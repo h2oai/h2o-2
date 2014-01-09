@@ -369,17 +369,24 @@ public class NeuralNet extends ValidatedJob {
     long len = input._len;
     if( n != 0 )
       len = Math.min(len, n);
+    // classification
     if( ls[ls.length - 1] instanceof Softmax ) {
       int correct = 0;
+      e.mean_square = 0;
+      e.cross_entropy = 0;
       for( input._pos = 0; input._pos < len; input._pos++ ) {
-        if( ((Softmax) ls[ls.length - 1]).target() == -2 )
+        if( ((Softmax) ls[ls.length - 1]).target() == -2 ) //NA
           continue;
         if( correct(ls, e, cm) )
           correct++;
       }
       e.classification = (len - (double) correct) / len;
       e.mean_square /= len;
-    } else {
+      e.cross_entropy /= len; //want to report the averaged cross-entropy
+    }
+    // regression
+    else {
+      e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
         if( !Float.isNaN(ls[ls.length - 1]._a[0]) )
           error(ls, e);
@@ -390,17 +397,25 @@ public class NeuralNet extends ValidatedJob {
     return e;
   }
 
+  // classification scoring
   private static boolean correct(Layer[] ls, Errors e, long[][] confusion) {
+    //Softmax for classification, one value per output class
     Softmax output = (Softmax) ls[ls.length - 1];
     if( output.target() == -1 )
       return false;
+    //Testing for this row
     for (Layer l : ls) l.fprop(false);
+    //Predicted output values
     float[] out = ls[ls.length - 1]._a;
+    //True target value
     int target = output.target();
+    //Score
     for( int o = 0; o < out.length; o++ ) {
-      float t = o == target ? 1 : 0;
-      float d = t - out[o];
+      final boolean hitpos = (o == target);
+      final float t = hitpos ? 1 : 0;
+      final float d = t - out[o];
       e.mean_square += d * d;
+      e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
     }
     float max = out[0];
     int idx = 0;
@@ -416,13 +431,19 @@ public class NeuralNet extends ValidatedJob {
   }
 
   // TODO extract to layer
+  // regression scoring
   private static void error(Layer[] ls, Errors e) {
+    //Linear output layer for regression
     Linear linear = (Linear) ls[ls.length - 1];
+    //Testing for this row
     for (Layer l : ls) l.fprop(false);
+    //Predicted target values
     float[] output = ls[ls.length - 1]._a;
+    //True target values
     float[] target = linear.target();
+    e.mean_square = 0;
     for( int o = 0; o < output.length; o++ ) {
-      float d = target[o] - output[o];
+      final float d = target[o] - output[o];
       e.mean_square += d * d;
     }
   }
@@ -473,11 +494,10 @@ public class NeuralNet extends ValidatedJob {
     public double classification = 1;
 
     @API(help = "MSE")
-    public double mean_square;
+    public double mean_square = Double.POSITIVE_INFINITY;
 
-    // TODO
-    //@API(help = "Cross entropy")
-    //public double cross_entropy;
+    @API(help = "Cross entropy")
+    public double cross_entropy = Double.POSITIVE_INFINITY;
 
     @API(help = "Layer learning rates")
     public double[] rates;
@@ -706,21 +726,25 @@ public class NeuralNet extends ValidatedJob {
 
     @Override public boolean toHTML(StringBuilder sb) {
       final String mse_format = "%2.6f";
+      final String cross_entropy_format = "%2.6f";
       Job nn = job_key == null ? null : Job.findJob(job_key);
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
-        String cmTitle = "Confusion Matrix", validC = "", validS = "";
+        String cmTitle = "Confusion Matrix", validC = "", validS = "", validCE = "";
         Errors train = model.training_errors[model.training_errors.length - 1];
         if( model.validation_errors != null ) {
           Errors valid = model.validation_errors[model.validation_errors.length - 1];
           validC = format(valid.classification);
           validS = String.format(mse_format, valid.mean_square);
+          validCE = String.format(cross_entropy_format, valid.cross_entropy);
         } else
           cmTitle += " (Training Data)";
         DocGen.HTML.section(sb, "Training classification error: " + format(train.classification));
         DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, train.mean_square));
+        DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, train.cross_entropy));
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
         DocGen.HTML.section(sb, "Validation mean square error: " + validS);
+        DocGen.HTML.section(sb, "Validation mean cross entropy: " + validCE);
         if( nn != null ) {
           long ps = train.training_samples * 1000 / nn.runTimeMs();
           DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
@@ -735,8 +759,10 @@ public class NeuralNet extends ValidatedJob {
         sb.append("<th>Training Time</th>");
         sb.append("<th>Training Samples</th>");
         sb.append("<th>Training MSE</th>");
+        sb.append("<th>Training MCE</th>");
         sb.append("<th>Training Classification Error</th>");
         sb.append("<th>Validation MSE</th>");
+        sb.append("<th>Validation MCE</th>");
         sb.append("<th>Validation Classification Error</th>");
         sb.append("</tr>");
         Errors[] trains = model.training_errors;
@@ -745,12 +771,14 @@ public class NeuralNet extends ValidatedJob {
           sb.append("<td>" + PrettyPrint.msecs(trains[i].training_time_ms, true) + "</td>");
           sb.append("<td>" + String.format("%,d", trains[i].training_samples) + "</td>");
           sb.append("<td>" + String.format(mse_format, trains[i].mean_square) + "</td>");
+          sb.append("<td>" + String.format(cross_entropy_format, trains[i].cross_entropy) + "</td>");
           sb.append("<td>" + format(trains[i].classification) + "</td>");
           if( model.validation_errors != null ) {
             sb.append("<td>" + String.format(mse_format, model.validation_errors[i].mean_square) + "</td>");
+            sb.append("<td>" + String.format(cross_entropy_format, model.validation_errors[i].cross_entropy) + "</td>");
             sb.append("<td>" + format(model.validation_errors[i].classification) + "</td>");
           } else
-            sb.append("<td></td><td></td>");
+            sb.append("<td></td><td></td><td></td>");
           sb.append("</tr>");
         }
         sb.append("</table>");
@@ -792,6 +820,9 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Mean square error")
     public double mean_square_error;
 
+    @API(help = "Cross entropy")
+    public double cross_entropy;
+
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
 
@@ -816,6 +847,7 @@ public class NeuralNet extends ValidatedJob {
       Errors e = eval(clones, data, resp, max_rows, confusion_matrix);
       classification_error = e.classification;
       mean_square_error = e.mean_square;
+      cross_entropy = e.cross_entropy;
       if( frs[1] != null )
         frs[1].remove();
       return Response.done(this);
