@@ -1,23 +1,30 @@
 package samples;
 
-import hex.*;
+import hex.Layer;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+import hex.NeuralNet;
 import hex.NeuralNet.Errors;
+import hex.Trainer;
 import hex.rng.MersenneTwisterRNG;
-
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.GZIPInputStream;
-
-import water.UKV;
-
 import water.Job;
 import water.TestUtil;
-import water.fvec.*;
-import water.util.Utils;
+import water.UKV;
 import water.api.FrameSplit;
+import water.fvec.AppendableVec;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
+import water.util.Utils;
+
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Runs a neural network on the MNIST dataset.
