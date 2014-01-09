@@ -134,6 +134,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
+    running = true;
     Vec[] vecs = Utils.append(_train, response);
     reChunk(vecs);
     final Vec[] train = new Vec[vecs.length - 1];
@@ -225,10 +226,11 @@ public class NeuralNet extends ValidatedJob {
     } else if (mode == ExecutionMode.Threaded_Hogwild) {
       System.out.println("Threaded (Hogwild) execution mode");
       trainer = new Trainer.Threaded(ls, epochs, self());
-    } else {
+    } else if (mode == ExecutionMode.MapReduce_Hogwild) {
       System.out.println("MapReduce + Threaded (Hogwild) execution mode");
       trainer = new Trainer.MapReduce(ls, epochs, self());
-    }
+    } else throw new RuntimeException("invalid execution mode.");
+
     System.out.println("Running for " + epochs + " epochs.");
 
     // Use a separate thread for monitoring (blocked most of the time)
@@ -246,15 +248,18 @@ public class NeuralNet extends ValidatedJob {
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
             validResp = vs[vs.length - 1];
           }
-          while( !cancelled() && running) {
-            eval(valid, validResp);
-            try {
-              Thread.sleep(5000); //sleep for 5 seconds before evaluating again
-            } catch( InterruptedException e ) {
-              throw new RuntimeException(e);
-            }
+
+          //validate continuously
+          final long total_samples = (long) (epochs * ((Input) ls[0])._len);
+          long eval_samples = 0;
+          while(!cancelled() && running) {
+            eval_samples = eval(valid, validResp);
           }
-          eval(valid, validResp);
+          // make sure to do the final eval on a regular run (don't know how many samples to do globally for M/R)
+          if (!cancelled() && (eval_samples < total_samples || mode == ExecutionMode.MapReduce_Hogwild)) {
+            eval(valid, validResp);
+          }
+          // remove validation data
           if( adapted != null && adapted[1] != null )
             adapted[1].remove();
         } catch( Exception ex ) {
@@ -262,7 +267,7 @@ public class NeuralNet extends ValidatedJob {
         }
       }
 
-      private void eval(Vec[] valid, Vec validResp) {
+      private long eval(Vec[] valid, Vec validResp) {
         long[][] cm = null;
         if( classification ) {
           int classes = ls[ls.length - 1].units;
@@ -295,6 +300,7 @@ public class NeuralNet extends ValidatedJob {
         model.loss = loss;
         model.seed = seed;
         UKV.put(model._selfKey, model);
+        return e.training_samples;
       }
 
       private Errors eval(Vec[] vecs, Vec resp, long n, long[][] cm) {
@@ -308,11 +314,22 @@ public class NeuralNet extends ValidatedJob {
     monitor.start();
     trainer.join();
     running = false; //tell the monitor thread to finish too
-    try {
-      monitor.join();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
+
+    // hack to gracefully terminate the job submitted via H2O web API
+    if (mode != ExecutionMode.MapReduce_Hogwild) {
+      try {
+        monitor.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
+      // remove this job
+      H2OCountedCompleter task = _fjtask;
+      if( task != null )
+        task.tryComplete();
+      this.remove();
     }
+
     System.out.println("Training finished.");
   }
 
