@@ -8,7 +8,7 @@ Import Data from URL to ValueArray
 Imports a file from the URL and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importURL.VA(object, path, key = "", parse = TRUE)
+h2o.importURL.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,12 +24,21 @@ The complete URL of the file to be imported. Each row of data appears as one lin
 \item{parse}{
 (Optional) A logical value indicating whether the file should be parsed after import.
   }
+    \item{header}{
+(Optional) A logical value indicating whether the first row is the column header. If missing, H2O will automatically try to detect the presence of a header.
+  }
+  \item{sep}{
+(Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
+  }
+  \item{col.names}{
+(Optional) An \code{\linkS4class{H2OParsedDataVA}} object containing the column header as its first and only row.
+  }
 }
 \details{
 This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFile}}. WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importURL will automatically parse the file.
 }
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}

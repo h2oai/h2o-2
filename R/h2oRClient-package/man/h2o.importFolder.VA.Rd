@@ -8,7 +8,7 @@
   Imports all the files in the local directory and parses them, returning a list of objects containing the identifying hex keys.
 }
 \usage{
-  h2o.importFolder.VA(object, path, pattern = "", parse = TRUE, sep = "")
+  h2o.importFolder.VA(object, path, pattern = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,15 +24,21 @@
   \item{parse}{
 (Optional) A logical value indicating whether the file should be parsed after import.
   }
+  \item{header}{
+(Optional) A logical value indicating whether the first row is the column header. If missing, H2O will automatically try to detect the presence of a header.
+  }
   \item{sep}{
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
+  }
+  \item{col.names}{
+(Optional) An \code{\linkS4class{H2OParsedDataVA}} object containing the column header as its first and only row.
   }
 }
 \details{
 This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFolder}}. WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
 }
 \value{
-  If \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedData}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawData}}.
+  If \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawDataVA}}.
   %%  ~Describe the value returned
   %%  If it is a LIST, use
   %%  \item{comp1 }{Description of 'comp1'}
