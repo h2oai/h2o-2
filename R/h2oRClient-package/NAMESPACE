@@ -1,20 +1,7 @@
 exportPattern("^[[:alpha:]]+")
-export('h2o.glm', 'h2o.glm.FV', 'h2o.kmeans', 'h2o.randomForest', 'h2o.prcomp', 'h2o.gbm', 'h2o.nn', 'h2o.predict')
+export('h2o.glm', 'h2o.glm.FV', 'h2o.kmeans', 'h2o.randomForest', 'h2o.prcomp', 'h2o.gbm', 'h2o.nn', 'h2o.predict', 'h2o.checkClient', 'h2o.importFile', 'h2o.importFolder', 'h2o.uploadFile', 'h2o.parseRaw', 'h2o.importFile.VA', 'h2o.importFolder.VA', 'h2o.importHDFS.VA', 'h2o.importURL.VA', 'h2o.uploadFile.VA', 'h2o.parseRaw.VA', 'h2o.ls', 'h2o.rm')
 exportMethods(
   "colnames",
-  "h2o.checkClient",
-  "h2o.importFile",
-  "h2o.importFolder",
-  "h2o.uploadFile",
-  "h2o.parseRaw",
-  "h2o.importFile.VA",
-  "h2o.importFolder.VA",
-  "h2o.importHDFS.VA",
-  "h2o.importURL.VA",
-  "h2o.uploadFile.VA",
-  "h2o.parseRaw.VA",
-  "h2o.ls",
-  "h2o.rm",
   "show",
   "summary",
   "histograms",
