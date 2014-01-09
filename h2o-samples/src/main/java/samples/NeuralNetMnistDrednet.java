@@ -26,12 +26,13 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     ls[3] = new Layer.RectifierDropout(2048);
     ls[4] = new VecSoftmax(labels, outputStats);
     for( int i = 0; i < ls.length; i++ ) {
-      // for ReLU
-      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
-      ls[i].initial_weight_scale = 0.01;
 
-      // for tanh
-//      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.UniformAdaptive;
+      // Default
+      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.UniformAdaptive;
+
+      // Hinton
+//      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
+//      ls[i].initial_weight_scale = 0.01;
 
       ls[i].rate = .01f;
       ls[i].rate_annealing = 1e-6f;
@@ -39,8 +40,11 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
       ls[i].momentum_ramp = 60000 * 30; //TODO: try 300 epochs
       ls[i].momentum_stable = .99f;
       ls[i].l1 = .00001f;
-      //ls[i].l2 = .00001f;
+//      ls[i].l2 = .00001f;
       ls[i].max_w2 = 15; //cf. hinton for Mnist
+      ls[i].loss = Layer.Loss.CrossEntropy;
+      //optional: use MSE on output layer
+//      ls[i].loss = (i == ls.length-1) ? Layer.Loss.MeanSquare : Layer.Loss.CrossEntropy;
       ls[i].init(ls, i);
     }
     return ls;
