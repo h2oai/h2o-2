@@ -97,7 +97,7 @@ class ASTApply extends AST {
       return new ASTApply(args,x);
     // Error handling
     if( ft2.isNotFun() )      // Oops, failed basic sanity
-      E.throwErr("Function-parens following a "+ft2,x);
+      E.throwErr("Function-parens foll owing a "+ft2,x);
     if( ft2._ts.length != ts.length )
       E.throwErr("Passed "+(ts.length-1)+" args but expected "+(ft2._ts.length-1),x);
     String vars[] = (fast instanceof ASTOp) ? ((ASTOp)fast)._vars : null;

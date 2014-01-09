@@ -158,6 +158,10 @@ public class Expr2Test extends TestUtil {
       checkStr("a[,1] = factor(a[,1])");
       //checkStr("a[,1] = factor(a[,1])");
       checkStr("is.factor(a[,1])");
+      checkStr("isTRUE(c(1,3))");
+      checkStr("a=1;isTRUE(1)");
+      checkStr("a=c(1,2);isTRUE(a)");
+      checkStr("isTRUE(min)");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
