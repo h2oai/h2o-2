@@ -106,6 +106,8 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x){y=x*2; y+1}(2)");
       checkStr("function(x){y=1+2}(2)");
       checkStr("function(x){y=1+2;y=c(1,2)}"); // Not allowed to change types in inner scopes
+      checkStr("c(1,c(2,3))");
+      checkStr("a=c(1,Inf);c(2,a)");
       checkStr("sum(1,2,3)");
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");
