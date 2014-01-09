@@ -208,7 +208,7 @@ public class KMeans2 extends ColumnsJob {
         rowHTML(sb, new String[]{"Total Sum of Squares", "Total Within Cluster Sum of Squares", "Between Cluster Sum of Squares"}, row);
         DocGen.HTML.section(sb, "Cluster Assignments by Observation: ");
         RString rs = new RString("<a href='Inspect2.html?src_key=%$key'>%content</a>");
-        rs.replace("key", "KMeansClusters_" + model._selfKey);
+        rs.replace("key", model._selfKey + "_clusters");
         rs.replace("content", "View the row-by-row cluster assignments");
         sb.append(rs.toString());
         //sb.append("<iframe src=\"" + "/Inspect.html?key=KMeansClusters\"" + "width = \"850\" height = \"550\" marginwidth=\"25\" marginheight=\"25\" scrolling=\"yes\"></iframe>" );

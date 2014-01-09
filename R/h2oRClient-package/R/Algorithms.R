@@ -655,10 +655,10 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
   if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
   if(!is.logical(use_non_local)) stop("use_non_local must be logical indicating whether to use non-local data")
-  
+
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt, use_non_local_data=as.numeric(use_non_local))
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, out_of_bag_error_estimate=1)
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, response_variable=args$y, out_of_bag_error_estimate=1)
   modelOrig = h2o.__getRFResults(res2)
   new("H2ORFModelVA", key=res$destination_key, data=data, model=modelOrig)
 }
