@@ -68,7 +68,7 @@ public class Runner {
     if( ARGS.sample <  0 || ARGS.sample > 1.0f   ) throw new RuntimeException("sample "+ARGS.sample+" out of bounds");
     if( ARGS.learn  <  0 || ARGS.learn  > 1.0f   ) throw new RuntimeException("learn " +ARGS.learn +" out of bounds");
     if( ARGS.nbins  <  2 || ARGS.nbins  > 100000 ) throw new RuntimeException("nbins " +ARGS.nbins +" out of bounds");
-    if( ARGS.depth  <= 1 )                         throw new RuntimeException("depth " +ARGS.depth +" out of bounds");
+    if( ARGS.depth  <= 0 )                         throw new RuntimeException("depth " +ARGS.depth +" out of bounds");
     if( ARGS.splitTestTrain < 0 || ARGS.splitTestTrain > 1.0f ) throw new RuntimeException("splitTestTrain "+ARGS.splitTestTrain+" out of bounds");
     // If trainFile is NOT set, you are doing the default file and cannot set testFile.
     if( (ARGS.trainFile == OptArgs.defaultTrainFile) && (ARGS.testFile != OptArgs.defaultTestFile) )
