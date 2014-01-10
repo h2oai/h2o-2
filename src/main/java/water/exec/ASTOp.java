@@ -110,6 +110,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
     // Misc
+    putPrefix(new ASTSeq   ());
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
     putPrefix(new ASTTable ());
@@ -800,6 +801,32 @@ class ASTOR extends ASTOp {
     else if (op2 == 0 && Double.isNaN(op1))
       op2 = Double.NaN;
     env.push(op2);
+  }
+}
+
+// Similar to R's seq_len
+class ASTSeq extends ASTOp {
+  @Override String opStr() { return "seq_len"; }
+  ASTSeq( ) {
+    super(new String[]{"seq_len", "n"},
+            new Type[]{Type.ARY,Type.DBL},
+            OPF_PREFIX,
+            OPP_PREFIX,
+            OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt) {
+    int len = (int)env.popDbl();
+    if (len <= 0)
+      throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
+    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
+    AppendableVec av = new AppendableVec(key);
+    NewChunk nc = new NewChunk(av,0);
+    for (int r = 0; r < len; r++) nc.addNum(r+1);
+    nc.close(0,null);
+    Vec v = av.close(null);
+    env.pop();
+    env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
   }
 }
 
