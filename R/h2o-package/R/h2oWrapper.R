@@ -195,7 +195,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 .onDetach <- function(libpath) {
   if(exists(".LastOriginal", mode = "function"))
      assign(".Last", get(".LastOriginal"), envir = .GlobalEnv)
-  else
+  else if(exists(".Last", envir = .GlobalEnv))
     rm(".Last", envir = .GlobalEnv)
 }
 
