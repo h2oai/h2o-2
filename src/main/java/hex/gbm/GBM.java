@@ -317,7 +317,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       if( tree == null ) continue;
       for( int i=0; i<tree._len-leafs[k]; i++ ) {
         double g = gp._gss[k][i] == 0 // Constant response?
-          ? 1000                      // Cap (exponential) learn, instead of dealing with Inf
+          ? (gp._rss[k][i]==0?0:1000) // Cap (exponential) learn, instead of dealing with Inf
           : learn_rate*m1class*gp._rss[k][i]/gp._gss[k][i];
         assert !Double.isNaN(g);
         ((LeafNode)tree.node(leafs[k]+i))._pred = g;
