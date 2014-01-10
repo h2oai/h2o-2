@@ -8,13 +8,16 @@ These instructions assume you are using R  2.14.0 or later.
 
 **STEP 1**
 
-The download package can be obtained by clicking on the button Download H\ :sub:`2`\ O at `http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_.
+The download package can be obtained by clicking on the button Download 
+H\ :sub:`2`\ O at 
+`http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_.
 
 Unzip the downloaded H\ :sub:`2`\ O zip file.
 
 **STEP 2**
 
-Start an instance of H\ :sub:`2`\ O. For help with this see :ref:`GettingStartedFromaZipFile`
+Start an instance of H\ :sub:`2`\ O. For help with this see 
+:ref:`GettingStartedFromaZipFile`
 
 Users should be aware that in order for H\ :sub:`2`\ O to successfully
 run through R, an instance of H\ :sub:`2`\ O must also simultaneously
@@ -75,8 +78,9 @@ the H2O code, but the corresponding R code as well.
 
 This can be done using the following commands.
 
- **Before you cut andpaste these commands please check that the file path to 
-the version ofH2O R you would like to install is correct.**  
+**IMPORTANT**
+Before you cut and paste these commands please check that the file path to 
+the version ofH2O R you would like to install is correct. 
 
 ::
   

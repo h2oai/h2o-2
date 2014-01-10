@@ -67,9 +67,7 @@ Upgrading the H\ :sub:`2`\ O R Packages
 
 Users may wish to manually upgrade their R packages. For instance, if you are running the bleeding edge developer build, it’s possible that the code has changed, but that the revision number has not, in which case manually upgrading ensures the most current version of not only the H2O code, but the corresponding R code as well.
 
-**Additional Information**
-"""""""""""""""""""""""""""
-Users can find additional help, including examples of how to import and manipulate data, and run common algorityhms by visiting :ref:`R_tutorial`
+
 
 
  
