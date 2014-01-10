@@ -54,6 +54,15 @@ public class Expr2Test extends TestUtil {
       checkStr("1.23 >=2.34");  // 0
       checkStr("1.23 ==2.34");  // 0
       checkStr("1.23 !=2.34");  // 1
+      checkStr("1 & 2");        // 1
+      checkStr("c(1,0)&c(2,3)");// 1,0
+      checkStr("NA&1");         // NaN
+      checkStr("1&&2");         // 1
+      checkStr("c(2,NA)&&T");   // 1
+      checkStr("1||0");         // 1
+      checkStr("NA||1");        // 1
+      checkStr("NA||0");        // NA
+      checkStr("0||NA");        // NA
       checkStr("h.hex");        // Simple ref
       checkStr("+(1.23,2.34)"); // prefix 3.57
       checkStr("+(1.23)");      // Syntax error, not enuf args
