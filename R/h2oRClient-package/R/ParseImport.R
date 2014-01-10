@@ -52,7 +52,7 @@ h2o.ls <- function(object, pattern = "") {
   res = h2o.__remoteSend(object, h2o.__PAGE_VIEWALL, filter=pattern)
   if(length(res$keys) == 0) return(list())
   myList = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
-  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2,byrow = TRUE))
+  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2, byrow = TRUE))
   colnames(temp) = c("Key", "Bytesize")
   temp$Key = as.character(temp$Key)
   temp$Bytesize = as.numeric(as.character(temp$Bytesize))
@@ -78,7 +78,7 @@ h2o.assign <- function(data, key) {
   return(data)
 }
 
-h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "") {
+h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -100,7 +100,7 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
-      h2o.parseRaw(data=rawData, key=key, header=header, sep=sep) 
+      h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
     } else {
       myData = lapply(res$keys, function(x) { new("H2ORawData", h2o=object, key=x) })
       if(length(res$keys) == 1) myData[[1]] else myData
@@ -108,11 +108,11 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
   } else stop("All files failed to import!")
 }
 
-h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "") {
-  h2o.importFolder(object, path, pattern = "", key, parse, header, sep)
+h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
+  h2o.importFolder(object, path, pattern = "", key, parse, header, sep, col.names)
 }
 
-h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "", silent = TRUE) {
+h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -128,7 +128,7 @@ h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "
   else
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
   rawData = new("H2ORawData", h2o=object, key=path)
-  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep) else rawData
+  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
 }
 
 h2o.parseRaw <- function(data, key = "", header, sep = "", col.names) {
@@ -152,11 +152,11 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names) {
   parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
 
-h2o.importURL <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "") {
+h2o.importURL <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   stop("This function has been deprecated in FluidVecs. Please use h2o.importFile with a http:// prefix instead.")
 }
 
-h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "") {
+h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   stop("This function has been deprecated in FluidVecs. Please use h2o.importFolder with a hdfs:// prefix instead.")
 }
 
@@ -171,7 +171,7 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, va
           
 #-------------------------------- ValueArray -----------------------------------#
 # Data import operations
-h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "") {
+h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -190,7 +190,7 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep) 
+      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
     } else {
       myData = lapply(res$keys, function(x) { new("H2ORawDataVA", h2o=object, key=x) })
       if(length(res$keys) == 1) myData[[1]] else myData
@@ -198,7 +198,7 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
   } else stop("All files failed to import!")
 }
 
-h2o.importFile.VA <- function(object, path, key, parse = TRUE, header, sep = "") {
+h2o.importFile.VA <- function(object, path, key, parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -206,12 +206,12 @@ h2o.importFile.VA <- function(object, path, key, parse = TRUE, header, sep = "")
   if(!is.logical(parse)) stop("parse must be of class logical")
   
   if(missing(key))
-    h2o.importFolder.VA(object, path, pattern = "", key = "", parse, header, sep)
+    h2o.importFolder.VA(object, path, pattern = "", key = "", parse, header, sep, col.names = col.names)
   else
-    h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, header, sep)
+    h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, header, sep, col.names = col.names)
 }
 
-h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "") {
+h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -230,7 +230,7 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep) 
+      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
     } else {
       myData = lapply(res$succeeded, function(x) { new("H2ORawDataVA", h2o=object, key=x$key) })
       if(res$num_succeeded == 1) myData[[1]] else myData
@@ -238,7 +238,7 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
   } else stop("All files failed to import!")
 }
 
-h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", silent = TRUE) {
+h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -253,10 +253,10 @@ h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep 
   else
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
   rawData = new("H2ORawDataVA", h2o=object, key=path)
-  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep) else rawData
+  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
 }
 
-h2o.importURL.VA <- function(object, path, key = "", parse = TRUE, header, sep = "") {
+h2o.importURL.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -266,7 +266,7 @@ h2o.importURL.VA <- function(object, path, key = "", parse = TRUE, header, sep =
   destKey = ifelse(parse, "", key)
   res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path, key=destKey)
   rawData = new("H2ORawDataVA", h2o=object, key=res$key)
-  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep) else rawData
+  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
 }
 
 h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
@@ -274,7 +274,7 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   if(!is.character(key)) stop("key must be of class character")
   if(!(missing(header) || is.logical(header))) stop(paste("header cannot be of class", class(header)))
   if(!is.character(sep)) stop("sep must be of class character")
-  if(!(missing(col.names) || class(col.names) == "H2OParsedData")) stop(paste("col.names cannot be of class", class(col.names)))
+  if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
   
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))

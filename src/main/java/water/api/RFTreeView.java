@@ -15,20 +15,17 @@ public class RFTreeView extends Request {
   protected final Int        _tree     = new Int(TREE_NUM, 0);
   protected final H2OHexKey  _dataKey  = new H2OHexKey(DATA_KEY);
 
-  public static String link(RFModel model, int tree, ValueArray va, int clz, String body) {
+  public static String link(RFModel model, int tree, ValueArray va, String body) {
     RString rs = new RString("<a href='/RFTreeView.html?" +
         "%modelKey=%$modelVal" +
         "&%treeKey=%treeVal" +
-        "&%vaKey=%$vaVal" +
-        "&%clzKey=%clzVal'>%body</a>");
+        "&%vaKey=%$vaVal'>%body</a>");
     rs.replace("modelKey", MODEL_KEY);
     rs.replace("modelVal", model._selfKey.toString());
     rs.replace("treeKey", TREE_NUM);
     rs.replace("treeVal", tree);
     rs.replace("vaKey", DATA_KEY);
     rs.replace("vaVal", va._key.toString());
-    rs.replace("clzKey", CLASS);
-    rs.replace("clzVal", clz);
     rs.replace("body", body);
     return rs.toString();
   }
