@@ -3,17 +3,19 @@ package hex;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet.Errors;
-
-import java.io.File;
-
-import org.junit.*;
-
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 import water.JUnitRunner.Nightly;
-import water.*;
+import water.JUnitRunnerDebug;
+import water.Key;
+import water.TestUtil;
 import water.deploy.VM;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
+
+import java.io.File;
 
 @Nightly
 @Ignore
@@ -30,7 +32,7 @@ public class NeuralNetSpiralsTest extends TestUtil {
     Vec[] data = Utils.remove(frame.vecs(), frame.vecs().length - 1);
     Vec labels = frame.vecs()[frame.vecs().length - 1];
     VecsInput input = new VecsInput(data, null);
-    VecSoftmax output = new VecSoftmax(labels, null);
+    VecSoftmax output = new VecSoftmax(labels, null, Layer.Loss.MeanSquare);
     Layer[] ls = new Layer[3];
     ls[0] = input;
     ls[1] = new Layer.Tanh(50);

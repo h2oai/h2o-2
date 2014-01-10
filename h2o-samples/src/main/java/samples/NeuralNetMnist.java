@@ -71,7 +71,7 @@ public class NeuralNetMnist extends Job {
 //    ls[1] = new Layer.Tanh(500);
 //    ls[1] = new Layer.TanhDropout(500);
     ls[1] = new Layer.RectifierDropout(500);
-    ls[2] = new VecSoftmax(labels, outputStats);
+    ls[2] = new VecSoftmax(labels, outputStats, Layer.Loss.CrossEntropy);
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
       ls[i].initial_weight_scale = 0.01;
@@ -79,7 +79,6 @@ public class NeuralNetMnist extends Job {
       ls[i].rate_annealing = 1 / 1e6f;
       ls[i].l2 = .001f;
       ls[i].max_w2 = 15; //cf. hinton for Mnist
-      ls[i].loss = Layer.Loss.CrossEntropy;
       ls[i].init(ls, i);
     }
     return ls;

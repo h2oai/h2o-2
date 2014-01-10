@@ -14,7 +14,6 @@ import water.util.RString;
 import water.util.Utils;
 
 import java.util.Arrays;
-import java.util.Random;
 
 /**
  * Neural network.
@@ -84,7 +83,8 @@ public class NeuralNet extends ValidatedJob {
   public double epochs = 100;
 
   @API(help = "Seed for the random number generator", filter = Default.class)
-  public static long seed = new Random().nextLong();
+  //public static long seed = new Random().nextLong();
+  public static long seed = 0; //TODO: Revert to RNG
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
@@ -184,13 +184,15 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1].l1 = (float) l1;
       ls[i + 1].l2 = (float) l2;
       ls[i + 1].max_w2 = max_w2;
-      ls[i + 1].loss = loss;
       ls[i + 1].fast_mode = fast_mode;
     }
+
     if( classification )
-      ls[ls.length - 1] = new VecSoftmax(trainResp, null);
+      ls[ls.length - 1] = new VecSoftmax(trainResp, null, loss);
     else
-      ls[ls.length - 1] = new VecLinear(trainResp, null);
+      ls[ls.length - 1] = new VecLinear(trainResp, null, loss);
+
+
     ls[ls.length - 1].initial_weight_distribution = initial_weight_distribution;
     ls[ls.length - 1].initial_weight_scale = initial_weight_scale;
     ls[ls.length - 1].rate = (float) rate;
@@ -198,7 +200,6 @@ public class NeuralNet extends ValidatedJob {
     ls[ls.length - 1].l1 = (float) l1;
     ls[ls.length - 1].l2 = (float) l2;
     ls[ls.length - 1].max_w2 = max_w2;
-    ls[ls.length - 1].loss = loss;
     ls[ls.length - 1].fast_mode = fast_mode;
 
     for( int i = 0; i < ls.length; i++ )
@@ -230,6 +231,7 @@ public class NeuralNet extends ValidatedJob {
     model.loss = loss;
     model.fast_mode = fast_mode;
     model.seed = seed;
+    model.fast_mode = fast_mode;
 
     UKV.put(destination_key, model);
 
@@ -334,6 +336,7 @@ public class NeuralNet extends ValidatedJob {
         model.loss = loss;
         model.fast_mode = fast_mode;
         model.seed = seed;
+        model.fast_mode = fast_mode;
         UKV.put(model._selfKey, model);
         return e.training_samples;
       }
@@ -380,9 +383,9 @@ public class NeuralNet extends ValidatedJob {
   public static Errors eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm) {
     Output output = (Output) ls[ls.length - 1];
     if( output instanceof VecSoftmax )
-      output = new VecSoftmax(resp, (VecSoftmax) output);
+      output = new VecSoftmax(resp, (VecSoftmax) output, output.loss);
     else
-      output = new VecLinear(resp, (VecLinear) output);
+      output = new VecLinear(resp, (VecLinear) output, output.loss);
     return eval(ls, new VecsInput(vecs, (VecsInput) ls[0]), output, n, cm);
   }
 

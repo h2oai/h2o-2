@@ -57,10 +57,6 @@ public abstract class Layer extends Iced {
   public enum Loss {
     MeanSquare, CrossEntropy
   }
-
-  @API(help = "Loss function")
-  public Loss loss = Loss.CrossEntropy;
-
   @API(help = "Fast mode (minor approximation)")
   public boolean fast_mode;
 
@@ -170,11 +166,6 @@ public abstract class Layer extends Iced {
    * Apply gradient g to unit u with rate r and momentum m.
    */
   final void bprop(int u, float g, float r, float m) {
-    if (loss == Loss.CrossEntropy) {
-      //nothing else needed
-    } else if (loss == Loss.MeanSquare) {
-      g *= (1 - _a[u]) * _a[u];
-    }
     float r2 = 0;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = u * _previous._a.length + i;
@@ -460,6 +451,14 @@ public abstract class Layer extends Iced {
     static final int API_WEAVER = 1;
     public static DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Loss function")
+    public Loss loss = Loss.CrossEntropy;
+
+    public final void init(Layer[] ls, int index, Loss l) {
+      super.init(ls, index);
+      loss = l;
+    }
+
     protected final long pos() {
       return _input._pos;
     }
@@ -503,6 +502,11 @@ public abstract class Layer extends Iced {
         //output unit u should be 1.0 if u is the class label for the training point
         final float targetval = (u == label ? 1 : 0);
         float g = targetval - _a[u]; //error
+        if (loss == Loss.CrossEntropy) {
+          //nothing else needed
+        } else if (loss == Loss.MeanSquare) {
+          g *= (1 - _a[u]) * _a[u];
+        }
         bprop(u, g, r, m);
       }
     }
@@ -515,14 +519,33 @@ public abstract class Layer extends Iced {
     VecSoftmax() {
     }
 
-    public VecSoftmax(Vec vec, VecSoftmax stats) {
+    public VecSoftmax(Vec v, VecSoftmax stats, Loss l) {
 // Waiting for Michal stuff, for now enum must start at 0
 //      if( vec.domain() == null ) {
 //        vec = vec.toEnum();
 //        _toClose = vec;
 //      }
-      this.units = stats != null ? stats.units : (int) (vec.max() + 1);
-      this.vec = vec;
+      this.vec = v;
+
+      // TODO extract layer info in separate Ice
+      if (stats != null) {
+        units = stats.units;
+        rate = stats.rate;
+        rate_annealing = stats.rate_annealing;
+        momentum_start = stats.momentum_start;
+        momentum_stable = stats.momentum_stable;
+        momentum_ramp = stats.momentum_ramp;
+        l1 = stats.l1;
+        l2 = stats.l2;
+        initial_weight_distribution = stats.initial_weight_distribution;
+        initial_weight_scale = stats.initial_weight_scale;
+        max_w2 = stats.max_w2;
+        loss = stats.loss;
+      }
+      else {
+        units = (int)(v.max() + 1);
+        loss = l;
+      }
     }
 
     @Override protected int target() {
@@ -585,6 +608,11 @@ public abstract class Layer extends Iced {
       float[] v = target();
       for( int u = 0; u < _a.length; u++ ) {
         float g = v[u] - _a[u];
+        if (loss == Loss.CrossEntropy) {
+          //nothing else needed
+        } else if (loss == Loss.MeanSquare) {
+          g *= (1 - _a[u]) * _a[u];
+        }
         bprop(u, g, r, m);
       }
     }
@@ -597,9 +625,25 @@ public abstract class Layer extends Iced {
     VecLinear() {
     }
 
-    public VecLinear(Vec vec, VecLinear stats) {
-      this.units = stats != null ? stats.units : 1;
+    public VecLinear(Vec vec, VecLinear stats, Loss l) {
       _vec = vec;
+      this.units = stats != null ? stats.units : 1;
+      loss = stats != null ? stats.loss : l;
+
+      if (stats != null) {
+        // TODO extract layer info in separate Ice
+        rate = stats.rate;
+        rate_annealing = stats.rate_annealing;
+        momentum_start = stats.momentum_start;
+        momentum_stable = stats.momentum_stable;
+        momentum_ramp = stats.momentum_ramp;
+        l1 = stats.l1;
+        l2 = stats.l2;
+        initial_weight_distribution = stats.initial_weight_distribution;
+        initial_weight_scale = stats.initial_weight_scale;
+        max_w2 = stats.max_w2;
+        fast_mode = stats.fast_mode;
+      }
     }
 
     @Override float[] target() {
@@ -617,6 +661,7 @@ public abstract class Layer extends Iced {
 
     public ChunkLinear(Chunk chunk, VecLinear stats) {
       units = stats.units;
+      loss = stats.loss;
       _chunk = chunk;
 
       // TODO extract layer info in separate Ice
@@ -630,7 +675,7 @@ public abstract class Layer extends Iced {
       initial_weight_distribution = stats.initial_weight_distribution;
       initial_weight_scale = stats.initial_weight_scale;
       max_w2 = stats.max_w2;
-      loss = stats.loss;
+      fast_mode = stats.fast_mode;
     }
 
     @Override float[] target() {
@@ -815,11 +860,6 @@ public abstract class Layer extends Iced {
         float e = _previous._previous._a[o] - _a[o];
 
         float g = e;
-        if (loss == Loss.CrossEntropy) {
-          //nothing else needed
-        } else if (loss == Loss.MeanSquare) {
-          g *= (1 - _a[o]) * _a[o];
-        }
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + o;
           if( _previous._e != null )
@@ -866,10 +906,10 @@ public abstract class Layer extends Iced {
           _a[o] = Float.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] = Math.max(_a[o], _w[o * _previous._a.length + i] * _previous._a[i]);
+          _a[o] += _b[o];
           if( !training ) {
             _a[o] *= .5f;
           }
-          _a[o] += _b[o];
           if( max < _a[o] )
             max = _a[o];
         }
@@ -926,9 +966,8 @@ public abstract class Layer extends Iced {
       final float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-        float g = 0;
         if( _a[u] > 0 ) { // don't use >=
-          g = _e[u]; // * 1.0 (from derivative of rectifier)
+          final float g = _e[u]; // * 1.0 (from derivative of rectifier)
           bprop(u, g, r, m);
         } else if (fast_mode || (l1 == 0 && l2 == 0 && _wm == null && _bm == null)) {
           continue; // g = _e[u] * 0.0 = 0 and no other contributions to weights, and no momenta

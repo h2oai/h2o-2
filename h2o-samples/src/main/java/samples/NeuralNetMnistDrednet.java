@@ -24,7 +24,7 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     ls[1] = new Layer.RectifierDropout(1024);
     ls[2] = new Layer.RectifierDropout(1024);
     ls[3] = new Layer.RectifierDropout(2048);
-    ls[4] = new VecSoftmax(labels, outputStats);
+    ls[4] = new VecSoftmax(labels, outputStats, Layer.Loss.CrossEntropy);
     for( int i = 0; i < ls.length; i++ ) {
 
       // Default
@@ -42,7 +42,6 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
       ls[i].l1 = .00001f;
 //      ls[i].l2 = .00001f;
       ls[i].max_w2 = 15; //cf. hinton for Mnist
-      ls[i].loss = Layer.Loss.CrossEntropy;
       //optional: use MSE on output layer
 //      ls[i].loss = (i == ls.length-1) ? Layer.Loss.MeanSquare : Layer.Loss.CrossEntropy;
       ls[i].init(ls, i);

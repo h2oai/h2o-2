@@ -79,11 +79,10 @@ public class NeuralNetIrisTest extends TestUtil {
         else if (activation == Activation.Rectifier) {
           ls[1] = new Rectifier(7);
         }
-        ls[2] = new VecSoftmax(labels, null);
+        ls[2] = new VecSoftmax(labels, null, loss);
 
         for( int i = 0; i < ls.length; i++ ) {
           ls[i].rate = rate;
-          ls[i].loss = (i == 2) ? loss : Loss.CrossEntropy; //always use cross-entropy for hidden layers
           ls[i].max_w2 = Float.MAX_VALUE; //effectively turning this feature off
 //      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
 //      ls[i].initial_weight_scale = 0.01f;
