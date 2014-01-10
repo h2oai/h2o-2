@@ -307,7 +307,7 @@ public class Summary2 extends Iced {
     Random r = new Random(chk._start);
     int row = 0;
     int ns = 0;
-    while ((row += nextPoission(r, _lambda)) < chk._len) {
+    while ((row += nextPoission(r, _lambda)) < chk._len && row > 0) {
       if (!chk.isNA0(row)) {
         if (ns == _samples.length) _samples = Arrays.copyOf(_samples,_samples.length*2+1);
         _samples[ns++] = chk.at0(row);
