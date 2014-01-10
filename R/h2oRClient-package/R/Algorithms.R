@@ -179,6 +179,7 @@ h2o.__getGLM2Results <- function(model, x, y) {
   result$y = y
   result$x = x
   result$coefficients = as.numeric(unlist(submod$beta))
+  result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
   names(result$coefficients) = model$coefficients_names
   result$rank = valid$'_rank'
   if(model$glm$family == "tweedie")
