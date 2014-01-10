@@ -147,6 +147,11 @@ public class Env extends Iced {
     _ary[_sp]=global.subRef(_ary[_sp],_key[_sp]);
     assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
+  public void popUncheck( ) {
+    _sp--;
+    _fcn[_sp]=subRef(_fcn[_sp]);
+    _ary[_sp]=subRef(_ary[_sp],_key[_sp]);
+  }
   public void pop( ) { pop(this); }
   public void pop( int n ) {
     for( int i=0; i<n; i++ )
@@ -309,7 +314,7 @@ public class Env extends Iced {
         }
         UKV.put(Key.make(_key[_sp]),fr2);
       } else
-        pop();
+        popUncheck();
     }
   }
 

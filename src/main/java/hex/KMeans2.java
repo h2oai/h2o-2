@@ -208,7 +208,7 @@ public class KMeans2 extends ColumnsJob {
         rowHTML(sb, new String[]{"Total Sum of Squares", "Total Within Cluster Sum of Squares", "Between Cluster Sum of Squares"}, row);
         DocGen.HTML.section(sb, "Cluster Assignments by Observation: ");
         RString rs = new RString("<a href='Inspect2.html?src_key=%$key'>%content</a>");
-        rs.replace("key", "KMeansClusters_" + model._selfKey);
+        rs.replace("key", model._selfKey + "_clusters");
         rs.replace("content", "View the row-by-row cluster assignments");
         sb.append(rs.toString());
         //sb.append("<iframe src=\"" + "/Inspect.html?key=KMeansClusters\"" + "width = \"850\" height = \"550\" marginwidth=\"25\" marginheight=\"25\" scrolling=\"yes\"></iframe>" );
@@ -471,18 +471,23 @@ public class KMeans2 extends ColumnsJob {
           _cMeans[clu][col] += values[col];
         _rows[clu]++;
       }
+      int[] validMeans = new int[_gm.length];
       for( int clu = 0; clu < _cMeans.length; clu++ )
         for( int col = 0; col < _cMeans[clu].length; col++ ) {
-          _cMeans[clu][col] /= _rows[clu];
-          _gm[col] += _cMeans[clu][col];
+          if(_rows[clu] != 0) {
+            _cMeans[clu][col] /= _rows[clu];
+            _gm[col] += _cMeans[clu][col];
+            validMeans[col]++;
+          }
         }
       for (int col = 0; col < _gm.length; col++)
-          _gm[col] /= _cMeans.length;
+        if(validMeans[col] != 0)
+          _gm[col] /= validMeans[col];
 
       for (int clu = 0; clu < _cMeans.length; clu++)
           for (int col = 0; col < _gm.length; col++) {
               double mean_delta = _cMeans[clu][col] - _gm[col];
-              _betwnSqrs[clu] += (double)_rows[clu] * mean_delta * mean_delta;
+              _betwnSqrs[clu] += _rows[clu] * mean_delta * mean_delta;
           }
       // Second pass for in-cluster variances
       for( int row = 0; row < cs[0]._len; row++ ) {
