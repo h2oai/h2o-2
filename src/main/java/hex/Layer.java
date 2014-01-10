@@ -541,10 +541,12 @@ public abstract class Layer extends Iced {
         initial_weight_scale = stats.initial_weight_scale;
         max_w2 = stats.max_w2;
         loss = stats.loss;
+        fast_mode = stats.fast_mode;
       }
       else {
         units = (int)(v.max() + 1);
         loss = l;
+        // all the other members must be set later (by the caller)
       }
     }
 
@@ -580,6 +582,7 @@ public abstract class Layer extends Iced {
       initial_weight_scale = stats.initial_weight_scale;
       max_w2 = stats.max_w2;
       loss = stats.loss;
+      fast_mode = stats.fast_mode;
     }
 
     @Override protected int target() {

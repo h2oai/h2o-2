@@ -192,11 +192,13 @@ public class NeuralNet extends ValidatedJob {
     else
       ls[ls.length - 1] = new VecLinear(trainResp, null, loss);
 
-
     ls[ls.length - 1].initial_weight_distribution = initial_weight_distribution;
     ls[ls.length - 1].initial_weight_scale = initial_weight_scale;
     ls[ls.length - 1].rate = (float) rate;
     ls[ls.length - 1].rate_annealing = (float) rate_annealing;
+    ls[ls.length - 1].momentum_start = (float) momentum_start;
+    ls[ls.length - 1].momentum_ramp = momentum_ramp;
+    ls[ls.length - 1].momentum_stable = (float) momentum_stable;
     ls[ls.length - 1].l1 = (float) l1;
     ls[ls.length - 1].l2 = (float) l2;
     ls[ls.length - 1].max_w2 = max_w2;
@@ -231,7 +233,6 @@ public class NeuralNet extends ValidatedJob {
     model.loss = loss;
     model.fast_mode = fast_mode;
     model.seed = seed;
-    model.fast_mode = fast_mode;
 
     UKV.put(destination_key, model);
 
@@ -336,7 +337,6 @@ public class NeuralNet extends ValidatedJob {
         model.loss = loss;
         model.fast_mode = fast_mode;
         model.seed = seed;
-        model.fast_mode = fast_mode;
         UKV.put(model._selfKey, model);
         return e.training_samples;
       }
