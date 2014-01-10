@@ -3,8 +3,6 @@
 H\ :sub:`2`\ O installation in R Console
 ------------------------------------------
 
-Installation of H\ :sub:`2`\ O Package in R Console
-""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 These instructions assume you are using R  2.14.0 or later.  
 
@@ -62,12 +60,12 @@ This call *may* return the output:
 **Do you want to install H2O R package 2.1.0.99999.1389130748 from the
 server (Y/N)?**
 
-Respond Y or YES. This is the mechanism by which the revision of the H2O R package and
-the H2O instance running on the server are verified as matching and
-compatible. 
+Respond Y or YES. This is the mechanism by which the revision of the H2O R 
+package and the H2O instance running on the server are verified as matching 
+and compatible. 
 
 
-**STEP 5:Upgrading Packages**
+**STEP 5: Upgrading Packages**
 
 Users may wish to manually upgrade their R packages. For instance, if
 you are running the bleeding edge developer build, it’s possible that
