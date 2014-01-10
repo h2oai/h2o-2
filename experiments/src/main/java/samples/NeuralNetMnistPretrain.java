@@ -22,14 +22,14 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
 //    ls[2] = new Layer.RectifierDropout(1024);
     ls[1] = new Layer.Tanh(500);
     ls[2] = new Layer.Tanh(500);
-    ls[3] = new VecSoftmax(labels, outputStats);
+    ls[3] = new VecSoftmax(labels, outputStats, Loss.CrossEntropy);
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
       ls[i].initial_weight_scale = 1;
       ls[i].rate = .01f;
       ls[i].rate_annealing = 1 / 1e6f;
       ls[i].momentum_start = .5f;
-      ls[i].momentum_ramp = 60000 * 100;
+      ls[i].momentum_ramp = 60000 * 300;
       ls[i].momentum_stable = .99f;
       //ls[i].l1 = .005f;
       ls[i].init(ls, i);
