@@ -61,6 +61,8 @@ public abstract class ASTOp extends AST {
     putBinInfix(new ASTPow());
     putBinInfix(new ASTPow2());
     putBinInfix(new ASTMod());
+    putBinInfix(new ASTAND());
+    putBinInfix(new ASTOR());
     putBinInfix(new ASTLT());
     putBinInfix(new ASTLE());
     putBinInfix(new ASTGT());
@@ -108,6 +110,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
     // Misc
+    putPrefix(new ASTSeq   ());
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
     putPrefix(new ASTTable ());
@@ -756,6 +759,76 @@ class ASTMax extends ASTOp {
   }
 }
 
+// R like binary operator &&
+class ASTAND extends ASTOp {
+  @Override String opStr() { return "&&"; }
+  ASTAND( ) {
+    super(new String[]{"", "x", "y"},
+          new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTOp make() { return new ASTAND(); }
+  @Override void apply(Env env, int argcnt) {
+    double op1 = env.isAry(-2) ? env.ary(-2).vecs()[0].at(0) : env.dbl(-2);
+    double op2 = op1==0 ? 0 :
+           Double.isNaN(op1) ? Double.NaN :
+           env.isAry(-1) ? env.ary(-1).vecs()[0].at(0) : env.dbl(-1);
+    env.pop(3);
+    if (!Double.isNaN(op2)) op2 = op2==0?0:1;
+    env.push(op2);
+  }
+}
+
+// R like binary operator ||
+class ASTOR extends ASTOp {
+  @Override String opStr() { return "||"; }
+  ASTOR( ) {
+    super(new String[]{"", "x", "y"},
+          new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTOp make() { return new ASTOR(); }
+  @Override void apply(Env env, int argcnt) {
+    double op1 = env.isAry(-2) ? env.ary(-2).vecs()[0].at(0) : env.dbl(-2);
+    double op2 = !Double.isNaN(op1) && op1!=0 ? 1 :
+            env.isAry(-1) ? env.ary(-1).vecs()[0].at(0) : env.dbl(-1);
+    if (!Double.isNaN(op2) && op2 != 0)
+      op2 = 1;
+    else if (op2 == 0 && Double.isNaN(op1))
+      op2 = Double.NaN;
+    env.push(op2);
+  }
+}
+
+// Similar to R's seq_len
+class ASTSeq extends ASTOp {
+  @Override String opStr() { return "seq_len"; }
+  ASTSeq( ) {
+    super(new String[]{"seq_len", "n"},
+            new Type[]{Type.ARY,Type.DBL},
+            OPF_PREFIX,
+            OPP_PREFIX,
+            OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt) {
+    int len = (int)env.popDbl();
+    if (len <= 0)
+      throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
+    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
+    AppendableVec av = new AppendableVec(key);
+    NewChunk nc = new NewChunk(av,0);
+    for (int r = 0; r < len; r++) nc.addNum(r+1);
+    nc.close(0,null);
+    Vec v = av.close(null);
+    env.pop();
+    env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+  }
+}
 
 // Variable length; flatten all the component arys
 class ASTCat extends ASTOp {

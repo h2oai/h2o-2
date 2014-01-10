@@ -209,7 +209,7 @@ public class RFModel extends OldModel implements Progress {
   public long getTreeSeed(int i) {  return Tree.seed(tree(i)); }
 
   /** Single row scoring, on properly ordered data */
-  protected double score0(double[] data) {
+  @Override protected double score0(double[] data) {
     int numClasses = classes();
     int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
     for( int i = 0; i < treeCount(); i++ )
@@ -218,10 +218,10 @@ public class RFModel extends OldModel implements Progress {
   }
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0( ValueArray data, int row) { throw H2O.unimpl(); }
+  @Override protected double score0( ValueArray data, int row) { throw H2O.unimpl(); }
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) { throw H2O.unimpl(); }
+  @Override protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) { throw H2O.unimpl(); }
 
   @Override public JsonObject toJson() {
     JsonObject res = new JsonObject();
