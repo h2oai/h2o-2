@@ -60,6 +60,9 @@ public abstract class Layer extends Iced {
   @API(help = "Fast mode (minor approximation)")
   public boolean fast_mode;
 
+  //public static Random _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+  public static Random _rand = new Random(); //time-based
+
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
   // TODO extract transients & code in separate one-shot trees to avoid cloning
@@ -90,8 +93,7 @@ public abstract class Layer extends Iced {
   transient Training _training;
 
   public final void init(Layer[] ls, int index) {
-    //init(ls, index, true, 0, new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS));
-    init(ls, index, true, 0, new Random(NeuralNet.seed));
+    init(ls, index, true, 0, _rand);
   }
 
   public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
@@ -120,7 +122,7 @@ public abstract class Layer extends Iced {
    * @param prefactor prefactor for initialization (typical value: 1.0)
    */
   // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
-  public void randomize(Random rng, float prefactor) {
+  void randomize(Random rng, float prefactor) {
     if (_w == null) return;
 
     if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
@@ -737,7 +739,6 @@ public abstract class Layer extends Iced {
   }
 
   public static class TanhDropout extends Layer {
-    transient Random _rand;
     transient byte[] _bits;
 
     TanhDropout() {
@@ -749,8 +750,6 @@ public abstract class Layer extends Iced {
 
     // keep random generators thread-local
     @Override public Layer clone() {
-      //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      _rand = new Random(NeuralNet.seed);
       _bits = new byte[(units + 7) / 8];
       return super.clone();
     }
@@ -771,9 +770,7 @@ public abstract class Layer extends Iced {
 
       }
 
-      if( _rand == null ) {
-        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        _rand = new Random(NeuralNet.seed);
+      if( _bits == null ) {
         _bits = new byte[(units + 7) / 8];
       }
       _rand.nextBytes(_bits);
@@ -875,7 +872,6 @@ public abstract class Layer extends Iced {
   }
 
   public static class Maxout extends Layer {
-    transient Random _rand;
     transient byte[] _bits;
 
     Maxout() {
@@ -895,9 +891,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override protected void fprop(boolean training) {
-      if( _rand == null ) {
-        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        _rand = new Random(NeuralNet.seed);
+      if( _bits == null ) {
         _bits = new byte[units / 8 + 1];
       }
       _rand.nextBytes(_bits);
@@ -1004,7 +998,6 @@ public abstract class Layer extends Iced {
   }
 
   public static class RectifierDropout extends Rectifier {
-    transient Random _rand;
     transient byte[] _bits;
 
     private RectifierDropout() {
@@ -1014,18 +1007,13 @@ public abstract class Layer extends Iced {
       super(units);
     }
 
-    // keep random generators thread-local
     @Override public Layer clone() {
-      //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      _rand = new Random(NeuralNet.seed);
       _bits = new byte[(units + 7) / 8];
       return super.clone();
     }
 
     @Override protected void fprop(boolean training) {
-      if( _rand == null ) {
-        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        _rand = new Random(NeuralNet.seed);
+      if( _bits == null ) {
         _bits = new byte[(units + 7) / 8];
       }
       _rand.nextBytes(_bits);

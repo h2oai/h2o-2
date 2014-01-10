@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author cypof
  */
 public abstract class Trainer {
-  public Trainer() {
+  Trainer() {
   }
 
   public abstract Layer[] layers();
