@@ -43,20 +43,16 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       float sum = 0;
       float[] p = super.score0(data, preds);
       if (nclasses()>1) { // classification
+        // Because we call Math.exp, we have to be numerically stable or else
+        // we get Infinities, and then shortly NaN's.  Rescale the data so the
+        // largest value is +/-1 and the other values are smaller.  
+        float rescale=0; 
+        for(int k=0; k<p.length;k++) rescale = Math.max(rescale,Math.abs(p[k]));
+        if( rescale < 1.0f ) rescale=1.0f;
+        float dsum=0;
         for(int k=0; k<p.length;k++)
-          sum+=(p[k]=(float)Math.exp(p[k]));
-        if( !Float.isInfinite(sum) ) div(p,sum);
-        else {                  // Math.exp leads to Infinities alot...
-          // If one of the probs was large and the others all small, the
-          // Math.exp shot up to infinity... and the division will bring us
-          // back down to a single 1.0 and the rest 0.0.
-          boolean only_one=false;
-          for(int k=0; k<p.length;k++)
-            if( Float.isInfinite(p[k])) {
-              assert !only_one;  only_one = true;
-              p[k] = 1.0f;      // Class predicts spot on
-            } else p[k]=0.0f;   // Anything divided by infinity
-        }
+          dsum+=(p[k]=(float)Math.exp(p[k]/rescale));
+        div(p,dsum);
       } else { // regression
         // do nothing for regression
       }
