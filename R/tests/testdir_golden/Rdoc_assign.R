@@ -13,6 +13,8 @@ PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
 sum1<- summary(PSA.outliers)
 PSA.outliers.df = as.data.frame(PSA.outliers)
 sum2<- summary(PSA.outliers.df)
+head(prostate.hex)
+head(PSA.outliers)
 
 
 testEnd()
