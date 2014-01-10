@@ -36,7 +36,7 @@ public class NeuralNet extends ValidatedJob {
   public Activation activation = Activation.RectifierWithDropout;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
-  public float input_dropout_ratio = 0.2;
+  public float input_dropout_ratio = 0.2f;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
   public int[] hidden = new int[] { 1024, 1024, 2048 };
