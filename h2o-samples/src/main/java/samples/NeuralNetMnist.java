@@ -32,8 +32,8 @@ import java.util.zip.GZIPInputStream;
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist.class;
-    samples.launchers.CloudLocal.launch(job, 1);
-//    samples.launchers.CloudProcess.launch(job, 4);
+//    samples.launchers.CloudLocal.launch(job, 1);
+    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
@@ -66,33 +66,47 @@ public class NeuralNetMnist extends Job {
   }
 
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
-    Layer[] ls = new Layer[3];
-    ls[0] = new VecsInput(data, inputStats, 0.2);
-//    ls[1] = new Layer.Tanh(500);
-//    ls[1] = new Layer.TanhDropout(500);
-    ls[1] = new Layer.RectifierDropout(500);
-    ls[2] = new VecSoftmax(labels, outputStats, Layer.Loss.CrossEntropy);
+    Layer[] ls = new Layer[4];
+    //ls[0] = new VecsInput(data, inputStats, 0.2);
+    ls[0] = new VecsInput(data, inputStats);
+//    ls[1] = new Layer.Tanh(50);
+//    ls[2] = new Layer.Tanh(50);
+    ls[1] = new Layer.RectifierDropout(50);
+    ls[2] = new Layer.RectifierDropout(50);
+    ls[3] = new VecSoftmax(labels, outputStats, Layer.Loss.CrossEntropy);
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
       ls[i].initial_weight_scale = 0.01;
-      ls[i].rate = .005f;
+      ls[i].rate = .01f;
       ls[i].rate_annealing = 1 / 1e6f;
+      ls[i].l1 = .001f;
       ls[i].l2 = .001f;
+      ls[i].fast_mode = true;
+      //ls[i].max_w2 = Float.MAX_VALUE; //cf. hinton for Mnist
       ls[i].max_w2 = 15; //cf. hinton for Mnist
+      ls[i].momentum_start = 0.05f;
+      ls[i].momentum_ramp = 100000;
+      ls[i].momentum_stable = 0.10f;
       ls[i].init(ls, i);
     }
     return ls;
   }
 
   protected void startTraining(Layer[] ls) {
-    // Single-thread SGD
-//    _trainer = new Trainer.Direct(ls, 0, self());
+    double epochs = 15.0;
+
+//    // Single-thread SGD
+//    System.out.println("Single-threaded\n");
+//    _trainer = new Trainer.Direct(ls, epochs, self());
 
     // Single-node parallel
-    _trainer = new Trainer.Threaded(ls, 0, self());
+//    System.out.println("Multi-threaded\n");
+//    _trainer = new Trainer.Threaded(ls, epochs, self());
 
     // Distributed parallel
-//    _trainer = new Trainer.MapReduce(ls, 0, self());
+    System.out.println("MapReduce\n");
+    _trainer = new Trainer.MapReduce(ls, epochs, self()); //this will call cancel() and abort the whole run
+
     _trainer.start();
   }
 
@@ -135,7 +149,7 @@ public class NeuralNetMnist extends Job {
           text += ", momentum: ";
           text += String.format("%.5g", ls[0].momentum(processed));
           System.out.println(text);
-          if( (evals.incrementAndGet() % 5) == 0 ) {
+          if( (evals.incrementAndGet() % 1) == 0 ) {
             System.out.println("Computing test error");
             temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
             Layer.shareWeights(ls, temp);
@@ -144,7 +158,7 @@ public class NeuralNetMnist extends Job {
           }
         }
       }
-    }, 0, 10000);
+    }, 0, 10);
     startTraining(ls);
     return Status.Running;
   }
