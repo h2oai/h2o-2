@@ -8,7 +8,7 @@ Parse Raw Data File
 Parses a raw data file, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.parseRaw(data, key = "")
+h2o.parseRaw(data, key = "", header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -17,6 +17,15 @@ An \code{\linkS4class{H2ORawData}} object to be parsed.
 }
   \item{key}{
 (Optional) The hex key assigned to the parsed file.
+  }
+  \item{header}{
+(Optional) A logical value indicating whether the first row is the column header. If missing, H2O will automatically try to detect the presence of a header.
+  }
+  \item{sep}{
+(Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
+  }
+  \item{col.names}{
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
   }
 }
 \details{

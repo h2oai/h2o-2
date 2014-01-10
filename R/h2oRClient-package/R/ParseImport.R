@@ -52,7 +52,7 @@ h2o.ls <- function(object, pattern = "") {
   res = h2o.__remoteSend(object, h2o.__PAGE_VIEWALL, filter=pattern)
   if(length(res$keys) == 0) return(list())
   myList = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
-  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2,byrow = TRUE))
+  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2, byrow = TRUE))
   colnames(temp) = c("Key", "Bytesize")
   temp$Key = as.character(temp$Key)
   temp$Bytesize = as.numeric(as.character(temp$Bytesize))
@@ -274,7 +274,7 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   if(!is.character(key)) stop("key must be of class character")
   if(!(missing(header) || is.logical(header))) stop(paste("header cannot be of class", class(header)))
   if(!is.character(sep)) stop("sep must be of class character")
-  if(!(missing(col.names) || class(col.names) == "H2OParsedData")) stop(paste("col.names cannot be of class", class(col.names)))
+  if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
   
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))

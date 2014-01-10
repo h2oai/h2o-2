@@ -105,6 +105,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMax ());
     putPrefix(new ASTSum ());
     putPrefix(new ASTSdev());
+    putPrefix(new ASTMean());
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
@@ -886,6 +887,25 @@ class ASTSdev extends ASTOp {
     double sig = fr.vecs()[0].sigma();
     env.pop();
     env.poppush(sig);
+  }
+}
+
+class ASTMean extends ASTOp {
+  ASTMean() { super(new String[]{"mean", "ary"}, new Type[]{Type.DBL,Type.ARY},
+                    OPF_PREFIX,
+                    OPP_PREFIX,
+                    OPA_RIGHT); }
+  @Override String opStr() { return "mean"; }
+  @Override ASTOp make() { return new ASTMean(); }
+  @Override void apply(Env env, int argcnt) {
+    Frame fr = env.peekAry();
+    if (fr.vecs().length > 1)
+      throw new IllegalArgumentException("sd does not apply to multiple cols.");
+    if (fr.vecs()[0].isEnum())
+      throw new IllegalArgumentException("sd only applies to numeric vector.");
+    double ave = fr.vecs()[0].mean();
+    env.pop();
+    env.poppush(ave);
   }
 }
 
