@@ -1,4 +1,5 @@
 package water;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -176,11 +177,12 @@ public class Arguments {
     }
   }
 
-  public void extract(Arg arg) throws MissingArgumentError {
+  public <TArg extends Arg> TArg extract(TArg arg) throws MissingArgumentError {
     Field[] fields = getFields(arg);
     int count = extract(arg, fields);
     if( arg instanceof Req && count != fields.length )
       throw new MissingArgumentError(arg.usage());
+    return arg;
   }
 
   /**

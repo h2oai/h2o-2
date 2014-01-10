@@ -81,7 +81,7 @@ class DABuilder {
       final int S = start_row;
       if (!k.home()) continue;     // This is not necessary, but for sure skip no local keys (we only inhale local data)
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-      Log.info(Sys.RANDF,"* loading local key: ", k, " start_row: ", S);
+      Log.debug(Sys.RANDF,"* loading local key: ", k, " start_row: ", S);
       dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }

@@ -54,6 +54,15 @@ public class Expr2Test extends TestUtil {
       checkStr("1.23 >=2.34");  // 0
       checkStr("1.23 ==2.34");  // 0
       checkStr("1.23 !=2.34");  // 1
+      checkStr("1 & 2");        // 1
+      checkStr("c(1,0)&c(2,3)");// 1,0
+      checkStr("NA&1");         // NaN
+      checkStr("1&&2");         // 1
+      checkStr("c(2,NA)&&T");   // 1
+      checkStr("1||0");         // 1
+      checkStr("NA||1");        // 1
+      checkStr("NA||0");        // NA
+      checkStr("0||NA");        // NA
       checkStr("h.hex");        // Simple ref
       checkStr("+(1.23,2.34)"); // prefix 3.57
       checkStr("+(1.23)");      // Syntax error, not enuf args
@@ -71,7 +80,14 @@ public class Expr2Test extends TestUtil {
       checkStr("(1.23+h.hex)-h.hex");
       checkStr("min(h.hex,1+2)");
       checkStr("max(h.hex,1+2)");
+      checkStr("min.na.rm(h.hex,NA)"); // 0
+      checkStr("max.na.rm(h.hex,NA)"); // 211.3375
+      checkStr("min.na.rm(c(NA, 1), -1)"); // -1
+      checkStr("max.na.rm(c(NA, 1), -1)"); // 1
+      checkStr("max(c(Inf,1),2)");     // Infinity
+      checkStr("min(c(Inf,1),-Inf)");  // -Infinity
       checkStr("is.na(h.hex)");
+      checkStr("sum(is.na(h.hex))");
       checkStr("nrow(h.hex)*3");
       checkStr("h.hex[nrow(h.hex)-1,ncol(h.hex)-1]");
       checkStr("1=2");
@@ -99,10 +115,14 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x){y=x*2; y+1}(2)");
       checkStr("function(x){y=1+2}(2)");
       checkStr("function(x){y=1+2;y=c(1,2)}"); // Not allowed to change types in inner scopes
+      checkStr("c(1,c(2,3))");
+      checkStr("a=c(1,Inf);c(2,a)");
       checkStr("sum(1,2,3)");
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");
       checkStr("sum(1,h.hex,3)");
+      checkStr("sum(c(NA,-1,1))");
+      checkStr("sum.na.rm(c(NA,-1,1))");
       checkStr("h.hex[,c(1,3,5)]");
       checkStr("h.hex[c(1,3,5),]");
       checkStr("a=c(11,22,33,44,55,66); a[c(2,6,1),]");
@@ -147,6 +167,10 @@ public class Expr2Test extends TestUtil {
       checkStr("a[,1] = factor(a[,1])");
       //checkStr("a[,1] = factor(a[,1])");
       checkStr("is.factor(a[,1])");
+      checkStr("isTRUE(c(1,3))");
+      checkStr("a=1;isTRUE(1)");
+      checkStr("a=c(1,2);isTRUE(a)");
+      checkStr("isTRUE(min)");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");

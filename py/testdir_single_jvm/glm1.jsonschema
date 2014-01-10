@@ -1,0 +1,79 @@
+{
+    "type": "object", "properties": {
+        "GLMModel": { "type": "object", "properties": {
+            "GLMParams": { "type": "object", "properties": {
+                "betaEps": { "type": "number" },
+                "caseVal": { "type": "string" },
+                "family": { "type": "string" },
+                "link": { "type": "string" },
+                "maxIter": { "type": "number" },
+                "weight": { "type": "number" }
+            }
+            },
+            "LSMParams": { "type": "object", "properties": {
+                "alpha": { "type": "number" },
+                "lambda": { "type": "number" }
+            }
+            },
+            "coefficients": { "type": "object", "properties": {
+                "<col # or name>": { "type": "number" },
+                "Intercept": { "type": "number" }
+            }
+            },
+            "column_names": { "type": "array", "items":
+                    { "type": "string" }
+            },
+            "dof": { "type": "number" },
+            "iterations": { "type": "number" },
+            "lsm_time": { "type": "number" },
+            "model_iterations": { "type": "number" },
+            "model_key": { "type": "string" },
+            "model_time": { "type": "number" },
+            "nCols": { "type": "number" },
+            "nLines": { "type": "number" },
+            "normalized_coefficients": { "type": "object", "properties": {
+                "<col # or name>": { "type": "number" },
+                "Intercept": { "type": "number" }
+            }
+            },
+            "type": { "type": "string" },
+            "validations": { "type": "array", "items":
+                { "type": "object", "properties": {
+                        "aic": { "type": "number" },
+                        "auc": { "type": "number" },
+                        "classErr": { "type": "array", "items": 
+                            { "type": "number" }
+                        },
+                        "cm": { "type": "array", "items": 
+                            { "type": "array" }
+                        },
+                        "dataset": { "type": "string" },
+                        "err": { "type": "number" },
+                        "nrows": { "type": "number" },
+                        "nullDev": { "type": "number" },
+                        "resDev": { "type": "number" },
+                        "threshold": { "type": "number" },
+                        "val_iterations": { "type": "number" },
+                        "val_time": { "type": "number" },
+                        "xval_models": { "type": "array", "items":
+                            { "type": "string" }
+                        }
+                    }
+                }
+            },
+            "version": { "type": "string" },
+            "warnings": { "type": "array" }
+        }
+        },
+        "computation_time": { "type": "string" },
+        "destination_key": { "type": "string" },
+        "response": { "type": "object", "properties": {
+            "h2o": { "type": "string" },
+            "node": { "type": "string" },
+            "status": { "type": "string" },
+            "time": { "type": "number" }
+        }
+        }
+    }
+}
+

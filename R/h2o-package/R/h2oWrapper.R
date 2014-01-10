@@ -22,12 +22,11 @@ setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logica
     if(!startH2O)
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
-      cat("\n")
-      cat("H2O is not running yet, starting it now...\n")
+      cat("\nH2O is not running yet, starting it now...\n")
       # h2oWrapper.startLauncher()
       # invisible(readline("Start H2O, then hit <Return> to continue: "))
       h2o.startJar(Xmx)
-      count = 0; while(!url.exists(myURL) && count < 10) { Sys.sleep(1); count = count + 1 }
+      count = 0; while(!url.exists(myURL) && count < 30) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }

@@ -630,7 +630,7 @@ class RUnitRunner:
                 continue
 
             for f in files:
-                if (not re.match(".*runit.*\.[rR]", f)):
+                if (not re.match(".*runit.*\.[rR]$", f)):
                     continue
                 if (test_group is not None):
                     test_short_dir = self._calc_test_short_dir(os.path.join(root, f))
