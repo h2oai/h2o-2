@@ -388,7 +388,6 @@ setMethod("ceiling", "H2OParsedData", function(x) { h2o.__unop2("ceil", x) })
 setMethod("floor", "H2OParsedData", function(x) { h2o.__unop2("floor", x) })
 setMethod("log", "H2OParsedData", function(x) { h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
-# setMethod("sum", "H2OParsedData", function(x,na.rm=F) { ifelse(na.rm, h2o.unop2("sum.na.rm", x), h2o.__unop2("sum", x)) })
 setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
 
 setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
@@ -519,19 +518,18 @@ setMethod("colMeans", "H2OParsedData", function(x) {
   temp
 })
 
-setMethod("mean", "H2OParsedData", function(x) {
-  res <- NA
+mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
+  if(length(x) != 1 || trim != 0) stop("Unimplemented")
   if(any.factor(x) || dim(x)[2] != 1) {
-    warning("In H2O mean(x): argument not numeric or logical: returning NA")
-    res
+    warning("argument is not numeric or logical: returning NA")
+    return(NA_real_)
   }
-  res <- h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
-  temp <- sapply(res$cols, function(x) x$mean)
-  names(temp) = sapply(res$cols, function(x) x$name)
-  temp[[1]]
-})
+  if(!na.rm && h2o.__unop2("any.na", x)) return(NA)
+  h2o.__unop2("mean", x)
+}
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
+  if(length(x) != 1) stop("Unimplemented")
   if(dim(x)[2] != 1 || any.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   if(!na.rm && h2o.__unop2("any.na", x)) return(NA)
   h2o.__unop2("sd", x)
@@ -761,6 +759,10 @@ str.H2OParsedData <- function(object, ...) {
       cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
     }
   }
+}
+
+str.H2OParsedDataVA <- function(object, ...) {
+  str(new("H2OParsedData", h2o=object@h2o, key=object@key), ...)
 }
 
 #--------------------------------- ValueArray ----------------------------------#

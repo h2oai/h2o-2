@@ -61,6 +61,8 @@ public abstract class ASTOp extends AST {
     putBinInfix(new ASTPow());
     putBinInfix(new ASTPow2());
     putBinInfix(new ASTMod());
+    putBinInfix(new ASTAND());
+    putBinInfix(new ASTOR());
     putBinInfix(new ASTLT());
     putBinInfix(new ASTLE());
     putBinInfix(new ASTGT());
@@ -103,6 +105,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMax ());
     putPrefix(new ASTSum ());
     putPrefix(new ASTSdev());
+    putPrefix(new ASTMean());
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
@@ -755,6 +758,50 @@ class ASTMax extends ASTOp {
   }
 }
 
+// R like binary operator &&
+class ASTAND extends ASTOp {
+  @Override String opStr() { return "&&"; }
+  ASTAND( ) {
+    super(new String[]{"", "x", "y"},
+          new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTOp make() { return new ASTAND(); }
+  @Override void apply(Env env, int argcnt) {
+    double op1 = env.isAry(-2) ? env.ary(-2).vecs()[0].at(0) : env.dbl(-2);
+    double op2 = op1==0 ? 0 :
+           Double.isNaN(op1) ? Double.NaN :
+           env.isAry(-1) ? env.ary(-1).vecs()[0].at(0) : env.dbl(-1);
+    env.pop(3);
+    if (!Double.isNaN(op2)) op2 = op2==0?0:1;
+    env.push(op2);
+  }
+}
+
+// R like binary operator ||
+class ASTOR extends ASTOp {
+  @Override String opStr() { return "||"; }
+  ASTOR( ) {
+    super(new String[]{"", "x", "y"},
+          new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTOp make() { return new ASTOR(); }
+  @Override void apply(Env env, int argcnt) {
+    double op1 = env.isAry(-2) ? env.ary(-2).vecs()[0].at(0) : env.dbl(-2);
+    double op2 = !Double.isNaN(op1) && op1!=0 ? 1 :
+            env.isAry(-1) ? env.ary(-1).vecs()[0].at(0) : env.dbl(-1);
+    if (!Double.isNaN(op2) && op2 != 0)
+      op2 = 1;
+    else if (op2 == 0 && Double.isNaN(op1))
+      op2 = Double.NaN;
+    env.push(op2);
+  }
+}
 
 // Variable length; flatten all the component arys
 class ASTCat extends ASTOp {
@@ -840,6 +887,25 @@ class ASTSdev extends ASTOp {
     double sig = fr.vecs()[0].sigma();
     env.pop();
     env.poppush(sig);
+  }
+}
+
+class ASTMean extends ASTOp {
+  ASTMean() { super(new String[]{"mean", "ary"}, new Type[]{Type.DBL,Type.ARY},
+                    OPF_PREFIX,
+                    OPP_PREFIX,
+                    OPA_RIGHT); }
+  @Override String opStr() { return "mean"; }
+  @Override ASTOp make() { return new ASTMean(); }
+  @Override void apply(Env env, int argcnt) {
+    Frame fr = env.peekAry();
+    if (fr.vecs().length > 1)
+      throw new IllegalArgumentException("sd does not apply to multiple cols.");
+    if (fr.vecs()[0].isEnum())
+      throw new IllegalArgumentException("sd only applies to numeric vector.");
+    double ave = fr.vecs()[0].mean();
+    env.pop();
+    env.poppush(ave);
   }
 }
 
