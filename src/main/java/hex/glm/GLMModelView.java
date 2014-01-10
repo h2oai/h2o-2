@@ -8,8 +8,11 @@ import hex.glm.GLMValidation.GLMXValidation;
 import java.text.DecimalFormat;
 
 import water.*;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
+import water.api.Request.API;
+import water.api.Request.Default;
+import water.api.RequestArguments.H2OKey;
+import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 public class GLMModelView extends Request2 {
@@ -30,6 +33,9 @@ public class GLMModelView extends Request2 {
   @API(help="GLM Model")
   GLMModel glm_model;
 
+  @API(help="job key",required=false, filter=Default.class)
+  Key job_key;
+
   public static String link(String txt, Key model) {return link(txt,model,Double.NaN);}
   public static String link(String txt, Key model, double lambda) {
     return "<a href='GLMModelView.html?_modelKey=" + model + "&lambda=" + lambda + "'>" + txt + "</a>";
@@ -37,11 +43,9 @@ public class GLMModelView extends Request2 {
   public static Response redirect(Request req, Key modelKey) {
     return Response.redirect(req, "/2/GLMModelView", "_modelKey", modelKey);
   }
-
-  public static Response redirect2(Request req, Key modelKey) {
-    return Response.redirect(req, "/2/GLMModelView", "_modelKey", modelKey);
+  public static Response redirect(Request req, Key modelKey, Key job_key) {
+    return Response.redirect(req, "/2/GLMModelView", "_modelKey", modelKey,"job_key",job_key);
   }
-
   @Override public boolean toHTML(StringBuilder sb){
 //      if(title != null && !title.isEmpty())DocGen.HTML.title(sb,title);
     if(glm_model == null){
@@ -434,17 +438,42 @@ public class GLMModelView extends Request2 {
     sb.append(t + "msec");
   }
 
+//  Job jjob = null;
+//  if( job_key != null )
+//    jjob = Job.findJob(job_key);
+//  if( jjob != null && jjob.exception != null )
+//    return Response.error(jjob.exception == null ? "cancelled" : jjob.exception);
+//  if( jjob == null || jjob.end_time > 0 || jjob.cancelled() )
+//    return jobDone(jjob, destination_key);
+//  return jobInProgress(jjob, destination_key);
+
   @Override protected Response serve() {
+    Job jjob = ( job_key != null )?Job.findJob(job_key):null;
+    if( jjob != null && jjob.exception != null )
+      return Response.error(jjob.exception == null ? "cancelled" : jjob.exception);
     Value v = DKV.get(_modelKey);
-    if(v == null)
-      return Response.poll(this, 0, 100, "_modelKey", _modelKey.toString());
-    glm_model = v.get();
-    if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
-    Job j;
-    if(DKV.get(glm_model.job_key) != null && (j = Job.findJob(glm_model.job_key)) != null)
-      return Response.poll(this, (int) (100 * j.progress()), 100, "_modelKey", _modelKey.toString());
-    else
+    if(v != null){
+      glm_model = v.get();
+      if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
+    }
+    if( jjob == null || jjob.end_time > 0 || jjob.cancelled() )
       return Response.done(this);
+    return Response.poll(this,(int)(100*jjob.progress()),100,"_modelKey",_modelKey.toString());
   }
+
+//  @Override protected Response serve() {
+//    Value v = DKV.get(_modelKey);
+//    if(v == null)
+//      return Response.poll(this, 0, 100, "_modelKey", _modelKey.toString());
+//    glm_model = v.get();
+//    if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
+//    Job j;
+//    if((j = Job.findJob(glm_model.job_key)) != null && j.exception != null)
+//      return Response.error(j.exception);
+//    if(DKV.get(glm_model.job_key) != null && j != null)
+//      return Response.poll(this, (int) (100 * j.progress()), 100, "_modelKey", _modelKey.toString());
+//    else
+//      return Response.done(this);
+//  }
 }
 
