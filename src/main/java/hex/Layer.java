@@ -1104,4 +1104,55 @@ public abstract class Layer extends Iced {
     bb.put1('}');
     return bb;
   }
+
+  // classification scoring
+  static boolean correct(Layer[] ls, NeuralNet.Errors e, long[][] confusion) {
+    //Softmax for classification, one value per output class
+    Softmax output = (Softmax) ls[ls.length - 1];
+    if( output.target() == -1 )
+      return false;
+    //Testing for this row
+    for (Layer l : ls) l.fprop(false);
+    //Predicted output values
+    float[] out = ls[ls.length - 1]._a;
+    //True target value
+    int target = output.target();
+    //Score
+    for( int o = 0; o < out.length; o++ ) {
+      final boolean hitpos = (o == target);
+      final float t = hitpos ? 1 : 0;
+      final float d = t - out[o];
+      e.mean_square += d * d;
+      e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
+    }
+    float max = out[0];
+    int idx = 0;
+    for( int o = 1; o < out.length; o++ ) {
+      if( out[o] > max ) {
+        max = out[o];
+        idx = o;
+      }
+    }
+    if( confusion != null )
+      confusion[output.target()][idx]++;
+    return idx == output.target();
+  }
+
+  // regression scoring
+  static void error(Layer[] ls, NeuralNet.Errors e) {
+    //Linear output layer for regression
+    Linear linear = (Linear) ls[ls.length - 1];
+    //Testing for this row
+    for (Layer l : ls) l.fprop(false);
+    //Predicted target values
+    float[] output = ls[ls.length - 1]._a;
+    //True target values
+    float[] target = linear.target();
+    e.mean_square = 0;
+    for( int o = 0; o < output.length; o++ ) {
+      final float d = target[o] - output[o];
+      e.mean_square += d * d;
+    }
+  }
+
 }
