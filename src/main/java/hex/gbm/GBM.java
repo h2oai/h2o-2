@@ -45,7 +45,18 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       if (nclasses()>1) { // classification
         for(int k=0; k<p.length;k++)
           sum+=(p[k]=(float)Math.exp(p[k]));
-        div(p,sum);
+        if( !Float.isInfinite(sum) ) div(p,sum);
+        else {                  // Math.exp leads to Infinities alot...
+          // If one of the probs was large and the others all small, the
+          // Math.exp shot up to infinity... and the division will bring us
+          // back down to a single 1.0 and the rest 0.0.
+          boolean only_one=false;
+          for(int k=0; k<p.length;k++)
+            if( Float.isInfinite(p[k])) {
+              assert !only_one;  only_one = true;
+              p[k] = 1.0f;      // Class predicts spot on
+            } else p[k]=0.0f;   // Anything divided by infinity
+        }
       } else { // regression
         // do nothing for regression
       }
@@ -214,7 +225,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       if( _nclass > 1 ) {       // Classification
 
         for( int row=0; row<ys._len; row++ ) {
-          if( ys.isNA0(row) ) throw H2O.unimpl(); // Set NANs in all works
+          if( ys.isNA0(row) ) continue;
           int y = (int)ys.at80(row); // zero-based response variable
           // Actual is '1' for class 'y' and '0' for all other classes
           for( int k=0; k<_nclass; k++ ) {
