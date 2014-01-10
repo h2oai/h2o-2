@@ -151,7 +151,7 @@ public class Inspect extends Request {
       return Response.error(((Job.Fail)f)._message);
     }
     if(f instanceof hex.glm.GLMModel)
-      return GLMModelView.redirect2(this, key);
+      return GLMModelView.redirect(this, key);
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
 //    if( f instanceof GLMValidation)
