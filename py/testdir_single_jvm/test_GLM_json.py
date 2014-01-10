@@ -1,6 +1,7 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
+from pprint import pprint
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -28,42 +29,31 @@ class Basic(unittest.TestCase):
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
-        y = "3"
-        # cols 0-13. 3 is output
-        # no member id in this one
-        for maxx in range(11,14):
-            x = range(maxx)
-            x.remove(3) # 3 is output
-            x = ",".join(map(str,x))
-            print "\nx:", x
-            print "y:", y
-
-            kwargs = {'x': x, 'y':  y}
-            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
-            # no longer look at STR?
-            print (h2o.dump_json(glm)) 
-            glm_c = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-          
-            print (h2o.dump_json(glm_c)) 
-            sys.stdout.write('.')
-            sys.stdout.flush() 
         y = "4"
         # cols 0-13. 3 is output
         # no member id in this one
         for maxx in range(11,14):
             x = range(maxx)
-            x.remove(4) # 3 is output
+            x.remove(4) # 4 is output
             x = ",".join(map(str,x))
+
             print "\nx:", x
             print "y:", y
 
-            kwargs = {'x': x, 'y':  y}
+        # Adding values for lambda and max_iter
+
+            kwargs = {'x': x, 'y':  y,'alpha':0.5,'lambda':0.001,'max_iter': 30}
+           
+            startime = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
-            # no longer look at STR?
-            print (h2o.dump_json(glm))
-            glm_c = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
- 
-            print (h2o.dump_json(glm_c))
+            elapsedtime = time.time() - startime
+            print("ELAPSED TIME ",elapsedtime)
+            pprint(glm['GLMModel']['coefficients'])
+            pprint(glm['GLMModel']['normalized_coefficients'])
+            pprint(glm['GLMModel']['nCols'])
+            pprint(glm['GLMModel']['nLines'])
+            pprint(glm['GLMModel']['iterations'])
+            pprint(glm['GLMModel']['coefficients']['Intercept'])
             sys.stdout.write('.')
             sys.stdout.flush()
 
