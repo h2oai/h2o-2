@@ -192,6 +192,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
     registerRequest(new LogAndEcho());
+    registerRequest(new GLMProgress());
+    registerRequest(new hex.glm.GLMGridProgress());
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());

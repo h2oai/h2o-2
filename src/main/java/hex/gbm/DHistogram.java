@@ -168,22 +168,6 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     return maxIn+ulp;
   }
 
-  /**
-   * Compare two numbers to see if they are within one ulp of the smaller decade.
-   * Order of the arguments does not matter.
-   *
-   * @param a First number
-   * @param b Second number
-   * @return true if a and b are essentially equal, false otherwise.
-   */
-  static public boolean equalsWithinOneSmallUlp(float a, float b) {
-    float ulp_a = Math.ulp(a);
-    float ulp_b = Math.ulp(b);
-    float small_ulp = Math.min(ulp_a, ulp_b);
-    float absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
-    return absdiff_a_b <= small_ulp;
-  }
-
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the sum of the MSEs when the data is split at a single point.
   // mses[1] == MSE for splitting between bins  0  and 1.

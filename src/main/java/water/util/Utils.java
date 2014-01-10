@@ -3,6 +3,7 @@ package water.util;
 import hex.rng.*;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
@@ -10,6 +11,7 @@ import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.*;
+
 import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen.FieldDoc;
@@ -48,6 +50,30 @@ public class Utils {
     for (int i = 1; i<from.length; ++i)
       if (from[i]>from[result]) result = i;
     return result;
+  }
+
+  /**
+   * Compare two numbers to see if they are within one ulp of the smaller decade.
+   * Order of the arguments does not matter.
+   *
+   * @param a First number
+   * @param b Second number
+   * @return true if a and b are essentially equal, false otherwise.
+   */
+  public static boolean equalsWithinOneSmallUlp(float a, float b) {
+    float ulp_a = Math.ulp(a);
+    float ulp_b = Math.ulp(b);
+    float small_ulp = Math.min(ulp_a, ulp_b);
+    float absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
+    return absdiff_a_b <= small_ulp;
+  }
+
+  public static boolean equalsWithinOneSmallUlp(double a, double b) {
+    double ulp_a = Math.ulp(a);
+    double ulp_b = Math.ulp(b);
+    double small_ulp = Math.min(ulp_a, ulp_b);
+    double absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
+    return absdiff_a_b <= small_ulp;
   }
 
   public static double lnF(double what) {
@@ -840,6 +866,7 @@ public class Utils {
     return nums;
   }
   public static float[] div(float[] nums, float n) {
+    assert !Float.isInfinite(n); // Almost surely not what you want
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
