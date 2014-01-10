@@ -99,10 +99,10 @@ setMethod("show", "H2OGrid", function(object) {
 
 setMethod("show", "H2OGLMModel", function(object) {
   print(object@data)
-  cat("GLM2 Model Key:", object@key, "\n\nCoefficients:\n")
+  cat("GLM2 Model Key:", object@key, "\n\n")
 
   model = object@model
-  print(round(model$coefficients,5))
+  cat("Coefficients:\n"); print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
@@ -778,10 +778,11 @@ setMethod("show", "H2OParsedDataVA", function(object) {
 
 setMethod("show", "H2OGLMModelVA", function(object) {
   print(object@data)
-  cat("GLM Model Key:", object@key, "\n\nCoefficients:\n")
-
+  cat("GLM Model Key:", object@key, "\n\n")
+  
   model = object@model
-  print(round(model$coefficients,5))
+  cat("Coefficients:\n"); print(round(model$coefficients,5))
+  cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
