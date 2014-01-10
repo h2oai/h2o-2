@@ -480,7 +480,7 @@ public class GLMTest extends TestUtil {
     final double icept = coefs.get("Intercept").getAsDouble();
     final double c[] = new double[5];
     for( int i=0; i<c.length; i++ )
-      c[i] = coefs.get(Integer.toString(i)).getAsDouble();
+      c[i] = coefs.get("C" + Integer.toString(i+1)).getAsDouble();
 
     // Now run the dataset through the equation and see how close we got
     AutoBuffer ab = va.getChunk(0);
