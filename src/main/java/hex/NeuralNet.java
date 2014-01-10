@@ -30,13 +30,13 @@ public class NeuralNet extends ValidatedJob {
   }
 
   @API(help = "Execution Mode", filter = Default.class)
-  public ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
+  public ExecutionMode mode = ExecutionMode.MapReduce_Hogwild;
 
   @API(help = "Activation function", filter = Default.class)
-  public Activation activation = Activation.Tanh;
+  public Activation activation = Activation.RectifierWithDropout;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
-  public float input_dropout_ratio = 0;
+  public float input_dropout_ratio = 0.2;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
   public int[] hidden = new int[] { 1024, 1024, 2048 };
@@ -81,10 +81,6 @@ public class NeuralNet extends ValidatedJob {
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
   public double epochs = 100;
-
-  @API(help = "Seed for the random number generator", filter = Default.class)
-  //public static long seed = new Random().nextLong();
-  public static long seed = 0; //TODO: Revert to RNG
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
@@ -232,7 +228,6 @@ public class NeuralNet extends ValidatedJob {
     model.l2 = l2;
     model.loss = loss;
     model.fast_mode = fast_mode;
-    model.seed = seed;
 
     UKV.put(destination_key, model);
 
@@ -336,7 +331,6 @@ public class NeuralNet extends ValidatedJob {
         model.l2 = l2;
         model.loss = loss;
         model.fast_mode = fast_mode;
-        model.seed = seed;
         UKV.put(model._selfKey, model);
         return e.training_samples;
       }
@@ -396,7 +390,7 @@ public class NeuralNet extends ValidatedJob {
       clones[y] = ls[y].clone();
     clones[clones.length - 1] = output;
     for( int y = 0; y < clones.length; y++ )
-      clones[y].init(clones, y, false, 0, null);
+      clones[y].init(clones, y, false, 0);
     Layer.shareWeights(ls, clones);
     return eval(clones, n, cm);
   }
@@ -543,9 +537,6 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Fast mode (minor approximation)")
     public boolean fast_mode;
 
-    @API(help = "Seed for the random number generator")
-    public long seed;
-
     @API(help = "Layers")
     public Layer[] layers;
 
@@ -586,7 +577,7 @@ public class NeuralNet extends ValidatedJob {
       for( int y = 0; y < clones.length; y++ ) {
         clones[y]._w = weights[y];
         clones[y]._b = biases[y];
-        clones[y].init(clones, y, false, 0, null);
+        clones[y].init(clones, y, false, 0);
       }
       ((Input) clones[0])._pos = rowInChunk;
       for (Layer clone : clones) clone.fprop(false);
@@ -664,9 +655,6 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Fast mode (minor approximation)")
     public boolean fast_mode;
 
-    @API(help = "Seed for the random number generator")
-    public long seed;
-
     @API(help = "How many times the dataset should be iterated")
     public double epochs;
 
@@ -706,7 +694,6 @@ public class NeuralNet extends ValidatedJob {
         loss = job.loss;
         fast_mode = job.fast_mode;
         epochs = job.epochs;
-        seed = NeuralNet.seed;
       }
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {

@@ -60,9 +60,6 @@ public abstract class Layer extends Iced {
   @API(help = "Fast mode (minor approximation)")
   public boolean fast_mode;
 
-  //public static Random _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-  public static Random _rand = new Random(); //time-based
-
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
   // TODO extract transients & code in separate one-shot trees to avoid cloning
@@ -92,11 +89,13 @@ public abstract class Layer extends Iced {
 
   transient Training _training;
 
+  private static Random getRNG() { return java.util.concurrent.ThreadLocalRandom.current(); }
+
   public final void init(Layer[] ls, int index) {
-    init(ls, index, true, 0, _rand);
+    init(ls, index, true, 0);
   }
 
-  public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
+  public void init(Layer[] ls, int index, boolean weights, long step) {
     _a = new float[units];
     if (!(this instanceof Output)) {
       _e = new float[units];
@@ -128,12 +127,12 @@ public abstract class Layer extends Iced {
     if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
-        _w[i] = (float) rand(rng, -range, range);
+        _w[i] = rand(rng, -range, range);
     }
     else {
       if (initial_weight_distribution == InitialWeightDistribution.Uniform) {
         for (int i = 0; i < _w.length; i++) {
-          _w[i] = (float) rand(rng, -initial_weight_scale, initial_weight_scale);
+          _w[i] = rand(rng, (float)-initial_weight_scale, (float)initial_weight_scale);
         }
       } else if (initial_weight_distribution == InitialWeightDistribution.Normal) {
         for (int i = 0; i < _w.length; i++) {
@@ -233,7 +232,7 @@ public abstract class Layer extends Iced {
     @ParamsSearch.Ignore
     protected long _pos, _len;
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
       _a = new float[units];
     }
 
@@ -469,10 +468,10 @@ public abstract class Layer extends Iced {
   public static abstract class Softmax extends Output {
     protected abstract int target();
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
-      super.init(ls, index, weights, step, rand);
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
       if( weights ) {
-        randomize(rand, 4.0f);
+        randomize(getRNG(), 4.0f);
       }
     }
 
@@ -501,9 +500,8 @@ public abstract class Layer extends Iced {
       float r = rate(processed) * (1 - m);
       int label = target();
       for( int u = 0; u < _a.length; u++ ) {
-        //output unit u should be 1.0 if u is the class label for the training point
         final float targetval = (u == label ? 1 : 0);
-        float g = targetval - _a[u]; //error
+        float g = targetval - _a[u];
         if (loss == Loss.CrossEntropy) {
           //nothing else needed
         } else if (loss == Loss.MeanSquare) {
@@ -700,10 +698,10 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
-      super.init(ls, index, weights, step, rand);
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
       if( weights ) {
-        randomize(rand, 1.0f);
+        randomize(getRNG(), 1.0f);
       }
     }
 
@@ -754,10 +752,10 @@ public abstract class Layer extends Iced {
       return super.clone();
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
-      super.init(ls, index, weights, step, rand);
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
       if( weights ) {
-        randomize(rand, 1.0f);
+        randomize(getRNG(), 1.0f);
       }
     }
 
@@ -773,12 +771,12 @@ public abstract class Layer extends Iced {
       if( _bits == null ) {
         _bits = new byte[(units + 7) / 8];
       }
-      _rand.nextBytes(_bits);
+      getRNG().nextBytes(_bits);
       // input dropout: set some input layer feature values to 0
       if (_previous.isInput() && training) {
         final double rate = ((Input)_previous)._dropout_rate;
         for( int i = 0; i < _previous._a.length; i++ ) {
-          if (_rand.nextFloat() < rate) _previous._a[i] = 0;
+          if (getRNG().nextFloat() < rate) _previous._a[i] = 0;
         }
       }
 
@@ -835,8 +833,8 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
-      super.init(ls, index, weights, step, rand);
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
       // Auto encoder has it's own bias vector
       _b = new float[units];
     }
@@ -858,8 +856,7 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         assert _previous._previous.units == units;
         float e = _previous._previous._a[o] - _a[o];
-
-        float g = e;
+        float g = e; // * (1 - _a[o]) * _a[o]; // Square error
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + o;
           if( _previous._e != null )
@@ -881,10 +878,10 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
-      super.init(ls, index, weights, step, rand);
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
       if( weights ) {
-        randomize(rand, 4.0f);
+        randomize(getRNG(), 4.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -894,7 +891,7 @@ public abstract class Layer extends Iced {
       if( _bits == null ) {
         _bits = new byte[units / 8 + 1];
       }
-      _rand.nextBytes(_bits);
+      getRNG().nextBytes(_bits);
       float max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
@@ -937,10 +934,10 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
-      super.init(ls, index, weights, step, rand);
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
       if( weights ) {
-        randomize(rand, 1.0f);
+        randomize(getRNG(), 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -1016,13 +1013,13 @@ public abstract class Layer extends Iced {
       if( _bits == null ) {
         _bits = new byte[(units + 7) / 8];
       }
-      _rand.nextBytes(_bits);
+      getRNG().nextBytes(_bits);
 
       // input dropout: set some input layer feature values to 0
       if (_previous.isInput() && training) {
         final double rate = ((Input)_previous)._dropout_rate;
         for( int i = 0; i < _previous._a.length; i++ ) {
-          if (_rand.nextFloat() < rate) _previous._a[i] = 0;
+          if (getRNG().nextFloat() < rate) _previous._a[i] = 0;
         }
       }
 
@@ -1054,8 +1051,8 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
-      super.init(ls, index, weights, step, rand);
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
       // Auto encoder has it's own bias vector
       _b = new float[units];
       for( int i = 0; i < _b.length; i++ )
@@ -1122,8 +1119,8 @@ public abstract class Layer extends Iced {
       shareWeights(src[y], dst[y]);
   }
 
-  private static double rand(Random rand, double min, double max) {
-    return min + rand.nextDouble() * (max - min);
+  private static float rand(Random rand, float min, float max) {
+    return min + rand.nextFloat() * (max - min);
   }
 
   @Override public AutoBuffer writeJSON(AutoBuffer bb) {
