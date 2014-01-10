@@ -39,7 +39,7 @@ public class NeuralNet extends ValidatedJob {
   public float input_dropout_ratio = 0;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
-  public int[] hidden = new int[] { 500 };
+  public int[] hidden = new int[] { 1024, 1024, 2048 };
 
   @API(help = "Initial Weight Distribution", filter = Default.class, dmin = 0)
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
@@ -48,7 +48,7 @@ public class NeuralNet extends ValidatedJob {
   public double initial_weight_scale = 0.01;
 
   @API(help = "Learning rate", filter = Default.class, dmin = 0)
-  public double rate = .005;
+  public double rate = .01;
 
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
   public double rate_annealing = 1 / 1e6;
@@ -60,7 +60,7 @@ public class NeuralNet extends ValidatedJob {
   public double momentum_start = .5;
 
   @API(help = "Number of samples for which momentum increases", filter = Default.class)
-  public long momentum_ramp = 300 * 60000;
+  public long momentum_ramp = 30 * 60000;
 
   @API(help = "Momentum once the initial increase is over", filter = Default.class, dmin = 0)
   public double momentum_stable = .99;
@@ -68,10 +68,10 @@ public class NeuralNet extends ValidatedJob {
   //TODO: add a ramp down to 0 for l1 and l2
 
   @API(help = "L1 regularization", filter = Default.class, dmin = 0)
-  public double l1;
+  public double l1 = 0.00001;
 
   @API(help = "L2 regularization", filter = Default.class, dmin = 0)
-  public double l2 = .001;
+  public double l2 = 0.0;
 
   @API(help = "Loss function", filter =Default.class)
   private Layer.Loss loss = Layer.Loss.CrossEntropy;
