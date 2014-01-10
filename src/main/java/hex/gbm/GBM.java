@@ -40,13 +40,12 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {
-      float sum = 0;
       float[] p = super.score0(data, preds);
       if (nclasses()>1) { // classification
         // Because we call Math.exp, we have to be numerically stable or else
         // we get Infinities, and then shortly NaN's.  Rescale the data so the
-        // largest value is +/-1 and the other values are smaller.  
-        float rescale=0; 
+        // largest value is +/-1 and the other values are smaller.
+        float rescale=0;
         for(int k=0; k<p.length;k++) rescale = Math.max(rescale,Math.abs(p[k]));
         if( rescale < 1.0f ) rescale=1.0f;
         float dsum=0;
@@ -65,9 +64,11 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
     @Override protected void toJavaUnifyPreds(SB bodyCtxSB) {
       if (isClassifier()) {
-        bodyCtxSB.i().p("// Compute Probabilities").nl();
-        bodyCtxSB.i().p("float sum = 0;").nl();
-        bodyCtxSB.i().p("for(int i=1;i<preds.length; i++) sum += (preds[i]=(float) Math.exp(preds[i]));").nl();
+        bodyCtxSB.i().p("// Compute Probabilities for classifier").nl();
+        bodyCtxSB.i().p("float sum = 0, rescale = 0;").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) rescale = Math.max(rescale,Math.abs(preds[i]));").nl();
+        bodyCtxSB.i().p("if (rescale < 1.0f) rescale = 1.0f;").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) sum += (preds[i]=(float) Math.exp(preds[i]/rescale));").nl();
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
       }
     }
@@ -258,7 +259,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // The Boolean Optimization
         // This optimization assumes the 2nd tree of a 2-class system is the
         // inverse of the first.  This is false for DRF (and true for GBM) -
-        // DRF picks a random different set of columns for the 2nd tree.  
+        // DRF picks a random different set of columns for the 2nd tree.
         if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
         new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],false) ); // The "root" node
@@ -348,8 +349,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     }.doAll(fr);
 
     // Collect leaves stats
-    for (int i=0; i<ktrees.length; i++) 
-      if( ktrees[i] != null ) 
+    for (int i=0; i<ktrees.length; i++)
+      if( ktrees[i] != null )
         ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
     // printGenerateTrees(ktrees);
@@ -415,7 +416,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     }
   }
 
-  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) { 
+  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) {
     return new GBMDecidedNode(udn,hs);
   }
 
