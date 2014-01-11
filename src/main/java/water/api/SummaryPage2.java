@@ -61,12 +61,7 @@ public class SummaryPage2 extends Request2 {
     Summary2.BasicSummaryTask basics = new Summary2.BasicSummaryTask().doAll(fr);
     double[] mins = basics._finite_min;
     double[] maxs = basics._finite_max;
-    long time0 = System.currentTimeMillis();
-    long[] resample_idx = Summary2.resample_idx(fr.anyVec());
-    Log.info("Generating resample indices takes " + (System.currentTimeMillis()-time0) + " milli sec.");
-    time0 = System.currentTimeMillis();
-    summaries = new Summary2.SummaryTask2(mins,maxs,resample_idx).doAll(fr)._summaries;
-    Log.info("Computing summary takes " + (System.currentTimeMillis()-time0) + " milli sec.");
+    summaries = new Summary2.SummaryTask2(mins, maxs).doAll(fr)._summaries;
     if (summaries != null)
       for (int i = 0; i < cols.length; i++) 
         summaries[i].finishUp(vecs[i]);

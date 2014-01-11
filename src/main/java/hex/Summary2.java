@@ -100,26 +100,6 @@ public class Summary2 extends Iced {
   @API(help="histogram headers" ) public String[]  hbrk;
   @API(help="histogram bin values") public long[]  hcnt;
 
-  public static class FilterNA extends MRTask2<FilterNA> {
-    public double[] _data;
-    public FilterNA( ) { _data = new double[10]; }
-    @Override public void map(Chunk chk) {
-      int ns = 0;
-      for (int i = 0; i < chk._len; i++) {
-        double val;
-        if (!chk.isNA0(i) && !Double.isNaN(val = chk.at0(i))) {
-          if ( ns == _data.length ) _data = Arrays.copyOf(_data,_data.length<<1);
-          _data[ns++] = val;
-        }
-      }
-    }
-    @Override public void reduce( FilterNA other ) {
-      double merged[] = new double[_data.length+other._data.length];
-      System.arraycopy(_data,0,merged,0,_data.length);
-      System.arraycopy(other._data,0,merged,_data.length,other._data.length);
-    }
-  }
-
   public static class BasicSummaryTask extends MRTask2<BasicSummaryTask> {
     public double _finite_min[];
     public double _finite_max[];
@@ -160,15 +140,11 @@ public class Summary2 extends Iced {
   public static class SummaryTask2 extends MRTask2<SummaryTask2> {
     private double[] _mins, _maxs;
     public Summary2 _summaries[];
-    public long[] _resample_ix;
-    public SummaryTask2 (double[] mins, double[] maxs, long[] resamples) {
-      _mins=mins; _maxs = maxs; _resample_ix = resamples;
-    }
+    public SummaryTask2 (double[] mins, double[] maxs) { _mins=mins; _maxs = maxs;}
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++) {
-        _summaries[i] = new Summary2(_fr.vecs()[i],_fr.names()[i],_mins[i],_maxs[i]);
-        _summaries[i].add(cs[i]); _summaries[i].resample(cs[i],_resample_ix);
+        (_summaries[i]=new Summary2(_fr.vecs()[i], _fr.names()[i], _mins[i], _maxs[i])).add(cs[i]);
       }
     }
     @Override public void reduce(SummaryTask2 other) {
@@ -225,12 +201,15 @@ public class Summary2 extends Iced {
   }
 
   public void finishUp(Vec vec) {
-    // Use all in place of resample if the vec only contains a small number of valid elements.
-    if (vec.length()-vec.naCnt() < 10*RESAMPLE_SZ && _samples.length<RESAMPLE_SZ/2) {
-      _samples = new FilterNA().doAll(new Frame(vec))._data;
+    // Use all in place of resample if vec size is smaller than RESAMPLE_SZ
+    if (vec.length() - vec.naCnt() <= RESAMPLE_SZ) {
+      int rs = 0; _samples = new double[(int)(vec.length() - vec.naCnt())];
+      for (int r = 0; r < vec.length(); r++) {
+        double v = vec.at(r); if(!Double.isNaN(v)) _samples[rs++] = v;
+      }
+      _samples = Arrays.copyOf(_samples, rs);
     }
     Arrays.sort(_samples);
-    Log.info("resample size " + _samples.length);
     // Compute percentiles for numeric data
     _pctile = new double[DEFAULT_PERCENTILES.length];
     for (int i = 0; i < _pctile.length; i++)
@@ -314,39 +293,24 @@ public class Summary2 extends Iced {
     }
   }
 
-  private static long nextPoission(Random rgr, double lambda) {
+  private static int nextPoission(Random rgr, double lambda) {
     double L = Math.exp(-lambda);
     double p = 1.0;
-    long k = 0;
+    int k = 0;
     do {
       k++; p *= rgr.nextDouble();
     } while (p > L);
     return k - 1;
   }
 
-  public static long[] resample_idx(Vec vec) {
-    long len = vec.length();
-    Random r = new Random(vec.length());
-    double lambda = (double)len / RESAMPLE_SZ;
-    long row = 0;
-    int  ns = 0;
-    long[] samples = new long[RESAMPLE_SZ];
-    while ((row += nextPoission(r, lambda))<len && row>0 && ns<samples.length)
-      samples[ns++] = row;
-    samples = Arrays.copyOf(samples, ns);
-    return samples;
-  }
-
-  public void resample(Chunk chk, final long[] idx) {
-    int ri = Arrays.binarySearch(idx,chk._start);
-    if (ri < 0) ri = -(ri+1);
+  public void resample(Chunk chk) {
+    Random r = new Random(chk._start);
+    int row = 0;
     int ns = 0;
-    long end = chk._start + chk._len;
-    long row;
-    while (ri < idx.length && (row = idx[ri++]) < end) {
-      if (!chk.isNA(row)) {
+    while ((row += nextPoission(r, _lambda)) < chk._len && row > 0) {
+      if (!chk.isNA0(row)) {
         if (ns == _samples.length) _samples = Arrays.copyOf(_samples,_samples.length*2+1);
-        _samples[ns++] = chk.at(row);
+        _samples[ns++] = chk.at0(row);
       }
     }
     _samples = Arrays.copyOf(_samples, ns);
@@ -355,6 +319,7 @@ public class Summary2 extends Iced {
   public void add(Chunk chk) {
     for (int i = 0; i < chk._len; i++)
       add(chk.at0(i));
+    resample(chk);
   }
   public void add(double val) {
     if( Double.isNaN(val) ) return;
