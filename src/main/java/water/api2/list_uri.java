@@ -7,21 +7,21 @@ import water.api.RequestServer;
 import java.util.ArrayList;
 
 /**
- *
+ * Given an uri, list the files at that location.
  */
 public class list_uri extends AbstractSimpleRequestHandler {
   public list_uri() {
     super(HML_GET, SINCE_V3, UNTIL_FOREVER, "/list_uri\\.json");
   }
 
-  public static class UriEntry {
+  private static class UriEntry {
     public UriEntry(String u, long s) { uri = u; size = s;}
 
     public String uri;
     public long size;
   }
 
-  public static class list_uri_Response {
+  private static class list_uri_Response {
     list_uri_Response() {
       uris = new ArrayList<UriEntry>();
       ignored_uris = new ArrayList<UriEntry>();

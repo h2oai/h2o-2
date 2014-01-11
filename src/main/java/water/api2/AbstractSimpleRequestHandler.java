@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- *
+ * Base class for simple request handlers.
  */
 public abstract class AbstractSimpleRequestHandler {
   // HTTP Method Lists (HML).
@@ -26,6 +26,14 @@ public abstract class AbstractSimpleRequestHandler {
   private int _since;
   private int _until;
 
+  /**
+   * Constructor.
+   *
+   * @param httpMethods One of the HML lists specifying supported HTTP methods for this servlet.
+   * @param since One of the SINCE values.
+   * @param until One of the UNTIL values.
+   * @param uriRegex A regular expression for uri matching.
+   */
   public AbstractSimpleRequestHandler(String[] httpMethods, int since, int until, String uriRegex) {
     _httpMethods = httpMethods;
     _uriRegex = uriRegex;
@@ -33,6 +41,13 @@ public abstract class AbstractSimpleRequestHandler {
     _until = until;
   }
 
+  /**
+   * Whether this servlet matches the incoming URI.
+   *
+   * @param method Session HTTP method.
+   * @param uri Session URI.
+   * @return true if this servlet should handle the given request.  false otherwise.
+   */
   public boolean matches(String method, String uri) {
     int apiVersion;
     String uri_after_removing_version;
@@ -74,5 +89,14 @@ public abstract class AbstractSimpleRequestHandler {
     return false;
   }
 
-  public abstract NanoHTTPD.Response serve(NanoHTTPD.IHTTPSession session) throws Exception;
+  /**
+   * Serve the request with this servlet.
+   *
+   * @param session Contains request information.
+   * @return A response for the request.
+   * @throws ASRIllegalArgumentException When an argument is malformed or missing.
+   * @throws Exception Results in an Internal Server Error.
+   */
+  @SuppressWarnings("DuplicateThrows")
+  public abstract NanoHTTPD.Response serve(NanoHTTPD.IHTTPSession session) throws ASRIllegalArgumentException, Exception;
 }

@@ -280,6 +280,12 @@ public class RequestServer extends NanoHTTPD {
     }
 
     String uri = session.getUri();
+
+    // Log requests.
+    if (! (uri.endsWith(".css") || uri.endsWith(".js") || uri.endsWith(".png"))) {
+      Log.info(Sys.HTTPD, uri);
+    }
+
     boolean va_postfile = uri.matches("/PostFile.*");
     boolean fvec_postfile = uri.matches("/\\d+/PostFile.*");
     Map<String, String> parmsMap = new HashMap<String, String>();
@@ -354,6 +360,7 @@ public class RequestServer extends NanoHTTPD {
         return response;
       }
       catch (Exception e) {
+        Log.err(e);
         StringWriter sw = new StringWriter();
         e.printStackTrace(new PrintWriter(sw));
         String st = sw.toString();
@@ -437,14 +444,29 @@ public class RequestServer extends NanoHTTPD {
 
   private ArrayList<AbstractSimpleRequestHandler> _srhList;
 
+  /**
+   * Register a new handler.
+   *
+   * @param srh The handler to register.
+   */
   public void addSimpleRequestHandler(AbstractSimpleRequestHandler srh) {
     _srhList.add(srh);
   }
 
+  /**
+   * Register a bunch of static handlers at startup time.
+   */
   private void addInitialSimpleRequestHandlers() {
     addSimpleRequestHandler(new list_uri());
   }
 
+  /**
+   * Find a handler for a given HTTP method and URI.
+   *
+   * @param method HTTP method of the request.
+   * @param uri URI of the request.
+   * @return The handler if one is found, null otherwise.
+   */
   private AbstractSimpleRequestHandler findSimpleRequestHandler(String method, String uri) {
     for (AbstractSimpleRequestHandler srh : _srhList) {
       if (srh.matches(method, uri)) {
