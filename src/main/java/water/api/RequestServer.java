@@ -13,6 +13,7 @@ import hex.pca.*;
 
 import java.io.*;
 import java.net.ServerSocket;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -26,6 +27,8 @@ import water.fvec.UploadFileVec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 import water.util.Utils.ExpectedExceptionForDebug;
+
+import water.api2.*;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -258,6 +261,9 @@ public class RequestServer extends NanoHTTPD {
   }
 
   @Override public Response serve(IHTTPSession session) {
+    // Jack priority for user-visible requests
+    Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 1);
+
     Map<String, String> files = new HashMap<String, String>();
     Method method = session.getMethod();
     if (Method.PUT.equals(method) || Method.POST.equals(method)) {
@@ -327,8 +333,27 @@ public class RequestServer extends NanoHTTPD {
       }
     }
 
-    // Jack priority for user-visible requests
-    Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 1);
+    //----------------------------------------------------------------------
+    // New simple AbstractSimpleRequestHandler handlers.
+    //----------------------------------------------------------------------
+
+    AbstractSimpleRequestHandler srh = findSimpleRequestHandler(method.name(), uri);
+    if (srh != null) {
+      try {
+        Response response = srh.serve(session);
+        return response;
+      }
+      catch (Exception e) {
+        String s = e.getMessage() != null ? e.getMessage() : "";
+        Response response = new Response(Response.Status.INTERNAL_ERROR, RequestServer.MIME_PLAINTEXT, s);
+        return response;
+      }
+    }
+
+    //----------------------------------------------------------------------
+    // Legacy RequestArguments handlers.
+    //----------------------------------------------------------------------
+
     // update arguments and determine control variables
     if( uri.isEmpty() || uri.equals("/") ) uri = "/Tutorials.html";
     // determine the request type
@@ -356,6 +381,8 @@ public class RequestServer extends NanoHTTPD {
 
   private RequestServer( ServerSocket socket ) throws IOException {
     super(socket);
+    _srhList = new ArrayList<AbstractSimpleRequestHandler>();
+    addInitialSimpleRequestHandlers();
   }
 
   // Resource loading ----------------------------------------------------------
@@ -389,4 +416,27 @@ public class RequestServer extends NanoHTTPD {
     return new NanoHTTPD.Response(Response.Status.OK,mime,new ByteArrayInputStream(bytes));
   }
 
+  //----------------------------------------------------------------------
+  // SimpleRequestHandler state.
+  //----------------------------------------------------------------------
+
+  private ArrayList<AbstractSimpleRequestHandler> _srhList;
+
+  public void addSimpleRequestHandler(AbstractSimpleRequestHandler srh) {
+    _srhList.add(srh);
+  }
+
+  private void addInitialSimpleRequestHandlers() {
+    addSimpleRequestHandler(new list_uri());
+  }
+
+  private AbstractSimpleRequestHandler findSimpleRequestHandler(String method, String uri) {
+    for (AbstractSimpleRequestHandler srh : _srhList) {
+      if (srh.matches(method, uri)) {
+        return srh;
+      }
+    }
+
+    return null;
+  }
 }
