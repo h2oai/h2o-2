@@ -71,17 +71,17 @@ For more information see: http://docs.0xdata.com
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, 
 + startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-# Run multinomial classification GBM on abalone data 
-abalone.hex = h2o.importFile(localH2O, path = "http://archive.ics.uci.edu/ml/machine-learning
- + databases/abalone/abalone.data", key = "abalone.hex")
-independent<- c("C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7")
-dependent<- "C8"
-h2o.gbm(y = dependent, x = independent, data = abalone.hex, n.trees = 10, 
- + interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, 
- + distribution= "multinomial")
 
-# Run multinomial classification GBM on abalone data 
+# Run multinomial classification GBM on australia.hex data 
 
-h2o.gbm(y = dependent, x = independent, data = abalone.hex, n.trees = 15, 
- + interaction.depth = 5, n.minobsinnode = 2, shrinkage = 0.01, distribution= "gaussian")
+ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
+australia.hex = h2o.importFile(localH2O, path = ausPath)
+independent<- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
+dependent<- "runoffnew"
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+
+# Run multinomial classification GBM on australia data 
+
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, 
+  interaction.depth = 5, n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
 }

@@ -79,7 +79,8 @@ public abstract class Model extends Iced {
 
   /** For classifiers, confusion matrix on validation set. */
   public ConfusionMatrix cm() { return null; }
-
+  /** Returns mse for validation set. */
+  public double mse() { return Double.NaN; }
   /** Variable importance of individual variables measured by this model. */
   public VariableImportance varimp() { return null; }
 

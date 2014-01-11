@@ -94,9 +94,11 @@ public class GridSearch extends Job {
           info._job = job;
           Object value = UKV.get(job.destination_key);
           info._model = value instanceof Model ? (Model) value : null;
-          if( info._model != null )
+          if( info._model != null ) {
             info._cm = info._model.cm();
-          if( info._cm != null )
+            info._error = info._model.mse();
+          }
+          if( info._cm != null)
             info._error = info._cm.err();
           infos.add(info);
         }
@@ -150,7 +152,7 @@ public class GridSearch extends Job {
             pct = String.format("%.2f", 100 * info._error) + "%";
             if( info._cm._arr.length == 2 )
               f1 = String.format("%.2f", info._cm.precisionAndRecall());
-          }
+          } else pct = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");
           sb.append("</tr>");

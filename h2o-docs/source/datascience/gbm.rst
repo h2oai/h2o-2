@@ -1,3 +1,5 @@
+.. _GBMmath:
+
 Gradient Boosted Regression and Classification
 ----------------------------------------------
 Gradient boosted regression and gradient boosted classification are

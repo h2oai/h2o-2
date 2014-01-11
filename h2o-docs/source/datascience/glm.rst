@@ -1,3 +1,5 @@
+.. _GLMmath:
+
 
 Generalized Linear Model (GLM)
 ------------------------------
