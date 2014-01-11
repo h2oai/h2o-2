@@ -1,96 +1,101 @@
 {
-    "type":"object",
+    "type": "object",
     "properties":{
         "Request2": {
-            "type":"number",
+            "type": "number",
         },
         "glm_model": {
-            "type":"object", "properties": {
-                "_caseMode": { "type":"string" },
-                "_caseVal": { "type":"number" },
-                "_dataKey": { "type":"string" },
-                "_domains": { "type":"array", "items": 
-                    { "type":"string" }
+            "type": "object", "properties": {
+                "_caseMode": { "type": "string" },
+                "_caseVal": { "type": "number" },
+                "_dataKey": { "type": "string" },
+                "_domains": { "type": "array", "items": 
+                    { "type": "string" }
                 },
-                "_names": { "type":"array", "items": 
-                    { "type":"string" }
+                "_names": { "type": "array", "items": 
+                    { "type": "string" }
                 },
-                "_selfKey": { "type":"string",
+                "_selfKey": { "type": "string",
                 },
-                "alpha": { "type":"number" },
-                "best_lambda_idx": { "type":"number" }
-                "beta_eps": { "type":"number" },
-                "catOffsets": { "type":"array", "items": 
-                    { "type":"number" }
+                "alpha": { "type": "number" },
+                "best_lambda_idx": { "type": "number" }
+                "beta_eps": { "type": "number" },
+                "coefficient_names": { "type": "array", "items": 
+                    { "type": "string" }
                 },
+                "data_info": { "type": "null" },
                 "glm": {
-                    "type":"object", "properties": {
-                        "family": { "type":"string" },
-                        "link": { "type":"string" },
-                        "tweedie_link_power": { "type":"number" },
-                        "tweedie_variance_power": { "type":"number" }
+                    "type": "object", "properties": {
+                        "family": { "type": "string" },
+                        "link": { "type": "string" },
+                        "tweedie_link_power": { "type": "number" },
+                        "tweedie_variance_power": { "type": "number" }
                     }
                 },
-                "run_time": { "type":"number" },
-                "start_time": { "type":"number" },
-                "submodels": { "type":"array", "items": {
-                    "type":"object", "properties": {
-                        "beta": { "type":"array", "items": 
-                            { "type":"number" }
+                "job_key": { "type": "string" },
+                "lambdas": { "type": "array", "items": 
+                    { "type": "number" }
+                },
+                "run_time": { "type": "number" },
+                "start_time": { "type": "number" },
+                "submodels": { "type": "array", "items": {
+                    "type": "object", "properties": {
+                        "beta": { "type": "array", "items": 
+                            { "type": "number" }
                         },
-                        "norm_beta": { "type":"array", "items": 
-                            { "type":"number" }
+                        "norm_beta": { "type": "array", "items": 
+                            { "type": "number" }
                         },
-                        "idxs": { "type":"array", "items": 
-                            { "type":"number" }
+                        "idxs": { "type": "array", "items": 
+                            { "type": "number" }
                         },
-                        "iteration": { "type":"number" },
-                        "lambda": { "type":"number" },
-                        "run_time": { "type":"number", },
-                        "validation": { "type":"object", "properties": {
-                            "_aic2": { "type":"number" },
-                            "_cms": { "type":"array", "items": { 
-                                "type":"object", "properties": {
-                                    "_arr": { "type":"array", "items": 
-                                        { "type":"array" }
+                        "iteration": { "type": "number" },
+                        "lambda": { "type": "number" },
+                        "run_time": { "type": "number", },
+                        "validation": { "type": "object", "properties": {
+                            "_aic2": { "type": "number" },
+                            "_cms": { "type": "array", "items": { 
+                                "type": "object", "properties": {
+                                    "_arr": { "type": "array", "items": 
+                                        { "type": "array" }
                                     }
                                 }
                                 }
                             },
-                            "_glm": { "type":"object", "properties": {
-                                "family": { "type":"string" },
-                                "link": { "type":"string" },
-                                "tweedie_link_power": { "type":"number" },
-                                "tweedie_variance_power": { "type":"number" }
+                            "_glm": { "type": "object", "properties": {
+                                "family": { "type": "string" },
+                                "link": { "type": "string" },
+                                "tweedie_link_power": { "type": "number" },
+                                "tweedie_variance_power": { "type": "number" }
                             }
                             },
-                            "_rank": { "type":"number" },
-                            "_ymu": { "type":"number" },
-                            "aic": { "type":"number" },
-                            "auc": { "type":"number" },
-                            "avg_err": { "type":"number" },
-                            "best_threshold": { "type":"number" },
-                            "dataKey": { "type":"string" },
-                            "nobs": { "type":"number" },
-                            "null_deviance": { "type":"number" },
-                            "residual_deviance": { "type":"number" }
+                            "_rank": { "type": "number" },
+                            "_ymu": { "type": "number" },
+                            "aic": { "type": "number" },
+                            "auc": { "type": "number" },
+                            "avg_err": { "type": "number" },
+                            "best_threshold": { "type": "number" },
+                            "dataKey": { "type": "string" },
+                            "nobs": { "type": "number" },
+                            "null_deviance": { "type": "number" },
+                            "residual_deviance": { "type": "number" }
                         }
                         }
                     }
                 }
                 },
-                "threshold": { "type":"number" },
-                "warnings": { "type":"string" },
-                "ymu": { "type":"number" }
+                "threshold": { "type": "number" },
+                "warnings": { "type": "string" },
+                "ymu": { "type": "number" }
             }
         },
-        "response_info": { "type":"object",
+        "response_info": { "type": "object",
             "properties":{
-                "h2o": { "type":"string" },
-                "node": { "type":"string" },
-                "redirect_url": { "type":"string" },
-                "status": { "type":"string" },
-                "time": { "type":"number" }
+                "h2o": { "type": "string" },
+                "node": { "type": "string" },
+                "redirect_url": { "type": "string" },
+                "status": { "type": "string" },
+                "time": { "type": "number" }
             }
         }
     }
