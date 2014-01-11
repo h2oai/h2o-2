@@ -38,6 +38,7 @@ public class Summary2 extends Iced {
   public double[]            _mins;
   public double[]            _maxs;
   public double[]            _samples;
+  long                       _gprows;    // non-empty rows per group
 
   final transient String[]   _domain;
   final transient double     _start;
@@ -167,7 +168,7 @@ public class Summary2 extends Iced {
      * @return number of filled elements, excluding NaN's as well.
      */
     public long len1() {
-      return _len - _nas - _nas;
+      return _len - _nas - _nans;
     }
     /**
      * Returns whether the fill density is less than the given percent.
@@ -261,13 +262,21 @@ public class Summary2 extends Iced {
 
   public void finishUp(Vec vec) {
     nacnt = _stat0._nas;
-    Arrays.sort(_samples);
-    // Compute percentiles for numeric data
-    _pctile = new double[DEFAULT_PERCENTILES.length];
-    for (int i = 0; i < _pctile.length; i++)
-      _pctile[i] = quantile(DEFAULT_PERCENTILES[i]);
-    // Compute majority items for enum data
-    computeMajorities();
+    if (_type == T_ENUM) {
+      // Compute majority items for enum data
+      computeMajorities();
+    } else {
+      _pctile = new double[DEFAULT_PERCENTILES.length];
+      if (_samples != null) {
+        Arrays.sort(_samples);
+        // Compute percentiles for numeric data
+        for (int i = 0; i < _pctile.length; i++)
+          _pctile[i] = sampleQuantile(_samples,DEFAULT_PERCENTILES[i]);
+      } else {
+        approxQuantiles(_pctile,DEFAULT_PERCENTILES);
+      }
+    }
+
     // remove the trailing NaNs
     for (int i = 0; i < _mins.length; i++) {
       if (Double.isNaN(_mins[i])) {
@@ -303,6 +312,7 @@ public class Summary2 extends Iced {
     _stat0 = stat0;
     _type = vec.isEnum()?2:vec.isInt()?1:0;
     _domain = vec.isEnum() ? vec.domain() : null;
+    _gprows = 0;
     double sigma = Double.isNaN(vec.sigma()) ? 0 : vec.sigma();
     if ( _type != T_ENUM ) {
       _mins = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
@@ -391,7 +401,7 @@ public class Summary2 extends Iced {
   }
   public void add(double val) {
     if( Double.isNaN(val) ) return;
-    _len1++;
+    _len1++; _gprows++;
     if ( _type != T_ENUM ) {
       int index;
       // update min/max
@@ -447,6 +457,7 @@ public class Summary2 extends Iced {
   public Summary2 add(Summary2 other) {
     if (hcnt != null)
       Utils.add(hcnt, other.hcnt);
+    _gprows += other._gprows;
     // merge samples
     double merged[] = new double[_samples.length+other._samples.length];
     System.arraycopy(_samples,0,merged,0,_samples.length);
@@ -494,12 +505,31 @@ public class Summary2 extends Iced {
   // _start of each bin
   public double binValue(int b) { return _start + b*_binsz; }
 
-  private double quantile(final double threshold) {
+  private double sampleQuantile(final double[] samples, final double threshold) {
     assert .0 <= threshold && threshold <= 1.0;
-    int ix = (int)(_samples.length * threshold);
-    return ix<_samples.length?_samples[ix]:Double.NaN;
+    int ix = (int)(samples.length * threshold);
+    return ix<samples.length?samples[ix]:Double.NaN;
   }
-
+  private int htot() {
+    int cnt = 0;
+    for (int i = 0; i < hcnt.length; i++) cnt+=hcnt[i];
+    return cnt;
+  }
+  private void approxQuantiles(double[] qtiles, double[] thres){
+    if( hcnt.length == 0 ) return;
+    int k = 0;
+    long s = 0;
+    assert _gprows==htot();
+    for(int j = 0; j < thres.length; ++j) {
+      final double s1 = thres[j]*_gprows;
+      long bc;
+      while(s1 > s+(bc = hcnt[k])){
+        s  += bc;
+        k++;
+      }
+      qtiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
+    }
+  }
   // Compute majority categories for enums only
   public void computeMajorities() {
     if ( _type != T_ENUM ) return;
