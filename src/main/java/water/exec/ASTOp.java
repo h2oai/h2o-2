@@ -2,7 +2,6 @@ package water.exec;
 
 import java.util.*;
 
-import org.apache.hadoop.mapred.analysejobhistory_jsp;
 import water.*;
 import water.fvec.*;
 import water.util.Log;
@@ -226,7 +225,7 @@ abstract class ASTUniOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x"};
   static Type[] newsig() {
     Type t1 = Type.dblary();
-    return new Type[]{Type.anyary(new Type[]{t1}),t1};
+    return new Type[]{t1,t1};
   }
   ASTUniOp( int form, int precedence, int association ) {
     super(VARS,newsig(),form,precedence,association);
@@ -251,7 +250,7 @@ abstract class ASTUniOp extends ASTOp {
               n.addNum(uni.op(c.at0(r)));
           }
         }
-      }.doAll(fr.numCols(),fr).outputFrame(fr._names, fr.domains());
+      }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
     env.subRef(fr,skey);
     env.pop();                  // Pop self
     env.push(fr2);
@@ -525,8 +524,8 @@ class ASTGT       extends ASTBinOp { ASTGT()       { super(OPF_INFIX, OPP_GT,   
 class ASTGE       extends ASTBinOp { ASTGE()       { super(OPF_INFIX, OPP_GE,     OPA_LEFT); }  String opStr(){ return ">=" ;} ASTOp make() {return new ASTGE  ();} double op(double d0, double d1) { return d0>d1 ||  Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
 class ASTEQ       extends ASTBinOp { ASTEQ()       { super(OPF_INFIX, OPP_EQ,     OPA_LEFT); }  String opStr(){ return "==" ;} ASTOp make() {return new ASTEQ  ();} double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
 class ASTNE       extends ASTBinOp { ASTNE()       { super(OPF_INFIX, OPP_NE,     OPA_LEFT); }  String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?0:1;}}
-class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  String opStr(){ return "&"  ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0)?1:0;}}
-class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  String opStr(){ return "|"  ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0)?0:1;}}
+class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  String opStr(){ return "&"  ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:1) :0;}}
+class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  String opStr(){ return "|"  ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:0) :1;}}
 
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
@@ -766,7 +765,7 @@ class ASTAND extends ASTOp {
     super(new String[]{"", "x", "y"},
           new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
           OPF_PREFIX,
-          OPP_PREFIX,
+          OPP_AND,
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTAND(); }
@@ -788,7 +787,7 @@ class ASTOR extends ASTOp {
     super(new String[]{"", "x", "y"},
           new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
           OPF_PREFIX,
-          OPP_PREFIX,
+          OPP_OR,
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTOR(); }
