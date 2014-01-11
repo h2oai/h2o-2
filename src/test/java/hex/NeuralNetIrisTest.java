@@ -1,8 +1,8 @@
 package hex;
 
-import hex.Layer.Loss;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+import hex.NeuralNet.NeuralNetParams.Loss;
 import hex.rng.MersenneTwisterRNG;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
@@ -20,7 +20,8 @@ import water.util.Utils;
 
 import java.io.File;
 
-import static hex.Layer.*;
+import static hex.Layer.Rectifier;
+import static hex.Layer.Tanh;
 
 public class NeuralNetIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
@@ -33,10 +34,10 @@ public class NeuralNetIrisTest extends TestUtil {
   @Test public void compare() throws Exception {
     NeuralNetMLPReference ref = new NeuralNetMLPReference();
 
-    Activation[] activations = { Activation.Tanh, Activation.Rectifier };
-    Loss[] losses = { Loss.MeanSquare, Loss.CrossEntropy };
+    NeuralNet.NeuralNetParams.Activation[] activations = { NeuralNet.NeuralNetParams.Activation.Tanh, NeuralNet.NeuralNetParams.Activation.Rectifier };
+    Loss[] losses = { NeuralNet.NeuralNetParams.Loss.MeanSquare, NeuralNet.NeuralNetParams.Loss.CrossEntropy };
 
-    for (Activation activation : activations) {
+    for (NeuralNet.NeuralNetParams.Activation activation : activations) {
       for (Loss loss : losses) {
         Log.info("Testing " + activation.name() + " activation function with " + loss.name() + " loss function");
 
@@ -66,27 +67,29 @@ public class NeuralNetIrisTest extends TestUtil {
         _test = frame(null, Utils.subarray(rows, limit, (int) frame.numRows() - limit));
         UKV.remove(pars);
 
-        float rate = 0.01f;
-        int epochs = 1000;
         Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
         Vec labels = _train.vecs()[_train.vecs().length - 1];
 
+        NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
+        p.rate = 0.01f;
+        p.epochs = 1000;
+        p.activation = activation;
+        p.max_w2 = Float.MAX_VALUE;
+//        p.initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
+//        p.initial_weight_scale = 0.01f;
+
         Layer[] ls = new Layer[3];
         ls[0] = new VecsInput(data, null);
-        if (activation == Activation.Tanh) {
+        if (activation == NeuralNet.NeuralNetParams.Activation.Tanh) {
           ls[1] = new Tanh(7);
         }
-        else if (activation == Activation.Rectifier) {
+        else if (activation == NeuralNet.NeuralNetParams.Activation.Rectifier) {
           ls[1] = new Rectifier(7);
         }
         ls[2] = new VecSoftmax(labels, null, loss);
 
         for( int i = 0; i < ls.length; i++ ) {
-          ls[i].rate = rate;
-          ls[i].max_w2 = Float.MAX_VALUE; //effectively turning this feature off
-//      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
-//      ls[i].initial_weight_scale = 0.01f;
-          ls[i].init(ls, i);
+          ls[i].init(ls, i, p);
         }
 
         // use the same random weights for the reference implementation
@@ -104,10 +107,10 @@ public class NeuralNetIrisTest extends TestUtil {
         }
 
         // Reference
-        ref.train(epochs, rate, loss);
+        ref.train((int)p.epochs, (float)p.rate, loss);
 
         // H2O
-        Trainer.Direct trainer = new Trainer.Direct(ls, epochs, null);
+        Trainer.Direct trainer = new Trainer.Direct(ls, p.epochs, null);
         trainer.run();
 
         // Make sure outputs are equal

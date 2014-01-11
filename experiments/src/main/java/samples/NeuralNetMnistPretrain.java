@@ -4,6 +4,7 @@ package samples;
 import hex.Layer;
 import hex.Layer.*;
 import hex.MnistCanvas;
+import hex.NeuralNet;
 import hex.Trainer;
 import water.fvec.Vec;
 
@@ -22,9 +23,9 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
 //    ls[2] = new Layer.RectifierDropout(1024);
     ls[1] = new Layer.Tanh(500);
     ls[2] = new Layer.Tanh(500);
-    ls[3] = new VecSoftmax(labels, outputStats, Loss.CrossEntropy);
+    ls[3] = new VecSoftmax(labels, outputStats, NeuralNet.NeuralNetParams.Loss.CrossEntropy);
     for( int i = 0; i < ls.length; i++ ) {
-      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
+      ls[i].initial_weight_distribution = NeuralNet.NeuralNetParams.InitialWeightDistribution.Uniform;
       ls[i].initial_weight_scale = 1;
       ls[i].rate = .01f;
       ls[i].rate_annealing = 1 / 1e6f;
@@ -78,7 +79,7 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
     Layer.shareWeights(ls[index], pre[index]);
     Layer.shareWeights(ls[index], pre[index + 1]);
     for( int i = 0; i < pre.length; i++ ) {
-      pre[i].init(pre, i, false, 0, null);
+      pre[i].init(pre, i, false, 0);
     }
 
     _trainer = new Trainer.Direct(pre, 10, self());

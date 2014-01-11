@@ -9,7 +9,6 @@ import hex.Trainer;
 import hex.rng.MersenneTwisterRNG;
 import water.Job;
 import water.TestUtil;
-import water.UKV;
 import water.api.FrameSplit;
 import water.fvec.AppendableVec;
 import water.fvec.Frame;
@@ -26,14 +25,16 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
+import static hex.NeuralNet.NeuralNetParams;
+
 /**
  * Runs a neural network on the MNIST dataset.
  */
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist.class;
-//    samples.launchers.CloudLocal.launch(job, 1);
-    samples.launchers.CloudProcess.launch(job, 4);
+    samples.launchers.CloudLocal.launch(job, 1);
+//    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
@@ -54,11 +55,8 @@ public class NeuralNetMnist extends Job {
       testf = split.splitFrame(testf, ratios, seed)[0];
 
       // for debugging only
-      if (false) {
-        UKV.put(water.Key.make("train"+fraction), trainf);
-        UKV.put(water.Key.make("test"+fraction), testf);
-        //try { Thread.sleep(10000000); } catch (Exception _) {}
-      }
+//      UKV.put(water.Key.make("train"+fraction), trainf);
+//      UKV.put(water.Key.make("test"+fraction), testf);
     }
     train = trainf.vecs();
     test = testf.vecs();
@@ -66,34 +64,38 @@ public class NeuralNetMnist extends Job {
   }
 
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
-    Layer[] ls = new Layer[4];
+    Layer[] ls = new Layer[5];
     //ls[0] = new VecsInput(data, inputStats, 0.2);
     ls[0] = new VecsInput(data, inputStats);
 //    ls[1] = new Layer.Tanh(50);
 //    ls[2] = new Layer.Tanh(50);
-    ls[1] = new Layer.RectifierDropout(50);
-    ls[2] = new Layer.RectifierDropout(50);
-    ls[3] = new VecSoftmax(labels, outputStats, Layer.Loss.CrossEntropy);
+    ls[1] = new Layer.RectifierDropout(102);
+    ls[2] = new Layer.RectifierDropout(102);
+    ls[3] = new Layer.RectifierDropout(204);
+    ls[4] = new VecSoftmax(labels, outputStats, NeuralNetParams.Loss.CrossEntropy);
+
+    NeuralNetParams p = new NeuralNetParams();
+    p.rate = 0.003f;
+    p.rate_annealing = 1e-6f;
+    p.epochs = 1000;
+    p.activation = NeuralNetParams.Activation.RectifierWithDropout;
+    p.max_w2 = 15;
+    p.momentum_start = 0.5f;
+    p.momentum_ramp = 1800000;
+    p.momentum_stable = 0.99f;
+    p.l1 = .00001f;
+    p.l2 = .00f;
+    p.fast_mode = true;
+    p.initial_weight_distribution = NeuralNetParams.InitialWeightDistribution.UniformAdaptive;
+
     for( int i = 0; i < ls.length; i++ ) {
-      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
-      ls[i].initial_weight_scale = 0.01;
-      ls[i].rate = .01f;
-      ls[i].rate_annealing = 1 / 1e6f;
-      ls[i].l1 = .001f;
-      ls[i].l2 = .001f;
-      ls[i].fast_mode = true;
-      //ls[i].max_w2 = Float.MAX_VALUE; //cf. hinton for Mnist
-      ls[i].max_w2 = 15; //cf. hinton for Mnist
-      ls[i].momentum_start = 0.05f;
-      ls[i].momentum_ramp = 100000;
-      ls[i].momentum_stable = 0.10f;
-      ls[i].init(ls, i);
+      ls[i].init(ls, i, p);
     }
     return ls;
   }
 
   protected void startTraining(Layer[] ls) {
-    double epochs = 15.0;
+    double epochs = 1000.0;
 
 //    // Single-thread SGD
 //    System.out.println("Single-threaded\n");

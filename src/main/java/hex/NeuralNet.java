@@ -25,24 +25,20 @@ public class NeuralNet extends ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network";
 
-  public enum ExecutionMode {
-    Serial, Threaded_Hogwild, MapReduce_Hogwild
-  }
-
   @API(help = "Execution Mode", filter = Default.class)
-  public ExecutionMode mode = ExecutionMode.MapReduce_Hogwild;
+  public NeuralNetParams.ExecutionMode mode = NeuralNetParams.ExecutionMode.MapReduce_Hogwild;
 
   @API(help = "Activation function", filter = Default.class)
-  public Activation activation = Activation.RectifierWithDropout;
+  public NeuralNetParams.Activation activation = NeuralNetParams.Activation.RectifierWithDropout;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
-  public float input_dropout_ratio = 0.2f;
+  public double input_dropout_ratio = 0.2;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
   public int[] hidden = new int[] { 1024, 1024, 2048 };
 
   @API(help = "Initial Weight Distribution", filter = Default.class, dmin = 0)
-  public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
+  public NeuralNetParams.InitialWeightDistribution initial_weight_distribution = NeuralNetParams.InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0)
   public double initial_weight_scale = 0.01;
@@ -73,8 +69,8 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "L2 regularization", filter = Default.class, dmin = 0)
   public double l2 = 0.0;
 
-  @API(help = "Loss function", filter =Default.class)
-  private Layer.Loss loss = Layer.Loss.CrossEntropy;
+  @API(help = "Loss function", filter = Default.class)
+  private NeuralNetParams.Loss loss = NeuralNetParams.Loss.CrossEntropy;
 
   @API(help = "Fast mode (minor approximation)", filter = Default.class)
   public boolean fast_mode = true;
@@ -100,12 +96,12 @@ public class NeuralNet extends ValidatedJob {
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
     if (arg._name.equals("input_dropout_ratio") &&
-            (activation != Layer.Activation.RectifierWithDropout && activation != Layer.Activation.TanhWithDropout)
+            (activation != NeuralNetParams.Activation.RectifierWithDropout && activation != NeuralNetParams.Activation.TanhWithDropout)
             ) {
       arg.disable("Only with Dropout", inputArgs);
     }
     if(arg._name.equals("initial_weight_scale") &&
-            (initial_weight_distribution == Layer.InitialWeightDistribution.UniformAdaptive)
+            (initial_weight_distribution == NeuralNetParams.InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
     }
@@ -116,7 +112,107 @@ public class NeuralNet extends ValidatedJob {
     }
   }
 
-  // used to stop the monitor thread
+  // Wrapper class to pass around
+  // @API stuff is used for JSON serialization
+  public static class NeuralNetParams extends Iced {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help = "Execution Mode")
+    public ExecutionMode mode;
+
+    @API(help = "Activation function")
+    public Activation activation;
+
+    @API(help = "Input layer dropout ratio")
+    public double input_dropout_ratio;
+
+    @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
+    public int[] hidden;
+
+    @API(help = "Initial Weight Distribution")
+    public InitialWeightDistribution initial_weight_distribution;
+
+    @API(help = "Uniform: -value...value, Normal: stddev)")
+    public double initial_weight_scale;
+
+    @API(help = "Learning rate")
+    public double rate;
+
+    @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)")
+    public double rate_annealing;
+
+    @API(help = "Constraint for squared sum of incoming weights per unit")
+    public float max_w2;
+
+    @API(help = "Momentum at the beginning of training")
+    public double momentum_start;
+
+    @API(help = "Number of samples for which momentum increases")
+    public long momentum_ramp;
+
+    @API(help = "Momentum once the initial increase is over")
+    public double momentum_stable;
+
+    //TODO: add a ramp down to 0 for l1 and l2
+
+    @API(help = "L1 regularization")
+    public double l1;
+
+    @API(help = "L2 regularization")
+    public double l2;
+
+    @API(help = "Loss function")
+    private Loss loss = Loss.CrossEntropy;
+
+    @API(help = "Fast mode (minor approximation)")
+    public boolean fast_mode = true;
+
+    @API(help = "How many times the dataset should be iterated")
+    public double epochs;
+
+    public NeuralNetParams() {}
+
+    public NeuralNetParams(ExecutionMode mode, Activation activation, double input_dropout_ratio, int[] hidden, InitialWeightDistribution initial_weight_distribution, double initial_weight_scale, double rate, double rate_annealing, float max_w2, double momentum_start, long momentum_ramp, double momentum_stable, double l1, double l2, Loss loss, boolean fast_mode, double epochs) {
+      this.mode = mode;
+      this.activation = activation;
+      this.input_dropout_ratio = input_dropout_ratio;
+      this.hidden = hidden;
+      this.initial_weight_distribution = initial_weight_distribution;
+      this.initial_weight_scale = initial_weight_scale;
+      this.rate = rate;
+      this.rate_annealing = rate_annealing;
+      this.max_w2 = max_w2;
+      this.momentum_start = momentum_start;
+      this.momentum_ramp = momentum_ramp;
+      this.momentum_stable = momentum_stable;
+      this.l1 = l1;
+      this.l2 = l2;
+      this.loss = loss;
+      this.fast_mode = fast_mode;
+      this.epochs = epochs;
+    }
+
+    public enum ExecutionMode {
+      Serial, Threaded_Hogwild, MapReduce_Hogwild
+    }
+
+    public enum InitialWeightDistribution {
+      UniformAdaptive, Uniform, Normal
+    }
+
+    public enum Activation {
+      Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
+    }
+
+    public enum Loss {
+      MeanSquare, CrossEntropy
+    }
+  };
+
+  NeuralNetParams _params;
+
+  // Hack: used to stop the monitor thread
   private static volatile boolean running = true;
 
   public NeuralNet() {
@@ -143,6 +239,8 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
+    _params = new NeuralNetParams(mode, activation, input_dropout_ratio, hidden, initial_weight_distribution, initial_weight_scale, rate, rate_annealing, max_w2, momentum_start, momentum_ramp, momentum_stable, l1, l2, loss, fast_mode, epochs);
+
     running = true;
     Vec[] vecs = Utils.append(_train, response);
     reChunk(vecs);
@@ -170,17 +268,6 @@ public class NeuralNet extends ValidatedJob {
           ls[i + 1] = new Layer.Maxout(hidden[i]);
           break;
       }
-      ls[i + 1].initial_weight_distribution = initial_weight_distribution;
-      ls[i + 1].initial_weight_scale = initial_weight_scale;
-      ls[i + 1].rate = (float) rate;
-      ls[i + 1].rate_annealing = (float) rate_annealing;
-      ls[i + 1].momentum_start = (float) momentum_start;
-      ls[i + 1].momentum_ramp = momentum_ramp;
-      ls[i + 1].momentum_stable = (float) momentum_stable;
-      ls[i + 1].l1 = (float) l1;
-      ls[i + 1].l2 = (float) l2;
-      ls[i + 1].max_w2 = max_w2;
-      ls[i + 1].fast_mode = fast_mode;
     }
 
     if( classification )
@@ -188,20 +275,8 @@ public class NeuralNet extends ValidatedJob {
     else
       ls[ls.length - 1] = new VecLinear(trainResp, null, loss);
 
-    ls[ls.length - 1].initial_weight_distribution = initial_weight_distribution;
-    ls[ls.length - 1].initial_weight_scale = initial_weight_scale;
-    ls[ls.length - 1].rate = (float) rate;
-    ls[ls.length - 1].rate_annealing = (float) rate_annealing;
-    ls[ls.length - 1].momentum_start = (float) momentum_start;
-    ls[ls.length - 1].momentum_ramp = momentum_ramp;
-    ls[ls.length - 1].momentum_stable = (float) momentum_stable;
-    ls[ls.length - 1].l1 = (float) l1;
-    ls[ls.length - 1].l2 = (float) l2;
-    ls[ls.length - 1].max_w2 = max_w2;
-    ls[ls.length - 1].fast_mode = fast_mode;
-
     for( int i = 0; i < ls.length; i++ )
-      ls[i].init(ls, i);
+      ls[i].init(ls, i, _params);
 
     final Key sourceKey = Key.make(input("source"));
     final Frame frame = new Frame(_names, train);
@@ -209,25 +284,9 @@ public class NeuralNet extends ValidatedJob {
     final Errors[] trainErrors0 = new Errors[] { new Errors() };
     final Errors[] validErrors0 = validation == null ? null : new Errors[] { new Errors() };
 
-    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+    NeuralNetModel model = new NeuralNetModel_JSON(destination_key, sourceKey, frame, ls, _params);
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
-
-    model.mode = mode;
-    model.activation = activation;
-    model.input_dropout_ratio = input_dropout_ratio;
-    model.initial_weight_distribution = initial_weight_distribution;
-    model.initial_weight_scale = initial_weight_scale;
-    model.rate = rate;
-    model.rate_annealing = rate_annealing;
-    model.max_w2 = max_w2;
-    model.momentum_start = momentum_start;
-    model.momentum_ramp = momentum_ramp;
-    model.momentum_stable = momentum_stable;
-    model.l1 = l1;
-    model.l2 = l2;
-    model.loss = loss;
-    model.fast_mode = fast_mode;
 
     UKV.put(destination_key, model);
 
@@ -236,7 +295,7 @@ public class NeuralNet extends ValidatedJob {
 
     final long num_rows = source.numRows();
     // work on first batch of points serially for better reproducibility
-    if (mode != ExecutionMode.Serial) {
+    if (mode != NeuralNetParams.ExecutionMode.Serial) {
       final long serial_rows = 1000l;
       System.out.println("Training the first " + serial_rows + " rows serially.");
       Trainer pretrainer = new Trainer.Direct(ls, (double)serial_rows/num_rows, self());
@@ -244,13 +303,13 @@ public class NeuralNet extends ValidatedJob {
       pretrainer.join();
     }
 
-    if (mode == ExecutionMode.Serial) {
+    if (mode == NeuralNetParams.ExecutionMode.Serial) {
       System.out.println("Serial execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
-    } else if (mode == ExecutionMode.Threaded_Hogwild) {
+    } else if (mode == NeuralNetParams.ExecutionMode.Threaded_Hogwild) {
       System.out.println("Threaded (Hogwild) execution mode");
       trainer = new Trainer.Threaded(ls, epochs, self());
-    } else if (mode == ExecutionMode.MapReduce_Hogwild) {
+    } else if (mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
       System.out.println("MapReduce + Threaded (Hogwild) execution mode");
       trainer = new Trainer.MapReduce(ls, epochs, self());
     } else throw new RuntimeException("invalid execution mode.");
@@ -280,11 +339,11 @@ public class NeuralNet extends ValidatedJob {
             eval_samples = eval(valid, validResp);
           }
           // make sure to do the final eval on a regular run
-          if (mode != ExecutionMode.MapReduce_Hogwild && !cancelled() && eval_samples < total_samples) {
+          if (mode != NeuralNetParams.ExecutionMode.MapReduce_Hogwild && !cancelled() && eval_samples < total_samples) {
             eval_samples = eval(valid, validResp);
           }
           // hack for MapReduce, which calls cancel() from outside, but doesn't set running to false
-          if (cancelled() && mode == ExecutionMode.MapReduce_Hogwild && running) {
+          if (cancelled() && mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild && running) {
             eval_samples = eval(valid, validResp);
             running = false;
           }
@@ -311,26 +370,10 @@ public class NeuralNet extends ValidatedJob {
           e = eval(valid, validResp, 0, cm);
           validErrors = Utils.append(validErrors, e);
         }
-        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, _params);
         model.training_errors = trainErrors;
         model.validation_errors = validErrors;
         model.confusion_matrix = cm;
-        // also copy model parameters
-        model.mode = mode;
-        model.activation = activation;
-        model.input_dropout_ratio = input_dropout_ratio;
-        model.initial_weight_distribution = initial_weight_distribution;
-        model.initial_weight_scale = initial_weight_scale;
-        model.rate = rate;
-        model.rate_annealing = rate_annealing;
-        model.max_w2 = max_w2;
-        model.momentum_start = momentum_start;
-        model.momentum_ramp = momentum_ramp;
-        model.momentum_stable = momentum_stable;
-        model.l1 = l1;
-        model.l2 = l2;
-        model.loss = loss;
-        model.fast_mode = fast_mode;
         UKV.put(model._selfKey, model);
         return e.training_samples;
       }
@@ -347,7 +390,7 @@ public class NeuralNet extends ValidatedJob {
     trainer.join();
 
     // hack to gracefully terminate the job submitted via H2O web API
-    if (mode != ExecutionMode.MapReduce_Hogwild) {
+    if (mode != NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
       running = false; //tell the monitor thread to finish too
       try {
         monitor.join();
@@ -488,54 +531,24 @@ public class NeuralNet extends ValidatedJob {
     }
   }
 
+  public static class NeuralNetModel_JSON extends NeuralNetModel {
+    NeuralNetModel_JSON(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNetParams p) {
+      super(selfKey, dataKey, fr, ls, p);
+    }
+
+    @Override
+    public AutoBuffer writeJSONFields(AutoBuffer bb) {
+      AutoBuffer b = super.writeJSONFields(bb);
+      _params.writeJSONFields(b);
+      return b;
+    }
+
+  }
+
   public static class NeuralNetModel extends Model {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
-
-    @API(help = "Execution Mode")
-    public ExecutionMode mode;
-
-    @API(help = "Activation function")
-    public Layer.Activation activation;
-
-    @API(help = "Input layer dropout ratio")
-    public double input_dropout_ratio;
-
-    @API(help = "Initial Weight Distribution")
-    public Layer.InitialWeightDistribution initial_weight_distribution;
-
-    @API(help = "Uniform: -value...value, Normal: stddev)")
-    public double initial_weight_scale;
-
-    @API(help = "Learning rate")
-    public double rate;
-
-    @API(help = "Learning rate annealing")
-    public double rate_annealing;
-
-    @API(help = "Constraint for squared sum of incoming weights per unit")
-    public float max_w2;
-
-    @API(help = "Momentum at the beginning of training")
-    public double momentum_start;
-
-    @API(help = "Number of samples for which momentum increases")
-    public long momentum_ramp;
-
-    @API(help = "Momentum once the initial increase is over")
-    public double momentum_stable;
-
-    @API(help = "L1 regularization")
-    public double l1;
-
-    @API(help = "L2 regularization")
-    public double l2;
-
-    @API(help = "Loss function")
-    public Layer.Loss loss;
-
-    @API(help = "Fast mode (minor approximation)")
-    public boolean fast_mode;
+    public NeuralNetParams _params;
 
     @API(help = "Layers")
     public Layer[] layers;
@@ -552,9 +565,8 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
 
-    NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
+    NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNetParams p) {
       super(selfKey, dataKey, fr);
-
       layers = ls;
       weights = new float[ls.length][];
       biases = new float[ls.length][];
@@ -562,6 +574,7 @@ public class NeuralNet extends ValidatedJob {
         weights[y] = layers[y]._w;
         biases[y] = layers[y]._b;
       }
+      _params = p;
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
@@ -607,56 +620,7 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Execution Mode")
-    public ExecutionMode mode;
-
-    @API(help = "Activation function")
-    public Layer.Activation activation;
-
-    @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)")
-    public double input_dropout_ratio;
-
-    @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
-    public int[] hidden;
-
-    @API(help = "Initial Weight Distribution")
-    public Layer.InitialWeightDistribution initial_weight_distribution;
-
-    @API(help = "Uniform: -value...value, Normal: stddev)")
-    public double initial_weight_scale;
-
-    @API(help = "Learning rate")
-    public double rate;
-
-    @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)")
-    public double rate_annealing;
-
-    @API(help = "Constraint for squared sum of incoming weights per unit")
-    public float max_w2;
-
-    @API(help = "Momentum at the beginning of training")
-    public double momentum_start;
-
-    @API(help = "Number of samples for which momentum increases")
-    public long momentum_ramp;
-
-    @API(help = "Momentum once the initial increase is over")
-    public double momentum_stable;
-
-    @API(help = "L1 regularization")
-    public double l1;
-
-    @API(help = "L2 regularization")
-    public double l2;
-
-    @API(help = "Loss function")
-    public Layer.Loss loss;
-
-    @API(help = "Fast mode (minor approximation)")
-    public boolean fast_mode;
-
-    @API(help = "How many times the dataset should be iterated")
-    public double epochs;
+    public NeuralNetParams _params;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -677,23 +641,7 @@ public class NeuralNet extends ValidatedJob {
     @Override protected Response serve() {
       NeuralNet job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
       if( job != null ) {
-        mode = job.mode;
-        activation = job.activation;
-        input_dropout_ratio = job.input_dropout_ratio;
-        hidden = job.hidden;
-        initial_weight_distribution = job.initial_weight_distribution;
-        initial_weight_scale = job.initial_weight_scale;
-        rate = job.rate;
-        rate_annealing = job.rate_annealing;
-        max_w2 = job.max_w2;
-        momentum_start = job.momentum_start;
-        momentum_ramp = job.momentum_ramp;
-        momentum_stable = job.momentum_stable;
-        l1 = job.l1;
-        l2 = job.l2;
-        loss = job.loss;
-        fast_mode = job.fast_mode;
-        epochs = job.epochs;
+        _params = job._params;
       }
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
@@ -726,6 +674,13 @@ public class NeuralNet extends ValidatedJob {
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
         DocGen.HTML.section(sb, "Validation mean square error: " + validS);
         DocGen.HTML.section(sb, "Validation mean cross entropy: " + validCE);
+        DocGen.HTML.section(sb, "Layer 0 samples: " + train.training_samples);
+        for (int i=1; i<model.layers.length; ++i) {
+          final Layer l = model.layers[i];
+          DocGen.HTML.section(sb,
+                  "Layer " + i + " learning rate: " + l.rate(train.training_samples)
+                          + " momentum: " + String.format(mse_format, l.momentum(train.training_samples)));
+        }
         if( nn != null ) {
           long ps = train.training_samples * 1000 / nn.runTimeMs();
           DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
