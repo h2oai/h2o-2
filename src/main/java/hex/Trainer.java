@@ -18,7 +18,6 @@ import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -141,18 +140,16 @@ public abstract class Trainer {
     final Base[] _trainers;
     final Thread[] _threads;
     final long _stepsPerThread;
-    static final CyclicBarrier DONE = new CyclicBarrier(1);
-    volatile CyclicBarrier _suspend;
-    final CyclicBarrier _resume;
     final AtomicLong _processed = new AtomicLong();
 
     public Threaded(Layer[] ls, double epochs, final Key job) {
-      _trainers = new Base[Runtime.getRuntime().availableProcessors()];
-      _threads = new Thread[_trainers.length];
-      _stepsPerThread = (long) (epochs * ((Input) ls[0])._len / _threads.length);
-      _resume = new CyclicBarrier(_threads.length + 1);
+      final int num_threads = Runtime.getRuntime().availableProcessors();
+      _trainers = new Base[num_threads];
+      _threads = new Thread[num_threads];
+      _stepsPerThread = (long) (epochs * ((Input) ls[0])._len / num_threads);
 
-      for( int t = 0; t < _trainers.length; t++ ) {
+      System.out.println("Starting " + num_threads + " threads.");
+      for( int t = 0; t < num_threads; t++ ) {
         Layer[] clones = new Layer[ls.length];
         for( int y = 0; y < clones.length; y++ )
           clones[y] = ls[y].clone();
@@ -165,26 +162,15 @@ public abstract class Trainer {
           };
         }
         final Input input = (Input) clones[0];
-        input._pos = input._len * t / _trainers.length;
+        input._pos = input._len * t / num_threads;
         _trainers[t] = new Base(clones);
         final Base trainer = _trainers[t];
 
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
             for( long i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
-              CyclicBarrier b = _suspend;
-              if( b == DONE )
-                break;
               if( Job.cancelled(job) )
                 break;
-              if( b != null ) {
-                try {
-                  b.await();
-                  _resume.await();
-                } catch( Exception e ) {
-                  throw new RuntimeException(e);
-                }
-              }
               trainer.step();
               input.move();
               _processed.incrementAndGet();
@@ -192,7 +178,6 @@ public abstract class Trainer {
           }
         };
       }
-      Log.info("Started " + _trainers.length + " neural network trainers");
     }
 
     @Override public Layer[] layers() {
@@ -217,27 +202,6 @@ public abstract class Trainer {
       }
     }
 
-    public void cancel() {
-      _suspend = DONE;
-    }
-
-    void suspend() {
-      try {
-        _suspend = new CyclicBarrier(_threads.length + 1);
-        _suspend.await();
-        _suspend = null;
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    void resume() {
-      try {
-        _resume.await();
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
-      }
-    }
   }
 
   /**
