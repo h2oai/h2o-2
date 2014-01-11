@@ -1,3 +1,4 @@
+.. _KMmath:
 
 K-Means
 -------

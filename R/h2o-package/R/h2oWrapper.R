@@ -30,7 +30,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
       # h2oWrapper.startLauncher()
       # invisible(readline("Start H2O, then hit <Return> to continue: "))
       h2o.startJar(Xmx)
-      count = 0; while(!url.exists(myURL) && count < 30) { Sys.sleep(1); count = count + 1 }
+      count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }
@@ -176,7 +176,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
         myURL = paste("http://", ip, ":", port, sep = "")
         
         require(RCurl); require(rjson)
-        if(url.exists(myURL))
+        if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
         eval(.LastOriginal(...), envir = envir)
       }, envir = .GlobalEnv)
@@ -186,7 +186,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
         myURL = paste("http://", ip, ":", port, sep = "")
         
         require(RCurl); require(rjson)
-        if(url.exists(myURL))
+        if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
       }, envir = .GlobalEnv)
   }
@@ -206,11 +206,13 @@ h2o.startJar <- function(memory = "2g") {
   #
   
   if(.Platform$OS.type == "windows") {
-    stdout <- "C:/tmp/h2o_started_from_r.out"
-    stderr <- "C:/tmp/h2o_started_from_r.err"
+    usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
+    stdout <- paste("C:/tmp/h2o", usr, "started_from_r.out", sep="_")
+    stderr <- paste("C:/tmp/h2o", usr, "started_from_r.err", sep="_")
   } else {
-    stdout <- "/tmp/h2o_started_from_r.out"
-    stderr <- "/tmp/h2o_started_from_r.err"
+    usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USER"))
+    stdout <- paste("/tmp/h2o", usr, "started_from_r.out", sep="_")
+    stderr <- paste("/tmp/h2o", usr, "started_from_r.err", sep="_")
   }
   
   jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
@@ -236,6 +238,7 @@ h2o.startJar <- function(memory = "2g") {
   if (rc != 0) {
     stop(sprintf("Failed to exec %s", jar_file))
   }
+  .startedH2O <<- TRUE
 }
 
 #---------------------------------- Deprecated ----------------------------------#

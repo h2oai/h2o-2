@@ -171,7 +171,11 @@ public abstract class DGLM {
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
-      res.addProperty("family", _family.toString());
+      res.addProperty("family", _family._family.toString());
+      if(_family._family == Family.tweedie){
+        res.addProperty("variance_power", _family._tweedieVariancePower);
+        res.addProperty("link_power", _link._tweedieLinkPower);
+      }
       res.addProperty("link", _link.toString());
       res.addProperty("betaEps", _betaEps);
       res.addProperty("maxIter", _maxIter);
