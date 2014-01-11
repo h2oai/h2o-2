@@ -433,7 +433,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed, validation) {
+h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed=-1, validation) {
   args <- verify_dataxy(data, x, y)
 
   if(!is.numeric(ntree)) stop('ntree must be a number')
@@ -446,9 +446,8 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.
   if( any(sample.rate < 0 || sample.rate > 1) ) stop('sample.rate must be between 0 and 1')
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
-  if(!(missing(seed) || is.numeric(seed))) stop("seed must be an integer")
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
 
-  if(missing(seed)) seed = ""
   if(missing(validation)) validation = data
   else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
 
@@ -646,7 +645,7 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
   }
 }
 
-h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL, seed, use_non_local=T) {
+h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL, seed=-1, use_non_local=T) {
   if(class(data) != "H2OParsedDataVA")
     stop("h2o.randomForest.VA only works under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
@@ -657,7 +656,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(!is.numeric(sample.rate)) stop("sample.rate must be numeric")
   if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
   if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
-  if(!(missing(seed) || is.numeric(seed))) stop("seed must be an integer")
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
   if(!is.logical(use_non_local)) stop("use_non_local must be logical indicating whether to use non-local data")
 
   if(missing(seed)) seed = ""

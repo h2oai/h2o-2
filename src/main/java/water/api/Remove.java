@@ -16,9 +16,7 @@ public class Remove extends Request {
     Value v = _key.value();
 
     try {
-      Futures fs = new Futures();
-      UKV.remove(v._key, fs);
-      fs.blockForPending();
+      UKV.remove(v._key);       // Standard blocking remove
     } catch( Exception e ) {
       return Response.error(e.getMessage());
     }

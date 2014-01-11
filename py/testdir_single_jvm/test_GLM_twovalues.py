@@ -85,7 +85,7 @@ class GLM_twovalues(unittest.TestCase):
             ]
 
         trial = 0
-        for (outputTrue, outputFalse, case, coeffNum) in twoValueList:
+        for (outputTrue, outputFalse, case, expectedCoeffNum) in twoValueList:
             write_syn_dataset(csvPathname, 20, 
                 rowDataTrue, rowDataFalse, str(outputTrue), str(outputFalse))
 
@@ -100,9 +100,9 @@ class GLM_twovalues(unittest.TestCase):
             h2o_glm.simpleCheckGLM(self, glm, 0, **kwargs)
 
             # check that the number of entries in coefficients is right (12 with intercept)
-            coeffNum = len(glm['GLMModel']['coefficients'])
-            if (coeffNum!=coeffNum):
-                raise Exception("Should be " + coeffNum + " coefficients in result. %s" % coeffNum)
+            actualCoeffNum = len(glm['GLMModel']['coefficients'])
+            if (actualCoeffNum!=expectedCoeffNum):
+                raise Exception("Should be " + expectedCoeffNum + " expected coefficients in result. %s" % expectedCoeffNum)
 
             print "trial #", trial, "glm end on ", csvFilename, 'took', time.time() - start, 'seconds'
             # h2b.browseJsonHistoryAsUrlLastMatch("GLM")

@@ -1,49 +1,49 @@
 {
-    "type":"object",
+    "type": "object",
     "properties":{
-        "cloud_name": { "type":"string" },
-        "cloud_size": { "type":"number" },
-        "consensus": { "type":"boolean" },
-        "locked": { "type":"boolean" },
-        "node_name": { "type":"string" },
-        "nodes": { "type":"array", "items": {
-            "type":"object", "properties": { 
+        "cloud_name": { "type": "string" },
+        "cloud_size": { "type": "number" },
+        "consensus": { "type": "boolean" },
+        "locked": { "type": "boolean" },
+        "node_name": { "type": "string" },
+        "nodes": { "type": "array", "items": {
+            "type": "object", "properties": { 
                 "fj_queue_hi": {
-                    "type":"array", "items": 
-                        { "type":"number" }
+                    "type": "array", "items": 
+                        { "type": "number" }
                 },
-                "fj_queue_lo": { "type":"number" },
-                "fj_threads_hi": { "type":"array", "items":
-                        { "type":"number" }
+                "fj_queue_lo": { "type": "number" },
+                "fj_threads_hi": { "type": "array", "items":
+                        { "type": "number" }
                 },
-                "fj_threads_lo": { "type":"number" },
-                "free_disk_bytes": { "type":"number" },
-                "free_mem_bytes": { "type":"number" },
-                "last_contact": { "type":"number" },
-                "max_disk_bytes": { "type":"number" },
-                "max_mem_bytes": { "type":"number" },
-                "my_cpu_%": { "type":"string" },
-                "name": { "type":"string" },
-                "num_cpus": { "type":"number" },
-                "num_keys": { "type":"number" },
-                "open_fds": { "type":"number" },
-                "rpcs": { "type":"number" },
-                "sys_cpu_%": { "type":"string" },
-                "system_load": { "type":"number" },
-                "tcps_active": { "type":"number" },
-                "tot_mem_bytes": { "type":"number" },
-                "value_size_bytes": { "type":"number" }
+                "fj_threads_lo": { "type": "number" },
+                "free_disk_bytes": { "type": "number" },
+                "free_mem_bytes": { "type": "number" },
+                "last_contact": { "type": "number" },
+                "max_disk_bytes": { "type": "number" },
+                "max_mem_bytes": { "type": "number" },
+                "my_cpu_%": { "type": "string" },
+                "name": { "type": "string" },
+                "num_cpus": { "type": "number" },
+                "num_keys": { "type": "number" },
+                "open_fds": { "type": "number" },
+                "rpcs": { "type": "number" },
+                "sys_cpu_%": { "type": "string" },
+                "system_load": { "type": "number" },
+                "tcps_active": { "type": "number" },
+                "tot_mem_bytes": { "type": "number" },
+                "value_size_bytes": { "type": "number" }
             }
             }
         },
-        "response": { "type":"object", "properties": {
-            "h2o": { "type":"string" },
-            "node": { "type":"string" },
-            "status": { "type":"string" },
-            "time": { "type":"number" }
+        "response": { "type": "object", "properties": {
+            "h2o": { "type": "string" },
+            "node": { "type": "string" },
+            "status": { "type": "string" },
+            "time": { "type": "number" }
         }
         },
-        "version": { "type":"string" }
+        "version": { "type": "string" }
     }
 }
 
