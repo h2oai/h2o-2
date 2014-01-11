@@ -561,6 +561,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       assert !oob || validation==null ; // oob => validation==null
       _oob = oob;
       // No validation, so do on training data
+      //System.err.println(fr.toStringAll());
       if( validation == null ) return doAll(fr, build_tree_per_node);
       _validation = true;
       // Validation: need to score the set, getting a probability distribution for each class
@@ -601,10 +602,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
           sum = score0(chks,ds,row);
         }
         double err;  int ycls=0;
+        if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
           if( sum == 0 ) {       // This tree does not predict this row *at all*?
             err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
-            if (_oob) continue; // it is in-bag row (no vote by any tree)
           } else {
             ycls = (int)ys.at80(row); // Response class from 0 to nclass-1
             if (ycls >= _nclass) continue;
@@ -630,6 +631,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         _snrows++;
       }
     }
+
     @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); _snrows += t._snrows; }
 
     public Score report( Sys tag, int ntree, DTree[] trees ) {
@@ -645,6 +647,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
         if( _nclass > 1 )
           Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
+        else
+          Log.info("Reported on "+_snrows+" rows.");
       }
       return this;
     }
@@ -663,6 +667,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 
   protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], DTree.TreeModel.TreeStats tstats);
+
+  protected boolean inBagRow(Chunk[] chks, int row) { return false; }
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }
