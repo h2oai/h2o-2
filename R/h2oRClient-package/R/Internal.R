@@ -57,6 +57,7 @@ h2o.__logIt <- function(m, tmp, commandOrErr) {
 }
 
 # Internal functions & declarations
+h2o.__PAGE_CANCEL = "Cancel.json"
 h2o.__PAGE_CLOUD = "Cloud.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GET = "GetVector.json"
@@ -250,6 +251,23 @@ h2o.__pollAll <- function(client, timeout) {
     Sys.sleep(1)
     if(as.numeric(difftime(Sys.time(), start)) > timeout)
       stop("Timeout reached! Check if any jobs have frozen in H2O.")
+  }
+}
+
+h2o.__cancelJob <- function(client, keyName) {
+  res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
+  res = res$jobs
+  if(length(res) == 0) stop("No jobs found in queue")
+  prog = NULL
+  for(i in 1:length(res)) {
+    if(res[[i]]$key == keyName) {
+      prog = res[[i]]; break
+    }
+  }
+  if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
+  if(!(prog$cancelled || prog$progress == -1.0 || prog$progress == -2.0 || prog$end_time == -1)) {
+    h2o.__remoteSend(client, h2o.__PAGE_CANCEL, key=keyName)
+    cat("Job key", keyName, "has been cancelled")
   }
 }
 

@@ -148,6 +148,7 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names) {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
   else
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
+  on.exit(h2o.__cancelJob(data@h2o, res$job_key))
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
@@ -286,6 +287,7 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
   else
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
+  on.exit(h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job))
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
 }
