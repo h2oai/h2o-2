@@ -24,10 +24,11 @@ public class Summary2Test extends TestUtil {
     fs.blockForPending();
 
     Vec vec = fr.vecs()[0];
-    Summary2 s = new Summary2(vec, "", vec.min(), vec.max());
+    Summary2.BasicStat basicStat = new Summary2.PrePass().doAll(fr).finishUp()._basicStats[0];
+    Summary2 s = new Summary2(vec, "",basicStat);
     s.add(vec.chunk(0));
     for (int i = 1; i < vec.nChunks(); i++) {
-      Summary2 s1 = new Summary2(vec, "", vec.min(), vec.max()); s1.add(vec.chunk(i)); s.add(s1);
+      Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunk(i)); s.add(s1);
     }
     s.finishUp(vec);
     assertEquals(1, s.hcnt.length);
@@ -45,10 +46,11 @@ public class Summary2Test extends TestUtil {
     for( Vec vec : fr.vecs()) vec.rollupStats(fs);
     fs.blockForPending();
     Vec vec = fr.vecs()[fr.find("name")];
-    Summary2 s = new Summary2(vec, "", vec.min(), vec.max());
+    Summary2.BasicStat basicStat = new Summary2.PrePass().doAll(fr).finishUp()._basicStats[fr.find("name")];
+    Summary2 s = new Summary2(vec, "", basicStat);
     s.add(vec.chunk(0));
     for( int i = 1; i < vec.nChunks(); i++ )
-      { Summary2 s1 = new Summary2(vec, "", vec.min(), vec.max()); s1.add(vec.chunk(i)); s.add(s1); }
+      { Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunk(i)); s.add(s1); }
     s.finishUp(vec);
 
     assertEquals(306, s.hcnt.length);
@@ -62,10 +64,11 @@ public class Summary2Test extends TestUtil {
     for( Vec vec : fr.vecs()) vec.rollupStats(fs);
     fs.blockForPending();
     Vec vec = fr.vecs()[fr.find("cylinders")];
-    Summary2 s = new Summary2(vec, "", vec.min(), vec.max());
+    Summary2.BasicStat basicStat = new Summary2.PrePass().doAll(fr).finishUp()._basicStats[fr.find("cylinders")];
+    Summary2 s = new Summary2(vec, "", basicStat);
     s.add(vec.chunk(0));
     for( int i = 1; i < vec.nChunks(); i++ )
-      { Summary2 s1 = new Summary2(vec, "", vec.min(), vec.max()); s1.add(vec.chunk(i)); s.add(s1); }
+      { Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunk(i)); s.add(s1); }
     s.finishUp(vec);
 
     assertEquals(0, s.hcnt[4]); // no 7 cylinder cars
