@@ -204,7 +204,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     # threshold only there if binomial?
     # auc only for binomial
-    print "kbn family:", family
     if family=="binomial":
         print "%15s %s" % ("auc:\t", validations['auc'])
         if h2o.beta_features:
@@ -231,44 +230,52 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # get a copy, so we don't destroy the original when we pop the intercept
     if h2o.beta_features:
         coefficients_names = GLMModel['coefficients_names']
-        # 'beta' has to use 'idxs' to index into these names
         idxs = submodels0['idxs']
         column_names = coefficients_names
 
+        # always check both normalized and normal coefficients
+        norm_beta = submodels0['norm_beta']
+        if len(column_names)!=len(norm_beta):
+            print len(column_names), len(norm_beta)
+            raise Exception("column_names and normalized_norm_beta from h2o json not same length. column_names: %s normalized_norm_beta: %s" % (column_names, norm_beta))
+
+        beta = submodels0['beta']
+        if len(column_names)!=len(beta):
+            print len(column_names), len(beta)
+            raise Exception("column_names and beta from h2o json not same length. column_names: %s beta: %s" % (column_names, beta))
+
+
+        # test wants to use normalized?
         if doNormalized:
-            beta = submodels0['normalized_beta']
-            if len(column_names)!=len(beta):
-                print len(column_names), len(beta)
-                raise Exception("column_names and normalized_beta from h2o json not same length. column_names: %s normalized_beta: %s" % (column_names, beta))
+            beta_used = norm_beta
         else:
-            beta = submodels0['beta']
-            if len(column_names)!=len(beta):
-                print len(column_names), len(beta)
-                raise Exception("column_names and beta from h2o json not same length. column_names: %s beta: %s" % (column_names, beta))
+            beta_used = beta
 
         coefficients = {}
         # create a dictionary with name, beta (including intercept) just like v1
 
-        for n,b in zip(column_names, beta ):
+        for n,b in zip(column_names, beta_used):
             coefficients[n] = b
 
         print  "coefficients:", coefficients
         print  "beta:", beta
+        print  "norm_beta:", norm_beta
+
         print "intercept demapping info:", \
             "column_names[-i]:", column_names[-1], \
             "idxs[-1]:", idxs[-1], \
             "coefficient_names[[idxs[-1]]:", coefficients_names[idxs[-1]], \
-            "beta[-1]:", beta[-1], \
+            "beta_used[-1]:", beta_used[-1], \
             "coefficients['Intercept']", coefficients['Intercept']
 
-        # idxs has the order for non-zero coefficients, it's shorter than beta and column_names
+        # idxs has the order for non-zero coefficients, it's shorter than beta_used and column_names
         for i in idxs:
-            if beta[i]==0.0:
-                raise Exception("idxs shouldn't point to any 0 coefficients i: %s beta[i]:" (i, beta[i]))
+            if beta_used[i]==0.0:
+                raise Exception("idxs shouldn't point to any 0 coefficients i: %s beta_used[i]:" (i, beta_used[i]))
 
         intercept = coefficients.pop('Intercept', None)
 
-        # intercept demapping info: idxs[-1]: 54 coefficient_names[[idxs[-1]]: Intercept beta[-1]: -6.6866753099
+        # intercept demapping info: idxs[-1]: 54 coefficient_names[[idxs[-1]]: Intercept beta_used[-1]: -6.6866753099
         # the last one shoudl be 'Intercept' ?
         column_names.pop()
 
@@ -297,7 +304,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # I guess now we won't print the "None" cases for dropped columns (constant columns!)
     # Because Tomas doesn't get everything in 'column_names' if dropped by GLMQuery before
     # he gets it? 
-    def add_to_coefficient_list_and_string(c,cList,cString):
+    def add_to_coefficient_list_and_string(c, cList, cString):
         if c in coefficients:
             cValue = coefficients[c]
             cValueString = "%s: %.5e   " % (c, cValue)
@@ -462,7 +469,7 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 def goodXFromColumnInfo(y, 
     num_cols=None, missingValuesDict=None, constantValuesDict=None, enumSizeDict=None, 
     colTypeDict=None, colNameDict=None, keepPattern=None, key=None, 
-    timeoutSecs=120, forRF=False, noPrint=False):
+    timeoutSecs=120, forRF=False, noPrint=False, returnStringX=True):
 
     y = str(y)
 
@@ -536,10 +543,13 @@ def goodXFromColumnInfo(y,
         print "ignore_x has", len(ignore_x), "cols"
 
     # this is probably used in 'cols" in v2, which can take numbers
-    x = ",".join(map(str,x))
+    if returnStringX:
+        x = ",".join(map(str, x))
 
-    if h2o.beta_features: # add the 'C" prefix
+    if h2o.beta_features: # add the 'C" prefix because of ignored_cols_by_name
         ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
+    else:
+        ignore_x = ",".join(map(lambda x: str(x), ignore_x))
 
     if not noPrint:
         print "\nx:", x
@@ -549,29 +559,3 @@ def goodXFromColumnInfo(y,
         return ignore_x
     else:
         return x
-
-# keepList is a list of column names
-def findXFromColumnInfo(key=None, keepList=None, timeoutSecs=120, noPrint=False):
-
-    (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-        h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, 
-        max_column_display=99999999, timeoutSecs=timeoutSecs)
-
-    num_cols = len(colNameDict)
-    x = range(num_cols)
-
-    # need to walk over a copy, cause we change x
-    xOrig = x[:]
-    for k in xOrig:
-        name = colNameDict[k]
-        if not name in keepList:
-            if not noPrint:
-                print "Removing %d because name: %s isn't in keepList %s" % (k, name, keepList)
-            x.remove(k)
-
-    if not noPrint:
-        print "x has", len(x), "cols"
-        strX = ",".join(map(str,x))
-        print "\nmatching keepList x:",strX 
-    return strX
-

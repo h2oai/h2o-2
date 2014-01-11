@@ -1,3 +1,5 @@
+.. _PCAmath:
+
 Principal Components Analysis
 ===========================================
 
