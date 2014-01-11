@@ -1,17 +1,17 @@
 {
-    "type":"object",
+    "type": "object",
     "properties":{
-        "Request2": { "type":"number" },
-        "destination_key": { "type":"string" },
-        "job_key": { "type":"string" },
-        "model": { "type":"null" },
-        "progress": { "type":"number" },
-        "response_info": { "type":"object", "properties":{
-            "h2o": { "type":"string" },
-            "node": { "type":"string" },
-            "redirect_url": { "type":"null" },
-            "status": { "type":"string" },
-            "time": { "type":"number" }
+        "Request2": { "type": "number" },
+        "destination_key": { "type": "string" },
+        "job_key": { "type": "string" },
+        "model": { "type": "null" },
+        "progress": { "type": "number" },
+        "response_info": { "type": "object", "properties":{
+            "h2o": { "type": "string" },
+            "node": { "type": "string" },
+            "redirect_url": { "type": "null" },
+            "status": { "type": "string" },
+            "time": { "type": "number" }
         }
         }
     }
