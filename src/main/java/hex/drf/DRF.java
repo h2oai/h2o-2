@@ -147,7 +147,11 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     else if (seed == -1) _seed = _seedGenerator.nextLong(); else _seed = seed;
   }
 
+  // Out-of-bag trees counter - only one since it is shared via k-trees
+  protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
+
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
+    fr.add("OUT_BAG_TREES", response.makeZero());
 
     DRFModel model = new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
     DKV.put(outputKey, model);
@@ -355,14 +359,18 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     double sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
       sum+=(ds[k]=chk_tree(chks,k).at0(row));
+    if (_nclass == 1) sum /= chk_oobt(chks).at0(row); // for regression average per trees voted for this row
     return sum;
+  }
+
+  @Override protected boolean inBagRow(Chunk[] chks, int row) {
+    return chk_oobt(chks).at80(row) == 0;
   }
 
   // Collect and write predictions into leafs.
   private class CollectPreds extends MRTask2<CollectPreds> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
-    final int   _leafs[]; // Number of active leaves (per tree)
-    CollectPreds(DTree trees[], int leafs[]) { _leafs=leafs; _trees=trees; }
+    CollectPreds(DTree trees[], int leafs[]) { _trees=trees; }
     @Override public void map( Chunk[] chks ) {
       // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
@@ -373,8 +381,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         if( tree.root() instanceof LeafNode ) continue;
         final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
         final Chunk ct   = chk_tree(chks,k);
+        final Chunk oobt = chk_oobt(chks); // out-of-bag tree counter
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
+          // Update only out-of-bag rows
           // This is out-of-bag row - but we would like to track on-the-fly prediction for the row
           if( isOOBRow(nid) ) {
             nid = oob2Nid(nid);
@@ -385,7 +395,11 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
               dn = tree.decided(tree.node(nid).pid());    // Then take parent's decision
             int leafnid = dn.ns(chks,row); // Decide down to a leafnode
             // Setup Tree(i) - on the fly prediction of i-tree for row-th row
+            //   - for classification: cumulative number of votes for this row
+            //   - for regression: cumulative sum of prediction of each tree - has to be normalized by number of trees
             ct.set0(row, (float)(ct.at0 (row) + ((LeafNode)tree.node(leafnid)).pred() ));
+            // For this tree this row is out-of-bag - i.e., a tree voted for this row
+            oobt.set0(row, _nclass>1?1:oobt.at0(row)+1); // for regression track number of trees, for classification boolean flag is enough
           }
           // reset help column
           nids.set0(row,0);
