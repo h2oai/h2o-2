@@ -70,7 +70,7 @@ h2o.rm <- function(object, keys) {
 h2o.assign <- function(data, key) {
   if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
   if(!is.character(key)) stop("key must be of class character")
-  if(length(key) == 0) stop("Key cannot be an empty string!")
+  if(length(key) == 0) stop("key cannot be an empty string!")
   if(key == data@key) stop(paste("Destination key must differ from data key", data@key))
   
   res = h2o.__exec2_dest_key(data@h2o, data@key, key)
