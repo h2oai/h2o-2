@@ -132,7 +132,6 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
-.startedH2O <- FALSE
 
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
