@@ -12,8 +12,13 @@ public abstract class AbstractSimpleRequestHandler {
   // HTTP Method Lists (HML).
   static String[] HML_GET = {"GET"};
 
+  // Version codes.
   static int SINCE_V3 = 3;
   static int UNTIL_FOREVER = Integer.MAX_VALUE;
+
+  // Error codes.
+  public static int ASR_ERROR_MISSING_REQUIRED_PARAMETER = 1000;
+  public static int ASR_ERROR_UNKNOWN_PARAMETER = 1001;
 
   // Class members.
   private String _httpMethods[];

@@ -1,5 +1,7 @@
 package water.api;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import hex.*;
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2.KMeans2ModelView;
@@ -343,9 +345,21 @@ public class RequestServer extends NanoHTTPD {
         Response response = srh.serve(session);
         return response;
       }
+      catch (ASRIllegalArgumentException e) {
+        ASRArgumentErrorInfo ei = e.getErrorInfo();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        String json = gson.toJson(ei);
+        Response response = new Response(Response.Status.BAD_REQUEST, RequestServer.MIME_JSON, json);
+        return response;
+      }
       catch (Exception e) {
-        String s = e.getMessage() != null ? e.getMessage() : "";
-        Response response = new Response(Response.Status.INTERNAL_ERROR, RequestServer.MIME_PLAINTEXT, s);
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        String st = sw.toString();
+        ASRInternalServerErrorInfo ei = new ASRInternalServerErrorInfo(e.getMessage() != null ? e.getMessage() : "", st);
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        String json = gson.toJson(ei);
+        Response response = new Response(Response.Status.INTERNAL_ERROR, RequestServer.MIME_JSON, json);
         return response;
       }
     }
