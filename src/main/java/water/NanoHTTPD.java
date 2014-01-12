@@ -510,7 +510,7 @@ public abstract class NanoHTTPD {
         private final List<TempFile> tempFiles;
 
         public DefaultTempFileManager() {
-            tmpdir = System.getProperty("java.io.tmpdir");
+            tmpdir = System.getProperty("h2o.httpd_tmp_dir");
             tempFiles = new ArrayList<TempFile>();
         }
 

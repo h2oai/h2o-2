@@ -247,7 +247,8 @@ public class RequestServer extends NanoHTTPD {
   // Keep spinning until we get to launch the NanoHTTPD
   public static void mystart() {
     new Thread( new Runnable() {
-        @Override public void run()  {
+        @Override public void run() {
+          System.setProperty("h2o.httpd_tmp_dir", H2O.ICE_ROOT.toString());
           while( true ) {
             try {
               // Try to get the NanoHTTP daemon started
@@ -365,12 +366,16 @@ public class RequestServer extends NanoHTTPD {
         ASRErrorInfo ei = new ASRErrorInfo(
                 ASRErrorCodes.INTERNAL_SERVER_ERROR,
                 Response.Status.INTERNAL_ERROR,
-                "Internal Error");
+                "Internal server error");
         ei.setException(e);
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(ei);
         Response response = new Response(ei.getHttpStatus(), RequestServer.MIME_JSON, json);
         return response;
+      }
+      catch (Throwable t) {
+        try { Log.err(t); } catch (Throwable _) {}
+        H2O.exit(1);
       }
     }
 
