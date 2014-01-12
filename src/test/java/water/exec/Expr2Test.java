@@ -146,7 +146,7 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(1,2,3)",6);
       checkStr("sum(c(1,3,5))",9);
       checkStr("sum(4,c(1,3,5),2,6)",21);
-      checkStr("sum(1,h.hex,3)",1586.9492);
+      checkStr("sum(1,h.hex,3)"); // should report an error because h.hex has enums
       checkStr("sum(c(NA,-1,1))",Double.NaN);
       checkStr("sum.na.rm(c(NA,-1,1))",0);
 
