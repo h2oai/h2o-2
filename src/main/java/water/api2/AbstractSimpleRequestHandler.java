@@ -16,10 +16,6 @@ public abstract class AbstractSimpleRequestHandler {
   static int SINCE_V3 = 3;
   static int UNTIL_FOREVER = Integer.MAX_VALUE;
 
-  // Error codes.
-  public static int ASR_ERROR_MISSING_REQUIRED_PARAMETER = 1000;
-  public static int ASR_ERROR_UNKNOWN_PARAMETER = 1001;
-
   // Class members.
   private String _httpMethods[];
   private String _uriRegex;

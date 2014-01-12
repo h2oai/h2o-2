@@ -4,11 +4,11 @@ package water.api2;
  * A specific Exception to carry argument error information.
  */
 public class ASRIllegalArgumentException extends IllegalArgumentException {
-  private ASRArgumentErrorInfo _ei;
+  private ASRErrorInfo _ei;
 
-  ASRIllegalArgumentException(ASRArgumentErrorInfo ei) {
+  ASRIllegalArgumentException(ASRErrorInfo ei) {
     _ei = ei;
   }
 
-  public ASRArgumentErrorInfo getErrorInfo() { return _ei; }
+  public ASRErrorInfo getErrorInfo() { return _ei; }
 }

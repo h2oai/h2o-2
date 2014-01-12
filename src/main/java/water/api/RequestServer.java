@@ -353,21 +353,23 @@ public class RequestServer extends NanoHTTPD {
         return response;
       }
       catch (ASRIllegalArgumentException e) {
-        ASRArgumentErrorInfo ei = e.getErrorInfo();
+        ASRErrorInfo ei = e.getErrorInfo();
+        ei.setException(e);
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(ei);
-        Response response = new Response(Response.Status.BAD_REQUEST, RequestServer.MIME_JSON, json);
+        Response response = new Response(ei.getHttpStatus(), RequestServer.MIME_JSON, json);
         return response;
       }
       catch (Exception e) {
         Log.err(e);
-        StringWriter sw = new StringWriter();
-        e.printStackTrace(new PrintWriter(sw));
-        String st = sw.toString();
-        ASRInternalServerErrorInfo ei = new ASRInternalServerErrorInfo(e.getMessage() != null ? e.getMessage() : "", st);
+        ASRErrorInfo ei = new ASRErrorInfo(
+                ASRErrorCodes.INTERNAL_SERVER_ERROR,
+                Response.Status.INTERNAL_ERROR,
+                "Internal Error");
+        ei.setException(e);
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(ei);
-        Response response = new Response(Response.Status.INTERNAL_ERROR, RequestServer.MIME_JSON, json);
+        Response response = new Response(ei.getHttpStatus(), RequestServer.MIME_JSON, json);
         return response;
       }
     }

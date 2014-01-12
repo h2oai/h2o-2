@@ -1,5 +1,7 @@
 package water.api2;
 
+import water.NanoHTTPD.Response.Status;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -32,10 +34,10 @@ public class ParmHelper {
     if (value == null) {
       ASRIllegalArgumentException e =
         new ASRIllegalArgumentException(
-                new ASRArgumentErrorInfo(
-                        AbstractSimpleRequestHandler.ASR_ERROR_MISSING_REQUIRED_PARAMETER,
-                        "Missing required parameter",
-                        name));
+                new ASRErrorInfo(
+                        ASRErrorCodes.MISSING_REQUIRED_PARAMETER,
+                        Status.BAD_REQUEST,
+                        "Missing required parameter with name " + name + "."));
       throw e;
     }
     _visited.add(name);
@@ -71,10 +73,10 @@ public class ParmHelper {
       if (! _visited.contains(key)) {
         ASRIllegalArgumentException e =
                 new ASRIllegalArgumentException(
-                        new ASRArgumentErrorInfo(
-                                AbstractSimpleRequestHandler.ASR_ERROR_UNKNOWN_PARAMETER,
-                                "Parameter is unknown",
-                                key));
+                        new ASRErrorInfo(
+                                ASRErrorCodes.UNKNOWN_PARAMETER,
+                                Status.BAD_REQUEST,
+                                "Unknown parameter with name " + key + "."));
         throw e;
       }
     }
