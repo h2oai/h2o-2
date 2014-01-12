@@ -49,7 +49,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     if(_noutputs == 0)return null;
     Vec [] vecs = new Vec[_noutputs];
     for(int i = 0; i < _noutputs; ++i){
-      _appendables[i]._domain = domains[i];
+      _appendables[i]._domain = domains==null ? null : domains[i];
       vecs[i] = _appendables[i].close(fs);
     }
     return new Frame(names,vecs);
