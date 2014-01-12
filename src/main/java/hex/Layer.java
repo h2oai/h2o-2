@@ -55,9 +55,6 @@ public abstract class Layer extends Iced {
   @API(help = "Constraint for squared sum of incoming weights per unit")
   public float max_w2;
 
-  @API(help = "Fast mode (minor approximation)")
-  public boolean fast_mode;
-
   public void transferParams(NeuralNet.NeuralNetParams p) {
     initial_weight_distribution = p.initial_weight_distribution;
     initial_weight_scale = p.initial_weight_scale;
@@ -69,7 +66,6 @@ public abstract class Layer extends Iced {
     l1 = (float) p.l1;
     l2 = (float) p.l2;
     max_w2 = p.max_w2;
-    fast_mode = p.fast_mode;
   }
 
   // Weights, biases, activity, error
@@ -211,12 +207,27 @@ public abstract class Layer extends Iced {
    * Apply gradient g to unit u with rate r and momentum m.
    */
   final void bprop(int u, float g, float r, float m) {
-    float r2 = 0;
+    double r2 = 0;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = u * _previous._a.length + i;
+
+//      if (Float.isInfinite(g * _w[w])) {
+//        System.out.println("g * w is inf: g = " + g + " w = " + _w[w]);
+//        //System.exit(0);
+//      }
+
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
       float d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+//      if (Math.abs(d) > 1e10) {
+//        System.out.println("d is getting large: d = " + d + " because g = " + g + " and a = " + _previous._a[i]);
+//        //System.exit(0);
+//      }
+
+//      if (Float.isInfinite(d)) {
+//        System.out.println("d is inf: g = " + g + " a = " + _previous._a[i]);
+//        //System.exit(0);
+//      }
 
       // TODO finish per-weight acceleration, doesn't help for now
 //      if( _wp != null && d != 0 ) {
@@ -240,10 +251,21 @@ public abstract class Layer extends Iced {
         _wm[w] = d = _wm[w] + d;
       }
       _w[w] += r * d;
+//      if (Math.abs(_w[w]) > 1e10) {
+//        System.out.println("w is getting large: w = " + _w[w] + " because r = " + r + " and d = " + d);
+//        //System.exit(0);
+//      }
       r2 += _w[w] * _w[w];
     }
-    if( r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      float scale = (float) Math.sqrt(max_w2 / r2);
+//    if (r2 > 1e20) {
+//      System.out.println("r2 is getting large: r2 = " + r2);
+//    }
+//    if (Double.isInfinite(r2)) {
+//      System.out.println("r2 is inf.");
+//      //System.exit(0);
+//    }
+    if( r2 > max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+      double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
       for( int i = 0; i < _previous._a.length; i++ ) {
         int w = u * _previous._a.length + i;
         _w[w] *= scale;
@@ -585,7 +607,6 @@ public abstract class Layer extends Iced {
         initial_weight_scale = stats.initial_weight_scale;
         max_w2 = stats.max_w2;
         loss = stats.loss;
-        fast_mode = stats.fast_mode;
       }
       else {
         units = (int)(v.max() + 1);
@@ -626,7 +647,6 @@ public abstract class Layer extends Iced {
       initial_weight_scale = stats.initial_weight_scale;
       max_w2 = stats.max_w2;
       loss = stats.loss;
-      fast_mode = stats.fast_mode;
     }
 
     @Override protected int target() {
@@ -689,7 +709,6 @@ public abstract class Layer extends Iced {
         initial_weight_distribution = stats.initial_weight_distribution;
         initial_weight_scale = stats.initial_weight_scale;
         max_w2 = stats.max_w2;
-        fast_mode = stats.fast_mode;
       }
     }
 
@@ -722,7 +741,6 @@ public abstract class Layer extends Iced {
       initial_weight_distribution = stats.initial_weight_distribution;
       initial_weight_scale = stats.initial_weight_scale;
       max_w2 = stats.max_w2;
-      fast_mode = stats.fast_mode;
     }
 
     @Override float[] target() {
@@ -927,9 +945,20 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         if( !training || dropout == null || dropout.unit_active(o) ) {
-          for( int i = 0; i < _previous._a.length; i++ )
+          for( int i = 0; i < _previous._a.length; i++ ) {
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
+//            if (Math.abs(_a[o]) > 1e10) {
+//              System.out.println("a is getting large: previous a = " + _previous._a[i] + " weight = " + _w[o * _previous._a.length + i] );
+//              //System.exit(0);
+//            }
+          }
           _a[o] += _b[o];
+//          if (_a[o] > 1) {
+//            _a[o] = 1;
+//          }
+//          if (Float.isInfinite(_a[o])) {
+//            _a[o] = 1e10f;
+//          }
           if( _a[o] < 0 )
             _a[o] = 0;
           else if( !training && dropout != null )
@@ -946,34 +975,17 @@ public abstract class Layer extends Iced {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
         if( _a[u] > 0 ) { // don't use >=
           final float g = _e[u]; // * 1.0 (from derivative of rectifier)
+//          if (Float.isNaN(g)) {
+//            System.out.println("e is NaN");
+//            //System.exit(0);
+//          }
+//          if (Float.isInfinite(g)) {
+//            System.out.println("e is inf");
+//            //System.exit(0);
+//          }
           bprop(u, g, r, m);
-        } else if (fast_mode || (l1 == 0 && l2 == 0 && _wm == null && _bm == null)) {
-          continue; // g = _e[u] * 0.0 = 0 and no other contributions to weights, and no momenta
-        } else {
-          // g = 0, but still keep updating with momenta and L1/L2 regularizers
-          float r2 = 0;
-          for( int i = 0; i < _previous._a.length; i++ ) {
-            final int w = u * _previous._a.length + i;
-            float d = - _w[w] * l2 - Math.signum(_w[w]) * l1;
-
-            if( _wm != null ) {
-              _wm[w] *= m;
-              _wm[w] = d = _wm[w] + d;
-            }
-            _w[w] += r * d;
-            r2 += _w[w] * _w[w];
-          }
-          if( r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-            float scale = (float) Math.sqrt(max_w2 / r2);
-            for( int i = 0; i < _previous._a.length; i++ ) {
-              int w = u * _previous._a.length + i;
-              _w[w] *= scale;
-            }
-          }
-          if( _bm != null ) {
-            _bm[u] *= m;
-          }
         }
+        // otherwise g = _e[u] * 0.0 = 0 and we don't allow other contributions by (and to) weights and momenta
       }
     }
   }
@@ -1021,7 +1033,7 @@ public abstract class Layer extends Iced {
         float e = _previous._previous._a[u] - _a[u];
         float g = e;//* (1 - _a[o]) * _a[o];
         //float g = e * (1 - _a[o]) * _a[o]; // Square error
-        float r2 = 0;
+        double r2 = 0;
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + u;
           if( _previous._e != null )

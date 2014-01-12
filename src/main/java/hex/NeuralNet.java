@@ -72,7 +72,7 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Loss function", filter = Default.class)
   private NeuralNetParams.Loss loss = NeuralNetParams.Loss.CrossEntropy;
 
-  @API(help = "Fast mode (minor approximation)", filter = Default.class)
+//  @API(help = "Fast mode (minor approximation)", filter = Default.class)
   public boolean fast_mode = true;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
@@ -104,11 +104,6 @@ public class NeuralNet extends ValidatedJob {
             (initial_weight_distribution == NeuralNetParams.InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
-    }
-    if (arg._name.equals("fast_mode") &&
-            (l1 == 0 && l2 == 0 && momentum_start == 0 && momentum_stable == 0)
-            ) {
-      arg.disable("Only needed if L1/L2 regularization or momentum is active.", inputArgs);
     }
   }
 
@@ -201,10 +196,18 @@ public class NeuralNet extends ValidatedJob {
       UniformAdaptive, Uniform, Normal
     }
 
+    /**
+     * Activation functions
+     * Tanh, Rectifier and RectifierWithDropout have been tested.  TanhWithDropout and Maxout are experimental.
+     */
     public enum Activation {
       Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
     }
 
+    /**
+     * Loss functions
+     * CrossEntropy is recommended
+     */
     public enum Loss {
       MeanSquare, CrossEntropy
     }
@@ -296,7 +299,7 @@ public class NeuralNet extends ValidatedJob {
     final long num_rows = source.numRows();
     // work on first batch of points serially for better reproducibility
     if (mode != NeuralNetParams.ExecutionMode.Serial) {
-      final long serial_rows = 1000l;
+      final long serial_rows = 10000l;
       System.out.println("Training the first " + serial_rows + " rows serially.");
       Trainer pretrainer = new Trainer.Direct(ls, (double)serial_rows/num_rows, self());
       pretrainer.start();
@@ -307,10 +310,10 @@ public class NeuralNet extends ValidatedJob {
       System.out.println("Serial execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
     } else if (mode == NeuralNetParams.ExecutionMode.Threaded_Hogwild) {
-      System.out.println("Threaded (Hogwild) execution mode");
+      System.out.println("Single-node threaded (Hogwild) execution mode");
       trainer = new Trainer.Threaded(ls, epochs, self());
     } else if (mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
-      System.out.println("MapReduce + Threaded (Hogwild) execution mode");
+      System.out.println("Multi-node MapReduce (Hogwild) execution mode");
       trainer = new Trainer.MapReduce(ls, epochs, self());
     } else throw new RuntimeException("invalid execution mode.");
 
@@ -333,22 +336,10 @@ public class NeuralNet extends ValidatedJob {
           }
 
           //validate continuously
-          final long total_samples = (long) (epochs * num_rows);
-          long eval_samples = 0;
           while(!cancelled() && running) {
-            eval_samples = eval(valid, validResp);
+            eval(valid, validResp);
+            Thread.sleep(2000);
           }
-          // make sure to do the final eval on a regular run
-          if (mode != NeuralNetParams.ExecutionMode.MapReduce_Hogwild && !cancelled() && eval_samples < total_samples) {
-            eval_samples = eval(valid, validResp);
-          }
-          // hack for MapReduce, which calls cancel() from outside, but doesn't set running to false
-          if (cancelled() && mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild && running) {
-            eval_samples = eval(valid, validResp);
-            running = false;
-          }
-          // make sure we we finished properly
-          assert(eval_samples == total_samples || (cancelled() && !running));
 
           // remove validation data
           if( adapted != null && adapted[1] != null )
@@ -387,6 +378,36 @@ public class NeuralNet extends ValidatedJob {
     };
     trainer.start();
     monitor.start();
+
+//    // Use a separate thread for updating the layer statistics
+//    Thread layers = new Thread() {
+//      @Override public void run() {
+//        try {
+//          while(!cancelled() && running) {
+//            NeuralNetModel model = UKV.get(destination_key);
+//            Errors[] trainErrors, validErrors;
+//            long[][] confusion_matrix;
+//            if (model != null) {
+//              trainErrors = model.training_errors;
+//              validErrors = model.validation_errors;
+//              confusion_matrix = model.confusion_matrix;
+//              // update model's statistics only, keep training/validation errors and confusion matrix
+//              model = new NeuralNetModel(destination_key, sourceKey, frame, ls, _params);
+//              model.training_errors = trainErrors;
+//              model.validation_errors = validErrors;
+//              model.confusion_matrix = confusion_matrix;
+//              UKV.put(model._selfKey, model);
+//            }
+//            Thread.sleep(1000);
+//          }
+//        } catch( Exception ex ) {
+//          cancel(ex);
+//        }
+//      }
+//    };
+//    layers.start();
+
+
     trainer.join();
 
     // hack to gracefully terminate the job submitted via H2O web API
@@ -523,11 +544,11 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Cross entropy")
     public double cross_entropy = Double.POSITIVE_INFINITY;
 
-    @API(help = "Layer learning rates")
-    public double[] rates;
-
     @Override public String toString() {
-      return String.format("%.2f", (100 * classification)) + "% (MSE:" + String.format("%.2e", mean_square) + ")";
+        return String.format("%.2f", (100 * classification))
+              + "% (MSE:" + String.format("%.2e", mean_square)
+              + ", MCE:" + String.format("%.2e", cross_entropy)
+              + ")";
     }
   }
 
@@ -565,6 +586,17 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
 
+    @API(help = "Mean activation")
+    public double[] mean_activation;
+
+    @API(help = "Mean bias")
+    public double[] mean_bias;
+
+    @API(help = "RMS weight")
+    public double[] rms_weights;
+
+    public boolean unstable;
+
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNetParams p) {
       super(selfKey, dataKey, fr);
       layers = ls;
@@ -573,6 +605,33 @@ public class NeuralNet extends ValidatedJob {
       for( int y = 1; y < layers.length; y++ ) {
         weights[y] = layers[y]._w;
         biases[y] = layers[y]._b;
+      }
+      mean_activation = new double[ls.length];
+      mean_bias = new double[ls.length];
+      rms_weights = new double[ls.length];
+      // compute mean values for all layers except the input layer
+      for( int y = 1; y < layers.length; y++ ) {
+        int len = layers[y]._a.length;
+        mean_activation[y] = 0;
+        mean_bias[y] = 0;
+        rms_weights[y] = 0;
+        double mean_weight = 0;
+        for( int u = 0; u < len; u++ ) {
+          mean_activation[y] += (double)layers[y]._a[u];
+          mean_bias[y] += (double)layers[y]._b[u];
+          mean_weight += layers[y]._w[u];
+        }
+        mean_activation[y] /= len;
+        mean_bias[y] /= len;
+        mean_weight /= len;
+
+        for(int u = 0; u < len; ++u) {
+          final double diff = layers[y]._w[u] - mean_weight;
+          rms_weights[y] += diff * diff;
+        }
+        rms_weights[y] = Math.sqrt(rms_weights[y]/len);
+        // Double.NaN will trigger when Float.NaN is reached
+        unstable = (Double.isNaN(mean_activation[y]) || Double.isNaN(mean_bias[y]) || Double.isNaN(rms_weights[y]));
       }
       _params = p;
     }
@@ -634,6 +693,15 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
 
+    @API(help = "Mean activation")
+    public double[] mean_activation;
+
+    @API(help = "Mean bias")
+    public double[] mean_bias;
+
+    @API(help = "RMS weight")
+    public double[] rms_weights;
+
     @Override protected String name() {
       return DOC_GET;
     }
@@ -649,6 +717,10 @@ public class NeuralNet extends ValidatedJob {
         validation_errors = model.validation_errors;
         class_names = model.classNames();
         confusion_matrix = model.confusion_matrix;
+        mean_activation = model.mean_activation;
+        mean_bias = model.mean_bias;
+        rms_weights = model.rms_weights;
+        if (model.unstable && job != null) job.cancel();
       }
       return super.serve();
     }
@@ -674,13 +746,43 @@ public class NeuralNet extends ValidatedJob {
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
         DocGen.HTML.section(sb, "Validation mean square error: " + validS);
         DocGen.HTML.section(sb, "Validation mean cross entropy: " + validCE);
-        DocGen.HTML.section(sb, "Layer 0 samples: " + train.training_samples);
-        for (int i=1; i<model.layers.length; ++i) {
-          final Layer l = model.layers[i];
-          DocGen.HTML.section(sb,
-                  "Layer " + i + " learning rate: " + l.rate(train.training_samples)
-                          + " momentum: " + String.format(mse_format, l.momentum(train.training_samples)));
+
+        boolean unstable = false;
+        // hidden layer stats
+        DocGen.HTML.arrayHead(sb);
+        sb.append("<tr>");
+        sb.append("<th>").append("Hidden layer").append("</th>");
+        sb.append("<th>").append("learning rate").append("</th>");
+        sb.append("<th>").append("momentum").append("</th>");
+        sb.append("<th>").append("mean activation").append("</th>");
+        sb.append("<th>").append("rms weight").append("</th>");
+        sb.append("<th>").append("mean bias").append("</th>");
+        sb.append("</tr>");
+        for (int i=1; i<model.layers.length-1; ++i) {
+          sb.append("<tr>");
+          sb.append("<td>").append("<b>" + i + "</b>").append("</td>");
+          sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
+          sb.append("<td>").append(String.format(mse_format, model.layers[i].momentum(train.training_samples))).append("</td>");
+          sb.append("<td>").append(String.format(mse_format, model.mean_activation[i])).append("</td>");
+          sb.append("<td>").append(String.format(mse_format, model.rms_weights[i])).append("</td>");
+          sb.append("<td>").append(String.format(mse_format, model.mean_bias[i])).append("</td>");
+          sb.append("</tr>");
+          unstable |= (Double.isNaN(model.mean_activation[i]) || Double.isNaN(model.rms_weights[i]) || Double.isNaN(model.mean_bias[i]));
         }
+        DocGen.HTML.arrayTail(sb);
+        if (unstable) {
+          DocGen.HTML.section(sb, "===> Instability detected and job aborted.  Try a smaller learning rate and/or single-node mode.") ;
+        }
+
+//        for (int i=1; i<model.layers.length; ++i) {
+//          final Layer l = model.layers[i];
+//          DocGen.HTML.section(sb,
+//                  "Layer " + i + " learning rate: " + l.rate(train.training_samples)
+//                          + " momentum: " + String.format(mse_format, l.momentum(train.training_samples))
+//                          + " mean activation: " + String.format(mse_format, model.mean_activation[i])
+//                          + " rms weight: " + String.format(mse_format, model.rms_weights[i])
+//                          + " mean bias: " + String.format(mse_format, model.mean_bias[i])
+//          );
         if( nn != null ) {
           long ps = train.training_samples * 1000 / nn.runTimeMs();
           DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");

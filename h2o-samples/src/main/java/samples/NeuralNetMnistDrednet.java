@@ -11,10 +11,11 @@ import water.fvec.Vec;
 public class NeuralNetMnistDrednet extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
     Class job = Class.forName(Thread.currentThread().getStackTrace()[1].getClassName());
-    samples.launchers.CloudLocal.launch(job, 1);
+//    samples.launchers.CloudLocal.launch(job, 1);
+//    samples.launchers.CloudProcess.launch(job, 3);
     //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.163");
-    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.163", "192.168.1.164");
+  samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 8);
   }
 
@@ -27,7 +28,7 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.NeuralNetParams.Loss.CrossEntropy);
 
     NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
-    p.rate = 0.01f;
+    p.rate = 0.1f;
     p.rate_annealing = 1e-6f;
     p.epochs = 1000;
     p.activation = NeuralNet.NeuralNetParams.Activation.RectifierWithDropout;
@@ -37,7 +38,6 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     p.momentum_stable = 0.99f;
     p.l1 = .00001f;
     p.l2 = .00f;
-    p.fast_mode = true;
     p.initial_weight_distribution = NeuralNet.NeuralNetParams.InitialWeightDistribution.UniformAdaptive;
     // Hinton
 //  p.initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
@@ -61,13 +61,11 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
 
     System.out.println("Main training");
 
-    // this works and is accurate
-    System.out.println("Multi-threaded");
+//    System.out.println("Multi-threaded");
     _trainer = new Trainer.Threaded(ls, 0, self());
     _trainer.start();
 
-    // TODO: Fix
-//    System.out.println("MapReduce");
+    System.out.println("MapReduce");
 //    _trainer = new Trainer.MapReduce(ls, 0, self());
 //    _trainer.start();
   }
