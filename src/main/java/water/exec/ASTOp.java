@@ -838,7 +838,7 @@ class ASTCat extends ASTOp {
           OPF_PREFIX,
           OPP_PREFIX,
           OPA_RIGHT); }
-  @Override ASTOp make() {return this;}
+  @Override ASTOp make() {return new ASTCat();}
   @Override void apply(Env env, int argcnt) {
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
