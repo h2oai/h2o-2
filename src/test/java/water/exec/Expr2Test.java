@@ -7,7 +7,6 @@ import water.*;
 import water.fvec.*;
 
 public class Expr2Test extends TestUtil {
-  int i = 0;
 
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
@@ -82,8 +81,8 @@ public class Expr2Test extends TestUtil {
       checkStr("max.na.rm(h.hex,NA)",211.3375); // 211.3375
       checkStr("min.na.rm(c(NA, 1), -1)",-1); // -1
       checkStr("max.na.rm(c(NA, 1), -1)", 1); // 1
-      checkStr("max(c(Inf,1),  2 )",  Double.POSITIVE_INFINITY); // Infinity
-      checkStr("min(c(Inf,1),-Inf)", -Double.NEGATIVE_INFINITY); // -Infinity
+      checkStr("max(c(Inf,1),  2 )", Double.POSITIVE_INFINITY); // Infinity
+      checkStr("min(c(Inf,1),-Inf)", Double.NEGATIVE_INFINITY); // -Infinity
       checkStr("is.na(h.hex)");
       checkStr("sum(is.na(h.hex))", 0);
       checkStr("nrow(h.hex)*3", 30);
