@@ -358,7 +358,7 @@ public class RequestServer extends NanoHTTPD {
         ei.setException(e);
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(ei);
-        Response response = new Response(ei.getHttpStatus(), RequestServer.MIME_JSON, json);
+        Response response = new Response(ei.getHttpStatus(), MIME_JSON, json);
         return response;
       }
       catch (Exception e) {
@@ -370,12 +370,8 @@ public class RequestServer extends NanoHTTPD {
         ei.setException(e);
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(ei);
-        Response response = new Response(ei.getHttpStatus(), RequestServer.MIME_JSON, json);
+        Response response = new Response(ei.getHttpStatus(), MIME_JSON, json);
         return response;
-      }
-      catch (Throwable t) {
-        try { Log.err(t); } catch (Throwable _) {}
-        H2O.exit(1);
       }
     }
 
