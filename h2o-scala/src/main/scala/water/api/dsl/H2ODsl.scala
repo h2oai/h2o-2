@@ -124,8 +124,8 @@ val model = drf(source, response, 1)
 """)
   }
 
-  override def head(d:DFrame, rows:Int) = println(d.toString(rows))
-  override def tail(d:DFrame, rows:Int) = println(d.toString(rows))
+  override def head(d:DFrame, rows:Int) = println(d.toStringHead(rows))
+  override def tail(d:DFrame, rows:Int) = println(d.toStringTail(rows))
   
   def test():DFrame = {
     val f = parse("../smalldata/cars.csv")
@@ -171,8 +171,9 @@ class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFr
   def -(rhs: T_Frame) = Utils.combine(this, rhs, CSub())
   // Append
   def ++(rhs: T_Frame) = new DFrame(cbind(frame(), rhs.frame()))
-  override def toString() = frame().toStringHead(NHEAD)
-  def toString(nrows: Int) = frame().toStringHead(nrows)
+  override def toString() = Utils.head(frame(), NHEAD)
+  def toStringHead(nrows: Int) = Utils.head(frame(), nrows)
+  def toStringTail(nrows: Int) = Utils.tail(frame(), nrows)
   
 }
 

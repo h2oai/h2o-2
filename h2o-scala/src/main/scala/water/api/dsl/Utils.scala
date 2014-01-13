@@ -8,6 +8,9 @@ import water.fvec.Chunk
 import water.fvec.NewChunk
 import water.fvec.Chunk
 import water.Freezable
+import water.fvec.Frame
+import java.lang.StringBuilder
+import java.lang.Long
 
 /** Frame utils. In most of cases, they do not modify
  *  original frame but create a new H2O frame. 
@@ -51,6 +54,24 @@ object Utils {
 		r.doAll(f1.ncol, f.frame)
 		new DFrame(r.outputFrame(f1.frame.names(), f1.frame.domains()))
 	}
+  
+  def head(f: Frame, nrows: Long ):String = {
+    val r : StringBuilder = new StringBuilder
+    if (f!=null) { 
+      val fs:Array[String] = f.toStringHdr(r);
+      for (i <- 0L until Math.min(f.numRows(), nrows) ) f.toString(r, fs, i)
+    }
+    return r.toString
+  }
+  
+  def tail(f: Frame, nrows: Long ):String = {
+    val r : StringBuilder = new StringBuilder
+    if (f!=null) { 
+      val fs:Array[String] = f.toStringHdr(r);
+      for (i <- Math.max(0, f.numRows()-nrows) until f.numRows() ) f.toString(r, fs, i)
+    }
+    return r.toString
+  }
 }
 
 class MRICollector[X<:Iced](acc:X, cf: T_T_Collect[X, scala.Double]) extends MRTask2[MRICollector[X]] {
