@@ -595,9 +595,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
         double sum;
         if( _validation ) {     // Passed in a class distribution from scoring
-          sum = 1.0;            // Sum of a distribution is 1.0
           for( int i=0; i<_nclass; i++ )
             ds[i] = chks[i+_ncols+1].at0(row);  // Get the class distros
+          if (_nclass > 1 ) sum = 1.0;          // Sum of a distribution is 1.0 for classification
+          else sum = ds[0];                     // Sum is the same as prediction for regression.
         } else {                // Passed in the model-specific columns
           sum = score0(chks,ds,row);
         }
