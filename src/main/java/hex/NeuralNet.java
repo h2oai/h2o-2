@@ -231,7 +231,7 @@ public class NeuralNet extends ValidatedJob {
   NeuralNetParams _params;
 
   // Hack: used to stop the monitor thread
-  private static volatile boolean running = true;
+  private volatile boolean running = true;
 
   public NeuralNet() {
     description = DOC_GET;
@@ -646,8 +646,11 @@ public class NeuralNet extends ValidatedJob {
           rms_bias[y] = Math.sqrt(rms_bias[y]/len);
           rms_weight[y] = Math.sqrt(rms_weight[y]/len/l._previous._a.length);
 
-          unstable = Double.isNaN(mean_bias[y])       || Double.isNaN(rms_bias[y])
-                  || Double.isNaN(mean_weight[y])     || Double.isNaN(rms_weight[y]);
+          unstable |= Double.isNaN(mean_bias[y])   || Double.isNaN(rms_bias[y])
+                   || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
+        }
+        for( int y = 1; y < layers.length-1; y++ ) {
+          unstable |= layers[y].unstable;
         }
       }
     }

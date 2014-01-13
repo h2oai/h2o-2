@@ -55,6 +55,8 @@ public abstract class Layer extends Iced {
   @API(help = "Constraint for squared sum of incoming weights per unit")
   public float max_w2;
 
+  public boolean unstable = false;
+
   public void transferParams(NeuralNet.NeuralNetParams p) {
     initial_weight_distribution = p.initial_weight_distribution;
     initial_weight_scale = p.initial_weight_scale;
@@ -213,6 +215,7 @@ public abstract class Layer extends Iced {
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
       float d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+      unstable |= Float.isNaN(d);
 
       // TODO finish per-weight acceleration, doesn't help for now
 //      if( _wp != null && d != 0 ) {
@@ -927,6 +930,7 @@ public abstract class Layer extends Iced {
           else if( !training && dropout != null )
             _a[o] *= .5f;
         }
+        unstable |= Float.isNaN(_a[o]);
       }
     }
 
