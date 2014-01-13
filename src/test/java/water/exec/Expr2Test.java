@@ -98,7 +98,7 @@ public class Expr2Test extends TestUtil {
 
       checkStr("(h.hex+1)<-2"); // No L-value
       checkStr("h.hex[nrow(h.hex=1),]"); // Passing a scalar 1.0 to nrow
-      checkStr("h.hex[{h.hex=10},]"); // SHOULD PARSE statement list here; then do evil side-effect killing h.hex but also using 10 to select last row
+      checkStr("h.hex[{h.hex=10},]"); // ERROR BROKEN: SHOULD PARSE statement list here; then do evil side-effect killing h.hex but also using 10 to select last row
       checkStr("h.hex[2,3]<-4;",4);
       checkStr("c(1,3,5)");
       // Column row subselection
@@ -164,7 +164,7 @@ public class Expr2Test extends TestUtil {
       // Filter/selection
       checkStr("h.hex[h.hex[,4]>30,]");
       checkStr("a=c(1,2,3);a[a[,1]>10,1]");
-      checkStr("apply(h.hex,2,sum)"); // Currently wrong; the ENUM cols should fold to NA
+      checkStr("apply(h.hex,2,sum)"); // ERROR BROKEN: the ENUM cols should fold to NA
       checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
       //checkStr("z=5;apply(h.hex,2,function(x){x[]+z})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
