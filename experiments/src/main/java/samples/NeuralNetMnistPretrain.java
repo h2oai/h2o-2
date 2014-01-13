@@ -24,16 +24,23 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
     ls[1] = new Layer.Tanh(500);
     ls[2] = new Layer.Tanh(500);
     ls[3] = new VecSoftmax(labels, outputStats, NeuralNet.NeuralNetParams.Loss.CrossEntropy);
+
+    NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
+    p.rate = 0.01f;
+    p.rate_annealing = 1e-6f;
+    p.epochs = 1000;
+    p.activation = NeuralNet.NeuralNetParams.Activation.Tanh;
+    p.max_w2 = 15;
+    p.momentum_start = 0.5f;
+    p.momentum_ramp = 60000 * 300;
+    p.momentum_stable = 0.99f;
+//    p.l1 = .00001f;
+//    p.l2 = .00f;
+    p.initial_weight_distribution = NeuralNet.NeuralNetParams.InitialWeightDistribution.Uniform;
+    p.initial_weight_scale = 1;
+
     for( int i = 0; i < ls.length; i++ ) {
-      ls[i].initial_weight_distribution = NeuralNet.NeuralNetParams.InitialWeightDistribution.Uniform;
-      ls[i].initial_weight_scale = 1;
-      ls[i].rate = .01f;
-      ls[i].rate_annealing = 1 / 1e6f;
-      ls[i].momentum_start = .5f;
-      ls[i].momentum_ramp = 60000 * 300;
-      ls[i].momentum_stable = .99f;
-      //ls[i].l1 = .005f;
-      ls[i].init(ls, i);
+      ls[i].init(ls, i, p);
     }
     return ls;
   }
