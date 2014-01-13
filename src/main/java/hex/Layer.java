@@ -210,24 +210,9 @@ public abstract class Layer extends Iced {
     double r2 = 0;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = u * _previous._a.length + i;
-
-//      if (Float.isInfinite(g * _w[w])) {
-//        System.out.println("g * w is inf: g = " + g + " w = " + _w[w]);
-//        //System.exit(0);
-//      }
-
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
       float d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
-//      if (Math.abs(d) > 1e10) {
-//        System.out.println("d is getting large: d = " + d + " because g = " + g + " and a = " + _previous._a[i]);
-//        //System.exit(0);
-//      }
-
-//      if (Float.isInfinite(d)) {
-//        System.out.println("d is inf: g = " + g + " a = " + _previous._a[i]);
-//        //System.exit(0);
-//      }
 
       // TODO finish per-weight acceleration, doesn't help for now
 //      if( _wp != null && d != 0 ) {
@@ -251,19 +236,8 @@ public abstract class Layer extends Iced {
         _wm[w] = d = _wm[w] + d;
       }
       _w[w] += r * d;
-//      if (Math.abs(_w[w]) > 1e10) {
-//        System.out.println("w is getting large: w = " + _w[w] + " because r = " + r + " and d = " + d);
-//        //System.exit(0);
-//      }
       r2 += _w[w] * _w[w];
     }
-//    if (r2 > 1e20) {
-//      System.out.println("r2 is getting large: r2 = " + r2);
-//    }
-//    if (Double.isInfinite(r2)) {
-//      System.out.println("r2 is inf.");
-//      //System.exit(0);
-//    }
     if( r2 > max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
       double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
       for( int i = 0; i < _previous._a.length; i++ ) {
@@ -945,20 +919,9 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         if( !training || dropout == null || dropout.unit_active(o) ) {
-          for( int i = 0; i < _previous._a.length; i++ ) {
+          for( int i = 0; i < _previous._a.length; i++ )
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
-//            if (Math.abs(_a[o]) > 1e10) {
-//              System.out.println("a is getting large: previous a = " + _previous._a[i] + " weight = " + _w[o * _previous._a.length + i] );
-//              //System.exit(0);
-//            }
-          }
           _a[o] += _b[o];
-//          if (_a[o] > 1) {
-//            _a[o] = 1;
-//          }
-//          if (Float.isInfinite(_a[o])) {
-//            _a[o] = 1e10f;
-//          }
           if( _a[o] < 0 )
             _a[o] = 0;
           else if( !training && dropout != null )
@@ -975,14 +938,6 @@ public abstract class Layer extends Iced {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
         if( _a[u] > 0 ) { // don't use >=
           final float g = _e[u]; // * 1.0 (from derivative of rectifier)
-//          if (Float.isNaN(g)) {
-//            System.out.println("e is NaN");
-//            //System.exit(0);
-//          }
-//          if (Float.isInfinite(g)) {
-//            System.out.println("e is inf");
-//            //System.exit(0);
-//          }
           bprop(u, g, r, m);
         }
         // otherwise g = _e[u] * 0.0 = 0 and we don't allow other contributions by (and to) weights and momenta

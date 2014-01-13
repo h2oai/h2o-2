@@ -22,13 +22,13 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
   @Override protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[5];
     ls[0] = new VecsInput(data, inputStats, 0.2);
-    ls[1] = new Layer.RectifierDropout(102);
-    ls[2] = new Layer.RectifierDropout(102);
-    ls[3] = new Layer.RectifierDropout(204);
+    ls[1] = new Layer.RectifierDropout(1024);
+    ls[2] = new Layer.RectifierDropout(1024);
+    ls[3] = new Layer.RectifierDropout(2048);
     ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.NeuralNetParams.Loss.CrossEntropy);
 
     NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
-    p.rate = 0.1f;
+    p.rate = 0.01f;
     p.rate_annealing = 1e-6f;
     p.epochs = 1000;
     p.activation = NeuralNet.NeuralNetParams.Activation.RectifierWithDropout;
@@ -54,10 +54,10 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
   @Override protected void startTraining(Layer[] ls) {
     // Initial training on one thread to increase stability
     // If the net still produces NaNs, reduce learning rate //TODO: Automate this
-//    System.out.println("Initial single-threaded training");
-//    _trainer = new Trainer.Direct(ls, 0.1, self());
-//    _trainer.start();
-//    _trainer.join();
+    System.out.println("Initial single-threaded training");
+    _trainer = new Trainer.Direct(ls, 0.1, self());
+    _trainer.start();
+    _trainer.join();
 
     System.out.println("Main training");
 

@@ -100,9 +100,11 @@ public class NeuralNet extends ValidatedJob {
             ) {
       arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
     }
-    if( arg._name.equals("mode") && (H2O.CLOUD._memary.length > 1) ) {
-      mode = NeuralNetParams.ExecutionMode.MapReduce_Hogwild;
-      arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
+    if( arg._name.equals("mode") ) {
+      if (H2O.CLOUD._memary.length > 1) {
+
+        arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
+      }
     }
   }
 
@@ -340,7 +342,6 @@ public class NeuralNet extends ValidatedJob {
           //validate continuously
           while(!cancelled() && running) {
             eval(valid, validResp);
-            Thread.sleep(2000);
           }
 
           // remove validation data
@@ -582,7 +583,7 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "RMS error")
     public double[] rms_error;
 
-    public boolean unstable;
+    public boolean unstable = false;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNetParams p) {
       super(selfKey, dataKey, fr);
@@ -590,7 +591,7 @@ public class NeuralNet extends ValidatedJob {
       layers = ls;
       weights = new float[ls.length][];
       biases = new float[ls.length][];
-      for( int y = 1; y < layers.length-1; y++ ) {
+      for( int y = 1; y < layers.length; y++ ) {
         weights[y] = layers[y]._w;
         biases[y] = layers[y]._b;
       }
@@ -730,7 +731,10 @@ public class NeuralNet extends ValidatedJob {
         validation_errors = model.validation_errors;
         class_names = model.classNames();
         confusion_matrix = model.confusion_matrix;
-        if (model.unstable && job != null) job.cancel();
+        if (model.unstable && job != null) {
+          System.out.println("Aborting job due to instability. Try a smaller learning rate and/or single-node mode.");
+          job.cancel();
+        }
       }
       return super.serve();
     }
@@ -908,6 +912,7 @@ public class NeuralNet extends ValidatedJob {
     @Override public boolean toHTML(StringBuilder sb) {
       DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
       DocGen.HTML.section(sb, "Mean square error: " + mean_square_error);
+      DocGen.HTML.section(sb, "Mean cross entropy: " + cross_entropy);
       confusion(sb, "Confusion Matrix", response.domain(), confusion_matrix);
       return true;
     }
