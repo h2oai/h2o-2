@@ -51,20 +51,26 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             # should be able to handle any character in a quoted stringexcept our 3 eol chars
             # create a random length enum. start with 1024 everywhere
             longEnum = ""
-            for k in range(ENUM_WIDTH):
-                if JUST_EASY_CHARS | JUST_EASIER_CHARS:
-                    uStr = random.choice(legalChars)
-                else:
-                    u = random.randint(0,MAX_CHAR)
-                    uStr = str(unichr(u))
-                # we're using double quote below, so don't use that either! double quote is ok!
-                # comma is okay? we're going to force the separator below
-                # TEMP: take out period and plus minus for now
-                if uStr=='\n' or uStr=='\r\n' or uStr=='\r' or uStr=='"' or uStr=='+' or uStr=="-" or uStr==".":
-                    # translate to 'a'
-                    uStr = 'a'
-                longEnum += uStr
-            rowData.append('"' + longEnum + '"') # double quoted long enum
+
+            # do 10% NAs
+            n = random.randint(0,9)
+            if n==0:
+                rowData.append('')
+            else:
+                for k in range(ENUM_WIDTH):
+                    if JUST_EASY_CHARS | JUST_EASIER_CHARS:
+                        uStr = random.choice(legalChars)
+                    else:
+                        u = random.randint(0,MAX_CHAR)
+                        uStr = str(unichr(u))
+                    # we're using double quote below, so don't use that either! double quote is ok!
+                    # comma is okay? we're going to force the separator below
+                    # TEMP: take out period and plus minus for now
+                    if uStr=='\n' or uStr=='\r\n' or uStr=='\r' or uStr=='"' or uStr=='+' or uStr=="-" or uStr==".":
+                        # translate to 'a'
+                        uStr = 'a'
+                    longEnum += uStr
+                rowData.append('"' + longEnum + '"') # double quoted long enum
 
         # can't use ', ' ..illegal, has to be comma only
         rowDataCsv = ",".join(map(str,rowData))

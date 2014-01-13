@@ -1,4 +1,5 @@
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../findNSourceUtils.R')
 
 test.glm2vanillafactors.golden <- function(H2Oserver) {
 	
@@ -33,3 +34,4 @@ expect_equal(fitH2O@model$aic, fitR$aic, tolerance = 0.01)
 }
 
 doTest("GLM Test: Golden GLM2 - Gaussian Factors", test.glm2vanillafactors.golden)
+

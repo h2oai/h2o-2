@@ -589,7 +589,7 @@ public final class AutoBuffer {
 
   public AutoBuffer put(Freezable f) {
     if( f == null ) return put2(TypeMap.NULL);
-    assert f.frozenType() > 0;
+    assert f.frozenType() > 0 : "No TypeMap for "+f.getClass().getName();
     put2((short)f.frozenType());
     return f.write(this);
   }
@@ -990,6 +990,17 @@ public final class AutoBuffer {
     for( int i=x; i<x+y; i++ ) ary[i] = getAA4();
     return ary;
   }
+  public long[][][] getAAA8( ) {
+    _arys++;
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    long[][][] ary  = new long[x+y+z][][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getAA8();
+    return ary;
+  }
 
   public String getStr( ) {
     int len = getInt();
@@ -1178,6 +1189,15 @@ public final class AutoBuffer {
     for( int i=x; i<x+y; i++ ) putAA4(ary[i]);
     return this;
   }
+  public AutoBuffer putAAA8( long[][][] ary ) {
+    _arys++;
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putAA8(ary[i]);
+    return this;
+  }
   // Put a String as bytes (not chars!)
   public AutoBuffer putStr( String s ) {
     if( s==null ) return putInt(-1);
@@ -1328,6 +1348,15 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+  public AutoBuffer putJSONAAA8( long ary[][][] ) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONAA8(ary[i]);
+    }
+    return put1(']');
+  }
 
   public AutoBuffer putEnumJSON( Enum e ) {
     return e==null ? putNULL() : put1('"').putStr2(e.toString()).put1('"');
@@ -1341,6 +1370,7 @@ public final class AutoBuffer {
 
   public AutoBuffer putJSONA8( String name, long ary[] ) { return putJSONStr(name).put1(':').putJSONA8(ary); }
   public AutoBuffer putJSONAA8( String name, long ary[][] ) { return putJSONStr(name).put1(':').putJSONAA8(ary); }
+  public AutoBuffer putJSONAAA8( String name, long ary[][][] ) { return putJSONStr(name).put1(':').putJSONAAA8(ary); }
   public AutoBuffer putJSON4 ( int i ) { return putStr2(Integer.toString(i)); }
   public AutoBuffer putJSON4 ( String name, int i ) { return putJSONStr(name).put1(':').putJSON4(i); }
   public AutoBuffer putJSONA4( int[] a) {

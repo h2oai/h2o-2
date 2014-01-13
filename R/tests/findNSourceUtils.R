@@ -1,3 +1,4 @@
+.origEchoValue <- getOption("echo")
 options(echo=FALSE)
 
 ##
@@ -20,7 +21,6 @@ function(path, root, optional_root_parent = NULL) {
         return(0)
     }
 
-    if(!is.null(optional_root_parent)) cat("\nUsing optional root parent: ", optional_root_parent, "\n")
     if (basename(path) == "h2o" || "smalldata" %in% dir(path)) {
         print("\n[INFO]: Could not find the bucket that you specified! Checking R/*. Will fail if cannot find\n")
         SEARCHPATH <<- path
@@ -106,20 +106,26 @@ function() {
 }
 
 getBucket<-
-function(bucket = NULL) {
+function(bucket = NULL, optional_root_parent = NULL) {
     if(is.null(bucket)) stop("Did not specify bucket...")
-    print(bucket)
     bucket <- gsub("[./]","",bucket)
-    distance.bucket.root <- calcPath(getwd(), bucket)
-    bucket.dots <- genDots(distance.bucket.root)
-    newBucket <- paste(bucket.dots, bucket, sep  ="")
-    return(newBucket)
+    distance.bucket.root <- calcPath(getwd(), bucket, optional_root_parent)
+    if (ROOTISPARENT) {
+        distance.bucket.root <- distance.bucket.root
+        bucket.dots <- genDots(distance.bucket.root)
+        return(bucket.dots)
+    } else {
+        bucket.dots <- genDots(distance.bucket.root)
+        newBucket <- paste(bucket.dots, bucket, sep  ="")
+        return(newBucket)
+    }
 }
 
 distance <- calcPath(getwd(), "tests", "R")
 if (distance < 0) {
     path <- paste(SEARCHPATH, "/R/", sep = "")
     source(paste(path, "tests/Utils/h2oR.R", sep = ""))
+    source(paste(path, "tests/Utils/setupR.R", sep = ""))
     source(paste(path, "tests/Utils/pcaR.R", sep = ""))
     source(paste(path, "tests/Utils/glmR.R", sep = ""))
     source(paste(path, "tests/Utils/gbmR.R", sep = ""))
@@ -129,9 +135,9 @@ if (distance < 0) {
     source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Internal.R", sep = ""))
 } else {
-    distance <- calcPath(getwd(), "tests")
     dots     <- genDots(distance)
     source(paste(dots, "Utils/h2oR.R", sep = ""))
+    source(paste(dots, "Utils/setupR.R", sep = ""))
     source(paste(dots, "Utils/pcaR.R", sep = ""))
     source(paste(dots, "Utils/glmR.R", sep = ""))
     source(paste(dots, "Utils/gbmR.R", sep = ""))
@@ -145,7 +151,34 @@ if (distance < 0) {
     source(paste(rdots, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(rdots, "h2oRClient-package/R/Internal.R", sep = ""))
 }
+
+#The master seed is set by the runnerSetup.R script.
+#It serves as a way to reproduce all of the tests 
+master_seed_dir <- getBucket("tests", "R")
+ms <- paste(master_seed_dir, "master_seed", sep = "")
+seed <- NULL
+if (file.exists(ms))  {
+    MASTER_SEED <<- TRUE
+    seed <- read.table(ms)[[1]]
+}
+setupRandomSeed(seed, suppress = FALSE)
 sandbox()
-#This random seed is overwritten by any seed set in a test
-setupRandomSeed(suppress = TRUE)
+h2o.__logIt("[SEED] :", SEED, "Command")
+
+
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "")
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), paste("STARTING TEST: ", R.utils::commandArgs(asValues=TRUE)$"-f"))
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "")
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
 h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
+
+# Set up some directories.
+if (exists("TEST_ROOT_DIR")) {
+  H2O_JAR_DIR = sprintf("%s/../../target", TEST_ROOT_DIR)
+}
+  
+# Clean up any temporary variables to avoid polluting the user's workspace.
+options(echo=.origEchoValue)
+rm(list=c(".origEchoValue"))
+

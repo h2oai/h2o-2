@@ -2,6 +2,8 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i
 
+
+DO_WEIGHT_FAIL = False
 def define_params(): 
     paramDict = {
         'standardize': [None, 0,1],
@@ -47,19 +49,34 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_params_rand2_newargs(self):
-        csvPathname = 'covtype/covtype.20k.data'
-        hex_key = 'covtype.20k.hex'
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
+    def test_GLM_tweedie_rand2(self):
+        if 1==1:
+            csvPathname = 'standard/covtype.data'
+            hex_key = 'covtype.hex'
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='put')
+        else:
+            csvPathname = 'covtype/covtype.20k.data'
+            hex_key = 'covtype.20k.hex'
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
+
+
         paramDict = define_params()
 
-        for trial in range(50):
+        for trial in range(10):
             # params is mutable. This is default.
-            params = {'y': 54, 'case': 1, 'lambda': 0, 'alpha': 0, 'n_folds': 1, 'family': 'tweedie'}
+            params = {
+                'y': 54, 
+                'case': 4, 
+                'case_mode': '=', 
+                'lambda': 0, 
+                'alpha': 0, 
+                'n_folds': 1, 
+                'family': 'tweedie'
+            }
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            glm = h2o_cmd.runGLM(timeoutSecs=70, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=180, parseResult=parseResult, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()

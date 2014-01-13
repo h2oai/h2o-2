@@ -79,11 +79,17 @@ nightly_build_stuff:
 	@echo
 	@echo Build completed successfully.
 
+MILLIS_SINCE_EPOCH = $(shell date '+%s')
+
 build:
 	@echo
 	@echo "PHASE: Building R inner package..."
 	@echo
+ifeq ($(BUILD_NUMBER),99999)
+	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION).$(MILLIS_SINCE_EPOCH)
+else
 	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION)
+endif
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
 	@echo
@@ -226,12 +232,17 @@ dw_3:
 # Note:  to get pdfunite on a mac, try:
 #     $ brew install poppler
 #
+PDFLATEX=$(shell which pdflatex)
 PDFUNITE=$(shell which pdfunite)
 dw_4:
+ifeq ($(PDFLATEX),)
+	@echo pdflatex not found, skipping...
+else
 ifeq ($(PDFUNITE),)
 	@echo pdfunite not found, skipping...
 else
 	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
+endif
 endif
 
 #

@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_1ktrees_job_cancel_many(self):
+    def test_1ktrees_job_cancel_many_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            h2o_cmd.runRF(parseResult=parseResult, trees=trial, max_depth=50, rfView=False, noPoll=True, timeoutSecs=6, retryDelaySecs=0.25)
+            h2o_cmd.runRF(parseResult=parseResult, trees=trial, max_depth=50, rfView=False, noPoll=True, timeoutSecs=30, retryDelaySecs=0.25)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
             ### h2o_jobs.cancelAllJobs(timeoutSecs=10)
             h2o.check_sandbox_for_errors()

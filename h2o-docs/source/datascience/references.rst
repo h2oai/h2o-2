@@ -9,8 +9,8 @@ platform correctly, and getting the most of analysis.
 
 Below are the citations of seminal articles, and articles
 demonstrating rigorous application of the algorithms of H2O. Included
-are referencesfor algos currently in the works. This list is not meant
-to be exhaustive, but ratherto provide an abbreviated syllabus to help
+are references for algos currently in the works. This list is not meant
+to be exhaustive, but rather to provide an abbreviated syllabus to help
 develop a strong understanding. 
 
 Recommended Reading

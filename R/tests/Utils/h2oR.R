@@ -1,5 +1,8 @@
-options(echo=FALSE)
-local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
+##                                       ##
+#                                         #  
+#  Various Utility Functions for R Units  #
+#                                         #
+##                                       ##
 
 grabRemote <- function(myURL, myFile) {
   temp <- tempfile()
@@ -26,13 +29,21 @@ function(exdir) {
 
 sandbox<-
 function() {
-  unlink("./Rsandbox", TRUE)
-  dir.create("./Rsandbox")
-  h2o.__LOG_COMMAND <- "./Rsandbox/"
-  h2o.__LOG_ERROR   <- "./Rsandbox/"
+  test_name <- R.utils::commandArgs(asValues=TRUE)$"-f"
+  Rsandbox <- paste("./Rsandbox_", test_name, sep = "")
+  dir.create(Rsandbox, showWarnings = FALSE)
+  commandsLog <- paste(Rsandbox, "/commands.log", sep = "")
+  errorsLog <- paste(Rsandbox, "/errors.log", sep = "")
+  if(file.exists(commandsLog)) file.remove(commandsLog)
+  if(file.exists(errorsLog)) file.remove(errorsLog)
+  write.table(SEED, paste(Rsandbox, "/seed", sep = ""), row.names = F, col.names = F)
+  h2o.__LOG_COMMAND <- paste(Rsandbox, "/", sep = "") 
+  h2o.__LOG_ERROR   <- paste(Rsandbox, "/", sep = "") 
   h2o.__changeCommandLog(normalizePath(h2o.__LOG_COMMAND))
   h2o.__changeErrorLog(normalizePath(h2o.__LOG_ERROR))
   h2o.__startLogging()
+  
+  
 }
 
 Log.info<-
@@ -68,16 +79,21 @@ function(m) {
   cat(sprintf("[%s] %s\n", Sys.time(),m))
 }
 
-PASS<- 
+PASS_BANNER<-
 function() {
+  cat("")
   cat("######     #     #####   #####  \n")
   cat("#     #   # #   #     # #     # \n")
   cat("#     #  #   #  #       #       \n")
   cat("######  #     #  #####   #####  \n")
   cat("#       #######       #       # \n")
   cat("#       #     # #     # #     # \n")
-  cat("#       #     #  #####   #####  \n")
+  cat("#       #     #  #####   #####  \n")  
+}
 
+PASS<- 
+function() {
+  PASS_BANNER()
   Log.info("TEST PASSED")
   q("no",0,FALSE)
 }
@@ -98,6 +114,44 @@ function(e) {
 WARN<-
 function(w) {
   Log.warn(w)
+}
+
+#----------------------------------------------------------------------
+# Print out a message with clear whitespace.
+#
+# Parameters:  x -- Message to print out.
+#              n -- (optional) Step number.
+#
+# Returns:     none
+#----------------------------------------------------------------------
+heading <- function(x, n = -1) {
+  Log.info("")
+  Log.info("")
+  if (n < 0) {
+    Log.info(sprintf("STEP: %s", x))
+  }
+  else {
+    Log.info(sprintf("STEP %2d: %s", n, x))
+  }
+  Log.info("")
+  Log.info("")
+}
+
+#----------------------------------------------------------------------
+# "Safe" system.  Error checks process exit status code.  stop() if it failed.
+#
+# Parameters:  x -- String of command to run (passed to system()).
+#
+# Returns:     none
+#----------------------------------------------------------------------
+safeSystem <- function(x) {
+  print(sprintf("+ CMD: %s", x))
+  res <- system(x)
+  print(res)
+  if (res != 0) {
+    msg <- sprintf("SYSTEM COMMAND FAILED (exit status %d)", res)
+    stop(msg)
+  }
 }
 
 get_args<-
@@ -203,16 +257,17 @@ function() {
   require(testthat)
 }
 
-Log.info("============== Setting up R-Unit environment... ================")
-Log.info("Branch: ")
-system('git branch')
-Log.info("Hash: ")
-system('git rev-parse HEAD')
-
-defaultPath <- locate("../../target/R")
-ipPort <- get_args(commandArgs(trailingOnly = TRUE))
-checkNLoadWrapper(ipPort)
-checkNLoadPackages()
+#
+#Log.info("============== Setting up R-Unit environment... ================")
+#Log.info("Branch: ")
+#system('git branch')
+#Log.info("Hash: ")
+#system('git rev-parse HEAD')
+#
+#defaultPath <- locate("../../target/R")
+#ipPort <- get_args(commandArgs(trailingOnly = TRUE))
+#checkNLoadWrapper(ipPort)
+#checkNLoadPackages()
 
 h2o.removeAll <-
 function(object) {
@@ -220,16 +275,17 @@ function(object) {
   h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
 }
 
-Log.info("Loading other required test packages")
-if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
-if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
-require(glmnet)
-require(gbm)
-
-#Global Variables
-myIP   <- ipPort[[1]]
-myPort <- ipPort[[2]]
-PASSS <- FALSE
-view_max <- 10000 #maximum returned by Inspect.java
-SEED <- NULL
+#Log.info("Loading other required test packages")
+#if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
+#if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
+#require(glmnet)
+#require(gbm)
+#
+##Global Variables
+#myIP   <- ipPort[[1]]
+#myPort <- ipPort[[2]]
+#PASSS <- FALSE
+#view_max <- 10000 #maximum returned by Inspect.java
+#SEED <- NULL
+#
 

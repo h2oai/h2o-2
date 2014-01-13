@@ -30,8 +30,10 @@ public class Exec2 {
   //           id[] := cxexpr      // Deep-copy, then slice assignment
   //           iexpr ? cxexpr : cxexpr  // exprs must have equal types
   //   iexpr := 
-  //           slice {op2 slice}*  // Infix notation, evals LEFT TO RIGHT
-  //   slice := 
+  //           term {op2 term}*  // Infix notation, evals LEFT TO RIGHT
+  //   term  :=
+  //           op1* slice
+  //   slice :=
   //           expr                // Can be a dbl or fcn or ary
   //           expr[]              // whole ary val
   //           expr[,]             // whole ary val
@@ -43,6 +45,7 @@ public class Exec2 {
   //           val(cxexpr,...)*    // Prefix function application, evals LEFT TO RIGHT
   //   val :=
   //           ( cxexpr )          // Ordering evaluation
+  //           { statements }      // compound statement
   //           id                  // any visible var; will be typed
   //           num                 // Scalars, treated as 1x1
   //           op                  // Built-in functions
@@ -59,7 +62,7 @@ public class Exec2 {
     for( Value v : H2O.values() ) { // Add Frames to parser's namespace
       Frame fr;
       if( v.type()==TypeMap.VALUE_ARRAY ) fr = ValueArray.asFrame(v);
-      else if( v.type()==TypeMap.FRAME ) fr = (Frame)v.get();
+      else if( v.type()==TypeMap.FRAME  ) fr = v.get();
       else continue;
       env.push(fr,v._key.toString());
       global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
@@ -69,6 +72,7 @@ public class Exec2 {
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
     global.add(new ASTId(Type.DBL,"NA",0,global.size()));  env.push(Double.NaN);
+    global.add(new ASTId(Type.DBL,"Inf",0,global.size())); env.push(Double.POSITIVE_INFINITY);
 
     // Parse.  Type-errors get caught here and throw IAE
     int argcnt = global.size();
@@ -100,7 +104,8 @@ public class Exec2 {
   int lexical_depth() { return _env.size()-1; }
   
   AST parse() { 
-    AST ast = ASTStatement.parse(this); 
+
+    AST ast = ASTStatement.parse(this);
     skipWS();                   // No trailing crud
     return _x == _buf.length ? ast : throwErr("Junk at end of line",_buf.length-1);
   }
@@ -128,16 +133,15 @@ public class Exec2 {
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
-  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':'; }
+  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
-    if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
-    return isDigit(c) || isLetter(c);
+    return c=='.' || c==':' || c=='\\' || isDigit(c) || isLetter(c);
   }
 
   // Return an ID string, or null if we get weird stuff or numbers.  Valid IDs
   // include all the operators, except parens (function application) and assignment.
-  // Valid IDs: +   ++   <=  > ! [ ] joe123 ABC 
+  // Valid IDs: + - <=  > ! [ ] joe123 ABC
   // Invalid  : +++ 0joe ( = ) 123.45 1e3
   String isID() {
     skipWS();
@@ -158,7 +162,7 @@ public class Exec2 {
     }
 
     // If first char is special, accept 1 or 2 special chars.
-    // i.e. allow ++ != >= == <= but not = alone
+    // i.e. allow != >= == <= but not = alone
     if( _x>=_buf.length ) return _str.substring(_x-1,_x);
     char c2=_buf[_x];
     if( isDigit(c2) || isLetter(c2) || isWS(c2) || isReserved(c2) ) {
@@ -166,6 +170,12 @@ public class Exec2 {
       return _str.substring(_x-1,_x);
     }
     if( c=='<' && c2=='-' ) { _x--; return null; } // The other assignment operator
+    // Must accept as single letters to avoid ambiguity
+    if( c=='+' || c=='-' ) return _str.substring(_x-1,_x);
+    // One letter look ahead to decide on what to accept
+    if( c=='=' || c=='!' || c=='<' || c =='>' )
+      if ( c2 =='=' ) return _str.substring(++_x-2,_x);
+      else return _str.substring(_x-1,_x);
     _x++;                       // Else accept e.g. <= >= ++ != == etc...
     return _str.substring(_x-2,_x);
   }

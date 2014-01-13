@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             hex_key = csvFilename + "_" + str(trial) + ".hex"
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
-            kwargs = {'ntrees': 5, 'max_depth': 5, 'nbins': 32000}
+            kwargs = {'ntrees': 5, 'max_depth': 5, 'nbins': 10000}
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=10, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \

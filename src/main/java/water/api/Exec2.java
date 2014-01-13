@@ -37,8 +37,8 @@ public class Exec2 extends Request2 {
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
       if( env.sp() == 0 ) {      // Empty stack
       } else if( env.isAry() ) {
-        Frame fr = env.popAry();
-        String skey = env.key();
+        Frame fr = env.peekAry();
+        String skey = env.peekKey();
         num_rows = fr.numRows();
         num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
@@ -49,12 +49,12 @@ public class Exec2 extends Request2 {
         for( int i=0; i<Math.min(6,fr.numRows()); i++ )
           fr.toString(sb,fs,i);
         // Nuke the result
-        env.subRef(fr,skey);
+        env.pop();
       } else if( env.isFcn() ) {
-        ASTOp op = env.popFcn();
+        ASTOp op = env.peekFcn();
         funstr = op.toString();
         sb.append(op.toString(true)); // Verbose function
-        env.subRef(op);
+        env.pop();
       } else {
         scalar = env.popDbl();
         sb.append(Double.toString(scalar));

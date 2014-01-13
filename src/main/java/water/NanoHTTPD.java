@@ -373,20 +373,47 @@ public class NanoHTTPD
             fileUpload(boundary,is,parms, useValueArray);
           } else {
             // Handle application/x-www-form-urlencoded
+
             String postLine = "";
-            char pbuf[] = new char[512];
-            if (is.available()!=0) {
+            if (size >= 0) {
+              //
+              // content-length is specified.  Use it.
+              //
+              char pbuf[] = new char[4096];
+              long bytesRead = 0;
+              long bytesToRead = size;
+              StringBuffer sb = new StringBuffer();
+              while (bytesRead < bytesToRead) {
+                int n = in.read(pbuf);
+                if (n < 0) {
+                  break;
+                }
+                else if (n == 0) {
+                  // this is supposed to be blocking, so i don't know what this means.
+                  // but it isn't good.
+                  assert(false);
+                  break;
+                }
+                bytesRead += n;
+                sb.append(pbuf, 0, n);
+              }
+              postLine = sb.toString();
+            }
+            else {
+              //
+              // The original path for x-www-form-urlencoded.
+              // Don't have content-length.  Look for \r\n to stop the input.
+              //
+              char pbuf[] = new char[512];
               int read = in.read(pbuf);
               while ( read >= 0 && !postLine.endsWith("\r\n") )
               {
                 postLine += String.valueOf(pbuf, 0, read);
-                if (!in.ready()) // avoid hanging here
-                  break;
                 read = in.read(pbuf);
               }
               postLine = postLine.trim();
-              decodeParms( postLine, parms );
             }
+            decodeParms( postLine, parms );
           }
         }
 

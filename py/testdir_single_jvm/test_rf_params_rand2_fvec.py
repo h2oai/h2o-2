@@ -13,13 +13,14 @@ paramDict = {
     'max_depth': [None, 1,10,20,100],
     'nbins': [None,5,10,100,1000],
     'ignored_cols_by_name': [None, None, None, None, 'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
-    'cols': [None, None, None, None, None, '0,1,2,3,4,','C1,C2,C3,C4'],
+    'cols': [None, None, None, None, None, '0,1,2,3,4,5,6,7,8','C1,C2,C3,C4,C5,C6,C7,C8'],
 
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
     'seed': [None,'0','1','11111','19823134','1231231'],
     # stack trace if we use more features than legal. dropped or redundanct cols reduce 
     # legal max also.
-    'mtries': [1,3,5,7,9,11,13,17,19,23,37,53],
+    # Can't have more mtries than cols..force to 4 if cols is not None?
+    'mtries': [1,3,5,7],
     }
 
 class Basic(unittest.TestCase):
@@ -40,13 +41,21 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_params_rand2(self):
+    def test_rf_params_rand2_fvec(self):
         h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntrees': 13, 'mtries': 7}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
+            if 'cols' in params and params['cols']:
+                pass
+            else:
+                if 'ignored_cols_by_name' in params and params['ignored_cols_by_name']:
+                    params['mtries'] = random.randint(1,53)
+                else:
+                    params['mtries'] = random.randint(1,54)
+                
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             timeoutSecs = 30 + ((kwargs['ntrees']*80) * max(1,kwargs['mtries']/60) )

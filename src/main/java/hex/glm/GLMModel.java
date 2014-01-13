@@ -166,15 +166,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     coefficients_names = coefNames();
   }
   public void setLambdaSubmodel(int lambdaIdx, double [] beta, double [] norm_beta, int iteration){
-    submodels[lambdaIdx] = new Submodel(beta, norm_beta, run_time, iteration);
     run_time = (System.currentTimeMillis()-start_time);
+    submodels[lambdaIdx] = new Submodel(beta, norm_beta, run_time, iteration);
   }
-//
-//  public void setBeta(int lambdaIdx, double [] beta, double [] norm_beta){
-//    Submodel sm = submodels[lambdaIdx];
-//    sm.beta = beta;
-//    sm.norm_beta = norm_beta;
-//  }
 
   public double lambda(){
     if(submodels == null)return Double.NaN;
@@ -252,8 +246,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
       _res.finalize_AIC_AUC();
-      _improved = _model.setAndTestValidation(_lambdaIdx, _res);
-      UKV.put(_model._selfKey,_model);
     }
   }
   // use general score to reduce number of possible different code paths
@@ -301,12 +293,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       for(int i = 0; i < _xmodels.length; ++i){
         _xvals[i].finalize_AIC_AUC();
         _xvals[i].nobs = _nobs-_xvals[i].nobs;
-        _xmodels[i].setValidation(0, _xvals[i]);
+        _xmodels[i].setAndTestValidation(0, _xvals[i]);
         DKV.put(_xmodels[i]._selfKey, _xmodels[i],fs);
       }
       _res = new GLMXValidation(_model, _xmodels,_lambdaIdx,_nobs);
-      _improved = _model.setAndTestValidation(_lambdaIdx, _res);
-      UKV.put(_model._selfKey, _model);
       fs.blockForPending();
     }
   }
@@ -328,31 +318,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public int rank() {return rank(best_lambda_idx);}
   public int rank(int lambdaIdx) {return submodels[lambdaIdx].rank;}
-  @Override public void delete(){super.delete();}
 
-
-  public GLMModel  setValidation(int lambdaIdx,GLMValidation val ){
+  public boolean setAndTestValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
-    return this;
-  }
-
-  public void store(){clone().store2();}
-  private void store2(){
-    new TAtomic<GLMModel>() {
-      @Override public GLMModel atomic(GLMModel old) {
-        if(old == null)return GLMModel.this;
-        return GLMModel.this.iteration() > old.iteration()?GLMModel.this:old;
-      }
-    }.fork(_selfKey);
-  }
-  public boolean  setAndTestValidation(int lambdaIdx,GLMValidation val ){
-    submodels[lambdaIdx].validation = val;
-    if(lambdaIdx == 0 || rank(lambdaIdx) == 1)
-      return true;
-    double diff = submodels[best_lambda_idx].validation.residual_deviance - val.residual_deviance;
-    if(diff/val.null_deviance >= 0.01)
-      best_lambda_idx = lambdaIdx;
-    return (diff >= 0);
+    if(lambdaIdx == 0 || rank(lambdaIdx) == 1)return true;
+    double diff = (submodels[lambdaIdx-1].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
+    if(diff >= 0.01)best_lambda_idx = lambdaIdx;
+    return  (diff > 0.001);
   }
 
   /**

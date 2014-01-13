@@ -34,7 +34,7 @@ public final class H2O {
   public static String NAME;
 
   // The default port for finding a Cloud
-  public static final int DEFAULT_PORT = 54321;
+  public static int DEFAULT_PORT = 54321;
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
@@ -637,10 +637,11 @@ public final class H2O {
   public static int hiQPoolSize(int i) { return FJPS[i+MIN_HI_PRIORITY].getPoolSize();             }
 
   // Submit to the correct priority queue
-  public static void submitTask( H2OCountedCompleter task ) {
+  public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
     assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
     FJPS[priority].submit(task);
+    return task;
   }
 
   // Simple wrapper over F/J CountedCompleter to support priority queues.  F/J
@@ -734,6 +735,7 @@ public final class H2O {
   public static class OptArgs extends Arguments.Opt {
     public String name; // set_cloud_name_and_mcast()
     public String flatfile; // set_cloud_name_and_mcast()
+    public int base_port; // starting number to search for open ports
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String network; // Network specification for acceptable interfaces to bind to.
@@ -902,6 +904,10 @@ public final class H2O {
     ARGS = arguments.toStringArray();
 
     printAndLogVersion();
+
+    if (OPT_ARGS.base_port != 0) {
+      DEFAULT_PORT = OPT_ARGS.base_port;
+    }
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();

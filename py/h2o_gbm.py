@@ -534,6 +534,7 @@ def goodXFromColumnInfo(y,
 def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
     # print "GBMResult:", h2o.dump_json(GBMResult)
     jobs = GBMResult['jobs']
+    print "GBM jobs:", jobs
     for jobnum, j in enumerate(jobs):
         _distribution = j['_distribution']
         model_key = j['destination_key']
@@ -544,7 +545,7 @@ def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
         print "jobnum:", jobnum, h2o.dump_json(gbmTrainView)
 
         if classification:
-            cm = gbmTrainView['gbm_model']['cm']
+            cm = gbmTrainView['gbm_model']['cms'][-1] # take the last one
             pctWrongTrain = pp_cm_summary(cm);
             if pctWrongTrain > expectedErrorMax:
                 raise Exception("Should have < %s error here. pctWrongTrain: %s" % (expectedErrorMax, pctWrongTrain))

@@ -20,7 +20,7 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
@@ -31,11 +31,11 @@ public class DRFTest extends TestUtil {
           1,
           a( a(6, 0,  0),
              a(0, 7,  0),
-             a(0, 2, 11)),
+             a(0, 3, 10)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassIris50() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
@@ -44,36 +44,36 @@ public class DRFTest extends TestUtil {
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
-             a(0,  2, 34)),
+             a(0,  4, 32)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassCars1() throws Throwable {
     // cars ntree=1
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
-        a( a(0,  1, 0, 0, 0),
-           a(1, 56, 0, 3, 0),
+        a( a(2,  3, 0, 3, 1),
+           a(1, 51, 0, 3, 1),
            a(0,  0, 0, 0, 0),
-           a(0,  1, 0,17, 0),
+           a(0,  2, 0,16, 2),
            a(0,  0, 0, 0,33)),
         s("3", "4", "5", "6", "8"));
   }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
-        a( a(1,   3, 0,  0,   0),
-           a(1, 206, 0,  0,   0),
+        a( a(0,   4, 0,  0,   0),
+           a(0, 207, 0,  0,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   4, 0, 79,   1),
-           a(0,   0, 1,  0, 107)),
+           a(0,   4, 0, 80,   0),
+           a(0,   0, 1,  3, 104)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -148,8 +148,8 @@ public class DRFTest extends TestUtil {
     return drf.response;
   }
 
-  public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM, expRespDom, 10/*max_depth*/); }
-  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, long[][] expCM, String[] expRespDom, int max_depth) throws Throwable {
+  public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM, expRespDom, 10/*max_depth*/, 20/*nbins*/, 0/*optflag*/); }
+  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, long[][] expCM, String[] expRespDom, int max_depth, int nbins, int optflags) throws Throwable {
     DRF drf = null;
     Frame frTrain = null, frTest = null;
     Key destTrain = Key.make(hexnametrain);
@@ -164,7 +164,7 @@ public class DRFTest extends TestUtil {
       drf.ntrees = ntree;
       drf.max_depth = max_depth;
       drf.min_rows = 1; // = nodesize
-      drf.nbins = 100;
+      drf.nbins = nbins;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // Simulated sampling with replacement
       drf.seed = (1L<<32)|2;
@@ -174,13 +174,14 @@ public class DRFTest extends TestUtil {
       // Get the model
       DRFModel model = UKV.get(drf.dest());
       // And compare CMs
-      assertCM(expCM, model.cm);
+      assertCM(expCM, model.cms[model.cms.length-1]);
       Assert.assertEquals("Number of trees differs!", ntree, model.errs.length-1);
       String[] cmDom = model._domains[model._domains.length-1];
       Assert.assertArrayEquals("CM domain differs!", expRespDom, cmDom);
 
       frTest = fnametest!=null ? parseFrame(destTest, fnametest) : null;
       pred = drf.score(frTest!=null?frTest:drf.source);
+
     } catch (Throwable t) {
       t.printStackTrace();
       throw t;

@@ -26,14 +26,16 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   cols = paste(args$x_i - 1, collapse=",")
 
   if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1) {
-    destKey = h2o.__uniqID("GBMModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
+    # destKey = h2o.__uniqID("GBMModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
+    on.exit(h2o.__cancelJob(data@h2o, res$job_key))
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=res$destination_key)
 
     result = h2o.__getGBMResults(res2$gbm_model, distribution == 'multinomial')
     result$distribution <- distribution
-    new("H2OGBMModel", key=destKey, data=data, model=result, valid=validation)
+    new("H2OGBMModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
     h2o.gridsearch.internal("GBM", data, res$job_key, res$destination_key, validation, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt= (distribution=='multinomial'))
@@ -52,16 +54,14 @@ h2o.__getGBMSummary <- function(res, isClassificationAndYesTheBloodyModelShouldR
   if( isClassificationAndYesTheBloodyModelShouldReportIt ){
     temp = matrix(unlist(res$cm), nrow = length(res$cm))
     mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-  } else {
   }
   return(mySum)
 }
 
 h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldReportIt) {
   result = list()
-  print(res)
   if( isClassificationAndYesTheBloodyModelShouldReportIt ){
-    result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
+    result$confusion = build_cm(tail(res$cm, 1)[[1]], tail(res$'_domains', 1)[[1]])  #res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
   } else
     result$classification <- F
@@ -71,7 +71,6 @@ h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldR
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-# TODO: Cross-validation results currently not showing because keys aren't being returned in the JSON
 h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
   args <- verify_dataxy(data, x, y)
 
@@ -93,6 +92,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
       res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
     else
       res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
+    on.exit(h2o.__cancelJob(data@h2o, res$job_key))
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
 
     res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=res$destination_key)
@@ -104,12 +104,12 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
       return(new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list()))
 
     res_xval = list()
-  #   for(i in 1:nfolds) {
-  #     xvalKey = paste(destKey, "_xval", seq(0,nfolds-1), sep="")
-  #     resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
-  #     modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
-  #     res_xval[[i]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
-  #   }
+    for(i in 1:nfolds) {
+      xvalKey = resModel$submodels[[resModel$best_lambda_idx+1]]$validation$xval_models
+      resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
+      modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
+      res_xval[[i]] = new("H2OGLMModel", key=xvalKey[i], data=data, model=modelXval, xval=list())
+    }
     new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
   } else
     h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, lambda, tweedie.p)
@@ -120,35 +120,37 @@ h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, lamb
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
   else
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
-
+  
   pb = txtProgressBar(style = 3)
   while((prog = h2o.__poll(data@h2o, res$job_key)) != -1) { Sys.sleep(1); setTxtProgressBar(pb, prog) }
   setTxtProgressBar(pb, 1.0); close(pb)
 
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2GridView, grid_key=res$destination_key)
+  destKey = res$destination_key
   allModels = res2$grid$destination_keys
 
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
-    resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=allModels[[i]]$destination_key)
+    resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=allModels[i])
     myModelSum[[i]] = h2o.__getGLM2Summary(resH$glm_model)
+    x = colnames(data)[-(x_ignore+1)]
     modelOrig = h2o.__getGLM2Results(resH$glm_model, x, y)
 
     # Get results from cross-validation
     if(nfolds < 2)
-      result[[i]] = new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list())
+      result[[i]] = new("H2OGLMModel", key=allModels[i], data=data, model=modelOrig, xval=list())
     else {
       res_xval = list()
-#       for(j in 1:nfolds) {
-#         xvalKey = paste(destKey, "_xval0_", seq(0,nfolds-1), sep="")
-#         resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
-#         modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
-#         res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
-#       }
-      result[[i]] = new("H2OGLMModel", key=allModels[[i]]$destination_key, data=data, model=modelOrig, xval=res_xval)
+      for(j in 1:nfolds) {
+         xvalKey = resH$glm_model$submodels[[resH$glm_model$best_lambda_idx+1]]$validation$xval_models
+         resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
+         modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
+         res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+      }
+      result[[i]] = new("H2OGLMModel", key=allModels[i], data=data, model=modelOrig, xval=res_xval)
     }
   }
-  new("H2OGLMGrid", key=dest_key, data=data, model=result, sumtable=myModelSum)
+  new("H2OGLMGrid", key=destKey, data=data, model=result, sumtable=myModelSum)
 }
 
 h2o.__getGLM2Summary <- function(model) {
@@ -157,10 +159,12 @@ h2o.__getGLM2Summary <- function(model) {
   mySum$alpha = model$alpha
   mySum$lambda_min = min(model$lambda)
   mySum$lambda_max = max(model$lambda)
-  mySum$lambda_best = model$lambda[[model$best_lambda_idx]]
-  mySum$iterations = tail(model$submodels,1)[[1]]$iteration
-
-  valid = tail(model$submodels,1)[[1]]$validation
+  mySum$lambda_best = model$lambda[model$best_lambda_idx+1]
+  
+  submod = model$submodels[[model$best_lambda_idx+1]]
+  mySum$iterations = submod$iteration
+  valid = submod$validation
+  
   if(model$glm$family == "binomial")
     mySum$auc = as.numeric(valid$auc)
   mySum$aic = as.numeric(valid$aic)
@@ -170,13 +174,14 @@ h2o.__getGLM2Summary <- function(model) {
 
 # Pretty formatting of H2O GLM2 results
 h2o.__getGLM2Results <- function(model, x, y) {
-  submod = tail(model$submodels,1)[[1]]
+  submod = model$submodels[[model$best_lambda_idx+1]]
   valid = submod$validation
 
   result = list()
   result$y = y
   result$x = x
   result$coefficients = as.numeric(unlist(submod$beta))
+  result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
   names(result$coefficients) = model$coefficients_names
   result$rank = valid$'_rank'
   if(model$glm$family == "tweedie")
@@ -198,7 +203,7 @@ h2o.__getGLM2Results <- function(model, x, y) {
     result$auc = as.numeric(valid$auc)
 
     # Construct confusion matrix
-    cm_ind = trunc(100*result$best_threshold) + 1
+    cm_ind = trunc(100*result$best_threshold) + 2
     temp = data.frame(t(sapply(valid$'_cms'[[cm_ind]]$'_arr', c)))
     temp[,3] = c(temp[1,2], temp[2,1])/apply(temp, 1, sum)
     temp[3,] = c(temp[2,1], temp[1,2], 0)/apply(temp, 2, sum)
@@ -233,14 +238,16 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10) {
   myIgnore <- ifelse(cols == '' || length(temp) == 0, '', paste(temp, sep=','))
 
   if(length(centers) == 1 && length(iter.max) == 1) {
-    rand_kmeans_key = h2o.__uniqID("KMeansModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, destination_key=rand_kmeans_key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    # rand_kmeans_key = h2o.__uniqID("KMeansModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, destination_key=rand_kmeans_key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    on.exit(h2o.__cancelJob(data@h2o, res$job_key))
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMModelView, model=rand_kmeans_key)
-    res = res$model
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMModelView, model=res$destination_key)
+    res2 = res2$model
 
-    result = h2o.__getKMResults(res, data) #, centers)
-    new("H2OKMeansModel", key=res$'_selfKey', data=data, model=result)
+    result = h2o.__getKMResults(res2, data) #, centers)
+    new("H2OKMeansModel", key=res2$'_selfKey', data=data, model=result)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
     h2o.gridsearch.internal("KM", data, res$job_key, res$destination_key)
@@ -257,17 +264,22 @@ h2o.__getKMSummary <- function(res) {
 }
 
 h2o.__getKMResults <- function(res, data) {
-  rand_pred_key = h2o.__uniqID("KMeansClusters")
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
+  #rand_pred_key = h2o.__uniqID("KMeansClusters")
+  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
+  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
 
+  clusters_key <- paste(res$'_clustersKey', sep = "")
   result = list()
-  result$cluster = new("H2OParsedData", h2o=data@h2o, key=rand_pred_key)
+  result$cluster = new("H2OParsedData", h2o=data@h2o, key=clusters_key)
   feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
-  result$centers = t(matrix(unlist(res$clusters), ncol = res$k))
+  result$centers = t(matrix(unlist(res$centers), ncol = res$k))
   dimnames(result$centers) = list(seq(1,res$k), feat)
-  result$withinss = res$cluster_variances        # TODO: Not sure if this is within or between SS?
-  result$size = res2$summaries[[1]]$hcnt
+  result$totss <- res$total_SS
+  result$withinss <- res$within_cluster_variances
+  result$tot.withinss <- res$total_within_SS
+  result$betweenss <- res$between_cluster_SS
+  result$size <- res$size
+  #result$size = res2$summaries[[1]]$hcnt
   return(result)
 }
 
@@ -299,15 +311,19 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
 
   # BUG: Resulting numbers are off from browser. I don't think the algorithm is finished even when progress = -1
   if(length(layers) == 1 && length(rate) == 1 && length(l1_reg) == 1 && length(l2_reg) == 1 && length(epoch) == 1) {
-    destKey = h2o.__uniqID("NNModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+    # destKey = h2o.__uniqID("NNModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+    #    classification=as.numeric(classification), activation=activation, rate=rate,
+    #    hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
         classification=as.numeric(classification), activation=activation, rate=rate,
         hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
+    on.exit(h2o.__cancelJob(data@h2o, res$job_key))
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, destination_key=destKey)
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, destination_key=res$destination_key)
 
     result = h2o.__getNNResults(res2)
-    new("H2ONNModel", key=destKey, data=data, model=result, valid=validation)
+    new("H2ONNModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
                            classification=as.numeric(classification), activation=activation, rate=rate,
@@ -350,6 +366,7 @@ h2o.__getNNResults <- function(res) {
 # ----------------------- Principal Components Analysis ----------------------------- #
 h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=T) {
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, ignored_cols_by_name=x_ignore, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
+  on.exit(h2o.__cancelJob(data@h2o, res$job_key))
   # while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
@@ -377,6 +394,7 @@ h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
 
   destKey = h2o.__uniqID("PCAModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, destination_key=destKey, tolerance=tol, standardize=as.numeric(standardize))
+  on.exit(h2o.__cancelJob(data@h2o, res$job_key))
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
   res = res$pca_model
@@ -421,7 +439,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, validation) {
+h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed=-1, validation) {
   args <- verify_dataxy(data, x, y)
 
   if(!is.numeric(ntree)) stop('ntree must be a number')
@@ -434,6 +452,7 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.
   if( any(sample.rate < 0 || sample.rate > 1) ) stop('sample.rate must be between 0 and 1')
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
 
   if(missing(validation)) validation = data
   else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
@@ -442,15 +461,17 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.
   cols <- paste(args$x_i - 1, collapse=',')
 
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
-    destKey = h2o.__uniqID("DRFModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins)
+    # destKey = h2o.__uniqID("DRFModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed)
+    on.exit(h2o.__cancelJob(data@h2o, res$job_key))
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRFModelView, '_modelKey'=destKey)
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRFModelView, '_modelKey'=res$destination_key)
 
     result = h2o.__getDRFResults(res2$drf_model)
-    new("H2ODRFModel", key=destKey, data=data, model=result, valid=validation)
+    new("H2ODRFModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed)
     h2o.gridsearch.internal("RF", data, res$job_key, res$destination_key, validation)
   }
 }
@@ -476,7 +497,7 @@ h2o.__getDRFResults <- function(res) {
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
 
-  result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
+  result$confusion = build_cm(tail(res$cm, 1)[[1]], tail(res$'_domains', 1)[[1]])  #res$'_domains'[[length(res$'_domains')]])
   result$mse = res$errs
   result$ntree = res$N
   return(result)
@@ -486,11 +507,11 @@ h2o.__getDRFResults <- function(res) {
 #setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('must specify object')
-  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA') )) stop('object must be an H2OModel')
+  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA', 'H2ORFModelVA') )) stop('object must be an H2OModel')
   if( missing(newdata) ) newdata <- object@data
   if(!class(newdata) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('newdata must be h2o data')
 
-  if(class(object) == "H2OGLMModelVA") {
+  if(class(object) %in% c("H2OGLMModelVA", "H2ORFModelVA")) {
     if(class(newdata) != 'H2OParsedDataVA')
       stop("Prediction requires newdata to be type H2OParsedDataVA")
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
@@ -510,6 +531,7 @@ h2o.predict <- function(object, newdata) {
     numMatch = colnames(newdata) %in% rownames(object@model$rotation)
     numPC = min(length(numMatch[numMatch == TRUE]), object@model$num_pc)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
+    on.exit(h2o.__cancelJob(data@h2o, res$job_key))
     while(h2o.__poll(object@data@h2o, res$job_key) != -1) { Sys.sleep(1) }
     new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
   } else
@@ -614,9 +636,8 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
   if(class(data) != "H2OParsedDataVA")
     stop("GLM currently only working under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
-  if( nfolds < 0 ) stop('nfolds must be >= 0')
-  if( alpha < 0 ) stop('alpha must be >= 0')
-  if( lambda < 0 ) stop('lambda must be >= 0')
+  if( any(alpha < 0) ) stop('alpha must be >= 0')
+  if( any(lambda < 0) ) stop('lambda must be >= 0')
   if( epsilon < 0 ) stop('epsilon must be >= 0')
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
@@ -630,6 +651,39 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
     if(!missing(tweedie.p)) print('Tweedie variance power not available in GLM grid search')
     h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda)
   }
+}
+
+h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL, seed=-1, use_non_local=T) {
+  if(class(data) != "H2OParsedDataVA")
+    stop("h2o.randomForest.VA only works under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
+  args <- verify_dataxy(data, x, y)
+  if(!is.numeric(ntree)) stop("ntree must be numeric")
+  if(ntree <= 0) stop("ntree must be > 0")
+  if(!is.numeric(depth)) stop("depth must be numeric")
+  if(depth < 0) stop("depth must be >= 0")
+  if(!is.numeric(sample.rate)) stop("sample.rate must be numeric")
+  if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
+  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
+  if(!is.logical(use_non_local)) stop("use_non_local must be logical indicating whether to use non-local data")
+
+  if(missing(seed)) seed = ""
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt, seed=seed, use_non_local_data=as.numeric(use_non_local))
+  while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, response_variable=args$y, out_of_bag_error_estimate=1)
+  modelOrig = h2o.__getRFResults(res2)
+  new("H2ORFModelVA", key=res$destination_key, data=data, model=modelOrig)
+}
+
+h2o.__getRFResults <- function(model) {
+  result = list()
+  result$ntree = model$ntree
+  result$classification_error = model$confusion_matrix$classification_error
+  result$confusion = build_cm(model$confusion_matrix$scores, model$confusion_matrix$header)
+  result$depth_sum = unlist(model$trees$depth)
+  result$leaves_sum = unlist(model$trees$leaves)
+  result$tree_sum = matrix(c(model$trees$depth, model$trees$leaves), nrow=2, dimnames=list(c("Depth", "Leaves"), c("Min", "Mean", "Max")))
+  return(result)
 }
 
 # Used to verify data, x, y and turn into the appropriate things
@@ -669,7 +723,8 @@ verify_dataxy <- function(data, x, y) {
 
 h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
   if(!algo %in% c("GBM", "KM", "RF", "NN")) stop("General grid search not supported for ", algo) 
-
+  on.exit(h2o.__cancelJob(data@h2o, job_key))
+  
   pb = txtProgressBar(style = 3)
   while((prog = h2o.__poll(data@h2o, job_key)) != -1) { Sys.sleep(1); setTxtProgressBar(pb, prog) }
   setTxtProgressBar(pb, 1.0); close(pb)
@@ -702,11 +757,13 @@ h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = 
 }
 
 build_cm <- function(cm, cf_names) {
+  #browser()
   categories = length(cm)
   cf_matrix = t(matrix(unlist(cm), nrow=categories))
 
   cf_total = apply(cf_matrix, 2, sum)
-  cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  # cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  cf_error = c(1-diag(cf_matrix)/apply(cf_matrix,1,sum), 1-sum(diag(cf_matrix))/sum(cf_matrix))
   cf_matrix = rbind(cf_matrix, cf_total)
   cf_matrix = cbind(cf_matrix, round(cf_error, 3))
 
@@ -714,3 +771,4 @@ build_cm <- function(cm, cf_names) {
   dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
   return(cf_matrix)
 }
+

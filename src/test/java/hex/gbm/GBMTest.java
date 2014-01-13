@@ -2,6 +2,7 @@ package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
 import java.io.File;
+import java.util.Arrays;
 import org.junit.*;
 import water.*;
 import water.api.ConfusionMatrix;
@@ -9,9 +10,11 @@ import water.fvec.*;
 
 public class GBMTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   private abstract class PrepData { abstract int prep(Frame fr); }
+
+  static final String ignored_aircols[] = new String[] { "DepTime", "ArrTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay", "IsDepDelayed"};
 
   @Test
   public void testBasicGBM() {
@@ -40,7 +43,9 @@ public class GBMTest extends TestUtil {
              new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); }
              });
     basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-             new PrepData() { int prep(Frame fr) { return fr.find("IsDepDelayed"); }
+             new PrepData() { int prep(Frame fr) { 
+               for( String s : ignored_aircols ) UKV.remove(fr.remove(s)._key);
+               return fr.find("IsArrDelayed"); }
              });
     //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
     //         new PrepData() {
@@ -53,6 +58,9 @@ public class GBMTest extends TestUtil {
     //           }
     //         });
   }
+
+  // covtype ignorable columns
+  static final int IGNS[] = new int[] { 6, 7, 10,11 };
 
   // ==========================================================================
   public void basicGBM(String fname, String hexname, PrepData prep) {
@@ -68,7 +76,7 @@ public class GBMTest extends TestUtil {
       UKV.remove(fkey);
       int idx = prep.prep(fr);
       if( idx < 0 ) { gbm.classification = false; idx = ~idx; }
-      String rname =fr._names[idx];
+      String rname = fr._names[idx];
       gbm.response = fr.vecs()[idx];
       fr.remove(idx);           // Move response to the end
       fr.add(rname,gbm.response);

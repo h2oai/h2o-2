@@ -31,18 +31,18 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
         destination_key = kmeans["destination_key"]
         kmeansResult = h2o_cmd.runInspect(key=destination_key)
 
-
     if h2o.beta_features:
         model = kmeansResult['model']
-        clusters = model["clusters"]
-        cluster_variances = model["cluster_variances"]
-        error = model["error"]
+        clusters = model["centers"]
+        cluster_variances = model["within_cluster_variances"]
+        error = model["total_within_SS"]
         iterations = model["iterations"]
         normalized = model["normalized"]
         max_iter = model["max_iter"]
     else:
-        model = kmeansResult["KMeansModel"]
-        clusters = model["clusters"]
+        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
+        model = kmeansResult['KMeansModel']
+        clusters = model['clusters']
         error = model["error"]
 
     for i,c in enumerate(clusters):
@@ -59,17 +59,17 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
 def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey, **kwargs):
     simpleCheckKMeans(self, kmeans, **kwargs)
     if h2o.beta_features:
-        model_key = kmeans['model']['_selfKey']
-        # Exception: rjson error in inspect: Argument 'src_key' error: benign_k.hex:Key is not a Frame
-
         # can't use inspect on a model key? now?
+        model = kmeans['model']
+        model_key = model['_selfKey']
+        centers = model['centers']
+        cluster_variances = model["within_cluster_variances"]
+        error = model["total_within_SS"]
         kmeansResult = kmeans
-        model = kmeansResult['model']
-        centers = model['clusters']
-        error = model["error"]
     else:
         model_key = kmeans["destination_key"]
         kmeansResult = h2o_cmd.runInspect(key=model_key)
+        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
         model = kmeansResult['KMeansModel']
         centers = model['clusters']
         error = model["error"]
@@ -84,8 +84,8 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
         summaryResult = h2o.nodes[0].summary_page(key=predictKey)
         hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
         rows_per_cluster = hcnt
-        # have to figure out how to get this with fvec
-        sqr_error_per_cluster = [0 for h in hcnt]
+        # FIX! does the cluster order/naming match, compared to cluster variances
+        sqr_error_per_cluster = cluster_variances
     
     else:
         kmeansApplyResult = h2o.nodes[0].kmeans_apply(
@@ -107,7 +107,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     tupleResultList = []
     print "\nerror: ", error
     for i,c in enumerate(centers):
-        print "\ncenters["+str(i)+"]: ", centers[i]
+        print "\ncenters["+str(i)+"]: ", [round(c,2) for c in centers[i]]
         print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
         print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
         tupleResultList.append( (centers[i], rows_per_cluster[i], sqr_error_per_cluster[i]) )
@@ -145,17 +145,17 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
             (actCenter, actRows, actError) = tupleResultList[i]
 
             for (a,b) in zip(expCenter, actCenter): # compare list of floats
-                absAllowedDelta = allowedDelta[0] * a
-                self.assertAlmostEqual(a, b, delta=allowedDelta,
-                    msg="Trial %d Center expected: %s actual: %s delta > %s" % (trial, expCenter, actCenter, absAllowedDelta))
+                absAllowedDelta = abs(allowedDelta[0] * a)
+                self.assertAlmostEqual(a, b, delta=absAllowedDelta,
+                    msg="Trial %d Center value expected: %s actual: %s delta > %s" % (trial, a, b, absAllowedDelta))
 
-            absAllowedDelta = allowedDelta[1] * expRows
+            absAllowedDelta = abs(allowedDelta[1] * expRows)
             self.assertAlmostEqual(expRows, actRows, delta=absAllowedDelta,
                 msg="Trial %d Rows expected: %s actual: %s delta > %s" % (trial, expRows, actRows, absAllowedDelta))
 
             if not h2o.beta_features:
                 if expError is not None: # don't always check this
-                    absAllowedDelta = allowedDelta[2] * expError
+                    absAllowedDelta = abs(allowedDelta[2] * expError)
                     self.assertAlmostEqual(expError, actError, delta=absAllowedDelta,
                         msg="Trial %d Error expected: %s actual: %s delta > %s" % (trial, expError, actError, absAllowedDelta))
 

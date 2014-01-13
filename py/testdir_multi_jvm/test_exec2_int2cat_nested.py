@@ -2,6 +2,10 @@ import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
+# FIX!. enums may only work if 0 based
+# try -5,5 etc
+# maybe call GLM on it after doing factor (check # of coefficients)
+
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
@@ -50,6 +54,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec2_int2cat_nested(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (1000,  10, 'cA', 100),
@@ -66,12 +71,25 @@ class Basic(unittest.TestCase):
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
         exprList = [
-                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);' + \
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);'  + \
-                '<keyX>[,1] = factor(<keyX>[,<col2>]);'  + \
-                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);' + \
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);'  + \
+                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                '<keyX>[,1] = factor(<keyX>[,<col2>]);',
+                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
                 '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
+                ]
+
+        exprList = [
+                '<keyX>[,<col1>] = factor(<keyX>[,<col1>]);',
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                '<keyX>[,1] = factor(<keyX>[,<col2>]);',
+                '<keyX>[,<col1>] = factor(<keyX>[,<col1>]);',
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
+                ]
+
+        exprList = [
+                '<keyX>[,2] = factor(<keyX>[,2])',
                 ]
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:

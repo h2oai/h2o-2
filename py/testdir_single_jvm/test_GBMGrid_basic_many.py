@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=14)
+            h2o.build_cloud(1, java_heap_GB=1)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -37,9 +37,9 @@ class Basic(unittest.TestCase):
             'destination_key': modelKey,
             'ignored_cols_by_name': 'ID',
             'learn_rate': '.1,.2',
-            'ntrees': '5,8',
+            'ntrees': '8,10',
             'max_depth': '8,9',
-            'min_rows': '1,5',
+            'min_rows': '1,2',
             'response': 'CAPSULE',
             'classification': 1 if DO_CLASSIFICATION else 0,
             'grid_parallelism': 1,

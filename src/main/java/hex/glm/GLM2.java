@@ -196,7 +196,8 @@ public class GLM2 extends ModelJob {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
       fork();
-      return GLMModelView.redirect(this, dest());
+//      return GLMModelView.redirect(this, dest(),job_key);
+      return GLMProgress.redirect(this,job_key, dest());
     }
   }
   private static double beta_diff(double[] b1, double[] b2) {
@@ -209,18 +210,23 @@ public class GLM2 extends ModelJob {
   @Override public float progress(){
     if(DKV.get(dest()) == null)return 0;
     GLMModel m = DKV.get(dest()).get();
-    return (float)m.iteration()/(float)max_iter; // TODO, do something smarter here
+    float progress =  (float)m.iteration()/(float)max_iter; // TODO, do something smarter here
+    System.out.println("glm progress = " + progress);
+    return progress;
   }
 
   private class Iteration extends H2OCallback<GLMIterationTask> {
     LSMSolver _solver;
     final DataInfo _dinfo;
     final H2OCountedCompleter _fjt;
+//    Key _modelKey;
     GLMModel _model; // latest model
-    GLMModel _oldModel; // model 1 round back (the one being validated)
+//    GLMModel _oldModel; // model 1 round back (the one being validated)
 
     public Iteration(GLMModel model, LSMSolver solver, DataInfo dinfo, H2OCountedCompleter fjt){
-      _oldModel = model;
+//      _modelKey = modelKey;
+//      _oldModel = model;
+      _model = model;
       _solver = solver;
       _dinfo = dinfo;
       _fjt = fjt;
@@ -248,14 +254,15 @@ public class GLM2 extends ModelJob {
           newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
         }
         boolean done = false;
-        _model = _oldModel.clone();
+//        _model = _oldModel.clone();
         done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
         _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
         if(done){
           H2OCallback fin = new H2OCallback<GLMValidationTask>() {
             @Override public void callback(GLMValidationTask tsk) {
-              if(!diverged && (tsk._improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
-                _oldModel = _model;
+              boolean improved = _model.setAndTestValidation(_lambdaIdx,tsk._res);
+              DKV.put(_model._selfKey, _model);
+              if(!diverged && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
                 _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
                 glmt._val = null;
                 Iteration.this.callback(glmt);
@@ -272,7 +279,8 @@ public class GLM2 extends ModelJob {
         } else {
           if(glmt._val != null){
             glmt._val.finalize_AIC_AUC();
-            _oldModel.setValidation(_lambdaIdx,glmt._val).store();
+            _model.setAndTestValidation(_lambdaIdx,glmt._val);//.store();
+            UKV.put(_model._selfKey, _model);
           }
           int iter = glmt._iter+1;
           GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);

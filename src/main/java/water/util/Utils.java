@@ -11,11 +11,14 @@ import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.*;
+
+import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen.FieldDoc;
+import water.nbhm.UtilUnsafe;
+import water.parser.ParseDataset.Compression;
 import water.parser.ParseDataset;
 import water.parser.ValueString;
-import water.parser.ParseDataset.Compression;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -47,6 +50,30 @@ public class Utils {
     for (int i = 1; i<from.length; ++i)
       if (from[i]>from[result]) result = i;
     return result;
+  }
+
+  /**
+   * Compare two numbers to see if they are within one ulp of the smaller decade.
+   * Order of the arguments does not matter.
+   *
+   * @param a First number
+   * @param b Second number
+   * @return true if a and b are essentially equal, false otherwise.
+   */
+  public static boolean equalsWithinOneSmallUlp(float a, float b) {
+    float ulp_a = Math.ulp(a);
+    float ulp_b = Math.ulp(b);
+    float small_ulp = Math.min(ulp_a, ulp_b);
+    float absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
+    return absdiff_a_b <= small_ulp;
+  }
+
+  public static boolean equalsWithinOneSmallUlp(double a, double b) {
+    double ulp_a = Math.ulp(a);
+    double ulp_b = Math.ulp(b);
+    double small_ulp = Math.min(ulp_a, ulp_b);
+    double absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
+    return absdiff_a_b <= small_ulp;
   }
 
   public static double lnF(double what) {
@@ -340,6 +367,7 @@ public class Utils {
     return a;
   }
   public static long[] add(long[] a, long[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
@@ -348,6 +376,7 @@ public class Utils {
     return a;
   }
   public static float[] add(float[] a, float[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
@@ -523,10 +552,6 @@ public class Utils {
    * @param <T>
    */
   public static class IcedArrayList<T extends Iced> extends ArrayList<T> implements Freezable {
-    private static final int I;
-    static {
-      I = TypeMap.onLoad(IcedArrayList.class.getName());
-    }
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
       for(T t:this)
@@ -543,8 +568,9 @@ public class Utils {
     @Override public <T2 extends Freezable> T2 newInstance() {
       return (T2)new IcedArrayList<T>();
     }
+    private static int _frozen$type;
     @Override public int frozenType() {
-      return I;
+      return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedArrayList.class.getName())) : _frozen$type;
     }
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       return bb;
@@ -578,10 +604,6 @@ public class Utils {
    * @param <T>
    */
   public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
-    private static final int I;
-    static {
-      I = TypeMap.onLoad(IcedHashMap.class.getName());
-    }
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
       for(Map.Entry<K, V> e:entrySet())bb.put(e.getKey()).put(e.getValue());
@@ -597,8 +619,9 @@ public class Utils {
     @Override public <T2 extends Freezable> T2 newInstance() {
       return (T2)new IcedHashMap<K,V>();
     }
+    private static int _frozen$type;
     @Override public int frozenType() {
-      return I;
+      return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedHashMap.class.getName())) : _frozen$type;
     }
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       return bb;
@@ -843,6 +866,7 @@ public class Utils {
     return nums;
   }
   public static float[] div(float[] nums, float n) {
+    assert !Float.isInfinite(n); // Almost surely not what you want
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
@@ -876,5 +900,87 @@ public class Utils {
       for (int j=0; j<cs.length(); j++)
         if (s.charAt(i) == cs.charAt(j)) return true;
     return false;
+  }
+
+
+  // Atomically-updated float array
+  public static class AtomicFloatArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Fbase  = _unsafe.arrayBaseOffset(float[].class);
+    private static final int _Fscale = _unsafe.arrayIndexScale(float[].class);
+    private static long rawIndex(final float[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Fbase + idx * _Fscale;
+    }
+    static public void setMin( float fs[], int i, float min ) {
+      float old = fs[i];
+      while( min < old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(min) ) )
+        old = fs[i];
+    }
+    static public void setMax( float fs[], int i, float max ) {
+      float old = fs[i];
+      while( max > old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(max) ) )
+        old = fs[i];
+    }
+    static public String toString( float fs[] ) {
+      SB sb = new SB();
+      sb.p('[');
+      for( float f : fs )
+        sb.p(f==Float.MAX_VALUE ? "max": (f==-Float.MAX_VALUE ? "min": Float.toString(f))).p(',');
+      return sb.p(']').toString();
+    }
+  }
+
+  // Atomically-updated double array
+  public static class AtomicDoubleArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Dbase  = _unsafe.arrayBaseOffset(double[].class);
+    private static final int _Dscale = _unsafe.arrayIndexScale(double[].class);
+    private static long rawIndex(final double[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Dbase + idx * _Dscale;
+    }
+    static public void add( double ds[], int i, double y ) {
+      long adr = rawIndex(ds,i);
+      double old = ds[i];
+      while( !_unsafe.compareAndSwapLong(ds,adr, Double.doubleToRawLongBits(old), Double.doubleToRawLongBits(old+y) ) )
+        old = ds[i];
+    }
+  }
+
+  // Atomically-updated long array.  Instead of using the similar JDK pieces,
+  // allows the bare array to be exposed for fast readers.
+  public static class AtomicLongArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Lbase  = _unsafe.arrayBaseOffset(long[].class);
+    private static final int _Lscale = _unsafe.arrayIndexScale(long[].class);
+    private static long rawIndex(final long[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Lbase + idx * _Lscale;
+    }
+    static public void incr( long ls[], int i ) {
+      long adr = rawIndex(ls,i);
+      long old = ls[i];
+      while( !_unsafe.compareAndSwapLong(ls,adr, old, old+1) )
+        old = ls[i];
+    }
+  }
+  // Atomically-updated int array.  Instead of using the similar JDK pieces,
+  // allows the bare array to be exposed for fast readers.
+  public static class AtomicIntArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Ibase  = _unsafe.arrayBaseOffset(int[].class);
+    private static final int _Iscale = _unsafe.arrayIndexScale(int[].class);
+    private static long rawIndex(final int[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Ibase + idx * _Iscale;
+    }
+    static public void incr( int is[], int i ) { add(is,i,1); }
+    static public void add( int is[], int i, int x ) {
+      long adr = rawIndex(is,i);
+      int old = is[i];
+      while( !_unsafe.compareAndSwapInt(is,adr, old, old+x) )
+        old = is[i];
+    }
   }
 }

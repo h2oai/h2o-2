@@ -24,7 +24,7 @@ public class Frame extends Iced {
   transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
-  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
+  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) {
     // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
@@ -592,8 +592,33 @@ public class Frame extends Iced {
 
     // Do Da Slice
     // orows is either a long[] or a Vec
-    if( orows == null || orows instanceof long[] )
+    if (orows == null)
       return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    else if (orows instanceof long[]) {
+      final long CHK_ROWS=1000000;
+      long[] rows = (long[])orows;
+      if (rows.length==0)
+        return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+      if (rows[0] < 0)
+        return new DeepSlice(rows, c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+      // Vec'ize the index array
+      AppendableVec av = new AppendableVec("rownames");
+      int r = 0;
+      int c = 0;
+      while (r < rows.length) {
+        NewChunk nc = new NewChunk(av, c);
+        long end = Math.min(r+CHK_ROWS, rows.length);
+        for (; r < end; r++) {
+          nc.addNum(rows[r]);
+        }
+        nc.close(c++, null);
+      }
+      Vec c0 = av.close(null);   // c0 is the row index vec
+      Frame fr2 = new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
+              .outputFrame(names(c2), domains(c2));
+      UKV.remove(c0._key);      // Remove hidden vector
+      return fr2;
+    }
     Frame frows = (Frame)orows;
     Vec vrows = frows.anyVec();
     // It's a compatible Vec; use it as boolean selector.
@@ -609,12 +634,52 @@ public class Frame extends Iced {
     return new DeepSelect().doAll(c2.length,new Frame(names,vecs)).outputFrame(names(c2),domains(c2));
   }
 
+  // Slice and return in the form of new chunks.
+  private static class Slice extends MRTask2<Slice> {
+    final Frame  _base;   // the base frame to slice from
+    final int[]  _cols;
+    Slice(int[] cols, Frame base) { _cols = cols; _base = base; }
+    @Override public void map(Chunk[] ix, NewChunk[] ncs) {
+      final Vec[] vecs = new Vec[_cols.length];
+      final Vec   anyv = _base.anyVec();
+      final long  nrow = anyv.length();
+            long  r    = ix[0].at80(0);
+      int   last_ci = anyv.elem2ChunkIdx(r<nrow?r:0); // memoize the last chunk index
+      long  last_c0 = anyv._espc[last_ci];            // ...         last chunk start
+      long  last_c1 = anyv._espc[last_ci + 1];        // ...         last chunk end
+      Chunk[] last_cs = new Chunk[vecs.length];       // ...         last chunks
+      for (int c = 0; c < _cols.length; c++) {
+        vecs[c] = _base.vecs()[_cols[c]];
+        last_cs[c] = vecs[c].elem2BV(last_ci);
+      }
+      for (int i = 0; i < ix[0]._len; i++) {
+        // select one row
+        r = ix[0].at80(i) - 1;   // next row to select
+        if (r < 0) continue;
+        if (r >= nrow) {
+          for (int c = 0; c < vecs.length; c++) ncs[c].addNum(Double.NaN);
+        } else {
+          if (r < last_c0 || r >= last_c1) {
+            last_ci = anyv.elem2ChunkIdx(r);
+            last_c0 = anyv._espc[last_ci];
+            last_c1 = anyv._espc[last_ci + 1];
+            for (int c = 0; c < vecs.length; c++)
+              last_cs[c] = vecs[c].elem2BV(last_ci);
+          }
+          for (int c = 0; c < vecs.length; c++)
+            ncs[c].addNum(last_cs[c].at(r));
+        }
+      }
+    }
+  }
+
   // Bulk (expensive) copy from 2nd cols into 1st cols.
   // Sliced by the given cols & rows
   private static class DeepSlice extends MRTask2<DeepSlice> {
     final int  _cols[];
     final long _rows[];
-    DeepSlice( long rows[], int cols[] ) { _cols=cols; _rows=rows; }
+    boolean _ex = true;
+    DeepSlice( long rows[], int cols[]) { _cols=cols; _rows=rows;}
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       long rstart = chks[0]._start;
       int rlen = chks[0]._len;  // Total row count
@@ -625,8 +690,26 @@ public class Frame extends Iced {
         if( _rows != null ) {   // Got a row selector?
           if( rx >= _rows.length ) break; // All done with row selections
           long r = _rows[rx++]-1;// Next row selector
-          if( r < 0 ) {          // Row exclusion?
-            throw H2O.unimpl();
+          if( r < 0 ) {          // Row exclusion
+            if(rx > 0 && _rows[rx - 1] < _rows[rx]) throw H2O.unimpl();
+            long er = Math.abs(r) - 2;
+            if ( er < rstart) continue;
+            //scoop up all of the rows before the first exclusion
+            if (rx == 1 && ( (int)(er + 1 - rstart)) > 0 && _ex) {
+              rlo = (int)rstart;
+              rhi = (int)(er - rstart);
+              _ex = false;
+              rx--;
+            } else {
+              rlo = (int)(er + 1 - rstart);
+              //TODO: handle jumbled row indices ( e.g. -c(1,5,3) )
+              while(rx < _rows.length && (_rows[rx] + 1 == _rows[rx - 1] && rlo < rlen)) {
+                if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
+                rx++; rlo++;    //Exclude consecutive rows
+              }
+              rhi = rx >= _rows.length ? rlen : (int)Math.abs(_rows[rx] - 1) - 2;
+              if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
+            }
           } else {              // Positive row list?
             if( r < rstart ) continue;
             rlo = (int)(r-rstart);
@@ -638,18 +721,18 @@ public class Frame extends Iced {
         }
         // Process this next set of rows
         // For all cols in the new set
-        for( int i=0; i<_cols.length; i++ ) {
-          Chunk    oc =  chks[_cols[i]];
-          NewChunk nc = nchks[      i ];
-          if( oc._vec.isInt() ) { // Slice on integer columns
-            for( int j=rlo; j<rhi; j++ )
-              if( oc.isNA0(j) ) nc.addNA();
-              else              nc.addNum(oc.at80(j),0);
-          } else {                // Slice on double columns
-            for( int j=rlo; j<rhi; j++ )
-              nc.addNum(oc.at0(j));
+          for( int i=0; i<_cols.length; i++ ) {
+              Chunk    oc =  chks[_cols[i]];
+              NewChunk nc = nchks[      i ];
+              if( oc._vec.isInt() ) { // Slice on integer columns
+                  for( int j=rlo; j<rhi; j++ )
+                      if( oc.isNA0(j) ) nc.addNA();
+                      else              nc.addNum(oc.at80(j),0);
+              } else {                // Slice on double columns
+                  for( int j=rlo; j<rhi; j++ )
+                      nc.addNum(oc.at0(j));
+              }
           }
-        }
         rlo=rhi;
         if( _rows==null ) break;
       }

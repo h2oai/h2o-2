@@ -3,26 +3,39 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
 initList = [
-        ('r0.hex', 'r0.hex=c(1.3,0,1,2,3,4,5)'),
-        ('r1.hex', 'r1.hex=c(2.3,0,1,2,3,4,5)'),
-        ('r2.hex', 'r2.hex=c(3.3,0,1,2,3,4,5)'),
-        ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
-        ('r4.hex', 'r4.hex=c(5.3,0,1,2,3,4,5)'),
+        # ('r1.hex', 'r1.hex=c(1.3,0,1,2,3,4,5)'),
+        # ('r2.hex', 'r2.hex=c(2.3,0,1,2,3,4,5)'),
+        # ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
         ('r.hex', 'r.hex=i.hex'),
+        ('r1.hex', 'r1.hex=i.hex'),
+        ('r2.hex', 'r2.hex=i.hex'),
+        ('r3.hex', 'r3.hex=i.hex'),
         ]
 
-exprListSmall = [
+if 1==0:
+    exprListSmall = [
+    # apply: return vector or array or list of values..applying function to margins of array or matrix
+    # margins: either rows(1), coluns(2) or both(1:2)
+        'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
+        # doesn't work. Should work according to earl
+        # 'r.hex[is.na(r.hex)]<-0',
+        "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+    ]
+else:
+    exprListSmall = [
+        'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
+        'cct.hex=runif(r.hex);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',
+
         # 'r<n>[,0] = r0[,0] * r<n-1>[,0]',
         # 'r<n>[0,] = r1[0,] + r<n-1>[0,]',
         # 'r<n> = r1 + r<n-1>',
         # doesn't work
         # ';;',
-        'r0.hex[,1]=r0.hex[,1] == 1.0',
-        'b.hex=runif(r4.hex[,1])',
+        'r1.hex[,1]=r1.hex[,1] == 1.0',
+        'b.hex=runif(r3.hex[,1])',
 
-        # 'r0.hex[,1]=r0.hex[,1] + 1.3',
-        # 'r<n>.hex=min(r0.hex,1+2)',
-        # 'r<n>.hex=r1.hex + 1',
+        # 'r1.hex[,1]=r1.hex[,1] + 1.3',
+        # 'r<n>.hex=min(r1.hex,1+2)',
         # 'r<n>.hex=r2.hex + 1',
         # 'r<n>.hex=r3.hex + 1',
         # 'r<n>[,0] = r2[,0] / r<n-1>[,0]',
@@ -36,12 +49,24 @@ exprListSmall = [
         # doesn't work
         # ",1.23 + 2.34 * 3" #  10.71, L2R eval order
         ## ",1.23 2.34"   #  Syntax error
-        "1.23 < 2.34", #  1
+        "1.23<2.34", #  1
+        "1.23<=2.34", #  1
+        "1.23>2.34", #  0
+        "1.23>=2.34", #  0
+        "1.23==2.34", #  0
+        "1.23!=2.34", #  1
+        "1.23 <2.34", #  1
         "1.23 <=2.34", #  1
-        "1.23 > 2.34", #  0
+        "1.23 >2.34", #  0
         "1.23 >=2.34", #  0
         "1.23 ==2.34", #  0
         "1.23 !=2.34", #  1
+        "1.23< 2.34", #  1
+        "1.23<= 2.34", #  1
+        "1.23> 2.34", #  0
+        "1.23>= 2.34", #  0
+        "1.23== 2.34", #  0
+        "1.23!= 2.34", #  1
         "r.hex",       #  Simple ref
         "+(1.23,2.34)",#  prefix 3.57
         ## "+(1.23)",     #  Syntax error, not enuf args
@@ -130,7 +155,8 @@ exprListSmall = [
         # "apply(r.hex,1,function(x){x=1;r.hex})",
         # doesn't work
         # "apply(r.hex,1,function(x){r.hex})",
-        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
 
         #  Conditional selection; 
         "ifelse(0,1,2)",
@@ -179,6 +205,7 @@ for i in range(10):
     expr = ""
     for j in range(1):
         expr += "z.hex=" + random.choice(exprListSmall) + ";"
+        # expr += random.choice(exprListSmall) + ";"
     exprList.append(expr)
         
 
@@ -192,7 +219,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(1, java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
 
@@ -201,15 +228,17 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec2_operators(self):
-        bucket = 'smalldata'
-        csvPathname = 'iris/iris2.csv'
+        h2o.beta_features = True
+        bucket = ''
+        csvPathname = 'testdata/airlines/year2013.csv'
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
         for resultKey, execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r0.hex', maxTrials=200, timeoutSecs=10)
+        # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

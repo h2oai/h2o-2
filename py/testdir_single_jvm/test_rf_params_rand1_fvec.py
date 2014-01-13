@@ -9,7 +9,8 @@ paramDict = {
     'max_depth': [None, 1,10,20,100],
     'nbins': [None,4,5,10,100,1000],
     'ignored_cols_by_name': [None, None, None, None, 'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
-    'cols': [None, None, None, None, None, '0,1,2,3,4,','C1,C2,C3,C4'],
+    # undecided node assertion if input cols don't change
+    # 'cols': [None, None, None, None, None, '0,1,2,3,4,','C1,C2,C3,C4'],
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
     'seed': [None,'0','1','11111','19823134','1231231'],
     # I guess rf drops constant columns in poiker1000 so max of 4 features ??
@@ -17,12 +18,10 @@ paramDict = {
     # all the allowed features it says I can. So I'll live with 3 here.
     'mtries': [None,1,2,3],
     # only works on new
-    'min_rows': [None,0,3,5],
+    'min_rows': [None,1,3,5],
     'importance': [None,0,1],
     'classification': [None,0,1],
     'validation': [None, 'poker1000.hex'],
-    'model_key': [None, 'poker1000_model']
-
     }
 
 class Basic(unittest.TestCase):

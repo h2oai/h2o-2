@@ -23,17 +23,16 @@ class Basic(unittest.TestCase):
     def test_from_import_fvec(self):
         h2o.beta_features = True
 
-        timeoutSecs = 500
         csvFilenameAll = [
-            "covtype.data",
-            "covtype20x.data",
+            ("covtype.data", 500),
+            ("covtype20x.data", 1000),
             ]
 
-        for csvFilename in csvFilenameAll:
+        for (csvFilename, timeoutSecs) in csvFilenameAll:
             # creates csvFilename.hex from file in importFolder dir 
             hex_key = csvFilename + '.hex'
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="standard/" + csvFilename, schema='local',
-                hex_key=hex_key, timeoutSecs=500, doSummary=False)
+                hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], verbose=True)

@@ -6,7 +6,7 @@ pkg.env$temp_count = 0
 pkg.env$IS_LOGGING = FALSE
 TEMP_KEY = "Last.value"
 RESULT_MAX = 200
-LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
+LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
 
 # Initialize functions for R logging
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
@@ -57,6 +57,7 @@ h2o.__logIt <- function(m, tmp, commandOrErr) {
 }
 
 # Internal functions & declarations
+h2o.__PAGE_CANCEL = "Cancel.json"
 h2o.__PAGE_CLOUD = "Cloud.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GET = "GetVector.json"
@@ -90,6 +91,8 @@ h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_PARSE2 = "2/Parse2.json"
 h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
+h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
+h2o.__HACK_LEVELS = "2/Levels.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
@@ -118,12 +121,21 @@ h2o.__remoteSend <- function(client, page, ...) {
   if(pkg.env$IS_LOGGING) {
     h2o.__logIt(myURL, list(...), "Command")
   }
+  
   # Sends the given arguments as URL arguments to the given page on the specified server
-  # temp = postForm(myURL, style = "POST", ...)
-  if(length(list(...)) == 0)
-    temp = getURLContent(myURL)
-  else
-    temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  #
+  # Re-enable POST since we found the bug in NanoHTTPD which was causing POST
+  # payloads to be dropped.
+  #
+  temp = postForm(myURL, style = "POST", ...)
+  
+  # The GET code that we used temporarily while NanoHTTPD POST was known to be busted.
+  #
+  #if(length(list(...)) == 0)
+  #  temp = getURLContent(myURL)
+  #else
+  #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  
   # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
   # after = gsub("NaN", "\"NaN\"", after)
   # after = gsub("-Infinity", "\"-Inf\"", temp[1])
@@ -161,7 +173,7 @@ h2o.__checkClientHealth <- function(client) {
     elapsed <- node$elapsed_time
     nport <- unlist(strsplit(node$name, ":"))[2]
     if(!status) h2o.__cloudSick(node_name = node$name, client = client)
-    if(elapsed > 35000) h2o.__cloudSick(node_name = NULL, client = client)
+    if(elapsed > 45000) h2o.__cloudSick(node_name = NULL, client = client)
     if(elapsed > 10000) {
         Sys.sleep(5)
         lapply(grabCloudStatus(client)$nodes, checker, client)
@@ -242,8 +254,25 @@ h2o.__pollAll <- function(client, timeout) {
   }
 }
 
+h2o.__cancelJob <- function(client, keyName) {
+  res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
+  res = res$jobs
+  if(length(res) == 0) stop("No jobs found in queue")
+  prog = NULL
+  for(i in 1:length(res)) {
+    if(res[[i]]$key == keyName) {
+      prog = res[[i]]; break
+    }
+  }
+  if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
+  if(!(prog$cancelled || prog$progress == -1.0 || prog$progress == -2.0 || prog$end_time == -1)) {
+    h2o.__remoteSend(client, h2o.__PAGE_CANCEL, key=keyName)
+    cat("Job key", keyName, "has been cancelled")
+  }
+}
+
 h2o.__uniqID <- function(prefix = "") {
-  if("uuid" %in% installed.packages()) {
+  if("uuid" %in% installed.packages()[,1]) {
     library(uuid)
     temp = UUIDgenerate()
   } else {
@@ -271,8 +300,7 @@ h2o.__uniqID <- function(prefix = "") {
 
 h2o.__checkForFactors <- function(object) {
     if(class(object) != "H2OParsedData") return(FALSE)
-    f <- function(idx, hex){ return(is.factor(hex[,idx]))} #print(is.factor(hex[,idx])); return(is.factor(hex[,idx]))}
-    any(sapply(seq(ncol(object)),f, object))
+    any.factor(object)
 }
 
 h2o.__version <- function(client) {
@@ -324,8 +352,8 @@ h2o.__unop2 <- function(op, x) {
     
   expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    return(res$scalar)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
   if(op %in% LOGICAL_OPERATORS)
     new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
   else
@@ -350,8 +378,8 @@ h2o.__binop2 <- function(op, x, y) {
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    return(res$scalar)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
   if(op %in% LOGICAL_OPERATORS)
     new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
   else

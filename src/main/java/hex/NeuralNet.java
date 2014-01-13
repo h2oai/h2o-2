@@ -64,9 +64,6 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "L2 regularization", filter = Default.class)
   public double l2 = .001;
 
-  @API(help = "Per-weight learning rate acceleration", filter = Default.class)
-  public boolean per_weight;
-
   @API(help = "How many times the dataset should be iterated", filter = Default.class)
   public int epochs = 100;
 
@@ -127,7 +124,6 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1].momentum_stable = (float) momentum_stable;
       ls[i + 1].l1 = (float) l1;
       ls[i + 1].l2 = (float) l2;
-      ls[i + 1].per_weight = per_weight;
     }
     if( classification )
       ls[ls.length - 1] = new VecSoftmax(trainResp, null);
@@ -550,9 +546,9 @@ public class NeuralNet extends ValidatedJob {
         sb.append("<th>Training Time</th>");
         sb.append("<th>Training Samples</th>");
         sb.append("<th>Training MSE</th>");
-        sb.append("<th>Training Classification</th>");
+        sb.append("<th>Training Classification Error</th>");
         sb.append("<th>Validation MSE</th>");
-        sb.append("<th>Validation Classification</th>");
+        sb.append("<th>Validation Classification Error</th>");
         sb.append("</tr>");
         Errors[] trains = model.training_errors;
         for( int i = trains.length - 1; i >= 0; i-- ) {

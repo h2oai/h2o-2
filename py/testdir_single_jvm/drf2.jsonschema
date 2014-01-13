@@ -13,7 +13,7 @@
                 { "type":"string" }
             },
             "_selfKey": { "type":"string" },
-            "cm": { "type":"array", "items":
+            "cms": { "type":"array", "items":
                 { "type":"array" }
             },
             "errs": { "type":"array", "items":

@@ -64,6 +64,10 @@ public abstract class MemoryManager {
   // Singleton, allocated now so I do not allocate during an OOM event.
   static private final H2O.Cleaner.Histo myHisto = new H2O.Cleaner.Histo();
 
+  // A monitonically increasing total count memory allocated via MemoryManager.
+  // Useful in tracking total memory consumed by algorithms - just ask for the
+  // before & after amounts and diff them.
+  public static final AtomicLong MEM_ALLOC = new AtomicLong();
 
   public static void setMemGood() {
     if( CAN_ALLOC ) return;
@@ -218,6 +222,7 @@ public abstract class MemoryManager {
           try { _lock.wait(3*1000); } catch (InterruptedException ex) { }
         }
       }
+      MEM_ALLOC.addAndGet(bytes);
       try {
         switch( type ) {
         case  1: return new byte   [elems];
@@ -252,10 +257,10 @@ public abstract class MemoryManager {
   public static float  [] malloc4f(int size) { return (float  [])malloc(size,size*4, 5,null,0); }
   public static double [] malloc8d(int size) { return (double [])malloc(size,size*8, 9,null,0); }
   public static boolean[] mallocZ (int size) { return (boolean[])malloc(size,size*1, 0,null,0); }
-  public static byte   [] arrayCopyOfRange(byte  [] orig, int from, int sz) { return (byte  []) malloc(sz,(sz-from),-1,orig,from); }
-  public static int    [] arrayCopyOfRange(int   [] orig, int from, int sz) { return (int   []) malloc(sz,(sz-from),-4,orig,from); }
-  public static long   [] arrayCopyOfRange(long  [] orig, int from, int sz) { return (long  []) malloc(sz,(sz-from),-8,orig,from); }
-  public static double [] arrayCopyOfRange(double[] orig, int from, int sz) { return (double[]) malloc(sz,(sz-from),-9,orig,from); }
+  public static byte   [] arrayCopyOfRange(byte  [] orig, int from, int sz) { return (byte  []) malloc(sz,(sz-from)*1,-1,orig,from); }
+  public static int    [] arrayCopyOfRange(int   [] orig, int from, int sz) { return (int   []) malloc(sz,(sz-from)*4,-4,orig,from); }
+  public static long   [] arrayCopyOfRange(long  [] orig, int from, int sz) { return (long  []) malloc(sz,(sz-from)*8,-8,orig,from); }
+  public static double [] arrayCopyOfRange(double[] orig, int from, int sz) { return (double[]) malloc(sz,(sz-from)*8,-9,orig,from); }
   public static byte   [] arrayCopyOf( byte  [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
   public static int    [] arrayCopyOf( int   [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
   public static long   [] arrayCopyOf( long  [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }

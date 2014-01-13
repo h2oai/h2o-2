@@ -20,7 +20,7 @@ endif
 	R CMD build h2o-package
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
-	mv h2o_1.0.4.tar.gz ../target/R
+	mv h2o_$(PROJECT_VERSION).tar.gz ../target/R
 
 build_inner:
 	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2oRClient-DESCRIPTION.template > h2oRClient-package/DESCRIPTION
@@ -53,3 +53,4 @@ clean:
 	rm -f h2o-package/man/h2o-package.Rd
 	rm -f h2o-package/inst/java/h2o.jar
 	rm -f h2o_*.tar.gz
+	rm -rf ../lib/resources/R

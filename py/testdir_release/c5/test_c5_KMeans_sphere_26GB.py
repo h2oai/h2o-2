@@ -87,6 +87,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'normalize': 1,
                 'initialization': 'Furthest',
                 'destination_key': 'junk.hex', 
+                # we get NaNs if whole col is NA
+                'ignored_cols': 'C0',
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
                 }
@@ -107,6 +109,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     benchmarkLogging=benchmarkLogging, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            print "kmeans result:", h2o.dump_json(kmeans)
 
             l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:s} for {:.2f} secs {:s}' .format(
                 len(h2o.nodes), h2o.nodes[0].java_heap_GB, "KMeans", "trial "+str(trial), csvFilename, elapsed, paramsString)

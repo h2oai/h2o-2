@@ -12,10 +12,10 @@ public class CloudProcess {
    * breakpoints etc.
    */
   public static void main(String[] args) throws Exception {
-    launch(3, null);
+    launch(null, 3);
   }
 
-  public static void launch(int nodes, Class<? extends Job> job) throws Exception {
+  public static void launch(Class<? extends Job> job, int nodes) throws Exception {
     // Additional logging info
     System.setProperty("h2o.debug", "true");
     String ip = "127.0.0.1";

@@ -14,7 +14,7 @@ public class DRFModelAdaptTest extends TestUtil {
 
   private abstract class PrepData { abstract Vec prep(Frame fr); int needAdaptation(Frame fr) { return fr.numCols(); };}
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   /**
    * The scenario:

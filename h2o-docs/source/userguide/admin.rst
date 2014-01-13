@@ -8,7 +8,7 @@ Jobs
 Users can access information on each action undertaken in an instance
 of H\ :sub:`2`\ O by accessing Jobs under the Admin drop down menu. From here it
 is possible to find .hex keys associated with models and parsed
-data. If a an action was canceled, that information will be displayed here as 
+data. If a an action was cancelled, that information will be displayed here as 
 well.
 
 **Table Definitions:**

@@ -180,7 +180,7 @@ class Basic(unittest.TestCase):
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
             # cluster centers can return in any order
-            clusters = kmeansResult['model']['clusters']
+            clusters = kmeansResult['model']['centers']
 
             # the way we create the centers above, if we sort on the sum of xyz
             # we should get the order the same as when they were created.

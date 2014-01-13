@@ -12,7 +12,7 @@ import water.fvec.Vec;
 
 /**
  * Neural network layer.
- *
+ * 
  * @author cypof
  */
 public abstract class Layer extends Iced {
@@ -20,6 +20,7 @@ public abstract class Layer extends Iced {
   public static DocGen.FieldDoc[] DOC_FIELDS;
 
   @API(help = "Number of neurons")
+  @ParamsSearch.Ignore
   public int units;
 
   @API(help = "Learning rate")
@@ -35,17 +36,15 @@ public abstract class Layer extends Iced {
   public float l2;
 
   @API(help = "Initial momentum value")
+  @ParamsSearch.Info(origin = 1)
   public float momentum_start;
 
   @API(help = "Number of samples during which momentum value varies")
-  @ParamsSearch.Info(origin = 1)
   public long momentum_ramp;
 
   @API(help = "Momentum value once ramp is over")
+  @ParamsSearch.Info(origin = 1)
   public float momentum_stable;
-
-  @API(help = "Per-weight rates")
-  public boolean per_weight;
 
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
@@ -54,9 +53,6 @@ public abstract class Layer extends Iced {
 
   // Momentum for weights and biases
   protected transient float[] _wm, _bm;
-
-  // Per-weight acceleration
-  protected transient float[] _wp, _bp;
 
   // Previous and input layers
   protected transient Layer _previous;
@@ -88,14 +84,6 @@ public abstract class Layer extends Iced {
         _wm = new float[_w.length];
         _bm = new float[_b.length];
       }
-      if( per_weight ) {
-        _wp = new float[_w.length];
-        _bp = new float[_b.length];
-        for( int i = 0; i < _wp.length; i++ )
-          _wp[i] = 1;
-        for( int i = 0; i < _bp.length; i++ )
-          _bp[i] = 1;
-      }
     }
   }
 
@@ -116,21 +104,24 @@ public abstract class Layer extends Iced {
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
       float d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
-      if( _wp != null && d != 0 ) {
-        boolean sign = _wp[w] >= 0;
-        float mult = Math.abs(_wp[w]);
-        // If the gradient kept its sign, increase
-        if( (d >= 0) == sign )
-          mult += .05f;
-        else {
-          if( mult > 1 )
-            mult *= .95f;
-          else
-            sign = !sign;
-        }
-        d *= mult;
-        _wp[w] = sign ? mult : -mult;
-      }
+
+      // TODO finish per-weight acceleration, doesn't help for now
+//      if( _wp != null && d != 0 ) {
+//        boolean sign = _wp[w] >= 0;
+//        float mult = Math.abs(_wp[w]);
+//        // If the gradient kept its sign, increase
+//        if( (d >= 0) == sign )
+//          mult += .05f;
+//        else {
+//          if( mult > 1 )
+//            mult *= .95f;
+//          else
+//            sign = !sign;
+//        }
+//        d *= mult;
+//        _wp[w] = sign ? mult : -mult;
+//      }
+
       if( _wm != null ) {
         _wm[w] *= m;
         _wm[w] = d = _wm[w] + d;
@@ -169,6 +160,7 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Input extends Layer {
+    @ParamsSearch.Ignore
     protected long _pos, _len;
 
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
@@ -202,6 +194,13 @@ public abstract class Layer extends Iced {
     transient Chunk[] _chunks;
 
     VecsInput() {
+    }
+
+    @Override public Layer clone() {
+      VecsInput o = (VecsInput) super.clone();
+      if( o._chunks != null )
+        o._chunks = new Chunk[o._chunks.length];
+      return o;
     }
 
     public VecsInput(Vec[] vecs, VecsInput train) {
@@ -473,7 +472,6 @@ public abstract class Layer extends Iced {
       momentum_ramp = stats.momentum_ramp;
       l1 = stats.l1;
       l2 = stats.l2;
-      per_weight = stats.per_weight;
     }
 
     @Override protected int target() {
@@ -545,7 +543,6 @@ public abstract class Layer extends Iced {
       momentum_ramp = stats.momentum_ramp;
       l1 = stats.l1;
       l2 = stats.l2;
-      per_weight = stats.per_weight;
     }
 
     @Override float[] target() {
@@ -587,6 +584,10 @@ public abstract class Layer extends Iced {
         // float a = Math.abs(_a[o]);
         // float b = 12 + a * (6 + a * (3 + a));
         // _a[o] = (_a[o] * b) / (a * b + 24);
+
+        // Other approx to try
+        // _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
+
         _a[o] = (float) Math.tanh(_a[o]);
       }
     }
@@ -841,17 +842,29 @@ public abstract class Layer extends Iced {
       long processed = _training.processed();
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
-      for( int o = 0; o < _a.length; o++ ) {
+      for( int u = 0; u < _a.length; u++ ) {
         assert _previous._previous.units == units;
-        float e = _previous._previous._a[o] - _a[o];
-        float g = e;//* (1 - _a[o]) * _a[o]; // Square error
+        float e = _previous._previous._a[u] - _a[u];
+        float g = e;//* (1 - _a[o]) * _a[o];
+        //float g = e * (1 - _a[o]) * _a[o]; // Square error
+        float r2 = 0;
         for( int i = 0; i < _previous._a.length; i++ ) {
-          int w = i * _a.length + o;
+          int w = i * _a.length + u;
           if( _previous._e != null )
             _previous._e[i] += g * _w[w];
-          _w[w] += r * (g * _previous._a[i] - _w[w] * l2);
+          float d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+          _w[w] += r * d;
+          r2 += _w[w] * _w[w];
         }
-        _b[o] += r * g;
+        if( r2 > 15 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+          float scale = (float) Math.sqrt(15 / r2);
+          for( int i = 0; i < _previous._a.length; i++ ) {
+            int w = i * _a.length + u;
+            _w[w] *= scale;
+          }
+        }
+        float d = g;
+        _b[u] += r * d;
       }
     }
   }
@@ -867,77 +880,12 @@ public abstract class Layer extends Iced {
     dst._b = src._b;
     dst._wm = src._wm;
     dst._bm = src._bm;
-    dst._wp = src._wp;
-    dst._bp = src._bp;
   }
 
   public static void shareWeights(Layer[] src, Layer[] dst) {
     for( int y = 1; y < src.length; y++ )
       shareWeights(src[y], dst[y]);
   }
-
-  // If layer is a RBM
-
-  /**
-   * TODO inject noise in units <br>
-   * mean 0 and variance 1 / ( 1 + e-x )
-   */
-  void contrastiveDivergence(float[] in) {
-//    float[] v1 = in;
-//    float[] h1 = new float[_b.length];
-//    fprop(v1, h1);
-//    float[] v2 = generate(h1);
-//    float[] h2 = new float[_b.length];
-//    fprop(v2, h2);
-
-//    for( int o = 0; o < _b.length; o++ )
-//      for( int i = 0; i < _v.length; i++ )
-//        _gw[o * _v.length + i] += _rate * ((h1[o] * v1[i]) - (h2[o] * v2[i]));
-//
-//    for( int o = 0; o < _gb.length; o++ )
-//      _gb[o] += _rate * (h1[o] - h2[o]);
-
-//    for( int i = 0; i < _gv.length; i++ )
-//      _gv[i] += _rate * (v1[i] - v2[i]);
-  }
-
-//
-//  final void adjustVisible() {
-//    if( _gv != null ) {
-//      for( int v = 0; v < _gv.length; v++ ) {
-//        _v[v] += _gv[v];
-//        _gv[v] *= 1 - _momentum;
-//      }
-//    }
-//  }
-//
-//  float[] generate(float[] hidden) {
-//    assert hidden.length == _b.length;
-//    float[] visible = new float[_v.length];
-//    for( int o = 0; o < hidden.length; o++ )
-//      for( int i = 0; i < _in._a.length; i++ )
-//        visible[i] += _w[o * _in._a.length + i] * hidden[o];
-//    for( int i = 0; i < visible.length; i++ ) {
-//      visible[i] += _v[i];
-//      if( visible[i] < 0 )
-//        visible[i] = 0;
-//    }
-//    return visible;
-//  }
-
-//  float freeEnergy(float[] in) {
-//    float energy = 0.0f;
-//    for( int i = 0; i < in.length; i++ )
-//      energy -= in[i] * _v[i];
-//    for( int o = 0; o < _b.length; o++ ) {
-//      float out = 0;
-//      for( int i = 0; i < in.length; i++ )
-//        out += _w[o * in.length + i] * in[i];
-//      out += _b[o];
-//      energy -= Math.log(1 + Math.exp(out));
-//    }
-//    return energy;
-//  }
 
   private static float rand(Random rand, float min, float max) {
     return min + rand.nextFloat() * (max - min);

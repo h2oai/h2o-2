@@ -134,8 +134,8 @@ Defining a Model
     may wish to correct this by weighting. Weights should be assigned
     so that if chosen at random, an observation of each 
     classification has an equal chance. For example, if there are two
-    classifications A and B  in a data set, such that As occur
-    about10% of the time, and Bs occur the rest, A should given a
+    classifications A and B in a data set, such that As occur
+    about 10% of the time, and Bs occur the rest, A should given a
     weight of 5, and B of .56. 
  
 

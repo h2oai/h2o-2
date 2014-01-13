@@ -198,6 +198,10 @@ public class Job extends Request2 {
     @Override protected void logStart() {
       super.logStart();
       int idx = source.find(response);
+      if( idx == -1 ) { 
+        Vec vm = response.masterVec();
+        if( vm != null ) idx = source.find(vm);
+      }
       Log.info("    response: "+(idx==-1?"null":source._names[idx]));
       Log.info("    "+(classification ? "classification" : "regression"));
     }

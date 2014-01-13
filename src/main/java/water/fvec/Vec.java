@@ -1,12 +1,8 @@
 package water.fvec;
 
-import java.util.Arrays;
 import java.util.UUID;
 
 import water.*;
-import water.H2O.H2OCallback;
-import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
 import water.util.Utils;
 import static water.util.Utils.seq;
 
@@ -241,7 +237,7 @@ public class Vec extends Iced {
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
     } else {                 // KV store reports we need to recompute
       RollupStats rs = new RollupStats().dfork(this);
-      if(fs != null) fs.add(rs); else rs.getResult();
+      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult()); 
     }
     return this;
   }
@@ -362,7 +358,7 @@ public class Vec extends Iced {
     return Key.make(bits);
   }
   /** Get a Chunk's Value by index.  Basically the index-to-key map,
-   *  plus the {@link DKV.get}.  Warning: this pulls the data locally;
+   *  plus the {@code DKV.get()}.  Warning: this pulls the data locally;
    *  using this call on every Chunk index on the same node will
    *  probably trigger an OOM!  */
   public Value chunkIdx( int cidx ) {
@@ -373,7 +369,7 @@ public class Vec extends Iced {
 
   protected boolean checkMissing(int cidx, Value val) {
     if( val != null ) return true;
-    assert val != null : "Missing chunk "+cidx+" for "+_key;
+    System.out.println("Missing chunk "+cidx+" for "+_key);
     return false;
   }
 
@@ -422,8 +418,9 @@ public class Vec extends Iced {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     Chunk c = dvec.get();               // Chunk data to compression wrapper
-    if( c._start == start ) return c;   // Already filled-in
-    assert c._start == -1 || c._start == start; // Second term in case multi-thread access
+    long cstart = c._start;             // Read once, since racily filled in
+    if( cstart == start ) return c;     // Already filled-in
+    assert cstart == -1;       // Was not filled in (everybody racily writes the same start value)
     c._start = start;          // Fields not filled in by unpacking from Value
     c._vec = this;             // Fields not filled in by unpacking from Value
     return c;
@@ -431,14 +428,6 @@ public class Vec extends Iced {
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
   public final Chunk chunk( long i ) {
     return elem2BV(elem2ChunkIdx(i));
-  }
-
-  /** Next Chunk from the current one. */
-  final Chunk nextBV( Chunk bv ) {
-    int cidx = bv.cidx()+1;
-    Chunk next =  cidx == nChunks() ? null : elem2BV(cidx);
-    assert next == null || next.cidx() == cidx;
-    return next;
   }
 
   /** Fetch element the slow way, as a long.  Floating point values are
@@ -483,8 +472,7 @@ public class Vec extends Iced {
   }
 
   @Override public boolean equals( Object o ) {
-    if( !(o instanceof Vec) ) return false;
-    return ((Vec)o)._key.equals(_key);
+    return o instanceof Vec && ((Vec)o)._key.equals(_key);
   }
   @Override public int hashCode() { return _key.hashCode(); }
 
@@ -565,10 +553,10 @@ public class Vec extends Iced {
     }
     /**
      * Gets the next n keys of this group.
-     * Performs atomic udpate of the group object to assure we get unique keys.
-     * The group size will be udpated by adding n.
+     * Performs atomic update of the group object to assure we get unique keys.
+     * The group size will be updated by adding n.
      *
-     * @param n
+     * @param n number of keys to make
      * @return arrays of unique keys belonging to this group.
      */
     public Key [] addVecs(final int n){
@@ -585,8 +573,7 @@ public class Vec extends Iced {
     }
 
     @Override public boolean equals( Object o ) {
-      if( !(o instanceof VectorGroup) ) return false;
-      return ((VectorGroup)o)._key.equals(_key);
+      return o instanceof VectorGroup && ((VectorGroup)o)._key.equals(_key);
     }
     @Override public int hashCode() {
       return _key.hashCode();
@@ -603,11 +590,10 @@ public class Vec extends Iced {
 
     public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
     @Override public void map(Chunk ys) {
-      int ycls=0;
       for( int row=0; row<ys._len; row++ ) {
         if (ys.isNA0(row)) continue;
-        ycls = (int)ys.at80(row)-_ymin;
-        _dom[ycls] = 1; // Only write to shared array
+        int ycls = (int)ys.at80(row)-_ymin;
+        if( _dom[ycls] == 0 ) _dom[ycls] = 1; // Only write to shared array
       }
     }
 

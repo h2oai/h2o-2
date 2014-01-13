@@ -58,7 +58,8 @@ public class SummaryPage2 extends Request2 {
     for( Vec vec : vecs) vec.rollupStats(fs);
     fs.blockForPending();
 
-    summaries = new Summary2.SummaryTask2().doAll(fr)._summaries;
+    Summary2.BasicStat basicStats[] = new Summary2.PrePass().doAll(fr).finishUp()._basicStats;
+    summaries = new Summary2.SummaryTask2(basicStats).doAll(fr)._summaries;
     if (summaries != null)
       for (int i = 0; i < cols.length; i++) 
         summaries[i].finishUp(vecs[i]);

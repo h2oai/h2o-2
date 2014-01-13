@@ -16,18 +16,44 @@ public class DRFTest2 extends TestUtil {
 
   // A bigger DRF test, useful for tracking memory issues.
   /*@Test*/ public void testAirlines() throws Throwable {
-    new DRFTest().basicDRF(
-        "../datasets/UCI/UCI-large/covtype/covtype.data", "covtype.hex", null, null, 
+    for( int i=0; i<10; i++ ) {
+      new DRFTest().basicDRF(
+        //
+        //"../demo/c5/row10000.csv.gz", "c5.hex", null, null, 
+
+        "../datasets/UCI/UCI-large/covtype/covtype.data", "covtype.hex", null, null,
         new DRFTest.PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
-        10,
-        a( a(154871,  52304,    18,    0,   24,   15,   935),  
-           a( 34958, 240871,  1423,   21,  243,  656,    56),  
-           a(     4,   3836, 30040,  203,    1, 1049,     0),  
-           a(     0,      8,   640, 1960,    0,   81,     0),  
-           a(   229,   6824,   126,    0, 2137,   17,     0),  
-           a(    21,   4278,  5353,   91,    2, 7332,     0),  
-           a(  7170,    297,     0,    0,    0,    0, 12718)),
+        10/*ntree*/,
+        a( a( 199019,   7697,    15,    0,  180,    45,   546), 
+           a(   8012, 267788,   514,    7,  586,   329,   181), 
+           a(     16,    707, 33424,  162,   53,   639,     0), 
+           a(      1,      5,   353, 2211,    0,    99,     0), 
+           a(    181,   1456,   134,    0, 7455,    43,     4), 
+           a(     30,    540,  1171,   96,   33, 15109,     0), 
+           a(    865,    167,     0,    0,    9,     0, 19075)),
         s("1", "2", "3", "4", "5", "6", "7"),
-        50/*max_depth*/);
+
+        //"./smalldata/iris/iris_wheader.csv", "iris.hex", null, null,
+        //new DRFTest.PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
+        //10/*ntree*/,
+        //a( a( 50,  0,  0),
+        //   a(  0, 50,  0),
+        //   a(  0,  0, 50)),
+        //s("Iris-setosa","Iris-versicolor","Iris-virginica"),
+
+        //"./smalldata/logreg/prostate.csv", "prostate.hex", null, null,
+        //new DRFTest.PrepData() { @Override int prep(Frame fr) {
+        //  UKV.remove(fr.remove("ID")._key); return fr.find("CAPSULE");
+        //  } },
+        //10/*ntree*/,
+        //a( a(170, 55),
+        //   a( 60, 92)),
+        //s("0","1"),
+
+
+        99/*max_depth*/,
+        20/*nbins*/,
+        0 /*optflag*/  );
+    }
   }
 }

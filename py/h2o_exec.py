@@ -27,7 +27,7 @@ def checkScalarResult(resultInspect, resultKey):
         num_cols = resultInspect0["num_cols"]
         num_rows = resultInspect0["num_rows"]
         cols = resultInspect0["cols"]
-        print "cols:", h2o.dump_json(cols)
+        # print "cols:", h2o.dump_json(cols)
 
     if emsg:
         print "\nKey: '" + str(resultKey) + "' inspect result:\n", h2o.dump_json(resultInspect)
@@ -95,23 +95,31 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
     resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')
     h2o.verboseprint(resultExec)
-    # inspect a result key?
-    if resultKey is not None:
-        kwargs = {'str': resultKey} 
-        resultExec2 = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
-        h2o.verboseprint("resultExec2:", h2o.dump_json(resultExec2))
 
-        # maybe return 'scalar' in some cases?
-        return resultExec2, resultExec2['cols'][0]['min']
-    else:
-        if 'scalar' in resultExec:
-            result = resultExec['scalar']
-        elif 'result' in resultExec:
-            result = resultExec['result']
+    if 'cols' in resultExec and resultExec['cols']: # not null
+        if 'funstr' in resultExec and resultExec['funstr']: # not null
+            raise Exception("cols and funstr shouldn't both be in resultExec: %s" % h2o.dump_json(resultExec))
         else:
-            result = None
+            # Frame
+            # if test said to look at a resultKey, it's should be in h2o k/v store
+            # inspect a result key?
+            if resultKey is not None:
+                kwargs = {'str': resultKey} 
+                resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
+                h2o.verboseprint("resultExec2:", h2o.dump_json(resultExec))
 
-        return resultExec, result
+            # handles the 1x1 data frame result. Not really interesting if bigger than 1x1?
+            result = resultExec['cols'][0]['min']
+        
+    else: 
+        if 'funstr' in resultExec and resultExec['funstr']: # not null
+            # function return 
+            result = resultExec['funstr']
+        else:
+            # scalar
+            result = resultExec['scalar']
+            
+    return resultExec, result
 
 
 
