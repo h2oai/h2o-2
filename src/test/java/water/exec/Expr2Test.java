@@ -62,6 +62,12 @@ public class Expr2Test extends TestUtil {
       checkStr("x<-1",1);       // Alternative R assignment syntax
       checkStr("x=3;y=4",4);    // Return value is last expr
 
+      // Ambiguity & Language
+      checkStr("x=mean");         // Assign x to the built-in fcn mean
+      checkStr("x=mean=3",3);     // Assign x & id mean with 3; "mean" here is not related to any built-in fcn
+      checkStr("x=mean(c(3))",3); // Assign x to the result of running fcn mean(3)
+      checkStr("x=mean+3");       // Error: "mean" is a function; cannot add a function and a number
+
       // Simple array handling; broadcast operators
       checkStr("h.hex");        // Simple ref
       checkStr("h.hex[2,3]",1); // Scalar selection
@@ -163,6 +169,7 @@ public class Expr2Test extends TestUtil {
       //checkStr("z=5;apply(h.hex,2,function(x){x[]+z})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("apply(h.hex,2,function(x){h.hex})");
+      checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
       
       // Conditional selection; 

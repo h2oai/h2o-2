@@ -298,7 +298,7 @@ class ASTId extends AST {
     String var = E.isID();
     if( var == null ) return null;
     // Built-in ops parse as ops, not vars
-    if( ASTOp.isOp(var) ) { E._x=x; return null; }
+    if( ASTOp.isInfixOp(var) ) { E._x=x; return null; }
     // See if pre-existing
     for( int d=E.lexical_depth(); d >=0; d-- ) {
       ArrayList<ASTId> asts = E._env.get(d);
@@ -319,7 +319,7 @@ class ASTId extends AST {
     String id = E.isID();
     if( id == null ) return null;
     // Built-in ops parse as ops, not vars
-    if( ASTOp.isOp(id) ) { E._x=x; return null; }
+    if( ASTOp.isInfixOp(id) ) { E._x=x; return null; }
     return id;
   }
   @Override void exec(Env env) {
