@@ -567,6 +567,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Validation: need to score the set, getting a probability distribution for each class
       // Frame has nclass vectors (nclass, or 1 for regression)
       Frame res = model.score(validation);
+      System.err.println(res.toStringAll());
       // Adapt the validation set to the model
       Frame frs[] = model.adapt(validation,false);
       Frame adapValidation = frs[0]; // adapted validation dataset
@@ -595,9 +596,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
         double sum;
         if( _validation ) {     // Passed in a class distribution from scoring
-          sum = 1.0;            // Sum of a distribution is 1.0
           for( int i=0; i<_nclass; i++ )
             ds[i] = chks[i+_ncols+1].at0(row);  // Get the class distros
+          if (_nclass > 1 ) sum = 1.0;          // Sum of a distribution is 1.0 for classification
+          else sum = ds[0];                     // Sum is the same as prediction for regression.
         } else {                // Passed in the model-specific columns
           sum = score0(chks,ds,row);
         }
