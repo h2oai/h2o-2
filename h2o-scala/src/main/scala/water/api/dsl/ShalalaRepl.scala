@@ -59,7 +59,7 @@ object ShalalaRepl {
     
     override def printWelcome() {
       echo("""
-=== Welcome to the world of ScAlH2O ===
+=== Welcome to the world of Shalala ===
           
 Type `help` or `example` to begin...
 """)
