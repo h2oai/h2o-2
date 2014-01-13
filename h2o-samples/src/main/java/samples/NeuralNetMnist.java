@@ -61,7 +61,7 @@ public class NeuralNetMnist extends Job {
     }
     train = trainf.vecs();
     test = testf.vecs();
-    NeuralNet.reChunk(train);
+    //NeuralNet.reChunk(train);
   }
 
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
