@@ -229,8 +229,8 @@ class Basic(unittest.TestCase):
 
     def test_exec2_operators(self):
         h2o.beta_features = True
-        bucket = ''
-        csvPathname = 'testdata/airlines/year2013.csv'
+        bucket = 'home-0xdiag-datasets'
+        csvPathname = 'airlines/year2013.csv'
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
