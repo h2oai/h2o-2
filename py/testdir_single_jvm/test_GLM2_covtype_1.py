@@ -23,9 +23,9 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
 
         csvFilename = 'covtype.data'
-        csvPathname = 'UCI/UCI-large/covtype/' + csvFilename
+        csvPathname = 'standard/' + csvFilename
 
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='local', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=10)
 
         # inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         # print "\n" + csvPathname, \

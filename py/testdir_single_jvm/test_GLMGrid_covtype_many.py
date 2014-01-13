@@ -20,8 +20,8 @@ class Basic(unittest.TestCase):
 
     def test_GLMGrid_covtype_many(self):
         csvFilename = 'covtype.data'
-        csvPathname = 'UCI/UCI-large/covtype/' + csvFilename
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', timeoutSecs=10)
+        csvPathname = 'standard/' + csvFilename
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', timeoutSecs=10)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             time.sleep(3)
             hex_key = str(i) + ".hex"
             src_key = str(i) + ".src"
-            parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', 
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', 
                 src_key=src_key, hex_key=hex_key, 
                 timeoutSecs=10, noPoll=True, doSummary=False)
 

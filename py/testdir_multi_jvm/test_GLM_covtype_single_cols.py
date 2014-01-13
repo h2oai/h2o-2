@@ -20,13 +20,13 @@ class Basic(unittest.TestCase):
 
     def test_GLM_covtype_single_cols(self):
         timeoutSecs = 10
-        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        csvPathname = 'standard/covtype.data'
         print "\n" + csvPathname
 
         # columns start at 0
         y = "54"
         x = ""
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', timeoutSecs=15)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', timeoutSecs=15)
 
         print "GLM binomial wth 1 X column at a time" 
         print "Result check: abs. value of coefficient and intercept returned are bigger than zero"

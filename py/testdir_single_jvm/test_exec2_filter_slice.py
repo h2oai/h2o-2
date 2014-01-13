@@ -32,9 +32,9 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         timeoutSecs = 10
         csvFilename = "covtype.data"
-        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        csvPathname = 'standard/covtype.data'
         hex_key = "c.hex"
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, 
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key, 
             timeoutSecs=10)
         print "Parse result['desination_key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

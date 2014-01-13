@@ -109,8 +109,8 @@ class Basic(unittest.TestCase):
 
             # make col 2 a binomial (negative numbers in src
             col = 2
-            execExpr = "%s=colSwap(%s,%s,(%s[%s]>-7 ? 1 : 0))" % (hex_key, hex_key, col, hex_key, col)
-            resultExec = h2o_cmd.runExec(expression=execExpr)
+            execExpr = "%s[,%s] = (%s[,%s]>-7 ? 1 : 0))" % (hex_key, col, hex_key, col)
+            resultExec = h2o_cmd.runExec(str=execExpr)
 
             params = {
                 'destination_key': "GBMKEY",
