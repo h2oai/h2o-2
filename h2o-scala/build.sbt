@@ -11,13 +11,21 @@ mainClass in Compile := Some("water.api.dsl.ShalalaRepl")
 /**
  * Configure dependencies.
  */
-libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.6.2"
+libraryDependencies += "commons-lang" % "commons-lang" % "2.4"
 
-libraryDependencies += "log4j" % "log4j" % "1.2.17"
+libraryDependencies += "org.apache.httpcomponents" % "httpclient" % "4.1.1"
+
+libraryDependencies += "com.google.guava" % "guava" % "12.0.1"
 
 libraryDependencies += "com.google.code.gson" % "gson" % "2.2.2"
 
+libraryDependencies += "log4j" % "log4j" % "1.2.17"
+
 libraryDependencies += "org.apache.poi" % "poi-ooxml" % "3.8"
+
+libraryDependencies += "net.java.dev.jets3t" % "jets3t" % "0.6.1"
+
+libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.6.2"
 
 libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "1.1.0"
 
@@ -39,4 +47,4 @@ resolvers ++= Seq("snapshots" at "http://oss.sonatype.org/content/repositories/s
 // Setup classpath
 (unmanagedBase in Compile) := baseDirectory.value / "../target/"
 
-(unmanagedClasspath in Runtime) := Seq( Attributed.blank( new File( "../target/classes/")), Attributed.blank( new File( "../lib/")))
+(unmanagedClasspath in Runtime) := Seq( Attributed.blank( new File( "../target/classes/")) )
