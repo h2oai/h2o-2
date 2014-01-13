@@ -27,7 +27,7 @@ public class NeuralNet extends ValidatedJob {
   public static final String DOC_GET = "Neural Network";
 
   @API(help = "Execution Mode", filter = Default.class)
-  public NeuralNetParams.ExecutionMode mode = NeuralNetParams.ExecutionMode.MapReduce_Hogwild;
+  public NeuralNetParams.ExecutionMode mode = NeuralNetParams.ExecutionMode.SingleNode;
 
   @API(help = "Activation function", filter = Default.class)
   public NeuralNetParams.Activation activation = NeuralNetParams.Activation.RectifierWithDropout;
@@ -97,21 +97,21 @@ public class NeuralNet extends ValidatedJob {
     if (arg._name.equals("input_dropout_ratio") &&
             (activation != NeuralNetParams.Activation.RectifierWithDropout && activation != NeuralNetParams.Activation.TanhWithDropout)
             ) {
-      arg.disable("Only with Dropout", inputArgs);
+      arg.disable("Only with Dropout.", inputArgs);
     }
     if(arg._name.equals("initial_weight_scale") &&
             (initial_weight_distribution == NeuralNetParams.InitialWeightDistribution.UniformAdaptive)
             ) {
-      arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
+      arg.disable("Only with Uniform or Normal initial weight distributions.", inputArgs);
     }
     if( arg._name.equals("mode") ) {
       if (H2O.CLOUD._memary.length > 1) {
         arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
-        mode = NeuralNetParams.ExecutionMode.MapReduce_Hogwild;
+        mode = NeuralNetParams.ExecutionMode.MultiNode;
       }
     }
     if( arg._name.equals("warmup_samples") ) {
-      if (mode == NeuralNetParams.ExecutionMode.Serial) {
+      if (mode == NeuralNetParams.ExecutionMode.SingleThread) {
         arg.disable("Only for non-serial execution modes.");
         assert(warmup_samples == 0);
       }
@@ -204,7 +204,7 @@ public class NeuralNet extends ValidatedJob {
     }
 
     public enum ExecutionMode {
-      Serial, Threaded_Hogwild, MapReduce_Hogwild
+      SingleThread, SingleNode, MultiNode
     }
 
     public enum InitialWeightDistribution {
@@ -316,8 +316,8 @@ public class NeuralNet extends ValidatedJob {
 
     final long num_rows = source.numRows();
 
-    if (mode == NeuralNetParams.ExecutionMode.Serial) {
-      Log.info("Serial execution mode");
+    if (mode == NeuralNetParams.ExecutionMode.SingleThread) {
+      Log.info("Single thread execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
     } else {
       // one node works on the first batch of points serially for improved stability
@@ -328,18 +328,18 @@ public class NeuralNet extends ValidatedJob {
         warmup.join();
         //TODO: send weights from master VM to all other VMs
       }
-      if (mode == NeuralNetParams.ExecutionMode.Threaded_Hogwild) {
-        Log.info("Entering single-node multi-threaded execution mode.");
+      if (mode == NeuralNetParams.ExecutionMode.SingleNode) {
+        Log.info("Entering single-node (multi-threaded Hogwild) execution mode.");
         trainer = new Trainer.Threaded(ls, epochs, self());
-      } else if (mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
-        if (warmup_samples > 0 && mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
+      } else if (mode == NeuralNetParams.ExecutionMode.MultiNode) {
+        if (warmup_samples > 0 && mode == NeuralNetParams.ExecutionMode.MultiNode) {
           Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
           Trainer warmup = new Trainer.Threaded(ls, warmup_samples/num_rows, self());
           warmup.start();
           warmup.join();
           //TODO: send weights from master VM to all other VMs
         }
-        Log.info("Entering MapReduce execution mode.");
+        Log.info("Entering multi-node (MapReduce) execution mode.");
         trainer = new Trainer.MapReduce(ls, epochs, self());
       } else throw new RuntimeException("invalid execution mode.");
     }
@@ -407,7 +407,7 @@ public class NeuralNet extends ValidatedJob {
     trainer.join();
 
     // hack to gracefully terminate the job submitted via H2O web API
-    if (mode != NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
+    if (mode != NeuralNetParams.ExecutionMode.MultiNode) {
       running = false; //tell the monitor thread to finish too
       try {
         monitor.join();
