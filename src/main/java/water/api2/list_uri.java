@@ -24,11 +24,11 @@ public class list_uri extends AbstractSimpleRequestHandler {
   private static class list_uri_Response {
     list_uri_Response() {
       uris = new ArrayList<UriEntry>();
-      ignored_uris = new ArrayList<UriEntry>();
+      excluded_uris = new ArrayList<UriEntry>();
     }
 
     ArrayList<UriEntry> uris;
-    ArrayList<UriEntry> ignored_uris;
+    ArrayList<UriEntry> excluded_uris;
   }
 
   public NanoHTTPD.Response serve(NanoHTTPD.IHTTPSession session) throws Exception {
