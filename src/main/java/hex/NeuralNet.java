@@ -70,10 +70,13 @@ public class NeuralNet extends ValidatedJob {
   public double l2 = 0.0;
 
   @API(help = "Loss function", filter = Default.class)
-  private NeuralNetParams.Loss loss = NeuralNetParams.Loss.CrossEntropy;
+  public NeuralNetParams.Loss loss = NeuralNetParams.Loss.CrossEntropy;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
   public double epochs = 100;
+
+  @API(help = "Enable diagnostics (incl. stability check)", filter = Default.class)
+  public boolean diagnostics = true;
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
@@ -96,6 +99,10 @@ public class NeuralNet extends ValidatedJob {
             (initial_weight_distribution == NeuralNetParams.InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
+    }
+    if( arg._name.equals("mode") && (H2O.CLOUD._memary.length > 1) ) {
+      mode = NeuralNetParams.ExecutionMode.MapReduce_Hogwild;
+      arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
     }
   }
 
@@ -150,14 +157,17 @@ public class NeuralNet extends ValidatedJob {
     public double l2;
 
     @API(help = "Loss function")
-    private Loss loss = Loss.CrossEntropy;
+    public Loss loss = Loss.CrossEntropy;
 
     @API(help = "How many times the dataset should be iterated")
     public double epochs;
 
+    @API(help = "Enable diagnostics (incl. stability check)")
+    public boolean diagnostics;
+
     public NeuralNetParams() {}
 
-    public NeuralNetParams(ExecutionMode mode, Activation activation, double input_dropout_ratio, int[] hidden, InitialWeightDistribution initial_weight_distribution, double initial_weight_scale, double rate, double rate_annealing, float max_w2, double momentum_start, long momentum_ramp, double momentum_stable, double l1, double l2, Loss loss, double epochs) {
+    public NeuralNetParams(ExecutionMode mode, Activation activation, double input_dropout_ratio, int[] hidden, InitialWeightDistribution initial_weight_distribution, double initial_weight_scale, double rate, double rate_annealing, float max_w2, double momentum_start, long momentum_ramp, double momentum_stable, double l1, double l2, Loss loss, double epochs, boolean diagnostics) {
       this.mode = mode;
       this.activation = activation;
       this.input_dropout_ratio = input_dropout_ratio;
@@ -174,6 +184,7 @@ public class NeuralNet extends ValidatedJob {
       this.l2 = l2;
       this.loss = loss;
       this.epochs = epochs;
+      this.diagnostics = diagnostics;
     }
 
     public enum ExecutionMode {
@@ -230,7 +241,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
-    _params = new NeuralNetParams(mode, activation, input_dropout_ratio, hidden, initial_weight_distribution, initial_weight_scale, rate, rate_annealing, max_w2, momentum_start, momentum_ramp, momentum_stable, l1, l2, loss, epochs);
+    _params = new NeuralNetParams(mode, activation, input_dropout_ratio, hidden, initial_weight_distribution, initial_weight_scale, rate, rate_annealing, max_w2, momentum_start, momentum_ramp, momentum_stable, l1, l2, loss, epochs, diagnostics);
 
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
@@ -290,7 +301,7 @@ public class NeuralNet extends ValidatedJob {
     final long num_rows = source.numRows();
     // work on first batch of points serially for better reproducibility
     if (mode != NeuralNetParams.ExecutionMode.Serial) {
-      final long serial_rows = 10000l;
+      final long serial_rows = 1000l;
       System.out.println("Training the first " + serial_rows + " rows serially.");
       Trainer pretrainer = new Trainer.Direct(ls, (double)serial_rows/num_rows, self());
       pretrainer.start();
@@ -369,36 +380,6 @@ public class NeuralNet extends ValidatedJob {
     };
     trainer.start();
     monitor.start();
-
-//    // Use a separate thread for updating the layer statistics
-//    Thread layers = new Thread() {
-//      @Override public void run() {
-//        try {
-//          while(!cancelled() && running) {
-//            NeuralNetModel model = UKV.get(destination_key);
-//            Errors[] trainErrors, validErrors;
-//            long[][] confusion_matrix;
-//            if (model != null) {
-//              trainErrors = model.training_errors;
-//              validErrors = model.validation_errors;
-//              confusion_matrix = model.confusion_matrix;
-//              // update model's statistics only, keep training/validation errors and confusion matrix
-//              model = new NeuralNetModel(destination_key, sourceKey, frame, ls, _params);
-//              model.training_errors = trainErrors;
-//              model.validation_errors = validErrors;
-//              model.confusion_matrix = confusion_matrix;
-//              UKV.put(model._selfKey, model);
-//            }
-//            Thread.sleep(1000);
-//          }
-//        } catch( Exception ex ) {
-//          cancel(ex);
-//        }
-//      }
-//    };
-//    layers.start();
-
-
     trainer.join();
 
     // hack to gracefully terminate the job submitted via H2O web API
@@ -605,6 +586,7 @@ public class NeuralNet extends ValidatedJob {
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNetParams p) {
       super(selfKey, dataKey, fr);
+      _params = p;
       layers = ls;
       weights = new float[ls.length][];
       biases = new float[ls.length][];
@@ -613,57 +595,67 @@ public class NeuralNet extends ValidatedJob {
         biases[y] = layers[y]._b;
       }
 
-      // compute stats on all nodes (a bit wasteful)
-      mean_activation = new double[ls.length];
-      rms_activation = new double[ls.length];
-      mean_bias = new double[ls.length];
-      rms_bias = new double[ls.length];
-      mean_weight = new double[ls.length];
-      rms_weight = new double[ls.length];
-      mean_error = new double[ls.length];
-      rms_error = new double[ls.length];
-      for( int y = 1; y < layers.length-1; y++ ) {
-        final Layer l = layers[y];
-        final int len = l._a.length;
+      if (_params.diagnostics) {
+        // compute stats on all nodes
+        mean_activation = new double[ls.length];
+        rms_activation = new double[ls.length];
+        mean_bias = new double[ls.length];
+        rms_bias = new double[ls.length];
+        mean_weight = new double[ls.length];
+        rms_weight = new double[ls.length];
+        mean_error = new double[ls.length];
+        rms_error = new double[ls.length];
+        for( int y = 1; y < layers.length-1; y++ ) {
+          final Layer l = layers[y];
+          final int len = l._a.length;
 
-        // compute mean values
-        mean_activation[y] = rms_activation[y] = 0;
-        mean_bias[y] = rms_bias[y] = 0;
-        mean_weight[y] = rms_weight[y] = 0;
-        mean_error[y] = rms_error[y] = 0;
-        for(int u = 0; u < len; u++) {
-          mean_activation[y] += l._a[u];
-          mean_bias[y] += l._b[u];
-          mean_error[y] += l._e[u];
-          mean_weight[y] += l._w[u];
-        }
-        mean_activation[y] /= len;
-        mean_bias[y] /= len;
-        mean_error[y] /= len;
-        mean_weight[y] /= len;
+          // compute mean values
+          mean_activation[y] = rms_activation[y] = 0;
+          mean_bias[y] = rms_bias[y] = 0;
+          mean_weight[y] = rms_weight[y] = 0;
+          mean_error[y] = rms_error[y] = 0;
+          for(int u = 0; u < len; u++) {
+            mean_activation[y] += l._a[u];
+            mean_bias[y] += l._b[u];
+            mean_error[y] += l._e[u];
+            for( int i = 0; i < l._previous._a.length; i++ ) {
+              int w = u * l._previous._a.length + i;
+              mean_weight[y] += l._w[w];
+            }
+          }
 
-        // compute rms values
-        for(int u = 0; u < len; ++u) {
-          final double da = l._a[u] - mean_activation[y];
-          rms_activation[y] += da * da;
-          final double db = l._b[u] - mean_bias[y];
-          rms_bias[y] += db * db;
-          final double de = l._e[u] - mean_error[y];
-          rms_error[y] += de * de;
-          final double dw = l._w[u] - mean_weight[y];
-          rms_weight[y] += dw * dw;
+          mean_activation[y] /= len;
+          mean_bias[y] /= len;
+          mean_error[y] /= len;
+          mean_weight[y] /= len * l._previous._a.length;
+
+          // compute rms values
+          for(int u = 0; u < len; ++u) {
+            final double da = l._a[u] - mean_activation[y];
+            rms_activation[y] += da * da;
+            final double db = l._b[u] - mean_bias[y];
+            rms_bias[y] += db * db;
+            final double de = l._e[u] - mean_error[y];
+            rms_error[y] += de * de;
+
+            for( int i = 0; i < l._previous._a.length; i++ ) {
+              int w = u * l._previous._a.length + i;
+              final double dw = l._w[w] - mean_weight[y];
+              rms_weight[y] += dw * dw;
+            }
+
+          }
+          rms_activation[y] = Math.sqrt(rms_activation[y]/len);
+          rms_bias[y] = Math.sqrt(rms_bias[y]/len);
+          rms_error[y] = Math.sqrt(rms_error[y]/len);
+          rms_weight[y] = Math.sqrt(rms_weight[y]/len/l._previous._a.length);
+          // Double.NaN will trigger when Float.NaN is reached
+          unstable = Double.isNaN(mean_activation[y]) || Double.isNaN(rms_activation[y])
+                  || Double.isNaN(mean_bias[y])       || Double.isNaN(rms_bias[y])
+                  || Double.isNaN(mean_weight[y])     || Double.isNaN(rms_weight[y])
+                  || Double.isNaN(mean_error[y])      || Double.isNaN(rms_error[y]);
         }
-        rms_activation[y] = Math.sqrt(rms_activation[y]/len);
-        rms_bias[y] = Math.sqrt(rms_bias[y]/len);
-        rms_error[y] = Math.sqrt(rms_error[y]/len);
-        rms_weight[y] = Math.sqrt(rms_weight[y]/len);
-        // Double.NaN will trigger when Float.NaN is reached
-        unstable = Double.isNaN(mean_activation[y]) || Double.isNaN(rms_activation[y])
-                || Double.isNaN(mean_bias[y])       || Double.isNaN(rms_bias[y])
-                || Double.isNaN(mean_weight[y])     || Double.isNaN(rms_weight[y])
-                || Double.isNaN(mean_error[y])      || Double.isNaN(rms_error[y]);
       }
-      _params = p;
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
@@ -723,30 +715,6 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
 
-    @API(help = "Mean activation")
-    public double[] mean_activation;
-
-    @API(help = "RMS activation")
-    public double[] rms_activation;
-
-    @API(help = "Mean bias")
-    public double[] mean_bias;
-
-    @API(help = "RMS bias")
-    public double[] rms_bias;
-
-    @API(help = "Mean weight")
-    public double[] mean_weight;
-
-    @API(help = "RMS weight")
-    public double[] rms_weight;
-
-    @API(help = "Mean error")
-    public double[] mean_error;
-
-    @API(help = "RMS error")
-    public double[] rms_error;
-
     @Override protected String name() {
       return DOC_GET;
     }
@@ -762,14 +730,6 @@ public class NeuralNet extends ValidatedJob {
         validation_errors = model.validation_errors;
         class_names = model.classNames();
         confusion_matrix = model.confusion_matrix;
-        mean_activation = model.mean_activation;
-        rms_activation = model.rms_activation;
-        mean_bias = model.mean_bias;
-        rms_bias = model.rms_bias;
-        mean_weight = model.mean_weight;
-        rms_weight = model.rms_weight;
-        mean_error = model.mean_error;
-        rms_error = model.rms_error;
         if (model.unstable && job != null) job.cancel();
       }
       return super.serve();
@@ -800,44 +760,46 @@ public class NeuralNet extends ValidatedJob {
           long ps = train.training_samples * 1000 / nn.runTimeMs();
           DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
         }
-        DocGen.HTML.section(sb, "Hidden Layer Status");
-        sb.append("<table class='table table-striped table-bordered table-condensed'>");
-        sb.append("<tr>");
-        sb.append("<th>").append("#").append("</th>");
-        sb.append("<th>").append("Units").append("</th>");
-        sb.append("<th>").append("Activation").append("</th>");
-        sb.append("<th>").append("Rate").append("</th>");
-        sb.append("<th>").append("Momentum").append("</th>");
-        sb.append("<th>").append("L1").append("</th>");
-        sb.append("<th>").append("L2").append("</th>");
-        sb.append("<th>").append("Activation (Mean,RMS)").append("</th>");
-        sb.append("<th>").append("Weight (Mean,RMS)").append("</th>");
-        sb.append("<th>").append("Bias (Mean,RMS)").append("</th>");
-        sb.append("<th>").append("Error (Mean,RMS)").append("</th>");
-        sb.append("</tr>");
-        for (int i=1; i<model.layers.length-1; ++i) {
+        if (_params != null && _params.diagnostics) {
+          DocGen.HTML.section(sb, "Hidden Layer Status");
+          sb.append("<table class='table table-striped table-bordered table-condensed'>");
           sb.append("<tr>");
-          sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
-          sb.append("<td>").append("<b>").append(model.layers[i].units).append("</b>").append("</td>");
-          sb.append("<td>").append(model.layers[i].getClass().getCanonicalName().replace("hex.Layer.", "")).append("</td>");
-          sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
-          final String format = "%e";
-          sb.append("<td>").append(model.layers[i].momentum(train.training_samples)).append("</td>");
-          sb.append("<td>").append(model.layers[i].l1).append("</td>");
-          sb.append("<td>").append(model.layers[i].l2).append("</td>");
-          sb.append("<td>(").append(String.format(format, model.mean_activation[i])).
-                  append(", ").append(String.format(format, model.rms_activation[i])).append(")</td>");
-          sb.append("<td>(").append(String.format(format, model.mean_weight[i])).
-                  append(", ").append(String.format(format, model.rms_weight[i])).append(")</td>");
-          sb.append("<td>(").append(String.format(format, model.mean_bias[i])).
-                  append(", ").append(String.format(format, model.rms_bias[i])).append(")</td>");
-          sb.append("<td>(").append(String.format(format, model.mean_error[i])).
-                  append(", ").append(String.format(format, model.rms_error[i])).append(")</td>");
+          sb.append("<th>").append("#").append("</th>");
+          sb.append("<th>").append("Units").append("</th>");
+          sb.append("<th>").append("Activation").append("</th>");
+          sb.append("<th>").append("Rate").append("</th>");
+          sb.append("<th>").append("L1").append("</th>");
+          sb.append("<th>").append("L2").append("</th>");
+          sb.append("<th>").append("Momentum").append("</th>");
+          sb.append("<th>").append("Activation (Mean, RMS)").append("</th>");
+          sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
+          sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
+          sb.append("<th>").append("Error (Mean, RMS)").append("</th>");
           sb.append("</tr>");
-        }
-        DocGen.HTML.arrayTail(sb);
-        if (model.unstable) {
-          DocGen.HTML.section(sb, "### Note:  Instability detected and job aborted.  Try a smaller learning rate and/or single-node mode. ###") ;
+          for (int i=1; i<model.layers.length-1; ++i) {
+            sb.append("<tr>");
+            sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
+            sb.append("<td>").append("<b>").append(model.layers[i].units).append("</b>").append("</td>");
+            sb.append("<td>").append(model.layers[i].getClass().getCanonicalName().replace("hex.Layer.", "")).append("</td>");
+            sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
+            sb.append("<td>").append(model.layers[i].l1).append("</td>");
+            sb.append("<td>").append(model.layers[i].l2).append("</td>");
+            final String format = "%2.5f";
+            sb.append("<td>").append(model.layers[i].momentum(train.training_samples)).append("</td>");
+            sb.append("<td>(").append(String.format(format, model.mean_activation[i])).
+                    append(", ").append(String.format(format, model.rms_activation[i])).append(")</td>");
+            sb.append("<td>(").append(String.format(format, model.mean_weight[i])).
+                    append(", ").append(String.format(format, model.rms_weight[i])).append(")</td>");
+            sb.append("<td>(").append(String.format(format, model.mean_bias[i])).
+                    append(", ").append(String.format(format, model.rms_bias[i])).append(")</td>");
+            sb.append("<td>(").append(String.format("%2.7f", model.mean_error[i])).
+                    append(", ").append(String.format("%2.7f", model.rms_error[i])).append(")</td>");
+            sb.append("</tr>");
+          }
+          DocGen.HTML.arrayTail(sb);
+          if (model.unstable) {
+            DocGen.HTML.section(sb, "### Note:  Instability detected and job aborted.  Try a smaller learning rate and/or single-node mode. ###") ;
+          }
         }
         if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           String[] classes = model.classNames();
