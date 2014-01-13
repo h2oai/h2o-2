@@ -80,7 +80,7 @@ public class NeuralNet extends ValidatedJob {
   public long warmup_samples = 0l;
 
   @API(help = "Diagnostics and stability check for hidden layers", filter = Default.class)
-  public boolean diagnostics = false;
+  public boolean diagnostics = true;
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
@@ -107,11 +107,13 @@ public class NeuralNet extends ValidatedJob {
     if( arg._name.equals("mode") ) {
       if (H2O.CLOUD._memary.length > 1) {
         arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
+        mode = NeuralNetParams.ExecutionMode.MapReduce_Hogwild;
       }
     }
     if( arg._name.equals("warmup_samples") ) {
       if (mode == NeuralNetParams.ExecutionMode.Serial) {
         arg.disable("Only for non-serial execution modes.");
+        assert(warmup_samples == 0);
       }
     }
   }
@@ -809,7 +811,7 @@ public class NeuralNet extends ValidatedJob {
             sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
             sb.append("<td>").append(model.layers[i].l1).append("</td>");
             sb.append("<td>").append(model.layers[i].l2).append("</td>");
-            final String format = "%2.5f";
+            final String format = "%g";
             sb.append("<td>").append(model.layers[i].momentum(train.training_samples)).append("</td>");
             sb.append("<td>(").append(String.format(format, model.mean_activation[i])).
                     append(", ").append(String.format(format, model.rms_activation[i])).append(")</td>");
@@ -817,8 +819,8 @@ public class NeuralNet extends ValidatedJob {
                     append(", ").append(String.format(format, model.rms_weight[i])).append(")</td>");
             sb.append("<td>(").append(String.format(format, model.mean_bias[i])).
                     append(", ").append(String.format(format, model.rms_bias[i])).append(")</td>");
-            sb.append("<td>(").append(String.format("%2.7f", model.mean_error[i])).
-                    append(", ").append(String.format("%2.7f", model.rms_error[i])).append(")</td>");
+            sb.append("<td>(").append(String.format(format, model.mean_error[i])).
+                    append(", ").append(String.format(format, model.rms_error[i])).append(")</td>");
             sb.append("</tr>");
           }
           sb.append("</table>");
