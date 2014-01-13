@@ -534,7 +534,7 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Classification error")
     public double classification = 1;
 
-    @API(help = "MSE")
+    @API(help = "Mean square error")
     public double mean_square = Double.POSITIVE_INFINITY;
 
     @API(help = "Cross entropy")
@@ -582,12 +582,6 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
 
-    @API(help = "Mean activation")
-    public double[] mean_activation;
-
-    @API(help = "RMS activation")
-    public double[] rms_activation;
-
     @API(help = "Mean bias")
     public double[] mean_bias;
 
@@ -599,12 +593,6 @@ public class NeuralNet extends ValidatedJob {
 
     @API(help = "RMS weight")
     public double[] rms_weight;
-
-    @API(help = "Mean error")
-    public double[] mean_error;
-
-    @API(help = "RMS error")
-    public double[] rms_error;
 
     public boolean unstable = false;
 
@@ -621,63 +609,45 @@ public class NeuralNet extends ValidatedJob {
 
       if (_params.diagnostics) {
         // compute stats on all nodes
-        mean_activation = new double[ls.length];
-        rms_activation = new double[ls.length];
         mean_bias = new double[ls.length];
         rms_bias = new double[ls.length];
         mean_weight = new double[ls.length];
         rms_weight = new double[ls.length];
-        mean_error = new double[ls.length];
-        rms_error = new double[ls.length];
         for( int y = 1; y < layers.length-1; y++ ) {
           final Layer l = layers[y];
           final int len = l._a.length;
 
           // compute mean values
-          mean_activation[y] = rms_activation[y] = 0;
           mean_bias[y] = rms_bias[y] = 0;
           mean_weight[y] = rms_weight[y] = 0;
-          mean_error[y] = rms_error[y] = 0;
           for(int u = 0; u < len; u++) {
-            mean_activation[y] += l._a[u];
-            mean_bias[y] += l._b[u];
-            mean_error[y] += l._e[u];
+            mean_bias[y] += biases[y][u];
             for( int i = 0; i < l._previous._a.length; i++ ) {
               int w = u * l._previous._a.length + i;
-              mean_weight[y] += l._w[w];
+              mean_weight[y] += weights[y][w];
             }
           }
 
-          mean_activation[y] /= len;
           mean_bias[y] /= len;
-          mean_error[y] /= len;
           mean_weight[y] /= len * l._previous._a.length;
 
           // compute rms values
           for(int u = 0; u < len; ++u) {
-            final double da = l._a[u] - mean_activation[y];
-            rms_activation[y] += da * da;
-            final double db = l._b[u] - mean_bias[y];
+            final double db = biases[y][u] - mean_bias[y];
             rms_bias[y] += db * db;
-            final double de = l._e[u] - mean_error[y];
-            rms_error[y] += de * de;
 
             for( int i = 0; i < l._previous._a.length; i++ ) {
               int w = u * l._previous._a.length + i;
-              final double dw = l._w[w] - mean_weight[y];
+              final double dw = weights[y][w] - mean_weight[y];
               rms_weight[y] += dw * dw;
             }
 
           }
-          rms_activation[y] = Math.sqrt(rms_activation[y]/len);
           rms_bias[y] = Math.sqrt(rms_bias[y]/len);
-          rms_error[y] = Math.sqrt(rms_error[y]/len);
           rms_weight[y] = Math.sqrt(rms_weight[y]/len/l._previous._a.length);
-          // Double.NaN will trigger when Float.NaN is reached
-          unstable = Double.isNaN(mean_activation[y]) || Double.isNaN(rms_activation[y])
-                  || Double.isNaN(mean_bias[y])       || Double.isNaN(rms_bias[y])
-                  || Double.isNaN(mean_weight[y])     || Double.isNaN(rms_weight[y])
-                  || Double.isNaN(mean_error[y])      || Double.isNaN(rms_error[y]);
+
+          unstable = Double.isNaN(mean_bias[y])       || Double.isNaN(rms_bias[y])
+                  || Double.isNaN(mean_weight[y])     || Double.isNaN(rms_weight[y]);
         }
       }
     }
@@ -798,10 +768,8 @@ public class NeuralNet extends ValidatedJob {
           sb.append("<th>").append("L1").append("</th>");
           sb.append("<th>").append("L2").append("</th>");
           sb.append("<th>").append("Momentum").append("</th>");
-          sb.append("<th>").append("Activation (Mean, RMS)").append("</th>");
           sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
           sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
-          sb.append("<th>").append("Error (Mean, RMS)").append("</th>");
           sb.append("</tr>");
           for (int i=1; i<model.layers.length-1; ++i) {
             sb.append("<tr>");
@@ -813,14 +781,10 @@ public class NeuralNet extends ValidatedJob {
             sb.append("<td>").append(model.layers[i].l2).append("</td>");
             final String format = "%g";
             sb.append("<td>").append(model.layers[i].momentum(train.training_samples)).append("</td>");
-            sb.append("<td>(").append(String.format(format, model.mean_activation[i])).
-                    append(", ").append(String.format(format, model.rms_activation[i])).append(")</td>");
             sb.append("<td>(").append(String.format(format, model.mean_weight[i])).
                     append(", ").append(String.format(format, model.rms_weight[i])).append(")</td>");
             sb.append("<td>(").append(String.format(format, model.mean_bias[i])).
                     append(", ").append(String.format(format, model.rms_bias[i])).append(")</td>");
-            sb.append("<td>(").append(String.format(format, model.mean_error[i])).
-                    append(", ").append(String.format(format, model.rms_error[i])).append(")</td>");
             sb.append("</tr>");
           }
           sb.append("</table>");
