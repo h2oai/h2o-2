@@ -22,9 +22,9 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
   @Override protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[5];
     ls[0] = new VecsInput(data, inputStats, 0.2);
-    ls[1] = new Layer.RectifierDropout(1024);
-    ls[2] = new Layer.RectifierDropout(1024);
-    ls[3] = new Layer.RectifierDropout(2048);
+    ls[1] = new Layer.RectifierDropout(102);
+    ls[2] = new Layer.RectifierDropout(102);
+    ls[3] = new Layer.RectifierDropout(204);
     ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.NeuralNetParams.Loss.CrossEntropy);
 
     NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
@@ -62,11 +62,11 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     System.out.println("Main training");
 
 //    System.out.println("Multi-threaded");
-    _trainer = new Trainer.Threaded(ls, 0, self());
-    _trainer.start();
+//    _trainer = new Trainer.Threaded(ls, 0, self());
+//    _trainer.start();
 
     System.out.println("MapReduce");
-//    _trainer = new Trainer.MapReduce(ls, 0, self());
-//    _trainer.start();
+    _trainer = new Trainer.MapReduce(ls, 0, self());
+    _trainer.start();
   }
 }
