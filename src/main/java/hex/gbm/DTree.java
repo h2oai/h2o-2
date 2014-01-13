@@ -563,7 +563,9 @@ public class DTree extends Iced {
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
     // Most recent ConfusionMatrix
-    @Override public ConfusionMatrix cm() { return cms == null || cms.length == 0 || cms[cms.length-1] == null ? null : new ConfusionMatrix(cms[cms.length-1]); }
+    @Override public ConfusionMatrix cm() { 
+      long cms[][][] = this.cms; // Avoid racey update; read it once
+      return cms == null || cms.length == 0 || cms[cms.length-1] == null ? null : new ConfusionMatrix(cms[cms.length-1]); }
     @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
     @Override public double mse() { return errs == null || errs.length == 0 ? Double.NaN : errs[errs.length-1]; }
 
