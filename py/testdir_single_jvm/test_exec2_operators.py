@@ -229,16 +229,16 @@ class Basic(unittest.TestCase):
 
     def test_exec2_operators(self):
         h2o.beta_features = True
-        bucket = ''
-        csvPathname = 'testdata/airlines/year2013.csv'
+        bucket = 'home-0xdiag-datasets'
+        csvPathname = 'airlines/year2013.csv'
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
         for resultKey, execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
         start = time.time()
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

@@ -38,8 +38,8 @@ class Basic(unittest.TestCase):
 
     def test_GLM_poisson_timeout_fail(self):
         start = time.time()
-        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
+        csvPathname = 'standard/covtype.data'
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
         print "upload/parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
         kwargs = define_params()

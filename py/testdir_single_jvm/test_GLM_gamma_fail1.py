@@ -22,8 +22,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_gamma_fail1(self):
-        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
+        csvPathname = 'standard/covtype.data'
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
         for trial in range(5):
             kwargs = {
                 'standardize': 1, 

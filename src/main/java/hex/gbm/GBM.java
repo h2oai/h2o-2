@@ -46,7 +46,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // we get Infinities, and then shortly NaN's.  Rescale the data so the
         // largest value is +/-1 and the other values are smaller.
         float rescale=0;
-        for(int k=0; k<p.length;k++) rescale = Math.max(rescale,Math.abs(p[k]));
+        for( float k : p ) rescale = Math.max(rescale,Math.abs(k));
         if( rescale < 1.0f ) rescale=1.0f;
         float dsum=0;
         for(int k=0; k<p.length;k++)
@@ -130,6 +130,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     DTree[] ktrees = null;              // Trees
     TreeStats tstats = new TreeStats(); // Tree stats
     for( tid=0; tid<ntrees; tid++) {
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, false, false);
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
@@ -146,7 +147,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
       // Check latest predictions
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, false, false);
     }
     // Final scoring
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false, false);

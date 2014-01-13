@@ -124,10 +124,14 @@ public abstract class ASTOp extends AST {
   static private void putUniInfix(ASTOp ast) { UNI_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putBinInfix(ASTOp ast) { BIN_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putPrefix  (ASTOp ast) {    PREFIX_OPS.put(ast.opStr(),ast); }
-  static public boolean isOp(String id) {
-    return UNI_INFIX_OPS.containsKey(id)
-        || BIN_INFIX_OPS.containsKey(id)
-        || PREFIX_OPS   .containsKey(id);
+  static public ASTOp isOp(String id) {
+    // This order matters. If used as a prefix OP, `+` and `-` are binary only.
+    ASTOp op3 =    PREFIX_OPS.get(id); if( op3 != null ) return op3;
+    ASTOp op2 = BIN_INFIX_OPS.get(id); if( op2 != null ) return op2;
+    ASTOp op1 = UNI_INFIX_OPS.get(id);                   return op1;
+  }
+  static public boolean isInfixOp(String id) {
+    return BIN_INFIX_OPS.containsKey(id) || UNI_INFIX_OPS.containsKey(id);
   }
   static public Set<String> opStrs() {
     Set<String> all = UNI_INFIX_OPS.keySet();
@@ -172,12 +176,10 @@ public abstract class ASTOp extends AST {
     int x = E._x;
     String id = E.isID();
     if( id == null ) return null;
-    ASTOp op;
-    // This order matters. If used as a prefix OP, `+` and `-` are binary only.
-    if( (op = PREFIX_OPS.get(id))    != null
-     || (op = BIN_INFIX_OPS.get(id)) != null
-     || (op = UNI_INFIX_OPS.get(id)) != null)
-      return op.make();
+    ASTOp op = isOp(id);  // The order matters. If used as a prefix OP, `+` and `-` are binary only.
+    // Also, if assigning to a built-in function then do not parse-as-a-fcn.
+    // Instead it will default to parsing as an ID in ASTAssign.parse
+    if( op != null && !E.peek('=') ) return op.make();
     E._x = x;
     return ASTFunc.parseFcn(E);
   }
