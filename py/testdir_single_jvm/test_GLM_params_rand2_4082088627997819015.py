@@ -42,8 +42,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_params_rand2_4082088627997819015(self):
-        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='covtype.hex')
+        csvPathname = 'standard/covtype.data'
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key='covtype.hex')
         paramDict = define_params()
         for trial in range(40):
             # params is mutable. This is default.

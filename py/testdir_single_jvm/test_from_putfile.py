@@ -29,13 +29,13 @@ class Basic(unittest.TestCase):
         #    "covtype20x.data", 
         #    "billion_rows.csv.gz",
         csvFilenameList = [
-            ("covtype.data", 'UCI/UCI-large/covtype/covtype.data', 1),
+            ("covtype.data", 'standard/covtype.data', 1),
             ]
         # pop open a browser on the cloud
         h2b.browseTheCloud()
 
         for (csvFilename, csvPathname, trees) in csvFilenameList:
-            parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, timeoutSecs=500, schema='put')
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500, schema='put')
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             # We should be able to see the parse result?
