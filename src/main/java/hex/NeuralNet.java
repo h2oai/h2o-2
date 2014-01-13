@@ -82,12 +82,7 @@ public class NeuralNet extends ValidatedJob {
   protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
     for (Argument arg : _arguments) {
-      if (       arg._name.equals("activation")
-              || arg._name.equals("initial_weight_distribution")
-              || arg._name.equals("l1")
-              || arg._name.equals("l2")
-              || arg._name.equals("momentum_start")
-              || arg._name.equals("momentum_stable")) {
+      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution") ) {
          arg.setRefreshOnChange();
       }
     }
