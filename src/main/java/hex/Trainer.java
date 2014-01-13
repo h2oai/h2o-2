@@ -148,7 +148,7 @@ public abstract class Trainer {
       _threads = new Thread[num_threads];
       _stepsPerThread = (long) (epochs * ((Input) ls[0])._len / num_threads);
 
-      System.out.println("Starting " + num_threads + " threads.");
+      Log.info("Starting " + num_threads + " threads.");
       for( int t = 0; t < num_threads; t++ ) {
         Layer[] clones = new Layer[ls.length];
         for( int y = 0; y < clones.length; y++ )

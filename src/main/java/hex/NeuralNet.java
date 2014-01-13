@@ -10,6 +10,7 @@ import water.api.Progress2;
 import water.api.Request;
 import water.api.RequestServer;
 import water.fvec.*;
+import water.util.Log;
 import water.util.RString;
 import water.util.Utils;
 
@@ -314,34 +315,34 @@ public class NeuralNet extends ValidatedJob {
     final long num_rows = source.numRows();
 
     if (mode == NeuralNetParams.ExecutionMode.Serial) {
-      System.out.println("Serial execution mode");
+      Log.info("Serial execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
     } else {
       // one node works on the first batch of points serially for improved stability
       if (warmup_samples > 0) {
-        System.out.println("Training the first " + warmup_samples + " samples in serial for improved stability.");
+        Log.info("Training the first " + warmup_samples + " samples in serial for improved stability.");
         Trainer warmup = new Trainer.Direct(ls, warmup_samples/num_rows, self());
         warmup.start();
         warmup.join();
         //TODO: send weights from master VM to all other VMs
       }
       if (mode == NeuralNetParams.ExecutionMode.Threaded_Hogwild) {
-        System.out.println("Entering single-node multi-threaded execution mode.");
+        Log.info("Entering single-node multi-threaded execution mode.");
         trainer = new Trainer.Threaded(ls, epochs, self());
       } else if (mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
         if (warmup_samples > 0 && mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
-          System.out.println("Multi-threaded warmup with " + warmup_samples + " samples.");
+          Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
           Trainer warmup = new Trainer.Threaded(ls, warmup_samples/num_rows, self());
           warmup.start();
           warmup.join();
           //TODO: send weights from master VM to all other VMs
         }
-        System.out.println("Entering MapReduce execution mode.");
+        Log.info("Entering MapReduce execution mode.");
         trainer = new Trainer.MapReduce(ls, epochs, self());
       } else throw new RuntimeException("invalid execution mode.");
     }
 
-    System.out.println("Running for " + epochs + " epochs.");
+    Log.info("Running for " + epochs + " epochs.");
 
     // Use a separate thread for monitoring (blocked most of the time)
     Thread monitor = new Thread() {
@@ -417,7 +418,7 @@ public class NeuralNet extends ValidatedJob {
       if( task != null )
         task.tryComplete();
       this.remove();
-      System.out.println("Training finished.");
+      Log.info("Training finished.");
     }
 
   }
@@ -752,7 +753,7 @@ public class NeuralNet extends ValidatedJob {
         class_names = model.classNames();
         confusion_matrix = model.confusion_matrix;
         if (model.unstable && job != null) {
-          System.out.println("Aborting job due to instability. Try a smaller learning rate and/or single-node mode.");
+          Log.info("Aborting job due to instability. Try a smaller learning rate and/or single-node mode.");
           job.cancel();
         }
       }
@@ -820,10 +821,10 @@ public class NeuralNet extends ValidatedJob {
                     append(", ").append(String.format("%2.7f", model.rms_error[i])).append(")</td>");
             sb.append("</tr>");
           }
-          DocGen.HTML.arrayTail(sb);
-          if (model.unstable) {
-            DocGen.HTML.section(sb, "### Note:  Instability detected and job aborted.  Try a smaller learning rate and/or single-node mode. ###") ;
-          }
+          sb.append("</table>");
+        }
+        if (model.unstable) {
+          DocGen.HTML.section(sb, "### Note:  Instability detected and job aborted.  Try a smaller learning rate and/or single-node mode. ###") ;
         }
         if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           String[] classes = model.classNames();
