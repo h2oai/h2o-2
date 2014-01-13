@@ -2,7 +2,7 @@ package hex;
 
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-import hex.NeuralNet.NeuralNetParams.Loss;
+import hex.NeuralNet.Loss;
 import hex.rng.MersenneTwisterRNG;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
@@ -34,10 +34,10 @@ public class NeuralNetIrisTest extends TestUtil {
   @Test public void compare() throws Exception {
     NeuralNetMLPReference ref = new NeuralNetMLPReference();
 
-    NeuralNet.NeuralNetParams.Activation[] activations = { NeuralNet.NeuralNetParams.Activation.Tanh, NeuralNet.NeuralNetParams.Activation.Rectifier };
-    Loss[] losses = { NeuralNet.NeuralNetParams.Loss.MeanSquare, NeuralNet.NeuralNetParams.Loss.CrossEntropy };
+    NeuralNet.Activation[] activations = { NeuralNet.Activation.Tanh, NeuralNet.Activation.Rectifier };
+    Loss[] losses = { NeuralNet.Loss.MeanSquare, NeuralNet.Loss.CrossEntropy };
 
-    for (NeuralNet.NeuralNetParams.Activation activation : activations) {
+    for (NeuralNet.Activation activation : activations) {
       for (Loss loss : losses) {
         Log.info("Testing " + activation.name() + " activation function with " + loss.name() + " loss function");
 
@@ -70,7 +70,7 @@ public class NeuralNetIrisTest extends TestUtil {
         Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
         Vec labels = _train.vecs()[_train.vecs().length - 1];
 
-        NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
+        NeuralNet p = new NeuralNet();
         p.rate = 0.01f;
         p.epochs = 1000;
         p.activation = activation;
@@ -80,10 +80,10 @@ public class NeuralNetIrisTest extends TestUtil {
 
         Layer[] ls = new Layer[3];
         ls[0] = new VecsInput(data, null);
-        if (activation == NeuralNet.NeuralNetParams.Activation.Tanh) {
+        if (activation == NeuralNet.Activation.Tanh) {
           ls[1] = new Tanh(7);
         }
-        else if (activation == NeuralNet.NeuralNetParams.Activation.Rectifier) {
+        else if (activation == NeuralNet.Activation.Rectifier) {
           ls[1] = new Rectifier(7);
         }
         ls[2] = new VecSoftmax(labels, null, loss);

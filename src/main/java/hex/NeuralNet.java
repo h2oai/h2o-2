@@ -16,6 +16,8 @@ import water.util.Utils;
 
 import java.util.Arrays;
 
+import static hex.NeuralNet.ExecutionMode.*;
+
 /**
  * Neural network.
  *
@@ -27,10 +29,10 @@ public class NeuralNet extends ValidatedJob {
   public static final String DOC_GET = "Neural Network";
 
   @API(help = "Execution Mode", filter = Default.class)
-  public NeuralNetParams.ExecutionMode mode = NeuralNetParams.ExecutionMode.SingleNode;
+  public ExecutionMode mode = ExecutionMode.SingleNode;
 
   @API(help = "Activation function", filter = Default.class)
-  public NeuralNetParams.Activation activation = NeuralNetParams.Activation.RectifierWithDropout;
+  public Activation activation = Activation.RectifierWithDropout;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
   public double input_dropout_ratio = 0.2;
@@ -39,7 +41,7 @@ public class NeuralNet extends ValidatedJob {
   public int[] hidden = new int[] { 1024, 1024, 2048 };
 
   @API(help = "Initial Weight Distribution, UniformAdaptive is ~ sqrt(6 / (# units + # input_units))", filter = Default.class)
-  public NeuralNetParams.InitialWeightDistribution initial_weight_distribution = NeuralNetParams.InitialWeightDistribution.UniformAdaptive;
+  public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0)
   public double initial_weight_scale = 0.01;
@@ -71,7 +73,7 @@ public class NeuralNet extends ValidatedJob {
   public double l2 = 0.0;
 
   @API(help = "Loss function", filter = Default.class)
-  public NeuralNetParams.Loss loss = NeuralNetParams.Loss.CrossEntropy;
+  public Loss loss = Loss.CrossEntropy;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
   public double epochs = 100;
@@ -95,140 +97,53 @@ public class NeuralNet extends ValidatedJob {
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
     if (arg._name.equals("input_dropout_ratio") &&
-            (activation != NeuralNetParams.Activation.RectifierWithDropout && activation != NeuralNetParams.Activation.TanhWithDropout)
+            (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
             ) {
       arg.disable("Only with Dropout.", inputArgs);
     }
     if(arg._name.equals("initial_weight_scale") &&
-            (initial_weight_distribution == NeuralNetParams.InitialWeightDistribution.UniformAdaptive)
+            (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Only with Uniform or Normal initial weight distributions.", inputArgs);
     }
     if( arg._name.equals("mode") ) {
       if (H2O.CLOUD._memary.length > 1) {
         arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
-        mode = NeuralNetParams.ExecutionMode.MultiNode;
+        mode = ExecutionMode.MultiNode;
       }
     }
     if( arg._name.equals("warmup_samples") ) {
-      if (mode == NeuralNetParams.ExecutionMode.SingleThread) {
+      if (mode == ExecutionMode.SingleThread) {
         arg.disable("Only for non-serial execution modes.");
         assert(warmup_samples == 0);
       }
     }
   }
 
-  // Wrapper class to pass around
-  // @API stuff is used for JSON serialization
-  public static class NeuralNetParams extends Iced {
-    static final int API_WEAVER = 1;
-    static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Execution Mode")
-    public ExecutionMode mode;
+  public enum ExecutionMode {
+    SingleThread, SingleNode, MultiNode
+  }
 
-    @API(help = "Activation function")
-    public Activation activation;
+  public enum InitialWeightDistribution {
+    UniformAdaptive, Uniform, Normal
+  }
 
-    @API(help = "Input layer dropout ratio")
-    public double input_dropout_ratio;
+  /**
+   * Activation functions
+   * Tanh, Rectifier and RectifierWithDropout have been tested.  TanhWithDropout and Maxout are experimental.
+   */
+  public enum Activation {
+    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
+  }
 
-    @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
-    public int[] hidden;
-
-    @API(help = "Initial Weight Distribution")
-    public InitialWeightDistribution initial_weight_distribution;
-
-    @API(help = "Uniform: -value...value, Normal: stddev)")
-    public double initial_weight_scale;
-
-    @API(help = "Learning rate")
-    public double rate;
-
-    @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)")
-    public double rate_annealing;
-
-    @API(help = "Constraint for squared sum of incoming weights per unit")
-    public float max_w2;
-
-    @API(help = "Momentum at the beginning of training")
-    public double momentum_start;
-
-    @API(help = "Number of samples for which momentum increases")
-    public long momentum_ramp;
-
-    @API(help = "Momentum once the initial increase is over")
-    public double momentum_stable;
-
-    //TODO: add a ramp down to 0 for l1 and l2
-
-    @API(help = "L1 regularization")
-    public double l1;
-
-    @API(help = "L2 regularization")
-    public double l2;
-
-    @API(help = "Loss function")
-    public Loss loss = Loss.CrossEntropy;
-
-    @API(help = "How many times the dataset should be iterated")
-    public double epochs;
-
-//    @API(help = "Number of samples to train with non-distributed mode for improved stability")
-    public long warmup_samples;
-
-    @API(help = "Diagnostics and stability check for hidden layers", filter = Default.class)
-    public boolean diagnostics;
-
-    public NeuralNetParams() {}
-
-    public NeuralNetParams(ExecutionMode mode, Activation activation, double input_dropout_ratio, int[] hidden, InitialWeightDistribution initial_weight_distribution, double initial_weight_scale, double rate, double rate_annealing, float max_w2, double momentum_start, long momentum_ramp, double momentum_stable, double l1, double l2, Loss loss, double epochs, long warmup_samples, boolean diagnostics) {
-      this.mode = mode;
-      this.activation = activation;
-      this.input_dropout_ratio = input_dropout_ratio;
-      this.hidden = hidden;
-      this.initial_weight_distribution = initial_weight_distribution;
-      this.initial_weight_scale = initial_weight_scale;
-      this.rate = rate;
-      this.rate_annealing = rate_annealing;
-      this.max_w2 = max_w2;
-      this.momentum_start = momentum_start;
-      this.momentum_ramp = momentum_ramp;
-      this.momentum_stable = momentum_stable;
-      this.l1 = l1;
-      this.l2 = l2;
-      this.loss = loss;
-      this.epochs = epochs;
-      this.warmup_samples = warmup_samples;
-      this.diagnostics = diagnostics;
-    }
-
-    public enum ExecutionMode {
-      SingleThread, SingleNode, MultiNode
-    }
-
-    public enum InitialWeightDistribution {
-      UniformAdaptive, Uniform, Normal
-    }
-
-    /**
-     * Activation functions
-     * Tanh, Rectifier and RectifierWithDropout have been tested.  TanhWithDropout and Maxout are experimental.
-     */
-    public enum Activation {
-      Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
-    }
-
-    /**
-     * Loss functions
-     * CrossEntropy is recommended
-     */
-    public enum Loss {
-      MeanSquare, CrossEntropy
-    }
-  };
-
-  NeuralNetParams _params;
+  /**
+   * Loss functions
+   * CrossEntropy is recommended
+   */
+  public enum Loss {
+    MeanSquare, CrossEntropy
+  }
 
   // Hack: used to stop the monitor thread
   private volatile boolean running = true;
@@ -257,8 +172,6 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
-    _params = new NeuralNetParams(mode, activation, input_dropout_ratio, hidden, initial_weight_distribution, initial_weight_scale, rate, rate_annealing, max_w2, momentum_start, momentum_ramp, momentum_stable, l1, l2, loss, epochs, warmup_samples, diagnostics);
-
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
 //    reChunk(vecs);
@@ -297,7 +210,7 @@ public class NeuralNet extends ValidatedJob {
       ls[ls.length - 1] = new VecLinear(trainResp, null, loss);
 
     for( int i = 0; i < ls.length; i++ )
-      ls[i].init(ls, i, _params);
+      ls[i].init(ls, i, this);
 
     final Key sourceKey = Key.make(input("source"));
     final Frame frame = new Frame(_names, train);
@@ -305,7 +218,7 @@ public class NeuralNet extends ValidatedJob {
     final Errors[] trainErrors0 = new Errors[] { new Errors() };
     final Errors[] validErrors0 = validation == null ? null : new Errors[] { new Errors() };
 
-    NeuralNetModel model = new NeuralNetModel_JSON(destination_key, sourceKey, frame, ls, _params);
+    NeuralNetModel model = new NeuralNetModel_JSON(destination_key, sourceKey, frame, ls, this);
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
 
@@ -316,7 +229,7 @@ public class NeuralNet extends ValidatedJob {
 
     final long num_rows = source.numRows();
 
-    if (mode == NeuralNetParams.ExecutionMode.SingleThread) {
+    if (mode == SingleThread) {
       Log.info("Single thread execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
     } else {
@@ -328,11 +241,11 @@ public class NeuralNet extends ValidatedJob {
         warmup.join();
         //TODO: send weights from master VM to all other VMs
       }
-      if (mode == NeuralNetParams.ExecutionMode.SingleNode) {
+      if (mode == SingleNode) {
         Log.info("Entering single-node (multi-threaded Hogwild) execution mode.");
         trainer = new Trainer.Threaded(ls, epochs, self());
-      } else if (mode == NeuralNetParams.ExecutionMode.MultiNode) {
-        if (warmup_samples > 0 && mode == NeuralNetParams.ExecutionMode.MultiNode) {
+      } else if (mode == MultiNode) {
+        if (warmup_samples > 0 && mode == MultiNode) {
           Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
           Trainer warmup = new Trainer.Threaded(ls, warmup_samples/num_rows, self());
           warmup.start();
@@ -346,9 +259,12 @@ public class NeuralNet extends ValidatedJob {
 
     Log.info("Running for " + epochs + " epochs.");
 
+    final NeuralNet nn = this;
+
     // Use a separate thread for monitoring (blocked most of the time)
     Thread monitor = new Thread() {
       Errors[] trainErrors = trainErrors0, validErrors = validErrors0;
+
 
       @Override public void run() {
         try {
@@ -387,7 +303,7 @@ public class NeuralNet extends ValidatedJob {
           e = eval(valid, validResp, 0, cm);
           validErrors = Utils.append(validErrors, e);
         }
-        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, _params);
+        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, nn);
         model.training_errors = trainErrors;
         model.validation_errors = validErrors;
         model.confusion_matrix = cm;
@@ -407,7 +323,7 @@ public class NeuralNet extends ValidatedJob {
     trainer.join();
 
     // hack to gracefully terminate the job submitted via H2O web API
-    if (mode != NeuralNetParams.ExecutionMode.MultiNode) {
+    if (mode != MultiNode) {
       running = false; //tell the monitor thread to finish too
       try {
         monitor.join();
@@ -549,23 +465,23 @@ public class NeuralNet extends ValidatedJob {
   }
 
   public static class NeuralNetModel_JSON extends NeuralNetModel {
-    NeuralNetModel_JSON(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNetParams p) {
+    NeuralNetModel_JSON(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNet p) {
       super(selfKey, dataKey, fr, ls, p);
     }
 
-    @Override
-    public AutoBuffer writeJSONFields(AutoBuffer bb) {
-      AutoBuffer b = super.writeJSONFields(bb);
-      _params.writeJSONFields(b);
-      return b;
-    }
+//    @Override
+//    public AutoBuffer writeJSONFields(AutoBuffer bb) {
+//      AutoBuffer b = super.writeJSONFields(bb);
+//      _params.writeJSONFields(b);
+//      return b;
+//    }
 
   }
 
   public static class NeuralNetModel extends Model {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
-    public NeuralNetParams _params;
+    public NeuralNet _params;
 
     @API(help = "Layers")
     public Layer[] layers;
@@ -596,7 +512,7 @@ public class NeuralNet extends ValidatedJob {
 
     public boolean unstable = false;
 
-    NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNetParams p) {
+    NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNet p) {
       super(selfKey, dataKey, fr);
       _params = p;
       layers = ls;
@@ -698,7 +614,7 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    public NeuralNetParams _params;
+    public NeuralNet _params;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -719,7 +635,7 @@ public class NeuralNet extends ValidatedJob {
     @Override protected Response serve() {
       NeuralNet job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
       if( job != null ) {
-        _params = job._params;
+        _params = job;
       }
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {

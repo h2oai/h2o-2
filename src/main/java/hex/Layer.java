@@ -23,7 +23,7 @@ public abstract class Layer extends Iced {
   public int units;
 
   @API(help = "Initial Weight Distribution")
-  public NeuralNet.NeuralNetParams.InitialWeightDistribution initial_weight_distribution = NeuralNet.NeuralNetParams.InitialWeightDistribution.UniformAdaptive;
+  public NeuralNet.InitialWeightDistribution initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
   @ParamsSearch.Info(origin = 0.01)
@@ -57,7 +57,7 @@ public abstract class Layer extends Iced {
 
   public boolean unstable = false;
 
-  public void transferParams(NeuralNet.NeuralNetParams p) {
+  public void transferParams(NeuralNet p) {
     initial_weight_distribution = p.initial_weight_distribution;
     initial_weight_scale = p.initial_weight_scale;
     rate = (float) p.rate;
@@ -132,7 +132,7 @@ public abstract class Layer extends Iced {
     return new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
   }
 
-  public final void init(Layer[] ls, int index, NeuralNet.NeuralNetParams p) {
+  public final void init(Layer[] ls, int index, NeuralNet p) {
     transferParams(p);
     init(ls, index, true, 0);
   }
@@ -166,17 +166,17 @@ public abstract class Layer extends Iced {
   void randomize(Random rng, float prefactor) {
     if (_w == null) return;
 
-    if (initial_weight_distribution == NeuralNet.NeuralNetParams.InitialWeightDistribution.UniformAdaptive) {
+    if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
         _w[i] = uniformDist(rng, -range, range);
     }
     else {
-      if (initial_weight_distribution == NeuralNet.NeuralNetParams.InitialWeightDistribution.Uniform) {
+      if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
         for (int i = 0; i < _w.length; i++) {
           _w[i] = uniformDist(rng, (float)-initial_weight_scale, (float)initial_weight_scale);
         }
-      } else if (initial_weight_distribution == NeuralNet.NeuralNetParams.InitialWeightDistribution.Normal) {
+      } else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
         for (int i = 0; i < _w.length; i++) {
           _w[i] = (float) (0 + rng.nextGaussian() * initial_weight_scale);
         }
@@ -496,9 +496,9 @@ public abstract class Layer extends Iced {
     public static DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help = "Loss function")
-    public NeuralNet.NeuralNetParams.Loss loss = NeuralNet.NeuralNetParams.Loss.CrossEntropy;
+    public NeuralNet.Loss loss = NeuralNet .Loss.CrossEntropy;
 
-    public final void init(Layer[] ls, int index, NeuralNet.NeuralNetParams p, NeuralNet.NeuralNetParams.Loss l) {
+    public final void init(Layer[] ls, int index, NeuralNet p, NeuralNet.Loss l) {
       super.init(ls, index, p);
       loss = l;
     }
@@ -545,9 +545,9 @@ public abstract class Layer extends Iced {
       for( int u = 0; u < _a.length; u++ ) {
         final float targetval = (u == label ? 1 : 0);
         float g = targetval - _a[u];
-        if (loss == NeuralNet.NeuralNetParams.Loss.CrossEntropy) {
+        if (loss == NeuralNet.Loss.CrossEntropy) {
           //nothing else needed
-        } else if (loss == NeuralNet.NeuralNetParams.Loss.MeanSquare) {
+        } else if (loss == NeuralNet.Loss.MeanSquare) {
           g *= (1 - _a[u]) * _a[u];
         }
         bprop(u, g, r, m);
@@ -562,7 +562,7 @@ public abstract class Layer extends Iced {
     VecSoftmax() {
     }
 
-    public VecSoftmax(Vec v, VecSoftmax stats, NeuralNet.NeuralNetParams.Loss l) {
+    public VecSoftmax(Vec v, VecSoftmax stats, NeuralNet.Loss l) {
 // Waiting for Michal stuff, for now enum must start at 0
 //      if( vec.domain() == null ) {
 //        vec = vec.toEnum();
@@ -652,9 +652,9 @@ public abstract class Layer extends Iced {
       float[] v = target();
       for( int u = 0; u < _a.length; u++ ) {
         float g = v[u] - _a[u];
-        if (loss == NeuralNet.NeuralNetParams.Loss.CrossEntropy) {
+        if (loss == NeuralNet.Loss.CrossEntropy) {
           //nothing else needed
-        } else if (loss == NeuralNet.NeuralNetParams.Loss.MeanSquare) {
+        } else if (loss == NeuralNet.Loss.MeanSquare) {
           g *= (1 - _a[u]) * _a[u];
         }
         bprop(u, g, r, m);
@@ -669,7 +669,7 @@ public abstract class Layer extends Iced {
     VecLinear() {
     }
 
-    public VecLinear(Vec vec, VecLinear stats, NeuralNet.NeuralNetParams.Loss l) {
+    public VecLinear(Vec vec, VecLinear stats, NeuralNet.Loss l) {
       _vec = vec;
       this.units = stats != null ? stats.units : 1;
       loss = stats != null ? stats.loss : l;

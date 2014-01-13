@@ -25,8 +25,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
-import static hex.NeuralNet.NeuralNetParams;
-
 /**
  * Runs a neural network on the MNIST dataset.
  */
@@ -73,20 +71,20 @@ public class NeuralNetMnist extends Job {
     ls[1] = new Layer.RectifierDropout(102);
     ls[2] = new Layer.RectifierDropout(102);
     ls[3] = new Layer.RectifierDropout(204);
-    ls[4] = new VecSoftmax(labels, outputStats, NeuralNetParams.Loss.CrossEntropy);
+    ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.Loss.CrossEntropy);
 
-    NeuralNetParams p = new NeuralNetParams();
+    NeuralNet p = new NeuralNet();
     p.rate = 0.003f;
     p.rate_annealing = 1e-6f;
     p.epochs = 1000;
-    p.activation = NeuralNetParams.Activation.RectifierWithDropout;
+    p.activation = NeuralNet.Activation.RectifierWithDropout;
     p.max_w2 = 15;
     p.momentum_start = 0.5f;
     p.momentum_ramp = 1800000;
     p.momentum_stable = 0.99f;
     p.l1 = .00001f;
     p.l2 = .00f;
-    p.initial_weight_distribution = NeuralNetParams.InitialWeightDistribution.UniformAdaptive;
+    p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
 
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].init(ls, i, p);

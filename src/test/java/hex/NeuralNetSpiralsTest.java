@@ -32,17 +32,17 @@ public class NeuralNetSpiralsTest extends TestUtil {
     Vec[] data = Utils.remove(frame.vecs(), frame.vecs().length - 1);
     Vec labels = frame.vecs()[frame.vecs().length - 1];
 
-    NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
+    NeuralNet p = new NeuralNet();
     p.rate = 0.005f;
     p.epochs = 1000;
-    p.activation = NeuralNet.NeuralNetParams.Activation.Tanh;
+    p.activation = NeuralNet.Activation.Tanh;
     p.max_w2 = Float.MAX_VALUE;
 //    p.initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
 //    p.initial_weight_scale = 0.01f;
 
     Layer[] ls = new Layer[3];
     VecsInput input = new VecsInput(data, null);
-    VecSoftmax output = new VecSoftmax(labels, null, NeuralNet.NeuralNetParams.Loss.MeanSquare);
+    VecSoftmax output = new VecSoftmax(labels, null, NeuralNet.Loss.MeanSquare);
     ls[0] = input;
     ls[1] = new Layer.Tanh(50);
     ls[2] = output;

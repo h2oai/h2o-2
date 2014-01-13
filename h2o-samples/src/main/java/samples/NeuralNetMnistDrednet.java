@@ -11,11 +11,11 @@ import water.fvec.Vec;
 public class NeuralNetMnistDrednet extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
     Class job = Class.forName(Thread.currentThread().getStackTrace()[1].getClassName());
-//    samples.launchers.CloudLocal.launch(job, 1);
+    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 3);
     //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.163");
-  samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
+//  samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 8);
   }
 
@@ -25,20 +25,20 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     ls[1] = new Layer.RectifierDropout(1024);
     ls[2] = new Layer.RectifierDropout(1024);
     ls[3] = new Layer.RectifierDropout(2048);
-    ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.NeuralNetParams.Loss.CrossEntropy);
+    ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.Loss.CrossEntropy);
 
-    NeuralNet.NeuralNetParams p = new NeuralNet.NeuralNetParams();
+    NeuralNet p = new NeuralNet();
     p.rate = 0.01f;
     p.rate_annealing = 1e-6f;
     p.epochs = 1000;
-    p.activation = NeuralNet.NeuralNetParams.Activation.RectifierWithDropout;
+    p.activation = NeuralNet.Activation.RectifierWithDropout;
     p.max_w2 = 15;
     p.momentum_start = 0.5f;
     p.momentum_ramp = 1800000;
     p.momentum_stable = 0.99f;
     p.l1 = .00001f;
     p.l2 = .00f;
-    p.initial_weight_distribution = NeuralNet.NeuralNetParams.InitialWeightDistribution.UniformAdaptive;
+    p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
     // Hinton
 //  p.initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
 //  p.initial_weight_scale = 0.01;
@@ -54,10 +54,10 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
   @Override protected void startTraining(Layer[] ls) {
     // Initial training on one thread to increase stability
     // If the net still produces NaNs, reduce learning rate //TODO: Automate this
-    System.out.println("Initial single-threaded training");
-    _trainer = new Trainer.Direct(ls, 0.1, self());
-    _trainer.start();
-    _trainer.join();
+//    System.out.println("Initial single-threaded training");
+//    _trainer = new Trainer.Direct(ls, 0.1, self());
+//    _trainer.start();
+//    _trainer.join();
 
     System.out.println("Main training");
 
