@@ -14,7 +14,6 @@ import java.io.File
 import water.fvec.ParseDataset2
 import water.Job
 import hex.drf.DRF
-import water.Weaver
 import water.fvec.NewChunk
 
 trait TRef {}
@@ -293,8 +292,6 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     drf.invoke()
     return UKV.get(drf.dest())
   }
-  
-  def debugWeaver(v:Boolean) = { Weaver.DEBUG_PRINT = v; }
 }
 
 /** Trait representing provided global environment in R-like style.
