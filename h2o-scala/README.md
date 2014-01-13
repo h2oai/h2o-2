@@ -78,5 +78,15 @@ ToDos
 - API to access algos
 
 
+FAQs
+----
+
+### How to generate Eclipse project?
+- Launch sbt
+- In sbt use the command _eclipse_ to create Eclipse project files
+```
+> eclipse
+```
+- In Eclipse use the _Import Wizard_ to import the project into workspace
 
 
