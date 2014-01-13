@@ -309,7 +309,7 @@ public abstract class Trainer {
             else {
               _node._total = _node._trainer.processed();
               try {
-                Thread.sleep(10); //sleep for 10 ms
+                Thread.sleep(1);
               } catch( InterruptedException ex ) {
               }
             }

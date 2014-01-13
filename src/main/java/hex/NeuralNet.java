@@ -218,7 +218,7 @@ public class NeuralNet extends ValidatedJob {
     final Errors[] trainErrors0 = new Errors[] { new Errors() };
     final Errors[] validErrors0 = validation == null ? null : new Errors[] { new Errors() };
 
-    NeuralNetModel model = new NeuralNetModel_JSON(destination_key, sourceKey, frame, ls, this);
+    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, this);
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
 
@@ -385,7 +385,7 @@ public class NeuralNet extends ValidatedJob {
       for( input._pos = 0; input._pos < len; input._pos++ ) {
         if( ((Softmax) ls[ls.length - 1]).target() == -2 ) //NA
           continue;
-        if( Layer.correct(ls, e, cm) )
+        if( correct(ls, e, cm) )
           correct++;
       }
       e.classification = (len - (double) correct) / len;
@@ -397,12 +397,62 @@ public class NeuralNet extends ValidatedJob {
       e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
         if( !Float.isNaN(ls[ls.length - 1]._a[0]) )
-          Layer.error(ls, e);
+          error(ls, e);
       e.classification = Double.NaN;
       e.mean_square /= len;
     }
     input._pos = 0;
     return e;
+  }
+
+  // classification scoring
+  static boolean correct(Layer[] ls, Errors e, long[][] confusion) {
+    //Softmax for classification, one value per output class
+    Softmax output = (Softmax) ls[ls.length - 1];
+    if( output.target() == -1 )
+      return false;
+    //Testing for this row
+    for (Layer l : ls) l.fprop(false);
+    //Predicted output values
+    float[] out = ls[ls.length - 1]._a;
+    //True target value
+    int target = output.target();
+    //Score
+    for( int o = 0; o < out.length; o++ ) {
+      final boolean hitpos = (o == target);
+      final float t = hitpos ? 1 : 0;
+      final float d = t - out[o];
+      e.mean_square += d * d;
+      e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
+    }
+    float max = out[0];
+    int idx = 0;
+    for( int o = 1; o < out.length; o++ ) {
+      if( out[o] > max ) {
+        max = out[o];
+        idx = o;
+      }
+    }
+    if( confusion != null )
+      confusion[output.target()][idx]++;
+    return idx == output.target();
+  }
+
+  // regression scoring
+  static void error(Layer[] ls, Errors e) {
+    //Linear output layer for regression
+    Linear linear = (Linear) ls[ls.length - 1];
+    //Testing for this row
+    for (Layer l : ls) l.fprop(false);
+    //Predicted target values
+    float[] output = ls[ls.length - 1]._a;
+    //True target values
+    float[] target = linear.target();
+    e.mean_square = 0;
+    for( int o = 0; o < output.length; o++ ) {
+      final float d = target[o] - output[o];
+      e.mean_square += d * d;
+    }
   }
 
   @Override protected Response redirect() {
@@ -462,20 +512,6 @@ public class NeuralNet extends ValidatedJob {
               + ", MCE:" + String.format("%.2e", cross_entropy)
               + ")";
     }
-  }
-
-  public static class NeuralNetModel_JSON extends NeuralNetModel {
-    NeuralNetModel_JSON(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNet p) {
-      super(selfKey, dataKey, fr, ls, p);
-    }
-
-//    @Override
-//    public AutoBuffer writeJSONFields(AutoBuffer bb) {
-//      AutoBuffer b = super.writeJSONFields(bb);
-//      _params.writeJSONFields(b);
-//      return b;
-//    }
-
   }
 
   public static class NeuralNetModel extends Model {
