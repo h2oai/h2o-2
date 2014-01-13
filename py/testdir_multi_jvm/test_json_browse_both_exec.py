@@ -57,9 +57,9 @@ class Basic(unittest.TestCase):
 
     def test_json_browse_both_exec(self):
         lenNodes = len(h2o.nodes)
-        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        csvPathname = 'standard/covtype.data'
         hex_key = 'c.hex'
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
         print "\nParse key is:", parseResult['destination_key']
 
         ## h2b.browseTheCloud()

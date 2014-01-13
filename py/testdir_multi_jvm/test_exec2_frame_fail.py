@@ -16,19 +16,6 @@ zeroList = [
         'Result = c.hex',
 ]
 
-# randomBitVector
-# randomFilter
-# log
-# makeEnum
-# bug?
-#        ['Result<n> = slice(c.hex[<col1>],<row>)',
-exprList = [
-        'Result<n>[,<col1>] = (c.hex[,2]==0) ? 54321 : 54321',
-        'Result<n> = c.hex[,<col1>]',
-        'Result<n> = min(c.hex[,<col1>])',
-        'Result<n> = max(c.hex[,<col1>]) + Result[,1]',
-        'Result<n> = sum(c.hex[,<col1>]) + Result[,1]',
-    ]
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -61,6 +48,8 @@ class Basic(unittest.TestCase):
         start = time.time()
         h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'c.hex',
             maxCol=54, maxRow=400000, maxTrials=200, timeoutSecs=15)
+        execExpr = = [ 'Result<n>[,<col1>] = (c.hex[,2]==0) ? 54321 : 54321',
+    ]
         h2o.check_sandbox_for_errors()
         print "exec end on ", "covtype.data" , 'took', time.time() - start, 'seconds'
 
