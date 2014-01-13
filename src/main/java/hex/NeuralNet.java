@@ -75,14 +75,17 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
   public double epochs = 100;
 
-  @API(help = "Enable diagnostics (incl. stability check)", filter = Default.class)
-  public boolean diagnostics = true;
+  //@API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0)
+  public long warmup_samples = 0l;
+
+  @API(help = "Diagnostics and stability check for hidden layers", filter = Default.class)
+  public boolean diagnostics = false;
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
     for (Argument arg : _arguments) {
-      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution") ) {
+      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution") || arg._name.equals("mode") ) {
          arg.setRefreshOnChange();
       }
     }
@@ -102,8 +105,12 @@ public class NeuralNet extends ValidatedJob {
     }
     if( arg._name.equals("mode") ) {
       if (H2O.CLOUD._memary.length > 1) {
-
         arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
+      }
+    }
+    if( arg._name.equals("warmup_samples") ) {
+      if (mode == NeuralNetParams.ExecutionMode.Serial) {
+        arg.disable("Only for non-serial execution modes.");
       }
     }
   }
@@ -164,12 +171,15 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "How many times the dataset should be iterated")
     public double epochs;
 
-    @API(help = "Enable diagnostics (incl. stability check)")
+//    @API(help = "Number of samples to train with non-distributed mode for improved stability")
+    public long warmup_samples;
+
+    @API(help = "Diagnostics and stability check for hidden layers", filter = Default.class)
     public boolean diagnostics;
 
     public NeuralNetParams() {}
 
-    public NeuralNetParams(ExecutionMode mode, Activation activation, double input_dropout_ratio, int[] hidden, InitialWeightDistribution initial_weight_distribution, double initial_weight_scale, double rate, double rate_annealing, float max_w2, double momentum_start, long momentum_ramp, double momentum_stable, double l1, double l2, Loss loss, double epochs, boolean diagnostics) {
+    public NeuralNetParams(ExecutionMode mode, Activation activation, double input_dropout_ratio, int[] hidden, InitialWeightDistribution initial_weight_distribution, double initial_weight_scale, double rate, double rate_annealing, float max_w2, double momentum_start, long momentum_ramp, double momentum_stable, double l1, double l2, Loss loss, double epochs, long warmup_samples, boolean diagnostics) {
       this.mode = mode;
       this.activation = activation;
       this.input_dropout_ratio = input_dropout_ratio;
@@ -186,6 +196,7 @@ public class NeuralNet extends ValidatedJob {
       this.l2 = l2;
       this.loss = loss;
       this.epochs = epochs;
+      this.warmup_samples = warmup_samples;
       this.diagnostics = diagnostics;
     }
 
@@ -243,7 +254,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
-    _params = new NeuralNetParams(mode, activation, input_dropout_ratio, hidden, initial_weight_distribution, initial_weight_scale, rate, rate_annealing, max_w2, momentum_start, momentum_ramp, momentum_stable, l1, l2, loss, epochs, diagnostics);
+    _params = new NeuralNetParams(mode, activation, input_dropout_ratio, hidden, initial_weight_distribution, initial_weight_scale, rate, rate_annealing, max_w2, momentum_start, momentum_ramp, momentum_stable, l1, l2, loss, epochs, warmup_samples, diagnostics);
 
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
@@ -301,25 +312,34 @@ public class NeuralNet extends ValidatedJob {
     final Trainer trainer;
 
     final long num_rows = source.numRows();
-    // work on first batch of points serially for better reproducibility
-    if (mode != NeuralNetParams.ExecutionMode.Serial) {
-      final long serial_rows = 1000l;
-      System.out.println("Training the first " + serial_rows + " rows serially.");
-      Trainer pretrainer = new Trainer.Direct(ls, (double)serial_rows/num_rows, self());
-      pretrainer.start();
-      pretrainer.join();
-    }
 
     if (mode == NeuralNetParams.ExecutionMode.Serial) {
       System.out.println("Serial execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
-    } else if (mode == NeuralNetParams.ExecutionMode.Threaded_Hogwild) {
-      System.out.println("Single-node threaded (Hogwild) execution mode");
-      trainer = new Trainer.Threaded(ls, epochs, self());
-    } else if (mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
-      System.out.println("Multi-node MapReduce (Hogwild) execution mode");
-      trainer = new Trainer.MapReduce(ls, epochs, self());
-    } else throw new RuntimeException("invalid execution mode.");
+    } else {
+      // one node works on the first batch of points serially for improved stability
+      if (warmup_samples > 0) {
+        System.out.println("Training the first " + warmup_samples + " samples in serial for improved stability.");
+        Trainer warmup = new Trainer.Direct(ls, warmup_samples/num_rows, self());
+        warmup.start();
+        warmup.join();
+        //TODO: send weights from master VM to all other VMs
+      }
+      if (mode == NeuralNetParams.ExecutionMode.Threaded_Hogwild) {
+        System.out.println("Entering single-node multi-threaded execution mode.");
+        trainer = new Trainer.Threaded(ls, epochs, self());
+      } else if (mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
+        if (warmup_samples > 0 && mode == NeuralNetParams.ExecutionMode.MapReduce_Hogwild) {
+          System.out.println("Multi-threaded warmup with " + warmup_samples + " samples.");
+          Trainer warmup = new Trainer.Threaded(ls, warmup_samples/num_rows, self());
+          warmup.start();
+          warmup.join();
+          //TODO: send weights from master VM to all other VMs
+        }
+        System.out.println("Entering MapReduce execution mode.");
+        trainer = new Trainer.MapReduce(ls, epochs, self());
+      } else throw new RuntimeException("invalid execution mode.");
+    }
 
     System.out.println("Running for " + epochs + " epochs.");
 
