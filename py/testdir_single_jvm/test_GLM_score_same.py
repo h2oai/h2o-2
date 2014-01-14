@@ -87,9 +87,9 @@ class Basic(unittest.TestCase):
 
     def test_GLM_score_same(self):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
-        bucket = 'datasets'
+        bucket = 'home-0xdiag-datasets'
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = 'logreg' + '/' + csvFilename
+        csvPathname = 'standard' + '/' + csvFilename
 
         y = "10"
         x = ""
