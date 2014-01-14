@@ -154,7 +154,7 @@ public abstract class Trainer {
         for( int y = 0; y < clones.length; y++ )
           clones[y] = ls[y].clone();
         for( int y = 0; y < clones.length; y++ ) {
-          clones[y].init(clones, y, false, 0);
+          clones[y].init(clones, y, false);
           clones[y]._training = new Training() {
             @Override long processed() {
               return _processed.get();
@@ -384,8 +384,10 @@ public abstract class Trainer {
           clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1], (VecSoftmax) output);
         else
           clones[clones.length - 1] = new ChunkLinear(_cs[_cs.length - 1], (VecLinear) output);
+
+        // create new _a and _e, but link to weights/bias from _node (Hogwild)
         for( int y = 0; y < clones.length; y++ ) {
-          clones[y].init(clones, y, false, _node._total);
+          clones[y].init(clones, y, false);
           clones[y]._w = _node._ws[y];
           clones[y]._b = _node._bs[y];
           clones[y]._wm = _node._wm[y];

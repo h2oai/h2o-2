@@ -62,11 +62,24 @@ public abstract class Layer extends Iced {
     initial_weight_scale = p.initial_weight_scale;
     rate = (float) p.rate;
     rate_annealing = (float) p.rate_annealing;
+    l1 = (float) p.l1;
+    l2 = (float) p.l2;
     momentum_start = (float) p.momentum_start;
     momentum_ramp = p.momentum_ramp;
     momentum_stable = (float) p.momentum_stable;
-    l1 = (float) p.l1;
-    l2 = (float) p.l2;
+    max_w2 = p.max_w2;
+  }
+
+  public void transferParams(Layer p) {
+    initial_weight_distribution = p.initial_weight_distribution;
+    initial_weight_scale = p.initial_weight_scale;
+    rate = p.rate;
+    rate_annealing = p.rate_annealing;
+    l1 = p.l1;
+    l2 = p.l2;
+    momentum_start = p.momentum_start;
+    momentum_ramp = p.momentum_ramp;
+    momentum_stable = p.momentum_stable;
     max_w2 = p.max_w2;
   }
 
@@ -134,10 +147,10 @@ public abstract class Layer extends Iced {
 
   public final void init(Layer[] ls, int index, NeuralNet p) {
     transferParams(p);
-    init(ls, index, true, 0);
+    init(ls, index, true);
   }
 
-  public void init(Layer[] ls, int index, boolean weights, long step) {
+  public void init(Layer[] ls, int index, boolean weights) {
     _a = new float[units];
     if (!(this instanceof Output)) {
       _e = new float[units];
@@ -275,7 +288,7 @@ public abstract class Layer extends Iced {
     @ParamsSearch.Ignore
     protected long _pos, _len;
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+    @Override public void init(Layer[] ls, int index, boolean weights) {
       _a = new float[units];
     }
 
@@ -496,7 +509,7 @@ public abstract class Layer extends Iced {
     public static DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help = "Loss function")
-    public NeuralNet.Loss loss = NeuralNet.Loss.CrossEntropy;
+    public NeuralNet.Loss loss = NeuralNet.Loss.MeanSquare;
 
     public final void init(Layer[] ls, int index, NeuralNet p, NeuralNet.Loss l) {
       super.init(ls, index, p);
@@ -511,8 +524,8 @@ public abstract class Layer extends Iced {
   public static abstract class Softmax extends Output {
     protected abstract int target();
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
       if( weights ) {
         randomize(getRNG(), 1.0f);
       }
@@ -562,34 +575,16 @@ public abstract class Layer extends Iced {
     VecSoftmax() {
     }
 
-    public VecSoftmax(Vec v, VecSoftmax stats, NeuralNet.Loss l) {
+    public VecSoftmax(Vec vec, VecSoftmax stats, NeuralNet.Loss l) {
 // Waiting for Michal stuff, for now enum must start at 0
 //      if( vec.domain() == null ) {
 //        vec = vec.toEnum();
 //        _toClose = vec;
 //      }
-      this.vec = v;
-
-      // TODO extract layer info in separate Ice
-      if (stats != null) {
-        units = stats.units;
-        rate = stats.rate;
-        rate_annealing = stats.rate_annealing;
-        momentum_start = stats.momentum_start;
-        momentum_stable = stats.momentum_stable;
-        momentum_ramp = stats.momentum_ramp;
-        l1 = stats.l1;
-        l2 = stats.l2;
-        initial_weight_distribution = stats.initial_weight_distribution;
-        initial_weight_scale = stats.initial_weight_scale;
-        max_w2 = stats.max_w2;
-        loss = stats.loss;
-      }
-      else {
-        units = (int)(v.max() + 1);
-        loss = l;
-        // all the other members must be set later (by the caller)
-      }
+      this.units = stats != null ? stats.units : (int) (vec.max() + 1);
+      this.vec = vec;
+      loss = l;
+      if (stats != null) transferParams(stats);
     }
 
     @Override protected int target() {
@@ -611,19 +606,8 @@ public abstract class Layer extends Iced {
     public ChunkSoftmax(Chunk chunk, VecSoftmax stats) {
       units = stats.units;
       _chunk = chunk;
-
-      // TODO extract layer info in separate Ice
-      rate = stats.rate;
-      rate_annealing = stats.rate_annealing;
-      momentum_start = stats.momentum_start;
-      momentum_stable = stats.momentum_stable;
-      momentum_ramp = stats.momentum_ramp;
-      l1 = stats.l1;
-      l2 = stats.l2;
-      initial_weight_distribution = stats.initial_weight_distribution;
-      initial_weight_scale = stats.initial_weight_scale;
-      max_w2 = stats.max_w2;
       loss = stats.loss;
+      transferParams(stats);
     }
 
     @Override protected int target() {
@@ -635,6 +619,13 @@ public abstract class Layer extends Iced {
 
   public static abstract class Linear extends Output {
     abstract float[] target();
+
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
+      if( weights ) {
+        randomize(getRNG(), 1.0f);
+      }
+    }
 
     @Override protected void fprop(boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
@@ -650,13 +641,10 @@ public abstract class Layer extends Iced {
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
       float[] v = target();
+      assert(loss == NeuralNet.Loss.MeanSquare);
       for( int u = 0; u < _a.length; u++ ) {
         float g = v[u] - _a[u];
-        if (loss == NeuralNet.Loss.CrossEntropy) {
-          //nothing else needed
-        } else if (loss == NeuralNet.Loss.MeanSquare) {
-          g *= (1 - _a[u]) * _a[u];
-        }
+        g *= (1 - _a[u]) * _a[u];
         bprop(u, g, r, m);
       }
     }
@@ -666,27 +654,10 @@ public abstract class Layer extends Iced {
     Vec _vec;
     transient float[] _values;
 
-    VecLinear() {
-    }
-
-    public VecLinear(Vec vec, VecLinear stats, NeuralNet.Loss l) {
-      _vec = vec;
+    public VecLinear(Vec vec, VecLinear stats) {
       this.units = stats != null ? stats.units : 1;
-      loss = stats != null ? stats.loss : l;
-
-      if (stats != null) {
-        // TODO extract layer info in separate Ice
-        rate = stats.rate;
-        rate_annealing = stats.rate_annealing;
-        momentum_start = stats.momentum_start;
-        momentum_stable = stats.momentum_stable;
-        momentum_ramp = stats.momentum_ramp;
-        l1 = stats.l1;
-        l2 = stats.l2;
-        initial_weight_distribution = stats.initial_weight_distribution;
-        initial_weight_scale = stats.initial_weight_scale;
-        max_w2 = stats.max_w2;
-      }
+      _vec = vec;
+      if (stats != null) transferParams(stats);
     }
 
     @Override float[] target() {
@@ -704,20 +675,9 @@ public abstract class Layer extends Iced {
 
     public ChunkLinear(Chunk chunk, VecLinear stats) {
       units = stats.units;
-      loss = stats.loss;
       _chunk = chunk;
-
-      // TODO extract layer info in separate Ice
-      rate = stats.rate;
-      rate_annealing = stats.rate_annealing;
-      momentum_start = stats.momentum_start;
-      momentum_stable = stats.momentum_stable;
-      momentum_ramp = stats.momentum_ramp;
-      l1 = stats.l1;
-      l2 = stats.l2;
-      initial_weight_distribution = stats.initial_weight_distribution;
-      initial_weight_scale = stats.initial_weight_scale;
-      max_w2 = stats.max_w2;
+      loss = stats.loss;
+      transferParams(stats);
     }
 
     @Override float[] target() {
@@ -737,8 +697,8 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
       if( weights ) {
         randomize(getRNG(), 1.0f);
       }
@@ -806,8 +766,8 @@ public abstract class Layer extends Iced {
       super(units);
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
       // Auto encoder has its own bias vector
       _b = new float[units];
     }
@@ -847,8 +807,8 @@ public abstract class Layer extends Iced {
       dropout = new Dropout(units);
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
       if( weights ) {
         randomize(getRNG(), 1.0f);
         for( int i = 0; i < _b.length; i++ )
@@ -903,8 +863,8 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
       if( weights ) {
         randomize(getRNG(), 1.0f);
         for( int i = 0; i < _b.length; i++ )
@@ -964,8 +924,8 @@ public abstract class Layer extends Iced {
       super(units);
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
       // Auto encoder has its own bias vector
       _b = new float[units];
       for( int i = 0; i < _b.length; i++ )
@@ -1013,8 +973,6 @@ public abstract class Layer extends Iced {
       }
     }
   }
-
-  //
 
   @Override public Layer clone() {
     Layer l = (Layer) super.clone();
