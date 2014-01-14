@@ -644,4 +644,91 @@ public class ValueArray extends Iced implements Cloneable {
       }
     }
   }
+
+  // Cached conversion of a Frame to a VA
+  public static ValueArray frameAsVA(Key frKey) {
+    synchronized( conversionLock ) {
+      String vaKeyString = DKV.calcConvertedVAKeyString(frKey.toString());
+      Key vaKey = Key.make(vaKeyString);
+      Value v = DKV.get(vaKey);
+      if( v != null ) {
+        // If the thing that aliases with the cached conversion name is not a
+        // Frame, then throw an error.
+        if( !v.isArray() ) throw new IllegalArgumentException(vaKey + " is not a VA.");
+        Log.info("Using existing cached VA conversion (" + vaKeyString + ").");
+        return v.get();
+      }
+
+      // No cached conversion.  Make one and store it in DKV.
+      int cn = conversionNumber.getAndIncrement();
+      Log.info("Converting Frame to ValueArray: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + vaKeyString + ")...");
+      ValueArray va = convert((Frame)UKV.get(frKey),vaKey);
+      DKV.put(vaKey, va);
+      Log.info("Conversion " + cn + " complete.");
+      return va;
+    }    
+  }
+  // Convert a Frame to a VA
+  private static ValueArray convert( Frame fr, Key vaKey ) {
+    long nrows = fr.numRows();
+    Vec vs[] = fr.vecs();
+
+    // Build array of column headers
+    Column cols[] = new Column[fr.numCols()];
+    int off=0;                  // Offset within a row
+    for( int i=0; i<cols.length; i++ ) {
+      Column C = cols[i] = new Column();
+      Vec v = vs[i];
+      C._name  = fr._names[i];
+      C._domain= v._domain;
+      C._min   = v.min  ();
+      C._max   = v.max  ();
+      C._mean  = v.mean ();
+      C._sigma = v.sigma();
+      C._n     = nrows - v.naCnt();
+      // No attempt at compression VA style.  We can add this in later.
+      C._base  = 0;
+      C._scale = 1;
+      C._off   = off;
+      byte sz  = 8;            // Full 8 bytes, no compression
+      C._size  = (byte)(v.isInt() ? sz : -sz);
+      off += sz;
+    }
+
+    // Count rows-per-chunk
+    Vec v0 = fr.anyVec();
+    int rows[] = new int[v0.nChunks()];
+    for( int i=0; i<rows.length; i++ )
+      rows[i] = v0.chunkLen(i);
+
+    // Make the VA header
+    final ValueArray va = new ValueArray(vaKey, rows, off, cols );
+    UKV.put(vaKey,va);
+
+    // Now fill in the data chunks
+    final int rowsize = off;
+    new MRTask2() {
+      transient Futures _fs;
+      @Override public void setupLocal() { _fs = new Futures(); }
+      @Override public void map(Chunk chks[]) {
+        int off=0;
+        byte[] buf = new byte[rowsize*chks[0]._len];
+        for( int row=0; row<chks[0]._len; row++ )
+          for( int c=0; c<chks.length; c++ ) {
+            Chunk C = chks[c];
+            if( va._cols[c]._size==8 ) {
+              off += UDP.set8(buf,off,C.isNA(row) ? Long.MIN_VALUE : C.at80(row));
+            } else {
+              off += UDP.set8d(buf,off,C.at0(row));
+            }
+          }
+        assert off == buf.length;
+        Value val = new Value(va.getChunkKey(_lo),buf);
+        DKV.put(val._key,val,_fs);
+      }
+      @Override public void closeLocal() { _fs.blockForPending(); }
+    }.doAll(fr);
+
+    return va;
+  }
 }

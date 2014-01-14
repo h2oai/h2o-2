@@ -71,8 +71,7 @@ public class Arguments {
   }
 
   static public class MissingArgumentError extends Error {
-    String m;
-    MissingArgumentError() {}
+    final String m;
     MissingArgumentError(String s) {  m = s; }
     public String toString() {  return ( m != null ) ? m : super.toString();  }
   }
@@ -120,16 +119,6 @@ public class Arguments {
    */
   public int size() { return commandLineArgs.length;  }
 
-  /**
-   * Index of first flag, or -1 if command line contains only options.
-   */
-  public int firstFlag() {
-    for( int i = 0; i < commandLineArgs.length; i++ )
-      if(commandLineArgs[i].flag)
-        return i;
-    return -1;
-  }
-
   public String get(int i) {  return commandLineArgs[i].val;  }
 
   /**
@@ -153,7 +142,7 @@ public class Arguments {
     if( str.startsWith("-") ){
       int startOffset = (str.startsWith("--"))? 2 : 1;
       String arg = "";
-      String opt = "";
+      String opt;
       boolean flag = false;
       int eqPos = str.indexOf("=");
       if( eqPos > 0 ||  (next!=null && !next.startsWith("-"))){
@@ -199,8 +188,12 @@ public class Arguments {
         if( cl.isPrimitive() ){
           if( cl == Boolean.TYPE ){
             boolean curval = field.getBoolean(arg);
-            if( opt != null ) field.setBoolean(arg, !curval);
-          }else if( opt == null || opt == "" ) continue;
+            boolean xval = curval;
+            if( opt != null ) xval = !curval;
+            if( "1".equals(opt) || "true" .equals(opt) ) xval = true;
+            if( "0".equals(opt) || "false".equals(opt) ) xval = false;
+            if( opt != null ) field.setBoolean(arg, xval);
+          }else if( opt == null || opt.length()==0 ) continue;
           else if( cl == Integer.TYPE ) field.setInt(arg, Integer.parseInt(opt));
           else if( cl == Float.TYPE ) field.setFloat(arg, Float.parseFloat(opt));
           else if( cl == Double.TYPE ) field.setDouble(arg, Double.parseDouble(opt));
@@ -227,15 +220,11 @@ public class Arguments {
    * empty string "" for an option ("-name" or "-name="). A null value is
    * returned if no binding or option is found.
    *
-   * @param name
-   *          string name of the option or binding
-   * @return
+   * @param name string name of the option or binding
    */
   public String getValue(String name) {
-    for( int i = 0; i < commandLineArgs.length; i++ ){
-      Entry e = commandLineArgs[i];
+    for( Entry e : commandLineArgs )
       if( name.equals(e.name) ) return e.val;
-    }
     return System.getProperty("h2o.arg."+name);
   }
 
@@ -244,8 +233,7 @@ public class Arguments {
    * implementation allows the same command line instance to parse several
    * argument lists, the results will be merged.
    *
-   * @param s
-   *          the array of arguments to be parsed
+   * @param s the array of arguments to be parsed
    */
   private void parse(String[] s) {
     commandLineArgs = new Entry[0];
@@ -256,9 +244,9 @@ public class Arguments {
   }
 
   public String toString() {
-    String[] s = toStringArray();
+    String[] ss = toStringArray();
     String result = "";
-    for( int i = 0; i < s.length; i++ )  result += s[i]+" ";
+    for( String s : ss )  result += s+" ";
     return result;
   }
 
@@ -284,8 +272,7 @@ public class Arguments {
     }
     Field[] keep = new Field[fields.length];
     int num = 0;
-    for( int i = 0; i < fields.length; i++ ){
-      Field field = fields[i];
+    for( Field field : fields ){
       field.setAccessible(true);
       if( Modifier.isStatic(field.getModifiers()) ) continue;
       if( field.getType().isPrimitive() || field.getType() == String.class ) keep[num++] = field;

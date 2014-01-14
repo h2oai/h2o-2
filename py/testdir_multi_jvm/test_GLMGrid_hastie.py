@@ -63,12 +63,12 @@ class Basic(unittest.TestCase):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)
-        bucket = 'datasets'
+        bucket = 'home-0xdiag-datasets'
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = 'logreg' + '/' + csvFilename
+        csvPathname = 'standard' + '/' + csvFilename
         glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=300)
 
-        fullPathname = h2i.find_folder_and_filename('datasets', csvPathname, returnFullPath=True)
+        fullPathname = h2i.find_folder_and_filename('home-0xdiag-datasets', csvPathname, returnFullPath=True)
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
         h2o_util.file_gunzip(fullPathname, pathname1x)

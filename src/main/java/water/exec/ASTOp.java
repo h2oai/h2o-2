@@ -2,7 +2,6 @@ package water.exec;
 
 import java.util.*;
 
-import org.apache.hadoop.mapred.analysejobhistory_jsp;
 import water.*;
 import water.fvec.*;
 import water.util.Log;
@@ -125,10 +124,14 @@ public abstract class ASTOp extends AST {
   static private void putUniInfix(ASTOp ast) { UNI_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putBinInfix(ASTOp ast) { BIN_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putPrefix  (ASTOp ast) {    PREFIX_OPS.put(ast.opStr(),ast); }
-  static public boolean isOp(String id) {
-    return UNI_INFIX_OPS.containsKey(id)
-        || BIN_INFIX_OPS.containsKey(id)
-        || PREFIX_OPS   .containsKey(id);
+  static public ASTOp isOp(String id) {
+    // This order matters. If used as a prefix OP, `+` and `-` are binary only.
+    ASTOp op3 =    PREFIX_OPS.get(id); if( op3 != null ) return op3;
+    ASTOp op2 = BIN_INFIX_OPS.get(id); if( op2 != null ) return op2;
+    ASTOp op1 = UNI_INFIX_OPS.get(id);                   return op1;
+  }
+  static public boolean isInfixOp(String id) {
+    return BIN_INFIX_OPS.containsKey(id) || UNI_INFIX_OPS.containsKey(id);
   }
   static public Set<String> opStrs() {
     Set<String> all = UNI_INFIX_OPS.keySet();
@@ -173,12 +176,10 @@ public abstract class ASTOp extends AST {
     int x = E._x;
     String id = E.isID();
     if( id == null ) return null;
-    ASTOp op;
-    // This order matters. If used as a prefix OP, `+` and `-` are binary only.
-    if( (op = PREFIX_OPS.get(id))    != null
-     || (op = BIN_INFIX_OPS.get(id)) != null
-     || (op = UNI_INFIX_OPS.get(id)) != null)
-      return op.make();
+    ASTOp op = isOp(id);  // The order matters. If used as a prefix OP, `+` and `-` are binary only.
+    // Also, if assigning to a built-in function then do not parse-as-a-fcn.
+    // Instead it will default to parsing as an ID in ASTAssign.parse
+    if( op != null && !E.peek('=') ) return op.make();
     E._x = x;
     return ASTFunc.parseFcn(E);
   }
@@ -226,7 +227,7 @@ abstract class ASTUniOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x"};
   static Type[] newsig() {
     Type t1 = Type.dblary();
-    return new Type[]{Type.anyary(new Type[]{t1}),t1};
+    return new Type[]{t1,t1};
   }
   ASTUniOp( int form, int precedence, int association ) {
     super(VARS,newsig(),form,precedence,association);
@@ -251,7 +252,7 @@ abstract class ASTUniOp extends ASTOp {
               n.addNum(uni.op(c.at0(r)));
           }
         }
-      }.doAll(fr.numCols(),fr).outputFrame(fr._names, fr.domains());
+      }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
     env.subRef(fr,skey);
     env.pop();                  // Pop self
     env.push(fr2);
@@ -475,7 +476,7 @@ abstract class ASTBinOp extends ASTOp {
         if( fr0.numCols() != fr1.numCols() ||
             fr0.numRows() != fr1.numRows() )
           throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
-        fr = new Frame(fr0).add(fr1);
+        fr = new Frame(fr0).add(fr1,true);
       } else {
         fr = fr0;
       }
@@ -525,8 +526,8 @@ class ASTGT       extends ASTBinOp { ASTGT()       { super(OPF_INFIX, OPP_GT,   
 class ASTGE       extends ASTBinOp { ASTGE()       { super(OPF_INFIX, OPP_GE,     OPA_LEFT); }  String opStr(){ return ">=" ;} ASTOp make() {return new ASTGE  ();} double op(double d0, double d1) { return d0>d1 ||  Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
 class ASTEQ       extends ASTBinOp { ASTEQ()       { super(OPF_INFIX, OPP_EQ,     OPA_LEFT); }  String opStr(){ return "==" ;} ASTOp make() {return new ASTEQ  ();} double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
 class ASTNE       extends ASTBinOp { ASTNE()       { super(OPF_INFIX, OPP_NE,     OPA_LEFT); }  String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?0:1;}}
-class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  String opStr(){ return "&"  ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0)?1:0;}}
-class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  String opStr(){ return "|"  ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0)?0:1;}}
+class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  String opStr(){ return "&"  ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:1) :0;}}
+class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  String opStr(){ return "|"  ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:0) :1;}}
 
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
@@ -632,7 +633,7 @@ class ASTCbind extends ASTOp {
 
     for(int i = 1; i < argcnt-1; i++) {
       if(env.isAry(-argcnt+1+i))
-        fr.add(env.ary(-argcnt+1+i));
+        fr.add(env.ary(-argcnt+1+i),true);
       else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
@@ -766,7 +767,7 @@ class ASTAND extends ASTOp {
     super(new String[]{"", "x", "y"},
           new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
           OPF_PREFIX,
-          OPP_PREFIX,
+          OPP_AND,
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTAND(); }
@@ -788,7 +789,7 @@ class ASTOR extends ASTOp {
     super(new String[]{"", "x", "y"},
           new Type[]{Type.DBL,Type.dblary(),Type.dblary()},
           OPF_PREFIX,
-          OPP_PREFIX,
+          OPP_OR,
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTOR(); }
@@ -838,7 +839,7 @@ class ASTCat extends ASTOp {
           OPF_PREFIX,
           OPP_PREFIX,
           OPA_RIGHT); }
-  @Override ASTOp make() {return this;}
+  @Override ASTOp make() {return new ASTCat();}
   @Override void apply(Env env, int argcnt) {
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
@@ -1036,12 +1037,12 @@ class ASTIfElse extends ASTOp {
     if( frtru !=null ) {          // True is a Frame?
       if( frtru.numCols() != ncols ||  frtru.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frtru);
-      fr.add(frtru);
+      fr.add(frtru,true);
     }
     if( frfal !=null ) {          // False is a Frame?
       if( frfal.numCols() != ncols ||  frfal.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frfal);
-      fr.add(frfal);
+      fr.add(frfal,true);
     }
     final boolean t = frtru != null;
     final boolean f = frfal != null;

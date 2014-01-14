@@ -59,15 +59,15 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rfview_score(self):
-        csvPathnameTrain = 'UCI/UCI-large/covtype/covtype.data'
+        csvPathnameTrain = 'standard/covtype.data'
         print "Train with:", csvPathnameTrain
-        parseResultTrain = h2i.import_parse(bucket='datasets', path=csvPathnameTrain, schema='put', 
+        parseResultTrain = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathnameTrain, schema='put', 
             hex_key="covtype.hex", timeoutSecs=15)
         dataKeyTrain = parseResultTrain['destination_key']
 
-        csvPathnameTest = 'UCI/UCI-large/covtype/covtype.data'
+        csvPathnameTest = 'standard/covtype.data'
         print "Test with:", csvPathnameTest
-        parseResultTest = h2i.import_parse(bucket='datasets', path=csvPathnameTest, schema='put', 
+        parseResultTest = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathnameTest, schema='put', 
             hex_key="covtype.hex", timeoutSecs=15)
         dataKeyTest = parseResultTest['destination_key']
 

@@ -24,8 +24,8 @@ class Basic(unittest.TestCase):
 
     def test_exec2_covtype_cols(self):
         h2o.beta_features = True
-        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=10)
+        csvPathname = 'standard/covtype.data'
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=10)
         print "\nParse key is:", parseResult['destination_key']
 
         ### h2b.browseTheCloud()
