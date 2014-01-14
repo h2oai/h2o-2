@@ -43,11 +43,11 @@ class Basic(unittest.TestCase):
 
         ### h2b.browseTheCloud()
         csvFilename = 'covtype.data'
-        csvPathname = 'UCI/UCI-large/covtype/'+ csvFilename
+        csvPathname = 'standard/'+ csvFilename
         hex_key = csvFilename + ".hex"
         print "\n" + csvPathname
 
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
         destination_key = parseResult['destination_key']
         print csvFilename, 'parse time:', parseResult['response']['time']
         print "Parse result['destination_key']:", destination_key 

@@ -21,6 +21,7 @@ public class Runner {
     String  testFile = defaultTestFile;
     String response  = "Angaus";
     String cols      = "SegSumT,SegTSeas,SegLowFlow,DSDist,DSMaxSlope,USAvgT,USRainDays,USSlope,USNative,DSDam,Method,LocSed";
+    boolean regression=false;// Defalt to classification (vs regression)
     int    min_rows  = 1;       // Smallest number of rows per terminal
     int    ntrees    = 10;      // Number of trees
     int    depth     = 999;     // Max tree depth
@@ -79,7 +80,7 @@ public class Runner {
     
     Sys sys = ARGS.gbm ? Sys.GBM__ : Sys.DRF__;
 
-    String cs[] = (ARGS.cols+","+ARGS.response).split("[, \t]");
+    String cs[] = (ARGS.cols+","+ARGS.response).split("[,\t]");
 
     // Set mtries
     if( ARGS.mtries == 0 )  ARGS.mtries = (int)Math.sqrt(cs.length);
@@ -116,6 +117,7 @@ public class Runner {
     SharedTreeModelBuilder stmb = ARGS.gbm ? new GBM() : new DRF();
     stmb.source = train;
     stmb.validation = test;
+    stmb.classification = !ARGS.regression;
     stmb.response   = response;
     stmb.ntrees     = ARGS.ntrees;
     stmb.max_depth  = ARGS.depth;

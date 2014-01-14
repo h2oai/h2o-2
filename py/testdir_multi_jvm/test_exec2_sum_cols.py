@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         print "Replicating covtype.data by 2x for results comparison to 1x"
         filename1x = 'covtype.data'
-        pathname1x = h2i.find_folder_and_filename('datasets', 'UCI/UCI-large/covtype/covtype.data', returnFullPath=True)
+        pathname1x = h2i.find_folder_and_filename('home-0xdiag-datasets', 'standard/covtype.data', returnFullPath=True)
         filename2x = "covtype_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
         h2o_util.file_cat(pathname1x, pathname1x, pathname2x)

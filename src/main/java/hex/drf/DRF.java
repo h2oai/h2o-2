@@ -168,6 +168,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     TreeStats tstats = new TreeStats();
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) {
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, tid==0, validation==null, build_tree_per_node);
       // At each iteration build K trees (K = nclass = response column domain size)
 
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
@@ -177,7 +178,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
       // Check latest predictions
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, validation==null, build_tree_per_node);
     }
     // Final scoring
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null, build_tree_per_node);
