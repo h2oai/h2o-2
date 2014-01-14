@@ -947,40 +947,69 @@ class ASTTable extends ASTOp {
   @Override String opStr() { return "table"; }
   @Override ASTOp make() { return new ASTTable(); }
   @Override void apply(Env env, int argcnt) {
+    int ncol;
     Frame fr = env.ary(-1);
-    if (fr.vecs().length > 1)
-      throw new IllegalArgumentException("table does not apply to multiple cols.");
-    if (! fr.vecs()[0].isInt())
-      throw new IllegalArgumentException("table only applies to integer vector.");
-    int[]  domain = new Vec.CollectDomain(fr.vecs()[0]).doAll(fr).domain();
-    long[] counts = new Tabularize(domain).doAll(fr)._counts;
+    if ((ncol = fr.vecs().length) > 2)
+      throw new IllegalArgumentException("table does not apply to more than two cols.");
+    for (int i = 0; i < ncol; i++) if (!fr.vecs()[i].isInt())
+      throw new IllegalArgumentException("table only applies to integer vectors.");
+    String[][] domains = new String[ncol][];  // the domain names to display as row and col names
+                                              // if vec does not have original domain, use levels returned by CoolectDomain
+    int[][] levels = new int[ncol][];
+    for (int i = 0; i < ncol; i++) {
+      Vec v = fr.vecs()[i];
+      levels[i] = new Vec.CollectDomain(v).doAll(new Frame(v)).domain();
+      domains[i] = v.domain();
+    }
+    long[][] counts = new Tabularize(levels).doAll(fr)._counts;
     // Build output vecs
-    Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(2);
+    Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(counts.length+1);
+    Vec[] vecs = new Vec[counts.length+1];
+    String[] colnames = new String[counts.length+1];
     AppendableVec v0 = new AppendableVec(keys[0]);
     v0._domain = fr.vecs()[0].domain() == null ? null : fr.vecs()[0].domain().clone();
     NewChunk c0 = new NewChunk(v0,0);
-    for( int i=0; i<domain.length; i++ ) c0.addNum((double) domain[i]);
+    for( int i=0; i<levels[0].length; i++ ) c0.addNum((double) levels[0][i]);
     c0.close(0,null);
-    AppendableVec v1 = new AppendableVec(keys[1]);
-    NewChunk c1 = new NewChunk(v1,0);
-    for( int i=0; i<domain.length; i++ ) c1.addNum((double) counts[i]);
-    c1.close(0,null);
+    vecs[0] = v0.close(null);
+    colnames[0] = "row.names";
+    if (ncol==1) colnames[1] = "Count";
+    for (int level1=0; level1 < counts.length; level1++) {
+      AppendableVec v = new AppendableVec(keys[level1+1]);
+      NewChunk c = new NewChunk(v,0);
+      v._domain = null;
+      for (int level0=0; level0 < counts[level1].length; level0++)
+        c.addNum((double) counts[level1][level0]);
+      c.close(0, null);
+      vecs[level1+1] = v.close(null);
+      if (ncol>1) {
+        colnames[level1+1] = domains[1]==null? Integer.toString(levels[1][level1]) : domains[1][levels[1][level1]];
+      }
+    }
     env.pop(2);
-    env.push(new Frame(new String[]{fr._names[0],"count"}, new Vec[]{v0.close(null), v1.close(null)}));
+    env.push(new Frame(colnames, vecs));
   }
   private static class Tabularize extends MRTask2<Tabularize> {
-    public final int[]  _domain;
-    public long[] _counts;
+    public final int[][]  _domains;
+    public long[][] _counts;
 
-    public Tabularize(int[] dom) { super(); _domain=dom; }
-    @Override public void map(Chunk chk) {
-      _counts=new long[_domain.length];
-      for (int i = 0; i < chk._len; i++)
-        if (! chk.isNA0(i)) {
-          int cls = Arrays.binarySearch(_domain,(int)chk.at80(i));
-          assert 0 <= cls && cls < _domain.length;
-          _counts[cls] ++;
+    public Tabularize(int[][] dom) { super(); _domains=dom; }
+    @Override public void map(Chunk[] cs) {
+      assert cs.length == _domains.length;
+      _counts = _domains.length==1? new long[1][] : new long[_domains[1].length][];
+      for (int i=0; i < _counts.length; i++) _counts[i] = new long[_domains[0].length];
+      for (int i=0; i < cs[0]._len; i++) {
+        int level0, level1;
+        if (cs[0].isNA0(i)) continue; else level0 = Arrays.binarySearch(_domains[0],(int)cs[0].at80(i));
+        assert 0 <= level0 && level0 < _domains[0].length;
+        if (cs.length>1) {
+          if (cs[1].isNA0(i)) continue; else level1 = Arrays.binarySearch(_domains[1],(int)cs[1].at80(i));
+          assert 0 <= level1 && level1 < _domains[1].length;
+        } else {
+          level1 = 0;
         }
+        _counts[level1][level0]++;
+      }
     }
     @Override public void reduce(Tabularize that) { Utils.add(_counts,that._counts); }
   }

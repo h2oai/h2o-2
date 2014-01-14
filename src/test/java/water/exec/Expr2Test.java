@@ -200,6 +200,8 @@ public class Expr2Test extends TestUtil {
       checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
       checkStr("table(h.hex)");
       checkStr("table(h.hex[,5])");
+      checkStr("table(h.hex[,c(2,7)])");
+      checkStr("table(h.hex[,c(2,9)])");
       checkStr("a=cbind(c(1,2,3), c(4,5,6))");
       checkStr("a[,1] = factor(a[,1])");
       checkStr("is.factor(a[,1])",1);
