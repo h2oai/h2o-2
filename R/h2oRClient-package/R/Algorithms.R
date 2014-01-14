@@ -439,7 +439,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed=-1, validation) {
+h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed, validation) {
   args <- verify_dataxy(data, x, y)
 
   if(!is.numeric(ntree)) stop('ntree must be a number')
@@ -452,6 +452,7 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.
   if( any(sample.rate < 0 || sample.rate > 1) ) stop('sample.rate must be between 0 and 1')
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
+  if(missing(seed)) seed = ifelse(exists(".Random.seed"), .Random.seed[3], -1)
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
 
   if(missing(validation)) validation = data
@@ -653,7 +654,7 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
   }
 }
 
-h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL, seed=-1, use_non_local=T) {
+h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL, seed, use_non_local=T) {
   if(class(data) != "H2OParsedDataVA")
     stop("h2o.randomForest.VA only works under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
@@ -664,10 +665,10 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(!is.numeric(sample.rate)) stop("sample.rate must be numeric")
   if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
   if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  if(missing(seed)) seed = ifelse(exists(".Random.seed"), .Random.seed[3], -1)
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
   if(!is.logical(use_non_local)) stop("use_non_local must be logical indicating whether to use non-local data")
 
-  if(missing(seed)) seed = ""
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt, seed=seed, use_non_local_data=as.numeric(use_non_local))
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, response_variable=args$y, out_of_bag_error_estimate=1)
