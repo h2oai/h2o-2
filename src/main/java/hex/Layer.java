@@ -55,7 +55,7 @@ public abstract class Layer extends Iced {
   @API(help = "Constraint for squared sum of incoming weights per unit")
   public float max_w2;
 
-  public boolean unstable = false;
+  public volatile boolean unstable = false;
 
   public void transferParams(NeuralNet p) {
     initial_weight_distribution = p.initial_weight_distribution;
