@@ -110,8 +110,9 @@ public class GLM extends Request {
       sb.append("&x=" + colIds[0]);
       for(int i = 1; i < colIds.length-1; ++i)
         sb.append(","+colIds[i]);
-      sb.append("&family=" + m._glmParams._family.toString());
-      sb.append("&link=" + m._glmParams._link.toString());
+      sb.append("&family=" + m._glmParams._family._family.toString());
+      sb.append("&tweedie_power=" + m._glmParams._family._tweedieVariancePower);
+      sb.append("&link=" + m._glmParams._link._link.toString());
       sb.append("&lambda=" + m._solver._lambda);
       sb.append("&alpha=" + m._solver._alpha);
       sb.append("&beta_eps=" + m._glmParams._betaEps);
