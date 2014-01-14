@@ -633,7 +633,7 @@ class ASTCbind extends ASTOp {
 
     for(int i = 1; i < argcnt-1; i++) {
       if(env.isAry(-argcnt+1+i))
-        fr.add(env.ary(-argcnt+1+i));
+        fr.add(env.ary(-argcnt+1+i),true);
       else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
