@@ -100,10 +100,10 @@ class ASTApply extends AST {
       E.throwErr("Function-parens following a "+ft2,x);
     if( ft2._ts.length != ts.length )
       E.throwErr("Passed "+(ts.length-1)+" args but expected "+(ft2._ts.length-1),x);
-    String vars[] = (fast instanceof ASTOp) ? ((ASTOp)fast)._vars : null;
+    String vars[] = ((ASTOp)fast)._vars;
     for( int i=1; i<ts.length; i++ )
       if( !ft2._ts[i].union(args[i]._t) )
-        E.throwErr("Arg "+(vars==null?("#"+i):("'"+vars[i]+"'"))+" typed as "+ft2._ts[i]+" but passed "+args[i]._t.find(),x);
+        E.throwErr("Arg '"+vars[i]+"'"+" typed as "+ft2._ts[i]+" but passed "+args[i]._t.find(),x);
     throw H2O.fail();
   }
 
