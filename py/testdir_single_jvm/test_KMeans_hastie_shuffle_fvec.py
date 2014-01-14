@@ -88,8 +88,8 @@ class Basic(unittest.TestCase):
 
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = 'logreg/' + csvFilename
-        bucket = 'datasets'
+        csvPathname = 'standard/' + csvFilename
+        bucket = 'home-0xdiag-datasets'
         kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows=1000000, timeoutSecs=60)
         fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
