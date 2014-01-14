@@ -1416,8 +1416,9 @@ class H2O(object):
 
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, timeoutSecs=30):
-        if beta_features:
+    def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, 
+        timeoutSecs=30, useVA=False):
+        if beta_features and not useVA:
             params = {
                 "src_key": key,
                 "offset": offset,
@@ -1431,7 +1432,7 @@ class H2O(object):
                 "max_column_display": max_column_display
                 }
 
-        a = self.__do_json_request('2/Inspect2.json' if beta_features else 'Inspect.json',
+        a = self.__do_json_request('2/Inspect2.json' if (beta_features and not useVA) else 'Inspect.json',
             params=params,
             ignoreH2oError=ignoreH2oError,
             timeout=timeoutSecs
@@ -2083,8 +2084,8 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
-        if beta_features:
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, **kwargs):
+        if beta_features and not useVA:
             params_dict = {
                 'source': key,
                 'cols': None,
@@ -2098,13 +2099,13 @@ class H2O(object):
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
-        a = self.__do_json_request('2/SummaryPage2.json' if beta_features else 'SummaryPage.json', 
+        a = self.__do_json_request('2/SummaryPage2.json' if (beta_features and not useVA) else 'SummaryPage.json', 
             timeout=timeoutSecs, params=params_dict)
         verboseprint("\nsummary_page result:", dump_json(a))
         
         # FIX!..not there yet for 2
-        if not beta_features:
-            h2o_cmd.infoFromSummary(a, noPrint=noPrint)
+        # if not beta_features:
+        h2o_cmd.infoFromSummary(a, noPrint=noPrint)
         return a
 
     def log_view(self, timeoutSecs=10, **kwargs):

@@ -5,11 +5,14 @@ import java.io.File;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.BeforeClass;
 import org.junit.rules.ExpectedException;
 import water.*;
 import water.fvec.*;
 
 public class Expr2Test extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -102,7 +105,7 @@ public class Expr2Test extends TestUtil {
       checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
 
       checkStr("(h.hex+1)<-2","Junk at end of line\n"+"(h.hex+1)<-2\n"+"         ^-^\n"); // No L-value
-      checkStr("h.hex[nrow(h.hex=1),]","Arg #1 typed as ary but passed dbl\n"+"h.hex[nrow(h.hex=1),]\n"+"          ^--------^\n"); // Passing a scalar 1.0 to nrow
+      checkStr("h.hex[nrow(h.hex=1),]","Arg 'x' typed as ary but passed dbl\n"+"h.hex[nrow(h.hex=1),]\n"+"          ^--------^\n"); // Passing a scalar 1.0 to nrow
       checkStr("h.hex[{h.hex=10},]"); // ERROR BROKEN: SHOULD PARSE statement list here; then do evil side-effect killing h.hex but also using 10 to select last row
       checkStr("h.hex[2,3]<-4;",4);
       checkStr("c(1,3,5)");
@@ -248,27 +251,22 @@ public class Expr2Test extends TestUtil {
   }
 
   void checkStr( String s, double d ) {
-    System.out.println(s);
     Env env = Exec2.exec(s);
     assertFalse( env.isAry() );
     assertFalse( env.isFcn() );
     double res = env.popDbl();
     assertEquals(d,res,d/1e8);
-    System.out.println( Double.toString(res) );
     env.remove();
   }
 
   void checkStr( String s, String err ) {
-    System.out.println(s);
     Env env = null;
     try {
       env = Exec2.exec(s);
+      env.remove();
+      fail(); // Supposed to throw; reaching here is an error
     } catch ( IllegalArgumentException e ) {
-      assertEquals(e.getMessage(), err);
-      System.out.println(err);
-    }
-    if (env!=null) {
-      env.remove(); fail();
+      assertEquals(err, e.getMessage());
     }
   }
 

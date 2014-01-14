@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
     def test_GLM_poisson_1(self):
         csvFilename = 'covtype.data'
         csvPathname = 'standard/' + csvFilename
-        parseResult = h2i.import_parse(bucket='home-0diag-datasets', path=csvPathname, schema='put', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', timeoutSecs=10)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
