@@ -102,7 +102,7 @@ public class Expr2Test extends TestUtil {
       checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
 
       checkStr("(h.hex+1)<-2","Junk at end of line\n"+"(h.hex+1)<-2\n"+"         ^-^\n"); // No L-value
-      checkStr("h.hex[nrow(h.hex=1),]","Arg #1 typed as ary but passed dbl\n"+"h.hex[nrow(h.hex=1),]\n"+"          ^--------^\n"); // Passing a scalar 1.0 to nrow
+      checkStr("h.hex[nrow(h.hex=1),]","Arg 'x' typed as ary but passed dbl\n"+"h.hex[nrow(h.hex=1),]\n"+"          ^--------^\n"); // Passing a scalar 1.0 to nrow
       checkStr("h.hex[{h.hex=10},]"); // ERROR BROKEN: SHOULD PARSE statement list here; then do evil side-effect killing h.hex but also using 10 to select last row
       checkStr("h.hex[2,3]<-4;",4);
       checkStr("c(1,3,5)");
@@ -197,6 +197,8 @@ public class Expr2Test extends TestUtil {
       checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
       checkStr("table(h.hex)");
       checkStr("table(h.hex[,5])");
+      checkStr("table(h.hex[,c(2,7)])");
+      checkStr("table(h.hex[,c(2,9)])");
       checkStr("a=cbind(c(1,2,3), c(4,5,6))");
       checkStr("a[,1] = factor(a[,1])");
       checkStr("is.factor(a[,1])",1);
