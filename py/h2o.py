@@ -1936,6 +1936,7 @@ class H2O(object):
             'cols'                 : None,
             'nbins'                : None,
             'classification'       : None,
+            'score_each_iteration' : None,
             'grid_parallelism'     : None,
         }
 
