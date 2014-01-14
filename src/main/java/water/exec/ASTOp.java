@@ -476,7 +476,7 @@ abstract class ASTBinOp extends ASTOp {
         if( fr0.numCols() != fr1.numCols() ||
             fr0.numRows() != fr1.numRows() )
           throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
-        fr = new Frame(fr0).add(fr1);
+        fr = new Frame(fr0).add(fr1,true);
       } else {
         fr = fr0;
       }
@@ -1037,12 +1037,12 @@ class ASTIfElse extends ASTOp {
     if( frtru !=null ) {          // True is a Frame?
       if( frtru.numCols() != ncols ||  frtru.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frtru);
-      fr.add(frtru);
+      fr.add(frtru,true);
     }
     if( frfal !=null ) {          // False is a Frame?
       if( frfal.numCols() != ncols ||  frfal.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frfal);
-      fr.add(frfal);
+      fr.add(frfal,true);
     }
     final boolean t = frtru != null;
     final boolean f = frfal != null;

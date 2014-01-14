@@ -114,7 +114,6 @@ public class Frame extends Iced {
   }
 
   /** Appends an entire Frame */
-  public Frame add( Frame fr ) { return add(fr,fr._names); }
   public Frame add( Frame fr, String names[] ) {
     assert anyVec().group().equals(fr.anyVec().group());
     for( String name : names )
@@ -131,7 +130,7 @@ public class Frame extends Iced {
     return this;
   }
   public Frame add( Frame fr, boolean rename ) { 
-    if( !rename ) return add(fr);
+    if( !rename ) return add(fr,fr._names);
     String names[] = new String[fr._names.length];
     for( int i=0; i<names.length; i++ ) {
       String name = fr._names[i];
