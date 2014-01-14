@@ -144,7 +144,7 @@ class Basic(unittest.TestCase):
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
-                    'response': num_cols-1,
+                    'response': 'C' + str(num_cols-1),
                     'ignored_cols_by_name': None,
                 }
                 print "Using these parameters for GBM: ", params

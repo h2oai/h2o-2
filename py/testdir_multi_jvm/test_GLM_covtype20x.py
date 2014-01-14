@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + csvFilename
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
-                timeoutSecs=2000, hex_key=hex_key, noise=('JStack', None))
+                timeoutSecs=2000, hex_key=hex_key)
             print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
 
@@ -49,17 +49,15 @@ class Basic(unittest.TestCase):
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
-            if (1==0):
-                print "WARNING: just first 33 features. Comparison to allstate"
-                # pythonic!
-                x = ",".join(map(str,range(33)))
-            else:
-                x = ""
 
+            # this will make it fvec
+            print "Touching %s with exec to make it fvec" % hex_key
+            h2o_cmd.runExec(str='%s[0,]=%s[0,]' % (hex_key, hex_key))
             print "WARNING: max_iter set to 8 for benchmark comparisons"
             max_iter = 8 
 
             y = "54"
+            x = ""
 
             kwargs = {
                 'x': x,
