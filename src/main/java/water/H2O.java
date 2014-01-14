@@ -969,6 +969,12 @@ public final class H2O {
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
 
+    Log.info("If you have trouble connecting, try SSH tunneling from your local machine (e.g., via port 55555):\n" +
+            "  1. Open a terminal and run 'ssh -L 55555:localhost:"
+            + API_PORT + " " + NAME + "@" + SELF_ADDRESS.getHostAddress() + "'\n" +
+            "  2. Point your browser to http://localhost:55555");
+
+
     // Create the starter Cloud with 1 member
     SELF._heartbeat._jar_md5 = Boot._init._jarHash;
     Paxos.doHeartbeat(SELF);

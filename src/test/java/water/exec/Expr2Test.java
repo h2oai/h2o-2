@@ -5,11 +5,14 @@ import java.io.File;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.BeforeClass;
 import org.junit.rules.ExpectedException;
 import water.*;
 import water.fvec.*;
 
 public class Expr2Test extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -250,27 +253,22 @@ public class Expr2Test extends TestUtil {
   }
 
   void checkStr( String s, double d ) {
-    System.out.println(s);
     Env env = Exec2.exec(s);
     assertFalse( env.isAry() );
     assertFalse( env.isFcn() );
     double res = env.popDbl();
     assertEquals(d,res,d/1e8);
-    System.out.println( Double.toString(res) );
     env.remove();
   }
 
   void checkStr( String s, String err ) {
-    System.out.println(s);
     Env env = null;
     try {
       env = Exec2.exec(s);
+      env.remove();
+      fail(); // Supposed to throw; reaching here is an error
     } catch ( IllegalArgumentException e ) {
-      assertEquals(e.getMessage(), err);
-      System.out.println(err);
-    }
-    if (env!=null) {
-      env.remove(); fail();
+      assertEquals(err, e.getMessage());
     }
   }
 

@@ -47,6 +47,9 @@ public abstract class ASTOp extends AST {
   static final public HashMap<String,ASTOp> UNI_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> BIN_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> PREFIX_OPS    = new HashMap();
+  // Too avoid a cyclic class-loading dependency, these are init'd before subclasses.
+  static final String VARS1[] = new String[]{ "", "x"};
+  static final String VARS2[] = new String[]{ "", "x","y"};
   static {
     // Unary infix ops
     putUniInfix(new ASTUniPlus());
@@ -144,13 +147,14 @@ public abstract class ASTOp extends AST {
   final int _precedence;    // operator precedence number
   final int _association;   // 0 - left associated, 1 - right associated
   // All fields are final, because functions are immutable
-  final String _vars[];         // Variable names
+  final String _vars[];     // Variable names
   ASTOp( String vars[], Type ts[], int form, int prec, int asso) {
     super(Type.fcn(ts));
     _form = form;
     _precedence = prec;
     _association = asso;
     _vars = vars;
+    assert ts.length==vars.length : "No vars?" + this;
   }
 
   abstract String opStr();
@@ -162,10 +166,10 @@ public abstract class ASTOp extends AST {
 
   @Override public String toString() {
     String s = _t._ts[0]+" "+opStr()+"(";
-    int len=_vars.length;
+    int len=_t._ts.length;
     for( int i=1; i<len-1; i++ )
-      s += _t._ts[i]+" "+_vars[i]+", ";
-    return s + (len > 1 ? _t._ts[len-1]+" "+_vars[len-1] : "")+")";
+      s += _t._ts[i]+" "+(_vars==null?"":_vars[i])+", ";
+    return s + (len > 1 ? _t._ts[len-1]+" "+(_vars==null?"":_vars[len-1]) : "")+")";
   }
   public String toString(boolean verbose) {
     if( !verbose ) return toString(); // Just the fun name& arg names
@@ -224,13 +228,12 @@ public abstract class ASTOp extends AST {
 }
 
 abstract class ASTUniOp extends ASTOp {
-  static final String VARS[] = new String[]{ "", "x"};
   static Type[] newsig() {
     Type t1 = Type.dblary();
     return new Type[]{t1,t1};
   }
   ASTUniOp( int form, int precedence, int association ) {
-    super(VARS,newsig(),form,precedence,association);
+    super(VARS1,newsig(),form,precedence,association);
   }
   double op( double d ) { throw H2O.fail(); }
   protected ASTUniOp( String[] vars, Type[] types, int form, int precedence, int association ) {
@@ -284,7 +287,7 @@ class ASTExp  extends ASTUniPrefixOp { String opStr(){ return "exp";   } ASTOp m
 class ASTIsNA extends ASTUniPrefixOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
 
 class ASTNrow extends ASTUniPrefixOp {
-  ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTNrow() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -297,7 +300,7 @@ class ASTNrow extends ASTUniPrefixOp {
 }
 
 class ASTNcol extends ASTUniPrefixOp {
-  ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTNcol() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -310,7 +313,7 @@ class ASTNcol extends ASTUniPrefixOp {
 }
 
 class ASTIsFactor extends ASTUniPrefixOp {
-  ASTIsFactor() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTIsFactor() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "is.factor"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -329,7 +332,7 @@ class ASTIsFactor extends ASTUniPrefixOp {
 
 // Added to facilitate Runit testing
 class ASTAnyFactor extends ASTUniPrefixOp {
-  ASTAnyFactor() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTAnyFactor() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "any.factor"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -347,7 +350,7 @@ class ASTAnyFactor extends ASTUniPrefixOp {
 }
 
 class ASTAnyNA extends ASTUniPrefixOp {
-  ASTAnyNA() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTAnyNA() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "any.na"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -365,7 +368,7 @@ class ASTAnyNA extends ASTUniPrefixOp {
 }
 
 class ASTIsTRUE extends ASTUniPrefixOp {
-  ASTIsTRUE() {super(VARS,new Type[]{Type.DBL,Type.unbound()});}
+  ASTIsTRUE() {super(VARS1,new Type[]{Type.DBL,Type.unbound()});}
   @Override String opStr() { return "isTRUE"; }
   @Override ASTOp make() {return new ASTIsTRUE();}  // to make sure fcn get bound at each new context
   @Override void apply(Env env, int argcnt) {
@@ -376,7 +379,7 @@ class ASTIsTRUE extends ASTUniPrefixOp {
 }
 
 class ASTScale extends ASTUniPrefixOp {
-  ASTScale() { super(VARS,new Type[]{Type.ARY,Type.ARY}); }
+  ASTScale() { super(VARS1,new Type[]{Type.ARY,Type.ARY}); }
   @Override String opStr() { return "scale"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -445,13 +448,12 @@ class ASTScale extends ASTUniPrefixOp {
 // applying 2 things (from an array or scalar to array or scalar) producing an
 // array or scalar result.
 abstract class ASTBinOp extends ASTOp {
-  static final String VARS[] = new String[]{ "", "x","y"};
   static Type[] newsig() {
     Type t1 = Type.dblary(), t2 = Type.dblary();
     return new Type[]{Type.anyary(new Type[]{t1,t2}),t1,t2};
   }
   ASTBinOp( int form, int precedence, int association ) {
-    super(VARS, newsig(), form, precedence, association); // binary ops are infix ops
+    super(VARS2, newsig(), form, precedence, association); // binary ops are infix ops
   }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env, int argcnt) {
