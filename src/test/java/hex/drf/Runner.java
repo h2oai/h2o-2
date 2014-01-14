@@ -10,8 +10,11 @@ import hex.gbm.SharedTreeModelBuilder;
 import hex.gbm.GBM;
 
 // Class for running DRF from the cmd line
+// Run as : java -jar h2o.jar water.Boot -mainClass hex.drf.Runner <runner_args>
+// Example: java -jar h2o.jar water.Boot -mainClass hex.drf.Runner -trainFile=smalldata/iris/iris_wheader.csv -testFile= -response=class -cols=sepal_len,sepal_wid,petal_len,petal_wid -ntrees=5 -mtries=3
 public class Runner {
 
+  // Every field in this class is also a command-line argument.
   public static class OptArgs extends Arguments.Opt {
     String h2oArgs;             // Extra args for H2O
     int    clusterSize=1;       // Stall till cluster gets this big
@@ -21,7 +24,7 @@ public class Runner {
     String  testFile = defaultTestFile;
     String response  = "Angaus";
     String cols      = "SegSumT,SegTSeas,SegLowFlow,DSDist,DSMaxSlope,USAvgT,USRainDays,USSlope,USNative,DSDam,Method,LocSed";
-    boolean regression=false;// Defalt to classification (vs regression)
+    boolean regression=false;   // Defalt to classification (vs regression)
     int    min_rows  = 1;       // Smallest number of rows per terminal
     int    ntrees    = 10;      // Number of trees
     int    depth     = 999;     // Max tree depth
@@ -40,12 +43,10 @@ public class Runner {
     // Bring up the cluster
     String[] h2oArgs;
     String as = ARGS.h2oArgs;
-    if( as == null ) {       // By default run using local IP, C.f. JUnitRunner
-      h2oArgs = new String[] { "-ip=127.0.0.1", "-flatfile=" + Utils.writeFile("127.0.0.1:54321").getAbsolutePath() };
-    } else {
+    if( as != null ) {
       if( as.startsWith("\"") && as.endsWith("\"") ) as = as.substring(1, as.length()-1);
       h2oArgs = as.trim().split("[ \t]+");
-    }
+    } else h2oArgs=new String[0];
     H2O.main(h2oArgs);
 
     // Make sure we shutdown on all exit paths
