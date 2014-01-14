@@ -38,7 +38,7 @@ public class NeuralNet extends ValidatedJob {
   public double input_dropout_ratio = 0.2;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
-  public int[] hidden = new int[] { 1024, 1024, 2048 };
+  public int[] hidden = new int[] { 100, 100, 100 };
 
   @API(help = "Initial Weight Distribution, UniformAdaptive is ~ sqrt(6 / (# units + # input_units))", filter = Default.class)
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
@@ -59,7 +59,7 @@ public class NeuralNet extends ValidatedJob {
   public double momentum_start = .5;
 
   @API(help = "Number of samples for which momentum increases", filter = Default.class)
-  public long momentum_ramp = 30 * 60000;
+  public long momentum_ramp = 1000000;
 
   @API(help = "Momentum once the initial increase is over", filter = Default.class, dmin = 0)
   public double momentum_stable = .99;
@@ -76,7 +76,7 @@ public class NeuralNet extends ValidatedJob {
   public Loss loss = Loss.CrossEntropy;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
-  public double epochs = 100;
+  public double epochs = 10;
 
   //@API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0)
   public long warmup_samples = 0l;
@@ -517,6 +517,8 @@ public class NeuralNet extends ValidatedJob {
   public static class NeuralNetModel extends Model {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help = "Model parameters")
     public NeuralNet _params;
 
     @API(help = "Layers")
@@ -650,6 +652,7 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Model parameters")
     public NeuralNet _params;
 
     @API(help = "Errors on the training set")
@@ -670,11 +673,9 @@ public class NeuralNet extends ValidatedJob {
 
     @Override protected Response serve() {
       NeuralNet job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
-      if( job != null ) {
-        _params = job;
-      }
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
+        _params = model._params;
         training_errors = model.training_errors;
         validation_errors = model.validation_errors;
         class_names = model.classNames();
@@ -730,7 +731,7 @@ public class NeuralNet extends ValidatedJob {
             sb.append("<tr>");
             sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
             sb.append("<td>").append("<b>").append(model.layers[i].units).append("</b>").append("</td>");
-            sb.append("<td>").append(model.layers[i].getClass().getCanonicalName().replace("hex.Layer.", "")).append("</td>");
+            sb.append("<td>").append(model.layers[i].getClass().getSimpleName()).append("</td>");
             sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
             sb.append("<td>").append(model.layers[i].l1).append("</td>");
             sb.append("<td>").append(model.layers[i].l2).append("</td>");
