@@ -8,7 +8,6 @@ import hex.rf.RFModel;
 import java.util.Arrays;
 
 import water.*;
-import water.fvec.Frame;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;

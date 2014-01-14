@@ -45,7 +45,7 @@ public class OneHot extends MRTask2<OneHot>{
 
 
         Frame fr2 = ss.outputFrame(eNames.toArray(new String[eNames.size()]),new String[l][]);
-        fr2.add(new Frame(nNames.toArray(new String[nNames.size()]), nvecs.toArray(new Vec[nvecs.size()])));
+        fr2.add(new Frame(nNames.toArray(new String[nNames.size()]), nvecs.toArray(new Vec[nvecs.size()])),false);
         return fr2;
     }
 
