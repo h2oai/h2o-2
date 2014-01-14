@@ -48,7 +48,7 @@ public class Progress2 extends Request2 {
   protected Response jobInProgress(final Job job, final Key dst) {
     progress = job.progress();
     return Response.poll(this, (int) (100 * job.progress()), 100, "job_key", job_key.toString(), "destination_key",
-        destination_key.toString());
+        dst.toString());
   }
 
   @Override public boolean toHTML(StringBuilder sb) {
