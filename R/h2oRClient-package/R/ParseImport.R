@@ -239,6 +239,15 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
   } else stop("All files failed to import!")
 }
 
+h2o.exportHDFS <- function(object, path) {
+  if(inherits(object, "H2OModelVA")) stop("h2o.exportHDFS does not work under VA")
+  else if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
+  if(!is.character(path)) stop("path must be of class character")
+  if(nchar(path) == 0) stop("path must be a non-empty string")
+  
+  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
+}
+
 h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
