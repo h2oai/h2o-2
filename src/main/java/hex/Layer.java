@@ -745,7 +745,7 @@ public abstract class Layer extends Iced {
   public static class TanhDropout extends Tanh {
     public TanhDropout(int units) {
       super(units);
-      dropout = new Dropout(units);
+//      dropout = new Dropout(units);
     }
   }
 
@@ -798,7 +798,7 @@ public abstract class Layer extends Iced {
   public static class Maxout extends Layer {
     public Maxout(int units) {
       this.units = units;
-      dropout = new Dropout(units);
+//      dropout = new Dropout(units);
     }
 
     @Override public void init(Layer[] ls, int index, boolean weights) {
@@ -906,7 +906,7 @@ public abstract class Layer extends Iced {
   public static class RectifierDropout extends Rectifier {
     public RectifierDropout(int units) {
       super(units);
-      dropout = new Dropout(units);
+//      dropout = new Dropout(units);
     }
   }
 
