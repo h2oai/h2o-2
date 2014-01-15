@@ -16,6 +16,7 @@ import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static hex.NeuralNet.ExecutionMode.*;
 
@@ -206,7 +207,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
-    RNG.seed = seed; //actually seed the random generator
+    RNG.seed = new AtomicLong(seed);
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
 //    reChunk(vecs);
@@ -331,8 +332,6 @@ public class NeuralNet extends ValidatedJob {
               if (!running) break; //MapReduce calls cancel() early, we are waiting for running = false
             }
           } while (true);
-
-          Log.info("Last evaluation at " + num + " samples.");
 
           // remove validation data
           if( adapted != null && adapted[1] != null )
@@ -1073,13 +1072,14 @@ public class NeuralNet extends ValidatedJob {
     }
   }
 
-  // Make a differently seeded random generator every time
-  // Ok, since we're using Hogwild anyway (impossible to get reproducibility on >1 threads)
+  // Make a differently seeded random generator every time someone asks for one
   public static class RNG {
-    public static long seed = new Random().nextLong();
+    // Atomicity is not really needed here (since in multi-threaded operation, the weights are simultaneously updated),
+    // but it is still done for posterity since it's cheap (and to be able to count the number of actual getRNG() calls)
+    public static AtomicLong seed = new AtomicLong(new Random().nextLong());
 
     public static Random getRNG() {
-      return water.util.Utils.getRNG(seed++);
+      return water.util.Utils.getDeterRNG(seed.getAndIncrement());
     }
   }
 }
