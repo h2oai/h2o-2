@@ -286,7 +286,6 @@ h2o.__isDone <- function(client, algo, resH) {
       url = ifelse(ind > 1, substr(res$response_info$redirect_url, 1, ind-1), res$response_info$redirect_url)
       !(res$response_info$status == "poll" || (res$response_info$status == "redirect" && url == page))
     } else
-      # res$response_info$status != "poll"
       res$response_info$status == "done"
   }
 }

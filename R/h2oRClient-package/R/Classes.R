@@ -427,7 +427,13 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
-h2o.table <- function(...) { if(length(c(...)) > 1) stop("Unimplemented"); h2o.__unop2("table", ...) }
+h2o.table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", "ifany", "always"), dnn = list.names(...), deparse.level = 1) { 
+  myData = c(...); idx = sapply(myData, function(y) { class(y) == "H2OParsedData" })
+  if(any(!idx)) stop("input must be H2OParsedData objects")
+  if(length(myData) > 1 || ncol(myData[[1]]) > 2) stop("Unimplemented")
+  h2o.__unop2("table", myData[[1]]) 
+}
+
 h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
@@ -830,6 +836,15 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
 })
+
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
+  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
+
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
+  function(x, value) {
+    if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
+    stop("Unimplemented"); return(x)
+  })
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
 
