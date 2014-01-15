@@ -86,7 +86,7 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
     Layer.shareWeights(ls[index], pre[index]);
     Layer.shareWeights(ls[index], pre[index + 1]);
     for( int i = 0; i < pre.length; i++ ) {
-      pre[i].init(pre, i, false, 0);
+      pre[i].init(pre, i, false);
     }
 
     _trainer = new Trainer.Direct(pre, 10, self());
