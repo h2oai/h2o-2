@@ -24,7 +24,7 @@ test.exec2.demo <- function(conn) {
   
   Log.info("Display count of AGE column levels")
   Log.info("Note: Currently only working on a single integer or factor column")
-  age.count = h2o.table(prostate.hex$AGE)
+  age.count = table(prostate.hex$AGE)
   print(head(age.count))
   
   Log.info("Run GLM2 on random sample of 50 observations")
