@@ -86,7 +86,7 @@ public abstract class Trainer {
 
     public Direct(Layer[] ls, double epochs, Key job) {
       super(ls);
-      _limit = (long) (epochs * ((Input) ls[0])._len);
+      _limit = (long) Math.ceil(epochs * ((Input) ls[0])._len);
       _job = job;
     }
 
@@ -273,6 +273,7 @@ public abstract class Trainer {
     }
 
     void done() {
+      NeuralNet.running = false;
       _instances.remove(_key);
       UKV.remove(_key);
       if( _job != null ) {

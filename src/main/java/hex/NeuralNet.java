@@ -39,7 +39,37 @@ public class NeuralNet extends ValidatedJob {
   public double input_dropout_ratio = 0.2;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class, json = true)
-  public int[] hidden = new int[] { 500 };
+  public int[] hidden = new int[] { 200, 200 };
+
+  @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 0, dmax = 1)
+  public double rate = .005;
+
+  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double rate_annealing = 1 / 1e6;
+
+  @API(help = "L1 regularization, can add stability", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double l1 = 0.0;
+
+  @API(help = "L2 regularization, can add stability", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double l2 = 0.001;
+
+  @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, json = true)
+  public double momentum_start = .5;
+
+  @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 0, json = true)
+  public long momentum_ramp = 1000000;
+
+  @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, json = true)
+  public double momentum_stable = .99;
+
+  @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
+  public double epochs = 10;
+
+  @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
+  public final long seed = new Random().nextLong();
+
+  @API(help = "Enable expert mode", filter = Default.class, json = false)
+  public boolean expert_mode = false;
 
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
@@ -47,58 +77,33 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0, json = true)
   public double initial_weight_scale = 0.01;
 
-  @API(help = "Learning rate", filter = Default.class, dmin = 0)
-  public double rate = .005;
-
-  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, json = true)
-  public double rate_annealing = 1 / 1e6;
-
-  @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class, json = true)
-  public float max_w2 = 15;
-
-  @API(help = "Momentum at the beginning of training", filter = Default.class, json = true)
-  public double momentum_start = .5;
-
-  @API(help = "Number of samples for which momentum increases", filter = Default.class, json = true)
-  public long momentum_ramp = 18000000;
-
-  @API(help = "Momentum once the initial increase is over", filter = Default.class, dmin = 0, json = true)
-  public double momentum_stable = .99;
-
-  //TODO: add a ramp down to 0 for l1 and l2
-
-  @API(help = "L1 regularization", filter = Default.class, dmin = 0, json = true)
-  public double l1 = 0.0;
-
-  @API(help = "L2 regularization", filter = Default.class, dmin = 0, json = true)
-  public double l2 = 0.001;
-
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
-  @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0, json = true)
-  public double epochs = 10;
-
-  @API(help = "Seed for the random number generator", filter = Default.class, json = true)
-  public final long seed = new Random().nextLong();
+  @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
+  public float max_w2 = Float.MAX_VALUE;
 
   //@API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
   public long warmup_samples = 0l;
 
-  @API(help = "How many samples to use for calculating training classification error (use 0 for all)", filter = Default.class, lmin = 0, json = false)
-  public long train_error_samples = 10000l;
+  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
+  public long score_training = 1000l;
 
-  @API(help = "How many samples to use for calculating validation classification error (use 0 for all)", filter = Default.class, lmin = 0, json = false)
-  public long valid_error_samples = 0l;
+  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
+  public long score_validation = 0l;
 
-  @API(help = "Diagnostics and stability check for hidden layers", filter = Default.class, json = false)
-  public boolean diagnostics = true;
+  @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = false)
+  public double score_interval = 2;
+
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
+  public boolean diagnostics = false;
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
     for (Argument arg : _arguments) {
-      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution") || arg._name.equals("mode") ) {
+      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")
+              || arg._name.equals("mode") || arg._name.equals("expert_mode")) {
          arg.setRefreshOnChange();
       }
     }
@@ -120,7 +125,7 @@ public class NeuralNet extends ValidatedJob {
       if (H2O.CLOUD._memary.length > 1) {
         //TODO: re-enable this
 //        arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
-//        mode = ExecutionMode.MultiNode;
+//        mode = ExecutionMode.MapReduce;
 
         //Temporary solution
         arg.disable("Distributed MapReduce mode is not yet fully supported. Will run in single-node mode, wasting "
@@ -138,11 +143,20 @@ public class NeuralNet extends ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
+    if (arg._name.equals("score_validation") && validation == null) {
+      arg.disable("Only if a validation set is specified.");
+    }
+    if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
+            || arg._name.equals("score_training") || arg._name.equals("score_validation")
+            || arg._name.equals("initial_weight_distribution") || arg._name.equals("initial_weight_scale")
+            || arg._name.equals("score_interval") || arg._name.equals("diagnostics")) {
+      if (!expert_mode)  arg.disable("Only in expert mode.");
+    }
   }
 
 
   public enum ExecutionMode {
-    SingleThread, SingleNode, MultiNode
+    SingleThread, SingleNode, MapReduce
   }
 
   public enum InitialWeightDistribution {
@@ -166,7 +180,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   // Hack: used to stop the monitor thread
-  private volatile boolean running = true;
+  public static volatile boolean running = true;
 
   public NeuralNet() {
     description = DOC_GET;
@@ -252,7 +266,7 @@ public class NeuralNet extends ValidatedJob {
     final long num_rows = source.numRows();
 
     if (mode == SingleThread) {
-      Log.info("Single thread execution mode");
+      Log.info("Entering single-threaded execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
     } else {
       // one node works on the first batch of points serially for improved stability
@@ -266,15 +280,15 @@ public class NeuralNet extends ValidatedJob {
       if (mode == SingleNode) {
         Log.info("Entering single-node (multi-threaded Hogwild) execution mode.");
         trainer = new Trainer.Threaded(ls, epochs, self());
-      } else if (mode == MultiNode) {
-        if (warmup_samples > 0 && mode == MultiNode) {
+      } else if (mode == MapReduce) {
+        if (warmup_samples > 0 && mode == MapReduce) {
           Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
           Trainer warmup = new Trainer.Threaded(ls, warmup_samples/num_rows, self());
           warmup.start();
           warmup.join();
           //TODO: send weights from master VM to all other VMs
         }
-        Log.info("Entering multi-node (MapReduce) execution mode.");
+        Log.info("Entering multi-node (MapReduce + multi-threaded Hogwild) execution mode.");
         trainer = new Trainer.MapReduce(ls, epochs, self());
       } else throw new RuntimeException("invalid execution mode.");
     }
@@ -287,7 +301,6 @@ public class NeuralNet extends ValidatedJob {
     Thread monitor = new Thread() {
       Errors[] trainErrors = trainErrors0, validErrors = validErrors0;
 
-
       @Override public void run() {
         try {
           Vec[] valid = null;
@@ -299,22 +312,32 @@ public class NeuralNet extends ValidatedJob {
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
             validResp = vs[vs.length - 1];
           }
-          //validate every 2 seconds (if we are fast enough)
-          long last_eval = runTimeMs();
+          //score the model every 2 seconds (or less often, if it takes longer to score)
           final long num_samples_total = (long)(Math.ceil(num_rows * epochs));
-          long num = 0;
-          while(!cancelled() && (running || num < num_samples_total)) {
-            num = eval(valid, validResp);
-            final long time_taken = runTimeMs() - last_eval;
-            if (time_taken < 2000) {
-              Thread.sleep(2000-time_taken); //assume it takes about the same time to score as last time
+          long num = -1, last_eval = runTimeMs();
+          do {
+            final long interval = (long)(score_interval * 1000); //time between evaluations
+            long time_taken = runTimeMs() - last_eval;
+            if (num >= 0 && time_taken < interval) {
+              Thread.sleep(interval - time_taken);
             }
             last_eval = runTimeMs();
-          }
+            num = eval(valid, validResp);
+
+            if (num >= num_samples_total) break;
+            if (mode != MapReduce) {
+              if (cancelled() || !running) break;
+            } else {
+              if (!running) break; //MapReduce calls cancel() early, we are waiting for running = false
+            }
+          } while (true);
+
+          Log.info("Last evaluation at " + num + " samples.");
 
           // remove validation data
           if( adapted != null && adapted[1] != null )
             adapted[1].remove();
+          Log.info("Training finished.");
         } catch( Exception ex ) {
           cancel(ex);
         }
@@ -326,10 +349,15 @@ public class NeuralNet extends ValidatedJob {
           int classes = ls[ls.length - 1].units;
           cm = new long[classes][classes];
         }
-        Errors e = eval(train, trainResp, train_error_samples, valid == null ? cm : null);
+        // score model on training set
+        Errors e = eval(train, trainResp, score_training, valid == null ? cm : null);
+        e.score_training = score_training == 0 ? train[0].length() : score_training;
         trainErrors = Utils.append(trainErrors, e);
+
+        // score model on validation set
         if( valid != null ) {
-          e = eval(valid, validResp, valid_error_samples, cm);
+          e = eval(valid, validResp, score_validation, cm);
+          e.score_validation = score_validation == 0 ? valid[0].length() : score_validation;
           validErrors = Utils.append(validErrors, e);
         }
         NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, nn);
@@ -352,21 +380,28 @@ public class NeuralNet extends ValidatedJob {
     trainer.join();
 
     // Gracefully terminate the job submitted via H2O web API
-    if (mode != MultiNode) {
+    if (mode != MapReduce) {
       running = false; //tell the monitor thread to finish too
       try {
         monitor.join();
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
-
-      // remove this job
-      H2OCountedCompleter task = _fjtask;
-      if( task != null )
-        task.tryComplete();
-      this.remove();
-      Log.info("Training finished.");
+    } else {
+      while (running) { //MapReduce will inform us that running = false
+        try {
+          Thread.sleep(1);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
     }
+
+    // remove this job -> stop H2O interface from refreshing
+    H2OCountedCompleter task = _fjtask;
+    if( task != null )
+      task.tryComplete();
+    this.remove();
 
   }
 
@@ -439,17 +474,12 @@ public class NeuralNet extends ValidatedJob {
 
   // classification scoring
   static boolean correct(Layer[] ls, Errors e, long[][] confusion) {
-    //Softmax for classification, one value per output class
     Softmax output = (Softmax) ls[ls.length - 1];
     if( output.target() == -1 )
       return false;
-    //Testing for this row
     for (Layer l : ls) l.fprop(false);
-    //Predicted output values
     float[] out = ls[ls.length - 1]._a;
-    //True target value
     int target = output.target();
-    //Score
     for( int o = 0; o < out.length; o++ ) {
       final boolean hitpos = (o == target);
       final float t = hitpos ? 1 : 0;
@@ -472,13 +502,9 @@ public class NeuralNet extends ValidatedJob {
 
   // regression scoring
   static void error(Layer[] ls, Errors e) {
-    //Linear output layer for regression
     Linear linear = (Linear) ls[ls.length - 1];
-    //Testing for this row
     for (Layer l : ls) l.fprop(false);
-    //Predicted target values
     float[] output = ls[ls.length - 1]._a;
-    //True target values
     float[] target = linear.target();
     e.mean_square = 0;
     for( int o = 0; o < output.length; o++ ) {
@@ -490,8 +516,8 @@ public class NeuralNet extends ValidatedJob {
   @Override protected Response redirect() {
     String redirectName = NeuralNetProgress.class.getSimpleName();
     return Response.redirect(this, redirectName, //
-        "job_key", job_key, //
-        "destination_key", destination_key);
+            "job_key", job_key, //
+            "destination_key", destination_key);
   }
 
   public static String link(Key k, String content) {
@@ -537,6 +563,13 @@ public class NeuralNet extends ValidatedJob {
 
     @API(help = "Cross entropy")
     public double cross_entropy = Double.POSITIVE_INFINITY;
+
+    @API(help = "Number of training set samples for scoring")
+    public long score_training;
+
+    @API(help = "Number of validation set samples for scoring")
+    public long score_validation;
+
 
     @Override public String toString() {
         return String.format("%.2f", (100 * classification))
@@ -635,9 +668,10 @@ public class NeuralNet extends ValidatedJob {
           unstable |= Double.isNaN(mean_bias[y])   || Double.isNaN(rms_bias[y])
                    || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
         }
-        for( int y = 1; y < layers.length-1; y++ ) {
-          unstable |= layers[y].unstable;
-        }
+      }
+      //always check for instability
+      for( int y = 1; y < layers.length-1; y++ ) {
+        unstable |= layers[y].unstable;
       }
     }
 
@@ -684,6 +718,9 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    private NeuralNet job;
+    private NeuralNetModel model;
+
     @API(help = "Model parameters")
     public NeuralNet parameters;
 
@@ -704,8 +741,8 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override protected Response serve() {
-      NeuralNet job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
-      NeuralNetModel model = UKV.get(destination_key);
+      job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
+      model = UKV.get(destination_key);
       if( model != null ) {
         parameters = model.parameters;
         training_errors = model.training_errors;
@@ -723,33 +760,41 @@ public class NeuralNet extends ValidatedJob {
     @Override public boolean toHTML(StringBuilder sb) {
       final String mse_format = "%2.6f";
       final String cross_entropy_format = "%2.6f";
-      Job nn = job_key == null ? null : Job.findJob(job_key);
-      NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
         final boolean classification = model.isClassifier();
-        final String cmTitle = "Confusion Matrix" + model.validation_errors == null ? " (Training Data)" : "";
-        Errors train = model.training_errors[model.training_errors.length - 1];
+        final String cmTitle = "Confusion Matrix" + (model.validation_errors == null ? " (Training Data)" : "");
+
+        // stats for training and validation
+        final Errors train = model.training_errors[model.training_errors.length - 1];
+        final Errors valid = model.validation_errors != null ? model.validation_errors[model.validation_errors.length - 1] : null;
+
         if (classification) {
           DocGen.HTML.section(sb, "Training classification error: " + formatPct(train.classification));
         }
         DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, train.mean_square));
         if (classification) {
           DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, train.cross_entropy));
-          if( model.validation_errors != null ) {
-            final Errors valid = model.validation_errors[model.validation_errors.length - 1];
+          if( valid != null ) {
             DocGen.HTML.section(sb, "Validation classification error: " + formatPct(valid.classification));
           }
         }
         if( model.validation_errors != null ) {
-          final Errors valid = model.validation_errors[model.validation_errors.length - 1];
           DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, valid.mean_square));
           if (classification) {
             DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, valid.cross_entropy));
           }
+          if( job != null ) {
+            // the number samples during validation set scoring is higher -> use that
+            long ps = valid.training_samples * 1000 / job.runTimeMs();
+            DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
+          }
         }
-        if( nn != null ) {
-          long ps = train.training_samples * 1000 / nn.runTimeMs();
-          DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
+        else {
+          if( job != null ) {
+            // the number samples during training set is the only number we have
+            long ps = train.training_samples * 1000 / job.runTimeMs();
+            DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
+          }
         }
         if (parameters != null && parameters.diagnostics) {
           DocGen.HTML.section(sb, "Hidden Layer Status");
@@ -791,7 +836,21 @@ public class NeuralNet extends ValidatedJob {
           String[] classes = model.classNames();
           NeuralNetScore.confusion(sb, cmTitle, classes, model.confusion_matrix);
         }
-        DocGen.HTML.section(sb, "Progress");
+        sb.append("<h3>" + "Progress" + "</h3>");
+        String training = "Number of training set samples for scoring: " + train.score_training;
+        if (train.score_training > 0) {
+          if (train.score_training < 1000) training += " (low, scoring might be inaccurate)";
+          if (train.score_training > 10000) training += " (large, scoring can be slow -> consider scoring manually)";
+        }
+        DocGen.HTML.section(sb, training);
+        if (valid != null) {
+          String validation = "Number of validation set samples for scoring: " + valid.score_validation;
+          if (valid.score_validation > 0) {
+            if (valid.score_validation < 1000) validation += " (low, scoring might be inaccurate)";
+            if (valid.score_validation > 10000) validation += " (large, scoring can be slow -> consider scoring manually)";
+          }
+          DocGen.HTML.section(sb, validation);
+        }
         sb.append("<table class='table table-striped table-bordered table-condensed'>");
         sb.append("<tr>");
         sb.append("<th>Training Time</th>");
@@ -807,21 +866,24 @@ public class NeuralNet extends ValidatedJob {
           sb.append("<th>Validation Classification Error</th>");
         }
         sb.append("</tr>");
-        Errors[] trains = model.training_errors;
-        for( int i = trains.length - 1; i >= 0; i-- ) {
+        for( int i = training_errors.length - 1; i >= 0; i-- ) {
           sb.append("<tr>");
-          sb.append("<td>" + PrettyPrint.msecs(trains[i].training_time_ms, true) + "</td>");
-          sb.append("<td>" + String.format("%,d", trains[i].training_samples) + "</td>");
-          sb.append("<td>" + String.format(mse_format, trains[i].mean_square) + "</td>");
-          if (classification) {
-            sb.append("<td>" + String.format(cross_entropy_format, trains[i].cross_entropy) + "</td>");
-            sb.append("<td>" + formatPct(trains[i].classification) + "</td>");
+          sb.append("<td>" + PrettyPrint.msecs(training_errors[i].training_time_ms, true) + "</td>");
+          if( validation_errors != null ) {
+            sb.append("<td>" + String.format("%,d", validation_errors[i].training_samples) + "</td>");
+          } else {
+            sb.append("<td>" + String.format("%,d", training_errors[i].training_samples) + "</td>");
           }
-          if( model.validation_errors != null ) {
-            sb.append("<td>" + String.format(mse_format, model.validation_errors[i].mean_square) + "</td>");
+          sb.append("<td>" + String.format(mse_format, training_errors[i].mean_square) + "</td>");
+          if (classification) {
+            sb.append("<td>" + String.format(cross_entropy_format, training_errors[i].cross_entropy) + "</td>");
+            sb.append("<td>" + formatPct(training_errors[i].classification) + "</td>");
+          }
+          if( validation_errors != null ) {
+            sb.append("<td>" + String.format(mse_format, validation_errors[i].mean_square) + "</td>");
             if (classification) {
-              sb.append("<td>" + String.format(cross_entropy_format, model.validation_errors[i].cross_entropy) + "</td>");
-              sb.append("<td>" + formatPct(model.validation_errors[i].classification) + "</td>");
+              sb.append("<td>" + String.format(cross_entropy_format, validation_errors[i].cross_entropy) + "</td>");
+              sb.append("<td>" + formatPct(validation_errors[i].classification) + "</td>");
             }
           } else
             sb.append("<td></td><td></td><td></td>");
