@@ -679,7 +679,7 @@ public class Job extends Request2 {
         p = p.error(ex.getMessage());
         DKV.put(progressKey(), p);
       }
-      cancel();
+      cancel(ex);
     }
   }
 
