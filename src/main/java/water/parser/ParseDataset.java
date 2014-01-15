@@ -365,7 +365,8 @@ public final class ParseDataset extends Job {
     @Override
     public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       UKV.remove(job._progress);
-      job.cancel("Got Exception " + ex.getClass().getSimpleName() + ", with msg " + ex.getMessage());
+      if(!(ex instanceof JobCancelledException))
+        job.cancel("Got Exception " + ex.getClass().getSimpleName() + ", with msg " + ex.getMessage());
       return super.onExceptionalCompletion(ex, caller);
     }
   }
