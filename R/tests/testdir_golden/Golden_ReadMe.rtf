@@ -47,6 +47,9 @@ Test: glm2:10 tests non regularized glm2 against both glmnet and r\'92s standard
 \
 Test: glm1:1 - tests to outstanding jira ticket that produces NAN on null deviance for airlines - tests null deviance is numeric. NOPASS as of Jan 13, 2014\
 \
+Test:glm1:2 - tests whether treatment of factors in GLM1 behaves as expected for full data set, no CV or test train split on family = gaussian\
+\
+Test:glm1:3 - tests whether treatment of factors in GLM1 behaves as expected for full data set, no CV or test train split on family = binomial\
 \
 \
 
