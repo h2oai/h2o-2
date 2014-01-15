@@ -9,7 +9,7 @@ scalaVersion := "2.10.3"
 mainClass in Compile := Some("water.api.dsl.ShalalaRepl")
 
 /**
- * Configure dependencies.
+ * Configure dependencies - compile and runtime.
  */
 libraryDependencies += "commons-lang" % "commons-lang" % "2.4"
 
@@ -27,9 +27,15 @@ libraryDependencies += "net.java.dev.jets3t" % "jets3t" % "0.6.1"
 
 libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.6.2"
 
+libraryDependencies += "org.javassist" % "javassist" % "3.16.1-GA"
+
 libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "1.1.0"
 
+libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-library" % v }
+
 libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-compiler" % v }
+
+libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "jline" % v }
 
 // Test dependencies
 libraryDependencies += "org.specs2" %% "specs2" % "2.2.3" % "test"
@@ -44,7 +50,26 @@ scalacOptions in Test ++= Seq("-Yrangepos")
 resolvers ++= Seq("snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
                   "releases"  at "http://oss.sonatype.org/content/repositories/releases")
 
-// Setup classpath
-(unmanagedBase in Compile) := baseDirectory.value / "../target/"
 
-(unmanagedClasspath in Runtime) := Seq( Attributed.blank( new File( "../target/classes/")) )
+// Setup classpath to have access to h2o.jar
+val h2oClasses = baseDirectory / "../target/classes"
+
+unmanagedClasspath in Compile += h2oClasses.value
+
+unmanagedClasspath in Runtime += h2oClasses.value
+
+// Setup run 
+// - Fork in run
+fork in run := true
+
+connectInput in run := true
+
+outputStrategy in run := Some(StdoutOutput)
+
+//javaOptions in run += "-Xdebug"
+
+//javaOptions in run += "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"
+
+// - Change the base directory
+baseDirectory in run := h2oClasses.value
+
