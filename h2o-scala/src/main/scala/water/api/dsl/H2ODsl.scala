@@ -24,13 +24,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   type FAOp = T_A2B_Transf[scala.Double]
   // Double collector
   type CDOp = T_T_Collect[scala.Double,scala.Double]
-  
-  // Dummy tester and H2O launcher - should launch H2O with REPL
-  def main(args: Array[String]): Unit = {
-    println("Launching H2O...")
-    water.Boot.main(Array("-mainClass", "water.api.dsl.ScAlH2ORepl"));
-  }
-  
+    
   // An object to represent an empty range selector 
   case object * extends Range(0, -1, 1);
   
