@@ -101,12 +101,6 @@ public class Jobs extends Request {
         return progress(Float.parseFloat(elm.getAsString()));
       }
     });
-    r.setBuilder(JOBS + "." + "CANCELLED", new ElementBuilder() {
-      @Override
-      public String elementToString(JsonElement elm, String contextName) {
-        return "";
-      }
-    });
     r.setBuilder(JOBS + "." + "result", new ElementBuilder() {
       @Override
       public String objectToString(JsonObject obj, String contextName) {

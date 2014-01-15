@@ -350,7 +350,7 @@ public class Job extends Request2 {
   }
 
   public void cancel() {
-    cancel("");
+    cancel((String)null);
   }
   public void cancel(Throwable ex){
 
