@@ -10,7 +10,7 @@ public class LoadDatasets extends Job {
   public static void main(String[] args) throws Exception {
     Class job = LoadDatasets.class;
     samples.launchers.CloudLocal.launch(job, 1);
-//    samples.launchers.CloudProcess.launch(job, 4);
+//    samples.launchers.CloudProcess.launch(job, 2);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
@@ -18,6 +18,8 @@ public class LoadDatasets extends Job {
   }
 
   void load() {
+    TestUtil.parseFromH2OFolder("smalldata/./mnist/test.csv.gz");
+    TestUtil.parseFromH2OFolder("smalldata/./mnist/train.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./1_100kx7_logreg.data.gz");
     TestUtil.parseFromH2OFolder("smalldata/./2_100kx7_logreg.data.gz");
     TestUtil.parseFromH2OFolder("smalldata/./AID362red_test.csv.gz");
@@ -162,8 +164,6 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./logreg/umass_statdata/uis.dat");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/why_perfect_training_100x500.csv");
     TestUtil.parseFromH2OFolder("smalldata/./mixed_causes_NA.csv");
-    TestUtil.parseFromH2OFolder("smalldata/./mnist/test.csv.gz");
-    TestUtil.parseFromH2OFolder("smalldata/./mnist/train.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./mtcars.csv");
     TestUtil.parseFromH2OFolder("smalldata/./neural/Benchmark_dojo_test.data");
     TestUtil.parseFromH2OFolder("smalldata/./neural/eightsq.data");
