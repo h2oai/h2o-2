@@ -246,8 +246,9 @@ abstract trait T_MR[T <: DFrame] {
 trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given representation of key
 
   // Parse a dataset
-  def parse(s:String):DFrame = {
-    val dest: Key = Key.make(s+".hex")
+  def parse(s:String):DFrame = parse(s, s+".hex")
+  def parse(s:String, destKey:String):DFrame = {
+    val dest: Key = Key.make(destKey)
     val fkey = NFSFileVec.make(new File(s))
     val f = ParseDataset2.parse(dest, Array(fkey))
     UKV.remove(fkey)
