@@ -490,21 +490,21 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
             print "cloud_start['%s']: %s" % (v, cs[v])
 
         # write out something that shows how the cloud could be rebuilt, since it's a decoupled cloud build.
-        build_cloud_rerun_sh = LOG_DIR + "/" + 'build_cloud_rerun.sh'
-        with open(build_cloud_rerun_sh, 'w') as f:
-            f.write("echo << ! > ./temp_for_build_cloud_rerun.sh\n")
-            f.write("echo 'Rebuilding a cloud built with %s at %s by %s on %s in %s'\n" % \
-                (cs['python_test_name'], cs['time'], cs['username'], cs['ip'], cs['cwd']))
-            f.write("cd %s\n" % cs['cwd'])
-            if cs['config_json']:
-                f.write("%s -cj %s\n" % (cs['python_cmd_line'], cs['config_json']))
-            else:
-                f.write("%s\n" % cs['python_cmd_line'])
-            f.write("!\n")
-            f.write("ssh %s@%s < ./temp_for_build_cloud_rerun.sh\n" % (cs['username'], cs['ip']))
-        # make it executable
-        t = os.stat(build_cloud_rerun_sh)
-        os.chmod(build_cloud_rerun_sh, t.st_mode | stat.S_IEXEC)
+###         build_cloud_rerun_sh = LOG_DIR + "/" + 'build_cloud_rerun.sh'
+###         with open(build_cloud_rerun_sh, 'w') as f:
+###             f.write("echo << ! > ./temp_for_build_cloud_rerun.sh\n")
+###             f.write("echo 'Rebuilding a cloud built with %s at %s by %s on %s in %s'\n" % \
+###                 (cs['python_test_name'], cs['time'], cs['username'], cs['ip'], cs['cwd']))
+###             f.write("cd %s\n" % cs['cwd'])
+###             if cs['config_json']:
+###                 f.write("%s -cj %s\n" % (cs['python_cmd_line'], cs['config_json']))
+###             else:
+###                 f.write("%s\n" % cs['python_cmd_line'])
+###             f.write("!\n")
+###             f.write("ssh %s@%s < ./temp_for_build_cloud_rerun.sh\n" % (cs['username'], cs['ip']))
+###         # make it executable
+###         t = os.stat(build_cloud_rerun_sh)
+###         os.chmod(build_cloud_rerun_sh, t.st_mode | stat.S_IEXEC)
 
         # this is the internal node state for python..h2o.nodes rebuild
         nodeStateList = cloneJson['h2o_nodes']
@@ -530,7 +530,7 @@ def setup_benchmark_log():
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 # node_count is per host if hosts is specified.
-def build_cloud(node_count=2, base_port=54321, hosts=None,
+def build_cloud(node_count=1, base_port=54321, hosts=None,
     timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
     # redirect to build_cloud_with_json if a command line arg
@@ -652,24 +652,25 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     cs_username = python_username
     cs_ip = python_cmd_ip
 
-    # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
-    print "Writing the test_rerun.sh in", LOG_DIR
-    test_rerun_sh = LOG_DIR + "/" + 'test_rerun.sh'
-    with open(test_rerun_sh, 'w') as f:
-        f.write("echo << ! > ./temp_for_test_rerun.sh\n")
-        f.write("echo 'rerunning %s that originally ran at %s by %s on %s in %s'\n" % \
-                (cs_python_test_name, cs_time, cs_username, cs_ip, cs_cwd))
-        f.write("cd %s\n" % cs_cwd)
-        if cs_config_json:
-            f.write("%s -cj %s\n" % (cs_python_cmd_line, cs_config_json))
-        else:
-            f.write("%s\n" % cs_python_cmd_line)
-        f.write("!\n")
-        f.write("ssh %s@%s < temp_for_test_rerun.sh\n" % (cs_username, cs_ip))
+###     # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
+###     print "Writing the test_rerun.sh in", LOG_DIR
+###     test_rerun_sh = LOG_DIR + "/" + 'test_rerun.sh'
+###     with open(test_rerun_sh, 'w') as f:
+###         f.write("echo << ! > ./temp_for_test_rerun.sh\n")
+###         f.write("echo 'rerunning %s that originally ran at %s by %s on %s in %s'\n" % \
+###                 (cs_python_test_name, cs_time, cs_username, cs_ip, cs_cwd))
+###         f.write("cd %s\n" % cs_cwd)
+###         if cs_config_json:
+###             f.write("%s -cj %s\n" % (cs_python_cmd_line, cs_config_json))
+###         else:
+###             f.write("%s\n" % cs_python_cmd_line)
+###         f.write("!\n")
+###         f.write("ssh %s@%s < temp_for_test_rerun.sh\n" % (cs_username, cs_ip))
+### 
+###     # make it executable
+###     t = os.stat(test_rerun_sh)
+###     os.chmod(test_rerun_sh, t.st_mode | stat.S_IEXEC)
 
-    # make it executable
-    t = os.stat(test_rerun_sh)
-    os.chmod(test_rerun_sh, t.st_mode | stat.S_IEXEC)
 # dump the h2o.nodes state to a json file # include enough extra info to have someone rebuild the cloud if a test fails
     # that was using that cloud.
     if create_json:
@@ -1078,16 +1079,16 @@ class H2O(object):
                     # HACK: these are missing the "2/" prefix for now
                     # 'KMeans2Progress' in str(redirect_url) or
                     # 'GLMModelView' in str(redirect_url) or
-                    if  'NeuralNetProgress' in str(redirect_url) or \
-                        'PCAProgressPage' in str(redirect_url):
-                        if "2/" not in str(redirect_url):
-                            print "Hacking in the 2/ prefix..need to fix h2o?"
-                            redirect_url = "2/" + redirect_url
-                    if  'DRFProgressPage' in str(redirect_url):
-                        if "2/" not in str(redirect_url):
-                            # already has a leading /?
-                            print "Hacking in the 2/ prefix..need to fix h2o?"
-                            redirect_url = "2" + redirect_url
+###                     if  'NeuralNetProgress' in str(redirect_url) or \
+###                         'PCAProgressPage' in str(redirect_url):
+###                         if "2/" not in str(redirect_url):
+###                             print "Hacking in the 2/ prefix..need to fix h2o?"
+###                             redirect_url = "2/" + redirect_url
+###                     if  'DRFProgressPage' in str(redirect_url):
+###                         if "2/" not in str(redirect_url):
+###                             # already has a leading /?
+###                             print "Hacking in the 2/ prefix..need to fix h2o?"
+###                             redirect_url = "2" + redirect_url
 
                     if redirect_url:
                         url = self.__url(redirect_url)
