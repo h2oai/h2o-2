@@ -1,9 +1,9 @@
-Scalala
+Shalala
 =======
 
 Overview
 --------
-Scalala is a Scala library providing access to H2O API via a dedicated DSL
+Shalala is a Scala library providing access to H2O API via a dedicated DSL
 and also a REPL integrated into H2O.
 
 Currently the library supports following expressions abstracting H2O API:
@@ -38,19 +38,29 @@ M/R commands
                           - function is (Double=>Boolean) 
 ```
 
+Build Scalala
+-------------
+
+To build Shalala `sbt` is required. You can get `sbt` from http://www.scala-sbt.org/release/docs/Getting-Started/Setup.
+
+To compile Shalala please type:
+```bash
+sbt compile
+```
+
 Launch REPL
 -----------
-The binary version of H2O with integrated Scala is accessible [here](s3.amazonaws.com/h2o-release/h2o/h2oscala/latest.html)
-H2O offers command `-scala_repl` which launches embedded Scala REPL.
+Shalala provides an integrated Scala REPL exposing H2O DSL. 
+You can start REPL via `sbt`:
 
 ```bash
-java -Xmx3G -jar target/h2o.jar -scala_repl
+sbt run
 ```
 
 Key points
 ----------
-- using specialization (to allow for generation code using primitive types)
-- all objects passed around cloud has to inherits from `water.Iced`
+- Using primitive types specialization (to allow for generation code using primitive types)
+- All objects passed around cloud has to inherits from `water.Iced`
 
 Examples
 --------
@@ -71,22 +81,28 @@ f("cylinders") map (new BOp {
     })
 ```
 
-ToDos
------
-- better typing
-- better slicing and filtering
-- API to access algos
-
 
 FAQs
 ----
 
-### How to generate Eclipse project?
-- Launch sbt
-- In sbt use the command _eclipse_ to create Eclipse project files
+### How to generate Eclipse project and import it into Eclipse?
+- Launch `sbt`
+- In `sbt` use the command `eclipse` to create Eclipse project files
 ```
 > eclipse
 ```
 - In Eclipse use the _Import Wizard_ to import the project into workspace
+
+### How to run REPL from Eclipse?
+- Import h2o-scala project into Eclipse
+- Launch `water.api.dsl.ShalalaRepl` as Scala application
+
+### How to generate Idea project and import it?
+- Launch `sbt`
+- In `sbt` use the command `gen-idea` to create Idea project files
+```
+> gen-idea
+```
+- In Idea open the project located in h2o-scala directory
 
 
