@@ -117,7 +117,7 @@ Future:
     Classes.R   sum H2OParsedData               ??
     Classes.R   is.na   H2OParsedData               ??
     Classes.R   h2o.cut H2OParsedData               vecTask??
-    Classes.R   h2o.table   H2OParsedData               multiVecTask??
+    Classes.R   table   H2OParsedData               multiVecTask??
     Classes.R   as.factor  H2OParsedData               vecTask (assuming)
     Classes.R   colnames    H2OParsedData               frameTask
     Classes.R   names   H2OParsedData               frameTask
