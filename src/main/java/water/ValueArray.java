@@ -2,10 +2,7 @@ package water;
 
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
-import water.fvec.AppendableVec;
-import water.fvec.Frame;
-import water.fvec.NewChunk;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.util.Log;
 
 import java.io.IOException;
