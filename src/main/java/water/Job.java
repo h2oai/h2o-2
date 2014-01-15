@@ -393,8 +393,7 @@ public class Job extends Request2 {
 
   protected void onCancelled() {
   }
-
-  public boolean cancelled() { return cancelled(job_key); }
+  public boolean cancelled() { return end_time == CANCELLED_END_TIME; }
   public static boolean cancelled(Key key) {
     return DKV.get(key) == null;
   }

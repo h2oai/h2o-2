@@ -6,6 +6,7 @@ import java.util.concurrent.*;
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
 import water.DException.DistributedException;
+import water.Job.JobCancelledException;
 import water.util.Log;
 
 /**  A Distributed DTask.
@@ -76,6 +77,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
         Throwable tex = eex.getCause();
         if( tex instanceof Error ) throw (Error)tex;
         if( tex instanceof DistributedException ) throw (DistributedException)tex;
+        if(tex instanceof JobCancelledException)throw (JobCancelledException)tex;
         throw new RuntimeException(tex);
       }
       catch(CancellationException cex) { Log.errRTExcept(cex); }
