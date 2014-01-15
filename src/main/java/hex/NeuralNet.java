@@ -96,7 +96,7 @@ public class NeuralNet extends ValidatedJob {
   public double score_interval = 2;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
-  public boolean diagnostics = false;
+  public boolean diagnostics = true;
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
