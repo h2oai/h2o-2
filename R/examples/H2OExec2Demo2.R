@@ -1,9 +1,11 @@
 library(h2o)
-myIP = "192.168.1.161"; myPort = 54321
+# myIP = "192.168.1.161"; myPort = 54321
+myIP = "23.22.188.100"; myPort = 54321
 remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
 
 # Import airlines dataset to H2O
-airPath = "hdfs://192.168.1.161/datasets/airlines.clean/earl/original/2007.csv.gz"
+# airPath = "hdfs://192.168.1.161/datasets/airlines.clean/earl/original/2007.csv.gz"
+airPath = "s3n://h2o-airlines-unpacked/allyears.1987.2013.csv"
 airlines.hex = h2o.importFile(remoteH2O, path = airPath, key = "a.hex")   # Note: Make sure to set the key so first character is an alphabetic letter
 
 # Print out basic summary
@@ -18,9 +20,12 @@ as.data.frame(dest.count)
 
 # Extract small sample (with replacement)
 airlines.samp = airlines.hex[sample(1:nrow(airlines.hex), 500),]
-# airlines.samp.df = as.data.frame(airlines.samp)
-myY = "ArrDelay"; myX = c("Origin", "Dest", "Distance", "FlightNum", "UniqueCarrier", "Month", "DayofMonth", "DayOfWeek", "CRSElapsedTime")
-airlines.glm = h2o.glm.FV(x = myX, y = myY, data = airlines.samp, family = "gaussian")
+airlines.samp.df = as.data.frame(airlines.samp)
+# myY = "ArrDelay"; myX = c("Origin", "Dest", "Distance", "FlightNum", "UniqueCarrier", "Month", "DayofMonth", "DayOfWeek", "CRSElapsedTime")
+# airlines.glm = h2o.glm.FV(x = myX, y = myY, data = airlines.samp, family = "gaussian")
+myY <- 'IsArrDelayed'
+myX <- c('Year', 'Month', 'DayofMonth', 'DayOfWeek', 'CRSDepTime', 'CRSArrTime', 'UniqueCarrier', 'FlightNum', 'CRSElapsedTime', 'Origin', 'Dest', 'Distance')
+airlines.glm = h2o.glm.FV(x = myX, y = myY, data = airlines.hex, family = "binomial")
 print(airlines.glm)
 
 # Get quantiles and examine outliers
@@ -49,16 +54,18 @@ airlines.test = h2o.assign(temp, "airlines.test")
 nrow(airlines.train) + nrow(airlines.test)
 
 # Run GBM on training set and predict on test set
-airlines.gbm = h2o.gbm(x = myX, y = myY, distribution = "gaussian", data = airlines.train, validation = airlines.test, n.trees = 3)
+# airlines.gbm = h2o.gbm(x = myX, y = myY, distribution = "gaussian", data = airlines.train, validation = airlines.test, n.trees = 3)
+airlines.gbm = h2o.gbm(x = myX, y = myY, distribution = "multinomial", data = airlines.train, validation = airlines.test, n.trees = 5, interaction.depth = 3)
 print(airlines.gbm)
 airlines.pred = h2o.predict(airlines.gbm, airlines.test)
 summary(airlines.pred)
 
 # Create new column based on 25% quantile
-# airlines.hex[,30] = airlines.hex$ArrDelay > quantile(airlines.hex$ArrDelay)["75%"]
-# airlines.hex[,31] = airlines.hex$DepDelay > quantile(airlines.hex$DepDelay, probs = 0.75)
-airlines.hex[,30] = airlines.hex$DepTime - airlines.hex$CRSDepTime >= 15
-airlines.hex[,31] = airlines.hex$ArrTime - airlines.hex$CRSArrTime >= 15
+newCol = ncol(airlines.hex)+1
+airlines.hex[,newCol] = airlines.hex$ArrDelay > quantile(airlines.hex$ArrDelay)["75%"]
+airlines.hex[,newCol+1] = airlines.hex$DepDelay > quantile(airlines.hex$DepDelay, probs = 0.75)
+# airlines.hex[,newCol] = airlines.hex$DepTime - airlines.hex$CRSDepTime >= 15
+# airlines.hex[,newCol+1] = airlines.hex$ArrTime - airlines.hex$CRSArrTime >= 15
 head(airlines.hex)
-airlines.glm.lin = h2o.glm.FV(y = 31, x = myX, data = airlines.hex, family = "binomial", nfolds = 2)
+airlines.glm.lin = h2o.glm.FV(y = newCol, x = myX, data = airlines.hex, family = "binomial", nfolds = 2)
 print(airlines.glm.lin)

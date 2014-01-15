@@ -119,7 +119,6 @@ public class Jobs extends Request {
               "if(showhide.innerHTML == '') showhide.innerHTML = '<pre>" + ex + "</pre>';" +
               "else showhide.innerHTML = '';" +
               "\">FAILED</a>\n<div id='"+ rid +"'></div>\n";
-          System.out.println("res = " + res);
           return res;
         } else if(obj.has("val")){
           return obj.get("val").getAsString();
