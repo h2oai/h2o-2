@@ -1,6 +1,5 @@
 package hex;
 
-import hex.rng.MersenneTwisterRNG;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -8,6 +7,8 @@ import water.fvec.Chunk;
 import water.fvec.Vec;
 
 import java.util.Random;
+
+import static hex.NeuralNet.RNG.getRNG;
 
 /**
  * Neural network layer.
@@ -136,13 +137,6 @@ public abstract class Layer extends Iced {
     private boolean unit_active(int o) {
       return (_bits[o / 8] & (1 << (o % 8))) != 0;
     }
-  }
-
-  // Make a differently seeded random generator every time
-  // Ok, since we're using Hogwild anyway (impossible to get reproducibility on >1 threads)
-  private static Random getRNG() {
-    final long seed = new Random().nextLong();
-    return new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
   }
 
   public final void init(Layer[] ls, int index, NeuralNet p) {

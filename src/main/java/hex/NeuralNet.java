@@ -80,7 +80,7 @@ public class NeuralNet extends ValidatedJob {
   public double epochs = 10;
 
   @API(help = "Seed for the random number generator", filter = Default.class, json = true)
-  public long seed = new Random().nextLong(); //TODO: use
+  public final long seed = new Random().nextLong();
 
   //@API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
   public long warmup_samples = 0l;
@@ -192,6 +192,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
+    RNG.seed = seed; //actually seed the random generator
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
 //    reChunk(vecs);
@@ -298,10 +299,17 @@ public class NeuralNet extends ValidatedJob {
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
             validResp = vs[vs.length - 1];
           }
-
-          //validate continuously
-          while(!cancelled() && running) {
-            eval(valid, validResp);
+          //validate every 2 seconds (if we are fast enough)
+          long last_eval = runTimeMs();
+          final long num_samples_total = (long)(Math.ceil(num_rows * epochs));
+          long num = 0;
+          while(!cancelled() && (running || num < num_samples_total)) {
+            num = eval(valid, validResp);
+            final long time_taken = runTimeMs() - last_eval;
+            if (time_taken < 2000) {
+              Thread.sleep(2000-time_taken); //assume it takes about the same time to score as last time
+            }
+            last_eval = runTimeMs();
           }
 
           // remove validation data
@@ -343,7 +351,7 @@ public class NeuralNet extends ValidatedJob {
     monitor.start();
     trainer.join();
 
-    // hack to gracefully terminate the job submitted via H2O web API
+    // Gracefully terminate the job submitted via H2O web API
     if (mode != MultiNode) {
       running = false; //tell the monitor thread to finish too
       try {
@@ -1000,6 +1008,16 @@ public class NeuralNet extends ValidatedJob {
         t._domain = vecs[v]._domain;
         vecs[v] = t;
       }
+    }
+  }
+
+  // Make a differently seeded random generator every time
+  // Ok, since we're using Hogwild anyway (impossible to get reproducibility on >1 threads)
+  public static class RNG {
+    public static long seed = new Random().nextLong();
+
+    public static Random getRNG() {
+      return water.util.Utils.getRNG(seed++);
     }
   }
 }
