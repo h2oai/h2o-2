@@ -27,7 +27,7 @@ public class DLSM {
 
   public static abstract class LSMSolver extends Iced {
     public double _lambda;
-    public final double _alpha;
+    public double _alpha;
 
     public LSMSolver(double lambda, double alpha){
       _lambda = lambda;
@@ -102,6 +102,7 @@ public class DLSM {
     public static final double DEFAULT_ALPHA = 0.5;
     public double _orlx = 1;//1.4; // over relaxation param
     public double _rho = 1e-3;
+    public boolean _autoHandleNonSPDMatrix = false;
 
     public boolean normalize() {
       return _lambda != 0;
@@ -132,14 +133,19 @@ public class DLSM {
       int attempts = 0;
       Cholesky chol = gram.cholesky(null);
       double rhoAdd = 0;
-      while(!chol._isSPD && attempts < 10){
-        double rhoIncrement = _rho*(1<< ++attempts);
-        gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
-        rhoAdd += rhoIncrement;
-        gram.cholesky(chol);
-      }
+      if(!chol._isSPD && _autoHandleNonSPDMatrix)
+        while(!chol._isSPD && attempts < 10){
+          double rhoIncrement = _rho*(1<< ++attempts);
+          gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
+          rhoAdd += rhoIncrement;
+          gram.cholesky(chol);
+        }
       if(!chol._isSPD) throw new NonSPDMatrixException();
-      _rho += rhoAdd;
+      if(_lambda == 0){
+        _alpha = 0;
+        _lambda = rhoAdd;
+      } else
+        _rho += rhoAdd;
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
         System.arraycopy(gram._xy, 0, z, 0, gram._xy.length);
         chol.solve(z);

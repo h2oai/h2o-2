@@ -177,7 +177,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
   }
   private V result(){
-    Throwable t = _dt.getException();
+    Throwable t = _dt.getDException();
     if(t != null)throw  new RuntimeException(t);
     return _dt;
   }
@@ -279,7 +279,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     @Override public void onCompletion( CountedCompleter caller ) {
       // Send results back
       DTask origDt = _dt;
-      DTask dt = _dt;// = _dt;           // _dt can go null the instant its send over wire
+      DTask dt = origDt; // _dt can go null the instant its send over wire
       do {           // Retry loop for broken TCP sends
         AutoBuffer ab = null;
         try {
@@ -296,7 +296,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
       } while((dt = _dt) != null); // end of while(true)
-      if(dt == null)Log.info("Cancelled remote task#"+_tsknum+" "+origDt.getClass()+" to "+_client + " has been cancelled by remote");
+      if( dt == null )
+        Log.info("Cancelled remote task#"+_tsknum+" "+origDt.getClass()+" to "+_client + " has been cancelled by remote");
       else if( (dt instanceof DRemoteTask || dt instanceof MRTask2) && dt.logVerbose() )
         Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck

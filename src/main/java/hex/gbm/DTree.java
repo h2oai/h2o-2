@@ -544,7 +544,7 @@ public class DTree extends Iced {
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
       errs[errs.length-1] = err;
       cms = Arrays.copyOf(prior.cms,prior.cms.length+1);
-      cms[errs.length-1] = cm;
+      cms[cms.length-1] = cm;
       if(trees == null)treeBits = prior.treeBits;
       else {
         assert trees.length == nclasses(): "Trees="+trees.length+" nclasses()="+nclasses();
@@ -563,8 +563,11 @@ public class DTree extends Iced {
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
     // Most recent ConfusionMatrix
-    @Override public ConfusionMatrix cm() { return cms == null ? null : new ConfusionMatrix(cms[cms.length-1]); }
+    @Override public ConfusionMatrix cm() { 
+      long cms[][][] = this.cms; // Avoid racey update; read it once
+      return cms == null || cms.length == 0 || cms[cms.length-1] == null ? null : new ConfusionMatrix(cms[cms.length-1]); }
     @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
+    @Override public double mse() { return errs == null || errs.length == 0 ? Double.NaN : errs[errs.length-1]; }
 
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
@@ -650,6 +653,7 @@ public class DTree extends Iced {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
+        last = isClassifier() ? last : errs.length-1; // for regressor reports all errors
         for( int i=last; i>=0; i-- )
           sb.append("<td>").append(i).append("</td>");
         sb.append("</tr>");

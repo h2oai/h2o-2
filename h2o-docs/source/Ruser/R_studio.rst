@@ -4,7 +4,7 @@ H\ :sub:`2`\ O in R Studio
 ---------------------------
 
 Installation of H\ :sub:`2`\ O Package in R
-“”””””””””””””””””””””””””””””””””””””””””””
+""""""""""""""""""""""""""""""""""""""""""""
 
 These instructions assume you are using R Studio 2.14.0 or later.  
 
@@ -62,10 +62,13 @@ Your IP and port may be different, depending on whether you are running H\ :sub:
 
 
 Upgrading the H\ :sub:`2`\ O R Packages
-“”””””””””””””””””””””””””””””””””””””””
+"""""""""""""""""""""""""""""""""""""""
 
 
 Users may wish to manually upgrade their R packages. For instance, if you are running the bleeding edge developer build, it’s possible that the code has changed, but that the revision number has not, in which case manually upgrading ensures the most current version of not only the H2O code, but the corresponding R code as well.
+
+
+
 
  
 

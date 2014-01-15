@@ -55,7 +55,7 @@ public class DRFTest extends TestUtil {
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
-        a( a(0,  2, 0, 0, 0),
+        a( a(2,  3, 0, 3, 1),
            a(1, 51, 0, 3, 1),
            a(0,  0, 0, 0, 0),
            a(0,  2, 0,16, 2),

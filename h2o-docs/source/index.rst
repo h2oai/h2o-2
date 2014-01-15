@@ -21,8 +21,8 @@ This section is for new users, and provides information about how to install and
    deployment/multinode
    Ruser/R_studio
    Ruser/Rinstall
-   Ruser/Rh2opackage
    newuser/ec2
+   developuser/quickstart_scala.rst
 
 .. toctree::
    :maxdepth: 2

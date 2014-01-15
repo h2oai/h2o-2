@@ -1,13 +1,11 @@
 package water.parser;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import water.*;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
-import water.util.Log;
 import water.util.Utils;
 
 /** Class responsible for actual parsing of the datasets.
@@ -461,7 +459,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._min = _min[i];
       cols[i]._mean = _mean[i];
       cols[i]._sigma = _sigma[i];
-      cols[i]._name = _colNames != null?_colNames[i]:Integer.toString(i);
+      cols[i]._name = _colNames != null?_colNames[i]:(Integer.toString(i));
       off += Math.abs(cols[i]._size);
     }
     // let any pending progress reports finish

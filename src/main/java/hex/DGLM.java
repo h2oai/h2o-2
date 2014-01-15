@@ -171,7 +171,11 @@ public abstract class DGLM {
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
-      res.addProperty("family", _family.toString());
+      res.addProperty("family", _family._family.toString());
+      if(_family._family == Family.tweedie){
+        res.addProperty("variance_power", _family._tweedieVariancePower);
+        res.addProperty("link_power", _link._tweedieLinkPower);
+      }
       res.addProperty("link", _link.toString());
       res.addProperty("betaEps", _betaEps);
       res.addProperty("maxIter", _maxIter);
@@ -1769,6 +1773,18 @@ public abstract class DGLM {
     H2O.submitTask(fjtask);
     return job;
   }
+
+  private static boolean solve(LSMSolver solver, Gram gram, double [] beta, ArrayList<String> warns){
+    try {
+      return solver.solve(gram, beta);
+    } catch(NonSPDMatrixException ex){
+      DLSM.ADMMSolver admm = (DLSM.ADMMSolver)solver;
+      if(admm._autoHandleNonSPDMatrix)throw ex;
+      admm._autoHandleNonSPDMatrix = true;
+      warns.add("Got Non-SPD Matrix, adding L2-regularization to get solution.");
+      return solver.solve(gram, beta);
+    }
+  }
   public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
       double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
     Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
@@ -1797,7 +1813,7 @@ public abstract class DGLM {
     int iter = 1;
     long lsmSolveTime = 0;
     long t = System.currentTimeMillis();
-    lsm.solve(gram, newBeta);
+    solve(lsm,gram, newBeta,warns);
     lsmSolveTime += System.currentTimeMillis() - t;
     currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
         params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
@@ -1811,7 +1827,7 @@ public abstract class DGLM {
       if( gram.hasNaNsOrInfs() ) // we can't solve this problem any further, user should increase regularization and try again
         break;
       t = System.currentTimeMillis();
-      lsm.solve(gram, newBeta);
+      solve(lsm,gram, newBeta,warns);
       lsmSolveTime += System.currentTimeMillis() - t;
       String[] warnings = new String[warns.size()];
       warns.toArray(warnings);

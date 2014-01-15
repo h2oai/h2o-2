@@ -122,7 +122,7 @@ public class GLMProgressPage extends Request {
       if( m._warnings != null && m._warnings.length > 0) {
         StringBuilder wsb = new StringBuilder();
         for( String s : m._warnings )
-          wsb.append(s).append("<br>");
+          wsb.append("<br>").append("<b>Warning:</b>" + s);
         R.replace("warnings",wsb);
         R.replace("succ","alert-warning");
         if(!m.converged())

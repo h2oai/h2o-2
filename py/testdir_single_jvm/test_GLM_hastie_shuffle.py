@@ -74,8 +74,8 @@ class Basic(unittest.TestCase):
 
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        bucket = 'datasets'
-        csvPathname = 'logreg' + '/' + csvFilename
+        bucket = 'home-0xdiag-datasets'
+        csvPathname = 'standard' + '/' + csvFilename
         fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
         glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30)

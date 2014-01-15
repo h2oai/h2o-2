@@ -62,7 +62,7 @@ public class Exec2 {
     for( Value v : H2O.values() ) { // Add Frames to parser's namespace
       Frame fr;
       if( v.type()==TypeMap.VALUE_ARRAY ) fr = ValueArray.asFrame(v);
-      else if( v.type()==TypeMap.FRAME ) fr = (Frame)v.get();
+      else if( v.type()==TypeMap.FRAME  ) fr = v.get();
       else continue;
       env.push(fr,v._key.toString());
       global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
@@ -72,6 +72,7 @@ public class Exec2 {
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
     global.add(new ASTId(Type.DBL,"NA",0,global.size()));  env.push(Double.NaN);
+    global.add(new ASTId(Type.DBL,"Inf",0,global.size())); env.push(Double.POSITIVE_INFINITY);
 
     // Parse.  Type-errors get caught here and throw IAE
     int argcnt = global.size();
@@ -103,7 +104,8 @@ public class Exec2 {
   int lexical_depth() { return _env.size()-1; }
   
   AST parse() { 
-    AST ast = ASTStatement.parse(this); 
+
+    AST ast = ASTStatement.parse(this);
     skipWS();                   // No trailing crud
     return _x == _buf.length ? ast : throwErr("Junk at end of line",_buf.length-1);
   }
@@ -134,8 +136,7 @@ public class Exec2 {
   static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
-    if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
-    return isDigit(c) || isLetter(c);
+    return c=='.' || c==':' || c=='\\' || isDigit(c) || isLetter(c);
   }
 
   // Return an ID string, or null if we get weird stuff or numbers.  Valid IDs

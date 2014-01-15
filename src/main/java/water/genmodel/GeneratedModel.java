@@ -8,6 +8,7 @@ public abstract class GeneratedModel implements IGeneratedModel {
   @Override public String   getResponseName() { return getNames()[getResponseIdx()]; }
   @Override public String[] getDomainValues(int i) { return getDomainValues()[i]; }
   @Override public int      getNumResponseClasses() { return getNumClasses(getResponseIdx()); }
+  @Override public boolean  isClassifier() { return getNumResponseClasses()!=-1; }
 
   @Override public int getColIdx(String name) {
     String[] names = getNames();

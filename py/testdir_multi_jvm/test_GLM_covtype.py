@@ -20,24 +20,26 @@ class Basic(unittest.TestCase):
 
     def test_GLM_covtype(self):
         csvFilename = 'covtype.data'
-        csvPathname = 'UCI/UCI-large/covtype/' + csvFilename
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put',timeoutSecs=10)
+        csvPathname = 'standard/' + csvFilename
+        hex_key = 'covtype.hex'
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put',
+            hex_key=hex_key, timeoutSecs=10)
+
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
 
-        if (1==0):
-            print "WARNING: just doing the first 33 features, for comparison to allstate numbers"
-            # pythonic!
-            x = ",".join(map(str,range(33)))
-        else:
-            x = ""
-
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         max_iter = 8
 
         y = "54"
+        x = ""
+
+        print "Touching it with exec to trigger va to fvec (covtype.hex) , and then fvec to va (covtype2.hex)"
+        h2o_cmd.runExec(str='%s=%s' % ('covtype2.hex', hex_key))
+        # hack to use the new one
+        parseResult['destination_key'] = 'covtype2.hex'
 
         # L2 
         kwargs = {

@@ -15,13 +15,13 @@ import water.util.Log.Tag.Sys;
 
 // Build (distributed) Trees.  Used for both Gradiant Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
-// 
+//
 // While this is a wholly H2O-design, we found these papers afterwards that
 // describes our design fairly well.
 //   Parallel GBRT http://www.cse.wustl.edu/~kilian/papers/fr819-tyreeA.pdf
 //   Streaming parallel decision tree http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
 // Note that our dynamic Histogram technique is different (surely faster, and
-// probably less mathematically clean).  I'm sure a host of other smaller details 
+// probably less mathematically clean).  I'm sure a host of other smaller details
 // differ also - but in the Big Picture the paper and our algorithm are similar.
 
 public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends ValidatedJob {
@@ -191,8 +191,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _timeLastScoreEnd = System.currentTimeMillis();
     }
     model = makeModel(model, finalScoring?null:ktrees,
-                      sc==null ? Double.NaN : sc._sum/sc._snrows,
-                      sc==null ? null : sc._cm, tstats);
+                      sc==null ? Double.NaN : sc.mse(),
+                      sc==null ? null : (_nclass>1?sc._cm:null), tstats);
     DKV.put(outputKey, model);
     return model;
   }
@@ -320,7 +320,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         if( dn._split._col == -1 ) { // Might have a leftover non-split
           nid = dn._pid;             // Use the parent split decision then
           int xnid = oob ? nid2Oob(nid) : nid;
-          nids.set0(row, xnid); 
+          nids.set0(row, xnid);
           nnids[row] = xnid-_leaf;
           dn = _tree.decided(nid); // Parent steers us
         }
@@ -404,7 +404,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
             sums = new double[rh._bins.length];
             ssqs = new double[rh._bins.length];
           }
-            
+
           // Gather all the data for this set of rows, for 1 column and 1 split/NID
           // Gather min/max, sums and sum-squares.
           for( int xrow=lo; xrow<hi; xrow++ ) {
@@ -505,7 +505,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         //System.out.println((_nclass==1?"Regression":("Class "+_fr2.vecs()[_ncols]._domain[_k]))+",\n  Undecided node:"+udn);
         // Replace the Undecided with the Split decision
         DTree.DecidedNode dn = makeDecided(udn,sbh._hcs[leaf-leafk]);
-        //System.out.println("--> Decided node: " + dn + 
+        //System.out.println("--> Decided node: " + dn +
         //                   "  > Split: " + dn._split + " L/R:" + dn._split.rowsLeft()+" + "+dn._split.rowsRight());
         if( dn._split.col() == -1 ) udn.do_not_split();
         else _did_split = true;
@@ -554,12 +554,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     public double   sum()   { return _sum; }
     public long[][] cm ()   { return _cm;  }
     public long     nrows() { return _snrows; }
+    public double   mse()   { return sum() / nrows(); }
 
     // Compute CM & MSE on either the training or testing dataset
     public Score doIt(Model model, Frame fr, Frame validation, boolean oob, boolean build_tree_per_node) {
       assert !oob || validation==null ; // oob => validation==null
       _oob = oob;
       // No validation, so do on training data
+      //System.err.println(fr.toStringAll());
       if( validation == null ) return doAll(fr, build_tree_per_node);
       _validation = true;
       // Validation: need to score the set, getting a probability distribution for each class
@@ -593,17 +595,18 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
         double sum;
         if( _validation ) {     // Passed in a class distribution from scoring
-          sum = 1.0;            // Sum of a distribution is 1.0
           for( int i=0; i<_nclass; i++ )
             ds[i] = chks[i+_ncols+1].at0(row);  // Get the class distros
+          if (_nclass > 1 ) sum = 1.0;          // Sum of a distribution is 1.0 for classification
+          else sum = ds[0];                     // Sum is the same as prediction for regression.
         } else {                // Passed in the model-specific columns
           sum = score0(chks,ds,row);
         }
         double err;  int ycls=0;
+        if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
           if( sum == 0 ) {       // This tree does not predict this row *at all*?
             err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
-            if (_oob) continue; // it is in-bag row (no vote by any tree)
           } else {
             ycls = (int)ys.at80(row); // Response class from 0 to nclass-1
             if (ycls >= _nclass) continue;
@@ -629,22 +632,21 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         _snrows++;
       }
     }
+
     @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); _snrows += t._snrows; }
 
     public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
-      int lcnt=0;
       Log.info(tag,"============================================================== ");
-      if (trees==null) {
-        Log.info("No trees...");
-      } else {
-        for( DTree t : trees ) if( t != null ) lcnt += t._len;
-        long err=_snrows;
-        for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
-        Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-        if( _nclass > 1 )
-          Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
-      }
+      int lcnt=0;
+      if( trees!=null ) for( DTree t : trees ) if( t != null ) lcnt += t._len;
+      long err=_snrows;
+      for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
+      Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
+      if( _nclass > 1 )
+        Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
+      else
+        Log.info("Reported on "+_snrows+" rows.");
       return this;
     }
   }
@@ -662,6 +664,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 
   protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], DTree.TreeModel.TreeStats tstats);
+
+  protected boolean inBagRow(Chunk[] chks, int row) { return false; }
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }

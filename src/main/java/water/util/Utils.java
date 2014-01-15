@@ -866,6 +866,7 @@ public class Utils {
     return nums;
   }
   public static float[] div(float[] nums, float n) {
+    assert !Float.isInfinite(n); // Almost surely not what you want
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }

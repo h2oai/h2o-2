@@ -30,7 +30,7 @@ class Basic(h2o_common.SetupUnitTest, unittest.TestCase):
         inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
     def test_F_RF_covtype(self):
-        parseResult = h2i.import_parse(bucket='datasets', path='UCI/UCI-large/covtype/covtype.data', schema='put', timeoutSecs=30)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/covtype.data', schema='put', timeoutSecs=30)
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=35, retryDelaySecs=0.5)
 
     def test_G_StoreView(self):

@@ -8,7 +8,7 @@
   Imports all the files in the local directory and parses them, returning a list of objects containing the identifying hex keys.
 }
 \usage{
-  h2o.importFolder(object, path, pattern = "", parse = TRUE, sep = "")
+  h2o.importFolder(object, path, pattern = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,8 +24,14 @@
   \item{parse}{
 (Optional) A logical value indicating whether the file should be parsed after import.
   }
+  \item{header}{
+(Optional) A logical value indicating whether the first row is the column header. If missing, H2O will automatically try to detect the presence of a header.
+  }
   \item{sep}{
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
+  }
+  \item{col.names}{
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
   }
 }
 \details{

@@ -59,6 +59,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_many_cols_enum(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
@@ -92,25 +93,23 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, translateList)
 
             # PARSE train****************************************
-            h2o.beta_features = False #turn off beta_features
             start = time.time()
             xList = []
             eList = []
             fList = []
 
-            h2o.beta_features = False
             modelKey = 'GBMModelKey'
 
             # Parse (train)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
-            parseTrainResult = h2i.import_parse(bucket=None, path=csvPathname, schema='put',
+            parseTrainResult = h2i.import_parse(bucket=None, path=csvPathname, schema='put', header=0,
                 hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 print "Filling in the parseTrainResult['destination_key'] for h2o"
-                parseTrainResult['destination_key'] = trainKey
+                parseTrainResult['destination_key'] = hex_key
 
             elapsed = time.time() - start
             print "train parse end on ", csvPathname, 'took', elapsed, 'seconds',\
@@ -128,10 +127,10 @@ class Basic(unittest.TestCase):
             # h2o.beta_features = True
             inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
@@ -144,9 +143,16 @@ class Basic(unittest.TestCase):
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
-                    'response': num_cols-1,
+                    'response': 'C' + str(numCols-1),
                     'ignored_cols_by_name': None,
                 }
+                # both response variants should work
+                if random.randint(0,1):
+                    params['response'] = numCols-1,
+                else:
+                    params['response'] = "C" + str(numCols-1)
+                    params['response'] = numCols-1,
+
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
                 h2o.beta_features = True

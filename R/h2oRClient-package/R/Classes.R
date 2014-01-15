@@ -99,10 +99,11 @@ setMethod("show", "H2OGrid", function(object) {
 
 setMethod("show", "H2OGLMModel", function(object) {
   print(object@data)
-  cat("GLM2 Model Key:", object@key, "\n\nCoefficients:\n")
+  cat("GLM2 Model Key:", object@key, "\n\n")
 
   model = object@model
-  print(round(model$coefficients,5))
+  cat("Coefficients:\n"); print(round(model$coefficients,5))
+  cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
@@ -388,7 +389,6 @@ setMethod("ceiling", "H2OParsedData", function(x) { h2o.__unop2("ceil", x) })
 setMethod("floor", "H2OParsedData", function(x) { h2o.__unop2("floor", x) })
 setMethod("log", "H2OParsedData", function(x) { h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
-setMethod("sum", "H2OParsedData", function(x) { h2o.__unop2("sum", x) })
 setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
 
 setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
@@ -427,7 +427,96 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
-h2o.table <- function(...) { if(length(c(...)) > 1) stop("Unimplemented"); h2o.__unop2("table", ...) }
+# TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
+table.internal <- table
+table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", "ifany", "always"), dnn = list.names(...), deparse.level = 1) {
+  idx = sapply(c(...), function(x) { class(x) == "H2OParsedData" })
+  if(any(idx) && !all(idx))
+    stop("Can't mix H2OParsedData objects with R objects in table")
+  else if(any(idx)) {
+    myData = c(...)
+    if(length(myData) > 1 || ncol(myData[[1]]) > 2) stop("Unimplemented")
+    h2o.__unop2("table", myData[[1]]) 
+  } else {
+    list.names <- function(...) {
+      l <- as.list(substitute(list(...)))[-1L]
+      nm <- names(l)
+      fixup <- if (is.null(nm)) 
+        seq_along(l)
+      else nm == ""
+      dep <- vapply(l[fixup], function(x) switch(deparse.level + 
+                                                   1, "", if (is.symbol(x)) as.character(x) else "", 
+                                                 deparse(x, nlines = 1)[1L]), "")
+      if (is.null(nm)) 
+        dep
+      else {
+        nm[fixup] <- dep
+        nm
+      }
+    }
+    if (!missing(exclude) && is.null(exclude)) 
+      useNA <- "always"
+    useNA <- match.arg(useNA)
+    args <- list(...)
+    if (!length(args)) 
+      stop("nothing to tabulate")
+    if (length(args) == 1L && is.list(args[[1L]])) {
+      args <- args[[1L]]
+      if (length(dnn) != length(args)) 
+        dnn <- if (!is.null(argn <- names(args))) 
+          argn
+      else paste(dnn[1L], seq_along(args), sep = ".")
+    }
+    bin <- 0L
+    lens <- NULL
+    dims <- integer()
+    pd <- 1L
+    dn <- NULL
+    for (a in args) {
+      if (is.null(lens)) 
+        lens <- length(a)
+      else if (length(a) != lens) 
+        stop("all arguments must have the same length")
+      cat <- if (is.factor(a)) {
+        if (any(is.na(levels(a)))) 
+          a
+        else {
+          if (is.null(exclude) && useNA != "no") 
+            addNA(a, ifany = (useNA == "ifany"))
+          else {
+            if (useNA != "no") 
+              a <- addNA(a, ifany = (useNA == "ifany"))
+            ll <- levels(a)
+            a <- factor(a, levels = ll[!(ll %in% exclude)], 
+                        exclude = if (useNA == "no") 
+                          NA)
+          }
+        }
+      }
+      else {
+        a <- factor(a, exclude = exclude)
+        if (useNA != "no") 
+          addNA(a, ifany = (useNA == "ifany"))
+        else a
+      }
+      nl <- length(ll <- levels(cat))
+      dims <- c(dims, nl)
+      if (prod(dims) > .Machine$integer.max) 
+        stop("attempt to make a table with >= 2^31 elements")
+      dn <- c(dn, list(ll))
+      bin <- bin + pd * (as.integer(cat) - 1L)
+      pd <- pd * nl
+    }
+    names(dn) <- dnn
+    bin <- bin[!is.na(bin)]
+    if (length(bin)) 
+      bin <- bin + 1L
+    y <- array(tabulate(bin, pd), dims, dimnames = dn)
+    class(y) <- "table"
+    y
+  }   
+}
+
 h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
@@ -466,10 +555,10 @@ min <- function(..., na.rm = FALSE) {
   idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
 
   if(any(idx)) {
-    if(na.rm) stop("Unimplemented")
+    hex.op = ifelse(na.rm, "min.na.rm", "min")
     myVals = c(...); myData = myVals[idx]
     myKeys = sapply(myData, function(y) { y@key })
-    expr = paste("min(", paste(myKeys, collapse=","), ")", sep = "")
+    expr = paste(hex.op, "(", paste(myKeys, collapse=","), ")", sep = "")
     res = h2o.__exec2(myData[[1]]@h2o, expr)
     .Primitive("min")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
   } else
@@ -481,14 +570,29 @@ max <- function(..., na.rm = FALSE) {
   idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
 
   if(any(idx)) {
-    if(na.rm) stop("Unimplemented")
+    hex.op = ifelse(na.rm, "max.na.rm", "max")
     myVals = c(...); myData = myVals[idx]
     myKeys = sapply(myData, function(y) { y@key })
-    expr = paste("max(", paste(myKeys, collapse=","), ")", sep = "")
+    expr = paste(hex.op, "(", paste(myKeys, collapse=","), ")", sep = "")
     res = h2o.__exec2(myData[[1]]@h2o, expr)
     .Primitive("max")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
   } else
     .Primitive("max")(..., na.rm = na.rm)
+}
+
+sum.internal <- sum
+sum <- function(..., na.rm = FALSE) {
+  idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  
+  if(any(idx)) {
+    hex.op = ifelse(na.rm, "sum.na.rm", "sum")
+    myVals = c(...); myData = myVals[idx]
+    myKeys = sapply(myData, function(y) { y@key })
+    expr = paste(hex.op, "(", paste(myKeys, collapse=","), ")", sep = "")
+    res = h2o.__exec2(myData[[1]]@h2o, expr)
+    .Primitive("sum")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
+  } else
+    .Primitive("sum")(..., na.rm = na.rm)
 }
 
 setMethod("range", "H2OParsedData", function(x) {
@@ -504,23 +608,21 @@ setMethod("colMeans", "H2OParsedData", function(x) {
   temp
 })
 
-setMethod("mean", "H2OParsedData", function(x) {
-  res <- NA
+mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
+  if(length(x) != 1 || trim != 0) stop("Unimplemented")
   if(any.factor(x) || dim(x)[2] != 1) {
-    warning("In H2O mean(x): argument not numeric or logical: returning NA")
-    res
+    warning("argument is not numeric or logical: returning NA")
+    return(NA_real_)
   }
-  res <- h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
-  temp <- sapply(res$cols, function(x) x$mean)
-  names(temp) = sapply(res$cols, function(x) x$name)
-  temp[[1]]
-})
+  if(!na.rm && h2o.__unop2("any.na", x)) return(NA)
+  h2o.__unop2("mean", x)
+}
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
-  if(na.rm) stop("Unimplemented")
+  if(length(x) != 1) stop("Unimplemented")
   if(dim(x)[2] != 1 || any.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
-  res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  res$summaries[[1]]$stats$sd
+  if(!na.rm && h2o.__unop2("any.na", x)) return(NA)
+  h2o.__unop2("sd", x)
 })
 
 setMethod("dim", "H2OParsedData", function(x) {
@@ -568,11 +670,10 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   x.slice = as.data.frame(x[seq_len(n),])
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-  x.lev = lapply(res$summaries, function(x) { x$hbrk })
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
   for(i in 1:ncol(x)) {
-    if(res$summaries[[i]]$stats$type == 'Enum')
-      x.slice[,i] <- factor(x.slice[,i], levels = res$summaries[[i]]$hbrk)
+    if(!is.null(res$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
   }
   return(x.slice)
 })
@@ -586,11 +687,10 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   idx = seq.int(to = nrx, length.out = n)
   x.slice = as.data.frame(x[idx,])
   rownames(x.slice) = idx
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-  x.lev = lapply(res$summaries, function(x) { x$hbrk })
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
   for(i in 1:ncol(x)) {
-    if(res$summaries[[i]]$stats$type == 'Enum')
-      x.slice[,i] <- factor(x.slice[,i], levels = res$summaries[[i]]$hbrk)
+    if(!is.null(res$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
   }
   return(x.slice)
 })
@@ -699,20 +799,26 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
 })
 
 setMethod("levels", "H2OParsedData", function(x) {
-  if(ncol(x) != 1) stop("levels only operates on a single column")
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-  if(res$summaries[[1]]$stats$type != 'Enum') return(NULL)
-  res$summaries[[1]]$hbrk
+  if(ncol(x) != 1) return(NULL)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res$levels[[1]]
 })
 
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Substitute in key names for H2OParsedData variables
-# setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
-#   params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
-#   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
-#   res = h2o.__exec2(X@h2o, expr)
-#   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
-# })
+setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
+  myfun = deparse(substitute(FUN))
+  len = length(myfun)
+
+  if(len > 2 && myfun[len] == "}")
+    myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), myfun[len])
+  else
+    myfun = paste(myfun, collapse = "")
+  params = c(X@key, MARGIN, myfun)
+  expr = paste("apply(", paste(params, collapse = ","), ")", sep="")
+  res = h2o.__exec2(X@h2o, expr)
+  new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
+})
 
 str.H2OParsedData <- function(object, ...) {
   if (length(l <- list(...)) && any("give.length" == names(l))) 
@@ -728,18 +834,22 @@ str.H2OParsedData <- function(object, ...) {
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
   rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
-  res2 = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source = object@key)
+  res2 = h2o.__remoteSend(object@h2o, h2o.__HACK_LEVELS, source = object@key)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
-    if(res2$summaries[[i]]$stats$type != 'Enum')
+    if(is.null(res2$levels[[i]]))
       cat("num  ", paste(rhead, collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
     else {
-      rlevels = res2$summaries[[i]]$hbrk
+      rlevels = res2$levels[[i]]
       cat("Factor w/ ", (count <- length(rlevels)), " level", if(count != 1) "s", ' "', paste(rlevels[1:min(count, 2)], collapse = '","'), '"', if(count > 2) ",..", ": ", sep = "")
       cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
     }
   }
+}
+
+str.H2OParsedDataVA <- function(object, ...) {
+  str(new("H2OParsedData", h2o=object@h2o, key=object@key), ...)
 }
 
 #--------------------------------- ValueArray ----------------------------------#
@@ -755,10 +865,11 @@ setMethod("show", "H2OParsedDataVA", function(object) {
 
 setMethod("show", "H2OGLMModelVA", function(object) {
   print(object@data)
-  cat("GLM Model Key:", object@key, "\n\nCoefficients:\n")
-
+  cat("GLM Model Key:", object@key, "\n\n")
+  
   model = object@model
-  print(round(model$coefficients,5))
+  cat("Coefficients:\n"); print(round(model$coefficients,5))
+  cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
@@ -809,6 +920,15 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
+  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
+
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
+  function(x, value) {
+    if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
+    stop("Unimplemented"); return(x)
+  })
+
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
 
 setMethod("nrow", "H2OParsedDataVA", function(x) {
@@ -835,12 +955,11 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   temp = lapply(res$rows, function(y) { y$row = NULL; as.data.frame(y) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
-  
-  res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-  x.lev = lapply(res2$summaries, function(x) { x$hbrk })
+
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
   for(i in 1:ncol(x)) {
-    if(res2$summaries[[i]]$stats$type == 'Enum')
-      x.slice[,i] <- factor(x.slice[,i], levels = res2$summaries[[i]]$hbrk)
+    if(!is.null(res2$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
   }
   return(x.slice)
 })
@@ -859,11 +978,10 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-  res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-  x.lev = lapply(res2$summaries, function(x) { x$hbrk })
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
   for(i in 1:ncol(x)) {
-    if(res2$summaries[[i]]$stats$type == 'Enum')
-      x.slice[,i] <- factor(x.slice[,i], levels = res2$summaries[[i]]$hbrk)
+    if(!is.null(res2$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
   }
   return(x.slice)
 })

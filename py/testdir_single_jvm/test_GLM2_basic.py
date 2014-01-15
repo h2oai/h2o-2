@@ -93,7 +93,8 @@ class Basic(unittest.TestCase):
         residual_deviance = validation['residual_deviance']
 
         print '_names', _names
-        print 'coefficients_name', coefficients_names
+        print 'coefficients_names', coefficients_names
+        # did beta get shortened? the simple check confirms names/beta/norm_beta are same length
         print 'beta', beta
         print 'iteration', iteration
         print 'avg_err', avg_err
