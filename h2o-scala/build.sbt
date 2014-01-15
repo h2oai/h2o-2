@@ -52,9 +52,12 @@ resolvers ++= Seq("snapshots" at "http://oss.sonatype.org/content/repositories/s
 
 
 // Setup classpath to have access to h2o.jar
-val h2oClasses = baseDirectory / "../target/classes"
+val h2oClasses = baseDirectory / "../target/classes/"
+val h2oSources = baseDirectory / "../src/"
 
 unmanagedClasspath in Compile += h2oClasses.value
+
+unmanagedClasspath in Compile += h2oSources.value
 
 unmanagedClasspath in Runtime += h2oClasses.value
 
