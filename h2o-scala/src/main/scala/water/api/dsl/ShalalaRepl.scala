@@ -11,6 +11,7 @@ import water.Boot
 import water.H2O
 import water.api.dsl.examples._
 import hex.gbm.DTree.TreeModel.TreeStats
+import water.deploy.NodeCL
 
 /** Custom H2O REPL.
  *  
@@ -21,29 +22,35 @@ object ShalalaRepl {
   // Simple REPL launcher - expect to be executed from water.Boot 
   //  - hence it configures REPL classpath according the Boot
   def main(args: Array[String]): Unit = {
-    // Launch H2O main
-    H2O.main(args);
-    // Launch REPL
-    launchRepl
+    // Launch Boot and and then H2O and ShalalaRepl 
+    Boot.main(classOf[ShalalaRepl], args);
   }
   
+  def userMain(args: Array[String]):Unit = {
+    H2O.main(args)
+	ShalalaRepl.launchRepl
+  }
+
   def launchRepl() = {
 	  val repl = new H2OILoop
 	  val settings = new Settings
-	  settings.Xnojline.value = true // Use SimpleLine library by default
-	  settings.Yreplsync.value = true
+	  //settings.Xnojline.value = true // Use SimpleLine library by default
+	  //settings.Yreplsync.value = true
 	  // FIXME we should provide CP via classloader via resource app.class.path 
-	  // but currently we have a problem to create a correct compiler mirror since javassist modify the classloader 
 	  settings.usejavacp.value = true
 	  // setup the classloader of some H2O class
 	  settings.embeddedDefaults[NFSFileVec]
-	  //settings.embeddedDefaults[Boot]
-      // Uncomment to DEBUG:
-	  //settings.Yrepldebug.value = true
-	  //settings.Ylogcp.value = true
-	  //settings.verbose.value = true
+	  //settings.embeddedDefaults[Boot] // serve as application loader
+      // Uncomment to configure DEBUG
+	  //debug(settings)
 	  
 	  repl.process(settings)
+  }
+  
+  def debug(settings: Settings) = {
+    //settings.Yrepldebug.value = true
+    settings.Ylogcp.value = true
+	settings.verbose.value = true
   }
   
   /** H2O Repl Configuration */
@@ -62,8 +69,16 @@ object ShalalaRepl {
 === Welcome to the world of Shalala ===
           
 Type `help` or `example` to begin...
-""")
+          
+Your are now in """ + System.getProperty("user.dir") + """
+
+Enjoy!
+"""
+)
     }
-    
   }
+}
+
+// Companion class
+class ShalalaRepl {
 }
