@@ -126,6 +126,12 @@ public final class H2O {
     System.exit(222);
   }
 
+  /** Shutdown itself by sending a shutdown UDP packet. */
+  public void shutdown() {
+    UDPRebooted.T.shutdown.send(H2O.SELF);
+    H2O.exit(0);
+  }
+
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
   // decide to change Clouds via atomic Cloud update.
