@@ -346,20 +346,24 @@ public class NeuralNet extends ValidatedJob {
           int classes = ls[ls.length - 1].units;
           cm = new long[classes][classes];
         }
+        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, nn);
+
         // score model on training set
         Errors e = eval(train, trainResp, score_training, valid == null ? cm : null);
         e.score_training = score_training == 0 ? train[0].length() : score_training;
         trainErrors = Utils.append(trainErrors, e);
+        model.unstable |= Double.isNaN(e.mean_square) || Double.isNaN(e.cross_entropy);
+        model.training_errors = trainErrors;
 
         // score model on validation set
         if( valid != null ) {
           e = eval(valid, validResp, score_validation, cm);
           e.score_validation = score_validation == 0 ? valid[0].length() : score_validation;
           validErrors = Utils.append(validErrors, e);
+          model.unstable |= Double.isNaN(e.mean_square) || Double.isNaN(e.cross_entropy);
         }
-        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, nn);
-        model.training_errors = trainErrors;
         model.validation_errors = validErrors;
+
         model.confusion_matrix = cm;
         UKV.put(model._selfKey, model);
         return e.training_samples;
@@ -610,7 +614,7 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "RMS weight")
     public double[] rms_weight;
 
-    public volatile boolean unstable = false;
+    public boolean unstable = false;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNet p) {
       super(selfKey, dataKey, fr);
@@ -665,10 +669,6 @@ public class NeuralNet extends ValidatedJob {
           unstable |= Double.isNaN(mean_bias[y])   || Double.isNaN(rms_bias[y])
                    || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
         }
-      }
-      //always check for instability
-      for( int y = 1; y < layers.length-1; y++ ) {
-        unstable |= layers[y].unstable;
       }
     }
 
@@ -747,7 +747,7 @@ public class NeuralNet extends ValidatedJob {
         class_names = model.classNames();
         confusion_matrix = model.confusion_matrix;
         if (model.unstable && job != null) {
-          Log.info("Aborting job due to instability. Try a smaller learning rate and/or single-node mode.");
+          Log.info("Aborting job due to numerical instability (exponential growth).");
           job.cancel();
         }
       }
@@ -826,7 +826,11 @@ public class NeuralNet extends ValidatedJob {
           sb.append("</table>");
         }
         if (model.unstable) {
-          DocGen.HTML.section(sb, "### Note:  Instability detected and job aborted.  Try a smaller learning rate and/or single-node mode. ###") ;
+          final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
+                  + "  Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+          DocGen.HTML.section(sb, "============================================================================================================");
+          DocGen.HTML.section(sb, msg);
+          DocGen.HTML.section(sb, "============================================================================================================");
         }
         if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           assert(classification);
