@@ -1,9 +1,9 @@
 package water;
 
+import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 
-import java.io.*;
 import java.util.*;
 
 import javassist.*;
@@ -108,9 +108,13 @@ public abstract class Model extends Iced {
     // result vector.
     v._domain = _domains[_domains.length-1];
     adaptFrm.add("predict",v);
-    if( nclasses() > 1 )
+    if( nclasses() > 1 ) {
+      String prefix = "";
+      for( int c=0; c<nclasses(); c++ ) // if any class is the same as column name in frame, then prefix all classnames
+        if (contains(adaptFrm._names, classNames()[c])) { prefix = "class_"; break; }
       for( int c=0; c<nclasses(); c++ )
-        adaptFrm.add(classNames()[c],adaptFrm.anyVec().makeZero());
+        adaptFrm.add(prefix+classNames()[c],adaptFrm.anyVec().makeZero());
+    }
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp[] = new double[_names.length];
