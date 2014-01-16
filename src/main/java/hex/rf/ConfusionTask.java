@@ -113,7 +113,7 @@ public class ConfusionTask extends MRTask {
     final Value dummyCMVal = new Value(cmKey, CMFinal.make());
     final Value val = DKV.DputIfMatch(cmKey, dummyCMVal, null, null);
     if (val==null) {
-      final CMJob cmJob = new CMJob(modelSize);
+      final CMJob cmJob = new CMJob(modelSize,cmKey);
       cmJob.destination_key = cmKey;
       cmJob.description = "CM computation";
       // and start a new confusion matrix computation
@@ -594,8 +594,8 @@ public class ConfusionTask extends MRTask {
   }
 
   public static class CMJob extends ChunkProgressJob {
-    public CMJob(long chunksTotal) {
-      super(chunksTotal);
+    public CMJob(long chunksTotal, Key dest) {
+      super(chunksTotal,dest);
     }
   }
 }

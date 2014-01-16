@@ -42,7 +42,7 @@ public class GridSearch extends Job {
   @Override public float progress() {
     double d = 0.1;
     for( Job job : jobs )
-      d += job.progress();
+      if(job.start_time > 0)d += job.progress();
     return Math.min(1f, (float) (d / jobs.length));
   }
 
