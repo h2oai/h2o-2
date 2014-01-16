@@ -7,6 +7,7 @@ import hex.*;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
+import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.*;
@@ -332,7 +333,8 @@ public class Inspect extends Request {
     sb.append("<div class='alert alert-info'>").append(Inspect4UX.link(key, "NEW Inspect!")).append("</div>");
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + PCA.link(key, "PCA") + ", "
-          + RF.link(key, "Random Forest") + ", "
+          + RF.link(key, "Single Node Random Forest") + ", "
+          + DRF.link(key, "Distributed Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", or "
           + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
