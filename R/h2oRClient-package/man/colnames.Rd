@@ -8,7 +8,7 @@ colnames(x)
 \arguments{
   \item{x}{ A parsed H2O data object.}
 }
-}
+
 \value{Returns a vector of column names. 
 }
 \examples{

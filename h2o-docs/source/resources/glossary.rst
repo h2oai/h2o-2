@@ -1,5 +1,8 @@
 .. -*- mode: rst -*-
 
+.. _glossary:
+
+
 Glossary
 ========
 

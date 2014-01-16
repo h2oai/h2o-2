@@ -1,6 +1,6 @@
 \name{colMeans}
 \alias{colMeans}
-d
+
 \title{
 Returns a vector of the column means. 
 }

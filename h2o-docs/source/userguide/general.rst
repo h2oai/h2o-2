@@ -16,7 +16,7 @@ available to that server (either via their network settings, or
 because the data are on the same server.) Users who are running H\ :sub:`2`\ O on
 a laptop must ensure that the data are available to that laptop. The
 specification of network settings is beyond the scope of this
-documentation.    
+documentation. Advanced users may find additional documentation on running in specialized environments helpful: :ref:`Developer`  
 
 User Interaction
 ----------------
@@ -55,4 +55,4 @@ Excel (XLS), ARFF, SVM-Light, HIVE file format, and others.
 Using H\ :sub:`2`\ O
 -----------------------
 
-Step by step instructions on how to use each of the algorithms and tools can be found in tutorials. Users have a variety of options for accessing and running H\ :sub:`2`\ O. For instructions on how to get started using H\ :sub:`2`\ O (for example through R, using Java, or via git-hub), please see the Quick Start Guides. New users may also find the glossary useful for familiarizing themselves with H\ :sub:`2`\ O's computing and statistics terms. 
+Step by step instructions on how to use each of the algorithms and tools can be found in tutorials . Users have a variety of options for accessing and running H\ :sub:`2`\ O. For instructions on how to get started using H\ :sub:`2`\ O (for example through R, using Java, or via git-hub), please see the Quick Start Guides. New users may also find the :ref:`glossary` useful for familiarizing themselves with H\ :sub:`2`\ O's computing and statistics terms. 
