@@ -563,12 +563,22 @@ public class DTree extends Iced {
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
     // Most recent ConfusionMatrix
-    @Override public ConfusionMatrix cm() { 
+    @Override public ConfusionMatrix cm() {
       long cms[][][] = this.cms; // Avoid racey update; read it once
-      return cms == null || cms.length == 0 || cms[cms.length-1] == null ? null : new ConfusionMatrix(cms[cms.length-1]); }
+      if(cms != null && cms.length > 0){
+        int n = cms.length-1;
+        while(n > 0 && cms[n] == null)--n;
+        return cms[n] == null?null:new ConfusionMatrix(cms[n]);
+      } else return null;
+    }
     @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
-    @Override public double mse() { return errs == null || errs.length == 0 ? Double.NaN : errs[errs.length-1]; }
-
+    @Override public double mse() {
+      if(errs != null && errs.length > 0){
+        int n = errs.length-1;
+        while(n > 0 && Double.isNaN(errs[n]))--n;
+        return errs[n];
+      } else return Double.NaN;
+    }
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
       for( int tidx=0; tidx<treeBits.length; tidx++ )
