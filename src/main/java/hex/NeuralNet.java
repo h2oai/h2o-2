@@ -765,6 +765,8 @@ public class NeuralNet extends ValidatedJob {
         final Errors train = model.training_errors[model.training_errors.length - 1];
         final Errors valid = model.validation_errors != null ? model.validation_errors[model.validation_errors.length - 1] : null;
 
+        DocGen.HTML.paragraph(sb,water.api.Predict.link(model._selfKey,"Predict!"));
+
         if (classification) {
           DocGen.HTML.section(sb, "Training classification error: " + formatPct(train.classification));
         }
