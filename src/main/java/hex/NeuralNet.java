@@ -84,8 +84,8 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
   public float max_w2 = Float.MAX_VALUE;
 
-  //@API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
-  public long warmup_samples = 0l;
+  @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
+  public long warmup_samples = 1000l;
 
   @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
   public long score_training = 1000l;
@@ -134,11 +134,9 @@ public class NeuralNet extends ValidatedJob {
         mode = ExecutionMode.SingleNode;
       }
     }
-    if( arg._name.equals("warmup_samples") ) {
-      if (mode == ExecutionMode.SingleThread) {
-        arg.disable("Only for non-serial execution modes.");
-        assert(warmup_samples == 0);
-      }
+    if( arg._name.equals("warmup_samples") && mode == MapReduce && H2O.CLOUD._memary.length > 1) {
+      arg.disable("Not yet implemented for distributed MapReduce execution modes, using a value of 0.");
+      warmup_samples = 0;
     }
     if(arg._name.equals("loss") && !classification) {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
@@ -273,10 +271,10 @@ public class NeuralNet extends ValidatedJob {
       // one node works on the first batch of points serially for improved stability
       if (warmup_samples > 0) {
         Log.info("Training the first " + warmup_samples + " samples in serial for improved stability.");
-        Trainer warmup = new Trainer.Direct(ls, warmup_samples/num_rows, self());
+        Trainer warmup = new Trainer.Direct(ls, (double)warmup_samples/num_rows, self());
         warmup.start();
         warmup.join();
-        //TODO: send weights from master VM to all other VMs
+        //TODO: for MapReduce send weights from master VM to all other VMs
       }
       if (mode == SingleNode) {
         Log.info("Entering single-node (multi-threaded Hogwild) execution mode.");
@@ -284,10 +282,10 @@ public class NeuralNet extends ValidatedJob {
       } else if (mode == MapReduce) {
         if (warmup_samples > 0 && mode == MapReduce) {
           Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
-          Trainer warmup = new Trainer.Threaded(ls, warmup_samples/num_rows, self());
+          Trainer warmup = new Trainer.Threaded(ls, (double)warmup_samples/num_rows, self());
           warmup.start();
           warmup.join();
-          //TODO: send weights from master VM to all other VMs
+          //TODO: for MapReduce send weights from master VM to all other VMs
         }
         Log.info("Entering multi-node (MapReduce + multi-threaded Hogwild) execution mode.");
         trainer = new Trainer.MapReduce(ls, epochs, self());
