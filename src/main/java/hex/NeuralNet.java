@@ -5,19 +5,19 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.DocGen;
-import water.api.Progress2;
-import water.api.Request;
-import water.api.RequestServer;
+import water.api.*;
 import water.fvec.*;
+import water.util.D3Plot;
 import water.util.Log;
 import water.util.RString;
 import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static hex.NeuralNet.ExecutionMode.*;
+
 
 /**
  * Neural network.
@@ -83,8 +83,8 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
   public float max_w2 = Float.MAX_VALUE;
 
-  //@API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
-  public long warmup_samples = 0l;
+  @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
+  public long warmup_samples = 1000l;
 
   @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
   public long score_training = 1000l;
@@ -133,11 +133,9 @@ public class NeuralNet extends ValidatedJob {
         mode = ExecutionMode.SingleNode;
       }
     }
-    if( arg._name.equals("warmup_samples") ) {
-      if (mode == ExecutionMode.SingleThread) {
-        arg.disable("Only for non-serial execution modes.");
-        assert(warmup_samples == 0);
-      }
+    if( arg._name.equals("warmup_samples") && mode == MapReduce && H2O.CLOUD._memary.length > 1) {
+      arg.disable("Not yet implemented for distributed MapReduce execution modes, using a value of 0.");
+      warmup_samples = 0;
     }
     if(arg._name.equals("loss") && !classification) {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
@@ -206,7 +204,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
-    RNG.seed = seed; //actually seed the random generator
+    RNG.seed = new AtomicLong(seed);
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
 //    reChunk(vecs);
@@ -272,10 +270,10 @@ public class NeuralNet extends ValidatedJob {
       // one node works on the first batch of points serially for improved stability
       if (warmup_samples > 0) {
         Log.info("Training the first " + warmup_samples + " samples in serial for improved stability.");
-        Trainer warmup = new Trainer.Direct(ls, warmup_samples/num_rows, self());
+        Trainer warmup = new Trainer.Direct(ls, (double)warmup_samples/num_rows, self());
         warmup.start();
         warmup.join();
-        //TODO: send weights from master VM to all other VMs
+        //TODO: for MapReduce send weights from master VM to all other VMs
       }
       if (mode == SingleNode) {
         Log.info("Entering single-node (multi-threaded Hogwild) execution mode.");
@@ -283,10 +281,10 @@ public class NeuralNet extends ValidatedJob {
       } else if (mode == MapReduce) {
         if (warmup_samples > 0 && mode == MapReduce) {
           Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
-          Trainer warmup = new Trainer.Threaded(ls, warmup_samples/num_rows, self());
+          Trainer warmup = new Trainer.Threaded(ls, (double)warmup_samples/num_rows, self());
           warmup.start();
           warmup.join();
-          //TODO: send weights from master VM to all other VMs
+          //TODO: for MapReduce send weights from master VM to all other VMs
         }
         Log.info("Entering multi-node (MapReduce + multi-threaded Hogwild) execution mode.");
         trainer = new Trainer.MapReduce(ls, epochs, self());
@@ -332,8 +330,6 @@ public class NeuralNet extends ValidatedJob {
             }
           } while (true);
 
-          Log.info("Last evaluation at " + num + " samples.");
-
           // remove validation data
           if( adapted != null && adapted[1] != null )
             adapted[1].remove();
@@ -349,20 +345,24 @@ public class NeuralNet extends ValidatedJob {
           int classes = ls[ls.length - 1].units;
           cm = new long[classes][classes];
         }
+        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, nn);
+
         // score model on training set
         Errors e = eval(train, trainResp, score_training, valid == null ? cm : null);
         e.score_training = score_training == 0 ? train[0].length() : score_training;
         trainErrors = Utils.append(trainErrors, e);
+        model.unstable |= Double.isNaN(e.mean_square) || Double.isNaN(e.cross_entropy);
+        model.training_errors = trainErrors;
 
         // score model on validation set
         if( valid != null ) {
           e = eval(valid, validResp, score_validation, cm);
           e.score_validation = score_validation == 0 ? valid[0].length() : score_validation;
           validErrors = Utils.append(validErrors, e);
+          model.unstable |= Double.isNaN(e.mean_square) || Double.isNaN(e.cross_entropy);
         }
-        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, nn);
-        model.training_errors = trainErrors;
         model.validation_errors = validErrors;
+
         model.confusion_matrix = cm;
         UKV.put(model._selfKey, model);
         return e.training_samples;
@@ -613,7 +613,7 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "RMS weight")
     public double[] rms_weight;
 
-    public volatile boolean unstable = false;
+    public boolean unstable = false;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNet p) {
       super(selfKey, dataKey, fr);
@@ -668,10 +668,6 @@ public class NeuralNet extends ValidatedJob {
           unstable |= Double.isNaN(mean_bias[y])   || Double.isNaN(rms_bias[y])
                    || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
         }
-      }
-      //always check for instability
-      for( int y = 1; y < layers.length-1; y++ ) {
-        unstable |= layers[y].unstable;
       }
     }
 
@@ -750,7 +746,7 @@ public class NeuralNet extends ValidatedJob {
         class_names = model.classNames();
         confusion_matrix = model.confusion_matrix;
         if (model.unstable && job != null) {
-          Log.info("Aborting job due to instability. Try a smaller learning rate and/or single-node mode.");
+          Log.info("Aborting job due to numerical instability (exponential growth).");
           job.cancel();
         }
       }
@@ -761,6 +757,36 @@ public class NeuralNet extends ValidatedJob {
       final String mse_format = "%2.6f";
       final String cross_entropy_format = "%2.6f";
       if( model != null ) {
+
+        DocGen.HTML.paragraph(sb, "Model Key: " + model._selfKey);
+        sb.append("<div class='alert'>Actions: " + water.api.Predict.link(model._selfKey, "Score on dataset") + ", "
+                + NeuralNet.link(model._dataKey, "Compute new model") + "</div>");
+
+        // Plot training error
+        {
+          float[] train_err = new float[training_errors.length];
+          float[] train_samples = new float[training_errors.length];
+          for (int i=0; i<train_err.length; ++i) {
+            train_err[i] = (float)training_errors[i].classification;
+            train_samples[i] = training_errors[i].training_samples;
+          }
+          new D3Plot(train_samples, train_err, "training samples", "classification error",
+                  "Classification Error on Training Set").generate(sb);
+        }
+
+        // Plot validation error
+        if (model.validation_errors != null) {
+          float[] valid_err = new float[validation_errors.length];
+          float[] valid_samples = new float[validation_errors.length];
+          for (int i=0; i<valid_err.length; ++i) {
+            valid_err[i] = (float)validation_errors[i].classification;
+            valid_samples[i] = training_errors[i].training_samples;
+          }
+          new D3Plot(valid_samples, valid_err, "training samples", "classification error",
+                  "Classification Error on Validation Set").generate(sb);
+        }
+
+
         final boolean classification = model.isClassifier();
         final String cmTitle = "Confusion Matrix" + (model.validation_errors == null ? " (Training Data)" : "");
 
@@ -829,7 +855,11 @@ public class NeuralNet extends ValidatedJob {
           sb.append("</table>");
         }
         if (model.unstable) {
-          DocGen.HTML.section(sb, "### Note:  Instability detected and job aborted.  Try a smaller learning rate and/or single-node mode. ###") ;
+          final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
+                  + "  Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+          DocGen.HTML.section(sb, "============================================================================================================");
+          DocGen.HTML.section(sb, msg);
+          DocGen.HTML.section(sb, "============================================================================================================");
         }
         if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           assert(classification);
@@ -890,6 +920,9 @@ public class NeuralNet extends ValidatedJob {
           sb.append("</tr>");
         }
         sb.append("</table>");
+      }
+      else {
+        sb.append("No model yet...");
       }
       return true;
     }
@@ -1073,13 +1106,14 @@ public class NeuralNet extends ValidatedJob {
     }
   }
 
-  // Make a differently seeded random generator every time
-  // Ok, since we're using Hogwild anyway (impossible to get reproducibility on >1 threads)
+  // Make a differently seeded random generator every time someone asks for one
   public static class RNG {
-    public static long seed = new Random().nextLong();
+    // Atomicity is not really needed here (since in multi-threaded operation, the weights are simultaneously updated),
+    // but it is still done for posterity since it's cheap (and to be able to count the number of actual getRNG() calls)
+    public static AtomicLong seed = new AtomicLong(new Random().nextLong());
 
     public static Random getRNG() {
-      return water.util.Utils.getRNG(seed++);
+      return water.util.Utils.getDeterRNG(seed.getAndIncrement());
     }
   }
 }
