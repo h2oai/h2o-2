@@ -96,9 +96,8 @@ public abstract class DGLM {
   public static class GLMJob extends ChunkProgressJob {
     public GLMJob(ValueArray data, Key dest, int xval, GLMParams params) {
       // approximate the total number of computed chunks as 25 per normal model computation + 10 iterations per xval model)
-      super((params._family._family == Family.gaussian) ? data.chunks() * (xval + 1) : data.chunks() * (20 + 4 * xval));
+      super((params._family._family == Family.gaussian) ? data.chunks() * (xval + 1) : data.chunks() * (20 + 4 * xval),dest);
       description = "GLM(" + data._key.toString() + ")";
-      destination_key = dest;
     }
 
     public boolean isDone() {

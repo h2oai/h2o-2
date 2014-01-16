@@ -68,7 +68,4 @@ irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+

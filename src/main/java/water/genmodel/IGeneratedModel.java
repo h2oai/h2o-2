@@ -27,13 +27,22 @@ public interface IGeneratedModel {
     /** Return true if this model represents a classifier, else it is used for regression. */
     public boolean isClassifier();
 
-    /** Predict the given row and return prediction
+    /** Predict the given row and return prediction.
      *
      * @param data row holding the data. Ordering should follow ordering of columns returned by getNames()
      * @param preds allocated array to hold a prediction
-     * @return returned preds parameter
+     * @return returned preds parameter filled by prediction
      */
     public float[] predict(double[] data, float[] preds);
+
+    /** Predict the given row and return prediction using given number of iterations (e.g., number of trees from forest).
+    *
+    * @param data row holding the data. Ordering should follow ordering of columns returned by getNames()
+    * @param preds allocated array to hold a prediction
+    * @param maxIters maximum number of iterations to use during predicting process
+    * @return returned preds parameter filled by prediction
+    */
+    public float[] predict(double[] data, float[] preds, int maxIters);
 
     /** Gets domain of given column.
      * @param name column name

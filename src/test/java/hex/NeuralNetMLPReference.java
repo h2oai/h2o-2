@@ -1,7 +1,5 @@
 package hex;
 
-import hex.rng.MersenneTwisterRNG;
-
 import java.text.DecimalFormat;
 import java.util.Random;
 
@@ -19,7 +17,7 @@ public class NeuralNetMLPReference {
   float[][] _testData;
   NeuralNetwork _nn;
 
-  void init(NeuralNet.Activation activation) {
+  void init(NeuralNet.Activation activation, Random rand, double holdout_ratio) {
     double[][] ds = new double[150][];
     int r = 0;
     ds[r++] = new double[] { 5.1, 3.5, 1.4, 0.2, 0, 0, 1 };
@@ -183,11 +181,11 @@ public class NeuralNetMLPReference {
       allData[j][6] = (float) ds[j][4];
     }
 
-    int trainRows = (int) (allData.length * 0.80);
+    int trainRows = (int) (allData.length * holdout_ratio);
     int testRows = allData.length - trainRows;
     _trainData = new float[trainRows][];
     _testData = new float[testRows][];
-    MakeTrainTest(allData, _trainData, _testData);
+    MakeTrainTest(allData, _trainData, _testData, rand);
 
     // Normalize all data using train stats
     for( int i = 0; i < 4; i++ ) {
@@ -223,14 +221,14 @@ public class NeuralNetMLPReference {
     _nn.Train(_trainData, maxEpochs, learnRate, 0, loss);
   }
 
-  void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData) {
+  void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData, Random rand) {
     // split allData into 80% trainData and 20% testData
     int numCols = allData[0].length;
 
     int[] shuffle = new int[allData.length]; // create a random sequence of indexes
     for( int i = 0; i < shuffle.length; ++i )
       shuffle[i] = i;
-    NeuralNetwork.shuffle(shuffle);
+    NeuralNetwork.shuffle(shuffle, rand);
 
     int si = 0; // index into sequence[]
     int j = 0; // index into trainData or testData
@@ -681,8 +679,7 @@ public class NeuralNetMLPReference {
       }
     } // Train
 
-    static void shuffle(int[] sequence) {
-      MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+    static void shuffle(int[] sequence, Random rand) {
       for( int i = sequence.length - 1; i >= 0; i-- ) {
         int r = rand.nextInt(i + 1);
         int tmp = sequence[r];

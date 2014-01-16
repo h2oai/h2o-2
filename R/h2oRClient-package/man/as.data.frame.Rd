@@ -1,4 +1,4 @@
-\name{h2o.as.data.frame}
+\name{as.data.frame}
 \alias{as.data.frame}
 \title{Converts a parsed H2O object to a data frame.}
 \description{ Converts a parsed H2O object to a data frame. Convert a parsed H2O object to an H2O data frame, which allows subsequent data frame operations (like head(), and tail())}
