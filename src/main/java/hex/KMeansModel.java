@@ -190,8 +190,7 @@ public class KMeansModel extends OldModel implements Progress {
 
     public static Job run(final Key dest, final KMeansModel model, final ValueArray ary) {
       UKV.remove(dest); // Delete dest first, or chunk size from previous key can crash job
-      final ChunkProgressJob job = new ChunkProgressJob(ary.chunks());
-      job.destination_key = dest;
+      final ChunkProgressJob job = new ChunkProgressJob(ary.chunks(),dest);
       final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
         @Override public void compute2() {
           KMeansApply kms = new KMeansApply();

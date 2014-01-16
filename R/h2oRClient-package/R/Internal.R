@@ -64,6 +64,7 @@ h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
 h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
+h2o.__PAGE_EXPORTHDFS = "ExportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
@@ -241,7 +242,9 @@ h2o.__poll <- function(client, keyName) {
       prog = res[[i]]
   }
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
-  if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
+  # if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
+  if(!is.null(prog$result$val) && prog$result$val == "CANCELLED") stop("Job key ", keyName, " was cancelled by user")
+  else if(!is.null(prog$result$exception) && prog$result$exception == 1) stop(prog$result$val)
   prog$progress
 }
 
@@ -303,7 +306,7 @@ h2o.__cancelJob <- function(client, keyName) {
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
   if(!(prog$cancelled || prog$progress == -1.0 || prog$progress == -2.0 || prog$end_time == -1)) {
     h2o.__remoteSend(client, h2o.__PAGE_CANCEL, key=keyName)
-    cat("Job key", keyName, "has been cancelled")
+    cat("Job key", keyName, "was cancelled by user")
   }
 }
 

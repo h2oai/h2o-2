@@ -404,11 +404,12 @@ public abstract class Model extends Iced {
   // Wrapper around the main predict call, including the signature and return value
   private SB toJavaPredict(SB ccsb, SB fileCtxSb) { // ccsb = classContext
     ccsb.nl();
-    ccsb.p("  // Pass in data in a double[], pre-aligned to the Model's requirements.\n");
-    ccsb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
-    ccsb.p("  // main prediction (class for classifiers or value for regression),\n");
-    ccsb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
-    ccsb.p("  public final float[] predict( double[] data, float[] preds ) {\n");
+    ccsb.p("  // Pass in data in a double[], pre-aligned to the Model's requirements.").nl();
+    ccsb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the").nl();
+    ccsb.p("  // main prediction (class for classifiers or value for regression),").nl();
+    ccsb.p("  // and remaining columns hold a probability distribution for classifiers.").nl();
+    ccsb.p("  public final float[] predict( double[] data, float[] preds) { return predict( data, preds, "+toJavaDefaultMaxIters()+"); }").nl();
+    ccsb.p("  public final float[] predict( double[] data, float[] preds, int maxIters ) {").nl();
     SB classCtxSb = new SB();
     toJavaPredictBody(ccsb.ii(2), classCtxSb, fileCtxSb); ccsb.di(1);
     ccsb.p("    return preds;").nl();
@@ -416,6 +417,8 @@ public abstract class Model extends Iced {
     ccsb.p(classCtxSb);
     return ccsb;
   }
+
+  protected String toJavaDefaultMaxIters() { return "-1"; };
 
   private static final String TOJAVA_MAP =
     "\n"+

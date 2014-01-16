@@ -42,7 +42,8 @@ public class GridSearch extends Job {
   @Override public float progress() {
     double d = 0.1;
     for( Job job : jobs )
-      d += job.progress();
+      if(job.start_time > 0)
+        d += job.progress();
     return Math.min(1f, (float) (d / jobs.length));
   }
 
@@ -92,11 +93,13 @@ public class GridSearch extends Job {
         for( Job job : jobs ) {
           JobInfo info = new JobInfo();
           info._job = job;
-          Object value = UKV.get(job.destination_key);
-          info._model = value instanceof Model ? (Model) value : null;
-          if( info._model != null ) {
-            info._cm = info._model.cm();
-            info._error = info._model.mse();
+          if(job.destination_key != null){
+            Object value = UKV.get(job.destination_key);
+            info._model = value instanceof Model ? (Model) value : null;
+            if( info._model != null ) {
+              info._cm = info._model.cm();
+              info._error = info._model.mse();
+            }
           }
           if( info._cm != null)
             info._error = info._cm.err();
@@ -131,9 +134,9 @@ public class GridSearch extends Job {
           sb.append("<td>").append(runTime).append("</td>");
           if( perf != null )
             sb.append("<td>").append(speed).append("</td>");
-
-          String link = info._job.destination_key.toString();
+          String link = "";
           if( info._job.start_time != 0 && DKV.get(info._job.destination_key) != null ) {
+            link = info._job.destination_key.toString();
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
             else if( info._model instanceof DRFModel )

@@ -61,6 +61,7 @@ covtype.km = h2o.kmeans(data = covtype.hex, centers = 5,
  + cols = c(1, 2, 3))
 #Get predicted cluster information for covtype dataset
 covtype.clusters = h2o.predict(object = covtype.km, newdata = covtype.hex)
+summary(covtype.clusters)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

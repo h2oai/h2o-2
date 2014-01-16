@@ -30,7 +30,7 @@ public final class H2O {
 
   public static String VERSION = "(unknown)";
 
-  // User name for this Cloud
+  // User name for this Cloud (either the username or the argument for the option -name)
   public static String NAME;
 
   // The default port for finding a Cloud
@@ -977,7 +977,7 @@ public final class H2O {
 
     Log.info("If you have trouble connecting, try SSH tunneling from your local machine (e.g., via port 55555):\n" +
             "  1. Open a terminal and run 'ssh -L 55555:localhost:"
-            + API_PORT + " " + NAME + "@" + SELF_ADDRESS.getHostAddress() + "'\n" +
+            + API_PORT + " " + System.getProperty("user.name") + "@" + SELF_ADDRESS.getHostAddress() + "'\n" +
             "  2. Point your browser to http://localhost:55555");
 
 

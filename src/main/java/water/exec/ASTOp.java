@@ -222,6 +222,7 @@ public abstract class ASTOp extends AST {
     return null;
   }
 
+  double[] map(Env env, double[] in, double[] out) { H2O.unimpl(); return null; }
 
   @Override void exec(Env env) { env.push(this); }
   abstract void apply(Env env, int argcnt);
@@ -534,7 +535,7 @@ class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,   
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
   final double _init;
-  final boolean _narm;
+  final boolean _narm;        // na.rm in R
   ASTReducerOp( double init, boolean narm ) {
     super(new String[]{"","dbls"},
           new Type[]{Type.DBL,Type.varargs(Type.dblary())},
@@ -543,6 +544,13 @@ abstract class ASTReducerOp extends ASTOp {
           OPA_RIGHT);
     _init = init;
     _narm = narm;
+  }
+  @Override double[] map(Env env, double[] in, double[] out) {
+    double s = _init;
+    for (double v : in) if (!_narm || !Double.isNaN(v)) s = op(s,v);
+    if (out == null || out.length < 1) out = new double[1];
+    out[0] = s;
+    return out;
   }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env, int argcnt) {
@@ -590,7 +598,7 @@ abstract class ASTReducerOp extends ASTOp {
   }
 }
 
-class ASTSum     extends ASTReducerOp { ASTSum( )     {super(0,false);} String opStr(){ return "sum"      ;} ASTOp make() {return new ASTSum();} double op(double d0, double d1) { return d0+d1;}}
+class ASTSum     extends ASTReducerOp { ASTSum( )     {super(0,false);} String opStr(){ return "sum"      ;} ASTOp make() {return new ASTSum();    } double op(double d0, double d1) { return d0+d1;}}
 class ASTSumNaRm extends ASTReducerOp { ASTSumNaRm( ) {super(0,true) ;} String opStr(){ return "sum.na.rm";} ASTOp make() {return new ASTSumNaRm();} double op(double d0, double d1) { return d0+d1;}}
 
 class ASTReduce extends ASTOp {
@@ -650,16 +658,11 @@ class ASTCbind extends ASTOp {
   }
 }
 
-class ASTMinNaRm extends ASTOp {
-  ASTMinNaRm( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMinNaRm extends ASTReducerOp {
+  ASTMinNaRm( ) { super( Double.POSITIVE_INFINITY, true ); }
   String opStr(){ return "min.na.rm";}
   ASTOp make() {return new ASTMinNaRm();}
+  @Override double op(double d0, double d1) { return Math.min(d0, d1); }
   @Override void apply(Env env, int argcnt) {
     double min = Double.POSITIVE_INFINITY;
     int nacnt = 0;
@@ -681,16 +684,11 @@ class ASTMinNaRm extends ASTOp {
   }
 }
 
-class ASTMaxNaRm extends ASTOp {
-  ASTMaxNaRm( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMaxNaRm extends ASTReducerOp {
+  ASTMaxNaRm( ) { super( Double.NEGATIVE_INFINITY, true ); }
   String opStr(){ return "max.na.rm";}
   ASTOp make() {return new ASTMaxNaRm();}
+  @Override double op(double d0, double d1) { return Math.max(d0,d1); }
   @Override void apply(Env env, int argcnt) {
     double max = Double.NEGATIVE_INFINITY;
     int nacnt = 0;
@@ -712,16 +710,11 @@ class ASTMaxNaRm extends ASTOp {
   }
 }
 
-class ASTMin extends ASTOp {
-  ASTMin( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMin extends ASTReducerOp {
+  ASTMin( ) { super( Double.POSITIVE_INFINITY, false); }
   String opStr(){ return "min";}
   ASTOp make() {return new ASTMin();}
+  @Override double op(double d0, double d1) { return Math.min(d0, d1); }
   @Override void apply(Env env, int argcnt) {
     double min = Double.POSITIVE_INFINITY;
     for( int i=0; i<argcnt-1; i++ )
@@ -737,16 +730,11 @@ class ASTMin extends ASTOp {
   }
 }
 
-class ASTMax extends ASTOp {
-  ASTMax( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMax extends ASTReducerOp {
+  ASTMax( ) { super( Double.NEGATIVE_INFINITY, false ); }
   String opStr(){ return "max";}
   ASTOp make() {return new ASTMax();}
+  @Override double op(double d0, double d1) { return Math.max(d0,d1); }
   @Override void apply(Env env, int argcnt) {
     double max = Double.NEGATIVE_INFINITY;
     for( int i=0; i<argcnt-1; i++ )
@@ -842,6 +830,11 @@ class ASTCat extends ASTOp {
           OPP_PREFIX,
           OPA_RIGHT); }
   @Override ASTOp make() {return new ASTCat();}
+  @Override double[] map(Env env, double[] in, double[] out) {
+    if (out == null || out.length < in.length) out = new double[in.length];
+    for (int i = 0; i < in.length; i++) out[i] = in[i];
+    return out;
+  }
   @Override void apply(Env env, int argcnt) {
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
@@ -1119,7 +1112,7 @@ class ASTRApply extends ASTOp {
   @Override void apply(Env env, int argcnt) {
     int oldsp = env._sp;
     // Peek everything from the stack
-    ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
+    final ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
     double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
     Frame fr = env.ary(-3);    // The Frame to work on
     if( d==2 || d== -1 ) {     // Work on columns?
@@ -1163,8 +1156,41 @@ class ASTRApply extends ASTOp {
       assert env._sp == oldsp-4+1;
       return;
     }
-    if( d==1 || d == -2 )       // Work on rows
-      throw H2O.unimpl();
+    if( d==1 || d==-2) {      // Work on rows
+      // apply on rows is essentially a map function
+      Type ts[] = new Type[2];
+      ts[0] = Type.unbound();
+      ts[1] = Type.ARY;
+      Type ft1 = Type.fcn(ts);
+      Type ft2 = op._t.find();  // Should be a function type
+      if( !ft1.union(ft2) ) {
+        if( ft2._ts.length != 2 )
+          throw new IllegalArgumentException("FCN " + op.toString() + " cannot accept one argument.");
+        if( !ft2._ts[1].union(ts[1]) )
+          throw new IllegalArgumentException("Arg " + op._vars[1] + " typed " + ft2._ts[1].find() + " but passed as " + ts[1]);
+        assert false;
+      }
+      // find out return type
+      final double[] rowin = new double[fr.vecs().length];
+      for (int c = 0; c < rowin.length; c++) rowin[c] = fr.vecs()[c].at(0);
+      final double[] rowout = op.map(env,rowin,null);
+      final Env env0 = env;
+      MRTask2 mrt = new MRTask2() {
+        @Override
+        public void map(Chunk[] cs, NewChunk[] ncs) {
+          for (int i = 0; i < cs[0]._len; i++) {
+            for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
+            op.map(env0, rowin, rowout);
+            for (int c = 0; c < ncs.length; c++) ncs[c].addNum(rowout[c]);
+          }
+        }
+      };
+      String[] names = new String[rowout.length];
+      for (int i = 0; i < names.length; i++) names[i] = "C"+(i+1);
+      Frame res = mrt.doAll(rowout.length,fr).outputFrame(names, null);
+      env.poppush(4,res,null);
+      return;
+    }
     throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
   }
 }
