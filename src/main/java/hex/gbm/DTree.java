@@ -933,13 +933,13 @@ public class DTree extends Iced {
       int treesInForest = 0;
       SB forest = new SB();
       // divide trees into small forests per 100 trees
-      bodySb.i().p("java.util.Arrays.fill(preds,0f);\n");
+      bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
       for( int c=0; c<nclasses(); c++ ) {
         toJavaForestBegin(bodySb, forest, c, fidx++);
         for( int i=0; i < treeBits.length; i++ ) {
           CompressedTree cts[] = treeBits[i];
           if( cts[c] == null ) continue;
-          forest.i(1).p("pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
           // append representation of tree predictor
           toJavaTreePredictFct(fileCtxSb, cts[c], i, c);
           if (++treesInForest > maxfsize) {
@@ -968,11 +968,12 @@ public class DTree extends Iced {
 
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
       predictBody.i().p("// Call forest predicting class ").p(c).nl();
-      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data);").nl();
+      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters);").nl();
       forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
       forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
-      forest.i().p("public static float predict(double[] data) {").nl().ii(1);
-      forest.i().p("float pred = 0;").nl();
+      forest.i().p("public static float predict(double[] data, int maxIters) {").nl().ii(1);
+      forest.i().p("float pred  = 0;").nl();
+      forest.i().p("int   iters = maxIters;").nl();
     }
     private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
       forest.i().p("return pred;").nl();
@@ -989,6 +990,8 @@ public class DTree extends Iced {
       new TreeJCodeGen(this,cts, sb).generate();
       sb.i().p("}").nl(); // close the class
     }
+
+    @Override protected String toJavaDefaultMaxIters() { return String.valueOf(this.N);  }
   }
 
   // Build a compressed-tree struct
