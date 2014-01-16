@@ -5,11 +5,9 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.DocGen;
-import water.api.Progress2;
-import water.api.Request;
-import water.api.RequestServer;
+import water.api.*;
 import water.fvec.*;
+import water.util.D3Plot;
 import water.util.Log;
 import water.util.RString;
 import water.util.Utils;
@@ -19,6 +17,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static hex.NeuralNet.ExecutionMode.*;
+
 
 /**
  * Neural network.
@@ -758,14 +757,42 @@ public class NeuralNet extends ValidatedJob {
       final String mse_format = "%2.6f";
       final String cross_entropy_format = "%2.6f";
       if( model != null ) {
+
+        DocGen.HTML.paragraph(sb, "Model Key: " + model._selfKey);
+        sb.append("<div class='alert'>Actions: " + water.api.Predict.link(model._selfKey, "Score on dataset") + ", "
+                + NeuralNet.link(model._dataKey, "Compute new model") + "</div>");
+
+        // Plot training error
+        {
+          float[] train_err = new float[training_errors.length];
+          float[] train_samples = new float[training_errors.length];
+          for (int i=0; i<train_err.length; ++i) {
+            train_err[i] = (float)training_errors[i].classification;
+            train_samples[i] = training_errors[i].training_samples;
+          }
+          new D3Plot(train_samples, train_err, "training samples", "classification error",
+                  "Classification Error on Training Set").generate(sb);
+        }
+
+        // Plot validation error
+        if (model.validation_errors != null) {
+          float[] valid_err = new float[validation_errors.length];
+          float[] valid_samples = new float[validation_errors.length];
+          for (int i=0; i<valid_err.length; ++i) {
+            valid_err[i] = (float)validation_errors[i].classification;
+            valid_samples[i] = training_errors[i].training_samples;
+          }
+          new D3Plot(valid_samples, valid_err, "training samples", "classification error",
+                  "Classification Error on Validation Set").generate(sb);
+        }
+
+
         final boolean classification = model.isClassifier();
         final String cmTitle = "Confusion Matrix" + (model.validation_errors == null ? " (Training Data)" : "");
 
         // stats for training and validation
         final Errors train = model.training_errors[model.training_errors.length - 1];
         final Errors valid = model.validation_errors != null ? model.validation_errors[model.validation_errors.length - 1] : null;
-
-        DocGen.HTML.paragraph(sb,water.api.Predict.link(model._selfKey,"Predict!"));
 
         if (classification) {
           DocGen.HTML.section(sb, "Training classification error: " + formatPct(train.classification));
@@ -893,6 +920,9 @@ public class NeuralNet extends ValidatedJob {
           sb.append("</tr>");
         }
         sb.append("</table>");
+      }
+      else {
+        sb.append("No model yet...");
       }
       return true;
     }
