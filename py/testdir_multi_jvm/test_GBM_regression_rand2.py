@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_params_rand2(self):
+    def test_GBM_regression_rand2(self):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
@@ -93,10 +93,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cms'][-1] # use the last one
-                pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-                print "\nTrain\n==========\n"
-                print h2o_gbm.pp_cm(cm)
+                # for regression, the cms are all null, so don't print
 
                 # GBM test****************************************
                 predictKey = 'Predict.hex'

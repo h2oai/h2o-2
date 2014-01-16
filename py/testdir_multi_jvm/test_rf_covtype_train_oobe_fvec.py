@@ -162,7 +162,10 @@ class Basic(unittest.TestCase):
 
         print "rfv3, from covtype.sorted.data"
         print "\nJsonDiff covtype.data rfv, to covtype.sorted.data rfv"
-        df = h2o_util.JsonDiff(rfv1, rfv3, with_values=True)
+        print "rfv1:", h2o.dump_json(rfv1)
+        print "rfv3:", h2o.dump_json(rfv3)
+        # df = h2o_util.JsonDiff(rfv1, rfv3, with_values=True)
+        df = h2o_util.JsonDiff(rfv1, rfv3)
         print "df.difference:", h2o.dump_json(df.difference)
 
         self.assertAlmostEqual(ce1, ce2, delta=0.5, msg="classification error %s isn't close to that when sorted %s" % (ce1, ce2))
