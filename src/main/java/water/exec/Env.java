@@ -204,7 +204,21 @@ public class Env extends Iced {
     _refcnt = null;
     _sb = null;
   }
-
+  private Env( Env e, boolean deep ) {
+    assert deep == true;
+    _sp = e._sp;
+    _key= e._key.clone();
+    _ary= e._ary.clone();
+    _d  = e._d  .clone();
+    _fcn= e._fcn.clone();
+    _tod= e._tod;
+    _refcnt = (HashMap<Vec,Integer>)e._refcnt.clone();
+    for (Vec key : _refcnt.keySet()) _refcnt.put(key, new Integer(_refcnt.get(key)));
+    _sb = null;
+  }
+  Env copy( ) {
+    return new Env(this,true);
+  }
 
   // Nice assert
   boolean allAlive(Frame fr) {

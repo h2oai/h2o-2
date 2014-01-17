@@ -221,11 +221,11 @@ public abstract class ASTOp extends AST {
     E._x = x;                 // Roll back, no parse happened
     return null;
   }
-
-  double[] map(Env env, double[] in, double[] out) { H2O.unimpl(); return null; }
-
   @Override void exec(Env env) { env.push(this); }
+  @Override void eval(Env2 env) { env.setFcn(1,this); }
   abstract void apply(Env env, int argcnt);
+  double[] map(Env2 env, double[] in, double[] out) { H2O.unimpl(); return null; }
+  double[] map(Env2 env, double[] in0, double[] in1, double[] out) { H2O.unimpl(); return null; }
 }
 
 abstract class ASTUniOp extends ASTOp {
@@ -239,6 +239,11 @@ abstract class ASTUniOp extends ASTOp {
   double op( double d ) { throw H2O.fail(); }
   protected ASTUniOp( String[] vars, Type[] types, int form, int precedence, int association ) {
     super(vars,types,form,precedence,association);
+  }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    if (out==null || out.length<in.length) out = new double[in.length];
+    for (int i = 0; i < in.length; i++) out[i] = op(in[i]);
+    return out;
   }
   @Override void apply(Env env, int argcnt) {
     // Expect we can broadcast across all functions as needed.
@@ -298,6 +303,9 @@ class ASTNrow extends ASTUniPrefixOp {
     env.subRef(fr,skey);
     env.poppush(d);
   }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    H2O.unimpl(); return  null;
+  }
 }
 
 class ASTNcol extends ASTUniPrefixOp {
@@ -310,6 +318,9 @@ class ASTNcol extends ASTUniPrefixOp {
     double d = fr.numCols();
     env.subRef(fr,skey);
     env.poppush(d);
+  }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    H2O.unimpl(); return  null;
   }
 }
 
@@ -328,6 +339,9 @@ class ASTIsFactor extends ASTUniPrefixOp {
     }
     env.subRef(fr,skey);
     env.poppush(d);
+  }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    H2O.unimpl(); return  null;
   }
 }
 
@@ -348,6 +362,9 @@ class ASTAnyFactor extends ASTUniPrefixOp {
     env.subRef(fr,skey);
     env.poppush(d);
   }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    H2O.unimpl(); return  null;
+  }
 }
 
 class ASTAnyNA extends ASTUniPrefixOp {
@@ -366,6 +383,12 @@ class ASTAnyNA extends ASTUniPrefixOp {
     env.subRef(fr, skey);
     env.poppush(d);
   }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    if (out==null || out.length<1) out = new double[1];
+    for (double d : in) if (Double.isNaN(d)) {out[0] = 1; return out;}
+    out[0] = 0;
+    return out;
+  }
 }
 
 class ASTIsTRUE extends ASTUniPrefixOp {
@@ -376,6 +399,9 @@ class ASTIsTRUE extends ASTUniPrefixOp {
     double res = env.isDbl() && env.popDbl()==1.0 ? 1:0;
     env.pop();
     env.poppush(res);
+  }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    H2O.unimpl(); return  null;
   }
 }
 
@@ -391,6 +417,14 @@ class ASTScale extends ASTUniPrefixOp {
     env.subRef(fr,skey);
     env.pop();                  // Pop self
     env.push(fr2);
+  }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    if (out==null || out.length<in.length) out = new double[in.length];
+    double center = 0;   int n = 0;
+    for (double d : in) if (!Double.isNaN(d)) { center += d; n++; }
+    if (n!=0) center = center/n;
+    for (int i = 0; i < in.length; i++) out[i] = in[i] - center;
+    return  out;
   }
 
   private static class Scale extends MRTask2<Scale> {
@@ -457,6 +491,12 @@ abstract class ASTBinOp extends ASTOp {
     super(VARS2, newsig(), form, precedence, association); // binary ops are infix ops
   }
   abstract double op( double d0, double d1 );
+  @Override double[] map(Env2 env, double[] in0, double[] in1, double[] out) {
+    assert in0.length == in1.length;
+    if (out==null || out.length<in0.length) out = new double[in0.length];
+    for (int i = 0; i < in0.length; i++) out[i] = op(in0[i], in1[i]);
+    return out;
+  }
   @Override void apply(Env env, int argcnt) {
     // Expect we can broadcast across all functions as needed.
     Frame fr0 = null, fr1 = null;
@@ -545,7 +585,7 @@ abstract class ASTReducerOp extends ASTOp {
     _init = init;
     _narm = narm;
   }
-  @Override double[] map(Env env, double[] in, double[] out) {
+  @Override double[] map(Env2 env, double[] in, double[] out) {
     double s = _init;
     for (double v : in) if (!_narm || !Double.isNaN(v)) s = op(s,v);
     if (out == null || out.length < 1) out = new double[1];
@@ -830,9 +870,16 @@ class ASTCat extends ASTOp {
           OPP_PREFIX,
           OPA_RIGHT); }
   @Override ASTOp make() {return new ASTCat();}
-  @Override double[] map(Env env, double[] in, double[] out) {
+  @Override double[] map(Env2 env, double[] in, double[] out) {
     if (out == null || out.length < in.length) out = new double[in.length];
     for (int i = 0; i < in.length; i++) out[i] = in[i];
+    return out;
+  }
+  @Override double[] map(Env2 env, double[] in0, double[] in1, double[] out) {
+    if (out==null || out.length<in0.length+in1.length)
+      out = new double[in0.length+in1.length];
+    for (int i = 0; i < in0.length; i++) out[i] = in0[i];
+    for (int i = 0; i < in1.length; i++) out[in0.length+i] = in1[i];
     return out;
   }
   @Override void apply(Env env, int argcnt) {
@@ -861,6 +908,12 @@ class ASTRunif extends ASTOp {
                      OPP_PREFIX,
                      OPA_RIGHT); }
   @Override ASTOp make() {return new ASTRunif();}
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    if (out==null || out.length<in.length) out = new double[in.length];
+    Random rng = new Random(System.currentTimeMillis());
+    for (int i = 0; i < in.length; i++) out[i] = rng.nextDouble();
+    return out;
+  }
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popAry();
     String skey = env.key();
@@ -901,6 +954,14 @@ class ASTSdev extends ASTOp {
                     OPA_RIGHT); }
   @Override String opStr() { return "sd"; }
   @Override ASTOp make() { return new ASTSdev(); }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    if (out==null || out.length<in.length) out = new double[1];
+    double ss=0; double s=0; int n=0;
+    for (double d : in) if(!Double.isNaN(d)) { ss += d*d; s += d; n++; }
+    if (n>0) { out[0] = Math.sqrt(ss/n - (s/n)*(s/n)); }
+    else out[0] = Double.NaN;
+    return out;
+  }
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.peekAry();
     if (fr.vecs().length > 1)
@@ -920,6 +981,14 @@ class ASTMean extends ASTOp {
                     OPA_RIGHT); }
   @Override String opStr() { return "mean"; }
   @Override ASTOp make() { return new ASTMean(); }
+  @Override double[] map(Env2 env, double[] in, double[] out) {
+    if (out==null || out.length<in.length) out = new double[1];
+    double s=0; int n=0;
+    for (double d : in) if(!Double.isNaN(d)) { s += d; n++; }
+    if (n>0) { out[0] = s/n; }
+    else out[0] = Double.NaN;
+    return out;
+  }
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.peekAry();
     if (fr.vecs().length > 1)
@@ -1173,15 +1242,14 @@ class ASTRApply extends ASTOp {
       // find out return type
       final double[] rowin = new double[fr.vecs().length];
       for (int c = 0; c < rowin.length; c++) rowin[c] = fr.vecs()[c].at(0);
-      final double[] rowout = op.map(env,rowin,null);
-      final Env env0 = env;
+      final double[] rowout = op.map(null,rowin,null);
       MRTask2 mrt = new MRTask2() {
         @Override
         public void map(Chunk[] cs, NewChunk[] ncs) {
           for (int i = 0; i < cs[0]._len; i++) {
             for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
-            op.map(env0, rowin, rowout);
-            for (int c = 0; c < ncs.length; c++) ncs[c].addNum(rowout[c]);
+            double ro[] = op.map(null,rowin, rowout);
+            for (int c = 0; c < ncs.length; c++) ncs[c].addNum(ro[c]);
           }
         }
       };

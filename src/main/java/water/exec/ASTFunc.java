@@ -78,32 +78,13 @@ public class ASTFunc extends ASTOp {
     env.popScope();
   }
 
-  @Override double[] map(Env env, double[] in, double[] out) {
-    final int sp = env._sp;
-    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
-    AppendableVec av = new AppendableVec(key);
-    NewChunk nc = new NewChunk(av,0);
-    for (double v : in) nc.addNum(v);
-    nc.close(0,null);
-    Frame fr = new Frame(av.close(null));
-    env.push(this);
-    env.push(fr);
-    this.apply(env,2);
-    if (env.isDbl()) {
-      if (out==null || out.length<1) out= new double[1];
-      out[0] = env.popDbl();
-    } else if (env.isAry()) {
-      fr = env.peekAry();
-      if (fr.vecs().length > 1) H2O.unimpl();
-      Vec vec = fr.anyVec();
-      if (vec.length() > 1<<8) H2O.unimpl();
-      if (out==null || out.length<vec.length()) out= new double[(int)vec.length()];
-      for (long i = 0; i < vec.length(); i++) out[(int)i] = vec.at(i);
-      env.pop();
-    } else {
-      H2O.unimpl();
-    }
-    assert sp == env._sp;
+  @Override double[] map(Env2 encl, double[] in, double[] out) {
+    if (_vars.length-_tmps!=1) H2O.unimpl();
+    Env2 env = new Env2(encl, this);
+    env.setAry(1, in);     // push the only argument to env
+    _body.eval(env);
+    out = env.retAry();
+    if (out == null) H2O.unimpl();
     return out;
   }
 

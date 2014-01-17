@@ -4,6 +4,7 @@ import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import water.*;
 import water.fvec.Frame;
@@ -39,6 +40,7 @@ abstract public class AST extends Iced {
     return null;
   }
   abstract void exec(Env env);
+  abstract void eval(Env2 env);
   boolean isPosConstant() { return false; }
   protected StringBuilder indent( StringBuilder sb, int d ) {
     for( int i=0; i<d; i++ ) sb.append("  ");
@@ -69,6 +71,9 @@ class ASTStatement extends AST {
       env.pop();                // Pop all intermediate results
     }
     _asts[_asts.length-1].exec(env); // Return final statement as result
+  }
+  @Override void eval(Env2 env) {
+    for ( int i=0; i<_asts.length; i++ ) _asts[i].eval(env);
   }
   @Override public String toString() { return ";;;"; }
   public StringBuilder toString( StringBuilder sb, int d ) {
@@ -186,6 +191,18 @@ class ASTApply extends AST {
     assert sp+_args.length==env._sp;
     env.fcn(-_args.length).apply(env,_args.length);
   }
+  @Override void eval(Env2 env) {
+    if (_args.length > 3) H2O.unimpl();
+    ASTOp op = (ASTOp)_args[0];
+    double[] var0,var1;
+    _args[1].eval(env); var0 = env.retAry(); if (var0==null) H2O.unimpl();
+    if (_args.length>2) {
+      _args[2].eval(env); var1 = env.retAry(); if (var1==null) H2O.unimpl();
+      env.setAry(0,op.map(env,var0,var1,null));
+    } else {
+      env.setAry(0,op.map(env,var0,null));
+    }
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -241,6 +258,8 @@ class ASTSlice extends AST {
       env.push(fr2);
     }
   }
+
+  @Override void eval(Env2 env) { H2O.unimpl(); }
 
   // Execute a col/row selection & return the selection.  NULL means "all".
   // Error to mix negatives & positive.  Negative list is sorted, with dups
@@ -331,6 +350,9 @@ class ASTId extends AST {
     // Nested scope?  need to grab from the nested-scope closure
     ASTFunc fcn = env.fcnScope(_depth);
     fcn._env.push_slot(_depth-1,_num,env);
+  }
+  @Override void eval(Env2 env) {
+    env.fetch(_id);
   }
   @Override public String toString() { return _id; }
 }
@@ -489,6 +511,14 @@ class ASTAssign extends AST {
     if( cols!= null ) narg++;
     env.poppush(narg,ary,null);
   }
+  @Override void eval(Env2 env) {
+    if( !(_lhs instanceof ASTId) ) H2O.unimpl();
+    ASTId id = (ASTId)_lhs;
+    _eval.eval(env);
+    if      (env.retFcn()!=null) env.asnFcn(id._id,env.retFcn());
+    else if (env.retAry()!=null) env.asnAry(id._id,env.retAry());
+    else                         env.asnDbl(id._id,env.retDbl());
+  }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append('\n');
@@ -515,6 +545,7 @@ class ASTNum extends AST {
   }
   boolean isPosConstant() { return _d >= 0; }
   @Override void exec(Env env) { env.push(_d); }
+  @Override void eval(Env2 env) { env.setDbl(0,_d);}
   @Override public String toString() { return Double.toString(_d); }
 
   /** Wrap an integer so that it can be modified by a called method.  i.e. Pass-by-reference.  */
