@@ -1,15 +1,16 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../findNSourceUtils.R')
 
-test.rdocimportfileVA.golden <- function(H2Oserver) {
-
+test.rdoccolnames.golden <- function(H2Oserver) {
+	
 
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
-iris.hex = h2o.importFile.VA(H2Oserver, path = irisPath, key = "iris.hex")
+iris.hex = h2o.importFile(H2Oserver, path = irisPath, key = "iris.hex")
 summary(iris.hex)
+colnames(iris.hex)
 
 testEnd()
 }
 
-doTest("R Doc ImportFileVA", test.rdocimportfileVA.golden)
+doTest("R Doc Col Names", test.rdoccolnames.golden)
 

@@ -1154,6 +1154,11 @@ public final class H2O {
   // multicast port (or all the individuals we can find, if multicast is
   // disabled).
   static void multicast( ByteBuffer bb ) {
+    try { multicast2(bb); }
+    catch (Exception _) {}
+  }
+
+  static private void multicast2( ByteBuffer bb ) {
     if( H2O.STATIC_H2OS == null ) {
       byte[] buf = new byte[bb.remaining()];
       bb.get(buf);
@@ -1173,11 +1178,11 @@ public final class H2O {
           // and if not a soft launch (hibernate mode)
           if(H2O.OPT_ARGS.soft == null)
             Log.err("Multicast Error ",e);
-            if( CLOUD_MULTICAST_SOCKET != null )
-              try { CLOUD_MULTICAST_SOCKET.close(); }
-              catch( Exception e2 ) { Log.err("Got",e2); }
-              finally { CLOUD_MULTICAST_SOCKET = null; }
-          }
+          if( CLOUD_MULTICAST_SOCKET != null )
+            try { CLOUD_MULTICAST_SOCKET.close(); }
+            catch( Exception e2 ) { Log.err("Got",e2); }
+            finally { CLOUD_MULTICAST_SOCKET = null; }
+        }
       }
     } else {                    // Multicast Simulation
       // The multicast simulation is little bit tricky. To achieve union of all

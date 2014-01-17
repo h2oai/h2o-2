@@ -21,7 +21,7 @@ The number of rows to be returned (the default count is 6).
 }
 
 \value{
-The last 6 rows of an H2O parsed data frame, unless the number of rows is otherwise specified to be N, in which case the last N rows are returned.
+A table displaying the last 6 rows of an H2O parsed data frame, unless the number of rows is otherwise specified to be N, in which case the last N rows are returned.
 }
 
 \examples{

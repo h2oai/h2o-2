@@ -49,11 +49,6 @@ An object of class \code{\linkS4class{H2ORFModelVA}} with slots key, data, and m
 \item{classification_error }{Classification error rate.}
 \item{tree_sum}{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
 \item{confusion }{Confusion matrix of the prediction.}
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
 }
 \references{
 %% ~put references to the literature/web site here ~
