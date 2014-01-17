@@ -19,8 +19,8 @@ import water.Job.ChunkProgressJob;
 import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.api.Constants;
-import water.util.Log;
-import water.util.Utils;
+import water.util.*;
+import water.util.Utils.IcedInt;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
@@ -1055,6 +1055,17 @@ public abstract class DGLM {
           UKV.remove(k);
     }
 
+    private static class YMUVal extends Iced {
+      private double _val;
+      private long _nobs;
+      public void add(double d){_val += d; ++_nobs;}
+      public double val(){return _nobs == 0?0:_val/_nobs;}
+      public YMUVal add(YMUVal val){
+        _val += val._val;
+        _nobs += val._nobs;
+        return this;
+      }
+    }
     // Validate on a dataset.  Columns must match, including the response column.
     public GLMValidation validateOn(Job job, ValueArray ary, Sampling s, double[] thresholds)
         throws JobCancelledException {
@@ -1062,8 +1073,22 @@ public abstract class DGLM {
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
         throw new GLMException("incompatible dataset");
       DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
-      GLMValidationFunc f = new GLMValidationFunc(this, _glmParams, _beta, thresholds,
-          ary._cols[modelDataMap[modelDataMap.length - 1]]._mean);
+      double ymu = ary._cols[modelDataMap[modelDataMap.length - 1]]._mean;
+      if(_glmParams._caseMode != CaseMode.none || Double.isNaN(ymu)){ // we need to compute the mean of the response...
+        final CaseMode caseMode = _glmParams._caseMode;
+        final double caseVal = _glmParams._caseVal;
+        ymu = new RowFunc<YMUVal>(){
+          @Override public YMUVal newResult() {return new YMUVal();}
+          @Override public void processRow(YMUVal res, double[] x, int[] indexes) {
+            for(double d:x)if(Double.isNaN(d))return;
+            double y = x[x.length-1];
+            if(caseMode != CaseMode.none) y = caseMode.isCase(y,caseVal)?1:0;
+            res.add(y);
+          }
+          @Override public YMUVal reduce(YMUVal x, YMUVal y) {return x.add(y);}
+        }.apply(null, data).val();
+      }
+      GLMValidationFunc f = new GLMValidationFunc(this, _glmParams, _beta, thresholds,ymu);
       GLMValidation val = f.apply(job, data);
       val._modelKey = _selfKey;
       if( _vals == null ) _vals = new GLMValidation[] { val };
@@ -1074,7 +1099,6 @@ public abstract class DGLM {
       }
       return val;
     }
-
     public GLMValidation xvalidate(Job job, ValueArray ary, int folds, double[] thresholds, boolean parallel)
         throws JobCancelledException {
       int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
