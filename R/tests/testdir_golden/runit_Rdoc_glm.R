@@ -3,7 +3,7 @@ source('../findNSourceUtils.R')
 
 test.rdocglm.golden <- function(H2Oserver) {
 	
-#Example from as.data.frame R doc
+
 
 prostate.hex = h2o.importURL.VA(H2Oserver, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)

@@ -11,5 +11,5 @@ summary(apply(iris.hex, 1, sum))
 testEnd()
 }
 
-doTest("R Doc K Means", test.rdocapply.golden)
+doTest("R Doc Apply", test.rdocapply.golden)
 

@@ -11,5 +11,5 @@ colMeans(iris.hex[,2:4])
 testEnd()
 }
 
-doTest("R Doc K Means", test.rdoccolmeans.golden)
+doTest("R Doc Col Means", test.rdoccolmeans.golden)
 

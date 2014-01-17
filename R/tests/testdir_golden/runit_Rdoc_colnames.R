@@ -12,5 +12,5 @@ colnames(iris.hex)
 testEnd()
 }
 
-doTest("R Doc K Means", test.rdoccolnames.golden)
+doTest("R Doc Col Names", test.rdoccolnames.golden)
 
