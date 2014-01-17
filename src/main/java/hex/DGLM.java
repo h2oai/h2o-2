@@ -1983,6 +1983,7 @@ public abstract class DGLM {
     double[] newBeta = MemoryManager.malloc8d(data.expandedSz());
     boolean converged = true;
     Gram gram = gramF.apply(job, data);
+    final long nobs = gram._nobs;
     int iter = 1;
     long lsmSolveTime = 0;
     long t = System.currentTimeMillis();
@@ -2019,8 +2020,11 @@ public abstract class DGLM {
     currentModel.xvalidate(job, data._ary, xval, DEFAULT_THRESHOLDS, parallel);
     else currentModel.validateOn(job, data._ary, data.getSamplingComplement(), DEFAULT_THRESHOLDS); // Full scoring on original dataset
     currentModel._status = Status.Done;
+    if(currentModel.rank() > nobs)
+      warns.add("Not enough data to compute the model (got more predictors than data points), try limit the number of columns (e.g. increase L1 regularization or run PCA first).");
     String[] warnings = new String[warns.size()];
     warns.toArray(warnings);
+    currentModel._warnings = warnings;
     currentModel.store();
     DKV.write_barrier();
     return currentModel;
