@@ -39,6 +39,7 @@ public class Constants extends Iced {
   public static final String BROWSE                = "browse";
   public static final String BUCKET                = "bucket";
   public static final String CANCELLED             = "cancelled";
+  public static final String CARDINALITY           = "cardinality";
   public static final String CASE                  = "case";
   public static final String CASE_MODE             = "case_mode";
   public static final String CHUNK                 = "chunk";
