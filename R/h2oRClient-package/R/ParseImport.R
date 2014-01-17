@@ -301,15 +301,6 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
 }
 
-setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
-  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
-
-setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
-  function(x, value) {
-    if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
-    stop("Unimplemented"); return(x)
-})
-
 # ----------------------- Log helper ----------------------- #
 h2o.logAndEcho <- function(conn, message) {
   if (class(conn) != "H2OClient")
