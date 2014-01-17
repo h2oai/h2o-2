@@ -763,7 +763,8 @@ h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, for
   if(!algo %in% c("GBM", "KM", "RF", "NN")) stop("General grid search not supported for ", algo)
   prog_view = switch(algo, GBM = h2o.__PAGE_GBMProgress, KM = h2o.__PAGE_KM2Progress, RF = h2o.__PAGE_DRFProgress, NN = h2o.__PAGE_NNProgress)
   
-  job_key = response$job_key; dest_key = response$destination_key
+  job_key = response$job_key
+  dest_key = response$destination_key
   on.exit(h2o.__cancelJob(data@h2o, job_key))
   h2o.__waitOnJob(data@h2o, job_key)
   # while(!h2o.__isDone(data@h2o, algo, response)) { Sys.sleep(1); prog = h2o.__poll(data@h2o, job_key); setTxtProgressBar(pb, prog) }

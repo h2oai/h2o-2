@@ -303,6 +303,32 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
 }
 
+# ----------------------- Diagnostics ----------------------- #
+h2o.checkCloud <- function(client) {
+  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+  myURL = paste("http://", client@ip, ":", client@port, "/", h2o.__PAGE_CLOUD, sep = "")
+  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
+  res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
+  
+  cat("Version:", res$version, "\n")
+  cat("Cloud name:", res$cloud_name, "\n")
+  cat("Node name:", res$node_name, "\n")
+  cat("Cloud size:", res$cloud_size, "\n")
+  if(res$locked) cat("Cloud is locked\n\n") else cat("Accepting new members\n\n")
+  if(is.null(res$nodes) || length(res$nodes) == 0) stop("No nodes found!")
+  
+  # Calculate how many seconds ago we last contacted cloud
+  cur_time <- Sys.time()
+  for(i in 1:length(res$nodes)) {
+    last_contact_sec = as.numeric(res$nodes[[i]]$last_contact)/1e3
+    time_diff = cur_time - as.POSIXct(last_contact_sec, origin = "1970-01-01")
+    res$nodes[[i]]$last_contact = as.numeric(time_diff)
+  }
+  cnames = c("name", "value_size_bytes", "free_mem_bytes", "max_mem_bytes", "free_disk_bytes", "max_disk_bytes", "num_cpus", "system_load", "rpcs", "last_contact")
+  temp = data.frame(t(sapply(res$nodes, c)))
+  return(temp[,cnames])
+}
+
 # ----------------------- Log helper ----------------------- #
 h2o.logAndEcho <- function(conn, message) {
   if (class(conn) != "H2OClient")
