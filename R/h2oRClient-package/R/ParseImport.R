@@ -78,6 +78,7 @@ h2o.assign <- function(data, key) {
   return(data)
 }
 
+# WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
@@ -149,7 +150,7 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names) {
   else
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
   
-  on.exit(h2o.__cancelJob(data@h2o, res$job_key))
+  # on.exit(h2o.__cancelJob(data@h2o, res$job_key))
   h2o.__waitOnJob(data@h2o, res$job_key)
   parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
@@ -173,6 +174,7 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, va
           
 #-------------------------------- ValueArray -----------------------------------#
 # Data import operations
+# WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
@@ -298,7 +300,7 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   else
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
   
-  on.exit(h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job))
+  # on.exit(h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job))
   h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
   parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
 }

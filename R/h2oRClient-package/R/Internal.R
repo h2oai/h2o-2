@@ -271,10 +271,12 @@ h2o.__pollAll <- function(client, timeout) {
 h2o.__waitOnJob <- function(client, job_key, pollInterval = 1, progressBar = TRUE) {
   if(progressBar) {
     pb = txtProgressBar(style = 3)
-    while((prog = h2o.__poll(client, job_key)) != -1) { Sys.sleep(pollInterval); setTxtProgressBar(pb, prog) }
+    tryCatch(while((prog = h2o.__poll(client, job_key)) != -1) { Sys.sleep(pollInterval); setTxtProgressBar(pb, prog) },
+             finally = h2o.__cancelJob(client, job_key))
     setTxtProgressBar(pb, 1.0); close(pb)
   } else
-    while(h2o.__poll(client, job_key) != -1) { Sys.sleep(pollInterval) }
+    tryCatch(while(h2o.__poll(client, job_key) != -1) { Sys.sleep(pollInterval) }, 
+             finally = h2o.__cancelJob(client, job_key))
 }
 
 # For checking progress from each algorithm's progress page (no longer used)
@@ -321,7 +323,7 @@ h2o.__cancelJob <- function(client, keyName) {
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
   if(!(prog$cancelled || prog$progress == -1.0 || prog$progress == -2.0 || prog$end_time == -1)) {
     h2o.__remoteSend(client, h2o.__PAGE_CANCEL, key=keyName)
-    cat("Job key", keyName, "was cancelled by user")
+    cat("Job key", keyName, "was cancelled by user\n")
   }
 }
 

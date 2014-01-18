@@ -479,6 +479,31 @@ public class Vec extends Iced {
   }
   @Override public int hashCode() { return _key.hashCode(); }
 
+  /** Always makes a copy of the given vector which shares the same
+   * group.
+   *
+   * The user is responsible for deleting the returned vector.
+   *
+   * This can be expensive operation since it can force copy of data
+   * among nodes.
+   *
+   * @param vec vector which is intended to be copied
+   * @return a copy of vec which shared the same {@link VectorGroup} with this vector
+   */
+  public Vec align(final Vec vec) {
+    assert ! this.group().equals(vec.group()) : "Vector align expects a vector from different vector group";
+    assert this._size == vec._size : "Trying to align vectors with different length!";
+    Vec avec = makeZero(); // aligned vector
+    new MRTask2() {
+      @Override public void map(Chunk c0) {
+        long srow = c0._start;
+        for (int r = 0; r < c0._len; r++) c0.set0(r, vec.at(srow + r));
+      }
+    }.doAll(avec);
+    avec._domain = _domain;
+    return avec;
+  }
+
   /**
    * Class representing the group of vectors.
    *
