@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.HashMap;
 
 class PredictCSV {
     private static String modelClassName;
@@ -83,6 +84,23 @@ class PredictCSV {
         BufferedReader input = new BufferedReader(new FileReader(inputCSVFileName));
         BufferedWriter output = new BufferedWriter(new FileWriter(outputCSVFileName));
 
+        System.out.println("COLS " + model.getNumCols());
+        // Create map of input variable domain information.
+        // This contains the categorical string to numeric mapping.
+        HashMap<Integer,HashMap<String,Integer>> domainMap = new HashMap<Integer,HashMap<String,Integer>>();
+        for (int i = 0; i < model.getNumCols(); i++) {
+            String[] domainValues = model.getDomainValues(i);
+            if (domainValues != null) {
+                HashMap<String,Integer> m = new HashMap<String,Integer>();
+                for (int j = 0; j < domainValues.length; j++) {
+                    System.out.println("Putting ("+ i +","+ j +","+ domainValues[j] +")");
+                    m.put(domainValues[j], new Integer(j));
+                }
+
+                domainMap.put(i, m);
+            }
+        }
+
         // Print outputCSV column names.
         output.write("predict");
         for (int i = 0; i < model.getNumResponseClasses(); i++) {
@@ -114,13 +132,35 @@ class PredictCSV {
             // Assemble the input values for the row.
             double[] row = new double[inputColumnsArray.length];
             for (int i = 0; i < inputColumnsArray.length; i++) {
-                String[] domainValues = model.getDomainValues(i);
-                if (domainValues != null) {
-                    System.out.println("ERROR: Unimplemented");
-                    System.exit(1);
+                String cellString = inputColumnsArray[i];
+
+                // System.out.println("Line " + lineno +" column ("+ model.getNames()[i] + " == " + i + ") cellString("+cellString+")");
+
+                if (cellString.equals("NA") ||
+                    cellString.equals("N/A") ||
+                    cellString.equals("") ||
+                    cellString.equals("-")) {
+                    row[i] = Double.NaN;
                 }
-                double value = Double.parseDouble(inputColumnsArray[i]);
-                row[i] = value;
+                else {
+                    String[] domainValues = model.getDomainValues(i);
+                    if (domainValues != null) {
+                        HashMap m = (HashMap<String,Integer>) domainMap.get(i);
+                        assert (m != null);
+                        Integer cellOrdinalValue = (Integer) m.get(cellString);
+                        if (cellOrdinalValue == null) {
+                            System.out.println("WARNING: Line " + lineno + " column ("+ model.getNames()[i] + " == " + i +") has unknown categorical value (" + cellString + ")");
+                            row[i] = Double.NaN;
+                        }
+                        else {
+                            row[i] = (double) cellOrdinalValue.intValue();
+                        }
+                    }
+                    else {
+                        double value = Double.parseDouble(cellString);
+                        row[i] = value;
+                    }
+                }
             }
 
             // Do the prediction.
