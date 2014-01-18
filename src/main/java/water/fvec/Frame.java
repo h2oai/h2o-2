@@ -40,7 +40,7 @@ public class Frame extends Iced {
     if( v0 == null ) return;
     VectorGroup grp = v0.group();
     for( int i=0; i<vecs.length; i++ )
-      assert grp.equals(vecs[i].group());
+      assert grp.equals(vecs[i].group()) : "Vector " + vecs[i] + " has different vector group!";
   }
   public Vec vec(String name){
     Vec [] vecs = vecs();
@@ -129,7 +129,7 @@ public class Frame extends Iced {
     System.arraycopy(fr._keys ,0,_keys ,len0,len1);
     return this;
   }
-  public Frame add( Frame fr, boolean rename ) { 
+  public Frame add( Frame fr, boolean rename ) {
     if( !rename ) return add(fr,fr._names);
     String names[] = new String[fr._names.length];
     for( int i=0; i<names.length; i++ ) {
