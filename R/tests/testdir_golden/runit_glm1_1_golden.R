@@ -24,8 +24,8 @@ Log.info(paste("H2O aic       : ", fitH2O@model$aic,           "\t\t", "R aic   
 Log.info("Compare model statistics in R to model statistics in H2O")
 expect_equal(fitH2O@model$null.deviance, fitR$null.deviance, tolerance = 0.01)
 expect_equal(fitH2O@model$deviance, fitR$deviance, tolerance = 0.01)
-expect_equal(fitH2O@model$df.residual, fitR$df.residual, tolerance = 0.01)
-expect_equal(fitH2O@model$df.null, fitR$df.null, tolerance = 0.01)
+expect_equal(fitH2O@model$df.residual, fitR$df.residual)
+expect_equal(fitH2O@model$df.null, fitR$df.null)
 expect_equal(fitH2O@model$aic, fitR$aic, tolerance = 0.01)
 
 testEnd()

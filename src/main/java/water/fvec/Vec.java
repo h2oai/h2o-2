@@ -176,6 +176,9 @@ public class Vec extends Iced {
    *  categorical columns.  Returns null for non-Enum/factor columns. */
   public String[] domain() { return _domain; }
 
+  /** Returns cardinality for enum domain or -1 for other types. */
+  public int cardinality() { return isEnum() ? _domain.length : -1; }
+
   /** Transform this vector to enum.
    *  Transformation is done by a {@link TransfVec} which provides a mapping between values.
    *
@@ -237,7 +240,7 @@ public class Vec extends Iced {
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
     } else {                 // KV store reports we need to recompute
       RollupStats rs = new RollupStats().dfork(this);
-      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult()); 
+      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
     }
     return this;
   }
