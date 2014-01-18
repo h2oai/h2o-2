@@ -918,10 +918,11 @@ public abstract class DGLM {
     }
 
     public int rank() {
-      if( _beta == null ) return -1;
-      int res = 0; //we do not count intercept so we start from -1
-      for( double b : _beta )
-        if( b != 0 ) ++res;
+      int res = 0;
+      if( _beta == null ) return res;
+      for( int i = 0; i < _beta.length-1; ++i)
+        if(_beta[i] != 0 ) ++res;
+      System.out.println("rank = " + res + ", beta = " + Arrays.toString(_beta));
       return res;
     }
 
@@ -1025,11 +1026,12 @@ public abstract class DGLM {
       _time = time;
       _solver = solver;
       _warnings = warnings;
-      _dof = nLines - rank() - 1;
+      _dof = nLines - 1 - rank();
       _nLines = nLines;
       _nCols = nCols;
       _response = response;
       // permute beta into original order!
+      System.out.println("DOF = " + _dof + ", nobs = " + nLines);
     }
 
     public boolean converged() {
@@ -1232,7 +1234,7 @@ public abstract class DGLM {
         default:
           assert false : "missing implementation for family " + _glmParams._family;
       }
-      res._aic += 2 * rank();//_glmp._family.aic(res._deviance, res._n, _beta.length);
+      res._aic += 2 * (rank()+1);//_glmp._family.aic(res._deviance, res._n, _beta.length);
       if( _vals == null ) _vals = new GLMValidation[] { res };
       else {
         _vals = Arrays.copyOf(_vals, _vals.length + 1);

@@ -11,9 +11,8 @@ cuseR<- read.csv(locate("smalldata/cuseexpanded.csv"), header=T)
 #Build matching models in R and H2O - R model specified to match H2O behavior for reference factor levels
 Log.info("Test H2O treatment of FACTORS AS PREDICTORS - Coefficients")
 Log.info("Run matching models in R and H2O")
-fitH2O<- h2o.glm(y="UsingBinom", x=c("Age", "Ed", "Wantsmore"), data=cuseH2O, family="binomial", lambda=0, alpha=0, nfolds=0)
+fitH<- h2o.glm(y="UsingBinom", x=c("AgeA","AgeC","AgeD","LowEd","MoreYes"), standardize=F,data=cuse, family="binomial", lambda=0, alpha=0, nfolds=0)
 fitR<- glm(UsingBinom ~ AgeA + AgeC + AgeD + LowEd + MoreYes, family=binomial, data=cuseR)
-
 
 Log.info("Print model coefficients for R and H2O... \n")
 H2Ocoeffs<- sort(t(fitH2O@model$coefficients))
