@@ -555,9 +555,8 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_s
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key=data@key, y=y, x=paste(x, sep="", collapse=","), family=family, n_folds=nfolds, alpha=alpha, lambda=lambda, expert_settings=expert_settings, beta_epsilon=beta_epsilon, standardize=as.numeric(standardize), case_mode="=", case=1.0, tweedie_power=tweedie.p)
   
   destKey = res$destination_key
-  h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job)
+  h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
   # while(!h2o.__isDone(data@h2o, "GLM1", res)) { Sys.sleep(1) }
-  
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
   resModel = res2$GLMModel
   
