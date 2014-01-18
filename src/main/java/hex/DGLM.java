@@ -922,7 +922,6 @@ public abstract class DGLM {
       if( _beta == null ) return res;
       for( int i = 0; i < _beta.length-1; ++i)
         if(_beta[i] != 0 ) ++res;
-      System.out.println("rank = " + res + ", beta = " + Arrays.toString(_beta));
       return res;
     }
 
@@ -1030,8 +1029,6 @@ public abstract class DGLM {
       _nLines = nLines;
       _nCols = nCols;
       _response = response;
-      // permute beta into original order!
-      System.out.println("DOF = " + _dof + ", nobs = " + nLines);
     }
 
     public boolean converged() {
