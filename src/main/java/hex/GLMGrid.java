@@ -24,11 +24,12 @@ public class GLMGrid extends Job {
   double[]             _ts;     // Thresholds
   double[]             _alphas; // Grid search values
   int                  _xfold;
+  boolean              _standardize;
   boolean              _parallelFlag;
   int                  _parallelism;
   GLMParams            _glmp;
 
-  public GLMGrid(Key dest, ValueArray va, GLMParams glmp, int[] xs, double[] ls, double[] as, double[] thresholds, int xfold, boolean pflag, int par) {
+  public GLMGrid(Key dest, ValueArray va, GLMParams glmp, int[] xs, double[] ls, double[] as, double[] thresholds, int xfold, boolean pflag, int par, boolean standardize) {
     destination_key = dest;
     _ary = va; // VA is large, and already in a Key so make it transient
     _datakey = va._key; // ... and use the data key instead when reloading
@@ -39,6 +40,7 @@ public class GLMGrid extends Job {
     _ts = thresholds;
     _alphas = as;
     _xfold = xfold;
+    _standardize = standardize;
     _parallelFlag = pflag;
     _parallelism = par;
     _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]], new ArrayList<String>()); // ignore warnings here, they will be shown for each mdoel anyways
@@ -71,11 +73,13 @@ public class GLMGrid extends Job {
     final int _aidx;
     GLMGrid   _job;
     boolean   _parallel;
+    boolean   _standardize;
     Key       _aryKey;
-    GridTask(GLMGrid job, int aidx, boolean parallel) {
+    GridTask(GLMGrid job, int aidx, boolean parallel, boolean standardize) {
       _aidx = aidx;
       _job = job;
       _parallel = parallel;
+      _standardize = standardize;
       _aryKey = _job._ary._key;
       assert _aryKey != null;
     }
@@ -87,7 +91,7 @@ public class GLMGrid extends Job {
       ValueArray ary = DKV.get(_aryKey).get();
       try{
         for( int l1 = 1; l1 <= _job._lambdas.length && !_job.cancelled(); l1++ ) {
-          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
+          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, _standardize), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
           beta = m._normBeta.clone();
           _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job.start_time,fs);
         }
@@ -110,7 +114,7 @@ public class GLMGrid extends Job {
           int submitted = 0, done = 0;
           Future[] active = new GridTask[_parallelism];
           for (int job = 0; job < _alphas.length; job++) {
-            GridTask t = new GridTask(GLMGrid.this, job, true);
+            GridTask t = new GridTask(GLMGrid.this, job, true, _standardize);
             if (submitted - done >= _parallelism) {
               try {
                 active[done++%_parallelism].get();
@@ -124,12 +128,12 @@ public class GLMGrid extends Job {
             active[submitted++%_parallelism] = t;
             if (nodeId==myId)
               t.fork();
-            else 
+            else
               new RPC(H2O.CLOUD._memary[nodeId],t).addCompleter(t).call();
           }
         } else {
           for( int a = 0; a < _alphas.length; a++ ) {
-            GridTask t = new GridTask(GLMGrid.this, a, false);
+            GridTask t = new GridTask(GLMGrid.this, a, false, _standardize);
             t.compute2();
           }
           remove();

@@ -565,7 +565,7 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_s
     for(i in 1:length(resModel$warnings))
       warning(resModel$warnings[[i]])
   }
-  modelOrig = h2o.__getGLMResults(resModel, y, family, tweedie.p)
+  modelOrig = h2o.__getGLMResults(resModel, y, family, tweedie.p, standardize)
 
   # Get results from cross-validation
   if(nfolds < 2)
@@ -575,14 +575,14 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_s
   for(i in 1:nfolds) {
     xvalKey = resModel$validations[[1]]$xval_models[i]
     resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
-    modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p)
+    modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p, standardize)
     res_xval[[i]] = new("H2OGLMModelVA", key=xvalKey, data=data, model=modelXval, xval=list())
   }
   new("H2OGLMModelVA", key=destKey, data=data, model=modelOrig, xval=res_xval)
 }
 
-h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda) {
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0, parallel= 1 )
+h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_eps = epsilon, standardize = as.numeric(standardize), case_mode="=", case=1.0, parallel=1)
   
   destKey = res$destination_key
   h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
@@ -602,7 +602,7 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda) {
       for(j in 1:length(resH$GLMModel$warnings))
         warning("Model ", allModels[[i]]$key, ": ", resH$GLMModel$warnings[[j]])
     }
-    modelOrig = h2o.__getGLMResults(resH$GLMModel, y, family, tweedie.p)
+    modelOrig = h2o.__getGLMResults(resH$GLMModel, y, family, tweedie.p, standardize)
 
     if(nfolds < 2)
       result[[i]] = new("H2OGLMModelVA", key=allModels[[i]]$key, data=data, model=modelOrig, xval=list())
@@ -611,7 +611,7 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda) {
       for(j in 1:nfolds) {
         xvalKey = resH$GLMModel$validations[[1]]$xval_models[j]
         resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
-        modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p)
+        modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p, standardize)
         res_xval[[j]] = new("H2OGLMModelVA", key=xvalKey, data=data, model=modelXval, xval=list())
       }
       result[[i]] = new("H2OGLMModelVA", key=allModels[[i]]$key, data=data, model=modelOrig, xval=res_xval)
@@ -621,10 +621,11 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda) {
 }
 
 # Pretty formatting of H2O GLM results
-h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
+h2o.__getGLMResults <- function(res, y, family, tweedie.p, standardize) {
   result = list()
   result$coefficients = unlist(res$coefficients)
-  result$normalized_coefficients = unlist(res$normalized_coefficients)
+  if(standardize)
+    result$normalized_coefficients = unlist(res$normalized_coefficients)
   result$rank = res$nCols
   result$family = h2o.__getFamily(family, tweedie.var.p = tweedie.p)
   result$deviance = as.numeric(res$validations[[1]]$resDev)
@@ -670,7 +671,7 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
     h2o.glm.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize)
   else {
     if(!missing(tweedie.p)) print('Tweedie variance power not available in GLM grid search')
-    h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda)
+    h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize)
   }
 }
 

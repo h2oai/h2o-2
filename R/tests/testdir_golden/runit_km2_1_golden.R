@@ -15,7 +15,7 @@ test.km2vanilla.golden <- function(H2Oserver) {
 # Sanity check to make sure required fields are actually present in the model that gets returned.
 #if (! ('withinss' %in% names(fitH2O@model))) {
 # stop("H2O model has no component 'withinss'")
-}
+#}
 
 #wssR<-sort.int(fitR$withinss)
 #wssH2O<- sort.int(fitH2O@model$withinss)

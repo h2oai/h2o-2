@@ -42,7 +42,7 @@ public class ConfusionMatrix extends Request2 {
   //}
 
   @Override public Response serve() {
-    Vec va = null,vp = null;
+    Vec va = null,vp = null, avp = null;
     // Input handling
     if( vactual==null || vpredict==null )
       return Response.error("Missing actual or predict?");
@@ -55,6 +55,11 @@ public class ConfusionMatrix extends Request2 {
       response_domain = va._domain;
       vp = vpredict.toEnum();
       predicted_domain = vp._domain;
+      // The vectors are from different groups => align them, but properly delete it after computation
+      if (!va.group().equals(vp.group())) {
+        avp = vp;
+        vp = va.align(vp);
+      }
       cm = new CM(va.domain().length, vp.domain().length).doAll(va,vp)._cm;
       return Response.done(this);
     } catch (Throwable t) {
@@ -63,6 +68,7 @@ public class ConfusionMatrix extends Request2 {
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
       if (vp!=null) UKV.remove(vp._key);
+      if (avp!=null) UKV.remove(avp._key);
     }
   }
 
