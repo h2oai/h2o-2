@@ -1240,12 +1240,14 @@ class ASTRApply extends ASTOp {
         assert false;
       }
       // find out return type
-      final double[] rowin = new double[fr.vecs().length];
-      for (int c = 0; c < rowin.length; c++) rowin[c] = fr.vecs()[c].at(0);
-      final double[] rowout = op.map(null,rowin,null);
+      final double[] rowin0 = new double[fr.vecs().length];
+      for (int c = 0; c < rowin0.length; c++) rowin0[c] = fr.vecs()[c].at(0);
+      final double[] rowout0 = op.map(null,rowin0,null);
       MRTask2 mrt = new MRTask2() {
         @Override
         public void map(Chunk[] cs, NewChunk[] ncs) {
+          final double[] rowin  = new double[cs.length];
+          final double[] rowout = new double[rowout0.length];
           for (int i = 0; i < cs[0]._len; i++) {
             for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
             double ro[] = op.map(null,rowin, rowout);
@@ -1253,9 +1255,9 @@ class ASTRApply extends ASTOp {
           }
         }
       };
-      String[] names = new String[rowout.length];
+      String[] names = new String[rowout0.length];
       for (int i = 0; i < names.length; i++) names[i] = "C"+(i+1);
-      Frame res = mrt.doAll(rowout.length,fr).outputFrame(names, null);
+      Frame res = mrt.doAll(rowout0.length,fr).outputFrame(names, null);
       env.poppush(4,res,null);
       return;
     }
