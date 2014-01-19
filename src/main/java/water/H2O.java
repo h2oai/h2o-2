@@ -736,7 +736,7 @@ public final class H2O {
   public static class OptArgs extends Arguments.Opt {
     public String name; // set_cloud_name_and_mcast()
     public String flatfile; // set_cloud_name_and_mcast()
-    public int base_port; // starting number to search for open ports
+    public int baseport; // starting number to search for open ports
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String network; // Network specification for acceptable interfaces to bind to.
@@ -905,8 +905,8 @@ public final class H2O {
 
     printAndLogVersion();
 
-    if (OPT_ARGS.base_port != 0) {
-      DEFAULT_PORT = OPT_ARGS.base_port;
+    if (OPT_ARGS.baseport != 0) {
+      DEFAULT_PORT = OPT_ARGS.baseport;
     }
 
     // Get ice path before loading Log or Persist class
