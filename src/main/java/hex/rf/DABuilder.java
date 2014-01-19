@@ -89,7 +89,7 @@ class DABuilder {
     for (final Key k : rkeys) {
       final int S = start_row;
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-      Log.info(Sys.RANDF,"!!! loading remote key: " + k + " from " + k.home_node(), " start_row: " + S);
+      Log.debug(Sys.RANDF,"** loading remote key: " + k + " from " + k.home_node(), " start_row: " + S);
       dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }
