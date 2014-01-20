@@ -123,11 +123,12 @@ public abstract class Layer extends Iced {
     }
 
     // for input layer
-    private void clearSomeInput() {
-      assert(_previous.isInput());
-      final double rate = ((Input)_previous)._dropout_rate;
-      for( int i = 0; i < _previous._a.length; i++ ) {
-        if (_rand.nextFloat() < rate) _previous._a[i] = 0;
+    private void clearSomeInput(Layer previous) {
+      if (_rand == null) _rand = getRNG();
+      assert(previous.isInput());
+      final double rate = ((Input)previous)._dropout_rate;
+      for( int i = 0; i < previous._a.length; i++ ) {
+        if (_rand.nextFloat() < rate) previous._a[i] = 0;
       }
     }
 
@@ -178,12 +179,12 @@ public abstract class Layer extends Iced {
     if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
-        _w[i] = uniformDist(rng, -range, range);
+        _w[i] = (float)uniformDist(rng, -range, range);
     }
     else {
       if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
         for (int i = 0; i < _w.length; i++) {
-          _w[i] = uniformDist(rng, (float)-initial_weight_scale, (float)initial_weight_scale);
+          _w[i] = (float)uniformDist(rng, (float)-initial_weight_scale, (float)initial_weight_scale);
         }
       } else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
         for (int i = 0; i < _w.length; i++) {
@@ -521,6 +522,9 @@ public abstract class Layer extends Iced {
 
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
+      if( weights ) {
+        randomize(getRNG(), 4.0f);
+      }
     }
 
     @Override protected void fprop(boolean training) {
@@ -700,7 +704,7 @@ public abstract class Layer extends Iced {
       if (dropout != null && training) {
         dropout.fillBytes();
         if (_previous.isInput())
-          dropout.clearSomeInput();
+          dropout.clearSomeInput(_previous);
       }
 
       for( int o = 0; o < _a.length; o++ ) {
@@ -812,7 +816,7 @@ public abstract class Layer extends Iced {
       if (dropout != null && training) {
         dropout.fillBytes();
         if (_previous.isInput())
-          dropout.clearSomeInput();
+          dropout.clearSomeInput(_previous);
       }
 
       float max = 0;
@@ -868,7 +872,7 @@ public abstract class Layer extends Iced {
       if (dropout != null && training) {
         dropout.fillBytes();
         if (_previous.isInput())
-          dropout.clearSomeInput();
+          dropout.clearSomeInput(_previous);
       }
 
       for( int o = 0; o < _a.length; o++ ) {
@@ -953,7 +957,7 @@ public abstract class Layer extends Iced {
           r2 += _w[w] * _w[w];
         }
         if( r2 >  max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-          final float scale = (float) Math.sqrt(max_w2 / r2);
+          final double scale = Math.sqrt(max_w2 / r2);
           for( int i = 0; i < _previous._a.length; i++ ) {
             int w = i * _a.length + u;
             _w[w] *= scale;
@@ -983,7 +987,7 @@ public abstract class Layer extends Iced {
       shareWeights(src[y], dst[y]);
   }
 
-  private static float uniformDist(Random rand, float min, float max) {
+  private static double uniformDist(Random rand, double min, double max) {
     return min + rand.nextFloat() * (max - min);
   }
 

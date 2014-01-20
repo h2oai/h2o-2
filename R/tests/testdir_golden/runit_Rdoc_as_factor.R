@@ -20,5 +20,5 @@ expect_true(is)
 testEnd()
 }
 
-doTest("R Doc as.data.frame", test.rdocasfactor.golden)
+doTest("R Doc as factor", test.rdocasfactor.golden)
 

@@ -804,10 +804,24 @@ setMethod("levels", "H2OParsedData", function(x) {
   res$levels[[1]]
 })
 
+setMethod("as.name", "H2OParsedData", function(x) {
+  deparse(substitute(x))
+})
+
 #----------------------------- Work in Progress -------------------------------#
-# TODO: Substitute in key names for H2OParsedData variables
+# TODO: Need to change ... to environment variables and pass to substitute method,
+#       Can't figure out how to access outside environment from within lapply
 setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
+  # h2olist <- lapply(list(...), function(x) { if(class(x) == "H2OParsedData") x@key else x })
+  # idx = which(names(h2olist) == "")
+  # names(h2olist)[idx] <- unlist(unname(list(...)))[idx]
+  
+  # lapply(list(...), function(x) { if(class(x) == "H2OParsedData") assign(x, as.name(x@key)) })
+  if(deparse(substitute(X)) != X@key)
+    assign(deparse(substitute(X)), as.name(X@key))
+  
   myfun = deparse(substitute(FUN))
+  # myfun = deparse(substitute(FUN, env = list(X = as.name(X@key))))
   len = length(myfun)
 
   if(len > 2 && myfun[len] == "}")
@@ -869,7 +883,9 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   
   model = object@model
   cat("Coefficients:\n"); print(round(model$coefficients,5))
-  cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+  if(!is.null(model$normalized_coefficients)) {
+    cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+  }
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
@@ -927,7 +943,7 @@ setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
   function(x, value) {
     if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
     stop("Unimplemented"); return(x)
-  })
+})
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
 

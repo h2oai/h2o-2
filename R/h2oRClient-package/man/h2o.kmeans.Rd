@@ -69,7 +69,3 @@ covtype.hex = h2o.importFile(localH2O, path = covPath)
 covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
 print(covtype.km)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

@@ -99,6 +99,27 @@ public abstract class DRF {
         throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params._sample);
       if (_params._numSplitFeatures!=-1 && (_params._numSplitFeatures< 1 || _params._numSplitFeatures>cs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(cs.length-1)+"]");
+      if (_params._useNonLocalData && !canLoadAll( (ValueArray) UKV.get(_rfmodel._dataKey) ))
+        throw new IllegalArgumentException("Cannot load all data from remote nodes. Please provide more memory for JVMs or un-check the option 'Use non local data' (however, it will affect resulting accuracy).");
+    }
+
+    private boolean canLoadAll(ValueArray ary) {
+      long[] localChunks = new long[H2O.CLOUD.size()];
+      // Collect number of local chunks
+      for(int i=0; i<ary.chunks(); i++) {
+        Key k = ary.getChunkKey(i);
+        localChunks[k.home(H2O.CLOUD)]++;
+      }
+      for(int i=0; i<localChunks.length; i++) {
+        long needToLoad = ary.chunks() - localChunks[i]; // number of chunks to load
+        long memoryForChunks = needToLoad * ValueArray.CHUNK_SZ;
+        HeartBeat hb = H2O.CLOUD._memary[i]._heartbeat; // use last heartbeat to estimate free memory
+        long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
+        Log.debug(Sys.RANDF, i + ": computed available mem: " + PrettyPrint.bytes(nodeFreeMemory));
+        Log.debug(Sys.RANDF, i + ": remote chunks require: " + PrettyPrint.bytes(memoryForChunks));
+        if (nodeFreeMemory  - memoryForChunks <= 0) return false;
+      }
+      return true;
     }
 
     /**Inhale the data, build a DataAdapter and kick-off the computation.
@@ -127,6 +148,11 @@ public abstract class DRF {
 
     @Override public final void reduce( DRemoteTask drt ) { }
 
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+      if (_job!=null) _job.cancel(ex);
+      return super.onExceptionalCompletion(ex, caller);
+    }
+
     /** Write number of split features computed on this node to a model */
     static void updateRFModel(Key modelKey, final int numSplitFeatures, final Key[] rkeys) {
       final int idx = H2O.SELF.index();
@@ -143,31 +169,30 @@ public abstract class DRF {
 
     private static final Key[] NO_KEYS = new Key[] {};
 
+    static final float OVERHEAD_MAGIC = 3/8.f; // memory overhead magic
     /** Return a list of chunk keys which can be loaded from other nodes. */
     private Key[] getNonLocalChunks(Key[] localCKeys) {
       Log.info(Sys.RANDF, "Use non-local data: " + _params._useNonLocalData);
       if (_params._useNonLocalData) {
-        final float OVERHEAD_MAGIC = 3/8.f; // magic !
-        long totalmem = Runtime.getRuntime().totalMemory();
-        long localChunks = localCKeys.length * ValueArray.CHUNK_SZ;
-        long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
 
-        if (availMem > 0) {
-          final ValueArray ary = UKV.get(_rfmodel._dataKey);
-          // Try to fill the memory up to ratio 3/8
-          int numkeys = Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
-          Log.info(Sys.RANDF, "Avail. mem: " + PrettyPrint.bytes(availMem));
-          Log.info(Sys.RANDF, "Can load keys: " + numkeys);
-          if (numkeys>0) {
-            Key[] rkeys = new Key[numkeys];
-            int c = 0;
-            for(int i=0; i<ary.chunks(); i++) {
-              Key k = ary.getChunkKey(i);
-              if (!k.home()) rkeys[c++] = k;
-              if (c == numkeys) break;
-            }
-            return rkeys;
+        long totalmem = Runtime.getRuntime().maxMemory()-(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory());
+        long availMem = (long) (OVERHEAD_MAGIC * totalmem); // theoretically available memory with overhead
+
+        final ValueArray ary = UKV.get(_rfmodel._dataKey);
+        // Try to fill the memory up to ratio 3/8 - load all chunks now since the memory condition are checked at beginning
+        int numkeys = (int) (ary.chunks()-localCKeys.length); //Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
+        Log.info(Sys.RANDF, "Computed available mem: " + PrettyPrint.bytes(availMem));
+        Log.info(Sys.RANDF, "Trying to load non-local keys: " + numkeys + " from " + (ary.chunks()-localCKeys.length));
+        assert availMem - numkeys * ValueArray.CHUNK_SZ > 0 : "There is not enough memory to load all remote keys!";
+        if (numkeys>0) {
+          Key[] rkeys = new Key[numkeys];
+          int c = 0;
+          for(int i=0; i<ary.chunks(); i++) {
+            Key k = ary.getChunkKey(i);
+            if (!k.home()) rkeys[c++] = k;
+            if (c == numkeys) break;
           }
+          return rkeys;
         }
       }
       return NO_KEYS;

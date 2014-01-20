@@ -9,5 +9,5 @@ summary(prostate.hex)
 testEnd()
 }
 
-doTest("R Doc as.data.frame", test.rdocuploadfile.golden)
+doTest("R Doc upload file", test.rdocuploadfile.golden)
 
