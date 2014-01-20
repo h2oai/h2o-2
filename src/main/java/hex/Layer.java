@@ -123,11 +123,12 @@ public abstract class Layer extends Iced {
     }
 
     // for input layer
-    private void clearSomeInput() {
-      assert(_previous.isInput());
-      final double rate = ((Input)_previous)._dropout_rate;
-      for( int i = 0; i < _previous._a.length; i++ ) {
-        if (_rand.nextFloat() < rate) _previous._a[i] = 0;
+    private void clearSomeInput(Layer previous) {
+      if (_rand == null) _rand = getRNG();
+      assert(previous.isInput());
+      final double rate = ((Input)previous)._dropout_rate;
+      for( int i = 0; i < previous._a.length; i++ ) {
+        if (_rand.nextFloat() < rate) previous._a[i] = 0;
       }
     }
 
@@ -700,7 +701,7 @@ public abstract class Layer extends Iced {
       if (dropout != null && training) {
         dropout.fillBytes();
         if (_previous.isInput())
-          dropout.clearSomeInput();
+          dropout.clearSomeInput(_previous);
       }
 
       for( int o = 0; o < _a.length; o++ ) {
@@ -812,7 +813,7 @@ public abstract class Layer extends Iced {
       if (dropout != null && training) {
         dropout.fillBytes();
         if (_previous.isInput())
-          dropout.clearSomeInput();
+          dropout.clearSomeInput(_previous);
       }
 
       float max = 0;
@@ -868,7 +869,7 @@ public abstract class Layer extends Iced {
       if (dropout != null && training) {
         dropout.fillBytes();
         if (_previous.isInput())
-          dropout.clearSomeInput();
+          dropout.clearSomeInput(_previous);
       }
 
       for( int o = 0; o < _a.length; o++ ) {
