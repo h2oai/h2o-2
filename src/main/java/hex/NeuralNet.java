@@ -780,7 +780,7 @@ public class NeuralNet extends ValidatedJob {
           float[] valid_samples = new float[validation_errors.length];
           for (int i=0; i<valid_err.length; ++i) {
             valid_err[i] = (float)validation_errors[i].classification;
-            valid_samples[i] = training_errors[i].training_samples;
+            valid_samples[i] = validation_errors[i].training_samples;
           }
           new D3Plot(valid_samples, valid_err, "training samples", "classification error",
                   "Classification Error on Validation Set").generate(sb);
