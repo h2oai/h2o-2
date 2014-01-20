@@ -73,13 +73,11 @@ class GLM_twovalues(unittest.TestCase):
             -4"
 
         twoValueList = [
-            ('A','B',0, 14),
-            ('A','B',1, 14),
-            (0,1,0, 12),
-            (0,1,1, 12),
-            (0,1,'NaN', 12),
-            (1,0,'NaN', 12),
-            (-1,1,0, 12),
+            # (0,1,0, 12),
+            # (0,1,1, 12),
+            # ('A','B',0, 12),
+            # ('A','B',1, 12),
+            (-1,1,-1, 12),
             (-1,1,1, 12),
             (-1e1,1e1,1e1, 12),
             (-1e1,1e1,-1e1, 12),
@@ -95,30 +93,32 @@ class GLM_twovalues(unittest.TestCase):
 
             start = time.time()
             kwargs = {
+                'n_folds': 0,
                 'case_mode': '=',
                 'case_val': case, 
                 'response': 'C12', 
                 'family': 'binomial', 
-                'alpha': 0, 
+                'alpha': 0.5, 
+                'lambda': 1e-4, 
                 'beta_epsilon': 0.0002
             }
 
             # default takes 39 iterations? play with alpha/beta
             print "using outputTrue: %s outputFalse: %s" % (outputTrue, outputFalse)
             glm = h2o_cmd.runGLM(parseResult=parseResult, **kwargs)
-            (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, 0, **kwargs)
+            (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             # check that the number of entries in coefficients is right (12 with intercept)
 
-            coefficients_names = glm['GLMModel']['coefficients_names']
+            coefficients_names = glm['glm_model']['coefficients_names']
             print "coefficients_names:", coefficients_names
 
-            actualCoeffNum = len(glm['GLMModel']['coefficients'])
+            # subtract one for intercept
+            actualCoeffNum = len(glm['glm_model']['submodels'][0]['beta']) - 1
             if (actualCoeffNum!=expectedCoeffNum):
                 raise Exception("Should be %s expected coefficients in result. actual: %s" % (expectedCoeffNum, actualCoeffNum))
 
             print "trial #", trial, "glm end on ", csvFilename, 'took', time.time() - start, 'seconds'
-            # h2b.browseJsonHistoryAsUrlLastMatch("GLM")
             h2o.check_sandbox_for_errors()
             trial += 1
 
