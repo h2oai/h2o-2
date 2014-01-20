@@ -264,7 +264,7 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
 
                 # did something change so min and max are different now if enum
                 # check if they are string here
-                if isinstance(c['min'], str) or isinstance(c['max'], str):
+                if isinstance(c['min'], basestring) or isinstance(c['max'], basestring):
                     raise Exception("Didn't expect 'min': %s or 'max': %s to be str or unicode" % (c['min'], c['max']))
                 enum_domain_size = (c['max'] - c['min']) + 1
                 msg += (" enum_domain_size: %d" % enum_domain_size)
