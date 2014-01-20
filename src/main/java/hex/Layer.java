@@ -179,12 +179,12 @@ public abstract class Layer extends Iced {
     if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
-        _w[i] = uniformDist(rng, -range, range);
+        _w[i] = (float)uniformDist(rng, -range, range);
     }
     else {
       if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
         for (int i = 0; i < _w.length; i++) {
-          _w[i] = uniformDist(rng, (float)-initial_weight_scale, (float)initial_weight_scale);
+          _w[i] = (float)uniformDist(rng, (float)-initial_weight_scale, (float)initial_weight_scale);
         }
       } else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
         for (int i = 0; i < _w.length; i++) {
@@ -984,7 +984,7 @@ public abstract class Layer extends Iced {
       shareWeights(src[y], dst[y]);
   }
 
-  private static float uniformDist(Random rand, float min, float max) {
+  private static double uniformDist(Random rand, double min, double max) {
     return min + rand.nextFloat() * (max - min);
   }
 
