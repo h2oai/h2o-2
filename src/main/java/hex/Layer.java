@@ -522,6 +522,9 @@ public abstract class Layer extends Iced {
 
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
+      if( weights ) {
+        randomize(getRNG(), 4.0f);
+      }
     }
 
     @Override protected void fprop(boolean training) {
