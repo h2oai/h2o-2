@@ -632,7 +632,7 @@ public class NeuralNet extends ValidatedJob {
         rms_bias = new double[ls.length];
         mean_weight = new double[ls.length];
         rms_weight = new double[ls.length];
-        for( int y = 1; y < layers.length-1; y++ ) {
+        for( int y = 1; y < layers.length; y++ ) {
           final Layer l = layers[y];
           final int len = l._a.length;
 
@@ -823,7 +823,7 @@ public class NeuralNet extends ValidatedJob {
           }
         }
         if (parameters != null && parameters.diagnostics) {
-          DocGen.HTML.section(sb, "Hidden Layer Status");
+          DocGen.HTML.section(sb, "Status of Hidden and Output Layers");
           sb.append("<table class='table table-striped table-bordered table-condensed'>");
           sb.append("<tr>");
           sb.append("<th>").append("#").append("</th>");
@@ -836,11 +836,11 @@ public class NeuralNet extends ValidatedJob {
           sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
           sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
           sb.append("</tr>");
-          for (int i=1; i<model.layers.length-1; ++i) {
+          for (int i=1; i<model.layers.length; ++i) {
             sb.append("<tr>");
             sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
             sb.append("<td>").append("<b>").append(model.layers[i].units).append("</b>").append("</td>");
-            sb.append("<td>").append(model.layers[i].getClass().getSimpleName()).append("</td>");
+            sb.append("<td>").append(model.layers[i].getClass().getSimpleName().replace("Vec","").replace("Chunk", "")).append("</td>");
             sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
             sb.append("<td>").append(model.layers[i].l1).append("</td>");
             sb.append("<td>").append(model.layers[i].l2).append("</td>");
