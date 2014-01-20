@@ -1415,6 +1415,21 @@ class H2O(object):
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
 
+
+    # turns enums into expanded binary features
+    def one_hot(self, source, timeoutSecs=30, **kwargs):
+        params = {
+            "source": source,
+            }
+
+        a = self.__do_json_request('2/OneHot.json',
+            params=params,
+            timeout=timeoutSecs
+            )
+
+        check_sandbox_for_errors(python_test_name=python_test_name)
+        return a
+
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, 
