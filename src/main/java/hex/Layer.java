@@ -179,7 +179,7 @@ public abstract class Layer extends Iced {
     if (_w == null) return;
 
     if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
-      final double range = prefactor * (double)Math.sqrt(6. / (_previous.units + units));
+      final double range = prefactor * Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
         _w[i] = (float)uniformDist(rng, -range, range);
     }
