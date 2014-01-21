@@ -726,7 +726,9 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         }
         break;
       case ICOL: // number
-        if (_max[i] - _min[i] < 255) {
+        if(_min[i] < Integer.MIN_VALUE || _max[i] > Integer.MAX_VALUE){
+          _colTypes[i] = LONG;
+        } else if (_max[i] - _min[i] < 255) {
           _colTypes[i] = BYTE;
           _bases[i] = (int)_min[i];
         } else if ((_max[i] - _min[i]) < 65535) {

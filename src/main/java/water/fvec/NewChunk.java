@@ -49,7 +49,7 @@ public class NewChunk extends Chunk {
         if( _ls != null )
           for( int i=0; i<_len; i++ )
             if( isNA(i) ) nas++;
-            else { 
+            else {
               if( isEnum(i)   ) ss++;
               if( _ls[i] != 0 ) nzs++;
             }
@@ -284,6 +284,7 @@ public class NewChunk extends Chunk {
     // Compress column into a byte
     if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
+    if(lemin < Integer.MIN_VALUE)return new C8Chunk( bufX(0,0,0,3));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if(0 <= min && max < 255 )      // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
@@ -422,9 +423,9 @@ public class NewChunk extends Chunk {
     if( _ds == null ) return at8_impl(i);
     assert _xs==null; return _ds[i];
   }
-  @Override public boolean isNA_impl( int i ) { 
+  @Override public boolean isNA_impl( int i ) {
     if( _len2 != _len ) throw H2O.unimpl();
-    return isNA(i); 
+    return isNA(i);
   }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
