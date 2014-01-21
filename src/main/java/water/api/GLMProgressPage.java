@@ -261,8 +261,8 @@ public class GLMProgressPage extends Request {
 
     static void validationHTML(GLMModel m, GLMValidation val, StringBuilder sb){
 
-      RString valHeader = new RString("<div class='alert'>Validation of model <a href='/Inspect.html?"+KEY+"=%modelKey'>%modelKey</a> on dataset <a href='/Inspect.html?"+KEY+"=%dataKey'>%dataKey</a></div>");
-      RString xvalHeader = new RString("<div class='alert'>%valName of model <a href='/Inspect.html?"+KEY+"=%modelKey'>%modelKey</a></div>");
+      RString valHeader = new RString("<div class='alert'>Validation on dataset <a href='/Inspect.html?"+KEY+"=%dataKey'>%dataKey</a></div>");
+      RString xvalHeader = new RString("<div class='alert'>%valName</div>");
 
       RString R = new RString("<table class='table table-striped table-bordered table-condensed'>"
           + "<tr><th>Degrees of freedom:</th><td>%DegreesOfFreedom total (i.e. Null);  %ResidualDegreesOfFreedom Residual</td></tr>"
@@ -277,10 +277,8 @@ public class GLMProgressPage extends Request {
           + "<tr><th>Best Threshold</th><td>%threshold</td></tr>");
       if(val.fold() > 1){
         xvalHeader.replace("valName", val.fold() + " fold cross validation");
-        xvalHeader.replace("modelKey", val.modelKey());
         sb.append(xvalHeader.toString());
       } else {
-        valHeader.replace("modelKey", val.modelKey());
         valHeader.replace("dataKey",val.dataKey());
         sb.append(valHeader.toString());
       }

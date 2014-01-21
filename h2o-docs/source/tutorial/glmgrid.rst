@@ -1,16 +1,20 @@
-GLM Tutorial
-------------
+GLM Grid Tutorial
+-------------------
 
 The purpose of this tutorial is to walk the new user through 
-a GLM analysis beginning to end. The objective is to  learn how to
-specify, run, and interpret a GLM model using  H\ :sub:`2`\ O.  
+a GLM grid analysis beginning to end. The objective is to  learn how to
+specify, run, and interpret a GLM grid model using  H\ :sub:`2`\ O.  
+Specification of GLM grid models are similar to GLM models, and all
+parameters and results have the same meaning. The primary difference
+between GLM and GLMgrid is that users can specify several different
+models, and generate the specified models simultaneously. 
 
 Those who have never used H\ :sub:`2`\ O before should see the quick
 start guide for additional instructions on how to run H\ :sub:`2`\ O.
 
 
-When to Use GLM
-"""""""""""""""
+When to Use GLM Grid
+"""""""""""""""""""""
 The variable of interest relates to predictions or
 inferences about a rate, an event, or a continuous
 measurement. Questions are about how a set of environmental 
@@ -27,6 +31,11 @@ Here are some examples:
   frame?"
 
   "Given a set of conditions, which units will fail?"
+
+AND
+
+The error rates in prediction are likely to be sensitive to the degree
+of regularization applied, or specified thresholds.
 
   
 
@@ -82,17 +91,22 @@ Building a Model
    Diameter, Height, and Rings (all other columns). 
 
 
-#. Specify the distribution family to be Gaussian. This automatically sets the link
-   field to identity. 
+#. Specify the distribution family to be Gaussian. This automatically
+   sets the link field to identity. 
 
 
-#. Set lambda and alpha to 0. These parameters determine
+#. Lambda and alpha are the parameters that determine the 
    regularization of GLM models. To find detailed information on the
    specification of tuning parameters see the data science
-   documentation on GLM.
+   documentation on GLM. In GLMgrid specification a range of values
+   can be specified by entering the desired set of values as a
+   comma separated list, for example: 0.001, 0.01, 0.1, 1 will produce
+   models at each of the four specified levels. The same syntax holds
+   for specification of alpha, and of thresholds.
 
 
-#. Leave n-folds at 10. This will produce 10 cross-validation models.
+#. Leave n-folds at 10. This will produce 10 cross-validation models
+   for each unique combination of specified parameters.
 
 
 #. Under the options box marked expert settings, notice that
@@ -101,35 +115,31 @@ Building a Model
    coefficients.  
 
 
-.. image:: GLMrequest.png
-   :width: 90%
-
-
-
-Additional specification detail
-
-
-
-.. image:: GLMrequest2.png
+.. image:: GLMgridrequest.png
    :width: 90%
 
 
 
 
-GLM Results
-"""""""""""
+GLM Grid Results
+"""""""""""""""""
 
-GLM output includes coefficients (as well as normalized coefficients when
-standardization is requested). Also reported are AIC and
-error rate. An equation of the specified model is printed across the top
+GLM grid output includes a table of the specified models, along with
+each model's corresponding specification values. Individual models can
+be viewed by clicking on the active link for each model. 
+For individual models coefficients (as well as normalized coefficients when
+standardization is requested), AIC and error rate are returned. An
+equation of the specified model is printed across the top
 of the GLM results page in red. 
 
-Users should note that if they wish to replicate results between H\ :sub:`2`\ O
-and R, it is recommended that standardization and cross validation
-either be turned off in H\ :sub:`2`\ O. 
 
 
-.. image:: GLMoutput.png
+.. image:: GLMgridoutput1.png
+   :width: 90%
+
+Individual model results
+
+.. image:: GLMgridoutput2.png
    :width: 90%
 
 
