@@ -275,6 +275,13 @@ public final class PersistHdfs extends Persist {
 
   public static void addFolder(Path p, JsonArray succeeded, JsonArray failed) throws IOException {
     FileSystem fs = FileSystem.get(p.toUri(), PersistHdfs.CONF);
+    if(!fs.exists(p)){
+      JsonObject o = new JsonObject();
+      o.addProperty(Constants.FILE, p.toString());
+      o.addProperty(Constants.ERROR, "Path does not exist!");
+      failed.add(o);
+      return;
+    }
     addFolder(fs, p, succeeded, failed);
   }
 
