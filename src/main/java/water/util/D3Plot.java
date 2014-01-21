@@ -2,47 +2,23 @@ package water.util;
 
 import water.api.RequestBuilders;
 
+/**
+ * Helper class to plot simple 2D scatter plots.
+ * Input: x and y are two equal-sized float arrays with X and Y coordinates to be plotted.
+ */
 public class D3Plot {
-  private String link_title = "show plot";
-  private String title = "Missing Title";
+  private float[] x;
+  private float[] y;
   private String xaxislabel = "x axis";
   private String yaxislabel = "y axis";
-  private int width = 1200;
+  private String title = "Missing Title";
+
+  // default values are usually fine - might want to add a formatting method later
+  private String link = "Toggle view of plot";
+  private int width = 1000;
   private int height = 400;
   private int padding = 40;
   private int font_size = 11;
-  private float[] x;
-  private float[] y;
-
-  private D3Plot() {
-  }
-
-  public D3Plot(float[] x, float[] y) {
-    this.x = x;
-    this.y = y;
-  }
-
-  public D3Plot(float[] x, float[] y, String link_title, String title, String xaxislabel, String yaxislabel, int font_size, int height, int width, int padding) {
-    this.link_title = link_title;
-    this.title = title;
-    this.xaxislabel = xaxislabel;
-    this.yaxislabel = yaxislabel;
-    this.width = width;
-    this.height = height;
-    this.padding = padding;
-    this.font_size = font_size;
-    this.x = x;
-    this.y = y;
-  }
-
-  public D3Plot(float[] x, float[] y, String xaxislabel, String yaxislabel, String title, String link_title) {
-    this.yaxislabel = yaxislabel;
-    this.xaxislabel = xaxislabel;
-    this.title = title;
-    this.link_title = link_title;
-    this.x = x;
-    this.y = y;
-  }
 
   public D3Plot(float[] x, float[] y, String xaxislabel, String yaxislabel, String title) {
     this.yaxislabel = yaxislabel;
@@ -50,17 +26,18 @@ public class D3Plot {
     this.title = title;
     this.x = x;
     this.y = y;
-    this.link_title = "Toggle view of plot of " + title;
+    this.link = "Toggle view of plot of " + title;
+    assert(x.length == y.length);
   }
 
+  // populate the StringBuilder object with the Javascript code to display a 2D plot in a HTML page
   public void generate(StringBuilder sb) {
     final String plot = title.replaceAll(" ", "");
-    assert(x.length == y.length);
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
     sb.append("<span style='display: inline-block;'>");
     //sb.append("<div class=\"pull-left\">");
     sb.append("<a href=\"#\" onclick=\'$(\"#" + "plot" + plot
-            + "\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>" + link_title + "</a></div>");
+            + "\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>" + link + "</a></div>");
     sb.append("<div class=\"hide\" id=\"" + "plot" + plot + "\">");
     sb.append("<style type=\"text/css\">");
     sb.append(".axis path," +
