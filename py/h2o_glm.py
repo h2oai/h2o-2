@@ -264,7 +264,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "intercept demapping info:", \
             "column_names[-i]:", column_names[-1], \
             "idxs[-1]:", idxs[-1], \
-            "coefficient_names[[idxs[-1]]:", coefficients_names[idxs[-1]], \
+            "coefficients_names[[idxs[-1]]:", coefficients_names[idxs[-1]], \
             "beta_used[-1]:", beta_used[-1], \
             "coefficients['Intercept']", coefficients['Intercept']
 

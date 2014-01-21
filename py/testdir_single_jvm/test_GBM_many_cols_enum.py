@@ -146,13 +146,10 @@ class Basic(unittest.TestCase):
                     'response': 'C' + str(numCols-1),
                     'ignored_cols_by_name': None,
                 }
-                # both response variants should work
-                if random.randint(0,1):
-                    params['response'] = numCols-1,
-                else:
-                    params['response'] = "C" + str(numCols-1)
-                    params['response'] = numCols-1,
-
+               # both response variants should work?
+                # if random.randint(0,1):
+                #    params['response'] = numCols-1,
+                
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
                 h2o.beta_features = True

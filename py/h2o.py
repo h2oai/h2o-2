@@ -614,9 +614,9 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         if conservative: # still needed?
             for n in nodeList:
                 stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
-        else:
-            pass
-            # verify_cloud_size(nodeList)
+
+        # this does some extra checking now
+        verify_cloud_size(nodeList)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors(python_test_name=python_test_name)
@@ -766,8 +766,20 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
     expectedSize = len(nodeList)
     # cloud size and consensus have to reflect a single grab of information from a node.
     cloudStatus = [n.get_cloud(timeoutSecs=timeoutSecs) for n in nodeList]
+
     cloudSizes = [c['cloud_size'] for c in cloudStatus]
     cloudConsensus = [c['consensus'] for c in cloudStatus]
+    cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
+
+    if not all(cloudHealthy):
+        raise Exception("Some node reported cloud_healthy not true: %s" % cloudHealthy)
+
+    # gather up all the node_healthy status too
+    for i,c in enumerate(cloudStatus):
+        nodesHealthy = [n['node_healthy'] for n in c['nodes']]
+        if not all(nodesHealthy):
+            print "node %s cloud status: %s" % (i, dump_json(c))
+            raise Exception("node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy))
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
@@ -1414,6 +1426,21 @@ class H2O(object):
 
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
+
+
+    # turns enums into expanded binary features
+    def one_hot(self, source, timeoutSecs=30, **kwargs):
+        params = {
+            "source": source,
+            }
+
+        a = self.__do_json_request('2/OneHot.json',
+            params=params,
+            timeout=timeoutSecs
+            )
+
+        check_sandbox_for_errors(python_test_name=python_test_name)
+        return a
 
     # &offset=
     # &view=
