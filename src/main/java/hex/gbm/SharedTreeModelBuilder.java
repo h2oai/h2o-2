@@ -190,7 +190,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       sc = new Score().doIt(model, fr, validation, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
-    model = makeModel(model, finalScoring?null:ktrees,
+    model = makeModel(model, ktrees,
                       sc==null ? Double.NaN : sc.mse(),
                       sc==null ? null : (_nclass>1?sc._cm:null), tstats);
     DKV.put(outputKey, model);

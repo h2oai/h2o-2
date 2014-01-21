@@ -146,7 +146,7 @@ class Basic(unittest.TestCase):
                     hex_key=hdr_hex_key, 
                     timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
                 # Set Column Names (before autoframe is created)
-                h2o.nodes[0].set_column_names(target=hex_key, source=hdr_hex_key)
+                h2o.nodes[0].set_column_names(target=hex_key, copy_from=hdr_hex_key)
 
                 # GBM
                 print "The response col name is changing each iteration, since we're parsing a new header"

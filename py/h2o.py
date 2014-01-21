@@ -1816,7 +1816,7 @@ class H2O(object):
 
     def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
-            'source': None,
+            'copy_from': None,
             'target': None,
         }
         # only lets these params thru

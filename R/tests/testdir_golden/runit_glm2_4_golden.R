@@ -5,7 +5,7 @@ test.glm2vanilla.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing Swiss data...") 
-swissH2O<- h2o.uploadFile(H2Oserver, locate("../smalldata/swiss.csv"), key="swissH2O")
+swissH2O<- h2o.uploadFile.FV(H2Oserver, locate("../smalldata/swiss.csv"), key="swissH2O")
 swissR<- read.csv(locate("../smalldata/swiss.csv"), header=T)
 
 Log.info("Test H2O treatment vanilla GLM - continuious real predictors, gaussian family")

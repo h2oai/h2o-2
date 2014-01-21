@@ -19,7 +19,7 @@ test.histogram <- function (conn) {
   path <- csv.files[sample(length(csv.files),1)]
   
   Log.info(paste("Using path: ", path))
-  h2o.data <- h2o.uploadFile(conn, path, "f.hex") #paste(path,".hex",sep=""))
+  h2o.data <- h2o.uploadFile.FV(conn, path, "f.hex") #paste(path,".hex",sep=""))
   h2o.hists <- histograms(h2o.data)
   df<- as.data.frame(h2o.data)
   
