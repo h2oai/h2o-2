@@ -2,17 +2,17 @@
 \alias{ifelse}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Applies conditional statements to H2O parsed data objects. 
+Applies conditional statements to an \code{\linkS4class{H2OParsedData} object. 
 }
 \description{
-Applies conditional statements to numeric vectors in H2O parsed data objects.
+Applies conditional statements to numeric vectors in H2O parsed data objects when the data are numeric.
 }
 \usage{
 ifelse(test, yes, no)
 }
 
 \arguments{
-  \item{test}{A locgial description of the condition to be met. See examples.
+  \item{test}{A logical description of the condition to be met (>, <, =, etc...)
 }
   \item{yes}{The value to return if the condition is TRUE.
 }
@@ -20,7 +20,7 @@ ifelse(test, yes, no)
 }
 }
 \details{
-Only numeric values can be tested, and only numeric results can be returned for either condition. 
+Only numeric values can be tested, and only numeric results can be returned for either condition. Categorical data is not currently supported for this funciton and returned values cannot be categorical in nature. 
 }
 \value{
 Retruns a vector of new values matching the conditions stated in the ifelse call. 

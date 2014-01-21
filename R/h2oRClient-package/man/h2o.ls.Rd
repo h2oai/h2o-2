@@ -1,7 +1,7 @@
 \name{h2o.ls}
 \alias{h2o.ls}
 \title{Obtain a list of H2O keys from the running instance of H2O}
-\description{Allows users to access a list of object keys in the runnign instance of H2O}
+\description{Allows users to access a list of object keys in the running instance of H2O}
 \usage{
 h2o.ls(object, pattern)
 }

@@ -16,7 +16,7 @@ h2o.uploadFile.VA(object, path, key = "", parse = TRUE)
 An \code{\linkS4class{H2OClient}} object containing the IP address and port of the server running H2O.
 }
   \item{path}{
-The complete URL of the file to be imported. Each row of data appears as one line of the file.
+The complete normalized file path of the file to be imported. Each row of data appears as one line of the file.
 }
   \item{key}{
 (Optional) The unique hex key assigned to the imported file. If none is given, a key will automatically be generated based on the URL path.

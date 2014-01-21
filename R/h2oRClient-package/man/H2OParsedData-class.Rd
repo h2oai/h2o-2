@@ -29,14 +29,16 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
   \describe{
     \item{colnames}{\code{signature(x = "H2OParsedData")}: ... }
     \item{h2o.gbm}{\code{signature(x = "character", y = "character", data = "H2OParsedData",
-    n.trees = "numeric", interaction.depth = "numeric", n.minobsinnode = "numeric", 
-    shrinkage = "numeric")}: ... }
+     + n.trees = "numeric", interaction.depth = "numeric", n.minobsinnode = "numeric", 
+     + shrinkage = "numeric")}: ... }
     \item{h2o.glm}{\code{signature(x = "character", y = "character", data = "H2OParsedData", 
-    family = "character", nfolds = "numeric", alpha = "numeric", lambda = "numeric")}: ... }
+    + family = "character", nfolds = "numeric", alpha = "numeric", lambda = "numeric")}: ... }
     \item{h2o.kmeans}{\code{signature(data = "H2OParsedData", centers = "numeric", cols = "character", 
-    iter.max = "numeric")}: ... }
-    \item{h2o.prcomp}{\code{signature(data = "H2OParsedData", tol = "numeric", standardize = "logical", retx = "logical")}: ... }
-    \item{h2o.randomForest}{\code{signature(y = "character", data = "H2OParsedData", ntree = "numeric")}: ... }
+    + iter.max = "numeric")}: ... }
+    \item{h2o.prcomp}{\code{signature(data = "H2OParsedData", tol = "numeric", 
+    		+ standardize = "logical", retx = "logical")}: ... }
+    \item{h2o.randomForest}{\code{signature(y = "character", 
+    		+ data = "H2OParsedData", ntree = "numeric")}: ... }
     \item{show}{\code{signature(object = "H2OParsedData")}: ... }
     \item{summary}{\code{signature(object = "H2OParsedData")}: ... }
 	 }

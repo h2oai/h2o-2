@@ -2,16 +2,16 @@
 \alias{nrow}
 
 \title{
-Returns a count of rows for a parsed H2O data object
+Returns a count of rows for an code{\linkS4class{H2OParsedData} object. 
 }
 \description{
-Returns a count of rows for a parsed H2O data object
+Returns a count of rows for an code{\linkS4class{H2OParsedData} object
 }
 \usage{
 nrow(x)
 }
 \arguments{
-  \item{x}{H2O parsed data object
+  \item{x}{code{\linkS4class{H2OParsedData} object
 }
 }
 \value{ An integer count of the number of rows 

@@ -42,7 +42,8 @@ A \code{\linkS4class{H2OParsedData}} object containing the predictions.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
++ promptUpgrade = FALSE)
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
 prostate.hex = h2o.importURL.VA(localH2O, 
  + path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
