@@ -778,7 +778,7 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
     for i,c in enumerate(cloudStatus):
         nodesHealthy = [n['node_healthy'] for n in c['nodes']]
         if not all(nodesHealthy):
-            print "node %s cloud status: %s" % i, h2o.dump_json(c)
+            print "node %s cloud status: %s" % (i, dump_json(c))
             raise Exception("node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy))
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
