@@ -1,9 +1,9 @@
 K Means Tutorial
 -----------------
 
-The purpose of this tutorial is to walk the new user through a 
-K-Means analysis beginning to end. By the end of this tutorial
-the user should know how to specify, run, and interpret a K-means model.
+The purpose of this tutorial is to walk through a K-Means analysis
+beginning to end. By the end of this tutorialthe user should know how
+to specify, run, and interpret a K-means model in  H\ :sub:`2`\ O.
 
 Those who have never used H\ :sub:`2`\ O before should see the quick start guide
 for additional instructions on how to run H\ :sub:`2`\ O. 
@@ -44,8 +44,8 @@ Building a Model
 
 #. Once  data are parsed a horizontal menu will appear at the top
    of the screen reading "Build model using ... ". Select 
-   K Means here, or go to the drop down menu Model and
-   select K-Means there.
+   K Means here, or go to the drop down menu **Model** and
+   select K-Means.
 
 
 #. In the field for Source Key enter the .hex key associated with the
@@ -53,17 +53,25 @@ Building a Model
 
 
 #. Choose K. There is no hard and fast rule for how to
-   do this. For this dataset K is chosen to be 3. 
+   do this. For this dataset K is chosen to be 3.  
 
 
 #. Note that data can be normalized, though it is not done for this
    analysis. 
 
-#. Specify Initialization. Plus Plus initialization chooses one initial center and random, and weights the random selection of subsequent centers so that points furthest from the first center are more likely to be chosen. Furthest initialization chooses one initial center at random, and then chooses the next center to be point furthest away in terms of Euclidean distance. No selection results in K initial centers being chosen independently at random.  
+#. Specify Initialization. Plus Plus initialization chooses one
+   initial center and random, and weights the random selection of
+   subsequent centers so that points furthest from the first center
+   are more likely to be chosen. Furthest initialization chooses one
+   initial center at random, and then chooses the next center to be
+   point furthest away in terms of Euclidean distance. No selection
+   results in K initial centers being chosen independently at random.  
 
-#. Specify Max Iter (short for maximum iterations), which allows the user to specify
-   the maximum number of iterations the algorithm processes.
+#. Specify Max Iter (short for maximum iterations), which allows the
+   user to specify the maximum number of iterations the algorithm processes.
 
+#. Note that data can be normalized, though it is not done for this
+   analysis. 
 
 #. Cols is a list of the columns of attributes that should be used 
    in defining the clusters. Here we select all but column 7 (the 
@@ -85,34 +93,24 @@ coordinates of the cluster centers in terms of the originally
 chosen attributes. Your cluster centers may differ slightly. 
 K-Means randomly chooses starting points and converges on 
 optimal centroids. The cluster number is arbitrary, and should
-be thought of as a factor.
+be thought of as a factor. 
 
 .. image:: KMinspect.png 
    :width: 100%
 
-The exact model can be reproduced by entering the same seed as was
-originally used. This seed is 
 
-::
-
- -220049831882026147
-
-
-K-means Score
-"""""""""""""
+K-means Next Steps
+"""""""""""""""""""
 
 For further information on the model select K-Means from the
 drop down menu Score. Specify the K-Means model key, and the 
 .hex key for the data set originally used. 
 
-.. image:: KMrscore.png
-   :width: 90%
-
 The output obtained when submit is pressed is the number of rows 
 assigned to each cluster, and the squared error per cluster. 
 
 .. image:: KMscore.png
-   :width: 80%
+   :width: 90%
 
 
 K-means Apply
