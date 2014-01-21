@@ -463,7 +463,7 @@ public class NeuralNet extends ValidatedJob {
     else {
       e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( !Float.isNaN(ls[ls.length - 1]._a[0]) )
+        if( !Double.isNaN(ls[ls.length - 1]._a[0]) )
           error(ls, e);
       e.classification = Double.NaN;
       e.mean_square /= len;
@@ -478,16 +478,16 @@ public class NeuralNet extends ValidatedJob {
     if( output.target() == -1 )
       return false;
     for (Layer l : ls) l.fprop(false);
-    float[] out = ls[ls.length - 1]._a;
+    double[] out = ls[ls.length - 1]._a;
     int target = output.target();
     for( int o = 0; o < out.length; o++ ) {
       final boolean hitpos = (o == target);
-      final float t = hitpos ? 1 : 0;
-      final float d = t - out[o];
+      final double t = hitpos ? 1 : 0;
+      final double d = t - out[o];
       e.mean_square += d * d;
       e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
     }
-    float max = out[0];
+    double max = out[0];
     int idx = 0;
     for( int o = 1; o < out.length; o++ ) {
       if( out[o] > max ) {
@@ -504,11 +504,11 @@ public class NeuralNet extends ValidatedJob {
   static void error(Layer[] ls, Errors e) {
     Linear linear = (Linear) ls[ls.length - 1];
     for (Layer l : ls) l.fprop(false);
-    float[] output = ls[ls.length - 1]._a;
-    float[] target = linear.target();
+    double[] output = ls[ls.length - 1]._a;
+    double[] target = linear.target();
     e.mean_square = 0;
     for( int o = 0; o < output.length; o++ ) {
-      final float d = target[o] - output[o];
+      final double d = target[o] - output[o];
       e.mean_square += d * d;
     }
   }
@@ -590,7 +590,10 @@ public class NeuralNet extends ValidatedJob {
     public Layer[] layers;
 
     @API(help = "Layer weights")
-    public float[][] weights, biases;
+    public float[][] weights;
+
+    @API(help = "Layer biases")
+    public double[][] biases;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -620,7 +623,7 @@ public class NeuralNet extends ValidatedJob {
       parameters = p;
       layers = ls;
       weights = new float[ls.length][];
-      biases = new float[ls.length][];
+      biases = new double[ls.length][];
       for( int y = 1; y < layers.length; y++ ) {
         weights[y] = layers[y]._w;
         biases[y] = layers[y]._b;
@@ -688,9 +691,12 @@ public class NeuralNet extends ValidatedJob {
       }
       ((Input) clones[0])._pos = rowInChunk;
       for (Layer clone : clones) clone.fprop(false);
-      float[] out = clones[clones.length - 1]._a;
+      double[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
-      return out;
+      // convert to float
+      float[] out2 = new float[out.length];
+      for (int i=0; i<out.length; ++i) out2[i] = (float)out[i];
+      return out2;
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {

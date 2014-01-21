@@ -13,8 +13,8 @@ import java.util.Random;
 public class NeuralNetMLPReference {
   static final DecimalFormat _format = new DecimalFormat("0.000");
 
-  float[][] _trainData;
-  float[][] _testData;
+  double[][] _trainData;
+  double[][] _testData;
   NeuralNetwork _nn;
 
   void init(NeuralNet.Activation activation, Random rand, double holdout_ratio) {
@@ -171,20 +171,20 @@ public class NeuralNetMLPReference {
     ds[r++] = new double[] { 6.2, 3.4, 5.4, 2.3, 1, 0, 0 };
     ds[r++] = new double[] { 5.9, 3, 5.1, 1.8, 1, 0, 0 };
 
-    float[][] allData = new float[ds.length][ds[0].length];
+    double[][] allData = new double[ds.length][ds[0].length];
     for( int j = 0; j < allData.length; j++ ) {
       for( int i = 0; i < allData[j].length; i++ )
-        allData[j][i] = (float) ds[j][i];
+        allData[j][i] = ds[j][i];
 
-      allData[j][4] = (float) ds[j][6];
-      allData[j][5] = (float) ds[j][5];
-      allData[j][6] = (float) ds[j][4];
+      allData[j][4] = ds[j][6];
+      allData[j][5] = ds[j][5];
+      allData[j][6] = ds[j][4];
     }
 
     int trainRows = (int) (allData.length * holdout_ratio);
     int testRows = allData.length - trainRows;
-    _trainData = new float[trainRows][];
-    _testData = new float[testRows][];
+    _trainData = new double[trainRows][];
+    _testData = new double[testRows][];
     MakeTrainTest(allData, _trainData, _testData, rand);
 
     // Normalize all data using train stats
@@ -217,11 +217,11 @@ public class NeuralNetMLPReference {
     _nn.InitializeWeights();
   }
 
-  void train(int maxEpochs, float learnRate, NeuralNet.Loss loss) {
+  void train(int maxEpochs, double learnRate, NeuralNet.Loss loss) {
     _nn.Train(_trainData, maxEpochs, learnRate, 0, loss);
   }
 
-  void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData, Random rand) {
+  void MakeTrainTest(double[][] allData, double[][] trainData, double[][] testData, Random rand) {
     // split allData into 80% trainData and 20% testData
     int numCols = allData[0].length;
 
@@ -235,7 +235,7 @@ public class NeuralNetMLPReference {
 
     for( ; si < trainData.length; ++si ) // first rows to train data
     {
-      trainData[j] = new float[numCols];
+      trainData[j] = new double[numCols];
       int idx = shuffle[si];
       System.arraycopy(allData[idx], 0, trainData[j], 0, numCols);
       ++j;
@@ -244,18 +244,18 @@ public class NeuralNetMLPReference {
     j = 0; // reset to start of test data
     for( ; si < allData.length; ++si ) // remainder to test data
     {
-      testData[j] = new float[numCols];
+      testData[j] = new double[numCols];
       int idx = shuffle[si];
       System.arraycopy(allData[idx], 0, testData[j], 0, numCols);
       ++j;
     }
   } // MakeTrainTest
 
-  static void Normalize(float[][] dataMatrix, int[] cols) {
+  static void Normalize(double[][] dataMatrix, int[] cols) {
     // in most cases you want to normalize the x-data
   }
 
-  static void ShowVector(float[] vector, int valsPerRow, int decimals, boolean newLine) {
+  static void ShowVector(double[] vector, int valsPerRow, int decimals, boolean newLine) {
     for( int i = 0; i < vector.length; ++i ) {
       if( i % valsPerRow == 0 )
         System.out.println("");
@@ -265,7 +265,7 @@ public class NeuralNetMLPReference {
       System.out.println("");
   }
 
-  static void ShowMatrix(float[][] matrix, int numRows, int decimals, boolean newLine) {
+  static void ShowMatrix(double[][] matrix, int numRows, int decimals, boolean newLine) {
     for( int i = 0; i < numRows; ++i ) {
       System.out.print(i + ": ");
       for( int j = 0; j < matrix[i].length; ++j ) {
@@ -287,26 +287,26 @@ public class NeuralNetMLPReference {
     int numHidden;
     int numOutput;
 
-    float[] inputs;
+    double[] inputs;
 
-    float[][] ihWeights; // input-hidden
-    float[] hBiases;
-    float[] hOutputs;
+    double[][] ihWeights; // input-hidden
+    double[] hBiases;
+    double[] hOutputs;
 
-    float[][] hoWeights; // hidden-output
-    float[] oBiases;
+    double[][] hoWeights; // hidden-output
+    double[] oBiases;
 
-    float[] outputs;
+    double[] outputs;
 
     // back-prop specific arrays (these could be local to method UpdateWeights)
-    float[] oGrads; // output gradients for back-propagation
-    float[] hGrads; // hidden gradients for back-propagation
+    double[] oGrads; // output gradients for back-propagation
+    double[] hGrads; // hidden gradients for back-propagation
 
     // back-prop momentum specific arrays (these could be local to method Train)
-    float[][] ihPrevWeightsDelta;  // for momentum with back-propagation
-    float[] hPrevBiasesDelta;
-    float[][] hoPrevWeightsDelta;
-    float[] oPrevBiasesDelta;
+    double[][] ihPrevWeightsDelta;  // for momentum with back-propagation
+    double[] hPrevBiasesDelta;
+    double[][] hoPrevWeightsDelta;
+    double[] oPrevBiasesDelta;
 
     public NeuralNetwork(NeuralNet.Activation activationType, int numInput, int numHidden, int numOutput) {
       this.activation = activationType;
@@ -314,32 +314,32 @@ public class NeuralNetMLPReference {
       this.numHidden = numHidden;
       this.numOutput = numOutput;
 
-      this.inputs = new float[numInput];
+      this.inputs = new double[numInput];
 
       this.ihWeights = MakeMatrix(numInput, numHidden);
-      this.hBiases = new float[numHidden];
-      this.hOutputs = new float[numHidden];
+      this.hBiases = new double[numHidden];
+      this.hOutputs = new double[numHidden];
 
       this.hoWeights = MakeMatrix(numHidden, numOutput);
-      this.oBiases = new float[numOutput];
+      this.oBiases = new double[numOutput];
 
-      this.outputs = new float[numOutput];
+      this.outputs = new double[numOutput];
 
       // back-prop related arrays below
-      this.hGrads = new float[numHidden];
-      this.oGrads = new float[numOutput];
+      this.hGrads = new double[numHidden];
+      this.oGrads = new double[numOutput];
 
       this.ihPrevWeightsDelta = MakeMatrix(numInput, numHidden);
-      this.hPrevBiasesDelta = new float[numHidden];
+      this.hPrevBiasesDelta = new double[numHidden];
       this.hoPrevWeightsDelta = MakeMatrix(numHidden, numOutput);
-      this.oPrevBiasesDelta = new float[numOutput];
+      this.oPrevBiasesDelta = new double[numOutput];
     } // ctor
 
-    private static float[][] MakeMatrix(int rows, int cols) // helper for ctor
+    private static double[][] MakeMatrix(int rows, int cols) // helper for ctor
     {
-      float[][] result = new float[rows][];
+      double[][] result = new double[rows][];
       for( int r = 0; r < result.length; ++r )
-        result[r] = new float[cols];
+        result[r] = new double[cols];
       return result;
     }
 
@@ -436,7 +436,7 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    public void SetWeights(float[] weights) {
+    public void SetWeights(double[] weights) {
       // copy weights and biases in weights[] array to i-h weights, i-h biases, h-o weights, h-o
 // biases
       int numWeights = (numInput * numHidden) + (numHidden * numOutput) + numHidden + numOutput;
@@ -460,19 +460,19 @@ public class NeuralNetMLPReference {
     public void InitializeWeights() {
       // initialize weights and biases to small random values
       int numWeights = (numInput * numHidden) + (numHidden * numOutput) + numHidden + numOutput;
-      float[] initialWeights = new float[numWeights];
-      float lo = -0.01f;
-      float hi = 0.01f;
+      double[] initialWeights = new double[numWeights];
+      double lo = -0.01f;
+      double hi = 0.01f;
       Random rnd = new Random(0);
       for( int i = 0; i < initialWeights.length; ++i )
         initialWeights[i] = (hi - lo) * rnd.nextFloat() + lo;
       this.SetWeights(initialWeights);
     }
 
-    public float[] GetWeights() {
+    public double[] GetWeights() {
       // returns the current set of wweights, presumably after training
       int numWeights = (numInput * numHidden) + (numHidden * numOutput) + numHidden + numOutput;
-      float[] result = new float[numWeights];
+      double[] result = new double[numWeights];
       int k = 0;
       for( int i = 0; i < ihWeights.length; ++i )
         for( int j = 0; j < ihWeights[0].length; ++j )
@@ -489,12 +489,12 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    private float[] ComputeOutputs(float[] xValues) {
+    private double[] ComputeOutputs(double[] xValues) {
       if( xValues.length != numInput )
         throw new RuntimeException("Bad xValues array length");
 
-      float[] hSums = new float[numHidden]; // hidden nodes sums scratch array
-      float[] oSums = new float[numOutput]; // output nodes sums
+      double[] hSums = new double[numHidden]; // hidden nodes sums scratch array
+      double[] oSums = new double[numOutput]; // output nodes sums
 
       for( int i = 0; i < xValues.length; ++i )
         // copy x-values to inputs
@@ -526,36 +526,36 @@ public class NeuralNetMLPReference {
         // add biases to input-to-hidden sums
         oSums[i] += oBiases[i];
 
-      float[] softOut = Softmax(oSums); // softmax activation does all outputs at once for
+      double[] softOut = Softmax(oSums); // softmax activation does all outputs at once for
 // efficiency
       System.arraycopy(softOut, 0, outputs, 0, softOut.length);
 
-      float[] retResult = new float[numOutput]; // could define a GetOutputs method instead
+      double[] retResult = new double[numOutput]; // could define a GetOutputs method instead
       System.arraycopy(this.outputs, 0, retResult, 0, retResult.length);
       return retResult;
     } // ComputeOutputs
 
-    private static float HyperTanFunction(float x) {
-      return (float) Math.tanh(x);
+    private static double HyperTanFunction(double x) {
+      return Math.tanh(x);
     }
 
-    private static float Rectifier(float x) {
+    private static double Rectifier(double x) {
       return Math.max(x, 0.0f);
     }
 
-    private static float[] Softmax(float[] oSums) {
+    private static double[] Softmax(double[] oSums) {
       // does all output nodes at once so scale doesn't have to be re-computed each time
       // 1. determine max output sum
-      float max = oSums[0];
+      double max = oSums[0];
       for( int i = 0; i < oSums.length; ++i )
         if( oSums[i] > max )
           max = oSums[i];
 
       // 2. determine scaling factor -- sum of exp(each val - max)
-      float[] result = new float[oSums.length];
-      float scale = 0;
+      double[] result = new double[oSums.length];
+      double scale = 0;
       for( int i = 0; i < result.length; i++ ) {
-        result[i] = (float) Math.exp(oSums[i] - max);
+        result[i] = Math.exp(oSums[i] - max);
         scale += result[i];
       }
       for( int i = 0; i < result.length; i++ )
@@ -565,7 +565,7 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    private void UpdateWeights(float[] tValues, float learnRate, float momentum, NeuralNet.Loss loss) {
+    private void UpdateWeights(double[] tValues, double learnRate, double momentum, NeuralNet.Loss loss) {
       // update the weights and biases using back-propagation, with target values, eta (learning
 // rate),
       // alpha (momentum)
@@ -578,7 +578,7 @@ public class NeuralNetMLPReference {
       // 1. compute output gradients
       for( int i = 0; i < oGrads.length; ++i ) {
         // derivative of softmax = (1 - y) * y (same as log-sigmoid)
-        float derivative = (1 - outputs[i]) * outputs[i];
+        double derivative = (1 - outputs[i]) * outputs[i];
         if (loss == NeuralNet.Loss.CrossEntropy) {
           oGrads[i] = tValues[i] - outputs[i];
         } else if (loss == NeuralNet.Loss.MeanSquare) {
@@ -589,17 +589,17 @@ public class NeuralNetMLPReference {
 
       // 2. compute hidden gradients
       for( int i = 0; i < hGrads.length; ++i ) {
-        float derivative = 1;
+        double derivative = 1;
         if (activation == NeuralNet.Activation.Tanh) {
           derivative = (1 - hOutputs[i]) * (1 + hOutputs[i]); // derivative of tanh (y) = (1 - y) * (1 + y)
         } else if (activation == NeuralNet.Activation.Rectifier) {
           derivative = hOutputs[i] <= 0 ? 0 : 1;
         } else throw new RuntimeException("invalid activation.");
 
-        float sum = 0;
+        double sum = 0;
         for( int j = 0; j < numOutput; ++j ) // each hidden delta is the sum of numOutput terms
         {
-          float x = oGrads[j] * hoWeights[i][j];
+          double x = oGrads[j] * hoWeights[i][j];
           sum += x;
         }
         hGrads[i] = derivative * sum;
@@ -611,7 +611,7 @@ public class NeuralNetMLPReference {
       {
         for( int j = 0; j < ihWeights[0].length; ++j ) // 0..3 (4)
         {
-          float delta = learnRate * hGrads[j] * inputs[i]; // compute the new delta
+          double delta = learnRate * hGrads[j] * inputs[i]; // compute the new delta
           ihWeights[i][j] += delta; // update. note we use '+' instead of '-'. this can be very
 // tricky.
           // add momentum using previous delta. on first pass old value will be 0.0 but that's OK.
@@ -624,7 +624,7 @@ public class NeuralNetMLPReference {
       // 3b. update hidden biases
       for( int i = 0; i < hBiases.length; ++i ) {
         // the 1.0 below is the constant input for any bias; could leave out
-        float delta = learnRate * hGrads[i] * 1;
+        double delta = learnRate * hGrads[i] * 1;
         hBiases[i] += delta;
         hBiases[i] += momentum * hPrevBiasesDelta[i]; // momentum
         // weight decay here
@@ -635,7 +635,7 @@ public class NeuralNetMLPReference {
       for( int i = 0; i < hoWeights.length; ++i ) {
         for( int j = 0; j < hoWeights[0].length; ++j ) {
           // see above: hOutputs are inputs to the nn outputs
-          float delta = learnRate * oGrads[j] * hOutputs[i];
+          double delta = learnRate * oGrads[j] * hOutputs[i];
           hoWeights[i][j] += delta;
           hoWeights[i][j] += momentum * hoPrevWeightsDelta[i][j]; // momentum
           // weight decay here
@@ -645,7 +645,7 @@ public class NeuralNetMLPReference {
 
       // 4b. update output biases
       for( int i = 0; i < oBiases.length; ++i ) {
-        float delta = learnRate * oGrads[i] * 1;
+        double delta = learnRate * oGrads[i] * 1;
         oBiases[i] += delta;
         oBiases[i] += momentum * oPrevBiasesDelta[i]; // momentum
         // weight decay here
@@ -655,12 +655,12 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    public void Train(float[][] trainData, int maxEprochs, float learnRate, float momentum, NeuralNet.Loss loss) {
+    public void Train(double[][] trainData, int maxEprochs, double learnRate, double momentum, NeuralNet.Loss loss) {
       // train a back-prop style NN classifier using learning rate and momentum
       // no weight decay
       int epoch = 0;
-      float[] xValues = new float[numInput]; // inputs
-      float[] tValues = new float[numOutput]; // target values
+      double[] xValues = new double[numInput]; // inputs
+      double[] tValues = new double[numOutput]; // target values
 
       int[] sequence = new int[trainData.length];
       for( int i = 0; i < sequence.length; ++i )
@@ -690,13 +690,13 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    public float Accuracy(float[][] testData) {
+    public double Accuracy(double[][] testData) {
       // percentage correct using winner-takes all
       int numCorrect = 0;
       int numWrong = 0;
-      float[] xValues = new float[numInput]; // inputs
-      float[] tValues = new float[numOutput]; // targets
-      float[] yValues; // computed Y
+      double[] xValues = new double[numInput]; // inputs
+      double[] tValues = new double[numOutput]; // targets
+      double[] yValues; // computed Y
 
       for( int i = 0; i < testData.length; ++i ) {
         System.arraycopy(testData[i], 0, xValues, 0, numInput); // parse test data into x-values and
@@ -705,19 +705,19 @@ public class NeuralNetMLPReference {
         yValues = this.ComputeOutputs(xValues);
         int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
 
-        if( tValues[maxIndex] == 1.0 ) // ugly. consider AreEqual(float x, float y)
+        if( tValues[maxIndex] == 1.0 ) // ugly. consider AreEqual(double x, double y)
           ++numCorrect;
         else
           ++numWrong;
       }
-      return (float) numWrong / (numCorrect + numWrong); // ugly 2 - check for divide by zero
+      return (double)numWrong / (numCorrect + numWrong); // ugly 2 - check for divide by zero
     }
 
-    private static int MaxIndex(float[] vector) // helper for Accuracy()
+    private static int MaxIndex(double[] vector) // helper for Accuracy()
     {
       // index of largest value
       int bigIndex = 0;
-      float biggestVal = vector[0];
+      double biggestVal = vector[0];
       for( int i = 0; i < vector.length; ++i ) {
         if( vector[i] > biggestVal ) {
           biggestVal = vector[i];

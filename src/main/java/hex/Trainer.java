@@ -257,7 +257,7 @@ public abstract class Trainer {
       _task._key = _key;
       _task._epochs = _epochs;
       _task._ws = new float[_ls.length][];
-      _task._bs = new float[_ls.length][];
+      _task._bs = new double[_ls.length][];
       for( int y = 1; y < _ls.length; y++ ) {
         _task._ws[y] = _ls[y]._w;
         _task._bs[y] = _ls[y]._b;
@@ -291,7 +291,8 @@ public abstract class Trainer {
   static class Descent extends MRTask2<Descent> {
     Key _job;
     Layer[] _ls;
-    float[][] _ws, _bs;
+    float[][] _ws;
+    double[][] _bs;
     Key _key;
     double _epochs;
     transient NodeDescent _node;
@@ -329,7 +330,8 @@ public abstract class Trainer {
       epoch._count = _epochs == 0. ? -1 : (int)Math.ceil(_epochs);
       H2O.submitTask(epoch);
       _ls = null;
-      _ws = _bs = null;
+      _ws = null;
+      _bs = null;
       _key = null;
     }
 
@@ -413,30 +415,33 @@ public abstract class Trainer {
     ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
     Key _job;
     Layer[] _ls;
-    float[][] _ws, _bs; // Current weights
-    float[][] _wi, _bi; // Initial weights, for synchronization
-    float[][] _wm, _bm; // Momentums
+    float[][] _ws; // Current weights
+    double[][] _bs; // Current bias
+    float[][] _wi; // Initial weights, for synchronization
+    double[][] _bi; // Initial biases, for synchronization
+    float[][] _wm; // Momentums
+    double[][] _bm; // Momentums
     Key _key;
     ConcurrentHashMap<Integer, Integer> _counters;
     MapReduce _trainer;
     long _total;
 
-    NodeDescent(Key job, Layer[] ls, float[][] ws, float[][] bs, Key key) {
+    NodeDescent(Key job, Layer[] ls, float[][] ws, double[][] bs, Key key) {
       _job = job;
       _ls = ls;
       _key = key;
       _ws = ws;
       _bs = bs;
       _wi = new float[ws.length][];
-      _bi = new float[bs.length][];
+      _bi = new double[bs.length][];
       _wm = new float[ws.length][];
-      _bm = new float[bs.length][];
+      _bm = new double[bs.length][];
       for( int y = 1; y < _ws.length; y++ ) {
         _wi[y] = ws[y].clone();
         _bi[y] = bs[y].clone();
         if( ls[y].momentum_start != 0 || ls[y].momentum_stable != 0 ) {
           _wm[y] = new float[ws[y].length];
-          _bm[y] = new float[bs[y].length];
+          _bm[y] = new double[bs[y].length];
         }
       }
       _trainer = MapReduce._instances.get(_key);
@@ -484,14 +489,14 @@ public abstract class Trainer {
       if( n > 0 ) {
         Shuttle s = new Shuttle();
         s._w = new float[_ws.length][];
-        s._b = new float[_bs.length][];
+        s._b = new double[_bs.length][];
         for( int y = 1; y < _ws.length; y++ ) {
           s._w[y] = new float[_ws[y].length];
           for( int i = 0; i < _ws[y].length; i++ ) {
             s._w[y][i] = _ws[y][i] - _wi[y][i];
             _wi[y][i] = _ws[y][i];
           }
-          s._b[y] = new float[_bs[y].length];
+          s._b[y] = new double[_bs[y].length];
           for( int i = 0; i < _bs[y].length; i++ ) {
             s._b[y][i] = _bs[y][i] - _bi[y][i];
             _bi[y][i] = _bs[y][i];
@@ -507,7 +512,7 @@ public abstract class Trainer {
             _ws[y][i] = s._w[y][i] + d;
           }
           for( int i = 0; i < _bs[y].length; i++ ) {
-            float d = _bs[y][i] - _bi[y][i];
+            double d = _bs[y][i] - _bi[y][i];
             _bi[y][i] = s._b[y][i];
             _bs[y][i] = s._b[y][i] + d;
           }
@@ -518,7 +523,8 @@ public abstract class Trainer {
     }
 
     static class Shuttle extends Atomic {
-      float[][] _w, _b; // Deltas in, values out
+      float[][] _w; // Deltas in, values out
+      double[][] _b; // Deltas in, values out
       int[] _counts;
       long _processed;
 
@@ -606,7 +612,7 @@ public abstract class Trainer {
         while (true) {
           input.fprop(true);
           for( int i = 0; i < input._a.length; i++ )
-            a[0].getBuffer().put(i, input._a[i]);
+            a[0].getBuffer().put(i, (float)input._a[i]);
           queue.putWriteBuffer(a[0], false);
           for( int y = 1; y < fprops.length; y++ )
             queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);
