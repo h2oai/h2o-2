@@ -1,12 +1,9 @@
 package water.exec;
 
 import java.util.ArrayList;
+import java.util.List;
+
 import water.H2O;
-import water.Key;
-import water.fvec.AppendableVec;
-import water.fvec.Frame;
-import water.fvec.NewChunk;
-import water.fvec.Vec;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -15,10 +12,11 @@ import water.fvec.Vec;
 // --------------------------------------------------------------------------
 public class ASTFunc extends ASTOp {
   final AST _body;
+  final String _locals[];       // including arguments and local variables.
   final int _tmps;
   Env _env;                     // Captured environment at each apply point
-  ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) {
-    super(vars,vtypes,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _tmps=tmps;
+  ASTFunc( String vars[], String locals[], Type vtypes[], AST body, int tmps ) {
+    super(vars,vtypes,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _locals=locals; _tmps=tmps;
   }
   @Override String opStr() { return "fun"; }
   @Override ASTOp make() { throw H2O.fail();} 
@@ -47,11 +45,16 @@ public class ASTFunc extends ASTOp {
     E._env.push(vars);
     AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
     if( body == null ) E.throwErr("Missing function body",x);
-    E._env.pop();
+    List<ASTId> local_ids = E._env.pop();
+    String[] local_names = new String[local_ids.size()+1];
+    local_names[0] = "fun";
+    for (int i = 0; i < local_ids.size(); i++)
+      local_names[i+1] = local_ids.get(i)._id;
 
     // The body should force the types.  Build a type signature.
     String xvars[] = new String[argcnt+1];
     Type   types[] = new Type  [argcnt+1];
+
     xvars[0] = "fun";
     types[0] = body._t;         // Return type of body
     for( int i=0; i<argcnt; i++ ) {
@@ -59,7 +62,7 @@ public class ASTFunc extends ASTOp {
       xvars[i+1] = id._id;
       types[i+1] = id._t;
     }
-    return new ASTFunc(xvars,types,body,vars.size()-argcnt);
+    return new ASTFunc(xvars,local_names,types,body,vars.size()-argcnt);
   }  
   
   @Override void exec(Env env) { 
@@ -79,12 +82,12 @@ public class ASTFunc extends ASTOp {
   }
 
   @Override double[] map(Env2 encl, double[] in, double[] out) {
-    if (_vars.length-_tmps!=1) H2O.unimpl();
+    if (_vars.length!=2) throw H2O.unimpl();
     Env2 env = new Env2(encl, this);
     env.setAry(1, in);     // push the only argument to env
     _body.eval(env);
     out = env.retAry();
-    if (out == null) H2O.unimpl();
+    if (out == null) throw H2O.unimpl();
     return out;
   }
 

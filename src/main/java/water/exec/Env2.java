@@ -21,9 +21,9 @@ public class Env2 extends Iced {
   ASTOp    _fcn[];   // function; closure if user defined.
 
   public Env2( Env2 encl, ASTFunc fcn ) {
-    int nsym = fcn._vars.length+1;
+    int nsym = fcn._locals.length + 1;
     _encl = encl;
-    _sym  = fcn._vars;
+    _sym  = fcn._locals;
     _d    = new double[nsym];
     _ary  = new double[nsym][];
     _fcn  = new ASTOp [nsym];
@@ -63,7 +63,9 @@ public class Env2 extends Iced {
   public double[] retAry() { return _ary[0]; }
   public ASTOp    retFcn() { return _fcn[0]; }
   public double   retDbl() { if (_ary[0]!=null || _fcn[0]!=null ) return Double.NaN; else return _d[0]; }
-
+  public boolean  isAry () { return _fcn[0] == null && _ary[0] != null; }
+  public boolean  isFcn () { return _fcn[0] != null; }
+  public boolean  isDbl () { return _fcn[0] == null && _ary[0] == null; }
   public void     asnAry( String id, double ary[] ) { setAry(findSym(id), ary); }
   public void     asnFcn( String id, ASTOp  fcn   ) { setFcn(findSym(id), fcn); }
   public void     asnDbl( String id, double d     ) { setDbl(findSym(id), d  ); }

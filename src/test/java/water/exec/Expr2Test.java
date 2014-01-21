@@ -258,6 +258,7 @@ public class Expr2Test extends TestUtil {
     assertFalse( env.isFcn() );
     double res = env.popDbl();
     assertEquals(d,res,d/1e8);
+    env.pop();
     env.remove();
   }
 
@@ -270,6 +271,7 @@ public class Expr2Test extends TestUtil {
     } catch ( IllegalArgumentException e ) {
       assertEquals(err, e.getMessage());
     }
+    env.remove();
   }
 
 }
