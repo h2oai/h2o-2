@@ -19,9 +19,9 @@ public class Test_R_apply extends TestUtil {
   @Test public void testRowApply() {
     Key dest = Key.make("h.hex");
     try {
-      //File file = TestUtil.find_test_file("smalldata/logreg/syn_2659x1049.csv");
+      File file = TestUtil.find_test_file("smalldata/logreg/syn_2659x1049.csv");
       //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
-      File file = TestUtil.find_test_file("smalldata/drugs.csv");
+      //File file = TestUtil.find_test_file("smalldata/drugs.csv");
       Key fkey = NFSFileVec.make(file);
       Frame in = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
@@ -80,7 +80,7 @@ public class Test_R_apply extends TestUtil {
     public Cap(double c) { _c = c; }
     double[] map(double ds[]) {
       double out[] = new double[ds.length];
-      for (int i=0;i<ds.length;i++) if (ds[i] >= _c) out[i] = _c;
+      for (int i=0;i<ds.length;i++) out[i] = ds[i] < _c ? ds[i] : _c;
       return out;
     }
   }
@@ -130,8 +130,9 @@ public class Test_R_apply extends TestUtil {
     assertEquals(result.length,expected.length);
     for(int i = 0; i < result.length; i++) {
       assertEquals(result[i].length, expected[i].length);
-      for (int c = 0; c < result[i].length; c++)
-        System.out.print(result[i][c]);
+      //for (int c = 0; c < result[i].length; c++)
+      //  System.out.print(String.format("%-12.2f",result[i][c]));
+      //System.out.println();
       assertArrayEquals(result[i], expected[i], 1E-5);
     }
     env.remove();
