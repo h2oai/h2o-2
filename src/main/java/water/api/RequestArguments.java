@@ -591,7 +591,7 @@ public class RequestArguments extends RequestStatics {
         T v = defaultValue();
         value = (v == null) ? "" : v.toString();
       }
-      return "<input" + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
+      return "<input autocomplete=\"off\"" + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
     }
 
     /** JS refresh is a default jQuery hook to the change() method.
@@ -956,7 +956,7 @@ public class RequestArguments extends RequestStatics {
       for (int i = 0 ; i < values.length; ++i) {
         sb.append("<div class='input-prepend" + (suffixes!=null?" input-append":"") + "'>");
         sb.append("<span class='add-on'>" + prefixes[i]+"</span>");
-        sb.append("<input class='span3' name='"+names[i]+"' id='"+_name+String.valueOf(i)+"' type='text' value='"+values[i]+"' placeholder='"+queryDescription()+"'>");
+        sb.append("<input autocomplete=\"off\" class='span3' name='"+names[i]+"' id='"+_name+String.valueOf(i)+"' type='text' value='"+values[i]+"' placeholder='"+queryDescription()+"'>");
         if (suffixes!=null) sb.append("<span class='add-on'>" + suffixes[i]+"</span>");
         sb.append("</div>");
       }
