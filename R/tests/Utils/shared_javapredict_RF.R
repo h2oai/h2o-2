@@ -1,20 +1,20 @@
-heading(  "BEGIN TEST"  )   
-conn <- new(   "H2OClient"  , ip=myIP, port=myPort)   
-   
-heading(   "Uploading train data to H2O"  )   
-iris_train.hex <- h2o.uploadFile(conn, train)   
-   
-heading(   "Creating DRF model in H2O"  )   
-iris.rf.h2o <- h2o.randomForest(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize )   
+heading(  "BEGIN TEST"  )
+conn <- new(   "H2OClient"  , ip=myIP, port=myPort)
+
+heading(   "Uploading train data to H2O"  )
+iris_train.hex <- h2o.uploadFile.FV(conn, train)
+
+heading(   "Creating DRF model in H2O"  )
+iris.rf.h2o <- h2o.randomForest.FV(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize )
 print(iris.rf.h2o)
-   
-heading(   "Downloading Java prediction model code from H2O"  )   
-model_key <- iris.rf.h2o@key   
-tmpdir_name <- sprintf(   "tmp_model_%s"  , as.character(Sys.getpid()))   
-cmd <- sprintf(   "rm -fr %s"  , tmpdir_name)   
-safeSystem(cmd)   
-cmd <- sprintf(   "mkdir %s"  , tmpdir_name)   
-safeSystem(cmd)   
+
+heading(   "Downloading Java prediction model code from H2O"  )
+model_key <- iris.rf.h2o@key
+tmpdir_name <- sprintf(   "tmp_model_%s"  , as.character(Sys.getpid()))
+cmd <- sprintf(   "rm -fr %s"  , tmpdir_name)
+safeSystem(cmd)
+cmd <- sprintf(   "mkdir %s"  , tmpdir_name)
+safeSystem(cmd)
 cmd <- sprintf(   "curl -o %s/%s.java http://%s:%d/2/DRFModelView.java?_modelKey=%s"  , tmpdir_name, model_key, myIP, myPort, model_key)
 safeSystem(cmd)
 
@@ -54,44 +54,44 @@ if (nrow(prediction1) != nrow(prediction2))    {
 match <- all(prediction1 == prediction2)
 if (! match)    {
   for (i in    1  :nrow(prediction1))    {
-    rowmatches <- all(prediction1[i,] == prediction2[i,])   
-    if (! rowmatches)    {   
-      print(   "----------------------------------------------------------------------"  )   
-      print(   ""  )   
-      print(paste(   "Prediction mismatch on data row"  , i,    "of test file"  , test))   
-      print(   ""  )   
-      print(         "(Note: That is the 1-based data row number, not the file line number."  )   
-      print(         "       If you have a header row, then the file line number is off by one.)"  )   
-      print(   ""  )   
-      print(   "----------------------------------------------------------------------"  )   
-      print(   ""  )   
-      print(   "Data from failing row"  )   
-      print(   ""  )   
-      print(iris_test_without_response[i,])   
-      print(   ""  )   
-      print(   "----------------------------------------------------------------------"  )   
-      print(   ""  )   
-      print(   "Prediction from H2O"  )   
-      print(   ""  )   
-      print(prediction1[i,])   
-      print(   ""  )   
-      print(   "----------------------------------------------------------------------"  )   
-      print(   ""  )   
-      print(   "Prediction from Java POJO"  )   
-      print(   ""  )   
-      print(prediction2[i,])   
-      print(   ""  )   
-      print(   "----------------------------------------------------------------------"  )   
-      print(   ""  )   
-      stop(   "Prediction mismatch"  )   
-       }   
-     }   
-   
-  stop(   "Paranoid; should not reach here"  )   
-   }   
-   
-heading(   "Cleaning up tmp files"  )   
-cmd <- sprintf(   "rm -fr %s"  , tmpdir_name)   
-safeSystem(cmd)   
-   
-PASS_BANNER()   
+    rowmatches <- all(prediction1[i,] == prediction2[i,])
+    if (! rowmatches)    {
+      print(   "----------------------------------------------------------------------"  )
+      print(   ""  )
+      print(paste(   "Prediction mismatch on data row"  , i,    "of test file"  , test))
+      print(   ""  )
+      print(         "(Note: That is the 1-based data row number, not the file line number."  )
+      print(         "       If you have a header row, then the file line number is off by one.)"  )
+      print(   ""  )
+      print(   "----------------------------------------------------------------------"  )
+      print(   ""  )
+      print(   "Data from failing row"  )
+      print(   ""  )
+      print(iris_test_without_response[i,])
+      print(   ""  )
+      print(   "----------------------------------------------------------------------"  )
+      print(   ""  )
+      print(   "Prediction from H2O"  )
+      print(   ""  )
+      print(prediction1[i,])
+      print(   ""  )
+      print(   "----------------------------------------------------------------------"  )
+      print(   ""  )
+      print(   "Prediction from Java POJO"  )
+      print(   ""  )
+      print(prediction2[i,])
+      print(   ""  )
+      print(   "----------------------------------------------------------------------"  )
+      print(   ""  )
+      stop(   "Prediction mismatch"  )
+       }
+     }
+
+  stop(   "Paranoid; should not reach here"  )
+   }
+
+heading(   "Cleaning up tmp files"  )
+cmd <- sprintf(   "rm -fr %s"  , tmpdir_name)
+safeSystem(cmd)
+
+PASS_BANNER()
