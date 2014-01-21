@@ -129,11 +129,11 @@ public final class ParseDataset2 extends Job {
   public static class EnumUpdateTask extends MRTask2<EnumUpdateTask>{
     private transient int[][][] _emap;
     final Key _eKey;
-    final String [][] _gDomain;
+    final ValueString [][] _gDomain;
     final Enum [][] _lEnums;
     final int  [] _chunk2Enum;
     final int [] _colIds;
-    public EnumUpdateTask(String [][] gDomain, Enum [][]  lEnums, int [] chunk2Enum, Key lDomKey, int [] colIds){
+    public EnumUpdateTask(ValueString [][] gDomain, Enum [][]  lEnums, int [] chunk2Enum, Key lDomKey, int [] colIds){
       _gDomain = gDomain; _lEnums = lEnums; _chunk2Enum = chunk2Enum; _eKey = lDomKey;_colIds = colIds;
     }
 
@@ -148,7 +148,7 @@ public final class ParseDataset2 extends Job {
             emap[i] = new int[e.maxId()+1];
             Arrays.fill(emap[i], -1);
             for(int j = 0; j < _gDomain[i].length; ++j) {
-              ValueString vs = new ValueString(_gDomain[i][j].getBytes());
+              ValueString vs = _gDomain[i][j];
               if( e.containsKey(vs) ) {
                 assert e.getTokenId(vs) <= e.maxId():"maxIdx = " + e.maxId() + ", got " + e.getTokenId(vs);
                 emap[i][e.getTokenId(vs)] = j;
@@ -280,9 +280,9 @@ public final class ParseDataset2 extends Job {
     if( ecols != null && ecols.length > 0 ) {
       EnumFetchTask eft = new EnumFetchTask(H2O.SELF.index(), uzpt._eKey, ecols).invokeOnAllNodes();
       Enum [] enums = eft._gEnums;
-      String [][] ds = new String[ecols.length][];
+      ValueString [][] ds = new ValueString[ecols.length][];
       int j = 0;
-      for(int i:ecols)ds[j++] =  uzpt._dout._vecs[i]._domain = enums[i].computeColumnDomain();
+      for(int i:ecols)uzpt._dout._vecs[i]._domain = ValueString.toString(ds[j++] = enums[i].computeColumnDomain());
       eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
     }
     Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());

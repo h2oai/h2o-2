@@ -391,7 +391,7 @@ NEXT_CHAR:
         case COND_QUOTE:
           if (c == quotes) {
             _str.addChar();
-            _str.skipChar();
+//            _str.skipChar();
             state = STRING;
             break NEXT_CHAR;
           } else {
