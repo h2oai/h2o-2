@@ -100,7 +100,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",                "Data");
     Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",                "Data");
     Request.addToNavbar(registerRequest(new Upload()),      "Upload",                     "Data");
-    Request.addToNavbar(registerRequest(new Get()),         "Download",                   "Data");
 
     Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
@@ -159,7 +158,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
-
+    registerRequest(new Get()); // Download
     //Column Expand
     registerRequest(new OneHot());
     // internal handlers

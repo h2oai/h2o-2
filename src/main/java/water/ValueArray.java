@@ -2,10 +2,11 @@ package water;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import jsr166y.CountedCompleter;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
 import water.fvec.*;
@@ -563,21 +564,23 @@ public class ValueArray extends Iced implements Cloneable {
         if( !v2.isFrame() ) {
           throw new IllegalArgumentException(k2 + " is not a frame.");
         }
-        Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+        //Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
         return v2.get();
       }
 
       // No cached conversion.  Make one and store it in DKV.
       int cn = conversionNumber.getAndIncrement();
       Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
-      Frame frame = convert();
-      DKV.put(k2, frame);
+      Futures fs = new Futures();
+      Frame frame = convert(fs);
+      DKV.put(k2, frame, fs);
+      fs.blockForPending();
       Log.info("Conversion " + cn + " complete.");
       return frame;
     }
   }
 
-  private Frame convert() {
+  private Frame convert(Futures fs) {
     String[] names = new String[_cols.length];
     // A new random VectorGroup
     Key keys[] = new Vec.VectorGroup().addVecs(_cols.length);
@@ -587,7 +590,7 @@ public class ValueArray extends Iced implements Cloneable {
     Vec[] vecs = new Vec[avs.length];
     for(int i = 0; i < avs.length; ++i) {
       avs[i]._domain = _cols[i]._domain;
-      vecs[i] = avs[i].close(null);
+      vecs[i] = avs[i].close(fs);
     }
     return new Frame(names, vecs);
   }
@@ -596,8 +599,17 @@ public class ValueArray extends Iced implements Cloneable {
     final Key _vaKey;
     final Key[] _keys;
     AppendableVec[] _vecs;
+    transient Futures _fs;
 
     Converter( Key vaKey, Key[] keys ) { _vaKey = vaKey; _keys = keys; }
+    @Override public void init() {
+      super.init();
+      _fs = new Futures();
+    }
+    @Override public final void lonCompletion( CountedCompleter caller ) {
+      super.lonCompletion(caller);
+      _fs.blockForPending();
+    }
     @Override public void map(Key key) {
       ValueArray va = DKV.get(_vaKey).get();
       AutoBuffer bits = va.getChunk(key);
@@ -632,16 +644,95 @@ public class ValueArray extends Iced implements Cloneable {
         }
       }
       for(int i = 0; i < chunks.length; ++i)
-        chunks[i].close(cidx, null);
+        chunks[i].close(cidx, _fs);
     }
 
     @Override public void reduce(Converter other) {
-      if(_vecs == null)
-        _vecs = other._vecs;
-      else {
-        for(int i = 0; i < _vecs.length; i++)
-          _vecs[i].reduce(other._vecs[i]);
-      }
+      if(_vecs == null) _vecs = other._vecs;
+      else for(int i = 0; i < _vecs.length; i++)
+             _vecs[i].reduce(other._vecs[i]);
     }
+  }
+
+  // Cached conversion of a Frame to a VA.  Returns the existing VA if there is
+  // one (so no staleness/caching check).
+  public static ValueArray frameAsVA(Key frKey) {
+    Key vaKey = Key.make(DKV.calcConvertedVAKeyString(frKey.toString()));
+    ValueArray ary = UKV.get(vaKey);
+    if( ary != null ) return ary; // Return an existing converted VA, if there is one
+    Frame fr = UKV.get(frKey);
+    if( fr == null ) return null; // No Frame, no VA, so return null
+    synchronized( ValueArray.class ) {
+      ary = UKV.get(vaKey);     // Check cache again under lock
+      if( ary != null ) return ary;
+      int cn = conversionNumber.getAndIncrement();
+      Log.info("Converting Frame to ValueArray: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frKey + ")...");
+      ary = convert(fr,vaKey);
+    }
+    return ary;
+  }
+
+  // Convert a Frame to a VA
+  private static ValueArray convert( Frame fr, Key vaKey ) {
+    long nrows = fr.numRows();
+    Vec vs[] = fr.vecs();
+
+    // Build array of column headers
+    Column cols[] = new Column[fr.numCols()];
+    int off=0;                  // Offset within a row
+    for( int i=0; i<cols.length; i++ ) {
+      Column C = cols[i] = new Column();
+      Vec v = vs[i];
+      C._name  = fr._names[i];
+      C._domain= v._domain;
+      C._min   = v.min  ();
+      C._max   = v.max  ();
+      C._mean  = v.mean ();
+      C._sigma = v.sigma();
+      C._n     = nrows - v.naCnt();
+      // No attempt at compression VA style.  We can add this in later.
+      C._base  = 0;
+      C._scale = 1;
+      C._off   = off;
+      byte sz  = 8;            // Full 8 bytes, no compression
+      C._size  = (byte)(v.isInt() ? sz : -sz);
+      off += sz;
+    }
+
+    // Count rows-per-chunk
+    Vec v0 = fr.anyVec();
+    int rows[] = new int[v0.nChunks()];
+    for( int i=0; i<rows.length; i++ )
+      rows[i] = v0.chunkLen(i);
+
+    // Make the VA header
+    final ValueArray va = new ValueArray(vaKey, rows, off, cols );
+    UKV.put(vaKey,va);
+
+    // Now fill in the data chunks
+    final int rowsize = off;
+    new MRTask2() {
+      transient Futures _fs;
+      @Override public void setupLocal() { _fs = new Futures(); }
+      @Override public void map(Chunk chks[]) {
+        int off=0;
+        byte[] buf = new byte[rowsize*chks[0]._len];
+        for( int row=0; row<chks[0]._len; row++ )
+          for( int c=0; c<chks.length; c++ ) {
+            Chunk C = chks[c];
+            if( va._cols[c]._size==8 ) {
+              off += UDP.set8(buf,off,C.isNA(row) ? Long.MIN_VALUE : C.at80(row));
+            } else {
+              off += UDP.set8d(buf,off,C.at0(row));
+            }
+          }
+        assert off == buf.length;
+        Value val = new Value(va.getChunkKey(_lo),buf);
+        DKV.put(val._key,val,_fs,true);
+      }
+      @Override public void closeLocal() { _fs.blockForPending(); }
+    }.doAll(fr);
+
+    return va;
   }
 }

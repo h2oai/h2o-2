@@ -1,6 +1,5 @@
 {
-    "type": "object",
-    "properties":{
+    "type": "object", "properties":{
         "Request2": {
             "type": "number",
         },

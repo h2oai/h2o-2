@@ -261,10 +261,14 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
 
         if h2o.beta_features:
             if c['type'] == 'Enum':
-                enum_domain_size = (c['max'] - c['min']) + 1
-                msg += (" enum_domain_size: %d" % enum_domain_size)
-                # inspect2 doesn't have enum_domain_size but this is equivalent
-                enumSizeDict[k] = enum_domain_size
+                # enums now have 'NaN' returned for min/max
+
+                # if isinstance(c['min'], basestring) or isinstance(c['max'], basestring):
+                #     raise Exception("Didn't expect 'min': %s or 'max': %s to be str or unicode" % (c['min'], c['max']))
+                cardinality = c['cardinality']
+                msg += (" cardinality: %d" % cardinality)
+                # inspect2 doesn't have cardinality but this is equivalent
+                enumSizeDict[k] = cardinality
                 printMsg = True
 
         else:

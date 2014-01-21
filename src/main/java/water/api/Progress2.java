@@ -32,8 +32,8 @@ public class Progress2 extends Request2 {
     Job jjob = null;
     if( job_key != null )
       jjob = Job.findJob(job_key);
-    if( jjob != null && jjob.exception != null )
-      return Response.error(jjob.exception == null ? "cancelled" : jjob.exception);
+    if( jjob != null && jjob.cancelled())
+      return Response.error(jjob.exception == null ? "Job was cancelled by user!" : jjob.exception);
     if( jjob == null || jjob.end_time > 0 || jjob.cancelled() )
       return jobDone(jjob, destination_key);
     return jobInProgress(jjob, destination_key);
@@ -48,7 +48,7 @@ public class Progress2 extends Request2 {
   protected Response jobInProgress(final Job job, final Key dst) {
     progress = job.progress();
     return Response.poll(this, (int) (100 * job.progress()), 100, "job_key", job_key.toString(), "destination_key",
-        destination_key.toString());
+        dst.toString());
   }
 
   @Override public boolean toHTML(StringBuilder sb) {

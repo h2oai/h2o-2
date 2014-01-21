@@ -69,7 +69,7 @@ Building a Model
 
 #. Nbins are the number of bins in which data are to be split, and split points are evaluated at the boundaries of each of these bins. As Nbins goes up, the more closely the algorithm approximates evaluating each individual observation as a split point. The trade off for this refinement is an increase in computational time. 
 
-#. Learn Rate is a tuning parameter that slows the convergence of the algorithm to a solution, and is intended to prevent overfitting. To specify multiple learning rates, separate the list by pipe. For example: .01|.10|.15.  
+#. Learn Rate is a tuning parameter that slows the convergence of the algorithm to a solution, and is intended to prevent overfitting. To specify multiple learning rates, separate the list by by comma. For example: .01,.10,.15.  
 
 .. image:: GBMGrequest.png
    :width: 90%

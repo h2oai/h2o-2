@@ -47,6 +47,9 @@ public abstract class ASTOp extends AST {
   static final public HashMap<String,ASTOp> UNI_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> BIN_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> PREFIX_OPS    = new HashMap();
+  // Too avoid a cyclic class-loading dependency, these are init'd before subclasses.
+  static final String VARS1[] = new String[]{ "", "x"};
+  static final String VARS2[] = new String[]{ "", "x","y"};
   static {
     // Unary infix ops
     putUniInfix(new ASTUniPlus());
@@ -124,10 +127,14 @@ public abstract class ASTOp extends AST {
   static private void putUniInfix(ASTOp ast) { UNI_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putBinInfix(ASTOp ast) { BIN_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putPrefix  (ASTOp ast) {    PREFIX_OPS.put(ast.opStr(),ast); }
-  static public boolean isOp(String id) {
-    return UNI_INFIX_OPS.containsKey(id)
-        || BIN_INFIX_OPS.containsKey(id)
-        || PREFIX_OPS   .containsKey(id);
+  static public ASTOp isOp(String id) {
+    // This order matters. If used as a prefix OP, `+` and `-` are binary only.
+    ASTOp op3 =    PREFIX_OPS.get(id); if( op3 != null ) return op3;
+    ASTOp op2 = BIN_INFIX_OPS.get(id); if( op2 != null ) return op2;
+    ASTOp op1 = UNI_INFIX_OPS.get(id);                   return op1;
+  }
+  static public boolean isInfixOp(String id) {
+    return BIN_INFIX_OPS.containsKey(id) || UNI_INFIX_OPS.containsKey(id);
   }
   static public Set<String> opStrs() {
     Set<String> all = UNI_INFIX_OPS.keySet();
@@ -140,13 +147,14 @@ public abstract class ASTOp extends AST {
   final int _precedence;    // operator precedence number
   final int _association;   // 0 - left associated, 1 - right associated
   // All fields are final, because functions are immutable
-  final String _vars[];         // Variable names
+  final String _vars[];     // Variable names
   ASTOp( String vars[], Type ts[], int form, int prec, int asso) {
     super(Type.fcn(ts));
     _form = form;
     _precedence = prec;
     _association = asso;
     _vars = vars;
+    assert ts.length==vars.length : "No vars?" + this;
   }
 
   abstract String opStr();
@@ -158,10 +166,10 @@ public abstract class ASTOp extends AST {
 
   @Override public String toString() {
     String s = _t._ts[0]+" "+opStr()+"(";
-    int len=_vars.length;
+    int len=_t._ts.length;
     for( int i=1; i<len-1; i++ )
-      s += _t._ts[i]+" "+_vars[i]+", ";
-    return s + (len > 1 ? _t._ts[len-1]+" "+_vars[len-1] : "")+")";
+      s += _t._ts[i]+" "+(_vars==null?"":_vars[i])+", ";
+    return s + (len > 1 ? _t._ts[len-1]+" "+(_vars==null?"":_vars[len-1]) : "")+")";
   }
   public String toString(boolean verbose) {
     if( !verbose ) return toString(); // Just the fun name& arg names
@@ -172,12 +180,10 @@ public abstract class ASTOp extends AST {
     int x = E._x;
     String id = E.isID();
     if( id == null ) return null;
-    ASTOp op;
-    // This order matters. If used as a prefix OP, `+` and `-` are binary only.
-    if( (op = PREFIX_OPS.get(id))    != null
-     || (op = BIN_INFIX_OPS.get(id)) != null
-     || (op = UNI_INFIX_OPS.get(id)) != null)
-      return op.make();
+    ASTOp op = isOp(id);  // The order matters. If used as a prefix OP, `+` and `-` are binary only.
+    // Also, if assigning to a built-in function then do not parse-as-a-fcn.
+    // Instead it will default to parsing as an ID in ASTAssign.parse
+    if( op != null && !E.peek('=') ) return op.make();
     E._x = x;
     return ASTFunc.parseFcn(E);
   }
@@ -216,19 +222,19 @@ public abstract class ASTOp extends AST {
     return null;
   }
 
+  double[] map(Env env, double[] in, double[] out) { H2O.unimpl(); return null; }
 
   @Override void exec(Env env) { env.push(this); }
   abstract void apply(Env env, int argcnt);
 }
 
 abstract class ASTUniOp extends ASTOp {
-  static final String VARS[] = new String[]{ "", "x"};
   static Type[] newsig() {
     Type t1 = Type.dblary();
     return new Type[]{t1,t1};
   }
   ASTUniOp( int form, int precedence, int association ) {
-    super(VARS,newsig(),form,precedence,association);
+    super(VARS1,newsig(),form,precedence,association);
   }
   double op( double d ) { throw H2O.fail(); }
   protected ASTUniOp( String[] vars, Type[] types, int form, int precedence, int association ) {
@@ -282,7 +288,7 @@ class ASTExp  extends ASTUniPrefixOp { String opStr(){ return "exp";   } ASTOp m
 class ASTIsNA extends ASTUniPrefixOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
 
 class ASTNrow extends ASTUniPrefixOp {
-  ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTNrow() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -295,7 +301,7 @@ class ASTNrow extends ASTUniPrefixOp {
 }
 
 class ASTNcol extends ASTUniPrefixOp {
-  ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTNcol() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -308,7 +314,7 @@ class ASTNcol extends ASTUniPrefixOp {
 }
 
 class ASTIsFactor extends ASTUniPrefixOp {
-  ASTIsFactor() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTIsFactor() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "is.factor"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -327,7 +333,7 @@ class ASTIsFactor extends ASTUniPrefixOp {
 
 // Added to facilitate Runit testing
 class ASTAnyFactor extends ASTUniPrefixOp {
-  ASTAnyFactor() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTAnyFactor() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "any.factor"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -345,7 +351,7 @@ class ASTAnyFactor extends ASTUniPrefixOp {
 }
 
 class ASTAnyNA extends ASTUniPrefixOp {
-  ASTAnyNA() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  ASTAnyNA() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "any.na"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -363,7 +369,7 @@ class ASTAnyNA extends ASTUniPrefixOp {
 }
 
 class ASTIsTRUE extends ASTUniPrefixOp {
-  ASTIsTRUE() {super(VARS,new Type[]{Type.DBL,Type.unbound()});}
+  ASTIsTRUE() {super(VARS1,new Type[]{Type.DBL,Type.unbound()});}
   @Override String opStr() { return "isTRUE"; }
   @Override ASTOp make() {return new ASTIsTRUE();}  // to make sure fcn get bound at each new context
   @Override void apply(Env env, int argcnt) {
@@ -374,7 +380,7 @@ class ASTIsTRUE extends ASTUniPrefixOp {
 }
 
 class ASTScale extends ASTUniPrefixOp {
-  ASTScale() { super(VARS,new Type[]{Type.ARY,Type.ARY}); }
+  ASTScale() { super(VARS1,new Type[]{Type.ARY,Type.ARY}); }
   @Override String opStr() { return "scale"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
@@ -443,13 +449,12 @@ class ASTScale extends ASTUniPrefixOp {
 // applying 2 things (from an array or scalar to array or scalar) producing an
 // array or scalar result.
 abstract class ASTBinOp extends ASTOp {
-  static final String VARS[] = new String[]{ "", "x","y"};
   static Type[] newsig() {
     Type t1 = Type.dblary(), t2 = Type.dblary();
     return new Type[]{Type.anyary(new Type[]{t1,t2}),t1,t2};
   }
   ASTBinOp( int form, int precedence, int association ) {
-    super(VARS, newsig(), form, precedence, association); // binary ops are infix ops
+    super(VARS2, newsig(), form, precedence, association); // binary ops are infix ops
   }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env, int argcnt) {
@@ -474,7 +479,7 @@ abstract class ASTBinOp extends ASTOp {
         if( fr0.numCols() != fr1.numCols() ||
             fr0.numRows() != fr1.numRows() )
           throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
-        fr = new Frame(fr0).add(fr1);
+        fr = new Frame(fr0).add(fr1,true);
       } else {
         fr = fr0;
       }
@@ -530,7 +535,7 @@ class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,   
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
   final double _init;
-  final boolean _narm;
+  final boolean _narm;        // na.rm in R
   ASTReducerOp( double init, boolean narm ) {
     super(new String[]{"","dbls"},
           new Type[]{Type.DBL,Type.varargs(Type.dblary())},
@@ -539,6 +544,13 @@ abstract class ASTReducerOp extends ASTOp {
           OPA_RIGHT);
     _init = init;
     _narm = narm;
+  }
+  @Override double[] map(Env env, double[] in, double[] out) {
+    double s = _init;
+    for (double v : in) if (!_narm || !Double.isNaN(v)) s = op(s,v);
+    if (out == null || out.length < 1) out = new double[1];
+    out[0] = s;
+    return out;
   }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env, int argcnt) {
@@ -586,7 +598,7 @@ abstract class ASTReducerOp extends ASTOp {
   }
 }
 
-class ASTSum     extends ASTReducerOp { ASTSum( )     {super(0,false);} String opStr(){ return "sum"      ;} ASTOp make() {return new ASTSum();} double op(double d0, double d1) { return d0+d1;}}
+class ASTSum     extends ASTReducerOp { ASTSum( )     {super(0,false);} String opStr(){ return "sum"      ;} ASTOp make() {return new ASTSum();    } double op(double d0, double d1) { return d0+d1;}}
 class ASTSumNaRm extends ASTReducerOp { ASTSumNaRm( ) {super(0,true) ;} String opStr(){ return "sum.na.rm";} ASTOp make() {return new ASTSumNaRm();} double op(double d0, double d1) { return d0+d1;}}
 
 class ASTReduce extends ASTOp {
@@ -631,7 +643,7 @@ class ASTCbind extends ASTOp {
 
     for(int i = 1; i < argcnt-1; i++) {
       if(env.isAry(-argcnt+1+i))
-        fr.add(env.ary(-argcnt+1+i));
+        fr.add(env.ary(-argcnt+1+i),true);
       else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
@@ -646,16 +658,11 @@ class ASTCbind extends ASTOp {
   }
 }
 
-class ASTMinNaRm extends ASTOp {
-  ASTMinNaRm( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMinNaRm extends ASTReducerOp {
+  ASTMinNaRm( ) { super( Double.POSITIVE_INFINITY, true ); }
   String opStr(){ return "min.na.rm";}
   ASTOp make() {return new ASTMinNaRm();}
+  @Override double op(double d0, double d1) { return Math.min(d0, d1); }
   @Override void apply(Env env, int argcnt) {
     double min = Double.POSITIVE_INFINITY;
     int nacnt = 0;
@@ -677,16 +684,11 @@ class ASTMinNaRm extends ASTOp {
   }
 }
 
-class ASTMaxNaRm extends ASTOp {
-  ASTMaxNaRm( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMaxNaRm extends ASTReducerOp {
+  ASTMaxNaRm( ) { super( Double.NEGATIVE_INFINITY, true ); }
   String opStr(){ return "max.na.rm";}
   ASTOp make() {return new ASTMaxNaRm();}
+  @Override double op(double d0, double d1) { return Math.max(d0,d1); }
   @Override void apply(Env env, int argcnt) {
     double max = Double.NEGATIVE_INFINITY;
     int nacnt = 0;
@@ -708,16 +710,11 @@ class ASTMaxNaRm extends ASTOp {
   }
 }
 
-class ASTMin extends ASTOp {
-  ASTMin( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMin extends ASTReducerOp {
+  ASTMin( ) { super( Double.POSITIVE_INFINITY, false); }
   String opStr(){ return "min";}
   ASTOp make() {return new ASTMin();}
+  @Override double op(double d0, double d1) { return Math.min(d0, d1); }
   @Override void apply(Env env, int argcnt) {
     double min = Double.POSITIVE_INFINITY;
     for( int i=0; i<argcnt-1; i++ )
@@ -733,16 +730,11 @@ class ASTMin extends ASTOp {
   }
 }
 
-class ASTMax extends ASTOp {
-  ASTMax( ) {
-    super(new String[]{"","dbls"},
-            new Type[]{Type.DBL,Type.varargs(Type.dblary())},
-            OPF_PREFIX,
-            OPP_PREFIX,
-            OPA_RIGHT);
-  }
+class ASTMax extends ASTReducerOp {
+  ASTMax( ) { super( Double.NEGATIVE_INFINITY, false ); }
   String opStr(){ return "max";}
   ASTOp make() {return new ASTMax();}
+  @Override double op(double d0, double d1) { return Math.max(d0,d1); }
   @Override void apply(Env env, int argcnt) {
     double max = Double.NEGATIVE_INFINITY;
     for( int i=0; i<argcnt-1; i++ )
@@ -838,6 +830,11 @@ class ASTCat extends ASTOp {
           OPP_PREFIX,
           OPA_RIGHT); }
   @Override ASTOp make() {return new ASTCat();}
+  @Override double[] map(Env env, double[] in, double[] out) {
+    if (out == null || out.length < in.length) out = new double[in.length];
+    for (int i = 0; i < in.length; i++) out[i] = in[i];
+    return out;
+  }
   @Override void apply(Env env, int argcnt) {
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
@@ -943,40 +940,69 @@ class ASTTable extends ASTOp {
   @Override String opStr() { return "table"; }
   @Override ASTOp make() { return new ASTTable(); }
   @Override void apply(Env env, int argcnt) {
+    int ncol;
     Frame fr = env.ary(-1);
-    if (fr.vecs().length > 1)
-      throw new IllegalArgumentException("table does not apply to multiple cols.");
-    if (! fr.vecs()[0].isInt())
-      throw new IllegalArgumentException("table only applies to integer vector.");
-    int[]  domain = new Vec.CollectDomain(fr.vecs()[0]).doAll(fr).domain();
-    long[] counts = new Tabularize(domain).doAll(fr)._counts;
+    if ((ncol = fr.vecs().length) > 2)
+      throw new IllegalArgumentException("table does not apply to more than two cols.");
+    for (int i = 0; i < ncol; i++) if (!fr.vecs()[i].isInt())
+      throw new IllegalArgumentException("table only applies to integer vectors.");
+    String[][] domains = new String[ncol][];  // the domain names to display as row and col names
+                                              // if vec does not have original domain, use levels returned by CoolectDomain
+    int[][] levels = new int[ncol][];
+    for (int i = 0; i < ncol; i++) {
+      Vec v = fr.vecs()[i];
+      levels[i] = new Vec.CollectDomain(v).doAll(new Frame(v)).domain();
+      domains[i] = v.domain();
+    }
+    long[][] counts = new Tabularize(levels).doAll(fr)._counts;
     // Build output vecs
-    Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(2);
+    Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(counts.length+1);
+    Vec[] vecs = new Vec[counts.length+1];
+    String[] colnames = new String[counts.length+1];
     AppendableVec v0 = new AppendableVec(keys[0]);
     v0._domain = fr.vecs()[0].domain() == null ? null : fr.vecs()[0].domain().clone();
     NewChunk c0 = new NewChunk(v0,0);
-    for( int i=0; i<domain.length; i++ ) c0.addNum((double) domain[i]);
+    for( int i=0; i<levels[0].length; i++ ) c0.addNum((double) levels[0][i]);
     c0.close(0,null);
-    AppendableVec v1 = new AppendableVec(keys[1]);
-    NewChunk c1 = new NewChunk(v1,0);
-    for( int i=0; i<domain.length; i++ ) c1.addNum((double) counts[i]);
-    c1.close(0,null);
+    vecs[0] = v0.close(null);
+    colnames[0] = "row.names";
+    if (ncol==1) colnames[1] = "Count";
+    for (int level1=0; level1 < counts.length; level1++) {
+      AppendableVec v = new AppendableVec(keys[level1+1]);
+      NewChunk c = new NewChunk(v,0);
+      v._domain = null;
+      for (int level0=0; level0 < counts[level1].length; level0++)
+        c.addNum((double) counts[level1][level0]);
+      c.close(0, null);
+      vecs[level1+1] = v.close(null);
+      if (ncol>1) {
+        colnames[level1+1] = domains[1]==null? Integer.toString(levels[1][level1]) : domains[1][levels[1][level1]];
+      }
+    }
     env.pop(2);
-    env.push(new Frame(new String[]{fr._names[0],"count"}, new Vec[]{v0.close(null), v1.close(null)}));
+    env.push(new Frame(colnames, vecs));
   }
   private static class Tabularize extends MRTask2<Tabularize> {
-    public final int[]  _domain;
-    public long[] _counts;
+    public final int[][]  _domains;
+    public long[][] _counts;
 
-    public Tabularize(int[] dom) { super(); _domain=dom; }
-    @Override public void map(Chunk chk) {
-      _counts=new long[_domain.length];
-      for (int i = 0; i < chk._len; i++)
-        if (! chk.isNA0(i)) {
-          int cls = Arrays.binarySearch(_domain,(int)chk.at80(i));
-          assert 0 <= cls && cls < _domain.length;
-          _counts[cls] ++;
+    public Tabularize(int[][] dom) { super(); _domains=dom; }
+    @Override public void map(Chunk[] cs) {
+      assert cs.length == _domains.length;
+      _counts = _domains.length==1? new long[1][] : new long[_domains[1].length][];
+      for (int i=0; i < _counts.length; i++) _counts[i] = new long[_domains[0].length];
+      for (int i=0; i < cs[0]._len; i++) {
+        int level0, level1;
+        if (cs[0].isNA0(i)) continue; else level0 = Arrays.binarySearch(_domains[0],(int)cs[0].at80(i));
+        assert 0 <= level0 && level0 < _domains[0].length;
+        if (cs.length>1) {
+          if (cs[1].isNA0(i)) continue; else level1 = Arrays.binarySearch(_domains[1],(int)cs[1].at80(i));
+          assert 0 <= level1 && level1 < _domains[1].length;
+        } else {
+          level1 = 0;
         }
+        _counts[level1][level0]++;
+      }
     }
     @Override public void reduce(Tabularize that) { Utils.add(_counts,that._counts); }
   }
@@ -1035,12 +1061,12 @@ class ASTIfElse extends ASTOp {
     if( frtru !=null ) {          // True is a Frame?
       if( frtru.numCols() != ncols ||  frtru.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frtru);
-      fr.add(frtru);
+      fr.add(frtru,true);
     }
     if( frfal !=null ) {          // False is a Frame?
       if( frfal.numCols() != ncols ||  frfal.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frfal);
-      fr.add(frfal);
+      fr.add(frfal,true);
     }
     final boolean t = frtru != null;
     final boolean f = frfal != null;
@@ -1086,7 +1112,7 @@ class ASTRApply extends ASTOp {
   @Override void apply(Env env, int argcnt) {
     int oldsp = env._sp;
     // Peek everything from the stack
-    ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
+    final ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
     double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
     Frame fr = env.ary(-3);    // The Frame to work on
     if( d==2 || d== -1 ) {     // Work on columns?
@@ -1130,8 +1156,41 @@ class ASTRApply extends ASTOp {
       assert env._sp == oldsp-4+1;
       return;
     }
-    if( d==1 || d == -2 )       // Work on rows
-      throw H2O.unimpl();
+    if( d==1 || d==-2) {      // Work on rows
+      // apply on rows is essentially a map function
+      Type ts[] = new Type[2];
+      ts[0] = Type.unbound();
+      ts[1] = Type.ARY;
+      Type ft1 = Type.fcn(ts);
+      Type ft2 = op._t.find();  // Should be a function type
+      if( !ft1.union(ft2) ) {
+        if( ft2._ts.length != 2 )
+          throw new IllegalArgumentException("FCN " + op.toString() + " cannot accept one argument.");
+        if( !ft2._ts[1].union(ts[1]) )
+          throw new IllegalArgumentException("Arg " + op._vars[1] + " typed " + ft2._ts[1].find() + " but passed as " + ts[1]);
+        assert false;
+      }
+      // find out return type
+      final double[] rowin = new double[fr.vecs().length];
+      for (int c = 0; c < rowin.length; c++) rowin[c] = fr.vecs()[c].at(0);
+      final double[] rowout = op.map(env,rowin,null);
+      final Env env0 = env;
+      MRTask2 mrt = new MRTask2() {
+        @Override
+        public void map(Chunk[] cs, NewChunk[] ncs) {
+          for (int i = 0; i < cs[0]._len; i++) {
+            for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
+            op.map(env0, rowin, rowout);
+            for (int c = 0; c < ncs.length; c++) ncs[c].addNum(rowout[c]);
+          }
+        }
+      };
+      String[] names = new String[rowout.length];
+      for (int i = 0; i < names.length; i++) names[i] = "C"+(i+1);
+      Frame res = mrt.doAll(rowout.length,fr).outputFrame(names, null);
+      env.poppush(4,res,null);
+      return;
+    }
     throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
   }
 }

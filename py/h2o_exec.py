@@ -50,14 +50,13 @@ def checkScalarResult(resultInspect, resultKey):
 
     metaDict = cols[0]
     for key,value in metaDict.items():
-        if h2o.beta_features:
-            print "Inspect metaDict:", key, value
-        else:
-            h2o.verboseprint("Inspect metaDict:", key, value)
+        print "Inspect metaDict:", key, value
             
     min_value = metaDict['min']
     checkForBadFP(min_value)
 
+
+    # do a VA inspect to see if the fvec to va converter works
     return min_value
 
 def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, m=None):
@@ -163,6 +162,12 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
         ### print "\nexecResult:", execResultInspect
 
         checkScalarResult(execResultInspect, None)
+
+        # assume keyX is the lhs, and do a VA inspect of keyX
+        if keyX:
+            vaInspect = h2o.nodes[0].inspect(key=keyX, useVA=True)
+        # print "va Inspect:", h2o.dump_json(vaInspect)
+        # checkScalarResult(vaInspect, keyX)
 
         sys.stdout.write('.')
         sys.stdout.flush()

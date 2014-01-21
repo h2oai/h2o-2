@@ -2,13 +2,14 @@
 \alias{h2o.randomForest.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-H2O: Random Forest
+H2O: Random Forest (Value Array)
 }
 \description{
-Performs random forest classification on a parsed data set.
+Performs Random Forest classification on an \code{\linkS4class{H2OParsedDataVA} object}.
 }
 \usage{
-h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, seed = -1, use_non_local = TRUE)
+h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, 
++ seed = -1, use_non_local = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -41,7 +42,7 @@ Number of trees to grow. (Must be a nonnegative integer).
   }
 }
 \details{
-This method runs single-node random forest, and requires the user import data with \code{\link{h2o.importFile.VA}} or \code{\link{h2o.importFolder.VA}}. Currently, only classification trees are supported.
+This method runs single-node Random Forest, and requires the user import data with \code{\link{h2o.importFile.VA}} or \code{\link{h2o.importFolder.VA}}. Currently, only classification models are supported.
 }
 \value{
 An object of class \code{\linkS4class{H2ORFModelVA}} with slots key, data, and model, where the last is a list of the following components:
@@ -49,11 +50,6 @@ An object of class \code{\linkS4class{H2ORFModelVA}} with slots key, data, and m
 \item{classification_error }{Classification error rate.}
 \item{tree_sum}{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
 \item{confusion }{Confusion matrix of the prediction.}
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
 }
 \references{
 %% ~put references to the literature/web site here ~

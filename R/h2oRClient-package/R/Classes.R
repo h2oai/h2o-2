@@ -30,6 +30,7 @@ setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", m
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
 setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
 setClass("H2OGLMGridVA", contains="H2OGridVA")
+setClass("H2OKMeansModelVA", contains="H2OModelVA")
 setClass("H2ORFModelVA", contains="H2OModelVA")
 
 # Register finalizers for H2O data and model objects
@@ -427,7 +428,96 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
-h2o.table <- function(...) { if(length(c(...)) > 1) stop("Unimplemented"); h2o.__unop2("table", ...) }
+# TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
+table.internal <- table
+table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", "ifany", "always"), dnn = list.names(...), deparse.level = 1) {
+  idx = sapply(c(...), function(x) { class(x) == "H2OParsedData" })
+  if(any(idx) && !all(idx))
+    stop("Can't mix H2OParsedData objects with R objects in table")
+  else if(any(idx)) {
+    myData = c(...)
+    if(length(myData) > 1 || ncol(myData[[1]]) > 2) stop("Unimplemented")
+    h2o.__unop2("table", myData[[1]]) 
+  } else {
+    list.names <- function(...) {
+      l <- as.list(substitute(list(...)))[-1L]
+      nm <- names(l)
+      fixup <- if (is.null(nm)) 
+        seq_along(l)
+      else nm == ""
+      dep <- vapply(l[fixup], function(x) switch(deparse.level + 
+                                                   1, "", if (is.symbol(x)) as.character(x) else "", 
+                                                 deparse(x, nlines = 1)[1L]), "")
+      if (is.null(nm)) 
+        dep
+      else {
+        nm[fixup] <- dep
+        nm
+      }
+    }
+    if (!missing(exclude) && is.null(exclude)) 
+      useNA <- "always"
+    useNA <- match.arg(useNA)
+    args <- list(...)
+    if (!length(args)) 
+      stop("nothing to tabulate")
+    if (length(args) == 1L && is.list(args[[1L]])) {
+      args <- args[[1L]]
+      if (length(dnn) != length(args)) 
+        dnn <- if (!is.null(argn <- names(args))) 
+          argn
+      else paste(dnn[1L], seq_along(args), sep = ".")
+    }
+    bin <- 0L
+    lens <- NULL
+    dims <- integer()
+    pd <- 1L
+    dn <- NULL
+    for (a in args) {
+      if (is.null(lens)) 
+        lens <- length(a)
+      else if (length(a) != lens) 
+        stop("all arguments must have the same length")
+      cat <- if (is.factor(a)) {
+        if (any(is.na(levels(a)))) 
+          a
+        else {
+          if (is.null(exclude) && useNA != "no") 
+            addNA(a, ifany = (useNA == "ifany"))
+          else {
+            if (useNA != "no") 
+              a <- addNA(a, ifany = (useNA == "ifany"))
+            ll <- levels(a)
+            a <- factor(a, levels = ll[!(ll %in% exclude)], 
+                        exclude = if (useNA == "no") 
+                          NA)
+          }
+        }
+      }
+      else {
+        a <- factor(a, exclude = exclude)
+        if (useNA != "no") 
+          addNA(a, ifany = (useNA == "ifany"))
+        else a
+      }
+      nl <- length(ll <- levels(cat))
+      dims <- c(dims, nl)
+      if (prod(dims) > .Machine$integer.max) 
+        stop("attempt to make a table with >= 2^31 elements")
+      dn <- c(dn, list(ll))
+      bin <- bin + pd * (as.integer(cat) - 1L)
+      pd <- pd * nl
+    }
+    names(dn) <- dnn
+    bin <- bin[!is.na(bin)]
+    if (length(bin)) 
+      bin <- bin + 1L
+    y <- array(tabulate(bin, pd), dims, dimnames = dn)
+    class(y) <- "table"
+    y
+  }   
+}
+
 h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
@@ -715,9 +805,27 @@ setMethod("levels", "H2OParsedData", function(x) {
   res$levels[[1]]
 })
 
+setMethod("as.name", "H2OParsedData", function(x) {
+  deparse(substitute(x))
+})
+
 #----------------------------- Work in Progress -------------------------------#
-# TODO: Substitute in key names for H2OParsedData variables
+# TODO: Need to change ... to environment variables and pass to substitute method,
+#       Can't figure out how to access outside environment from within lapply
 setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
+  # h2olist <- lapply(list(...), function(x) { if(class(x) == "H2OParsedData") x@key else x })
+  # idx = which(names(h2olist) == "")
+  # names(h2olist)[idx] <- unlist(unname(list(...)))[idx]
+  
+  # lapply(list(...), function(x) { if(class(x) == "H2OParsedData") assign(x, as.name(x@key)) })
+  # if(deparse(substitute(X)) != X@key)
+  #  assign(deparse(substitute(X)), as.name(X@key))
+  
+  myList <- list(...)
+  tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric")} )
+  if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
+  # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
+  
   myfun = deparse(substitute(FUN))
   len = length(myfun)
 
@@ -780,7 +888,9 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   
   model = object@model
   cat("Coefficients:\n"); print(round(model$coefficients,5))
-  cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+  if(!is.null(model$normalized_coefficients)) {
+    cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+  }
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
@@ -816,6 +926,18 @@ setMethod("show", "H2OGLMGridVA", function(object) {
   cat("\nSummary\n"); print(temp)
 })
 
+setMethod("show", "H2OKMeansModelVA", function(object) {
+  print(object@data)
+  cat("K-Means Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
+  cat("\n\nCluster means:\n"); print(model$centers)
+  cat("\nClustering vector:\n"); print(summary(model$cluster))
+  cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
+  cat("\nAvailable components:\n"); print(names(model))
+})
+
 setMethod("show", "H2ORFModelVA", function(object) {
   print(object@data)
   cat("Random Forest Model Key:", object@key)
@@ -829,6 +951,15 @@ setMethod("show", "H2ORFModelVA", function(object) {
 setMethod("colnames", "H2OParsedDataVA", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
+})
+
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
+  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
+
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
+  function(x, value) {
+    if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
+    stop("Unimplemented"); return(x)
 })
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })

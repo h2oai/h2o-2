@@ -5,10 +5,11 @@
 H2O: Random Forest
 }
 \description{
-Performs random forest classification on a parsed data set.
-}
+Performs Random Forest classification on an \code{\linkS4class{H2OParsedData} object.
+}}
 \usage{
-h2o.randomForest(x, y, data, ntree = 50, depth = 50, nodesize = 1, sample.rate = 2/3, nbins = 100, seed = -1, validation)
+h2o.randomForest(x, y, data, ntree = 50, depth = 50, nodesize = 1, 
++ sample.rate = 2/3, nbins = 100, seed = -1, validation)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -43,7 +44,7 @@ Number of trees to grow. (Must be a nonnegative integer).
   (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
 }
 \details{
-This method runs distributed random forest, and requires the user import data with \code{\link{h2o.importFile}} or \code{\link{h2o.importFolder}}.
+This method runs distributed Random Forest, and requires the user import data with \code{\link{h2o.importFile}} or \code{\link{h2o.importFolder}}.
 }
 \value{
 An object of class \code{\linkS4class{H2ODRFModel}} with slots key, data, and model, where the last is a list of the following components:
@@ -51,11 +52,7 @@ An object of class \code{\linkS4class{H2ODRFModel}} with slots key, data, and mo
 \item{mse }{Mean-squared error for each tree.}
 \item{forest }{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
 \item{confusion }{Confusion matrix of the prediction.}
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+
 }
 \references{
 %% ~put references to the literature/web site here ~

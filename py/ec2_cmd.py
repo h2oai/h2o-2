@@ -365,7 +365,7 @@ def invoke_hosts_action(action, hosts_config, args, ec2_reservation=None):
         try:
             h2o.config_json = args.hosts
             log("Starting H2O cloud...")
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(timeoutSecs=120, retryDelaySecs=5)
             h2o.touch_cloud()
             log("Cloud started. Let's roll!")
             log("You can start for example here \033[93mhttp://{0}:{1}\033[0m".format(hosts_config['ec2_instances'][0]['public_dns_name'],hosts_config['base_port']))

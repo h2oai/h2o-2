@@ -10,16 +10,23 @@ initList = [
         ('r1.hex', 'r1.hex=i.hex'),
         ('r2.hex', 'r2.hex=i.hex'),
         ('r3.hex', 'r3.hex=i.hex'),
+        ('x', 'x=r.hex[,1]; rcnt=nrow(x)-sum(is.na(x))'),
+        ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
+        ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
+        ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
         ]
 
-if 1==0:
+if 1==1:
     exprListSmall = [
     # apply: return vector or array or list of values..applying function to margins of array or matrix
-    # margins: either rows(1), coluns(2) or both(1:2)
-        'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
+    # margins: either rows(1), columns(2) or both(1:2)
+        # "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
+        "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
         # doesn't work. Should work according to earl
         # 'r.hex[is.na(r.hex)]<-0',
-        "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+        # works
+        # 'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
+        # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
     ]
 else:
     exprListSmall = [
@@ -229,16 +236,16 @@ class Basic(unittest.TestCase):
 
     def test_exec2_operators(self):
         h2o.beta_features = True
-        bucket = ''
-        csvPathname = 'testdata/airlines/year2013.csv'
+        bucket = 'home-0xdiag-datasets'
+        csvPathname = 'airlines/year2013.csv'
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
         for resultKey, execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
         start = time.time()
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

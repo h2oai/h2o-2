@@ -42,7 +42,8 @@ A \code{\linkS4class{H2OParsedData}} object containing the predictions.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
++ promptUpgrade = FALSE)
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
 prostate.hex = h2o.importURL.VA(localH2O, 
  + path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
@@ -61,6 +62,7 @@ covtype.km = h2o.kmeans(data = covtype.hex, centers = 5,
  + cols = c(1, 2, 3))
 #Get predicted cluster information for covtype dataset
 covtype.clusters = h2o.predict(object = covtype.km, newdata = covtype.hex)
+summary(covtype.clusters)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

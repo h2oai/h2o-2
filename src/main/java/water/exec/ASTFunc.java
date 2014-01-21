@@ -2,6 +2,11 @@ package water.exec;
 
 import java.util.ArrayList;
 import water.H2O;
+import water.Key;
+import water.fvec.AppendableVec;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -72,6 +77,36 @@ public class ASTFunc extends ASTOp {
     env.tos_into_slot(1,res_idx-1,null);
     env.popScope();
   }
+
+  @Override double[] map(Env env, double[] in, double[] out) {
+    final int sp = env._sp;
+    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
+    AppendableVec av = new AppendableVec(key);
+    NewChunk nc = new NewChunk(av,0);
+    for (double v : in) nc.addNum(v);
+    nc.close(0,null);
+    Frame fr = new Frame(av.close(null));
+    env.push(this);
+    env.push(fr);
+    this.apply(env,2);
+    if (env.isDbl()) {
+      if (out==null || out.length<1) out= new double[1];
+      out[0] = env.popDbl();
+    } else if (env.isAry()) {
+      fr = env.peekAry();
+      if (fr.vecs().length > 1) H2O.unimpl();
+      Vec vec = fr.anyVec();
+      if (vec.length() > 1<<8) H2O.unimpl();
+      if (out==null || out.length<vec.length()) out= new double[(int)vec.length()];
+      for (long i = 0; i < vec.length(); i++) out[(int)i] = vec.at(i);
+      env.pop();
+    } else {
+      H2O.unimpl();
+    }
+    assert sp == env._sp;
+    return out;
+  }
+
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append(") {\n");
     _body.toString(sb,d+1).append("\n");

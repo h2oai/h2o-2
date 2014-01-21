@@ -490,21 +490,21 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
             print "cloud_start['%s']: %s" % (v, cs[v])
 
         # write out something that shows how the cloud could be rebuilt, since it's a decoupled cloud build.
-        build_cloud_rerun_sh = LOG_DIR + "/" + 'build_cloud_rerun.sh'
-        with open(build_cloud_rerun_sh, 'w') as f:
-            f.write("echo << ! > ./temp_for_build_cloud_rerun.sh\n")
-            f.write("echo 'Rebuilding a cloud built with %s at %s by %s on %s in %s'\n" % \
-                (cs['python_test_name'], cs['time'], cs['username'], cs['ip'], cs['cwd']))
-            f.write("cd %s\n" % cs['cwd'])
-            if cs['config_json']:
-                f.write("%s -cj %s\n" % (cs['python_cmd_line'], cs['config_json']))
-            else:
-                f.write("%s\n" % cs['python_cmd_line'])
-            f.write("!\n")
-            f.write("ssh %s@%s < ./temp_for_build_cloud_rerun.sh\n" % (cs['username'], cs['ip']))
-        # make it executable
-        t = os.stat(build_cloud_rerun_sh)
-        os.chmod(build_cloud_rerun_sh, t.st_mode | stat.S_IEXEC)
+###         build_cloud_rerun_sh = LOG_DIR + "/" + 'build_cloud_rerun.sh'
+###         with open(build_cloud_rerun_sh, 'w') as f:
+###             f.write("echo << ! > ./temp_for_build_cloud_rerun.sh\n")
+###             f.write("echo 'Rebuilding a cloud built with %s at %s by %s on %s in %s'\n" % \
+###                 (cs['python_test_name'], cs['time'], cs['username'], cs['ip'], cs['cwd']))
+###             f.write("cd %s\n" % cs['cwd'])
+###             if cs['config_json']:
+###                 f.write("%s -cj %s\n" % (cs['python_cmd_line'], cs['config_json']))
+###             else:
+###                 f.write("%s\n" % cs['python_cmd_line'])
+###             f.write("!\n")
+###             f.write("ssh %s@%s < ./temp_for_build_cloud_rerun.sh\n" % (cs['username'], cs['ip']))
+###         # make it executable
+###         t = os.stat(build_cloud_rerun_sh)
+###         os.chmod(build_cloud_rerun_sh, t.st_mode | stat.S_IEXEC)
 
         # this is the internal node state for python..h2o.nodes rebuild
         nodeStateList = cloneJson['h2o_nodes']
@@ -530,7 +530,7 @@ def setup_benchmark_log():
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 # node_count is per host if hosts is specified.
-def build_cloud(node_count=2, base_port=54321, hosts=None,
+def build_cloud(node_count=1, base_port=54321, hosts=None,
     timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
     # redirect to build_cloud_with_json if a command line arg
@@ -614,9 +614,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         if conservative: # still needed?
             for n in nodeList:
                 stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
-        else:
-            pass
-            # verify_cloud_size(nodeList)
+
+        # this does some extra checking now
+        verify_cloud_size(nodeList)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors(python_test_name=python_test_name)
@@ -652,24 +652,25 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     cs_username = python_username
     cs_ip = python_cmd_ip
 
-    # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
-    print "Writing the test_rerun.sh in", LOG_DIR
-    test_rerun_sh = LOG_DIR + "/" + 'test_rerun.sh'
-    with open(test_rerun_sh, 'w') as f:
-        f.write("echo << ! > ./temp_for_test_rerun.sh\n")
-        f.write("echo 'rerunning %s that originally ran at %s by %s on %s in %s'\n" % \
-                (cs_python_test_name, cs_time, cs_username, cs_ip, cs_cwd))
-        f.write("cd %s\n" % cs_cwd)
-        if cs_config_json:
-            f.write("%s -cj %s\n" % (cs_python_cmd_line, cs_config_json))
-        else:
-            f.write("%s\n" % cs_python_cmd_line)
-        f.write("!\n")
-        f.write("ssh %s@%s < temp_for_test_rerun.sh\n" % (cs_username, cs_ip))
+###     # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
+###     print "Writing the test_rerun.sh in", LOG_DIR
+###     test_rerun_sh = LOG_DIR + "/" + 'test_rerun.sh'
+###     with open(test_rerun_sh, 'w') as f:
+###         f.write("echo << ! > ./temp_for_test_rerun.sh\n")
+###         f.write("echo 'rerunning %s that originally ran at %s by %s on %s in %s'\n" % \
+###                 (cs_python_test_name, cs_time, cs_username, cs_ip, cs_cwd))
+###         f.write("cd %s\n" % cs_cwd)
+###         if cs_config_json:
+###             f.write("%s -cj %s\n" % (cs_python_cmd_line, cs_config_json))
+###         else:
+###             f.write("%s\n" % cs_python_cmd_line)
+###         f.write("!\n")
+###         f.write("ssh %s@%s < temp_for_test_rerun.sh\n" % (cs_username, cs_ip))
+### 
+###     # make it executable
+###     t = os.stat(test_rerun_sh)
+###     os.chmod(test_rerun_sh, t.st_mode | stat.S_IEXEC)
 
-    # make it executable
-    t = os.stat(test_rerun_sh)
-    os.chmod(test_rerun_sh, t.st_mode | stat.S_IEXEC)
 # dump the h2o.nodes state to a json file # include enough extra info to have someone rebuild the cloud if a test fails
     # that was using that cloud.
     if create_json:
@@ -765,8 +766,20 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
     expectedSize = len(nodeList)
     # cloud size and consensus have to reflect a single grab of information from a node.
     cloudStatus = [n.get_cloud(timeoutSecs=timeoutSecs) for n in nodeList]
+
     cloudSizes = [c['cloud_size'] for c in cloudStatus]
     cloudConsensus = [c['consensus'] for c in cloudStatus]
+    cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
+
+    if not all(cloudHealthy):
+        raise Exception("Some node reported cloud_healthy not true: %s" % cloudHealthy)
+
+    # gather up all the node_healthy status too
+    for i,c in enumerate(cloudStatus):
+        nodesHealthy = [n['node_healthy'] for n in c['nodes']]
+        if not all(nodesHealthy):
+            print "node %s cloud status: %s" % (i, dump_json(c))
+            raise Exception("node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy))
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
@@ -1078,16 +1091,16 @@ class H2O(object):
                     # HACK: these are missing the "2/" prefix for now
                     # 'KMeans2Progress' in str(redirect_url) or
                     # 'GLMModelView' in str(redirect_url) or
-                    if  'NeuralNetProgress' in str(redirect_url) or \
-                        'PCAProgressPage' in str(redirect_url):
-                        if "2/" not in str(redirect_url):
-                            print "Hacking in the 2/ prefix..need to fix h2o?"
-                            redirect_url = "2/" + redirect_url
-                    if  'DRFProgressPage' in str(redirect_url):
-                        if "2/" not in str(redirect_url):
-                            # already has a leading /?
-                            print "Hacking in the 2/ prefix..need to fix h2o?"
-                            redirect_url = "2" + redirect_url
+###                     if  'NeuralNetProgress' in str(redirect_url) or \
+###                         'PCAProgressPage' in str(redirect_url):
+###                         if "2/" not in str(redirect_url):
+###                             print "Hacking in the 2/ prefix..need to fix h2o?"
+###                             redirect_url = "2/" + redirect_url
+###                     if  'DRFProgressPage' in str(redirect_url):
+###                         if "2/" not in str(redirect_url):
+###                             # already has a leading /?
+###                             print "Hacking in the 2/ prefix..need to fix h2o?"
+###                             redirect_url = "2" + redirect_url
 
                     if redirect_url:
                         url = self.__url(redirect_url)
@@ -1414,10 +1427,26 @@ class H2O(object):
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
 
+
+    # turns enums into expanded binary features
+    def one_hot(self, source, timeoutSecs=30, **kwargs):
+        params = {
+            "source": source,
+            }
+
+        a = self.__do_json_request('2/OneHot.json',
+            params=params,
+            timeout=timeoutSecs
+            )
+
+        check_sandbox_for_errors(python_test_name=python_test_name)
+        return a
+
     # &offset=
     # &view=
-    def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, timeoutSecs=30):
-        if beta_features:
+    def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, 
+        timeoutSecs=30, useVA=False):
+        if beta_features and not useVA:
             params = {
                 "src_key": key,
                 "offset": offset,
@@ -1431,7 +1460,7 @@ class H2O(object):
                 "max_column_display": max_column_display
                 }
 
-        a = self.__do_json_request('2/Inspect2.json' if beta_features else 'Inspect.json',
+        a = self.__do_json_request('2/Inspect2.json' if (beta_features and not useVA) else 'Inspect.json',
             params=params,
             ignoreH2oError=ignoreH2oError,
             timeout=timeoutSecs
@@ -1787,7 +1816,7 @@ class H2O(object):
 
     def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
-            'source': None,
+            'copy_from': None,
             'target': None,
         }
         # only lets these params thru
@@ -1935,6 +1964,7 @@ class H2O(object):
             'cols'                 : None,
             'nbins'                : None,
             'classification'       : None,
+            'score_each_iteration' : None,
             'grid_parallelism'     : None,
         }
 
@@ -2082,8 +2112,8 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
-        if beta_features:
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, **kwargs):
+        if beta_features and not useVA:
             params_dict = {
                 'source': key,
                 'cols': None,
@@ -2097,13 +2127,13 @@ class H2O(object):
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
-        a = self.__do_json_request('2/SummaryPage2.json' if beta_features else 'SummaryPage.json', 
+        a = self.__do_json_request('2/SummaryPage2.json' if (beta_features and not useVA) else 'SummaryPage.json', 
             timeout=timeoutSecs, params=params_dict)
         verboseprint("\nsummary_page result:", dump_json(a))
         
         # FIX!..not there yet for 2
-        if not beta_features:
-            h2o_cmd.infoFromSummary(a, noPrint=noPrint)
+        # if not beta_features:
+        h2o_cmd.infoFromSummary(a, noPrint=noPrint)
         return a
 
     def log_view(self, timeoutSecs=10, **kwargs):

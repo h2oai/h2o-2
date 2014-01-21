@@ -303,7 +303,7 @@ public class Job extends Request2 {
 
   public Job() {
     job_key = defaultJobKey();
-    destination_key = defaultDestKey();
+//    destination_key = defaultDestKey();
     description = getClass().getSimpleName();
   }
 
@@ -350,7 +350,7 @@ public class Job extends Request2 {
   }
 
   public void cancel() {
-    cancel("");
+    cancel((String)null);
   }
   public void cancel(Throwable ex){
 
@@ -393,8 +393,7 @@ public class Job extends Request2 {
 
   protected void onCancelled() {
   }
-
-  public boolean cancelled() { return cancelled(job_key); }
+  public boolean cancelled() { return end_time == CANCELLED_END_TIME; }
   public static boolean cancelled(Key key) {
     return DKV.get(key) == null;
   }
@@ -521,6 +520,7 @@ public class Job extends Request2 {
    * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
    */
   protected void init() throws IllegalArgumentException {
+    if(destination_key == null)destination_key = defaultDestKey();
   }
 
   protected enum Status { Running, Done }
@@ -648,8 +648,9 @@ public class Job extends Request2 {
   public static class ChunkProgressJob extends Job {
     Key _progress;
 
-    public ChunkProgressJob(long chunksTotal) {
-      _progress = Key.make(Key.make()._kb, (byte) 0, Key.DFJ_INTERNAL_USER, destination_key.home_node());
+    public ChunkProgressJob(long chunksTotal, Key destinationKey) {
+      destination_key = destinationKey;
+      _progress = Key.make(Key.make()._kb, (byte) 0, Key.DFJ_INTERNAL_USER, destinationKey.home_node());
       UKV.put(_progress, new ChunkProgress(chunksTotal));
     }
 
@@ -679,7 +680,7 @@ public class Job extends Request2 {
         p = p.error(ex.getMessage());
         DKV.put(progressKey(), p);
       }
-      cancel();
+      cancel(ex);
     }
   }
 

@@ -62,6 +62,10 @@ Output
    The standard deviation of the data in the column, defined as the
    square root of the sum of the deviance of observed values from the
    mean divided by the number of elements in the column less one.
+   For some columns of data a standard deviation of -0 may be produced. 
+   This outcome is the special case where the standard deviation is a very, 
+   very small negative number. The exact value has not been rounded, but the 
+   number of digits displayed have been truncated. 
 
 
    

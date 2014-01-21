@@ -30,7 +30,7 @@ public final class H2O {
 
   public static String VERSION = "(unknown)";
 
-  // User name for this Cloud
+  // User name for this Cloud (either the username or the argument for the option -name)
   public static String NAME;
 
   // The default port for finding a Cloud
@@ -124,6 +124,12 @@ public final class H2O {
 
     // Should never reach here.
     System.exit(222);
+  }
+
+  /** Shutdown itself by sending a shutdown UDP packet. */
+  public void shutdown() {
+    UDPRebooted.T.shutdown.send(H2O.SELF);
+    H2O.exit(0);
   }
 
   // --------------------------------------------------------------------------
@@ -243,7 +249,7 @@ public final class H2O {
     // go round-robin in 64MB chunks.
     if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
       long cidx = 0;
-      int skip = 1+1+4+4;       // Skip both the vec# and chunk#?
+      int skip = water.fvec.Vec.KEY_PREFIX_LEN; // Skip both the vec# and chunk#?
       if( key._kb[0] == Key.DVEC ) {
         long cSz = 1L << (26 - water.fvec.Vec.LOG_CHK);
         cidx = UDP.get4(key._kb, 1+1+4); // Chunk index
@@ -730,7 +736,7 @@ public final class H2O {
   public static class OptArgs extends Arguments.Opt {
     public String name; // set_cloud_name_and_mcast()
     public String flatfile; // set_cloud_name_and_mcast()
-    public int base_port; // starting number to search for open ports
+    public int baseport; // starting number to search for open ports
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String network; // Network specification for acceptable interfaces to bind to.
@@ -899,8 +905,8 @@ public final class H2O {
 
     printAndLogVersion();
 
-    if (OPT_ARGS.base_port != 0) {
-      DEFAULT_PORT = OPT_ARGS.base_port;
+    if (OPT_ARGS.baseport != 0) {
+      DEFAULT_PORT = OPT_ARGS.baseport;
     }
 
     // Get ice path before loading Log or Persist class
@@ -968,6 +974,12 @@ public final class H2O {
     Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
+
+    Log.info("If you have trouble connecting, try SSH tunneling from your local machine (e.g., via port 55555):\n" +
+            "  1. Open a terminal and run 'ssh -L 55555:localhost:"
+            + API_PORT + " " + System.getProperty("user.name") + "@" + SELF_ADDRESS.getHostAddress() + "'\n" +
+            "  2. Point your browser to http://localhost:55555");
+
 
     // Create the starter Cloud with 1 member
     SELF._heartbeat._jar_md5 = Boot._init._jarHash;
@@ -1142,6 +1154,11 @@ public final class H2O {
   // multicast port (or all the individuals we can find, if multicast is
   // disabled).
   static void multicast( ByteBuffer bb ) {
+    try { multicast2(bb); }
+    catch (Exception _) {}
+  }
+
+  static private void multicast2( ByteBuffer bb ) {
     if( H2O.STATIC_H2OS == null ) {
       byte[] buf = new byte[bb.remaining()];
       bb.get(buf);
@@ -1161,11 +1178,11 @@ public final class H2O {
           // and if not a soft launch (hibernate mode)
           if(H2O.OPT_ARGS.soft == null)
             Log.err("Multicast Error ",e);
-            if( CLOUD_MULTICAST_SOCKET != null )
-              try { CLOUD_MULTICAST_SOCKET.close(); }
-              catch( Exception e2 ) { Log.err("Got",e2); }
-              finally { CLOUD_MULTICAST_SOCKET = null; }
-          }
+          if( CLOUD_MULTICAST_SOCKET != null )
+            try { CLOUD_MULTICAST_SOCKET.close(); }
+            catch( Exception e2 ) { Log.err("Got",e2); }
+            finally { CLOUD_MULTICAST_SOCKET = null; }
+        }
       }
     } else {                    // Multicast Simulation
       // The multicast simulation is little bit tricky. To achieve union of all

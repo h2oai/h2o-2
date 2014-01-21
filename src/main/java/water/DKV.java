@@ -154,4 +154,17 @@ public abstract class DKV {
   static public boolean isConvertedFrameKeyString(String s) {
     return s.endsWith(".autoframe");
   }
+
+  /** Return the calculated name of a ValueArray Key given a Frame Key. */
+  static public String calcConvertedVAKeyString(String valueArrayKeyString) {
+    return valueArrayKeyString + ".autoVA";
+  }
+  static public String unconvertVAKeyString(String s) {
+    return s.substring(0,s.length()-".autoVA".length());
+  }
+
+  /** Return true if a string is a calculated ValueArray Key string; false otherwise. */
+  static public boolean isConvertedVAKeyString(String s) {
+    return s.endsWith(".autoVA");
+  }
 }

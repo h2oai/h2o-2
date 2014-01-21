@@ -55,12 +55,12 @@ public class Histograms extends LineChart {
         VBox v = new VBox();
         for( int i = ls.length - 1; i > 0; i-- ) {
           HBox h = new HBox();
-          h.getChildren().add(new Histograms("Layer " + i + " W", ls[i]._w));
-          h.getChildren().add(new Histograms("Bias", ls[i]._b));
-          h.getChildren().add(new Histograms("Activity", ls[i]._a));
-          h.getChildren().add(new Histograms("Error", ls[i]._e));
-          h.getChildren().add(new Histograms("Momentum", ls[i]._wm));
-          h.getChildren().add(new Histograms("Per weight", ls[i]._wp));
+          h.getChildren().add(new Histograms("Layer " + i + " weight", ls[i]._w));
+          h.getChildren().add(new Histograms("Layer " + i + " bias", ls[i]._b));
+          h.getChildren().add(new Histograms("Layer " + i + " activity", ls[i]._a));
+          h.getChildren().add(new Histograms("Layer " + i + " error", ls[i]._e));
+          h.getChildren().add(new Histograms("Layer " + i + " weight momentum", ls[i]._wm));
+          h.getChildren().add(new Histograms("Layer " + i + " bias momentum", ls[i]._bm));
           v.getChildren().add(h);
         }
         Stage stage = new Stage();

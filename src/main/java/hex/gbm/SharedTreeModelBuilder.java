@@ -190,7 +190,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       sc = new Score().doIt(model, fr, validation, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
-    model = makeModel(model, finalScoring?null:ktrees,
+    model = makeModel(model, ktrees,
                       sc==null ? Double.NaN : sc.mse(),
                       sc==null ? null : (_nclass>1?sc._cm:null), tstats);
     DKV.put(outputKey, model);
@@ -595,9 +595,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
         double sum;
         if( _validation ) {     // Passed in a class distribution from scoring
-          sum = 1.0;            // Sum of a distribution is 1.0
           for( int i=0; i<_nclass; i++ )
             ds[i] = chks[i+_ncols+1].at0(row);  // Get the class distros
+          if (_nclass > 1 ) sum = 1.0;          // Sum of a distribution is 1.0 for classification
+          else sum = ds[0];                     // Sum is the same as prediction for regression.
         } else {                // Passed in the model-specific columns
           sum = score0(chks,ds,row);
         }
@@ -636,20 +637,16 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
     public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
-      int lcnt=0;
       Log.info(tag,"============================================================== ");
-      if (trees==null) {
-        Log.info("No trees...");
-      } else {
-        for( DTree t : trees ) if( t != null ) lcnt += t._len;
-        long err=_snrows;
-        for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
-        Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-        if( _nclass > 1 )
-          Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
-        else
-          Log.info("Reported on "+_snrows+" rows.");
-      }
+      int lcnt=0;
+      if( trees!=null ) for( DTree t : trees ) if( t != null ) lcnt += t._len;
+      long err=_snrows;
+      for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
+      Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
+      if( _nclass > 1 )
+        Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
+      else
+        Log.info("Reported on "+_snrows+" rows.");
       return this;
     }
   }

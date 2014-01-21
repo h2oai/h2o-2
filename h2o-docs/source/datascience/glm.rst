@@ -155,6 +155,13 @@ Defining a GLM Model
       to this value. Used in binomial prediction, where the default
       case is the mean of the Y column. 
 
+**GLMgrid Models**
+ 
+     GLMgrid models can be generated for sets of regularization parameters by 
+     entering the parameters either as a list of comma separated
+     values, or ranges in steps. For example, if users wish to
+     evaluate a model for alpha=(0, .5, 1), entering 0, .5, 1 or
+     0:1:.5 will achieve the desired outcome. 
 
 Expert Settings
 """""""""""""""      

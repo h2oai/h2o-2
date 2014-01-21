@@ -47,7 +47,9 @@ public class h2odriver extends Configured implements Tool {
   static String clusterReadyFileName = null;
   static int cloudFormationTimeoutSeconds = DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
   static int nthreads = -1;
+  static int basePort = -1;
   static boolean beta = false;
+  static boolean enableExceptions = false;
 
   // Runtime state that might be touched by different threads.
   volatile ServerSocket driverCallbackSocket = null;
@@ -367,6 +369,8 @@ public class h2odriver extends Configured implements Tool {
                     "          [-extramempercent <0 to 20>]\n" +
                     "          -n | -nodes <number of H2O nodes (i.e. mappers) to create>\n" +
                     "          [-nthreads <maximum typical worker threads, i.e. cpus to use>]\n" +
+                    "          [-baseport <starting HTTP port for H2O nodes; default is 54321>]\n" +
+                    "          [-ea]\n" +
                     "          -o | -output <hdfs output dir>\n" +
                     "\n" +
                     "Notes:\n" +
@@ -494,8 +498,18 @@ public class h2odriver extends Configured implements Tool {
         i++; if (i >= args.length) { usage(); }
         nthreads = Integer.parseInt(args[i]);
       }
+      else if (s.equals("-baseport")) {
+        i++; if (i >= args.length) { usage(); }
+        basePort = Integer.parseInt(args[i]);
+	if ((basePort < 0) || (basePort > 65535)) {
+	    error("Base port must be between 1 and 65535");
+	}
+      }
       else if (s.equals("-beta")) {
         beta = true;
+      }
+      else if (s.equals("-ea")) {
+        enableExceptions = true;
       }
       else {
         error("Unrecognized option " + s);
@@ -701,7 +715,7 @@ public class h2odriver extends Configured implements Tool {
       conf.set("mapreduce.map.memory.mb", mapreduceMapMemoryMb);
 
       // MRv1 standard options, but also required for YARN.
-      String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx;
+      String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx + (enableExceptions ? " -ea" : "");
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
 
@@ -743,6 +757,9 @@ public class h2odriver extends Configured implements Tool {
     conf.set(h2omapper.H2O_NETWORK_KEY, network);
     if (nthreads >= 0) {
         conf.set(h2omapper.H2O_NTHREADS_KEY, Integer.toString(nthreads));
+    }
+    if (basePort >= 0) {
+        conf.set(h2omapper.H2O_BASE_PORT_KEY, Integer.toString(basePort));
     }
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");

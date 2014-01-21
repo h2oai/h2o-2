@@ -64,6 +64,7 @@ h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
 h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
+h2o.__PAGE_EXPORTHDFS = "ExportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
@@ -76,6 +77,7 @@ h2o.__PAGE_VIEWALL = "StoreView.json"
 h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
 h2o.__PAGE_GLM = "GLM.json"
+h2o.__PAGE_GLMProgress = "GLMProgressPage.json"
 h2o.__PAGE_GLMGrid = "GLMGrid.json"
 h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
@@ -95,20 +97,25 @@ h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 h2o.__HACK_LEVELS = "2/Levels.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
+h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
 h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
 h2o.__PAGE_GBM = "2/GBM.json"
+h2o.__PAGE_GBMProgress = "2/GBMProgressPage.json"
 h2o.__PAGE_GRIDSEARCH = "2/GridSearchProgress.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 h2o.__PAGE_GLM2 = "2/GLM2.json"
+h2o.__PAGE_GLM2Progress = "2/GLMProgress.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
 h2o.__PAGE_GLM2GridView = "2/GLMGridView.json"
 h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
-h2o.__PAGE_KMModelView = "2/KMeans2ModelView.json"
+h2o.__PAGE_KM2Progress = "2/KMeans2Progress.json"
+h2o.__PAGE_KM2ModelView = "2/KMeans2ModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
-h2o.__PAGE_NNModelView = "2/NeuralNetProgress.json"
+h2o.__PAGE_NNProgress = "2/NeuralNetProgress.json"
 h2o.__PAGE_PCA = "2/PCA.json"
 h2o.__PAGE_PCASCORE = "2/PCAScore.json"
+h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
 h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
@@ -226,6 +233,11 @@ h2o.__dumpLogs <- function(client) {
 }
 
 h2o.__poll <- function(client, keyName) {
+  if(missing(client)) stop("client is missing!")
+  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if(missing(keyName)) stop("keyName is missing!")
+  if(!is.character(keyName) || nchar(keyName) == 0) stop("keyName must be a non-empty string")
+  
   res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
   res = res$jobs
   if(length(res) == 0) stop("No jobs found in queue")
@@ -235,7 +247,9 @@ h2o.__poll <- function(client, keyName) {
       prog = res[[i]]
   }
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
-  if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
+  # if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
+  if(!is.null(prog$result$val) && prog$result$val == "CANCELLED") stop("Job key ", keyName, " was cancelled by user")
+  else if(!is.null(prog$result$exception) && prog$result$exception == 1) stop(prog$result$val)
   prog$progress
 }
 
@@ -254,6 +268,48 @@ h2o.__pollAll <- function(client, timeout) {
   }
 }
 
+h2o.__waitOnJob <- function(client, job_key, pollInterval = 1, progressBar = TRUE) {
+  if(progressBar) {
+    pb = txtProgressBar(style = 3)
+    tryCatch(while((prog = h2o.__poll(client, job_key)) != -1) { Sys.sleep(pollInterval); setTxtProgressBar(pb, prog) },
+             finally = h2o.__cancelJob(client, job_key))
+    setTxtProgressBar(pb, 1.0); close(pb)
+  } else
+    tryCatch(while(h2o.__poll(client, job_key) != -1) { Sys.sleep(pollInterval) }, 
+             finally = h2o.__cancelJob(client, job_key))
+}
+
+# For checking progress from each algorithm's progress page (no longer used)
+# h2o.__isDone <- function(client, algo, resH) {
+#   if(!algo %in% c("GBM", "KM", "RF1", "RF2", "NN", "GLM1", "GLM2", "GLM1Grid", "PCA")) stop(algo, " is not a supported algorithm")
+#   version = ifelse(algo %in% c("RF1", "GLM1", "GLM1Grid"), 1, 2)
+#   page = switch(algo, GBM = h2o.__PAGE_GBMProgress, KM = h2o.__PAGE_KM2Progress, RF1 = h2o.__PAGE_RFVIEW, 
+#                 RF2 = h2o.__PAGE_DRFProgress, NN = h2o.__PAGE_NNProgress, GLM1 = h2o.__PAGE_GLMProgress, 
+#                 GLM1Grid = h2o.__PAGE_GLMGridProgress, GLM2 = h2o.__PAGE_GLM2Progress, PCA = h2o.__PAGE_PCAProgress)
+#   
+#   if(version == 1) {
+#     job_key = resH$response$redirect_request_args$job
+#     dest_key = resH$destination_key
+#     if(algo == "RF1")
+#       res = h2o.__remoteSend(client, page, model_key = dest_key, data_key = resH$data_key, response_variable = resH$response$redirect_request_args$response_variable)
+#     else
+#       res = h2o.__remoteSend(client, page, job = job_key, destination_key = dest_key)
+#     if(res$response$status == "error") stop(res$error)
+#     res$response$status != "poll"
+#   } else {
+#     job_key = resH$job_key; dest_key = resH$destination_key
+#     res = h2o.__remoteSend(client, page, job_key = job_key, destination_key = dest_key)
+#     if(res$response_info$status == "error") stop(res$error)
+#     
+#     if(!is.null(res$response_info$redirect_url)) {
+#       ind = regexpr("\\?", res$response_info$redirect_url)[1]
+#       url = ifelse(ind > 1, substr(res$response_info$redirect_url, 1, ind-1), res$response_info$redirect_url)
+#       !(res$response_info$status == "poll" || (res$response_info$status == "redirect" && url == page))
+#     } else
+#       res$response_info$status == "done"
+#   }
+# }
+
 h2o.__cancelJob <- function(client, keyName) {
   res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
   res = res$jobs
@@ -267,7 +323,7 @@ h2o.__cancelJob <- function(client, keyName) {
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
   if(!(prog$cancelled || prog$progress == -1.0 || prog$progress == -2.0 || prog$end_time == -1)) {
     h2o.__remoteSend(client, h2o.__PAGE_CANCEL, key=keyName)
-    cat("Job key", keyName, "has been cancelled")
+    cat("Job key", keyName, "was cancelled by user\n")
   }
 }
 

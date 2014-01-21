@@ -1,6 +1,5 @@
 package hex;
 
-import sun.net.www.content.audio.basic;
 import water.*;
 import water.api.*;
 import water.api.Request.API;
@@ -10,8 +9,6 @@ import water.parser.*;
 import water.util.Utils;
 import water.util.Log;
 
-import java.lang.reflect.Array;
-import java.security.interfaces.DSAPublicKey;
 import java.util.Arrays;
 import java.util.Random;
 

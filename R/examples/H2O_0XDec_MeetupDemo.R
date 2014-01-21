@@ -10,7 +10,7 @@ library(h2o)
 #Parsing in the data file
  #air=h2o.importFile(remoteH2O,"hdfs://192.168.1.161/datasets/airlines_all.csv",key="air")
  # air=h2o.importFile.VA(remoteH2O,"/home/0xdiag/datasets/airlines/airlines_all.csv",key="air")
- air=h2o.importFile(remoteH2O,"/home/0xdiag/datasets/airlines/airlines_all.csv",key="air")
+ air=h2o.importFile.FV(remoteH2O,"/home/0xdiag/datasets/airlines/airlines_all.csv",key="air")
 
  dim(air)
  colnames(air)

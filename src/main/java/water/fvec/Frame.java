@@ -40,7 +40,7 @@ public class Frame extends Iced {
     if( v0 == null ) return;
     VectorGroup grp = v0.group();
     for( int i=0; i<vecs.length; i++ )
-      assert grp.equals(vecs[i].group());
+      assert grp.equals(vecs[i].group()) : "Vector " + vecs[i] + " has different vector group!";
   }
   public Vec vec(String name){
     Vec [] vecs = vecs();
@@ -103,6 +103,7 @@ public class Frame extends Iced {
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
     assert _vecs.length == 0 || anyVec().group().equals(vec.group());
+    if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
@@ -113,18 +114,32 @@ public class Frame extends Iced {
   }
 
   /** Appends an entire Frame */
-  public Frame add( Frame fr ) {
+  public Frame add( Frame fr, String names[] ) {
     assert anyVec().group().equals(fr.anyVec().group());
-    final int len0=    _names.length;
-    final int len1= fr._names.length;
+    for( String name : names )
+      if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
+    final int len0= _names.length;
+    final int len1=  names.length;
     final int len = len0+len1;
     _names = Arrays.copyOf(_names,len);
     _vecs  = Arrays.copyOf(_vecs ,len);
     _keys  = Arrays.copyOf(_keys ,len);
-    System.arraycopy(fr._names,0,_names,len0,len1);
+    System.arraycopy(    names,0,_names,len0,len1);
     System.arraycopy(fr._vecs ,0,_vecs ,len0,len1);
     System.arraycopy(fr._keys ,0,_keys ,len0,len1);
     return this;
+  }
+  public Frame add( Frame fr, boolean rename ) {
+    if( !rename ) return add(fr,fr._names);
+    String names[] = new String[fr._names.length];
+    for( int i=0; i<names.length; i++ ) {
+      String name = fr._names[i];
+      int cnt=0;
+      while( find(name) != -1 )
+        name = fr._names[i]+(cnt++);
+      names[i] = name;
+    }
+    return add(fr,names);
   }
 
   /** Removes the first column with a matching name.  */
@@ -592,11 +607,10 @@ public class Frame extends Iced {
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
-      if (rows.length==0)
+      if( rows.length==0 || rows[0] < 0 )
         return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
-      if (rows[0] < 0)
-        return new DeepSlice(rows, c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
       // Vec'ize the index array
+      Futures fs = new Futures();
       AppendableVec av = new AppendableVec("rownames");
       int r = 0;
       int c = 0;
@@ -606,9 +620,10 @@ public class Frame extends Iced {
         for (; r < end; r++) {
           nc.addNum(rows[r]);
         }
-        nc.close(c++, null);
+        nc.close(c++, fs);
       }
-      Vec c0 = av.close(null);   // c0 is the row index vec
+      Vec c0 = av.close(fs);   // c0 is the row index vec
+      fs.blockForPending();
       Frame fr2 = new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
               .outputFrame(names(c2), domains(c2));
       UKV.remove(c0._key);      // Remove hidden vector

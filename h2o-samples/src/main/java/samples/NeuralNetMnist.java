@@ -1,21 +1,29 @@
 package samples;
 
-import hex.*;
-import hex.Layer.Tanh;
+import hex.Layer;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+import hex.NeuralNet;
 import hex.NeuralNet.Errors;
+import hex.Trainer;
 import hex.rng.MersenneTwisterRNG;
-
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.GZIPInputStream;
-
 import water.Job;
 import water.TestUtil;
-import water.fvec.*;
+import water.api.FrameSplit;
+import water.fvec.AppendableVec;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
 import water.util.Utils;
+
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Runs a neural network on the MNIST dataset.
@@ -23,51 +31,89 @@ import water.util.Utils;
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist.class;
-    samples.launchers.CloudLocal.launch(job, 1);
-    //samples.launchers.CloudProcess.launch(job, 4);
+//    samples.launchers.CloudLocal.launch(job, 1);
+//    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
-    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
+    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
-  protected Vec[] train, test;
+  private Vec[] train, test;
   protected transient volatile Trainer _trainer;
 
-  public void load() {
-    train = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz").vecs();
-    test = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz").vecs();
-    NeuralNet.reChunk(train);
+  void load(double fraction, long seed) {
+    assert(fraction > 0 && fraction <= 1);
+    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
+    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
+    if (fraction < 1) {
+      System.out.println("Sampling " + fraction*100 + "% of data with random seed: " + seed + ".");
+      FrameSplit split = new FrameSplit();
+      final double[] ratios = {fraction, 1-fraction};
+      trainf = split.splitFrame(trainf, ratios, seed)[0];
+      testf = split.splitFrame(testf, ratios, seed)[0];
+
+      // for debugging only
+//      UKV.put(water.Key.make("train"+fraction), trainf);
+//      UKV.put(water.Key.make("test"+fraction), testf);
+    }
+    train = trainf.vecs();
+    test = testf.vecs();
+    //NeuralNet.reChunk(train);
   }
 
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
-    Layer[] ls = new Layer[3];
+    Layer[] ls = new Layer[5];
+    //ls[0] = new VecsInput(data, inputStats, 0.2);
     ls[0] = new VecsInput(data, inputStats);
-    ls[1] = new Tanh(500);
-    ls[2] = new VecSoftmax(labels, outputStats);
+//    ls[1] = new Layer.Tanh(50);
+//    ls[2] = new Layer.Tanh(50);
+    ls[1] = new Layer.RectifierDropout(102);
+    ls[2] = new Layer.RectifierDropout(102);
+    ls[3] = new Layer.RectifierDropout(204);
+    ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.Loss.CrossEntropy);
+
+    NeuralNet p = new NeuralNet();
+    p.rate = 0.003f;
+    p.rate_annealing = 1e-6f;
+    p.epochs = 1000;
+    p.activation = NeuralNet.Activation.RectifierWithDropout;
+    p.max_w2 = 15;
+    p.momentum_start = 0.5f;
+    p.momentum_ramp = 1800000;
+    p.momentum_stable = 0.99f;
+    p.l1 = .00001f;
+    p.l2 = .00f;
+    p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
+
     for( int i = 0; i < ls.length; i++ ) {
-      ls[i].rate = .005f;
-      ls[i].rate_annealing = 1 / 1e6f;
-      ls[i].l2 = .001f;
-      ls[i].init(ls, i);
+      ls[i].init(ls, i, p);
     }
     return ls;
   }
 
   protected void startTraining(Layer[] ls) {
-    // Single-thread SGD
-    //_trainer = new Trainer.Direct(ls, 0, self());
+    double epochs = 1000.0;
+
+//    // Single-thread SGD
+//    System.out.println("Single-threaded\n");
+//    _trainer = new Trainer.Direct(ls, epochs, self());
 
     // Single-node parallel
-    //_trainer = new Trainer.Threaded(ls, 0, self());
+//    System.out.println("Multi-threaded\n");
+//    _trainer = new Trainer.Threaded(ls, epochs, self());
 
     // Distributed parallel
-    _trainer = new Trainer.MapReduce(ls, 0, self());
+    System.out.println("MapReduce\n");
+    _trainer = new Trainer.MapReduce(ls, epochs, self()); //this will call cancel() and abort the whole run
+
     _trainer.start();
   }
 
   @Override protected Status exec() {
-    load();
-    System.out.println("Loaded data");
+    final double fraction = 1.0;
+    final long seed = 0xC0FFEE;
+    load(fraction, seed);
 
     // Labels are on last column for this dataset
     final Vec trainLabels = train[train.length - 1];
@@ -103,7 +149,7 @@ public class NeuralNetMnist extends Job {
           text += ", momentum: ";
           text += String.format("%.5g", ls[0].momentum(processed));
           System.out.println(text);
-          if( (evals.incrementAndGet() % 32) == 0 ) {
+          if( (evals.incrementAndGet() % 1) == 0 ) {
             System.out.println("Computing test error");
             temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
             Layer.shareWeights(ls, temp);
@@ -112,7 +158,7 @@ public class NeuralNetMnist extends Job {
           }
         }
       }
-    }, 0, 2000);
+    }, 0, 10);
     startTraining(ls);
     return Status.Running;
   }
@@ -126,7 +172,7 @@ public class NeuralNetMnist extends Job {
     csv("../smalldata/mnist/test.csv", "t10k-images-idx3-ubyte.gz", "t10k-labels-idx1-ubyte.gz");
   }
 
-  static void csv(String dest, String images, String labels) throws Exception {
+  private static void csv(String dest, String images, String labels) throws Exception {
     DataInputStream imagesBuf = new DataInputStream(new GZIPInputStream(new FileInputStream(new File(images))));
     DataInputStream labelsBuf = new DataInputStream(new GZIPInputStream(new FileInputStream(new File(labels))));
 

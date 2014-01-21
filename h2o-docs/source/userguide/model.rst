@@ -36,7 +36,7 @@ modeling option allows users to generate multiple models
 simultaneously, and compare model criteria directly, rather than
 separately building models one at a time. Users can specify multiple
 model configurations by entering different values of tuning parameters
-separated by pipe (shift + backslash). For example, to specify three
+separated by coma (for example: 2, 4, 8). For example, to specify three
 different values of K in a K-means grid search in the K field enter
 5,7,9 which will produce models for K=5, K=7, and K=9
 respectively. When multiple levels are specified for many tuning

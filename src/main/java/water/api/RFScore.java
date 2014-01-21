@@ -20,9 +20,6 @@ public class RFScore extends Request {
   protected final HexKeyClassCol     _classCol = new HexKeyClassCol(CLASS, _dataKey);
   protected final Int                _numTrees = new NTree(NUM_TREES, _modelKey);
   protected final H2OCategoryWeights _weights  = new H2OCategoryWeights(WEIGHTS, _modelKey, _dataKey, _classCol, 1);
-  protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
-
-  public static final String JSON_CLEAR_CM      = "clear_confusion_matrix";
 
   RFScore() {
     _numTrees._readOnly = true;
@@ -41,8 +38,9 @@ public class RFScore extends Request {
     return rs.toString();
   }
 
-  private void clearCachedCM(boolean oobee) {
-    UKV.remove(ConfusionTask.keyForCM(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),oobee));
+  private void clearCachedCM() {
+    UKV.remove(ConfusionTask.keyForCM(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),true));
+    UKV.remove(ConfusionTask.keyForCM(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),false));
   }
 
   @Override protected Response serve() {
@@ -56,7 +54,8 @@ public class RFScore extends Request {
     if (_weights.specified())
       response.addProperty(WEIGHTS, _weights.originalValue());
 
-    if (_clearCM.value()) clearCachedCM(false);
+    // Always clear CM matrix and recompute them to be sure that no stalled CM is in the system
+    clearCachedCM();
 
     return RFView.redirect(response, null, _modelKey.value()._selfKey, _dataKey.value()._key, model._totalTrees, _classCol.value(), _weights.originalValue(), false, false);
   }

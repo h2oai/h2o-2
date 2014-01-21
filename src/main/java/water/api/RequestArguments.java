@@ -448,7 +448,7 @@ public class RequestArguments extends RequestStatics {
      * If you want this behavior to be disabled for the argument, overwrite this
      * method to error.
      */
-    protected void setRefreshOnChange() {
+    public void setRefreshOnChange() {
       _refreshOnChange = true;
     }
 
@@ -1668,6 +1668,7 @@ public class RequestArguments extends RequestStatics {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
+      if( v.isFrame() ) return ValueArray.frameAsVA(k);
       if (!v.isArray()) throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
       return v.get();
     }
@@ -2444,8 +2445,13 @@ public class RequestArguments extends RequestStatics {
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
       int cidx = fr().find(input);
-      if (cidx == -1)
-        throw new IllegalArgumentException(input+" not a name of column, or a column index");
+      if (cidx == -1) {
+        try {
+          cidx = Integer.parseInt(input);
+        } catch (NumberFormatException e) { cidx = -1; }
+        if (cidx < 0 || cidx >= fr().numCols() )
+          throw new IllegalArgumentException(input+" not a name of column, or a column index");
+      }
       _colIdx.set(cidx);
       return fr().vecs()[cidx];
     }

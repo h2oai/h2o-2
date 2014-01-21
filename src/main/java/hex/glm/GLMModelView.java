@@ -4,9 +4,6 @@ import hex.ConfusionMatrix;
 import hex.glm.GLMModel.Submodel;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
-
-import java.text.DecimalFormat;
-
 import water.*;
 import water.api.*;
 import water.api.Request.API;
@@ -14,6 +11,8 @@ import water.api.Request.Default;
 import water.api.RequestArguments.H2OKey;
 import water.api.RequestBuilders.Response;
 import water.util.RString;
+
+import java.text.DecimalFormat;
 
 public class GLMModelView extends Request2 {
   public GLMModelView(){}
@@ -25,7 +24,7 @@ public class GLMModelView extends Request2 {
   @API(help="GLM Model Key", required=true, filter=GLMModelKeyFilter.class)
   Key _modelKey;
 
-  @API(help="Lambda value which shoudl be displayed as main model", required=false, filter=Default.class)
+  @API(help="Lambda value which should be displayed as main model", required=false, filter=Default.class)
   double lambda = Double.NaN;
 
   class GLMModelKeyFilter extends H2OKey { public GLMModelKeyFilter() { super("",true); } }

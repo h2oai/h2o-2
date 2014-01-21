@@ -32,10 +32,22 @@ public class Jobs extends Request {
       json.addProperty(DEST_KEY, jobs[i].dest() != null ? jobs[i].dest().toString() : "");
       json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].start_time)));
       long end = jobs[i].end_time;
-      boolean cancelled = (end == Job.CANCELLED_END_TIME);
+      JsonObject jobResult = new JsonObject();
+
+      boolean cancelled;
+      if(cancelled = (end == Job.CANCELLED_END_TIME)){
+        if(jobs[i].exception != null){
+          jobResult.addProperty("exception", "1");
+          jobResult.addProperty("val", jobs[i].exception);
+        } else {
+          jobResult.addProperty("val", "CANCELLED");
+        }
+      } else if(end > 0)
+        jobResult.addProperty("val", "OK");
       json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
       json.addProperty(PROGRESS, end == 0 ? (cancelled ? -2 : jobs[i].progress()) : (cancelled ? -2 : -1));
       json.addProperty(CANCELLED, cancelled);
+      json.add("result",jobResult);
       array.add(json);
     }
     result.add(JOBS, array);
@@ -89,6 +101,36 @@ public class Jobs extends Request {
         return progress(Float.parseFloat(elm.getAsString()));
       }
     });
+    r.setBuilder(JOBS + "." + "result", new ElementBuilder() {
+      @Override
+      public String objectToString(JsonObject obj, String contextName) {
+        if(obj.has("exception")){
+          String rid = Key.make().toString();
+          String ex = obj.get("val").getAsString().replace("'", "");
+          String [] lines = ex.split("\n");
+          StringBuilder sb = new StringBuilder(lines[0]);
+          for(int i = 1; i < lines.length; ++i){
+            sb.append("\\n" + lines[i]);
+          }
+//          ex = ex.substring(0,ex.indexOf('\n'));
+          ex = sb.toString();
+          String res =  "\n<a onClick=\"" +
+              "var showhide=document.getElementById('" + rid + "');" +
+              "if(showhide.innerHTML == '') showhide.innerHTML = '<pre>" + ex + "</pre>';" +
+              "else showhide.innerHTML = '';" +
+              "\">FAILED</a>\n<div id='"+ rid +"'></div>\n";
+          return res;
+        } else if(obj.has("val")){
+          return obj.get("val").getAsString();
+        }
+        return "";
+      }
+      @Override
+      public String build(String elementContents, String elementName) {
+        return "<td>" + elementContents + "</td>";
+      }
+    });
+
     return r;
   }
 

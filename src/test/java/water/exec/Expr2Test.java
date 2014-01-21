@@ -2,12 +2,19 @@ package water.exec;
 
 import static org.junit.Assert.*;
 import java.io.File;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.BeforeClass;
+import org.junit.rules.ExpectedException;
 import water.*;
 import water.fvec.*;
 
 public class Expr2Test extends TestUtil {
-  int i = 0;
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
 
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
@@ -23,7 +30,7 @@ public class Expr2Test extends TestUtil {
       checkStr("1.23",1.23);
       checkStr(" 1.23 + 2.34",3.57);
       checkStr(" 1.23 + 2.34 * 3", 8.25); // op precedence of * over +
-      checkStr(" 1.23 2.34");   // Syntax error
+      checkStr(" 1.23 2.34", "Junk at end of line\n"+" 1.23 2.34\n"+"      ^--^\n");   // Syntax error
       checkStr("1.23 < 2.34",1);
       checkStr("1.23 <=2.34",1);
       checkStr("1.23 > 2.34",0);
@@ -43,33 +50,39 @@ public class Expr2Test extends TestUtil {
       checkStr("0||NA",Double.NaN);
       checkStr("!1",0);
       checkStr("(!)(1)",0);
-      checkStr("(!!)(1)");
+      checkStr("(!!)(1)", "Arg 'x' typed as dblary but passed dblary(dblary)\n"+"(!!)(1)\n"+" ^-^\n");
       checkStr("-1",-1);
       checkStr("-(1)",-1);
-      checkStr("(-)(1)");
+      checkStr("(-)(1)", "Passed 1 args but expected 2\n"+"(-)(1)\n"+"   ^--^\n");
       checkStr("-T",-1);
-      checkStr("* + 1");
+      checkStr("* + 1", "Arg 'x' typed as dblary but passed anyary{dblary,dblary,}(dblary,dblary)\n"+"* + 1\n"+"^----^\n");
       // Simple op as prefix calls
-      checkStr("+(1.23,2.34)"); // Syntax error: looks like unary op application
+      checkStr("+(1.23,2.34)","Missing ')'\n"+"+(1.23,2.34)\n"+"  ^---^\n"); // Syntax error: looks like unary op application
       checkStr("+(1.23)",1.23); // Unary operator
-      checkStr("+(1.23,2,3)");  // Syntax error, too many args
 
       // Simple scalar assignment
-      checkStr("1=2");
-      checkStr("x");
-      checkStr("x+2");
-      checkStr("2+x");
+      checkStr("1=2","Junk at end of line\n"+"1=2\n"+" ^^\n");
+      checkStr("x","Unknown var x\n"+"x\n"+"^^\n");
+      checkStr("x+2","Unknown var x\n"+"x+2\n"+"^^\n");
+      checkStr("2+x","Missing expr or unknown ID\n"+"2+x\n"+"  ^\n");
       checkStr("x=1",1);
       checkStr("x<-1",1);       // Alternative R assignment syntax
       checkStr("x=3;y=4",4);    // Return value is last expr
 
+      // Ambiguity & Language
+      checkStr("x=mean");         // Assign x to the built-in fcn mean
+      checkStr("x=mean=3",3);     // Assign x & id mean with 3; "mean" here is not related to any built-in fcn
+      checkStr("x=mean(c(3))",3); // Assign x to the result of running fcn mean(3)
+      checkStr("x=mean+3","Arg 'x' typed as dblary but passed dbl(ary)\n"+"x=mean+3\n"+"  ^-----^\n");       // Error: "mean" is a function; cannot add a function and a number
+
       // Simple array handling; broadcast operators
       checkStr("h.hex");        // Simple ref
       checkStr("h.hex[2,3]",1); // Scalar selection
-      checkStr("h.hex[2,+]");   // Function not allowed
+      checkStr("h.hex[2,+]","Must be scalar or array\n"+"h.hex[2,+]\n"+"        ^-^\n");   // Function not allowed
       checkStr("h.hex[2+4,-4]");// Select row 6, all-cols but 4
       checkStr("h.hex[1,-1]; h.hex[2,-2]; h.hex[3,-3]");// Partial results are freed
-      checkStr("h.hex[2+3,h.hex]"); // Error: col selector has too many columns
+      checkStr("h.hex[2+3,h.hex]","Selector must be a single column: {pclass,name,sex,age,sibsp,parch,ticket,fare,cabin,embarked,boat,body,home.dest,survived}, 1.1 KB\n" +
+              "Chunk starts: {0,}"); // Error: col selector has too many columns
       checkStr("h.hex[2,]");    // Row 2 all cols
       checkStr("h.hex[,3]");    // Col 3 all rows
       checkStr("h.hex+1");      // Broadcast scalar over ary
@@ -82,8 +95,8 @@ public class Expr2Test extends TestUtil {
       checkStr("max.na.rm(h.hex,NA)",211.3375); // 211.3375
       checkStr("min.na.rm(c(NA, 1), -1)",-1); // -1
       checkStr("max.na.rm(c(NA, 1), -1)", 1); // 1
-      checkStr("max(c(Inf,1),  2 )",  Double.POSITIVE_INFINITY); // Infinity
-      checkStr("min(c(Inf,1),-Inf)", -Double.NEGATIVE_INFINITY); // -Infinity
+      checkStr("max(c(Inf,1),  2 )", Double.POSITIVE_INFINITY); // Infinity
+      checkStr("min(c(Inf,1),-Inf)", Double.NEGATIVE_INFINITY); // -Infinity
       checkStr("is.na(h.hex)");
       checkStr("sum(is.na(h.hex))", 0);
       checkStr("nrow(h.hex)*3", 30);
@@ -91,9 +104,9 @@ public class Expr2Test extends TestUtil {
       checkStr("x=1;x=h.hex");  // Allowed to change types via shadowing at REPL level
       checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
 
-      checkStr("(h.hex+1)<-2"); // No L-value
-      checkStr("h.hex[nrow(h.hex=1),]"); // Passing a scalar 1.0 to nrow
-      checkStr("h.hex[{h.hex=10},]"); // SHOULD PARSE statement list here; then do evil side-effect killing h.hex but also using 10 to select last row
+      checkStr("(h.hex+1)<-2","Junk at end of line\n"+"(h.hex+1)<-2\n"+"         ^-^\n"); // No L-value
+      checkStr("h.hex[nrow(h.hex=1),]","Arg 'x' typed as ary but passed dbl\n"+"h.hex[nrow(h.hex=1),]\n"+"          ^--------^\n"); // Passing a scalar 1.0 to nrow
+      checkStr("h.hex[{h.hex=10},]"); // ERROR BROKEN: SHOULD PARSE statement list here; then do evil side-effect killing h.hex but also using 10 to select last row
       checkStr("h.hex[2,3]<-4;",4);
       checkStr("c(1,3,5)");
       // Column row subselection
@@ -159,13 +172,14 @@ public class Expr2Test extends TestUtil {
       // Filter/selection
       checkStr("h.hex[h.hex[,4]>30,]");
       checkStr("a=c(1,2,3);a[a[,1]>10,1]");
-      checkStr("apply(h.hex,2,sum)"); // Currently wrong; the ENUM cols should fold to NA
+      checkStr("apply(h.hex,2,sum)"); // ERROR BROKEN: the ENUM cols should fold to NA
       checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
       //checkStr("z=5;apply(h.hex,2,function(x){x[]+z})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("apply(h.hex,2,function(x){h.hex})");
+      checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
-      
+
       // Conditional selection; 
       checkStr("ifelse(0,1,2)",2);
       checkStr("ifelse(0,h.hex+1,h.hex+2)");
@@ -186,6 +200,8 @@ public class Expr2Test extends TestUtil {
       checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
       checkStr("table(h.hex)");
       checkStr("table(h.hex[,5])");
+      checkStr("table(h.hex[,c(2,7)])");
+      checkStr("table(h.hex[,c(2,9)])");
       checkStr("a=cbind(c(1,2,3), c(4,5,6))");
       checkStr("a[,1] = factor(a[,1])");
       checkStr("is.factor(a[,1])",1);
@@ -234,15 +250,49 @@ public class Expr2Test extends TestUtil {
     } 
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
     if( env != null ) env.remove();
+    debug_print(s);
   }
 
   void checkStr( String s, double d ) {
-    Env env = Exec2.exec(s); 
+    Env env = Exec2.exec(s);
     assertFalse( env.isAry() );
     assertFalse( env.isFcn() );
     double res = env.popDbl();
     assertEquals(d,res,d/1e8);
     env.remove();
+    debug_print(s);
   }
 
+  void checkStr( String s, String err ) {
+    Env env = null;
+    try {
+      env = Exec2.exec(s);
+      env.remove();
+      fail(); // Supposed to throw; reaching here is an error
+    } catch ( IllegalArgumentException e ) {
+      assertEquals(err, e.getMessage());
+    }
+    debug_print(s);
+  }
+
+  // Handy code to debug leaking keys
+  void debug_print( String s ) {
+  //  int sz=0;
+  //  int vgs=0, frs=0, vcs=0, cks=0;
+  //  for( Key k : H2O.keySet() ) {
+  //    sz++;
+  //    Value val = DKV.get(k);
+  //    Iced ice = TypeMap.newInstance(val.type());
+  //    if( ice instanceof Vec.VectorGroup ) vgs++;
+  //    else if( ice instanceof Vec ) vcs++;
+  //    else if( ice instanceof Chunk ) cks++;
+  //    else if( ice instanceof Frame ) frs++;
+  //  }
+  //  System.out.println("KKK="+(sz-vgs-frs-vcs-cks)+
+  //                     ", VGS="+vgs+
+  //                     ", FRS="+frs+
+  //                     ", VCS="+vcs+
+  //                     ", CKS="+cks+
+  //                     ", "+s);
+  }
 }

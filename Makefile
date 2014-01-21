@@ -24,6 +24,7 @@
 # ec2/			EC2 scripts for use by the public.
 # experiments/		Experimental code built on top of H2O.
 # hadoop/		Hadoop driver and mapper for H2O.
+# h2o-scala/		Scala DSL + REPL
 # h2o-docs/             docs.0xdata.com website content.
 # installer/		BitRock InstallBuilder code for windows and mac.
 # launcher/		Launcher packaged with the installer.
@@ -98,6 +99,10 @@ endif
 	@echo "PHASE: Building H2O..."
 	@echo
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Building Shalala..."
+	@echo
+	$(MAKE) -C h2o-scala PROJECT_VERSION=$(PROJECT_VERSION)
 	@echo
 	@echo "PHASE: Building R outer package..."
 	@echo
@@ -179,8 +184,8 @@ testcb:
 	$(MAKE) -C h2o-cookbook build
 	$(MAKE) -C h2o-cookbook test
 
-TOPDIR:=$(CURDIR)
-BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
+TOPDIR:=$(subst /cygdrive/c,c:,$(CURDIR))
+BUILD_WEBSITE_DIR="$(TOPDIR)/target/docs-website"
 SPHINXBUILD=$(shell which sphinx-build)
 ifeq ($(SPHINXBUILD),)
 docs-website: dw_announce
@@ -207,7 +212,7 @@ dw_1:
 	rm -fr $(BUILD_WEBSITE_DIR)
 	rm -fr h2o-docs/source/developuser/DocGen
 	mkdir -p h2o-docs/source/developuser/DocGen
-	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -jar $(TOPDIR)/target/h2o.jar -runClass water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
+	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -jar "$(TOPDIR)/target/h2o.jar" -runClass water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
 	rm -rf $(TMPDIR)
 
 # If this fails, you might need to do the following:
@@ -262,10 +267,12 @@ clean:
 	rm -f $(BUILD_VERSION_JAVA_FILE)
 	rm -fr target
 	./build.sh clean
+	$(MAKE) -C h2o-scala clean
 	$(MAKE) -C hadoop clean
 	$(MAKE) -C R clean
 	$(MAKE) -C launcher clean
 	$(MAKE) -C installer clean
 	$(MAKE) docs-website-clean
+
 
 .phony: default build test docs-website run clean

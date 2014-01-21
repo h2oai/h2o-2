@@ -11,12 +11,12 @@ public class NeuralNetViz extends NeuralNetMnist {
   }
 
   protected void startTraining(Layer[] ls) {
-    _trainer = new Trainer.MapReduce(ls, 0, self());
-    //_trainer = new Trainer.Direct(ls);
+    //_trainer = new Trainer.MapReduce(ls, 0, self());
+    _trainer = new Trainer.Threaded(ls, 0, self());
 
     // Basic visualization of images and weights
     JFrame frame = new JFrame("H2O");
-    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
     MnistCanvas canvas = new MnistCanvas(_trainer);
     frame.setContentPane(canvas.init());
     frame.pack();

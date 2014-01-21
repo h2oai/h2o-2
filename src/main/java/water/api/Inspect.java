@@ -1,15 +1,16 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.pca.PCA;
-import hex.pca.PCAModelView;
 import hex.*;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
+import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
-import hex.glm.*;
+import hex.glm.GLMModelView;
+import hex.pca.PCA;
+import hex.pca.PCAModelView;
 import hex.rf.RFModel;
 
 import java.util.HashMap;
@@ -17,7 +18,7 @@ import java.util.HashMap;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
-import water.api.RequestBuilders.Response;
+import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.parser.CustomParser.PSetupGuess;
@@ -36,6 +37,7 @@ public class Inspect extends Request {
   private final Int                            _max_column   = new Int(COLUMNS_DISPLAY, MAX_COLUMNS_TO_DISPLAY);
 
   static final int MAX_COLUMNS_TO_DISPLAY = 1000;
+  static final String NA = ""; // not available information
 
   static {
     _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
@@ -206,10 +208,6 @@ public class Inspect extends Request {
   }
 
 
-  public Response serveValueArray(final ValueArray va) {
-    return serveValueArray(va, va._cols.length);
-  }
-
   /**
    * serve the value array with a capped # of columns [0,max_columns)
    */
@@ -238,13 +236,13 @@ public class Inspect extends Request {
       json.addProperty(SIZE, Math.abs(c._size));
       json.addProperty(BASE, c._base);
       json.addProperty(SCALE, (int) c._scale);
-      json.addProperty(MIN, c._min);
-      json.addProperty(MAX, c._max);
-      json.addProperty(MEAN, c._mean);
-      json.addProperty(VARIANCE, c._sigma);
+      json.addProperty(MIN,  c.isEnum() ? Double.NaN : c._min);
+      json.addProperty(MAX,  c.isEnum() ? Double.NaN : c._max);
+      json.addProperty(MEAN, c.isEnum() ? Double.NaN : c._mean);
+      json.addProperty(VARIANCE, c.isEnum() ? Double.NaN : c._sigma);
       json.addProperty(NUM_MISSING_VALUES, va._numrows - c._n);
-      json.addProperty(TYPE, c._domain != null ? "enum" : (c.isFloat() ? "float" : "int"));
-      json.addProperty(ENUM_DOMAIN_SIZE, c._domain != null ? c._domain.length : 0);
+      json.addProperty(TYPE, c.isEnum() ? "enum" : (c.isFloat() ? "float" : "int"));
+      json.addProperty(ENUM_DOMAIN_SIZE, c.isEnum() ? c._domain.length : 0);
       cols.add(json);
     }
 
@@ -332,7 +330,8 @@ public class Inspect extends Request {
     sb.append("<div class='alert alert-info'>").append(Inspect4UX.link(key, "NEW Inspect!")).append("</div>");
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + PCA.link(key, "PCA") + ", "
-          + RF.link(key, "Random Forest") + ", "
+          + RF.link(key, "Single Node Random Forest") + ", "
+          + DRF.link(key, "Distributed Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", or "
           + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
@@ -387,8 +386,10 @@ public class Inspect extends Request {
       Vec v = f.vecs()[i];
       JsonObject json = new JsonObject();
       json.addProperty(NAME, f._names[i]);
-      json.addProperty(MIN, v.min());
-      json.addProperty(MAX, v.max());
+      json.addProperty(TYPE, v.isEnum() ? ColType.Enum.toString() : v.isInt() ? ColType.Int.toString() : ColType.Real.toString());
+      json.addProperty(MIN, v.isEnum() ? Double.NaN : v.min());
+      json.addProperty(MAX, v.isEnum() ? Double.NaN : v.max());
+      json.addProperty(CARDINALITY, v.cardinality());
       cols.add(json);
     }
 
@@ -462,24 +463,34 @@ public class Inspect extends Request {
 
       JsonObject row = new JsonObject();
 
+      row.addProperty(ROW, TYPE);
+      for( int i = 0; i < _max_columns; i++ )
+        row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? ColType.Enum.toString() : _va._cols[i].isFloat() ? ColType.Real.toString() : ColType.Int.toString());
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
       row.addProperty(ROW, MIN);
       for( int i = 0; i < _max_columns; i++ )
-        row.addProperty(_va._cols[i]._name, _va._cols[i]._min);
+        row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? Double.NaN : _va._cols[i]._min);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MAX);
       for( int i = 0; i < _max_columns; i++ )
-        row.addProperty(_va._cols[i]._name, _va._cols[i]._max);
+        row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? Double.NaN : _va._cols[i]._max);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MEAN);
       for( int i = 0; i < _max_columns; i++ )
-        row.addProperty(_va._cols[i]._name, _va._cols[i]._mean);
+        row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? Double.NaN : _va._cols[i]._mean);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, VARIANCE);
       for( int i = 0; i < _max_columns; i++ )
-        row.addProperty(_va._cols[i]._name, _va._cols[i]._sigma);
+        row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? Double.NaN : _va._cols[i]._sigma);
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
+      row.addProperty(ROW, CARDINALITY);
+      for( int i = 0; i < _max_columns; i++ )
+        row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? (long) (_va._cols[i]._max-_va._cols[i]._min+1) : Double.NaN);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, NUM_MISSING_VALUES);
@@ -510,7 +521,7 @@ public class Inspect extends Request {
 
         row.addProperty(ROW, ENUM_DOMAIN_SIZE);
         for( int i = 0; i < _max_columns; i++ )
-          row.addProperty(_va._cols[i]._name, _va._cols[i]._domain != null ? _va._cols[i]._domain.length : 0);
+          row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? _va._cols[i]._domain.length : 0);
         sb.append(defaultBuilder(row).build(response, row, contextName));
       } else {
         for( JsonElement e : array ) {
@@ -551,14 +562,24 @@ public class Inspect extends Request {
 
       JsonObject row = new JsonObject();
 
+      row.addProperty(ROW, TYPE);
+      for( int i = 0; i < _f.numCols(); i++ )
+        row.addProperty(_f._names[i], _f.vecs()[i].isEnum() ? ColType.Enum.toString() : _f.vecs()[i].isInt() ? ColType.Int.toString() : ColType.Real.toString());
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
       row.addProperty(ROW, MIN);
       for( int i = 0; i < _f.numCols(); i++ )
-        row.addProperty(_f._names[i], _f.vecs()[i].min());
+        row.addProperty(_f._names[i], _f.vecs()[i].isEnum() ? Double.NaN : _f.vecs()[i].min());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MAX);
       for( int i = 0; i < _f.numCols(); i++ )
-        row.addProperty(_f._names[i], _f.vecs()[i].max());
+        row.addProperty(_f._names[i], _f.vecs()[i].isEnum() ? Double.NaN : _f.vecs()[i].max());
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
+      row.addProperty(ROW, CARDINALITY);
+      for( int i = 0; i < _f.numCols(); i++ )
+        row.addProperty(_f._names[i], _f.vecs()[i].isEnum() ? _f.vecs()[i].cardinality() : Double.NaN);
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, FIRST_CHUNK);
