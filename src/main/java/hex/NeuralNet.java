@@ -277,11 +277,11 @@ public class NeuralNet extends ValidatedJob {
       }
       if (mode == SingleNode) {
         Log.info("Entering single-node (multi-threaded Hogwild) execution mode.");
-        trainer = new Trainer.Threaded(ls, epochs, self());
+        trainer = new Trainer.Threaded(ls, epochs, self(), -1);
       } else if (mode == MapReduce) {
         if (warmup_samples > 0 && mode == MapReduce) {
           Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
-          Trainer warmup = new Trainer.Threaded(ls, (double)warmup_samples/num_rows, self());
+          Trainer warmup = new Trainer.Threaded(ls, (double)warmup_samples/num_rows, self(), -1);
           warmup.start();
           warmup.join();
           //TODO: for MapReduce send weights from master VM to all other VMs

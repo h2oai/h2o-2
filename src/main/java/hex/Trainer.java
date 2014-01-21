@@ -142,8 +142,8 @@ public abstract class Trainer {
     final long _stepsPerThread;
     final AtomicLong _processed = new AtomicLong();
 
-    public Threaded(Layer[] ls, double epochs, final Key job) {
-      final int num_threads = Runtime.getRuntime().availableProcessors();
+    public Threaded(Layer[] ls, double epochs, final Key job, int threads) {
+      int num_threads = threads > 0 ? threads : Runtime.getRuntime().availableProcessors();
       _trainers = new Base[num_threads];
       _threads = new Thread[num_threads];
       _stepsPerThread = (long) (epochs * ((Input) ls[0])._len / num_threads);
@@ -169,11 +169,15 @@ public abstract class Trainer {
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
             for( long i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
-              if( Job.cancelled(job) )
+              if( job != null && Job.cancelled(job) )
                 break;
-              trainer.step();
-              input.move();
-              _processed.incrementAndGet();
+              try {
+                trainer.step();
+                input.move();
+                _processed.incrementAndGet();
+              } catch (Exception e) {
+                e.getStackTrace();
+              }
             }
           }
         };
@@ -200,6 +204,11 @@ public abstract class Trainer {
           throw new RuntimeException(e);
         }
       }
+    }
+
+    public void run() {
+      start();
+      join();
     }
 
   }
@@ -270,6 +279,18 @@ public abstract class Trainer {
 
     @Override public void join() {
       _task.join();
+    }
+
+    public void run() {
+      start();
+      join();
+      while (NeuralNet.running) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
     }
 
     void done() {

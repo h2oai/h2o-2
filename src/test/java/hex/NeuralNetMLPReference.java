@@ -289,11 +289,11 @@ public class NeuralNetMLPReference {
 
     double[] inputs;
 
-    double[][] ihWeights; // input-hidden
+    float[][] ihWeights; // input-hidden
     double[] hBiases;
     double[] hOutputs;
 
-    double[][] hoWeights; // hidden-output
+    float[][] hoWeights; // hidden-output
     double[] oBiases;
 
     double[] outputs;
@@ -316,11 +316,11 @@ public class NeuralNetMLPReference {
 
       this.inputs = new double[numInput];
 
-      this.ihWeights = MakeMatrix(numInput, numHidden);
+      this.ihWeights = MakeMatrixFloat(numInput, numHidden);
       this.hBiases = new double[numHidden];
       this.hOutputs = new double[numHidden];
 
-      this.hoWeights = MakeMatrix(numHidden, numOutput);
+      this.hoWeights = MakeMatrixFloat(numHidden, numOutput);
       this.oBiases = new double[numOutput];
 
       this.outputs = new double[numOutput];
@@ -340,6 +340,14 @@ public class NeuralNetMLPReference {
       double[][] result = new double[rows][];
       for( int r = 0; r < result.length; ++r )
         result[r] = new double[cols];
+      return result;
+    }
+
+    private static float[][] MakeMatrixFloat(int rows, int cols) // helper for ctor
+    {
+      float[][] result = new float[rows][];
+      for( int r = 0; r < result.length; ++r )
+        result[r] = new float[cols];
       return result;
     }
 
@@ -436,7 +444,7 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    public void SetWeights(double[] weights) {
+    public void SetWeights(float[] weights) {
       // copy weights and biases in weights[] array to i-h weights, i-h biases, h-o weights, h-o
 // biases
       int numWeights = (numInput * numHidden) + (numHidden * numOutput) + numHidden + numOutput;
@@ -460,12 +468,12 @@ public class NeuralNetMLPReference {
     public void InitializeWeights() {
       // initialize weights and biases to small random values
       int numWeights = (numInput * numHidden) + (numHidden * numOutput) + numHidden + numOutput;
-      double[] initialWeights = new double[numWeights];
+      float[] initialWeights = new float[numWeights];
       double lo = -0.01f;
       double hi = 0.01f;
       Random rnd = new Random(0);
       for( int i = 0; i < initialWeights.length; ++i )
-        initialWeights[i] = (hi - lo) * rnd.nextFloat() + lo;
+        initialWeights[i] = (float)((hi - lo) * rnd.nextFloat() + lo);
       this.SetWeights(initialWeights);
     }
 
