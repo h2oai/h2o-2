@@ -3,7 +3,7 @@ heading("BEGIN TEST")
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
 heading("Uploading train data to H2O")
-iris_train.hex <- h2o.uploadFile(conn, train)
+iris_train.hex <- h2o.uploadFile.FV(conn, train)
 
 heading("Creating GBM model in H2O")
 iris.gbm.h2o <- h2o.gbm(x = x, y = y, data = iris_train.hex, n.trees = n.trees, interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode, shrinkage = shrinkage)

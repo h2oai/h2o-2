@@ -5,7 +5,7 @@ test.glm2vanillafactors.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing CUSE data...") 
-cuseH2O<- h2o.uploadFile(H2Oserver, locate("../smalldata/cuseexpanded.csv"), key="cuseH2O")
+cuseH2O<- h2o.uploadFile.FV(H2Oserver, locate("../smalldata/cuseexpanded.csv"), key="cuseH2O")
 cuseR<- read.csv(locate("smalldata/cuseexpanded.csv"), header=T)
 
 
