@@ -5,9 +5,9 @@ The purpose of this tutorial is to walk the new user through
 a GLM grid analysis beginning to end. The objective is to  learn how to
 specify, run, and interpret a GLM grid model using  H\ :sub:`2`\ O.  
 Specification of GLM grid models are similar to GLM models, and all
-parameters and results have the same meaning. The primary differnce
+parameters and results have the same meaning. The primary difference
 between GLM and GLMgrid is that users can specify several different
-models, and generate the specified models simultaneiously. 
+models, and generate the specified models simultaneously. 
 
 Those who have never used H\ :sub:`2`\ O before should see the quick
 start guide for additional instructions on how to run H\ :sub:`2`\ O.
@@ -106,7 +106,7 @@ Building a Model
 
 
 #. Leave n-folds at 10. This will produce 10 cross-validation models
-   for each unique combination of specifed parameters.
+   for each unique combination of specified parameters.
 
 
 #. Under the options box marked expert settings, notice that
@@ -125,7 +125,7 @@ GLM Grid Results
 """""""""""""""""
 
 GLM grid output includes a table of the specified models, along with
-each model's corresponding specification values. Invidual models can
+each model's corresponding specification values. Individual models can
 be viewed by clicking on the active link for each model. 
 For individual models coefficients (as well as normalized coefficients when
 standardization is requested), AIC and error rate are returned. An
