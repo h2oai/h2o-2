@@ -148,10 +148,7 @@ class Basic(unittest.TestCase):
                 }
                 # both response variants should work?
                 # if random.randint(0,1):
-                if False:
-                    params['response'] = numCols-1,
-                else:
-                    params['response'] = "C" + str(numCols-1)
+                #    params['response'] = numCols-1,
 
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()

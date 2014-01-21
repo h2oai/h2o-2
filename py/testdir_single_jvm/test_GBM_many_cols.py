@@ -159,6 +159,7 @@ class Basic(unittest.TestCase):
                     'response': prefix + "_response",
                     'ignored_cols_by_name': None,
                 }
+
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
                 h2o.beta_features = True
