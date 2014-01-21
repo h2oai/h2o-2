@@ -2445,8 +2445,13 @@ public class RequestArguments extends RequestStatics {
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
       int cidx = fr().find(input);
-      if (cidx == -1)
-        throw new IllegalArgumentException(input+" not a name of column, or a column index");
+      if (cidx == -1) {
+        try {
+          cidx = Integer.parseInt(input);
+        } catch (NumberFormatException e) { cidx = -1; }
+        if (cidx < 0 || cidx >= fr().numCols() )
+          throw new IllegalArgumentException(input+" not a name of column, or a column index");
+      }
       _colIdx.set(cidx);
       return fr().vecs()[cidx];
     }
