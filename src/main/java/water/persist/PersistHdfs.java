@@ -280,12 +280,17 @@ public final class PersistHdfs extends Persist {
 
   public static void addFolder2(Path p, ArrayList<String> keys,ArrayList<String> failed) throws IOException {
     FileSystem fs = FileSystem.get(p.toUri(), PersistHdfs.CONF);
+    if(!fs.exists(p)){
+      failed.add("Path does not exist: '" + p.toString() + "'");
+      return;
+    }
     addFolder2(fs, p, keys, failed);
   }
 
   private static void addFolder2(FileSystem fs, Path p, ArrayList<String> keys, ArrayList<String> failed) {
     try {
       if( fs == null ) return;
+
       Futures futures = new Futures();
       for( FileStatus file : fs.listStatus(p) ) {
         Path pfs = file.getPath();
