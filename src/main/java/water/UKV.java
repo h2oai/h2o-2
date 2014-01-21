@@ -16,48 +16,45 @@ public abstract class UKV {
 
   // This put is a top-level user-update, and not a reflected or retried
   // update.  i.e., The User has initiated a change against the K/V store.
-  // This is a WEAK update: it is only strongly ordered with other updates to
-  // the SAME key on the SAME node.
   static public void put( Key key, Value val ) {
     Futures fs = new Futures();
     put(key,val,fs);
     fs.blockForPending();         // Block for remote-put to complete
   }
+  static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key, val),fs); }
   static public void put( Key key, Value val, Futures fs ) {
     Value res = DKV.put(key,val,fs);
     // If the old Value was a large array, we need to delete the leftover
     // chunks - they are unrelated to the new Value which might be either
     // bigger or smaller than the old Value.
-    if( res != null && res.isArray() ) {
-      ValueArray ary = res.get();
-      for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
-        DKV.remove(ary.getChunkKey(i),fs);
-    }
+    if( res != null && res.isArray() )
+      remove(res,fs);
   }
   static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key, val),fs); }
 
+  static public void remove( Key key ) { removeAll(new Key[]{key}); }
   static public void removeAll(Key[] keys) {
-    for(Key key: keys) remove(key);
-  }
-  static public void remove( Key key ) { remove(key,true); }
-  static public void remove( Key key, boolean block) {
     Futures fs = new Futures();
     remove(key,fs);             // Recursively delete, gather pending deletes
-    if(block)
-      fs.blockForPending();         // Block until all is deleted
+    for(Key key: keys) remove(key,fs);
+    fs.blockForPending();       // Block until all is deleted
   }
   // Recursively remove, gathering all the pending remote key-deletes
   static public void remove( Key key, Futures fs ) {
     Value val = DKV.get(key,32,H2O.GET_KEY_PRIORITY); // Get the existing Value, if any
+    DKV.remove(key,fs); // Might need to be atomic with the above?
+    remove(val,fs);
+  }
+  // Remove the Chunk parts of Frames and Vecs and ValueArrays
+  static private void remove( Value val, Futures fs ) {
     if( val == null ) return;   // Trivial delete
     if( val.isArray() ) {       // See if this is an Array
       ValueArray ary = val.get();
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
         DKV.remove(ary.getChunkKey(i),fs);
     }
-    if( key._kb[0] == Key.VEC ) ((Vec)val.get()).remove(fs);
-    if( val.isFrame() )       ((Frame)val.get()).remove(fs);
-    DKV.remove(key,fs);
+    if( val.isVec  () ) ((Vec  )val.get()).remove(fs);
+    if( val.isFrame() ) ((Frame)val.get()).remove(fs);
   }
 
   // User-Weak-Get a Key from the distributed cloud.

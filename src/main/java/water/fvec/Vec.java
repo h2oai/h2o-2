@@ -297,9 +297,8 @@ public class Vec extends Iced {
       _size += rs._size;
       _isInt &= rs._isInt;
     }
-    @Override public boolean logVerbose() {
-      return !H2O.DEBUG;
-    }
+    // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
+    @Override public boolean logVerbose() { return false; }
   }
 
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
@@ -352,6 +351,15 @@ public class Vec extends Iced {
 
   /** Number of rows in chunk. Does not fetch chunk content. */
   public int chunkLen( int cidx ) { return (int) (_espc[cidx + 1] - _espc[cidx]); }
+
+  /** Get a Vec Key from Chunk Key, without loading the Chunk */
+  static public Key getVecKey( Key key ) {
+    assert key._kb[0]==Key.DVEC;
+    byte [] bits = key._kb.clone();
+    bits[0] = Key.VEC;
+    UDP.set4(bits,6,-1); // chunk#
+    return Key.make(bits);
+  }
 
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
   public Key chunkKey(int cidx ) {
@@ -463,8 +471,9 @@ public class Vec extends Iced {
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
+      // CNC: Bad plan to load remote data during a toString... messes up debug printing
       // Stupidly elem2BV loads all data locally
-      s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
+      // s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
     }
     return s+"}]";
   }
