@@ -760,7 +760,7 @@ def touch_cloud(nodeList=None):
         n.is_alive()
 
 # timeoutSecs is per individual node get_cloud()
-def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
+def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
     if not nodeList: nodeList = nodes
 
     expectedSize = len(nodeList)
@@ -772,14 +772,18 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
     cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
 
     if not all(cloudHealthy):
-        raise Exception("Some node reported cloud_healthy not true: %s" % cloudHealthy)
+        msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
+        if not ignoreHealth: 
+            raise Exception(msg=msg)
 
     # gather up all the node_healthy status too
     for i,c in enumerate(cloudStatus):
         nodesHealthy = [n['node_healthy'] for n in c['nodes']]
         if not all(nodesHealthy):
             print "node %s cloud status: %s" % (i, dump_json(c))
-            raise Exception("node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy))
+            msg = "node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy)
+            if not ignoreHealth: 
+                raise Exception(msg=msg)
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
