@@ -2,11 +2,12 @@ package water.parser;
 
 import java.util.ArrayList;
 
-public final class ValueString {
+import water.Iced;
+
+public final class ValueString extends Iced implements Comparable<ValueString> {
    private byte [] _buf;
    private int _off;
    private int _len;
-   ArrayList<Integer> _skips = new ArrayList<Integer>();
 
    public ValueString() {}
 
@@ -25,30 +26,26 @@ public final class ValueString {
    public ValueString(byte [] buf){
      this(buf,0,buf.length);
    }
+
+   @Override public int compareTo( ValueString o ) {
+     int len = Math.min(_len,o._len);
+     for( int i=0; i<len; i++ ) {
+       int x = (0xFF&_buf[_off+i]) - (0xFF&o._buf[o._off+i]);
+       if( x != 0 ) return x;
+     }
+     return _len - o._len;
+   }
+
    @Override
    public int hashCode(){
      int hash = 0;
-     if(_skips.isEmpty()){
-       int n = get_off() + get_length();
-       for (int i = get_off(); i < n; ++i)
-         hash = 31 * hash + get_buf()[i];
-       return hash;
-     } else {
-       int i = get_off();
-       for(int n:_skips){
-         for(; i < get_off()+n; ++i)
-           hash = 31*hash + get_buf()[i];
-         ++i;
-       }
-       int n = get_off() + get_length();
-       for(; i < n; ++i)
-         hash = 31*hash + get_buf()[i];
-       return hash;
-     }
+     int n = get_off() + get_length();
+     for (int i = get_off(); i < n; ++i)
+       hash = 31 * hash + get_buf()[i];
+     return hash;
    }
 
    void addChar(){_len++;}
-   void skipChar(){_skips.add(_len++);}
 
    void addBuff(byte [] bits){
      byte [] buf = new byte[get_length()];
@@ -59,55 +56,43 @@ public final class ValueString {
      _buf = buf;
    }
 
-  @Override
-  public String toString(){
-    if(_skips.isEmpty())return new String(get_buf(),get_off(),get_length());
-    StringBuilder sb = new StringBuilder();
-    int off = get_off();
-    for(int next:_skips){
-      int len = get_off()+next-off;
-      sb.append(new String(get_buf(),off,len));
-      off += len + 1;
-    }
-    sb.append(new String(get_buf(),off,get_length()-off+get_off()));
-    return sb.toString();
+
+// WARNING: LOSSY CONVERSION!!!
+  // Converting to a String will truncate all bytes with high-order bits set,
+  // even if they are otherwise a valid member of the field/ValueString.
+  // Converting back to a ValueString will then make something with fewer
+  // characters than what you started with, and will fail all equals() tests.a
+  @Override public String toString(){
+    return new String(_buf,_off,_len);
+  }
+
+  public static String[] toString( ValueString vs[] ) {
+    if( vs==null ) return null;
+    String[] ss = new String[vs.length];
+    for( int i=0; i<vs.length; i++ )
+      ss[i] = vs[i].toString();
+    return ss;
   }
 
   void set(byte [] buf, int off, int len){
     _buf = buf;
     _off = off;
     _len = len;
-    _skips.clear();
   }
 
   public ValueString setTo(String what) {
     _buf = what.getBytes();
     _off = 0;
     _len = _buf.length;
-    _skips.clear();
     return this;
   }
 
   @Override public boolean equals(Object o){
     if(!(o instanceof ValueString)) return false;
     ValueString str = (ValueString)o;
-    if(_skips.isEmpty() && str._skips.isEmpty()){ // no skipped chars
-      if(str.get_length() != get_length())return false;
-      for(int i = 0; i < get_length(); ++i)
-        if(get_buf()[get_off()+i] != str.get_buf()[str.get_off()+i]) return false;
-    }else if(str._skips.isEmpty()){ // only this has skipped chars
-      if(get_length() - _skips.size() != str.get_length())return false;
-      int j = 0;
-      int i = get_off();
-      for(int n:_skips){
-        for(; i < get_off()+n; ++i)
-          if(get_buf()[i] != str.get_buf()[j++])return false;
-        ++i;
-      }
-      int n = get_off() + get_length();
-      for(; i < n; ++i) if(get_buf()[i] != str.get_buf()[j++])return false;
-    } else return toString().equals(str.toString()); // both strings have skipped chars, unnecessarily complicated so just turn it into a string (which skips the chars), should not happen too often
-
+    if(str.get_length() != get_length())return false;
+    for(int i = 0; i < get_length(); ++i)
+      if(get_buf()[get_off()+i] != str.get_buf()[str.get_off()+i]) return false;
     return true;
   }
   public final byte [] get_buf() {return _buf;}
