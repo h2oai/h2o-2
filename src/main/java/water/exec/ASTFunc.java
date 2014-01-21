@@ -81,10 +81,10 @@ public class ASTFunc extends ASTOp {
     env.popScope();
   }
 
-  @Override double[] map(Env2 encl, double[] in, double[] out) {
-    if (_vars.length!=2) throw H2O.unimpl();
+  @Override double[] map(Env2 encl, double[] out, double[]... ins) {
     Env2 env = new Env2(encl, this);
-    env.setAry(1, in);     // push the only argument to env
+    assert _vars.length == ins.length+1;
+    for (int i = 0; i < ins.length; i++) env.setAry(i+1, ins[i]);
     _body.eval(env);
     out = env.retAry();
     if (out == null) throw H2O.unimpl();

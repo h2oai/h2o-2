@@ -19,9 +19,9 @@ public class Test_R_apply extends TestUtil {
   @Test public void testRowApply() {
     Key dest = Key.make("h.hex");
     try {
-      File file = TestUtil.find_test_file("smalldata/logreg/syn_2659x1049.csv");
+      //File file = TestUtil.find_test_file("smalldata/logreg/syn_2659x1049.csv");
       //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
-      //File file = TestUtil.find_test_file("smalldata/drugs.csv");
+      File file = TestUtil.find_test_file("smalldata/drugs.csv");
       Key fkey = NFSFileVec.make(file);
       Frame in = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
@@ -37,6 +37,7 @@ public class Test_R_apply extends TestUtil {
       checkResult("apply(h.hex,1,function(x){cap=0; fn=function(x){ifelse(x<cap,x,cap)}; cap=2; fn(x)})", new Cap(2).apply(in));
       checkResult("apply(h.hex,1,function(x){x+1})", new Add(1).apply(in));
       checkResult("apply(h.hex,1,function(x){is.na(x)?0:x})", fillna.apply(in));
+      checkResult("apply(h.hex,1,function(x){fn=function(){sum(x*x)}; fn()})", sqsum.apply(in));
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
@@ -74,6 +75,8 @@ public class Test_R_apply extends TestUtil {
     for (int i=0;i<ds.length;i++) out[0]=Math.min(out[0],ds[i]); return out; }  };
   static Map mean   = new Map() {double[] map(double ds[]) { double out[] = new double[1        ];
     for (int i=0;i<ds.length;i++) out[0]+=ds[i]; out[0]=out[0]/ds.length; return out; }  };
+  static Map sqsum  = new Map() {double[] map(double ds[]) { double out[] = new double[1        ];
+    for (int i=0;i<ds.length;i++) out[0]+=ds[i]*ds[i]; return out; }  };
 
   static final class Cap extends Map {
     final double _c;
@@ -148,5 +151,4 @@ public class Test_R_apply extends TestUtil {
       assertEquals(err, e.getMessage());
     }
   }
-
 }

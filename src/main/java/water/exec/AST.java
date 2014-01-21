@@ -191,50 +191,18 @@ class ASTApply extends AST {
     assert sp+_args.length==env._sp;
     env.fcn(-_args.length).apply(env,_args.length);
   }
+  // Evaluate apply in a row-wise fashion.
   @Override void eval(Env2 env) {
     if (_args.length > 4) throw H2O.unimpl();
     _args[0].eval(env);
     assert env.isFcn();
     ASTOp op = env.retFcn();
-    // 0 args
-    if (_args.length==1) { env.setAry(0,op.map(env,null)); return; }
-    double[] a0=null,a1=null,a2=null;
-    double   d0=0,   d1=0,   d2=0;
-    _args[1].eval(env);
-    if (env.isAry()) a0 = env.retAry();
-    else             d0 = env.retDbl();
-    // 1 arg
-    if (_args.length==2) {
-      assert a0 != null;
-      env.setAry(0,op.map(env,a0,null));
-      return;
+    double[] ins[] = new double[_args.length-1][];
+    for (int i = 0; i < _args.length-1; i++) {
+      _args[i+1].eval(env);
+      ins[i] = env.isAry() ? env.retAry() : new double[]{env.retDbl()};
     }
-    _args[2].eval(env);
-    if (env.isAry()) a1 = env.retAry();
-    else             d1 = env.retDbl();
-    // 2 args
-    if (_args.length==3) {
-      if      (a0==null && a1==null) env.setDbl(0,op.apply(d0,d1));
-      else if (a0==null            ) env.setAry(0,op.map(env,d0,a1,null));
-      else if (            a1==null) env.setAry(0,op.map(env,a0,d1,null));
-      else                           env.setAry(0,op.map(env,a0,a1,null));
-      return;
-    }
-    _args[3].eval(env);
-    if (env.isAry()) a2 = env.retAry();
-    else             d2 = env.retDbl();
-    // 3 args
-    if (_args.length==4) {
-      if      (a0==null && a1==null && a2==null) env.setDbl(0,op.apply(d0,d1,d2));
-      else if (a0==null && a1==null            ) env.setAry(0,op.map(env,d0,d1,a2,null));
-      else if (a0==null             && a2==null) env.setAry(0,op.map(env,d0,a1,d2,null));
-      else if (            a1==null && a2==null) env.setAry(0,op.map(env,a0,d1,d2,null));
-      else if (a0==null                        ) env.setAry(0,op.map(env,d0,a1,a2,null));
-      else if (            a1==null            ) env.setAry(0,op.map(env,a0,d1,a2,null));
-      else if (                        a2==null) env.setAry(0,op.map(env,a0,a1,d2,null));
-      else                                       env.setAry(0,op.map(env,a0,a1,a2,null));
-      return;
-    }
+    env.setAry(0,op.map(env,null,ins));
   }
 }
 
