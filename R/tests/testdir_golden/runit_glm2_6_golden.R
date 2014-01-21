@@ -5,7 +5,7 @@ test.glm2asfactor.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing DRUGS data...") 
-drugsH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/drugs.csv"), key="drugsH2O")
+drugsH2O<- h2o.uploadFile.FV(H2Oserver, locate("../../smalldata/drugs.csv"), key="drugsH2O")
 drugsR<- read.csv(locate("smalldata/drugs.csv"), header=T)
 
 Log.info("Test H2O data treatment: as.factor and derived column")

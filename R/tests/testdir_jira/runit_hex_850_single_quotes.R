@@ -13,7 +13,7 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 
 path = locate("smalldata/jira/850.csv")
 j.va = h2o.uploadFile.VA(conn, path, key="jira850.hex")
-j.fv = h2o.uploadFile(conn, path, key="jira850.hex")
+j.fv = h2o.uploadFile.FV(conn, path, key="jira850.hex")
 h2o.ls(conn)
     
 if (nrow(j.va) != 4) {

@@ -184,8 +184,8 @@ testcb:
 	$(MAKE) -C h2o-cookbook build
 	$(MAKE) -C h2o-cookbook test
 
-TOPDIR:=$(CURDIR)
-BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
+TOPDIR:=$(subst /cygdrive/c,c:,$(CURDIR))
+BUILD_WEBSITE_DIR="$(TOPDIR)/target/docs-website"
 SPHINXBUILD=$(shell which sphinx-build)
 ifeq ($(SPHINXBUILD),)
 docs-website: dw_announce
@@ -212,7 +212,7 @@ dw_1:
 	rm -fr $(BUILD_WEBSITE_DIR)
 	rm -fr h2o-docs/source/developuser/DocGen
 	mkdir -p h2o-docs/source/developuser/DocGen
-	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -jar $(TOPDIR)/target/h2o.jar -runClass water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
+	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -jar "$(TOPDIR)/target/h2o.jar" -runClass water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
 	rm -rf $(TMPDIR)
 
 # If this fails, you might need to do the following:

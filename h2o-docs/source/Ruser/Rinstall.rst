@@ -36,8 +36,9 @@ port=54321).
 revision number  with the appropriate file path and revision number
 specifying your downloaded and unzipped H2O file. 
 
-**install.packages("foo/R/h2o_2.1.0.99999.tar.gz", repos = NULL, 
-type = "source")**
+::
+
+  install.packages("foo/R/h2o_2.1.0.99999.tar.gz", repos = NULL, type = "source")
  
 Once the correct path has been specified, the H2O package will be
 installed. 

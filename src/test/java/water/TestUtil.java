@@ -150,10 +150,6 @@ public class TestUtil {
     return DKV.get(parsedKey).get();
   }
 
-  public static ValueArray parse_test_key(Key fileKey) {
-    return parse_test_key(fileKey, Key.make());
-  }
-
   public static String replaceExtension(String fname, String newExt) {
     int i = fname.lastIndexOf('.');
     if( i == -1 )
@@ -215,6 +211,7 @@ public class TestUtil {
         assert numrows == col._n;
     }
 
+    Futures fs = new Futures();
     int rowsize = off;
     ValueArray ary = new ValueArray(key, numrows, rowsize, cols);
     int row = 0;
@@ -260,7 +257,7 @@ public class TestUtil {
       }
 
       Key ckey = ary.getChunkKey(chunk);
-      DKV.put(ckey, new Value(ckey, ab.bufClose()));
+      DKV.put(ckey, new Value(ckey, ab.bufClose()), fs);
     }
 
     // Sum to mean
@@ -289,8 +286,8 @@ public class TestUtil {
       col._sigma = Math.sqrt(col._sigma / (col._n - 1));
 
     // Write out data & keys
-    DKV.put(key, ary);
-    DKV.write_barrier();
+    DKV.put(key, ary, fs);
+    fs.blockForPending();
     return ary;
   }
 
