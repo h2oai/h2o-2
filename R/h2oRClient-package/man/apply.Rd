@@ -18,7 +18,7 @@ An H2O parsed data object.
 The margin along wich the function should be applied
 }
   \item{FUN}{
-the function to apply. 
+The function to be applied by H2O. 
 }
 }
 \details{
@@ -30,7 +30,8 @@ Produces a new vector or array of the output of the applied function. That vecto
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
++ promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(apply(iris.hex, 1, sum))

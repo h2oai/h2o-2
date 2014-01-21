@@ -73,6 +73,9 @@ public class PCA extends ColumnsJob {
         cols[i] = removeCols.get(i);
       fr.remove(cols);
     }
+    if( fr.numCols() < 2 )
+      throw new IllegalArgumentException("Need more than one column to run PCA");
+
     DataInfo dinfo = new DataInfo(fr, 0, standardize);
     GramTask tsk = new GramTask(this, dinfo, false,false).doAll(dinfo._adaptedFrame);
     PCAModel myModel = buildModel(dinfo, tsk);

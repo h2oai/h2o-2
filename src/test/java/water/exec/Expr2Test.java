@@ -250,6 +250,7 @@ public class Expr2Test extends TestUtil {
     } 
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
     if( env != null ) env.remove();
+    debug_print(s);
   }
 
   void checkStr( String s, double d ) {
@@ -259,6 +260,7 @@ public class Expr2Test extends TestUtil {
     double res = env.popDbl();
     assertEquals(d,res,d/1e8);
     env.remove();
+    debug_print(s);
   }
 
   void checkStr( String s, String err ) {
@@ -270,6 +272,27 @@ public class Expr2Test extends TestUtil {
     } catch ( IllegalArgumentException e ) {
       assertEquals(err, e.getMessage());
     }
+    debug_print(s);
   }
 
+  // Handy code to debug leaking keys
+  void debug_print( String s ) {
+  //  int sz=0;
+  //  int vgs=0, frs=0, vcs=0, cks=0;
+  //  for( Key k : H2O.keySet() ) {
+  //    sz++;
+  //    Value val = DKV.get(k);
+  //    Iced ice = TypeMap.newInstance(val.type());
+  //    if( ice instanceof Vec.VectorGroup ) vgs++;
+  //    else if( ice instanceof Vec ) vcs++;
+  //    else if( ice instanceof Chunk ) cks++;
+  //    else if( ice instanceof Frame ) frs++;
+  //  }
+  //  System.out.println("KKK="+(sz-vgs-frs-vcs-cks)+
+  //                     ", VGS="+vgs+
+  //                     ", FRS="+frs+
+  //                     ", VCS="+vcs+
+  //                     ", CKS="+cks+
+  //                     ", "+s);
+  }
 }

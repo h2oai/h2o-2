@@ -256,7 +256,7 @@ public class StableAPITest {
     regR(RF.class, "data_key", "response_variable", "ignore", "ntree", "depth", "class_weights", "model_key");
     regR(RFView.class, "model_key", "data_key", "response_variable", "ntree", "class_weights", "out_of_bag_error_estimate");
     regR(RFTreeView.class, "model_key", "tree_number", "data_key");
-    regR(SetColumnNames.class, "target", "source" );
+    regR(SetColumnNames.class, "target", "copy_from" );
     regR(StoreView.class);
     regR(SummaryPage.class, "key");
 

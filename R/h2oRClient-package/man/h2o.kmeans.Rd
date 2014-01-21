@@ -5,8 +5,8 @@
 H2O: K-Means Clustering
 }
 \description{
-Performs k-means clustering on a parsed data file.
-}
+Performs k-means clustering on an \code{\linkS4class{H2OParsedData} object.
+}}
 \usage{
 h2o.kmeans(data, centers, cols = "", iter.max = 10)
 }
@@ -41,21 +41,7 @@ An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
