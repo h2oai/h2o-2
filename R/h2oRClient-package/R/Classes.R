@@ -30,6 +30,7 @@ setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", m
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
 setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
 setClass("H2OGLMGridVA", contains="H2OGridVA")
+setClass("H2OKMeansModelVA", contains="H2OModelVA")
 setClass("H2ORFModelVA", contains="H2OModelVA")
 
 # Register finalizers for H2O data and model objects
@@ -817,11 +818,15 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   # names(h2olist)[idx] <- unlist(unname(list(...)))[idx]
   
   # lapply(list(...), function(x) { if(class(x) == "H2OParsedData") assign(x, as.name(x@key)) })
-  if(deparse(substitute(X)) != X@key)
-    assign(deparse(substitute(X)), as.name(X@key))
+  # if(deparse(substitute(X)) != X@key)
+  #  assign(deparse(substitute(X)), as.name(X@key))
+  
+  myList <- list(...)
+  tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric")} )
+  if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
+  # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
   
   myfun = deparse(substitute(FUN))
-  # myfun = deparse(substitute(FUN, env = list(X = as.name(X@key))))
   len = length(myfun)
 
   if(len > 2 && myfun[len] == "}")
@@ -919,6 +924,18 @@ setMethod("show", "H2OGLMGridVA", function(object) {
 
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
+})
+
+setMethod("show", "H2OKMeansModelVA", function(object) {
+  print(object@data)
+  cat("K-Means Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
+  cat("\n\nCluster means:\n"); print(model$centers)
+  cat("\nClustering vector:\n"); print(summary(model$cluster))
+  cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
+  cat("\nAvailable components:\n"); print(names(model))
 })
 
 setMethod("show", "H2ORFModelVA", function(object) {

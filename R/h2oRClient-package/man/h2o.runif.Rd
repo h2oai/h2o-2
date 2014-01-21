@@ -13,7 +13,7 @@
 localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
-s = runif(nrow(prostate.hex))
+s = h2o.runif(prostate.hex)
 summary(s)
 prostate.train = prostate.hex[s <= 0.8,]
 prostate.train = h2o.assign(prostate.train, "prostate.train")
