@@ -27,7 +27,7 @@ public class ParseProgressTest extends TestUtil {
     if (f == null || !f.exists()) {
       System.out.println("Could not find covtype.data, skipping ParseProgressTest.testCovtype()");
       return;
-	 }
+    }
 
     FileIntegrityChecker c = FileIntegrityChecker.check(f,false);
     assertEquals(1,c.size());   // Exactly 1 file

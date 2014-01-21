@@ -71,13 +71,11 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
   public Key importFile(int i, Futures fs) {
     if( _ok[i] < H2O.CLOUD.size() ) return null;
     File f = new File(_files[i]);
-    Key k;
+    Key k = PersistNFS.decodeFile(f);
     if(_newApi) {
-      k = PersistNFS.decodeFile(f);
       NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
       UKV.put(k, new Frame(new String[] { "0" }, new Vec[] { nfs }), fs);
     } else {
-      k = PersistNFS.decodeFile(f);
       long size = f.length();
       Value val = (size < 2*ValueArray.CHUNK_SZ)
         ? new Value(k,(int)size,Value.NFS)

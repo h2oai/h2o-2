@@ -102,20 +102,13 @@ public final class Enum extends Iced implements Cloneable{
   public void kill() { _map = null; }
 
   // assuming single threaded
-  public String [] computeColumnDomain(){
+  public ValueString [] computeColumnDomain(){
     if( isKilled() ) return null;
-    String [] res = new String[_map.size()];
-    Map<ValueString, Integer> oldMap = _map;
-    Iterator<ValueString> it = oldMap.keySet().iterator();
-    for( int i = 0; i < res.length; ++i )
-      res[i] = it.next().toString();
-    Arrays.sort(res);
-    NonBlockingHashMap<ValueString, Integer> newMap = new NonBlockingHashMap<ValueString, Integer>();
-    for( int j = 0; j < res.length; ++j )
-      newMap.put(new ValueString(res[j]), j);
-    oldMap.clear();
-    _map = newMap;
-    return res;
+    ValueString vs[] = _map.keySet().toArray(new ValueString[_map.size()]);
+    Arrays.sort(vs);            // Alpha sort to be nice
+    for( int j = 0; j < vs.length; ++j )
+      _map.put(vs[j], j);       // Renumber in the map
+    return vs;
   }
 
   // Since this is a *concurrent* hashtable, writing it whilst its being
