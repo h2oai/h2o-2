@@ -222,22 +222,10 @@ public abstract class ASTOp extends AST {
     return null;
   }
   @Override void exec(Env env) { env.push(this); }
-  @Override void eval(Env2 env) { env.setFcn(0,this); }
+  @Override void evalR(Env2 env) { env.setFcn(0,this); }
   abstract void apply(Env env, int argcnt);
   double   apply(Env2 env, double... args) {throw H2O.unimpl();}
   double[] map  (Env2 env, double[] out, double[]... ins) {throw H2O.unimpl();}
-//  double[] map(Env2 env, double[] out) {throw H2O.unimpl();}
-//  double[] map(Env2 env, double[] in,  double[] out)               { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double[] in0, double[] in1, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double[] in0, double   in1, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double   in0, double[] in1, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double[] in0, double[] in1, double[] in2, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double[] in0, double[] in1, double   in2, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double[] in0, double   in1, double[] in2, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double   in0, double[] in1, double[] in2, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double[] in0, double   in1, double   in2, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double   in0, double[] in1, double   in2, double[] out) { throw H2O.unimpl(); }
-//  double[] map(Env2 env, double   in0, double   in1, double[] in2, double[] out) { throw H2O.unimpl(); }
 }
 
 abstract class ASTUniOp extends ASTOp {
@@ -1258,23 +1246,22 @@ class ASTRApply extends ASTOp {
       // find out return type
       final double[] rowin0 = new double[fr.vecs().length];
       for (int c = 0; c < rowin0.length; c++) rowin0[c] = fr.vecs()[c].at(0);
-      final double[] rowout0 = op.map(null,null,rowin0);
-      MRTask2 mrt = new MRTask2() {
+      final int outlen = op.map(null,null,rowin0).length;
+      String[] names = new String[outlen];
+      for (int i = 0; i < names.length; i++) names[i] = "C"+(i+1);
+      Frame out = new MRTask2() {
         @Override
         public void map(Chunk[] cs, NewChunk[] ncs) {
           final double[] rowin  = new double[cs.length];
-          final double[] rowout = new double[rowout0.length];
+          final double[] rowout = new double[outlen];
           for (int i = 0; i < cs[0]._len; i++) {
             for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
             double ro[] = op.map(null,rowout,rowin);
             for (int c = 0; c < ncs.length; c++) ncs[c].addNum(ro[c]);
           }
         }
-      };
-      String[] names = new String[rowout0.length];
-      for (int i = 0; i < names.length; i++) names[i] = "C"+(i+1);
-      Frame res = mrt.doAll(rowout0.length,fr).outputFrame(names, null);
-      env.poppush(4,res,null);
+      }.doAll(outlen,fr).outputFrame(names, null);
+      env.poppush(4,out,null);
       return;
     }
     throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");

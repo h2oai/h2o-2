@@ -4,7 +4,6 @@ import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 
 import water.*;
 import water.fvec.Frame;
@@ -40,7 +39,7 @@ abstract public class AST extends Iced {
     return null;
   }
   abstract void exec(Env env);
-  abstract void eval(Env2 env);
+  abstract void evalR(Env2 env);
   boolean isPosConstant() { return false; }
   protected StringBuilder indent( StringBuilder sb, int d ) {
     for( int i=0; i<d; i++ ) sb.append("  ");
@@ -72,8 +71,8 @@ class ASTStatement extends AST {
     }
     _asts[_asts.length-1].exec(env); // Return final statement as result
   }
-  @Override void eval(Env2 env) {
-    for ( int i=0; i<_asts.length; i++ ) _asts[i].eval(env);
+  @Override void evalR(Env2 env) {
+    for ( int i=0; i<_asts.length; i++ ) _asts[i].evalR(env);
   }
   @Override public String toString() { return ";;;"; }
   public StringBuilder toString( StringBuilder sb, int d ) {
@@ -192,14 +191,14 @@ class ASTApply extends AST {
     env.fcn(-_args.length).apply(env,_args.length);
   }
   // Evaluate apply in a row-wise fashion.
-  @Override void eval(Env2 env) {
+  @Override void evalR(Env2 env) {
     if (_args.length > 4) throw H2O.unimpl();
-    _args[0].eval(env);
+    _args[0].evalR(env);
     assert env.isFcn();
     ASTOp op = env.retFcn();
     double[] ins[] = new double[_args.length-1][];
     for (int i = 0; i < _args.length-1; i++) {
-      _args[i+1].eval(env);
+      _args[i+1].evalR(env);
       ins[i] = env.isAry() ? env.retAry() : new double[]{env.retDbl()};
     }
     env.setAry(0,op.map(env,null,ins));
@@ -260,7 +259,7 @@ class ASTSlice extends AST {
     }
   }
 
-  @Override void eval(Env2 env) { throw H2O.unimpl(); }
+  @Override void evalR(Env2 env) { throw H2O.unimpl(); }
 
   // Execute a col/row selection & return the selection.  NULL means "all".
   // Error to mix negatives & positive.  Negative list is sorted, with dups
@@ -352,7 +351,7 @@ class ASTId extends AST {
     ASTFunc fcn = env.fcnScope(_depth);
     fcn._env.push_slot(_depth-1,_num,env);
   }
-  @Override void eval(Env2 env) {
+  @Override void evalR(Env2 env) {
     env.fetch(_id);
   }
   @Override public String toString() { return _id; }
@@ -512,10 +511,10 @@ class ASTAssign extends AST {
     if( cols!= null ) narg++;
     env.poppush(narg,ary,null);
   }
-  @Override void eval(Env2 env) {
+  @Override void evalR(Env2 env) {
     if( !(_lhs instanceof ASTId) ) throw H2O.unimpl();
     ASTId id = (ASTId)_lhs;
-    _eval.eval(env);
+    _eval.evalR(env);
     if      (env.retFcn()!=null) env.asnFcn(id._id,env.retFcn());
     else if (env.retAry()!=null) env.asnAry(id._id,env.retAry());
     else                         env.asnDbl(id._id,env.retDbl());
@@ -546,7 +545,7 @@ class ASTNum extends AST {
   }
   boolean isPosConstant() { return _d >= 0; }
   @Override void exec(Env env) { env.push(_d); }
-  @Override void eval(Env2 env) { env.setDbl(0,_d);}
+  @Override void evalR(Env2 env) { env.setDbl(0,_d);}
   @Override public String toString() { return Double.toString(_d); }
 
   /** Wrap an integer so that it can be modified by a called method.  i.e. Pass-by-reference.  */

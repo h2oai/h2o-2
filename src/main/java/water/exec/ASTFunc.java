@@ -85,7 +85,7 @@ public class ASTFunc extends ASTOp {
     Env2 env = new Env2(encl, this);
     assert _vars.length == ins.length+1;
     for (int i = 0; i < ins.length; i++) env.setAry(i+1, ins[i]);
-    _body.eval(env);
+    _body.evalR(env);
     out = env.retAry();
     if (out == null) throw H2O.unimpl();
     return out;
