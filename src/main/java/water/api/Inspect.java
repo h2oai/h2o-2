@@ -208,10 +208,6 @@ public class Inspect extends Request {
   }
 
 
-  public Response serveValueArray(final ValueArray va) {
-    return serveValueArray(va, va._cols.length);
-  }
-
   /**
    * serve the value array with a capped # of columns [0,max_columns)
    */

@@ -2,7 +2,7 @@
 \alias{h2o.glm}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-H2O: Generalized Linear Model
+H2O: Generalized Linear Models
 }
 \description{
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
@@ -22,7 +22,7 @@ The name of the response variable in the model.
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{family}{
-A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported.
+A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. 
 }
   \item{nfolds}{
 Number of folds for cross-validation. The default is 10.
@@ -76,7 +76,11 @@ The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing
 
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}}, \code{\link{h2o.importHDFS.VA}}, \code{\link{h2o.importURL.VA}}, \code{\link{h2o.uploadFile.VA}}
+\code{\link{h2o.importFile.VA}}, 
+\code{\link{h2o.importFolder.VA}}, 
+\code{\link{h2o.importHDFS.VA}}, 
+\code{\link{h2o.importURL.VA}},
+\code{\link{h2o.uploadFile.VA}}
 }
 \examples{
 library(h2o)
@@ -93,7 +97,8 @@ h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5
 + alpha = 0.1)
 
 # Run GLM of IsDepDelayed ~ Distance + Origin + Dest + UniqueCarrier on airlines dataset in HDFS
-airlines.hex =  h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
+airlines.hex =  h2o.importURL.VA(localH2O, 
+ + path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
 h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), 
  + y = 'IsDepDelayed', family = 'binomial', data = airlines.hex)
 }

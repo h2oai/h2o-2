@@ -55,7 +55,8 @@ After the raw data file is parsed, it will be automatically deleted from the H2O
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
++ silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.raw = h2o.importFile(localH2O, path = prosPath, parse = FALSE)
 # Do not modify prostate.csv on disk at this point!

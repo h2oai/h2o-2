@@ -6,7 +6,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../findNSourceUtils.R')
 
 test <- function(conn) {
-  arrests.hex = h2o.uploadFile(conn, locate("../../../smalldata/pca_test/USArrests.csv"), "arrests.hex")
+  arrests.hex = h2o.uploadFile.FV(conn, locate("../../../smalldata/pca_test/USArrests.csv"), "arrests.hex")
   
   Log.info("Slicing column 1 of arrests 50 times")
   for(i in 1:50) {

@@ -249,7 +249,7 @@ public final class H2O {
     // go round-robin in 64MB chunks.
     if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
       long cidx = 0;
-      int skip = 1+1+4+4;       // Skip both the vec# and chunk#?
+      int skip = water.fvec.Vec.KEY_PREFIX_LEN; // Skip both the vec# and chunk#?
       if( key._kb[0] == Key.DVEC ) {
         long cSz = 1L << (26 - water.fvec.Vec.LOG_CHK);
         cidx = UDP.get4(key._kb, 1+1+4); // Chunk index

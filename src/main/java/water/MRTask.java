@@ -80,7 +80,7 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
     if(_reservedMem > 0)MemoryManager.freeTaskMem(_reservedMem);
   }
 
-  @Override public final void lonCompletion( CountedCompleter caller ) {
+  @Override public void lonCompletion( CountedCompleter caller ) {
     // Reduce results into 'this' so they collapse going up the execution tree.
     // NULL out child-references so we don't accidentally keep large subtrees
     // alive: each one may be holding large partial results.

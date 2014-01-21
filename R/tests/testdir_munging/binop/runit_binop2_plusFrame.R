@@ -33,7 +33,7 @@ test.plus.onFrame <- function(conn) {
   colRange <- dd$RANGE
 
   Log.info(paste("Importing ", dataName, " data..."))
-  hex <- h2o.uploadFile(conn, locate(dataSet[[1]]$PATHS[1]), paste("r", gsub('-','_',dataName),".hex", sep = ""))
+  hex <- h2o.uploadFile.FV(conn, locate(dataSet[[1]]$PATHS[1]), paste("r", gsub('-','_',dataName),".hex", sep = ""))
   anyEnum <- FALSE
   if(any(dd$TYPES == "enum")) anyEnum <- TRUE
 

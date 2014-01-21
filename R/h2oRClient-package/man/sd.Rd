@@ -5,7 +5,7 @@
 Standard deviation of a numeric column. 
 }
 \description{
-Calculates the standard deviation of a numeric column, assumed to be continuious, real numeric values. 
+Calculates the standard deviation of a column of continuious real valued data. 
 }
 \usage{
 sd(x, na.rm = FALSE)

@@ -69,7 +69,8 @@ covtype.hex = h2o.importHDFS.VA(localH2O,
 + parse = TRUE)
 summary(covtype.hex)
 
-stdfolder.data = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard", 
+stdfolder.data = h2o.importHDFS.VA(localH2O, 
++ path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard", 
 + parse = FALSE)
 stdfolder.parsed = vector("list", length(stdfolder.data))
 for(i in 1:length(stdfolder.data))
