@@ -53,7 +53,7 @@ Building a Model
 #. In the Key field enter the .hex key for the Arrhythmia data set. 
  
 
-#. In the Ingored Columns field select the set of columns to be
+#. In the Ignored Columns field select the set of columns to be
    omitted from the analysis.  Note that PCA ignores categorical variables
    and constant columns. Categoricals can be included by expanding the
    categorical into a set of binomial indicators.  

@@ -53,7 +53,7 @@ Building a Model
 
 #. In Ignored Columns select the subset of variables that should be
    omitted from the model. In this case, the only column to be
-   omittied is the index column, 0. 
+   omitted is the index column, 0. 
 
 
 #. Users have the option of Gradient Boosted Classification or
@@ -97,7 +97,15 @@ Building a Model
 GBM Results
 """""""""""
 
-GBM output for classification returns a confusion matrix showing the classifications for each group, and the associated error by group and the overall average error. Regression models can be quite complex and difficult to directly interpret. For that reason only a model key is given, for subsequent use in validation and prediction. Both models provide the MSE by tree. For classification models this is based on the classification error within the tree. For regression models MSE is calculated from the squared deviances, as it is in standard regressions. 
+GBM output for classification returns a confusion matrix showing the
+classifications for each group, and the associated error by group and
+the overall average error. Regression models can be quite complex and
+difficult to directly interpret. For that reason only a model key is
+given, for subsequent use in validation and prediction. Both models
+provide the MSE by tree. For classification models this is based on
+the classification error within the tree. For regression models MSE is
+calculated from the squared deviances, as it is in standard 
+regressions. 
 
 .. image:: GBMresults.png
    :width: 100%
