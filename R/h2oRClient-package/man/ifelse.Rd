@@ -3,7 +3,7 @@
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Applies conditional statements to an \code{\linkS4class{H2OParsedData} object. 
-}
+}}
 \description{
 Applies conditional statements to numeric vectors in H2O parsed data objects when the data are numeric.
 }

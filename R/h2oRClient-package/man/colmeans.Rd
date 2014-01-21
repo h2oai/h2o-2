@@ -6,7 +6,7 @@ Returns a vector of the column means.
 }
 \description{
 Returns a vector of column names for an \code{\linkS4class{H2OParsedData} object. 
-}
+}}
 \usage{
 colMeans(x)
 }

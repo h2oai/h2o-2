@@ -6,7 +6,7 @@ H2O: K-Means Clustering
 }
 \description{
 Performs k-means clustering on an \code{\linkS4class{H2OParsedData} object.
-}
+}}
 \usage{
 h2o.kmeans(data, centers, cols = "", iter.max = 10)
 }

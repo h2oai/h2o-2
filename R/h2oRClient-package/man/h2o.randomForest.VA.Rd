@@ -5,7 +5,7 @@
 H2O: Random Forest (Value Array)
 }
 \description{
-Performs Random Forest classification on a parsed data set.
+Performs Random Forest classification on an \code{\linkS4class{H2OParsedDataVA} object}.
 }
 \usage{
 h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, 

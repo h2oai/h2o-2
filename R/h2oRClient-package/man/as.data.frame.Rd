@@ -1,8 +1,10 @@
 \name{as.data.frame}
+}
 \alias{as.data.frame}
 \title{Converts a parsed H2O object to a data frame.}
-\description{Convert an \code{\linkS4class{H2OParsedData} object to a data frame, which allows subsequent data frame operations within the R environment.}
+\description{Convert an \code{\linkS4class{H2OParsedData} object to a data frame, which allows subsequent data frame operations within the R environment.}}
 \usage{as.data.frame(x, row.names = NULL, optional = FALSE, ...)}
+
 \arguments{
   \item{x}{ An \code{\linkS4class{H2OParsedData} object.}
  }

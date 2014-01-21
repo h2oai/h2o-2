@@ -6,7 +6,7 @@ H2O: Random Forest
 }
 \description{
 Performs Random Forest classification on an \code{\linkS4class{H2OParsedData} object.
-}
+}}
 \usage{
 h2o.randomForest(x, y, data, ntree = 50, depth = 50, nodesize = 1, 
 + sample.rate = 2/3, nbins = 100, seed = -1, validation)

@@ -1,13 +1,13 @@
 \name{colnames}
 \alias{colnames}
 \title{ Returns column names for a parsed H2O data object.}
-\description{Returns column names for an \code{\linkS4class{H2OParsedData} object.}
+\description{Returns column names for an \code{\linkS4class{H2OParsedData} object.}}
 \usage{
 colnames(x)
 }
 \arguments{
   \item{x}{ An\code{\linkS4class{H2OParsedData}} object. 
-}
+}}
 
 \value{Returns a vector of column names. 
 }
