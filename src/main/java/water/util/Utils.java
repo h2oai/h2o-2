@@ -767,7 +767,7 @@ public class Utils {
    * Unused domain items has mapping to -1.
    * @precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
   public static int[] mapping(int[] dom) {
-    assert dom.length > 0 : "Empty domain!";
+    if (dom.length == 0) return new int[] {};
     assert dom[0] <= dom[dom.length-1] : "Domain is not sorted";
     int min = dom[0];
     int max = dom[dom.length-1];
