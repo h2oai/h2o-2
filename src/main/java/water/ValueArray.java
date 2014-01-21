@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import jsr166y.CountedCompleter;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
 import water.fvec.*;
@@ -570,8 +571,10 @@ public class ValueArray extends Iced implements Cloneable {
       // No cached conversion.  Make one and store it in DKV.
       int cn = conversionNumber.getAndIncrement();
       Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
-      Frame frame = convert();
-      DKV.put(k2, frame);
+      Futures fs = new Futures();
+      Frame frame = convert(fs);
+      DKV.put(k2, frame, fs);
+      fs.blockForPending();
       Log.info("Conversion " + cn + " complete.");
       return frame;
     }

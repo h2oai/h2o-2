@@ -30,12 +30,9 @@ public abstract class UKV {
     if( res != null && res.isArray() )
       remove(res,fs);
   }
-  static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key, val),fs); }
-
   static public void remove( Key key ) { removeAll(new Key[]{key}); }
   static public void removeAll(Key[] keys) {
     Futures fs = new Futures();
-    remove(key,fs);             // Recursively delete, gather pending deletes
     for(Key key: keys) remove(key,fs);
     fs.blockForPending();       // Block until all is deleted
   }

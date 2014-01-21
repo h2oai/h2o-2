@@ -276,7 +276,7 @@ public class Expr2Test extends TestUtil {
   }
 
   // Handy code to debug leaking keys
-  void crunk( String s ) {
+  void debug_print( String s ) {
   //  int sz=0;
   //  int vgs=0, frs=0, vcs=0, cks=0;
   //  for( Key k : H2O.keySet() ) {
