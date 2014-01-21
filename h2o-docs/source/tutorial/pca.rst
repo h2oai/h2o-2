@@ -66,7 +66,7 @@ Building a Model
 #. Specify Tolerance so that components exhibiting low standard
    deviation (which indicates a lack of contribution to the overall
    variance observed in the data) are omitted. In this example we set
-   Tolerance to 3.
+   Tolerance to .5.
 
 
 #. Choose whether or not to standardize. Standardizing is highly
@@ -108,10 +108,6 @@ either be turned off in H\ :sub:`2`\ O, or specified in R.
    :width: 100%
 
 
-
-
-
-THE END. 
 
 
 
