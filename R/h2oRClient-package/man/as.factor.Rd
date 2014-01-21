@@ -1,4 +1,4 @@
-\name{h2o.as.factor}
+\name{as.factor}
 \alias{as.factor}
 \title{Converts a column from numeric to factor}
 \description{ 

@@ -983,4 +983,9 @@ public class Utils {
         old = is[i];
     }
   }
+
+  public static boolean contains(String[] names, String name) {
+    for (String n : names) if (n.equals(name)) return true;
+    return false;
+  }
 }

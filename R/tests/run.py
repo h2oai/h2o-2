@@ -140,7 +140,7 @@ class H2OCloudNode:
                "-ea",
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
-               "-base_port", str(self.my_base_port)]
+               "-baseport", str(self.my_base_port)]
         self.output_file_name = \
             os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
         f = open(self.output_file_name, "w")

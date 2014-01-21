@@ -11,11 +11,6 @@ australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)
 model<- print(australia.pca)
 summary<- summary(australia.pca)
 
-
-#Log.info("Print output from as.data.frame call")
-#Log.info(paste("H2O Model  :" ,model))
-#Log.info(paste("H2O summary  : " , summary))
-
 testEnd()
 }
 

@@ -3,7 +3,7 @@ source('../findNSourceUtils.R')
 
 test.RdocGBM.golden <- function(H2Oserver) {
 	
-#Example from as.data.frame R doc - just needs to run
+
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(H2Oserver, path = ausPath)
 independent<- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
@@ -16,5 +16,5 @@ h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15,
 testEnd()
 }
 
-doTest("R Doc as.data.frame", test.RdocGBM.golden)
+doTest("R Doc GBM", test.RdocGBM.golden)
 

@@ -1,6 +1,5 @@
 package hex.rf;
 
-import hex.rf.ConfusionTask.CM;
 import hex.rf.ConfusionTask.CMFinal;
 import hex.rf.DRF.DRFJob;
 import hex.rf.DRF.DRFParams;
@@ -11,7 +10,6 @@ import java.io.File;
 import java.util.*;
 
 import jsr166y.ForkJoinTask;
-
 import water.*;
 import water.Timer;
 import water.util.*;

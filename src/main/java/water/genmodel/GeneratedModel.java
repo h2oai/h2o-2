@@ -36,5 +36,4 @@ public abstract class GeneratedModel implements IGeneratedModel {
       if (from[i]>from[result]) result = i;
     return result;
   }
-
 }

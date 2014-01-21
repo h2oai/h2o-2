@@ -334,16 +334,17 @@ public class KMeans2 extends ColumnsJob {
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
       double[][] cs = centers;
+      int numInputCols = tmp.length-1; // -1 as there is no response column here
       if( normalized && _normClust == null )
         cs = _normClust = normalize(centers, chunks);
       if( _means == null ) {
-        _means = new double[chunks.length];
-        for( int i = 0; i < chunks.length; i++ )
+        _means = new double[numInputCols];
+        for( int i = 0; i < numInputCols; i++ )
           _means[i] = chunks[i]._vec.mean();
       }
       if( normalized && _mults == null ) {
-        _mults = new double[chunks.length];
-        for( int i = 0; i < chunks.length; i++ ) {
+        _mults = new double[numInputCols];
+        for( int i = 0; i < numInputCols; i++ ) {
           double sigma = chunks[i]._vec.sigma();
           _mults[i] = normalize(sigma) ? 1 / sigma : 1;
         }

@@ -1,11 +1,11 @@
 package water.api;
 
-import water.*;
-import water.api.RequestBuilders.Response;
-import water.fvec.*;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
+import water.*;
+import water.api.Inspect2.ColSummary.ColType;
+import water.fvec.*;
 
 public class Inspect2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -14,6 +14,7 @@ public class Inspect2 extends Request2 {
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET = "Inspect a fluid-vec frame";
+  static final String NA = ""; // not available information
 
   @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
   Frame src_key;
@@ -26,24 +27,26 @@ public class Inspect2 extends Request2 {
   @API(help="byte size in memory.") long byteSize;
 
   // An internal JSON-output-only class
-  @SuppressWarnings("unused")
   static class ColSummary extends Iced {
+    public static enum ColType { Enum, Int, Real };
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public ColSummary( String name, Vec vec ) {
       this.name = name;
-      this.type = vec.isEnum()?"Enum":vec.isInt()?"Int":"Real";
-      this.min  = vec.min();
-      this.max  = vec.max();
-      this.mean = vec.mean();
+      this.type = vec.isEnum() ? ColType.Enum : vec.isInt() ? ColType.Int : ColType.Real;
+      this.min  = vec.isEnum() ? Double.NaN : vec.min();
+      this.max  = vec.isEnum() ? Double.NaN : vec.max();
+      this.mean = vec.isEnum() ? Double.NaN : vec.mean();
       this.naCnt= vec.naCnt();
+      this.cardinality = vec.cardinality();
     }
-    @API(help="Label."           ) final String name;
-    @API(help="type."            ) final String type;
-    @API(help="min."             ) final double min;
-    @API(help="max."             ) final double max;
-    @API(help="mean."            ) final double mean;
-    @API(help="Missing elements.") final long   naCnt;
+    @API(help="Label."           ) final String  name;
+    @API(help="type."            ) final ColType type;
+    @API(help="min."             ) final double  min;
+    @API(help="max."             ) final double  max;
+    @API(help="mean."            ) final double  mean;
+    @API(help="Missing elements.") final long    naCnt;
+    @API(help="Cardinality.")      final long    cardinality;
   }
 
   @API(help="Array of Column Summaries.")
@@ -78,8 +81,13 @@ public class Inspect2 extends Request2 {
 
     // Missing/NA count
     long naCnt = 0;
-    for( int i=0; i<cols.length; i++ )
+    // Enum column is in dataset
+    boolean enumCol = false;
+    for( int i=0; i<cols.length; i++ ) {
       naCnt += cols[i].naCnt;
+      enumCol |= cols[i].type == ColType.Enum;
+    }
+
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+String.format("%,d",numCols)+" columns, "+String.format("%,d",numRows)+" rows, "+
@@ -87,7 +95,7 @@ public class Inspect2 extends Request2 {
                         (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
     sb.append("<div class='alert'>" +
-              "<br/> Expand factors using " + OneHot.link(skey, "One Hot Expansion") +
+              //"<br/> Expand factors using " + OneHot.link(skey, "One Hot Expansion") +
               //"View " + SummaryPage2.link(key, "Summary") +
               "<br/>Build models using " +
               DRF.link(skey, "Distributed Random Forest") +", "+
@@ -132,27 +140,36 @@ public class Inspect2 extends Request2 {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(src_key.vecs()[i],-1,cols[i].min)).append("</td>");
+      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : x1(src_key.vecs()[i],-1,cols[i].min)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Max").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(src_key.vecs()[i],-1,cols[i].max)).append("</td>");
+      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA :x1(src_key.vecs()[i],-1,cols[i].max)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Mean").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(String.format("%5.3f",cols[i].mean)).append("</td>");
+      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : String.format("%5.3f",cols[i].mean)).append("</td>");
     sb.append("</tr>");
+
+    // Cardinality row is shown only if dataset contains enum-column
+    if (enumCol) {
+      sb.append("<tr class='warning'>");
+      sb.append("<td>").append("Cardinality").append("</td>");
+      for( int i=0; i<cols.length; i++ )
+        sb.append("<td>").append(cols[i].type==ColType.Enum ? String.format("%d",cols[i].cardinality) : NA).append("</td>");
+      sb.append("</tr>");
+    }
 
     // Missing / NA row is optional; skip it if the entire dataset is clean
     if( naCnt > 0 ) {
       sb.append("<tr class='warning'>");
       sb.append("<td>").append("Missing").append("</td>");
       for( int i=0; i<cols.length; i++ )
-        sb.append("<td>").append(cols[i].naCnt > 0 ? Long.toString(cols[i].naCnt) : "").append("</td>");
+        sb.append("<td>").append(cols[i].naCnt > 0 ? Long.toString(cols[i].naCnt) : NA).append("</td>");
       sb.append("</tr>");
     }
 

@@ -7,6 +7,7 @@ import hex.rf.ConfusionTask.CMJob;
 import java.util.Arrays;
 
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 import com.google.gson.*;
@@ -26,7 +27,7 @@ public class RFView extends /* Progress */ Request {
   protected final H2OCategoryWeights _weights  = new H2OCategoryWeights(WEIGHTS, _modelKey, _dataKey, _classCol, 1);
   protected final Bool               _oobee    = new Bool(OOBEE,false,"Out of bag errors");
   protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
-  protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
+  protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, true, "Clear cache of model confusion matrices");
   protected final Bool               _iterativeCM        = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
   protected final Int                _refreshThresholdCM = new Int(JSON_REFRESH_THRESHOLD_CM, DEFAULT_CM_REFRESH_THRESHOLD);
   // Dummy parameters
@@ -131,6 +132,13 @@ public class RFView extends /* Progress */ Request {
 
     tasks    = model._totalTrees;
     finished = model.size();
+
+    // Handle cancelled/aborted jobs
+    if (_job.value()!=null) {
+      Job jjob = Job.findJob(_job.value());
+      if (jjob!=null && jjob.cancelled())
+        return Response.error(jjob.exception == null ? "Job was cancelled by user!" : jjob.exception);
+    }
 
     JsonObject response = defaultJsonResponse();
     // CM return and possible computation is requested

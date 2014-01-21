@@ -12,10 +12,6 @@ sum<- summary(prostate.data.frame)
 head<- head(prostate.data.frame)
 
 
-Log.info("Print output from as.data.frame call")
-Log.info(paste("H2O Summary  :" ,sum))
-Log.info(paste("H2O Head  : " , head))
-
 testEnd()
 }
 
