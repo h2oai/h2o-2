@@ -254,7 +254,7 @@ public abstract class Layer extends Iced {
       r2 += _w[w] * _w[w];
     }
     if( r2 > max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
+      final double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
       for( int i = 0; i < _previous._a.length; i++ ) {
         int w = u * _previous._a.length + i;
         _w[w] *= scale;

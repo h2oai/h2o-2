@@ -68,7 +68,8 @@ h2o.rm <- function(object, keys) {
 }
 
 h2o.assign <- function(data, key) {
-  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  # if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!inherits(data, "H2OParsedData")) stop("data must be an H2O parsed dataset")
   if(!is.character(key)) stop("key must be of class character")
   if(length(key) == 0) stop("key cannot be an empty string")
   if(key == data@key) stop(paste("Destination key must differ from data key", data@key))
@@ -356,6 +357,31 @@ h2o.exportHDFS <- function(object, path) {
   if(nchar(path) == 0) stop("path must be a non-empty string")
   
   res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
+}
+
+h2o.downloadCSV <- function(data, filename) {
+  if( missing(data)) stop('Must specify data')
+  if(! class(data) %in% c('H2OParsedDataVA', 'H2OParsedData'))
+    stop('data is not an H2O data object')
+  if( missing(filename) ) stop('Must specify filename')
+  
+  str <- paste('http://', data@h2o@ip, ':', data@h2o@port, '/2/DownloadDataset?src_key=', data@key, sep='')
+  has_wget <- '' != Sys.which('wget')
+  has_curl <- '' != Sys.which('curl')
+  if( !(has_wget || has_curl)) stop("I can't find wget or curl on your system")
+  if( has_wget ){
+    cmd <- 'wget'
+    args <- paste('-O', filename, str)
+  } else {
+    cmd <- 'curl'
+    args <- paste('-o', filename, str)
+  }
+  
+  print(paste('cmd:', cmd))
+  print(paste('args:', args))
+  val <- system2(cmd, args, wait=T)
+  if( val != 0 )
+    print(paste('Bad return val', val))
 }
 
 setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })

@@ -355,8 +355,9 @@ h2o.__uniqID <- function(prefix = "") {
 # }
 
 h2o.__checkForFactors <- function(object) {
-    if(class(object) != "H2OParsedData") return(FALSE)
-    any.factor(object)
+  # if(class(object) != "H2OParsedData") return(FALSE)
+  if(!class(object) %in% c("H2OParsedData", "H2OParsedDataVA")) return(FALSE)
+  any.factor(object)
 }
 
 h2o.__version <- function(client) {
@@ -419,18 +420,22 @@ h2o.__unop2 <- function(op, x) {
 h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
-
-  if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+  # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+  LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
+  
+  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) & !( op %in% c('==', '!='))) {
     anyFactorsX <- h2o.__checkForFactors(x)
     anyFactorsY <- h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
 
-  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  # RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  RHS = ifelse(inherits(y, "H2OParsedData"), y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData") myClient = x@h2o
+  # if(class(x) == "H2OParsedData") myClient = x@h2o
+  if(inherits(x, "H2OParsedData")) myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 
