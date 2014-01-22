@@ -2,7 +2,7 @@ import h2o_cmd, h2o, h2o_util
 import re, random, math
 
 ## Check that the last scored validation error is within a certain relative error of the expected result
-def simpleCheckValidationError(self, modelView, rows, expectedErr, relTol, **kwargs):
+def checkLastValidationError(self, modelView, rows, expectedErr, relTol, **kwargs):
 
     errsLast = modelView['validation_errors'][-1] # last scoring result
     h2o.verboseprint("NN 'Last scoring on test set:'", h2o.dump_json(errsLast))
@@ -15,6 +15,21 @@ def simpleCheckValidationError(self, modelView, rows, expectedErr, relTol, **kwa
     print "Actual   test set error: " + format(errsLast['classification'])
     if errsLast['classification'] != expectedErr and abs((expectedErr - errsLast['classification'])/expectedErr) > relTol:
         raise Exception("Test set classification error of %s is not within %s %% relative error of %s" % (errsLast['classification'], float(relTol)*100, expectedErr))
+
+    warnings = None
+
+    # shouldn't have any errors
+    h2o.check_sandbox_for_errors()
+
+    return (warnings)
+
+
+## Check that the scored validation error is within a certain relative error of the expected result
+def checkScoreResult(self, result, expectedErr, relTol, **kwargs):
+    print "Expected score error: " + format(expectedErr)
+    print "Actual   score error: " + format(result['classification_error'])
+    if result['classification_error'] != expectedErr and abs((expectedErr - result['classification_error'])/expectedErr) > relTol:
+        raise Exception("Scored classification error of %s is not within %s %% relative error of %s" % (result['classification_error'], float(relTol)*100, expectedErr))
 
     warnings = None
 

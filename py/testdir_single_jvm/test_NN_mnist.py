@@ -1,6 +1,6 @@
 import unittest, time, sys, random, string
 sys.path.extend(['.','..','py'])
-import h2o, h2o_gbm, h2o_nn, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_browse as h2b
+import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_browse as h2b
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=10, base_port=54323)
+            h2o.build_cloud(1, java_heap_GB=2, base_port=54323)
         else:
             h2o_hosts.build_cloud_with_hosts(base_port=54323)
 
@@ -32,6 +32,7 @@ class Basic(unittest.TestCase):
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
+        response = inspect['numCols'] - 1
 
         modes = [
             'SingleThread', 
@@ -47,7 +48,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {
                 'ignored_cols'                 : None,
-                'response'                     : '784',
+                'response'                     : response,
                 'mode'                         : mode,
                 'activation'                   : 'RectifierWithDropout',
                 'input_dropout_ratio'          : 0.2,
@@ -71,16 +72,30 @@ class Basic(unittest.TestCase):
             }
             expectedErr = 0.0655 ## expected validation error for the above model
 
-            timeoutSecs = 60
+            timeoutSecs = 300
             start = time.time()
             nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
             h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
             h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=10, retryDelaySecs=5)
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
-            modelView = h2o_cmd.runNeuralView(model_key=model_key)
 
+            #### Look at model progress, and check the last reported validation error
+            modelView = h2o_cmd.runNeuralView(model_key=model_key)
             relTol = 0.02 if mode == 'SingleThread' else 0.05 ### 5% relative error is acceptable for Hogwild
-            h2o_nn.simpleCheckValidationError(self, modelView, inspect['numRows'], expectedErr, relTol, **kwargs)
+            h2o_nn.checkLastValidationError(self, modelView, inspect['numRows'], expectedErr, relTol, **kwargs)
+
+            #### Now score using the model, and check the last reported validation error
+            kwargs = {
+                'source' : validation_key,
+                'max_rows': 0,
+                'response': response,
+                'ignored_cols': None, # this is not consistent with ignored_cols_by_name
+                'classification': 1,
+                'destination_key': 'score_' + identifier + '.hex',
+                'model': model_key,
+            }
+            nnScoreResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, **kwargs)
+            h2o_nn.checkScoreResult(self, nnScoreResult, expectedErr, relTol, **kwargs)
 
             h2o.beta_features = False
 
