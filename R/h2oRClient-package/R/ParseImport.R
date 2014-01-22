@@ -359,6 +359,31 @@ h2o.exportHDFS <- function(object, path) {
   res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
 }
 
+h2o.downloadCSV <- function(data, filename) {
+  if( missing(data)) stop('Must specify data')
+  if(! class(data) %in% c('H2OParsedDataVA', 'H2OParsedData'))
+    stop('data is not an H2O data object')
+  if( missing(filename) ) stop('Must specify filename')
+  
+  str <- paste('http://', data@h2o@ip, ':', data@h2o@port, '/2/DownloadDataset?src_key=', data@key, sep='')
+  has_wget <- '' != Sys.which('wget')
+  has_curl <- '' != Sys.which('curl')
+  if( !(has_wget || has_curl)) stop("I can't find wget or curl on your system")
+  if( has_wget ){
+    cmd <- 'wget'
+    args <- paste('-O', filename, str)
+  } else {
+    cmd <- 'curl'
+    args <- paste('-o', filename, str)
+  }
+  
+  print(paste('cmd:', cmd))
+  print(paste('args:', args))
+  val <- system2(cmd, args, wait=T)
+  if( val != 0 )
+    print(paste('Bad return val', val))
+}
+
 setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })
 setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function(x, value) {
   res = h2o.__exec2_dest_key(x@h2o, value@key, x@key); return(x)
