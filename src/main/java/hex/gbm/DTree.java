@@ -777,13 +777,16 @@ public class DTree extends Iced {
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
           }
 
+          // To be consistent with generated code:
+          //   - Double.NaN <  3.7f => return false => right branch is selected (i.e., ab.position()+skip)
+          //   - Double.NaN != 3.7f => return true  => left branch is selected (i.e., ab.position())
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal && ((float)row[colId]) == splitVal) ||
                 (!equal && ((float)row[colId]) >= splitVal) ) {
               ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
-          } else { ab.position(ab.position()+skip); lmask = rmask; }
+          } else if (!equal) { ab.position(ab.position()+skip); lmask = rmask; }
           if( (lmask&8)==8 ) return scoreLeaf(ab);
         }
       }
@@ -923,6 +926,7 @@ public class DTree extends Iced {
       int treesInForest = 0;
       SB forest = new SB();
       // divide trees into small forests per 100 trees
+      /* DEBUG line */ bodySb.i().p("// System.err.println(\"Row (gencode.predict): \" + java.util.Arrays.toString(data));");
       bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
       for( int c=0; c<nclasses(); c++ ) {
         toJavaForestBegin(bodySb, forest, c, fidx++);
