@@ -378,9 +378,10 @@ public abstract class Model extends Iced {
     sb.i(1).p("public static final String[][] DOMAINS = new String[][] {").nl();
     for (int i=0; i<_domains.length; i++) {
       String[] dom = _domains[i];
-      if (dom==null) sb.i(2).p("null");
+      sb.i(2).p("/* ").p(_names[i]).p(" */ ");
+      if (dom==null) sb.p("null");
       else {
-        sb.i(2).p("new String[] {");
+        sb.p("new String[] {");
         for (int j=0; j<dom.length; j++) {
           if (j>0) sb.p(',');
           sb.p('"').p(dom[j]).p('"');
