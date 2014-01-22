@@ -1,10 +1,6 @@
 package water.exec;
 
-import org.omg.DynamicAny._DynAnyFactoryStub;
 import water.Iced;
-import water.util.Utils.IcedHashMap;
-
-import java.util.HashMap;
 
 /**
  * R-like environment used to support row based computation.
@@ -45,21 +41,9 @@ public class Env2 extends Iced {
     env._ary[0] = _ary[i];
     env._fcn[0] = _fcn[i];
   }
-  public void setDbl(int i, double d) {
-    _d  [i] = d;
-    _ary[i] = null;
-    _fcn[i] = null;
-  }
-  public void setAry(int i, double[] ary) {
-    _d  [i] = 0;
-    _ary[i] = ary;
-    _fcn[i] = null;
-  }
-  public void setFcn(int i, ASTOp fcn) {
-    _d  [i] = 0;
-    _ary[i] = null;
-    _fcn[i] = fcn;
-  }
+  public void     setDbl(int i, double   d  ) { _d  [i] = d; _ary[i] = null; _fcn[i] = null; }
+  public void     setAry(int i, double[] ary) { _d  [i] = 0; _ary[i] = ary;  _fcn[i] = null; }
+  public void     setFcn(int i, ASTOp    fcn) { _d  [i] = 0; _ary[i] = null; _fcn[i] = fcn;  }
   public double[] retAry() { return _ary[0]; }
   public ASTOp    retFcn() { return _fcn[0]; }
   public double   retDbl() { if (_ary[0]!=null || _fcn[0]!=null ) return Double.NaN; else return _d[0]; }
@@ -69,6 +53,5 @@ public class Env2 extends Iced {
   public void     asnAry( String id, double ary[] ) { setAry(findSym(id), ary); }
   public void     asnFcn( String id, ASTOp  fcn   ) { setFcn(findSym(id), fcn); }
   public void     asnDbl( String id, double d     ) { setDbl(findSym(id), d  ); }
-
   public void     fetch ( String id ) { fetch(id, this); }
 }

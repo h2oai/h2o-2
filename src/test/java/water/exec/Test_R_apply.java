@@ -32,12 +32,14 @@ public class Test_R_apply extends TestUtil {
       checkResult("apply(h.hex,1,c)",    c   .apply(in));
       checkResult("apply(h.hex,1,mean)", mean.apply(in));
       checkResult("apply(h.hex,1,is.na)",isna.apply(in));
-      //apply custom function
+      // apply custom function
       checkResult("apply(h.hex,1,function(x){c(x)})", c.apply(in));
       checkResult("apply(h.hex,1,function(x){cap=0; fn=function(x){ifelse(x<cap,x,cap)}; cap=2; fn(x)})", new Cap(2).apply(in));
       checkResult("apply(h.hex,1,function(x){x+1})", new Add(1).apply(in));
       checkResult("apply(h.hex,1,function(x){is.na(x)?0:x})", fillna.apply(in));
       checkResult("apply(h.hex,1,function(x){fn=function(){sum(x*x)}; fn()})", sqsum.apply(in));
+
+      //checkStr("apply(h.hex,1,function(funy){function(x){funy(x)*funy(x)}}(sgn))");
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key

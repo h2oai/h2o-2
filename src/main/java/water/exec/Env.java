@@ -117,8 +117,19 @@ public class Env extends Iced {
     _key[idx] = d==0 && fr!=null ? id : null;
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
+  // Copy from TOS into a slot, using absolute index.
+  void tos_into_slot( int idx, String id ) {
+    subRef(_ary[idx], _key[idx]);
+    subRef(_fcn[idx]);
+    Frame fr =                   _ary[_sp-1];
+    _ary[idx] = fr==null ? null : addRef(new Frame(fr));
+    _d  [idx] =                  _d  [_sp-1] ;
+    _fcn[idx] =           addRef(_fcn[_sp-1]);
+    _key[idx] = fr!=null ? id : null;
+    assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
+  }
   // Copy from TOS into stack.  Pop's all intermediate.
-  // Example: pop_into_stk(-4)  BEFORE: A,B,C,D,TOS  AFTER: A,TOS
+  // Example: pop_into_stk(-4)  BEFORE: A,B,C,D,TOS  AFTER: D,TOS
   void pop_into_stk( int x ) {
     assert x < 0;
     subRef(_ary[_sp+x], _key[_sp+x]);  // Nuke out old stuff

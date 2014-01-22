@@ -15,6 +15,7 @@ public class ASTFunc extends ASTOp {
   final String _locals[];       // including arguments and local variables.
   final int _tmps;
   Env _env;                     // Captured environment at each apply point
+  Env2 _encl;                   // Enclosure used in rwo-wise evaluation
   ASTFunc( String vars[], String locals[], Type vtypes[], AST body, int tmps ) {
     super(vars,vtypes,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _locals=locals; _tmps=tmps;
   }
@@ -73,16 +74,21 @@ public class ASTFunc extends ASTOp {
     fun._env = env.capture();
     env.push(fun);
   }
-  @Override void apply(Env env, int argcnt) { 
+  @Override void apply(Env env, int argcnt) {
     int res_idx = env.pushScope(argcnt-1);
     env.push(_tmps);
     _body.exec(env);
-    env.tos_into_slot(1,res_idx-1,null);
+    env.tos_into_slot(res_idx-1,null);
     env.popScope();
   }
 
-  @Override double[] map(Env2 encl, double[] out, double[]... ins) {
-    Env2 env = new Env2(encl, this);
+  @Override void evalR(Env2 env) {
+    _encl = env;
+    env.setFcn(0,this);
+  }
+
+  @Override double[] map(Env2 e, double[] out, double[]... ins) {
+    Env2 env = new Env2(_encl, this);
     assert _vars.length == ins.length+1;
     for (int i = 0; i < ins.length; i++) env.setAry(i+1, ins[i]);
     _body.evalR(env);
