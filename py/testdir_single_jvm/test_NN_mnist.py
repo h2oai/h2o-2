@@ -19,16 +19,17 @@ class Basic(unittest.TestCase):
         ###h2o.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_NN_mnist_1(self):
+    def test_NN_mnist(self):
         #h2b.browseTheCloud()
         h2o.beta_features = True
         csvPathname_train = 'mnist/train.csv.gz'
         csvPathname_test  = 'mnist/test.csv.gz'
         hex_key = 'mnist_train.hex'
         validation_key = 'mnist_test.hex'
-        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=10)
-        parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=30)
-        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
+        timeoutSecs = 30
+        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
+        parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
+        inspect = h2o_cmd.runInspect(None, hex_key)
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
@@ -37,7 +38,7 @@ class Basic(unittest.TestCase):
         modes = [
             'SingleThread', 
             'SingleNode',
-            #'MapReduce'
+            ###'MapReduce' ### TODO: enable, once implemented
             ]
 
         for mode in modes:
@@ -49,6 +50,7 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'ignored_cols'                 : None,
                 'response'                     : response,
+                'classification'               : 1,
                 'mode'                         : mode,
                 'activation'                   : 'RectifierWithDropout',
                 'input_dropout_ratio'          : 0.2,
@@ -72,7 +74,7 @@ class Basic(unittest.TestCase):
             }
             expectedErr = 0.0655 ## expected validation error for the above model
 
-            timeoutSecs = 300
+            timeoutSecs = 600
             start = time.time()
             nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
             h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
