@@ -196,7 +196,7 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p, standardize) {
   result$null.deviance = as.numeric(res$validations[[1]]$nullDev)
   result$iter = res$iterations
   result$df.residual = res$dof
-  result$df.null = res$dof + result$rank
+  result$df.null = res$nLines - 1
   result$train.err = as.numeric(res$validations[[1]]$err)
   result$y = y
   result$x = res$column_names
