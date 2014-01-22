@@ -222,7 +222,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     if(is.logical(j)) j = which(j)
 
     # if(class(j) == "H2OLogicalData")
-    if(class(j) == "H2OParsedData" && j@logic)
+    # if(class(j) == "H2OParsedData" && j@logic)
+    if(inherits(j, "H2OParsedData") && j@logic)
       expr = paste(x@key, "[", j@key, ",]", sep="")
     else if(is.numeric(j) || is.integer(j))
       expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
@@ -231,7 +232,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
     # if(class(i) == "H2OLogicalData")
-    if(class(i) == "H2OParsedData" && i@logic)
+    # if(class(i) == "H2OParsedData" && i@logic)
+    if(inherits(i, "H2OParsedData") && i@logic)
       expr = paste(x@key, "[", i@key, ",]", sep="")
     else if(is.numeric(i) || is.integer(i))
       expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
@@ -240,7 +242,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
     # if(class(i) == "H2OLogicalData") rind = i@key
-    if(class(i) == "H2OParsedData" && i@logic) rind = i@key
+    # if(class(i) == "H2OParsedData" && i@logic) rind = i@key
+    if(inherits(i, "H2OParsedData") && i@logic) rind = i@key
     else if(is.numeric(i) || is.integer(i))
       rind = paste("c(", paste(i, collapse=","), ")", sep="")
     else stop(paste("Row index of type", class(i), "unsupported!"))
@@ -254,7 +257,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     # if(is.logical(j)) j = -which(!j)
     if(is.logical(j)) j = which(j)
     # if(class(j) == "H2OLogicalData") cind = j@key
-    if(class(j) == "H2OParsedData" && j@logic) cind = j@key
+    # if(class(j) == "H2OParsedData" && j@logic) cind = j@key
+    if(inherits(j, "H2OParsedData") && j@logic) cind = j@key
     else if(is.numeric(j) || is.integer(j))
       cind = paste("c(", paste(j, collapse=","), ")", sep="")
     else stop(paste("Column index of type", class(j), "unsupported!"))
@@ -322,7 +326,8 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
     lhs = paste(x@key, "[", rind, ",", cind, "]", sep = "")
   }
 
-  rhs = ifelse(class(value) == "H2OParsedData", value@key, value)
+  # rhs = ifelse(class(value) == "H2OParsedData", value@key, value)
+  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, value)
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   return(x)
 })
@@ -336,7 +341,8 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
     # TODO: Set column name of ncol(x) + 1 to name
   } else
     lhs = paste(x@key, "[,", idx, "]", sep="")
-  rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   return(x)
 })
@@ -432,9 +438,11 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
 # TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
 table.internal <- table
 table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", "ifany", "always"), dnn = list.names(...), deparse.level = 1) {
-  idx = sapply(c(...), function(x) { class(x) == "H2OParsedData" })
+  # idx = sapply(c(...), function(x) { class(x) == "H2OParsedData" })
+  idx = sapply(c(...), function(x) { class(x) %in% c("H2OParsedData", "H2OParsedDataVA") })
   if(any(idx) && !all(idx))
-    stop("Can't mix H2OParsedData objects with R objects in table")
+    # stop("Can't mix H2OParsedData objects with R objects in table")
+    stop("Can't mix H2O parsed data objects with R objects in table")
   else if(any(idx)) {
     myData = c(...)
     if(length(myData) > 1 || ncol(myData[[1]]) > 2) stop("Unimplemented")
@@ -554,8 +562,9 @@ setMethod("ncol", "H2OParsedData", function(x) {
 
 min.internal <- min
 min <- function(..., na.rm = FALSE) {
-  idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
-
+  # idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  idx = sapply(c(...), function(y) { class(y) %in% c("H2OParsedData", "H2OParsedDataVA") })
+  
   if(any(idx)) {
     hex.op = ifelse(na.rm, "min.na.rm", "min")
     myVals = c(...); myData = myVals[idx]
@@ -569,8 +578,9 @@ min <- function(..., na.rm = FALSE) {
 
 max.internal <- max
 max <- function(..., na.rm = FALSE) {
-  idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
-
+  # idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  idx = sapply(c(...), function(y) { class(y) %in% c("H2OParsedData", "H2OParsedDataVA") })
+  
   if(any(idx)) {
     hex.op = ifelse(na.rm, "max.na.rm", "max")
     myVals = c(...); myData = myVals[idx]
@@ -584,7 +594,8 @@ max <- function(..., na.rm = FALSE) {
 
 sum.internal <- sum
 sum <- function(..., na.rm = FALSE) {
-  idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  # idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  idx = sapply(c(...), function(y) { class(y) %in% c("H2OParsedData", "H2OParsedDataVA") })
   
   if(any(idx)) {
     hex.op = ifelse(na.rm, "sum.na.rm", "sum")
@@ -701,8 +712,8 @@ setMethod("as.factor", "H2OParsedData", function(x) { h2o.__unop2("factor", x) }
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(h2o.__unop2("is.factor", x)) })
 
 any.factor <- function(x) {
-  if(class(x) != "H2OParsedData")
-    stop("x must be an H2OParsedData object")
+  # if(class(x) != "H2OParsedData") stop("x must be an H2OParsedData object")
+  if(!inherits(x, "H2OParsedData")) stop("x must be an H2O parsed data object")
   as.logical(h2o.__unop2("any.factor", x))
 }
 
@@ -787,11 +798,14 @@ setMethod("summary", "H2OParsedData", function(object) {
 })
 
 setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
-  if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
+  # if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
+  if(!(is.numeric(yes) || inherits(yes, "H2OParsedData")) || !(is.numeric(no) || inherits(no, "H2OParsedData")))
     stop("Unimplemented")
   if(!test@logic) stop(test@key, " is not a H2O logical data type")
-  yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
-  no = ifelse(class(no) == "H2OParsedData", no@key, no)
+  # yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
+  # no = ifelse(class(no) == "H2OParsedData", no@key, no)
+  yes = ifelse(inherits(yes, "H2OParsedData"), yes@key, yes)
+  no = ifelse(inherits(no, "H2OParsedData"), no@key, no)
   expr = paste("ifelse(", test@key, ",", yes, ",", no, ")", sep="")
   res = h2o.__exec2(test@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
