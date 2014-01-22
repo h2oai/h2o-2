@@ -726,19 +726,25 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         }
         break;
       case ICOL: // number
-        if (_max[i] - _min[i] < 255) {
-          _colTypes[i] = BYTE;
-          _bases[i] = (int)_min[i];
-        } else if ((_max[i] - _min[i]) < 65535) {
-          _colTypes[i] = SHORT;
-          _bases[i] = (int)_min[i];
-        } else if (_max[i] - _min[i] < (1L << 32) &&
-                   _min[i] > Integer.MIN_VALUE && _max[i] < Integer.MAX_VALUE) {
-          _colTypes[i] = INT;
-          _bases[i] = (int)_min[i];
+        if(_min[i] >= Long.MIN_VALUE && _max[i] <= Long.MAX_VALUE){
+          if(_min[i] < Integer.MIN_VALUE || _max[i] > Integer.MAX_VALUE){
+            _colTypes[i] = LONG;
+          } else if (_max[i] - _min[i] < 255) {
+            _colTypes[i] = BYTE;
+            _bases[i] = (int)_min[i];
+          } else if ((_max[i] - _min[i]) < 65535) {
+            _colTypes[i] = SHORT;
+            _bases[i] = (int)_min[i];
+          } else if (_max[i] - _min[i] < (1L << 32) &&
+                     _min[i] > Integer.MIN_VALUE && _max[i] < Integer.MAX_VALUE) {
+            _colTypes[i] = INT;
+            _bases[i] = (int)_min[i];
+          } else
+            _colTypes[i] = LONG;
+          break;
         } else
-          _colTypes[i] = LONG;
-        break;
+          _colTypes[i] = DCOL;
+        //fallthrough
       case FCOL:
       case DCOL:
         if(_scale[i] >= -4 && (_max[i] <= powers10i[powers10i.length-1]) && (_min[i] >= -powers10i[powers10i.length-1])){
@@ -938,7 +944,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         if(d < _min[colIdx])_min[colIdx] = d;
         if(d > _max[colIdx])_max[colIdx] = d;
         _mean[colIdx] += d;
-        if(exp != 0) {
+        if(exp < 0) {
           if(exp < _scale[colIdx])_scale[colIdx] = exp;
           if(_colTypes[colIdx] != DCOL){
             if(Math.abs(number) > MAX_FLOAT_MANTISSA || exp < -35 || exp > 35)

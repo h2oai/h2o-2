@@ -3,7 +3,7 @@ source('../../findNSourceUtils.R')
 
 test.slice.colTail <- function(conn) {
   Log.info("Importing iris.csv data...\n")
-  iris.hex <- h2o.uploadFile.FV(conn, locate("../../../smalldata/iris/iris_wheader.csv"),key="iris.hex")
+  iris.hex <- h2o.uploadFile(conn, locate("../../../smalldata/iris/iris_wheader.csv"),key="iris.hex")
   
   iris_nrows <- nrow(iris.hex)
   iris_ncols <- ncol(iris.hex)

@@ -38,6 +38,9 @@ public final class ParseDataset2 extends Job {
   }
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
+    for( Key k : keys )
+      if( dest.equals(k) ) 
+        throw new IllegalArgumentException("Destination key "+dest+" must be different from all sources");
     ParseDataset2 job = new ParseDataset2(dest, keys);
     ParserFJTask fjt = new ParserFJTask(job, keys, setup, delete_on_done);
     job.start(fjt);

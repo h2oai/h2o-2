@@ -33,7 +33,7 @@ public final class ParseDataset extends Job {
     destination_key = dest;
     Value dataset = DKV.get(keys[0]);
     long total = dataset.length() * Pass.values().length;
-    for(int i = 1; i < keys.length; ++i){
+    for(int i = 1; i < keys.length; ++i) {
       dataset = DKV.get(keys[i]);
       total += dataset.length() * Pass.values().length;
     }
@@ -369,6 +369,9 @@ public final class ParseDataset extends Job {
     }
   }
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
+    for( Key k : keys )
+      if( dest.equals(k) ) 
+        throw new IllegalArgumentException("Destination key "+dest+" must be different from all sources");
     ParseDataset job = new ParseDataset(dest, keys);
     ParserFJTask fjt = new ParserFJTask(job, keys, setup);
     job.start(fjt);

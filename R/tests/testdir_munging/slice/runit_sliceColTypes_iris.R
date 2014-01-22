@@ -3,7 +3,7 @@ source('../../findNSourceUtils.R')
 
 test.slice.colTypes <- function(conn) {
   Log.info("Importing iris.csv data...")
-  iris.hex = h2o.uploadFile.FV(conn, locate("../../../smalldata/iris/iris_wheader.csv"), "iris.hex")
+  iris.hex = h2o.uploadFile(conn, locate("../../../smalldata/iris/iris_wheader.csv"), "iris.hex")
   Log.info("Check that summary works...")
   print(summary(iris.hex))
   summary_ <- summary(iris.hex) #keep the summary around

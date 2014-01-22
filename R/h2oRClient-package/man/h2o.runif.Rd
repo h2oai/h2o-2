@@ -1,7 +1,7 @@
 \name{h2o.runif}
 \alias{h2o.runif}
 \title{Produces a vector of specified length contain random uniform numbers}
-\description{Produces a vector of specified length contain random uniform numbers.}
+\description{Produces a vector of random uniform numbers.}
 \usage{h2o.runif(x, min, max)}
 \arguments{
   \item{x}{A number equal to the number of elements the vector of random numbers should have.}

@@ -2,8 +2,8 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../../findNSourceUtils.R')
 
 glm2Benign <- function(conn) { 
-  # bhexFV <- h2o.importFile.FV(conn, "./smalldata/logreg/benign.csv", key="benignFV.hex")
-  bhexFV <- h2o.uploadFile.FV(conn, locate("../../../smalldata/logreg/benign.csv"), key="benignFV.hex")
+  # bhexFV <- h2o.importFile(conn, "./smalldata/logreg/benign.csv", key="benignFV.hex")
+  bhexFV <- h2o.uploadFile(conn, locate("../../../smalldata/logreg/benign.csv"), key="benignFV.hex")
   maxX <- 11
   Y <- 4
   X   <- 3:maxX

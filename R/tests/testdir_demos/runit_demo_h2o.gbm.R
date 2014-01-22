@@ -10,7 +10,7 @@ source('../findNSourceUtils.R')
 test.h2o.gbm <- function(conn) {
   prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
   Log.info(paste("Uploading", prosPath))
-  prostate.hex = h2o.uploadFile.FV(conn, path = prosPath, key = "prostate.hex")
+  prostate.hex = h2o.uploadFile(conn, path = prosPath, key = "prostate.hex")
   
   Log.info("Print out summary of prostate.csv")
   print(summary(prostate.hex))
