@@ -19,7 +19,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
   
-  if( !(distribution %in% c('multinomial', 'gaussian')) )
+  if(!(distribution %in% c('multinomial', 'gaussian')))
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
   classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
 
@@ -679,7 +679,6 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(depth < 0) stop("depth must be >= 0")
   if(!is.numeric(sample.rate)) stop("sample.rate must be numeric")
   if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
-  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if(nbins < 1) stop('nbins must be an integer >= 1')
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
@@ -688,10 +687,24 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(!missing(ntree) && length(ntree) > 1 || !missing(depth) && length(depth) > 1 || !missing(sample.rate) && length(sample.rate) > 1 || !missing(nbins) && length(nbins) > 1)
     stop("Random forest grid search not supported under ValueArray")
   
+  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  if(!is.null(classwt)) {
+    y_col = data[,args$y_i]
+    if(!is.factor(y_col)) stop("Cannot specify classwt: response column is not a factor!")
+    
+    nc <- names(classwt)
+    if(is.null(nc) || any(nchar(nc) == 0)) stop("classwt must specify level names")
+    
+    lv <- levels(y_col)
+    if(any(!(nc %in% lv)))
+      stop(paste(paste(nc[!(nc %in% lv)], collapse=","), 'is not a valid level name'))
+    classwt <- paste(nc, classwt, sep="=", collapse=",")
+  }
+
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt, seed=seed, use_non_local_data=as.numeric(use_non_local))
   h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
   # while(!h2o.__isDone(data@h2o, "RF1", res)) { Sys.sleep(1) }
-  
+
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, response_variable=args$y, out_of_bag_error_estimate=1)
   modelOrig = h2o.__getRFResults(res2)
   new("H2ORFModelVA", key=res$destination_key, data=data, model=modelOrig)
