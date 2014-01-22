@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
             relTol = 0.02 if mode == 'SingleThread' else 0.05 ### 5% relative error is acceptable for Hogwild
             h2o_nn.checkLastValidationError(self, modelView, inspect['numRows'], expectedErr, relTol, **kwargs)
 
-            #### Now score using the model, and check the last reported validation error
+            #### Now score using the model, and check the validation error
             kwargs = {
                 'source' : validation_key,
                 'max_rows': 0,

@@ -77,8 +77,8 @@ class Basic(unittest.TestCase):
             timeoutSecs = 600
             start = time.time()
             nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-            h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
             h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=10, retryDelaySecs=5)
+            h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
             #### Look at model progress, and check the last reported validation error
