@@ -81,7 +81,7 @@ public class NeuralNet extends ValidatedJob {
   public Loss loss = Loss.CrossEntropy;
 
   @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
-  public float max_w2 = Float.MAX_VALUE;
+  public double max_w2 = Double.MAX_VALUE;
 
   @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
   public long warmup_samples = 1000l;
