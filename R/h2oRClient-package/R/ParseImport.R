@@ -68,7 +68,8 @@ h2o.rm <- function(object, keys) {
 }
 
 h2o.assign <- function(data, key) {
-  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  # if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!inherits(data, "H2OParsedData")) stop("data must be an H2O parsed dataset")
   if(!is.character(key)) stop("key must be of class character")
   if(length(key) == 0) stop("key cannot be an empty string")
   if(key == data@key) stop(paste("Destination key must differ from data key", data@key))

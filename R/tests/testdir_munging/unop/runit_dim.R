@@ -12,7 +12,7 @@ source('../../findNSourceUtils.R')
 
 test.dim <- function(conn) {
   Log.info("Uploading logreg/princeton/cuse.dat")
-  hex <- h2o.uploadFile.FV(conn, locate("smalldata/logreg/princeton/cuse.dat"), "cuse.hex")
+  hex <- h2o.uploadFile(conn, locate("smalldata/logreg/princeton/cuse.dat"), "cuse.hex")
   
   Rdat <- read.csv(locate("smalldata/logreg/princeton/cuse.dat"))
   

@@ -14,7 +14,7 @@ test <- function(conn) {
     Log.info("Reading prostate into R")	
 	x = read.csv("../../../smalldata/logreg/prostate.csv", header=T)
 	Log.info("Parsing prostate into H2O")	
-	hex = h2o.uploadFile.FV(conn, locate("../../../smalldata/logreg/prostate.csv"), "hex")
+	hex = h2o.uploadFile(conn, locate("../../../smalldata/logreg/prostate.csv"), "hex")
 	Nhex = as.data.frame(hex)
 	
 	Log.info("Expect that number of rows in as.data.frame is same as the original file")
