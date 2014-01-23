@@ -8,6 +8,7 @@ import java.util.Arrays;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -190,18 +191,18 @@ class ASTApply extends AST {
     assert sp+_args.length==env._sp;
     env.fcn(-_args.length).apply(env,_args.length);
   }
-  // Evaluate apply in a row-wise fashion.
+  // Evaluate row based apply.
   @Override void evalR(Env2 env) {
     if (_args.length > 4) throw H2O.unimpl();
     _args[0].evalR(env);
     assert env.isFcn();
-    ASTOp op = env.retFcn();
+    ASTOp op = env.getFcn0();
     double[] ins[] = new double[_args.length-1][];
     for (int i = 0; i < _args.length-1; i++) {
       _args[i+1].evalR(env);
-      ins[i] = env.isAry() ? env.retAry() : new double[]{env.retDbl()};
+      ins[i] = env.isAry() ? env.getAry0() : new double[]{env.getDbl0()};
     }
-    env.setAry(0,op.map(env,null,ins));
+    env.setAry0(op.map(env, null, ins));
   }
 }
 
@@ -515,9 +516,9 @@ class ASTAssign extends AST {
     if( !(_lhs instanceof ASTId) ) throw H2O.unimpl();
     ASTId id = (ASTId)_lhs;
     _eval.evalR(env);
-    if      (env.retFcn()!=null) env.asnFcn(id._id,env.retFcn());
-    else if (env.retAry()!=null) env.asnAry(id._id,env.retAry());
-    else                         env.asnDbl(id._id,env.retDbl());
+    if      (env.isFcn()) env.asnFcn(id._id, env.getFcn0());
+    else if (env.isAry()) env.asnAry(id._id,env.getAry0());
+    else                  env.asnDbl(id._id,env.getDbl0());
   }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
@@ -545,7 +546,7 @@ class ASTNum extends AST {
   }
   boolean isPosConstant() { return _d >= 0; }
   @Override void exec(Env env) { env.push(_d); }
-  @Override void evalR(Env2 env) { env.setDbl(0,_d);}
+  @Override void evalR(Env2 env) { env.setDbl0(_d);}
   @Override public String toString() { return Double.toString(_d); }
 
   /** Wrap an integer so that it can be modified by a called method.  i.e. Pass-by-reference.  */

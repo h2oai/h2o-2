@@ -11,7 +11,7 @@ import water.*;
 import water.fvec.*;
 
 public class Test_R_apply extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -25,7 +25,7 @@ public class Test_R_apply extends TestUtil {
       Key fkey = NFSFileVec.make(file);
       Frame in = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
-      // apply pre-defined function
+      // apply built-in function
       checkResult("apply(h.hex,1,sum)",  sum .apply(in));
       checkResult("apply(h.hex,1,max)",  max .apply(in));
       checkResult("apply(h.hex,1,min)",  min .apply(in));
@@ -34,7 +34,7 @@ public class Test_R_apply extends TestUtil {
       checkResult("apply(h.hex,1,is.na)",isna.apply(in));
       // apply custom function
       checkResult("apply(h.hex,1,function(x){c(x)})", c.apply(in));
-      checkResult("apply(h.hex,1,function(x){cap=0; fn=function(x){ifelse(x<cap,x,cap)}; cap=2; fn(x)})", new Cap(2).apply(in));
+      checkResult("apply(h.hex,1,function(x){cap=2; fn=function(x){ifelse(x<cap,x,cap)}; fn(x)})", new Cap(2).apply(in));
       checkResult("apply(h.hex,1,function(x){x+1})", new Add(1).apply(in));
       checkResult("apply(h.hex,1,function(x){is.na(x)?0:x})", fillna.apply(in));
       checkResult("apply(h.hex,1,function(x){fn=function(){sum(x*x)}; fn()})", sqsum.apply(in));
@@ -59,7 +59,24 @@ public class Test_R_apply extends TestUtil {
       return out;
     }
   }
-
+  static final class Cap extends Map {
+    final double _c;
+    public Cap(double c) { _c = c; }
+    double[] map(double ds[]) {
+      double out[] = new double[ds.length];
+      for (int i=0;i<ds.length;i++) out[i] = ds[i] < _c ? ds[i] : _c;
+      return out;
+    }
+  }
+  static final class Add extends Map {
+    final double _c;
+    public Add(double c) { _c = c; }
+    double[] map(double ds[]) {
+      double out[] = new double[ds.length];
+      for (int i=0;i<ds.length;i++) out[i] = ds[i] + _c;
+      return out;
+    }
+  }
   static Map fr2ary = new Map() {double[] map(double ds[]) { double out[] = new double[ds.length];
     for (int i=0;i<ds.length;i++) out[i]=ds[i]; return out; }  };
   static Map c      = fr2ary;
@@ -80,25 +97,6 @@ public class Test_R_apply extends TestUtil {
   static Map sqsum  = new Map() {double[] map(double ds[]) { double out[] = new double[1        ];
     for (int i=0;i<ds.length;i++) out[0]+=ds[i]*ds[i]; return out; }  };
 
-  static final class Cap extends Map {
-    final double _c;
-    public Cap(double c) { _c = c; }
-    double[] map(double ds[]) {
-      double out[] = new double[ds.length];
-      for (int i=0;i<ds.length;i++) out[i] = ds[i] < _c ? ds[i] : _c;
-      return out;
-    }
-  }
-
-  static final class Add extends Map {
-    final double _c;
-    public Add(double c) { _c = c; }
-    double[] map(double ds[]) {
-      double out[] = new double[ds.length];
-      for (int i=0;i<ds.length;i++) out[i] = ds[i] + _c;
-      return out;
-    }
-  } 
   void checkStr( String s ) {
     Env env=null;
     try { 

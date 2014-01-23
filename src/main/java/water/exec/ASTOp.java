@@ -222,7 +222,7 @@ public abstract class ASTOp extends AST {
     return null;
   }
   @Override void exec(Env env) { env.push(this); }
-  @Override void evalR(Env2 env) { env.setFcn(0,this); }
+  @Override void evalR(Env2 env) { env.setFcn0(this); }
   abstract void apply(Env env, int argcnt);
   double   apply(Env2 env, double... args) {throw H2O.unimpl();}
   double[] map  (Env2 env, double[] out, double[]... ins) {throw H2O.unimpl();}
@@ -1246,25 +1246,47 @@ class ASTRApply extends ASTOp {
       // find out return type
       final double[] rowin0 = new double[fr.vecs().length];
       for (int c = 0; c < rowin0.length; c++) rowin0[c] = fr.vecs()[c].at(0);
-      final int outlen = op.map(null,null,rowin0).length;
+      final int outlen = op.map(Env2.makeDummy(),null,rowin0).length;
       String[] names = new String[outlen];
       for (int i = 0; i < names.length; i++) names[i] = "C"+(i+1);
-      Frame out = new MRTask2() {
-        @Override
-        public void map(Chunk[] cs, NewChunk[] ncs) {
-          final double[] rowin  = new double[cs.length];
-          final double[] rowout = new double[outlen];
-          for (int i = 0; i < cs[0]._len; i++) {
-            for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
-            double ro[] = op.map(null,rowout,rowin);
-            for (int c = 0; c < ncs.length; c++) ncs[c].addNum(ro[c]);
-          }
-        }
-      }.doAll(outlen,fr).outputFrame(names, null);
+      //Frame out = new MRTask2() {
+      //  @Override
+      //  public void map(Chunk[] cs, NewChunk[] ncs) {
+      //    final double[] rowin  = new double[cs.length];
+      //    final double[] rowout = new double[outlen];
+      //    final Env2 perMapper = Env2.makeDummy();
+      //    for (int i = 0; i < cs[0]._len; i++) {
+      //      for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
+      //      double ro[] = op.map(perMapper,rowout,rowin);
+      //      for (int c = 0; c < ncs.length; c++) ncs[c].addNum(ro[c]);
+      //    }
+      //  }
+      //}.doAll(outlen,fr).outputFrame(names, null);
+      Log.info("start rapply.");
+      Frame out = new RapplyTask(op,outlen).doAll(outlen,fr).outputFrame(names,null);
+      Log.info("done rapply.");
       env.poppush(4,out,null);
       return;
     }
     throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
+  }
+  private static class RapplyTask extends MRTask2<RapplyTask> {
+    private final ASTOp _op;
+    private final int _outlen;
+    public RapplyTask(ASTOp op, int outlen) {_op = op; _outlen = outlen;}
+    @Override
+    public void map(Chunk[] cs, NewChunk[] ncs) {
+      final double[] rowin  = new double[cs.length];
+      final double[] rowout = new double[_outlen];
+      final Env2 perMapper = Env2.makeDummy();
+      Log.info("start map.");
+      for (int i = 0; i < cs[0]._len; i++) {
+        for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
+        double ro[] = _op.map(perMapper,rowout,rowin);
+        for (int c = 0; c < ncs.length; c++) ncs[c].addNum(ro[c]);
+      }
+      Log.info("done map.");
+    }
   }
 }
 

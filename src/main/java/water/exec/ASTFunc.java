@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import water.H2O;
+import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -15,7 +16,8 @@ public class ASTFunc extends ASTOp {
   final String _locals[];       // including arguments and local variables.
   final int _tmps;
   Env _env;                     // Captured environment at each apply point
-  Env2 _encl;                   // Enclosure used in rwo-wise evaluation
+  Env2 _envR;                   // used in rwo-wise evaluation
+  transient Env2 _caller;       // the cache of caller environment, used for detecting environment change
   ASTFunc( String vars[], String locals[], Type vtypes[], AST body, int tmps ) {
     super(vars,vtypes,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _locals=locals; _tmps=tmps;
   }
@@ -47,10 +49,9 @@ public class ASTFunc extends ASTOp {
     AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
     if( body == null ) E.throwErr("Missing function body",x);
     List<ASTId> local_ids = E._env.pop();
-    String[] local_names = new String[local_ids.size()+1];
-    local_names[0] = "fun";
+    String[] local_names = new String[local_ids.size()];
     for (int i = 0; i < local_ids.size(); i++)
-      local_names[i+1] = local_ids.get(i)._id;
+      local_names[i] = local_ids.get(i)._id;
 
     // The body should force the types.  Build a type signature.
     String xvars[] = new String[argcnt+1];
@@ -83,16 +84,21 @@ public class ASTFunc extends ASTOp {
   }
 
   @Override void evalR(Env2 env) {
-    _encl = env;
-    env.setFcn(0,this);
+    ASTFunc copy = (ASTFunc)clone();
+    copy._envR = new Env2(env,copy).copy();
+    env.setFcn0(copy);
   }
 
-  @Override double[] map(Env2 e, double[] out, double[]... ins) {
-    Env2 env = new Env2(_encl, this);
-    assert _vars.length == ins.length+1;
-    for (int i = 0; i < ins.length; i++) env.setAry(i+1, ins[i]);
-    _body.evalR(env);
-    out = env.retAry();
+  @Override double[] map(Env2 caller, double[] out, double[]... ins) {
+    assert caller!=null;
+    if (caller != _caller) {
+      _caller = caller;
+      _envR = _envR ==null?new Env2(null,this): _envR.copy();
+    }
+    assert _vars.length-1 == ins.length;
+    for (int i = 0; i < ins.length; i++) _envR.setAry(i, ins[i]);
+    _body.evalR(_envR);
+    out = _envR.getAry0();
     if (out == null) throw H2O.unimpl();
     return out;
   }
