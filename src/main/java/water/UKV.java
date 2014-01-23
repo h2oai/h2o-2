@@ -39,8 +39,8 @@ public abstract class UKV {
   // Recursively remove, gathering all the pending remote key-deletes
   static public void remove( Key key, Futures fs ) {
     Value val = DKV.get(key,32,H2O.GET_KEY_PRIORITY); // Get the existing Value, if any
+    remove(val,fs);             // Remove internal chunks with main key active
     DKV.remove(key,fs); // Might need to be atomic with the above?
-    remove(val,fs);
   }
   // Remove the Chunk parts of Frames and Vecs and ValueArrays
   static private void remove( Value val, Futures fs ) {

@@ -369,9 +369,19 @@ public final class ParseDataset extends Job {
     }
   }
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
-    for( Key k : keys )
+    // Some quick sanity checks: no overwriting your input key, and a resource check.
+    long sum=0;
+    for( Key k : keys ) {
       if( dest.equals(k) ) 
         throw new IllegalArgumentException("Destination key "+dest+" must be different from all sources");
+      sum += DKV.get(k).length(); // Sum of all input filesizes
+    }
+    long memsz=0;               // Cluster memory
+    for( H2ONode h2o : H2O.CLOUD._memary )
+      memsz += h2o._heartbeat.get_max_mem();
+    if( sum > memsz*2 )
+      throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
+
     ParseDataset job = new ParseDataset(dest, keys);
     ParserFJTask fjt = new ParserFJTask(job, keys, setup);
     job.start(fjt);
