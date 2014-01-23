@@ -74,7 +74,7 @@ public class ASTFunc extends ASTOp {
     int res_idx = env.pushScope(argcnt-1);
     env.push(_tmps);
     _body.exec(env);
-    env.tos_into_slot(1,res_idx-1,null);
+    env.tos_into_slot(res_idx-1,null);
     env.popScope();
   }
 
