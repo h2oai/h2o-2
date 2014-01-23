@@ -588,32 +588,29 @@ public final class ParseDataset2 extends Job {
         _vecs[i].reduce(dout._vecs[i]);
       return this;
     }
-    public FVecDataOut close(){
+    @Override public FVecDataOut close(){
       Futures fs = new Futures();
       close(fs);
       fs.blockForPending();
       return this;
     }
-    public FVecDataOut close(Futures fs){
+    @Override public FVecDataOut close(Futures fs){
       for(NewChunk nv:_nvs)nv.close(_cidx, fs);
+      _nvs = null;  // Free for GC
       return this;
     }
-    public FVecDataOut nextChunk(){
+    @Override public FVecDataOut nextChunk(){
       return  new FVecDataOut(_vg, _cidx+1, _nCols, _vecIdStart, _enums);
     }
 
-    public Vec [] closeVecs(){
+    private Vec [] closeVecs(){
       Futures fs = new Futures();
-      Vec [] res = closeVecs(fs);
-      fs.blockForPending();
-      return res;
-    }
-
-    public Vec [] closeVecs(Futures fs){
       _closedVecs = true;
       Vec [] res = new Vec[_vecs.length];
       for(int i = 0; i < _vecs.length; ++i)
         res[i] = _vecs[i].close(fs);
+      _vecs = null;  // Free for GC
+      fs.blockForPending();
       return res;
     }
 
