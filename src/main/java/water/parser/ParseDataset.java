@@ -272,6 +272,7 @@ public final class ParseDataset extends Job {
       if(!guess.valid())throw new RuntimeException("can not parse this dataset, did not find working setup");
       setup = guess._setup;
     }
+    setup.checkColumnNames();
     int j = 0;
     UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
     Key [] nonEmptyKeys = new Key[keys.length];
