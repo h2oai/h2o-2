@@ -365,6 +365,10 @@ public class NeuralNet extends ValidatedJob {
 
         model.confusion_matrix = cm;
         UKV.put(model._selfKey, model);
+
+        // terminate model building if we detect that a model is unstable
+        if (model.unstable) NeuralNet.running = false;
+
         return e.training_samples;
       }
 
@@ -668,6 +672,12 @@ public class NeuralNet extends ValidatedJob {
 
           unstable |= Double.isNaN(mean_bias[y])   || Double.isNaN(rms_bias[y])
                   || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
+
+          // Abort the run if weights or biases are unreasonably large (Note that all input values are normalized upfront)
+          // This can happen with Rectifier units when L1/L2/max_w2 are all set to 0, especially when using more than 1 hidden layer.
+          final double thresh = 1e10;
+          unstable |= mean_bias[y] > thresh   || rms_bias[y] > thresh
+                  || mean_weight[y] > thresh  || rms_weight[y] > thresh;
         }
       }
     }
@@ -773,9 +783,9 @@ public class NeuralNet extends ValidatedJob {
       if (unstable) {
         final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
                 + "  Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
-        DocGen.HTML.section(sb, "============================================================================================================");
+        DocGen.HTML.section(sb, "=======================================================================================");
         DocGen.HTML.section(sb, msg);
-        DocGen.HTML.section(sb, "============================================================================================================");
+        DocGen.HTML.section(sb, "=======================================================================================");
       }
       if( confusion_matrix != null && confusion_matrix.length < 100 ) {
         assert(classification);
