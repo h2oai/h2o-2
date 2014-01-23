@@ -30,13 +30,19 @@ http://www.slideshare.net/0xdata
 Contribute To The Project
 """"""""""""""""""""""""""
 
-
 H\ :sub:`2`\ O is an open source analytics platform built by a
 dedicated group that believes in enabling people to make better
 decisions and build better solutions. Get started making your own
 contribution by finding our code on Github.
 
 https://github.com/0xdata/h2o
+
+Users can also review and report bugs, errors, and missing features by visiting:
+
+https://0xdata.atlassian.net/secure/Dashboard.jspa
+
+Users will need to create a jira login in order to submit a bug, but can browse 
+without logging in. 
 
 Follow Us
 """"""""""

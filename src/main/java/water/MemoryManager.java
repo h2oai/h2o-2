@@ -126,11 +126,17 @@ public abstract class MemoryManager {
       if( oom ) setMemLow(); // Stop allocations; trigger emergency clean
       Boot.kick_store_cleaner();
     } else { // Else we are not *emergency* cleaning, but may be lazily cleaning.
-      if( !CAN_ALLOC )  m = "Unblocking:";
-      else              m = "MemGood:   ";
-      setMemGood();
-      if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
-        Log.warn(Sys.CLEAN,"OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);
+      setMemGood();             // Cache is as low as we'll go; unblock
+      if( oom ) {               // But still have an OOM?
+        m = "Unblock allocations; cache emptied but memory is low: ";
+        // Means the heap is full of uncached POJO's - which cannot be spilled.
+        // Here we enter the zone of possibly dieing for OOM.  There's no point
+        // in blocking allocations, as no more memory can be freed by more
+        // cache-flushing.  Might as well proceed on a "best effort" basis.
+        Log.warn(Sys.CLEAN,m+" OOM but cache is emptied:  MEM_MAX = " + PrettyPrint.bytes(MEM_MAX) + ", DESIRED_CACHE = " + PrettyPrint.bytes(d) +", CACHE = " + PrettyPrint.bytes(cacheUsage) + ", POJO = " + PrettyPrint.bytes(p) + ", this request bytes = " + PrettyPrint.bytes(bytes));
+      } else { 
+        m = "MemGood:   ";
+      }
     }
 
     // No logging if under memory pressure: can deadlock the cleaner thread
