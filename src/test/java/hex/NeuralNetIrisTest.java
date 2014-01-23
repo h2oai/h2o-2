@@ -119,11 +119,10 @@ public class NeuralNetIrisTest extends TestUtil {
                 NeuralNet p = new NeuralNet();
                 p.rate = 0.01;
                 p.activation = activation;
-                p.max_w2 = Float.MAX_VALUE;
-                p.rate = 0.01f;
+                p.max_w2 = Double.MAX_VALUE;
+                p.rate = 0.01;
                 p.epochs = 13*17;
                 p.activation = activation;
-                p.max_w2 = Float.MAX_VALUE;
                 p.input_dropout_ratio = 0;
                 p.rate_annealing = 0;
                 p.l1 = 0;
