@@ -595,6 +595,7 @@ public final class ParseDataset2 extends Job {
       return this;
     }
     @Override public FVecDataOut close(Futures fs){
+      if( _nvs == null ) return this; // Might call close twice
       for(NewChunk nv:_nvs)nv.close(_cidx, fs);
       _nvs = null;  // Free for GC
       return this;
