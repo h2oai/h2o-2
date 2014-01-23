@@ -17,7 +17,6 @@ import water.fvec.Vec;
 import water.util.Log;
 import water.util.Utils;
 
-import java.io.File;
 import java.util.Random;
 
 import static hex.Layer.Rectifier;
@@ -89,7 +88,7 @@ public class NeuralNetIrisTest extends TestUtil {
                 ref.init(activation, water.util.Utils.getDeterRNG(seed), holdout_ratio);
 
                 // Parse Iris and shuffle the same way as ref
-                Key file = NFSFileVec.make(new File(PATH));
+                Key file = NFSFileVec.make(find_test_file(PATH));
                 Key pars = Key.make();
                 Frame frame = ParseDataset2.parse(pars, new Key[] { file });
 

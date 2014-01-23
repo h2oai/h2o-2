@@ -15,16 +15,13 @@ import water.fvec.ParseDataset2;
 import water.fvec.Vec;
 import water.util.Utils;
 
-import java.io.File;
-
 public class NeuralNetSpiralsTest extends TestUtil {
   @BeforeClass public static void stall() {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
   @Test public void run() throws Exception {
-
-    Key file = NFSFileVec.make(new File("smalldata/neural/two_spiral.data"));
+    Key file = NFSFileVec.make(find_test_file("smalldata/neural/two_spiral.data"));
     Key parse = Key.make();
     Frame frame = ParseDataset2.parse(parse, new Key[]{file});
     UKV.remove(file);
