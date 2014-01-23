@@ -6,7 +6,7 @@ test.glm2vanilla.golden <- function(H2Oserver) {
 #Import data: 
 Log.info("Importing Swiss data...") 
 swissH2O.VA<- h2o.uploadFile.VA(H2Oserver, locate("../smalldata/swiss.csv"), key="swissH2O")
-swissH2O.FV<- h2o.uploadFile(H2Oserver, locate("../smalldata/swiss.csv"), key="swissH2OFV")
+swissH2O.FV<- h2o.uploadFile.FV(H2Oserver, locate("../smalldata/swiss.csv"), key="swissH2OFV")
 
 Log.info("Test H2O treatment vanilla GLM - continuious real predictors, gaussian family between GLM1 and GLM2")
 Log.info("Run matching models plain vanilla")

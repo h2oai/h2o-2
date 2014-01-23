@@ -1,6 +1,6 @@
 import unittest, time, sys, re
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_jobs
+import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_jobs
 
 def write_syn_dataset(csvPathname, rowCount, rowDataTrue, rowDataFalse, outputTrue, outputFalse):
     dsf = open(csvPathname, "w+")
@@ -30,7 +30,7 @@ class test_NN_twovalues(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_GLM_twovalues(self):
+    def test_NN_twovalues(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_twovalues.csv"
@@ -59,8 +59,8 @@ class test_NN_twovalues(unittest.TestCase):
 
             start = time.time()
             hex_key = csvFilename + "_" + str(trial)
+            model_key = 'trial_' + str(trial) + '.hex'
 
-            # default takes 39 iterations? play with alpha/beta
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
             print "using outputTrue: %s outputFalse: %s" % (outputTrue, outputFalse)
 
@@ -68,38 +68,59 @@ class test_NN_twovalues(unittest.TestCase):
             print "\n" + csvPathname, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
-
             response = inspect['numCols'] - 1
-            # up to but not including
-            x = ",".join(map(lambda x: 'C' + str(x), range(response)))
 
             kwargs = {
-                # this is ignore??
-                'response': 'C' + str(response),
-                'cols': x, # apparently no longer required? 
-                'ignored_cols': None, # this is not consistent with ignored_cols_by_name
-                'classification': 1,
-                'validation': hex_key,
-                'activation': 'Tanh', # 'Rectifier'
-                'hidden': 500, # comma separated values, or from:to:step
-                'rate': 0.01,  # learning rate
-                'l2': 1.0E-4, # regularization
-                'epochs': 2, # how many times dataset should be iterated
-                'destination_key': 'a.hex',
+                'ignored_cols'                 : None,
+                'response'                     : 'C' + str(response),
+                'classification'               : 1,
+                'mode'                         : 'SingleThread',
+                'activation'                   : 'Tanh',
+                #'input_dropout_ratio'          : 0.2,
+                'hidden'                       : '500',
+                'rate'                         : 0.01,
+                'rate_annealing'               : 1e-6,
+                'momentum_start'               : 0,
+                'momentum_ramp'                : 0,
+                'momentum_stable'              : 0,
+                'l1'                           : 0.0,
+                'l2'                           : 1e-4,
+                'seed'                         : 80023842348,
+                'loss'                         : 'CrossEntropy',
+                #'max_w2'                       : 15,
+                #'warmup_samples'               : 0,
+                'initial_weight_distribution'  : 'UniformAdaptive',
+                #'initial_weight_scale'         : 0.01,
+                'epochs'                       : 1.0,
+                'destination_key'              : model_key,
+                'validation'                   : hex_key,
             }
 
-            for iteration in range(2):
-                timeoutSecs = 600
-                start = time.time()
-                h2o.beta_features = True
-                nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            timeoutSecs = 60
+            start = time.time()
+            h2o.beta_features = True
+            nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+            h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
+            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=10, retryDelaySecs=5)
+            print "trial #", trial, "NN end on ", csvFilename, ' took', time.time() - start, 'seconds'
 
-                print "FIX! need to add something that looks at the neural net result here?"
-                print "nnResult:", h2o.dump_json(nnResult)
+            #### Now score using the model, and check the validation error
+            expectedErr = 0.0
+            relTol = 0.01
+            kwargs = {
+                'source' : hex_key,
+                'max_rows': 0,
+                'response': 'C' + str(response),
+                'ignored_cols': None, # this is not consistent with ignored_cols_by_name
+                'classification': 1,
+                'destination_key': 'score' + str(trial) + '.hex',
+                'model': model_key
+            }
 
-                print "trial #", trial, "iteration #", iteration, "NN end on ", csvFilename, 'took', time.time() - start, 'seconds'
-                # h2b.browseJsonHistoryAsUrlLastMatch("GLM")
-                h2o.check_sandbox_for_errors()
+            nnScoreResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, **kwargs)
+            h2o_nn.checkScoreResult(self, nnScoreResult, expectedErr, relTol, **kwargs)
+
+            h2o.check_sandbox_for_errors()
 
             trial += 1
 

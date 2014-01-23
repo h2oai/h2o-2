@@ -22,11 +22,11 @@ test.km2vanilla.golden <- function(H2Oserver) {
 # Sanity check to make sure required fields are actually present in the model that gets returned.
 #if (! ('withinss' %in% names(fitH2O@model))) {
  # stop("H2O model has no component 'withinss'")
-}
+#}
 
 #if (! ('totss' %in% names(fitH2O@model))) {
  # stop("H2O model has no component 'totss'")
-}
+#}
 
 #Log.info("Print model statistics for R and H2O... \n")
 #Note that there are two "total" statistics: total within ss, and total ss. Total ss is the total variance in the whole data set, #is computed as the sum of the vector norms between each point and the data mean, and is equal to within cluster sum of squares #when k=1. As of Dec 21 K means in H2O does not produce total ss as an accessible metric in R, and does not model k=1 (known to #jira).

@@ -53,6 +53,9 @@ public class ImportFiles2 extends Request2 {
   @API(help="files that failed to load")
   String [] fails;
 
+  @API(help="Prior Keys that matched a prefix of the imported path, and were removed prior to (re)importing")
+  String[] dels;
+
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
    */
@@ -63,9 +66,12 @@ public class ImportFiles2 extends Request2 {
     try{
       if(path != null){
         String p2 = path.toLowerCase();
-        if(p2.startsWith("hdfs://") || p2.startsWith("s3n://"))serveHdfs();
-        else if(p2.startsWith("s3://")) serveS3();
-        else if(p2.startsWith("http://") || p2.startsWith("https://")) serveHttp();
+        if( false ) ;
+        else if( p2.startsWith("hdfs://" ) ) serveHdfs();
+        else if( p2.startsWith("s3n://"  ) ) serveHdfs();
+        else if( p2.startsWith("s3://"   ) ) serveS3();
+        else if( p2.startsWith("http://" ) ) serveHttp();
+        else if( p2.startsWith("https://") ) serveHttp();
         else serveLocalDisk();
       }
       return Response.done(this);
@@ -123,27 +129,19 @@ public class ImportFiles2 extends Request2 {
     files = keys;
     fails = fail.toArray(new String[fail.size()]);
   }
-  protected void serveLocalDisk(){
+
+  private void serveLocalDisk() {
     File f = new File(path);
     if(!f.exists())throw new IllegalArgumentException("File " + path + " does not exist!");
-    FileIntegrityChecker c = FileIntegrityChecker.check(new File(path),true);
-    ArrayList<String> afails = new ArrayList();
     ArrayList<String> afiles = new ArrayList();
     ArrayList<String> akeys  = new ArrayList();
-    Futures fs = new Futures();
-    for( int i = 0; i < c.size(); ++i ) {
-      Key k = c.importFile(i, fs);
-      if( k == null ) {
-        afails.add(c.getFileName(i));
-      } else {
-        afiles.add(c.getFileName(i));
-        akeys .add(k.toString());
-      }
-    }
-    fs.blockForPending();
-    fails = afails.toArray(new String[0]);
+    ArrayList<String> afails = new ArrayList();
+    ArrayList<String> adels  = new ArrayList();
+    FileIntegrityChecker.check(f,true).syncDirectory(afiles,akeys,afails,adels);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
+    fails = afails.toArray(new String[0]);
+    dels  = adels .toArray(new String[0]);
   }
 
   protected void serveHttp() {
@@ -187,6 +185,8 @@ public class ImportFiles2 extends Request2 {
 
     if( fails.length > 0 )
       DocGen.HTML.array(DocGen.HTML.title(sb,"fails"),fails);
+    if( dels.length > 0 )
+      DocGen.HTML.array(DocGen.HTML.title(sb,"Keys deleted before importing"),dels);
     return true;
   }
 

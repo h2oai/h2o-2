@@ -16,9 +16,10 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   if(any(n.bins < 1)) stop('n.bins must be >= 1')
 
   if(missing(validation)) validation = data
-  else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
-
-  if( !(distribution %in% c('multinomial', 'gaussian')) )
+  # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
+  else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
+  
+  if(!(distribution %in% c('multinomial', 'gaussian')))
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
   classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
 
@@ -103,7 +104,7 @@ h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1.0e-5, 
   if((missing(lambda) || length(lambda) == 1) && (missing(alpha) || length(alpha) == 1))
     h2o.glm.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize)
   else {
-    if(!missing(tweedie.p) && !is.na(tweedie.p)) print('Tweedie variance power not available in GLM grid search under ValueArray')
+    if(!missing(tweedie.p) && !is.na(tweedie.p)) print('tweedie variance power not available in GLM grid search under ValueArray')
     h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize)
   }
 }
@@ -195,7 +196,7 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p, standardize) {
   result$null.deviance = as.numeric(res$validations[[1]]$nullDev)
   result$iter = res$iterations
   result$df.residual = res$dof
-  result$df.null = res$dof + result$rank
+  result$df.null = res$nLines - 1
   result$train.err = as.numeric(res$validations[[1]]$err)
   result$y = y
   result$x = res$column_names
@@ -219,6 +220,7 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p, standardize) {
 # -------------------------- FluidVecs -------------------------- #
 h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
   args <- verify_dataxy(data, x, y)
+  
   if(!is.numeric(nfolds)) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if(!is.numeric(alpha)) stop('alpha must be numeric')
@@ -374,14 +376,14 @@ h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALS
 
 # -------------------------- ValueArray -------------------------- #
 h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE) {
-  if(missing(data) ) stop('must specify data')
+  if(missing(data) ) stop('Must specify data')
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   
   if(missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be numeric')
   if( any(centers < 1) ) stop("centers must be an integer greater than 0")
-  if(missing(iter.max) || !is.numeric(iter.max)) stop('iter.max must be numeric')
+  if(!is.numeric(iter.max)) stop('iter.max must be numeric')
   if( any(iter.max < 1)) stop('iter.max must be >= 1')
   if(!is.logical(normalize)) stop("normalize must be of class logical")
   if(length(centers) > 1 || length(iter.max) > 1) stop("K-Means grid search not supported under ValueArray")
@@ -424,8 +426,9 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
 
 # -------------------------- FluidVecs -------------------------- #
 h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE) {
-  if( missing(data) ) stop('must specify data')
-  if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  if( missing(data) ) stop('Must specify data')
+  # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
 
   if( missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be a positive integer')
@@ -494,7 +497,7 @@ h2o.__getKM2Results <- function(res, data) {
 }
 
 # ------------------------------- Neural Network ------------------------------------ #
-h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500, rate=0.01, l1_reg=1e-4, l2_reg=0.0010, epoch=100, validation) {
+h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, rate=0.01, l1_reg=1e-4, l2_reg=0.0010, epoch=100, validation) {
   args <- verify_dataxy(data, x, y)
 
   if(!is.logical(classification)) stop('classification must be true or false')
@@ -512,8 +515,9 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   if( any(epoch < 0) ) stop('epoch must be >= 1')
 
   if(missing(validation)) validation = data
-  if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
-
+  # if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
+  if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
+  
   if(!(activation %in% c('Tanh', 'Rectifier')) )
     stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier] are supported"))
   if(!(classification %in% c(0, 1)) )
@@ -577,8 +581,9 @@ h2o.__getNNResults <- function(res) {
 
 # ----------------------- Principal Components Analysis ----------------------------- #
 h2o.prcomp <- function(data, tol=0, standardize=TRUE, retx=FALSE) {
-  if( missing(data) ) stop('must specify data')
-  if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
+  if( missing(data) ) stop('Must specify data')
+  # if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
   if(!is.numeric(tol)) stop('tol must be numeric')
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
@@ -605,7 +610,7 @@ h2o.prcomp <- function(data, tol=0, standardize=TRUE, retx=FALSE) {
 }
 
 # setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
-h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5, tweedie.p=ifelse(family=="tweedie", 0, as.numeric(NA))) {
+h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
   args <- verify_dataxy(data, x, y)
   
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
@@ -626,7 +631,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
   
   myScore[,ncomp+1] = data[,args$y_i]    # Bind response to frame of principal components
   myGLMData = new("H2OParsedData", h2o=data@h2o, key=myScore@key)
-  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
+  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
 }
 
 h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=TRUE) {
@@ -674,7 +679,6 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(depth < 0) stop("depth must be >= 0")
   if(!is.numeric(sample.rate)) stop("sample.rate must be numeric")
   if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
-  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if(nbins < 1) stop('nbins must be an integer >= 1')
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
@@ -683,10 +687,24 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(!missing(ntree) && length(ntree) > 1 || !missing(depth) && length(depth) > 1 || !missing(sample.rate) && length(sample.rate) > 1 || !missing(nbins) && length(nbins) > 1)
     stop("Random forest grid search not supported under ValueArray")
   
+  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  if(!is.null(classwt)) {
+    y_col = data[,args$y_i]
+    if(!is.factor(y_col)) stop("Cannot specify classwt: response column is not a factor!")
+    
+    nc <- names(classwt)
+    if(is.null(nc) || any(nchar(nc) == 0)) stop("classwt must specify level names")
+    
+    lv <- levels(y_col)
+    if(any(!(nc %in% lv)))
+      stop(paste(paste(nc[!(nc %in% lv)], collapse=","), 'is not a valid level name'))
+    classwt <- paste(nc, classwt, sep="=", collapse=",")
+  }
+
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt, seed=seed, use_non_local_data=as.numeric(use_non_local))
   h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
   # while(!h2o.__isDone(data@h2o, "RF1", res)) { Sys.sleep(1) }
-  
+
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, response_variable=args$y, out_of_bag_error_estimate=1)
   modelOrig = h2o.__getRFResults(res2)
   new("H2ORFModelVA", key=res$destination_key, data=data, model=modelOrig)
@@ -719,8 +737,9 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
 
   if(missing(validation)) validation = data
-  else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
-
+  # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
+  else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
+  
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
 
@@ -769,22 +788,19 @@ h2o.__getDRFResults <- function(res) {
 }
 
 # ------------------------------- Prediction ---------------------------------------- #
-#setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 h2o.predict <- function(object, newdata) {
-  if( missing(object) ) stop('must specify object')
+  if( missing(object) ) stop('Must specify object')
   if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA', 'H2OKMeansModelVA', 'H2ORFModelVA') )) stop('object must be an H2OModel')
   if( missing(newdata) ) newdata <- object@data
   if(!class(newdata) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('newdata must be a H2O dataset')
+  if(inherits(object, "H2OModelVA") && class(newdata) != "H2OParsedDataVA")
+    stop("Prediction requires newdata to be of class H2OParsedDataVA")
   
   if(class(object) %in% c("H2OGLMModelVA", "H2ORFModelVA")) {
-    if(class(newdata) != 'H2OParsedDataVA')
-      stop("Prediction requires newdata to be of class H2OParsedDataVA")
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
     new("H2OParsedDataVA", h2o=object@data@h2o, key=res$key)
   } else if(class(object) == "H2OKMeansModelVA") {
-    if(class(newdata) != 'H2OParsedDataVA')
-      stop("Prediction requires newdata to be of class H2OParsedDataVA")
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
     h2o.__waitOnJob(object@data@h2o, res$response$redirect_request_args$job)
     res2 = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$destination_key)
@@ -812,11 +828,11 @@ h2o.predict <- function(object, newdata) {
 # Helper Functions
 # Used to verify data, x, y and turn into the appropriate things
 verify_dataxy <- function(data, x, y) {
-  if( missing(data) ) stop('must specify data')
-  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop('data must be an H2O dataset')
+  if( missing(data) ) stop('Must specify data')
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop('data must be an H2O parsed dataset')
 
-  if( missing(x) ) stop('must specify x')
-  if( missing(y) ) stop('must specify y')
+  if( missing(x) ) stop('Must specify x')
+  if( missing(y) ) stop('Must specify y')
   if(!( class(x) %in% c('numeric', 'character', 'integer') )) stop('x must be column names or indices')
   if(!( class(y) %in% c('numeric', 'character', 'integer') )) stop('y must be a column name or index')
 

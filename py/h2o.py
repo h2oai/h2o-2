@@ -2047,14 +2047,12 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def neural_net_score(self, key, model, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+    def neural_net_score(self, key, model, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'source': key,
             'destination_key': None,
             'model': model,
-            # this is ignore??
-            'cols': None,
             'ignored_cols': None,
             'classification': None,
             'response': None,
@@ -2079,22 +2077,33 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def neural_net(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+    def neural_net(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
             'source': data_key,
-            # this is ignore??
-            'cols': None,
-            'ignored_cols': None,
-            'validation': None,
-            'classification': None,
-            'response': None,
-            'activation': None,
-            'hidden': None,
-            'rate': None,
-            'l2': None,
-            'epochs': None,
+            'ignored_cols'                 : None,
+            'validation'                   : None,
+            'classification'               : None,
+            'response'                     : None,
+            'mode'                         : None,
+            'activation'                   : None,
+            'input_dropout_ratio'          : None,
+            'hidden'                       : None,
+            'rate'                         : None,
+            'rate_annealing'               : None,
+            'momentum_start'               : None,
+            'momentum_ramp'                : None,
+            'momentum_stable'              : None,
+            'l1'                           : None,
+            'l2'                           : None,
+            'seed'                         : None,
+            'loss'                         : None,
+            'max_w2'                       : None,
+            'warmup_samples'               : None,
+            'initial_weight_distribution'  : None,
+            'initial_weight_scale'         : None,
+            'epochs'                       : None,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
@@ -2114,6 +2123,16 @@ class H2O(object):
         verboseprint("\nneural_net result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
+    def neural_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'destination_key': model_key,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'nn_view', print_params)
+        a = self.__do_json_request('2/NeuralNetProgress.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nneural_view result:", dump_json(a))
         return a
 
     def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, **kwargs):

@@ -3,7 +3,7 @@ source('../../findNSourceUtils.R')
 
 test.PCA.arrests <- function(conn) {
   Log.info("Importing USArrests.csv data...\n")
-  arrests.hex = h2o.uploadFile.FV(conn, locate("smalldata/pca_test/USArrests.csv"), "arrests.hex")
+  arrests.hex = h2o.uploadFile(conn, locate("smalldata/pca_test/USArrests.csv"), "arrests.hex")
   arrests.sum = summary(arrests.hex)
   print(arrests.sum)
   

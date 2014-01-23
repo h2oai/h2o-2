@@ -254,7 +254,7 @@ public abstract class Layer extends Iced {
       r2 += _w[w] * _w[w];
     }
     if( r2 > max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
+      final double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
       for( int i = 0; i < _previous._a.length; i++ ) {
         int w = u * _previous._a.length + i;
         _w[w] *= scale;
@@ -720,14 +720,14 @@ public abstract class Layer extends Iced {
           _a[o] += _b[o];
 
           // tanh approx, slightly faster, untested
-          // double a = Math.abs(_a[o]);
-          // double b = 12 + a * (6 + a * (3 + a));
-          // _a[o] = (_a[o] * b) / (a * b + 24);
+//          double a = Math.abs(_a[o]);
+//          double b = 12 + a * (6 + a * (3 + a));
+//          _a[o] = (_a[o] * b) / (a * b + 24);
 
-          // Other approx to try
-          // _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
+          // use this identity: tanh = 2*sigmoid(2*x) - 1, evaluates faster than tanh(x)
+           _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
 
-          _a[o] = Math.tanh(_a[o]);
+//          _a[o] = Math.tanh(_a[o]); //slow
 
           if( !training && dropout != null ) {
             _a[o] *= .5f;
