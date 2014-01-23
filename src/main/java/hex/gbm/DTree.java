@@ -1102,7 +1102,7 @@ public class DTree extends Iced {
       sb.p(";").nl();
       sb.i(1).p("return pred;").nl().di(1);
       sb.i().p("}").nl().di(1);
-    };
+    }
 
     @Override protected void pre( int col, float fcmp, boolean equal ) {
       if( _depth > 0 ) {
@@ -1122,7 +1122,7 @@ public class DTree extends Iced {
         preamble(_sb, _subtrees);
         _subtrees++;
       }
-      _sb.p(" (data[").p(col).p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      _sb.p(" (data[").p(col).p("/* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
       assert _bits[_depth]==0;
       _bits[_depth]=1;
     }

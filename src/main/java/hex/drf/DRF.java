@@ -88,7 +88,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       if (isClassifier()) {
         bodySb.i().p("float sum = 0;").nl();
         bodySb.i().p("for(int i=1; i<preds.length; i++) sum += preds[i];").nl();
-        bodySb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
+        bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
   }
