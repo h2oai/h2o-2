@@ -19,7 +19,15 @@ public class SB {
   public SB i( int d ) { for( int i=0; i<d+_indent; i++ ) p("  "); return this; }
   public SB i( ) { return i(0); }
   // Java specific append of float
-  public SB pj( float  s ) { _sb.append(s).append('f'); return this; }
+  public SB pj( float  s ) {
+    if (Float.isInfinite(s))
+      _sb.append("Float.").append(s>0? "POSITIVE_INFINITY" : "NEGATIVE_INFINITY");
+    else if (Float.isNaN(s))
+      _sb.append("Float.NaN");
+    else
+      _sb.append(s).append('f');
+    return this;
+  }
   // Increase indentation
   public SB ii( int i) { _indent += i; return this; }
   // Decrease indentation
