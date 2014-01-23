@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         del nodeList[1] # 1 is dead now
         print "We probably need some status to interrogate to understand a node is in red state?"
         print "And I probably need to wait 60 secs to get to red state"
-        time.sleep(5)
+        time.sleep(120)
         h2o.verify_cloud_size(nodeList, verbose=True)
         time.sleep(5)
         h2o.verify_cloud_size(nodeList, verbose=True)

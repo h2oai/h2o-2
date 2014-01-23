@@ -20,12 +20,12 @@ public class OneHot extends Request2 {
     class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
 
 
-    public static String link(Key k, String content) {
-        RString rs = new RString("<a href='OneHot.html?source=%$key'>%content</a>");
-        rs.replace("key", k.toString());
-        rs.replace("content", content);
-        return rs.toString();
-    }
+//    public static String link(Key k, String content) {
+//        RString rs = new RString("<a href='OneHot.html?source=%$key'>%content</a>");
+//        rs.replace("key", k.toString());
+//        rs.replace("content", content);
+//        return rs.toString();
+//    }
 
     @Override protected Response serve() {
         try {

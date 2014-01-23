@@ -3,10 +3,9 @@ package water.parser;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
-
+import java.util.ArrayList;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import water.*;
 import water.util.FileIntegrityChecker;
 
@@ -27,11 +26,11 @@ public class ParseProgressTest extends TestUtil {
     if (f == null || !f.exists()) {
       System.out.println("Could not find covtype.data, skipping ParseProgressTest.testCovtype()");
       return;
-	 }
+    }
 
     FileIntegrityChecker c = FileIntegrityChecker.check(f,false);
     assertEquals(1,c.size());   // Exactly 1 file
-    Key k = c.importFile(0, null);
+    Key k = c.syncDirectory(null,null,null,null);
     assertEquals(true,k!=null);
 
     for( int i=0; i<1; i++ ) {

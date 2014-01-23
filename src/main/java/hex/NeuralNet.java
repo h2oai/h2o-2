@@ -41,7 +41,7 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class, json = true)
   public int[] hidden = new int[] { 200, 200 };
 
-  @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 0, dmax = 1)
+  @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double rate = .005;
 
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
@@ -51,7 +51,7 @@ public class NeuralNet extends ValidatedJob {
   public double l1 = 0.0;
 
   @API(help = "L2 regularization, can add stability", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double l2 = 0.001;
+  public double l2 = 0.0;
 
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, json = true)
   public double momentum_start = .5;
@@ -60,13 +60,13 @@ public class NeuralNet extends ValidatedJob {
   public long momentum_ramp = 1000000;
 
   @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, json = true)
-  public double momentum_stable = .99;
+  public double momentum_stable = 1.0;
 
   @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
   public double epochs = 10;
 
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
-  public final long seed = new Random().nextLong();
+  public long seed = new Random().nextLong();
 
   @API(help = "Enable expert mode", filter = Default.class, json = false)
   public boolean expert_mode = false;
@@ -75,16 +75,16 @@ public class NeuralNet extends ValidatedJob {
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0, json = true)
-  public double initial_weight_scale = 0.01;
+  public double initial_weight_scale = 1.0;
 
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
   @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
-  public float max_w2 = Float.MAX_VALUE;
+  public double max_w2 = Double.MAX_VALUE;
 
   @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
-  public long warmup_samples = 1000l;
+  public long warmup_samples = 0l;
 
   @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
   public long score_training = 1000l;
@@ -93,7 +93,7 @@ public class NeuralNet extends ValidatedJob {
   public long score_validation = 0l;
 
   @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = false)
-  public double score_interval = 2;
+  public double score_interval = 5;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
   public boolean diagnostics = true;
@@ -277,11 +277,11 @@ public class NeuralNet extends ValidatedJob {
       }
       if (mode == SingleNode) {
         Log.info("Entering single-node (multi-threaded Hogwild) execution mode.");
-        trainer = new Trainer.Threaded(ls, epochs, self());
+        trainer = new Trainer.Threaded(ls, epochs, self(), -1);
       } else if (mode == MapReduce) {
         if (warmup_samples > 0 && mode == MapReduce) {
           Log.info("Multi-threaded warmup with " + warmup_samples + " samples.");
-          Trainer warmup = new Trainer.Threaded(ls, (double)warmup_samples/num_rows, self());
+          Trainer warmup = new Trainer.Threaded(ls, (double)warmup_samples/num_rows, self(), -1);
           warmup.start();
           warmup.join();
           //TODO: for MapReduce send weights from master VM to all other VMs
@@ -463,7 +463,7 @@ public class NeuralNet extends ValidatedJob {
     else {
       e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( !Float.isNaN(ls[ls.length - 1]._a[0]) )
+        if( !Double.isNaN(ls[ls.length - 1]._a[0]) )
           error(ls, e);
       e.classification = Double.NaN;
       e.mean_square /= len;
@@ -478,16 +478,16 @@ public class NeuralNet extends ValidatedJob {
     if( output.target() == -1 )
       return false;
     for (Layer l : ls) l.fprop(false);
-    float[] out = ls[ls.length - 1]._a;
+    double[] out = ls[ls.length - 1]._a;
     int target = output.target();
     for( int o = 0; o < out.length; o++ ) {
       final boolean hitpos = (o == target);
-      final float t = hitpos ? 1 : 0;
-      final float d = t - out[o];
+      final double t = hitpos ? 1 : 0;
+      final double d = t - out[o];
       e.mean_square += d * d;
       e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
     }
-    float max = out[0];
+    double max = out[0];
     int idx = 0;
     for( int o = 1; o < out.length; o++ ) {
       if( out[o] > max ) {
@@ -504,11 +504,11 @@ public class NeuralNet extends ValidatedJob {
   static void error(Layer[] ls, Errors e) {
     Linear linear = (Linear) ls[ls.length - 1];
     for (Layer l : ls) l.fprop(false);
-    float[] output = ls[ls.length - 1]._a;
-    float[] target = linear.target();
+    double[] output = ls[ls.length - 1]._a;
+    double[] target = linear.target();
     e.mean_square = 0;
     for( int o = 0; o < output.length; o++ ) {
-      final float d = target[o] - output[o];
+      final double d = target[o] - output[o];
       e.mean_square += d * d;
     }
   }
@@ -590,7 +590,10 @@ public class NeuralNet extends ValidatedJob {
     public Layer[] layers;
 
     @API(help = "Layer weights")
-    public float[][] weights, biases;
+    public float[][] weights;
+
+    @API(help = "Layer biases")
+    public double[][] biases;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -620,7 +623,7 @@ public class NeuralNet extends ValidatedJob {
       parameters = p;
       layers = ls;
       weights = new float[ls.length][];
-      biases = new float[ls.length][];
+      biases = new double[ls.length][];
       for( int y = 1; y < layers.length; y++ ) {
         weights[y] = layers[y]._w;
         biases[y] = layers[y]._b;
@@ -632,7 +635,7 @@ public class NeuralNet extends ValidatedJob {
         rms_bias = new double[ls.length];
         mean_weight = new double[ls.length];
         rms_weight = new double[ls.length];
-        for( int y = 1; y < layers.length-1; y++ ) {
+        for( int y = 1; y < layers.length; y++ ) {
           final Layer l = layers[y];
           final int len = l._a.length;
 
@@ -688,9 +691,12 @@ public class NeuralNet extends ValidatedJob {
       }
       ((Input) clones[0])._pos = rowInChunk;
       for (Layer clone : clones) clone.fprop(false);
-      float[] out = clones[clones.length - 1]._a;
+      double[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
-      return out;
+      // convert to float
+      float[] out2 = new float[out.length];
+      for (int i=0; i<out.length; ++i) out2[i] = (float)out[i];
+      return out2;
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {
@@ -780,7 +786,7 @@ public class NeuralNet extends ValidatedJob {
           float[] valid_samples = new float[validation_errors.length];
           for (int i=0; i<valid_err.length; ++i) {
             valid_err[i] = (float)validation_errors[i].classification;
-            valid_samples[i] = training_errors[i].training_samples;
+            valid_samples[i] = validation_errors[i].training_samples;
           }
           new D3Plot(valid_samples, valid_err, "training samples", "classification error",
                   "Classification Error on Validation Set").generate(sb);
@@ -823,7 +829,7 @@ public class NeuralNet extends ValidatedJob {
           }
         }
         if (parameters != null && parameters.diagnostics) {
-          DocGen.HTML.section(sb, "Hidden Layer Status");
+          DocGen.HTML.section(sb, "Status of Hidden and Output Layers");
           sb.append("<table class='table table-striped table-bordered table-condensed'>");
           sb.append("<tr>");
           sb.append("<th>").append("#").append("</th>");
@@ -836,11 +842,11 @@ public class NeuralNet extends ValidatedJob {
           sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
           sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
           sb.append("</tr>");
-          for (int i=1; i<model.layers.length-1; ++i) {
+          for (int i=1; i<model.layers.length; ++i) {
             sb.append("<tr>");
             sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
             sb.append("<td>").append("<b>").append(model.layers[i].units).append("</b>").append("</td>");
-            sb.append("<td>").append(model.layers[i].getClass().getSimpleName()).append("</td>");
+            sb.append("<td>").append(model.layers[i].getClass().getSimpleName().replace("Vec","").replace("Chunk", "")).append("</td>");
             sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
             sb.append("<td>").append(model.layers[i].l1).append("</td>");
             sb.append("<td>").append(model.layers[i].l2).append("</td>");

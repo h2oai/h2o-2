@@ -176,6 +176,9 @@ public class Vec extends Iced {
    *  categorical columns.  Returns null for non-Enum/factor columns. */
   public String[] domain() { return _domain; }
 
+  /** Returns cardinality for enum domain or -1 for other types. */
+  public int cardinality() { return isEnum() ? _domain.length : -1; }
+
   /** Transform this vector to enum.
    *  Transformation is done by a {@link TransfVec} which provides a mapping between values.
    *
@@ -237,7 +240,7 @@ public class Vec extends Iced {
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
     } else {                 // KV store reports we need to recompute
       RollupStats rs = new RollupStats().dfork(this);
-      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult()); 
+      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
     }
     return this;
   }
@@ -294,9 +297,8 @@ public class Vec extends Iced {
       _size += rs._size;
       _isInt &= rs._isInt;
     }
-    @Override public boolean logVerbose() {
-      return !H2O.DEBUG;
-    }
+    // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
+    @Override public boolean logVerbose() { return false; }
   }
 
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
@@ -349,6 +351,15 @@ public class Vec extends Iced {
 
   /** Number of rows in chunk. Does not fetch chunk content. */
   public int chunkLen( int cidx ) { return (int) (_espc[cidx + 1] - _espc[cidx]); }
+
+  /** Get a Vec Key from Chunk Key, without loading the Chunk */
+  static public Key getVecKey( Key key ) {
+    assert key._kb[0]==Key.DVEC;
+    byte [] bits = key._kb.clone();
+    bits[0] = Key.VEC;
+    UDP.set4(bits,6,-1); // chunk#
+    return Key.make(bits);
+  }
 
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
   public Key chunkKey(int cidx ) {
@@ -460,8 +471,9 @@ public class Vec extends Iced {
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
+      // CNC: Bad plan to load remote data during a toString... messes up debug printing
       // Stupidly elem2BV loads all data locally
-      s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
+      // s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
     }
     return s+"}]";
   }
@@ -475,6 +487,31 @@ public class Vec extends Iced {
     return o instanceof Vec && ((Vec)o)._key.equals(_key);
   }
   @Override public int hashCode() { return _key.hashCode(); }
+
+  /** Always makes a copy of the given vector which shares the same
+   * group.
+   *
+   * The user is responsible for deleting the returned vector.
+   *
+   * This can be expensive operation since it can force copy of data
+   * among nodes.
+   *
+   * @param vec vector which is intended to be copied
+   * @return a copy of vec which shared the same {@link VectorGroup} with this vector
+   */
+  public Vec align(final Vec vec) {
+    assert ! this.group().equals(vec.group()) : "Vector align expects a vector from different vector group";
+    assert this._size == vec._size : "Trying to align vectors with different length!";
+    Vec avec = makeZero(); // aligned vector
+    new MRTask2() {
+      @Override public void map(Chunk c0) {
+        long srow = c0._start;
+        for (int r = 0; r < c0._len; r++) c0.set0(r, vec.at(srow + r));
+      }
+    }.doAll(avec);
+    avec._domain = _domain;
+    return avec;
+  }
 
   /**
    * Class representing the group of vectors.

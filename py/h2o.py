@@ -614,9 +614,9 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         if conservative: # still needed?
             for n in nodeList:
                 stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
-        else:
-            pass
-            # verify_cloud_size(nodeList)
+
+        # this does some extra checking now
+        verify_cloud_size(nodeList)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors(python_test_name=python_test_name)
@@ -766,8 +766,20 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
     expectedSize = len(nodeList)
     # cloud size and consensus have to reflect a single grab of information from a node.
     cloudStatus = [n.get_cloud(timeoutSecs=timeoutSecs) for n in nodeList]
+
     cloudSizes = [c['cloud_size'] for c in cloudStatus]
     cloudConsensus = [c['consensus'] for c in cloudStatus]
+    cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
+
+    if not all(cloudHealthy):
+        raise Exception("Some node reported cloud_healthy not true: %s" % cloudHealthy)
+
+    # gather up all the node_healthy status too
+    for i,c in enumerate(cloudStatus):
+        nodesHealthy = [n['node_healthy'] for n in c['nodes']]
+        if not all(nodesHealthy):
+            print "node %s cloud status: %s" % (i, dump_json(c))
+            raise Exception("node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy))
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
@@ -1415,6 +1427,21 @@ class H2O(object):
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
 
+
+    # turns enums into expanded binary features
+    def one_hot(self, source, timeoutSecs=30, **kwargs):
+        params = {
+            "source": source,
+            }
+
+        a = self.__do_json_request('2/OneHot.json',
+            params=params,
+            timeout=timeoutSecs
+            )
+
+        check_sandbox_for_errors(python_test_name=python_test_name)
+        return a
+
     # &offset=
     # &view=
     def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, 
@@ -1789,7 +1816,7 @@ class H2O(object):
 
     def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
-            'source': None,
+            'copy_from': None,
             'target': None,
         }
         # only lets these params thru
@@ -2016,14 +2043,12 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def neural_net_score(self, key, model, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+    def neural_net_score(self, key, model, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'source': key,
             'destination_key': None,
             'model': model,
-            # this is ignore??
-            'cols': None,
             'ignored_cols': None,
             'classification': None,
             'response': None,
@@ -2048,22 +2073,33 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def neural_net(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+    def neural_net(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
             'source': data_key,
-            # this is ignore??
-            'cols': None,
-            'ignored_cols': None,
-            'validation': None,
-            'classification': None,
-            'response': None,
-            'activation': None,
-            'hidden': None,
-            'rate': None,
-            'l2': None,
-            'epochs': None,
+            'ignored_cols'                 : None,
+            'validation'                   : None,
+            'classification'               : None,
+            'response'                     : None,
+            'mode'                         : None,
+            'activation'                   : None,
+            'input_dropout_ratio'          : None,
+            'hidden'                       : None,
+            'rate'                         : None,
+            'rate_annealing'               : None,
+            'momentum_start'               : None,
+            'momentum_ramp'                : None,
+            'momentum_stable'              : None,
+            'l1'                           : None,
+            'l2'                           : None,
+            'seed'                         : None,
+            'loss'                         : None,
+            'max_w2'                       : None,
+            'warmup_samples'               : None,
+            'initial_weight_distribution'  : None,
+            'initial_weight_scale'         : None,
+            'epochs'                       : None,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
@@ -2083,6 +2119,16 @@ class H2O(object):
         verboseprint("\nneural_net result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
+    def neural_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'destination_key': model_key,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'nn_view', print_params)
+        a = self.__do_json_request('2/NeuralNetProgress.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nneural_view result:", dump_json(a))
         return a
 
     def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, **kwargs):

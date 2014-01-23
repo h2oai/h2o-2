@@ -21,7 +21,7 @@ A vector containing the names or indices of the predictor variables to use in bu
 The name or index of the response variable. If the data does not contain a header, this is the column index number starting at 0, and increasing from left to right. (The response must be either an integer or a categorical variable).
 }
   \item{distribution}{
-The type of GBM model to be produced, categorization is "multinomial" (default), "gaussian" used for regression.
+The type of GBM model to be produced, classification is "multinomial" (default), "gaussian" is used for regression.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
@@ -41,12 +41,11 @@ A learning-rate parameter defining step size reduction.
   }
 \value{
 An object of class \code{\linkS4class{H2OGBMModel}} with slots key, data, and model, where the last is a list of the following components:
-\item{type }{The type of the tree, which currently must be classification.}
-\item{n.trees }{Numbe
-	r of trees grown.}
+\item{type }{The type of the tree.}
+\item{n.trees }{Number of trees grown.}
 \item{oob_err }{Out of bag error rate.}
 \item{forest }{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
-\item{confusion }{Confusion matrix of the prediction.}
+\item{confusion }{Confusion matrix of the prediction when classification model is specified.}
 }
 \references{
 
@@ -72,13 +71,15 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, 
 + startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
-# Run multinomial classification GBM on australia.hex data 
+# Run regression GBM on australia.hex data 
 
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
-independent<- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
+independent<- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", 
++ "maxsoilmoist", "Max_czcs")
 dependent<- "runoffnew"
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, 
++ n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
 
 # Run multinomial classification GBM on australia data 
 

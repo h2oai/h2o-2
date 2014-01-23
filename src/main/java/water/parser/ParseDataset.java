@@ -3,7 +3,6 @@ package water.parser;
 import java.io.EOFException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
@@ -17,7 +16,6 @@ import water.parser.DParseTask.Pass;
 import water.util.*;
 import water.util.Utils.IcedArrayList;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 
 /**
@@ -35,7 +33,7 @@ public final class ParseDataset extends Job {
     destination_key = dest;
     Value dataset = DKV.get(keys[0]);
     long total = dataset.length() * Pass.values().length;
-    for(int i = 1; i < keys.length; ++i){
+    for(int i = 1; i < keys.length; ++i) {
       dataset = DKV.get(keys[i]);
       total += dataset.length() * Pass.values().length;
     }
@@ -166,7 +164,7 @@ public final class ParseDataset extends Job {
       }
     } else if(!keys.isEmpty())
       gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys.get(0)),setup,checkHeader);
-    if(!gSetup.valid())
+    if( gSetup == null || !gSetup.valid())
       throw new ParseSetupGuessException("",gSetup,null);
     if(headerKey != null){ // separate headerKey
       Value v = DKV.get(headerKey);
@@ -371,6 +369,19 @@ public final class ParseDataset extends Job {
     }
   }
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
+    // Some quick sanity checks: no overwriting your input key, and a resource check.
+    long sum=0;
+    for( Key k : keys ) {
+      if( dest.equals(k) ) 
+        throw new IllegalArgumentException("Destination key "+dest+" must be different from all sources");
+      sum += DKV.get(k).length(); // Sum of all input filesizes
+    }
+    long memsz=0;               // Cluster memory
+    for( H2ONode h2o : H2O.CLOUD._memary )
+      memsz += h2o._heartbeat.get_max_mem();
+    if( sum > memsz*2 )
+      throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
+
     ParseDataset job = new ParseDataset(dest, keys);
     ParserFJTask fjt = new ParserFJTask(job, keys, setup);
     job.start(fjt);

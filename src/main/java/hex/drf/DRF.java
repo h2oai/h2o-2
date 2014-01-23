@@ -88,7 +88,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       if (isClassifier()) {
         bodySb.i().p("float sum = 0;").nl();
         bodySb.i().p("for(int i=1; i<preds.length; i++) sum += preds[i];").nl();
-        bodySb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
+        bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
   }
@@ -102,7 +102,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='DRF.query?source=%$key'>%content</a>");
+    RString rs = new RString("<a href='/2/DRF.query?source=%$key'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();

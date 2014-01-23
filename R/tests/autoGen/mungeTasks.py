@@ -169,7 +169,7 @@ def writeSimpleNumericFilterTestTask(FU, data, dataPath, FUParams):
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")
                 Log.info("Uploading {0}")
-                hex <- h2o.uploadFile(conn, locate({2}), "r{0}.hex")
+                hex <- h2o.uploadFile.FV(conn, locate({2}), "r{0}.hex")
            """.format(DATANAME.replace('-','_'), FU, DATAPATH, TESTNAME.replace('-', '_'), st, githash, seed)
 
     valCol = zip(VALUECOL.split('|')[0].split(';'), VALUECOL.split('|')[1].split(';'))
@@ -273,7 +273,7 @@ def writeCompoundFilterTestTask(FU, data, dataPath, FUParams):
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")
                 Log.info("Uploading {0}")
-                hex <- h2o.uploadFile(conn, locate({2}), "r{0}.hex")
+                hex <- h2o.uploadFile.FV(conn, locate({2}), "r{0}.hex")
            """.format(DATANAME.replace('-','_'), FU, DATAPATH, TESTNAME.replace('-','_'), st, githash, seed)
 
     valColL = zip(VALUECOLL.split('|')[0].split(';'), VALUECOLL.split('|')[1].split(';'))

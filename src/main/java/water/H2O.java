@@ -249,7 +249,7 @@ public final class H2O {
     // go round-robin in 64MB chunks.
     if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
       long cidx = 0;
-      int skip = 1+1+4+4;       // Skip both the vec# and chunk#?
+      int skip = water.fvec.Vec.KEY_PREFIX_LEN; // Skip both the vec# and chunk#?
       if( key._kb[0] == Key.DVEC ) {
         long cSz = 1L << (26 - water.fvec.Vec.LOG_CHK);
         cidx = UDP.get4(key._kb, 1+1+4); // Chunk index
@@ -736,7 +736,7 @@ public final class H2O {
   public static class OptArgs extends Arguments.Opt {
     public String name; // set_cloud_name_and_mcast()
     public String flatfile; // set_cloud_name_and_mcast()
-    public int base_port; // starting number to search for open ports
+    public int baseport; // starting number to search for open ports
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String network; // Network specification for acceptable interfaces to bind to.
@@ -905,8 +905,8 @@ public final class H2O {
 
     printAndLogVersion();
 
-    if (OPT_ARGS.base_port != 0) {
-      DEFAULT_PORT = OPT_ARGS.base_port;
+    if (OPT_ARGS.baseport != 0) {
+      DEFAULT_PORT = OPT_ARGS.baseport;
     }
 
     // Get ice path before loading Log or Persist class
@@ -1154,6 +1154,11 @@ public final class H2O {
   // multicast port (or all the individuals we can find, if multicast is
   // disabled).
   static void multicast( ByteBuffer bb ) {
+    try { multicast2(bb); }
+    catch (Exception _) {}
+  }
+
+  static private void multicast2( ByteBuffer bb ) {
     if( H2O.STATIC_H2OS == null ) {
       byte[] buf = new byte[bb.remaining()];
       bb.get(buf);
@@ -1173,11 +1178,11 @@ public final class H2O {
           // and if not a soft launch (hibernate mode)
           if(H2O.OPT_ARGS.soft == null)
             Log.err("Multicast Error ",e);
-            if( CLOUD_MULTICAST_SOCKET != null )
-              try { CLOUD_MULTICAST_SOCKET.close(); }
-              catch( Exception e2 ) { Log.err("Got",e2); }
-              finally { CLOUD_MULTICAST_SOCKET = null; }
-          }
+          if( CLOUD_MULTICAST_SOCKET != null )
+            try { CLOUD_MULTICAST_SOCKET.close(); }
+            catch( Exception e2 ) { Log.err("Got",e2); }
+            finally { CLOUD_MULTICAST_SOCKET = null; }
+        }
       }
     } else {                    // Multicast Simulation
       // The multicast simulation is little bit tricky. To achieve union of all

@@ -233,6 +233,11 @@ h2o.__dumpLogs <- function(client) {
 }
 
 h2o.__poll <- function(client, keyName) {
+  if(missing(client)) stop("client is missing!")
+  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if(missing(keyName)) stop("keyName is missing!")
+  if(!is.character(keyName) || nchar(keyName) == 0) stop("keyName must be a non-empty string")
+  
   res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
   res = res$jobs
   if(length(res) == 0) stop("No jobs found in queue")
@@ -263,35 +268,47 @@ h2o.__pollAll <- function(client, timeout) {
   }
 }
 
-h2o.__isDone <- function(client, algo, resH) {
-  if(!algo %in% c("GBM", "KM", "RF1", "RF2", "NN", "GLM1", "GLM2", "GLM1Grid", "PCA")) stop(algo, " is not a supported algorithm")
-  version = ifelse(algo %in% c("RF1", "GLM1", "GLM1Grid"), 1, 2)
-  page = switch(algo, GBM = h2o.__PAGE_GBMProgress, KM = h2o.__PAGE_KM2Progress, RF1 = h2o.__PAGE_RFVIEW, 
-                RF2 = h2o.__PAGE_DRFProgress, NN = h2o.__PAGE_NNProgress, GLM1 = h2o.__PAGE_GLMProgress, 
-                GLM1Grid = h2o.__PAGE_GLMGridProgress, GLM2 = h2o.__PAGE_GLM2Progress, PCA = h2o.__PAGE_PCAProgress)
-  
-  if(version == 1) {
-    job_key = resH$response$redirect_request_args$job
-    dest_key = resH$destination_key
-    if(algo == "RF1")
-      res = h2o.__remoteSend(client, page, model_key = dest_key, data_key = resH$data_key, response_variable = resH$response$redirect_request_args$response_variable)
-    else
-      res = h2o.__remoteSend(client, page, job = job_key, destination_key = dest_key)
-    if(res$response$status == "error") stop(res$error)
-    res$response$status != "poll"
-  } else {
-    job_key = resH$job_key; dest_key = resH$destination_key
-    res = h2o.__remoteSend(client, page, job_key = job_key, destination_key = dest_key)
-    if(res$response_info$status == "error") stop(res$error)
-    
-    if(!is.null(res$response_info$redirect_url)) {
-      ind = regexpr("\\?", res$response_info$redirect_url)[1]
-      url = ifelse(ind > 1, substr(res$response_info$redirect_url, 1, ind-1), res$response_info$redirect_url)
-      !(res$response_info$status == "poll" || (res$response_info$status == "redirect" && url == page))
-    } else
-      res$response_info$status == "done"
-  }
+h2o.__waitOnJob <- function(client, job_key, pollInterval = 1, progressBar = TRUE) {
+  if(progressBar) {
+    pb = txtProgressBar(style = 3)
+    tryCatch(while((prog = h2o.__poll(client, job_key)) != -1) { Sys.sleep(pollInterval); setTxtProgressBar(pb, prog) },
+             finally = h2o.__cancelJob(client, job_key))
+    setTxtProgressBar(pb, 1.0); close(pb)
+  } else
+    tryCatch(while(h2o.__poll(client, job_key) != -1) { Sys.sleep(pollInterval) }, 
+             finally = h2o.__cancelJob(client, job_key))
 }
+
+# For checking progress from each algorithm's progress page (no longer used)
+# h2o.__isDone <- function(client, algo, resH) {
+#   if(!algo %in% c("GBM", "KM", "RF1", "RF2", "NN", "GLM1", "GLM2", "GLM1Grid", "PCA")) stop(algo, " is not a supported algorithm")
+#   version = ifelse(algo %in% c("RF1", "GLM1", "GLM1Grid"), 1, 2)
+#   page = switch(algo, GBM = h2o.__PAGE_GBMProgress, KM = h2o.__PAGE_KM2Progress, RF1 = h2o.__PAGE_RFVIEW, 
+#                 RF2 = h2o.__PAGE_DRFProgress, NN = h2o.__PAGE_NNProgress, GLM1 = h2o.__PAGE_GLMProgress, 
+#                 GLM1Grid = h2o.__PAGE_GLMGridProgress, GLM2 = h2o.__PAGE_GLM2Progress, PCA = h2o.__PAGE_PCAProgress)
+#   
+#   if(version == 1) {
+#     job_key = resH$response$redirect_request_args$job
+#     dest_key = resH$destination_key
+#     if(algo == "RF1")
+#       res = h2o.__remoteSend(client, page, model_key = dest_key, data_key = resH$data_key, response_variable = resH$response$redirect_request_args$response_variable)
+#     else
+#       res = h2o.__remoteSend(client, page, job = job_key, destination_key = dest_key)
+#     if(res$response$status == "error") stop(res$error)
+#     res$response$status != "poll"
+#   } else {
+#     job_key = resH$job_key; dest_key = resH$destination_key
+#     res = h2o.__remoteSend(client, page, job_key = job_key, destination_key = dest_key)
+#     if(res$response_info$status == "error") stop(res$error)
+#     
+#     if(!is.null(res$response_info$redirect_url)) {
+#       ind = regexpr("\\?", res$response_info$redirect_url)[1]
+#       url = ifelse(ind > 1, substr(res$response_info$redirect_url, 1, ind-1), res$response_info$redirect_url)
+#       !(res$response_info$status == "poll" || (res$response_info$status == "redirect" && url == page))
+#     } else
+#       res$response_info$status == "done"
+#   }
+# }
 
 h2o.__cancelJob <- function(client, keyName) {
   res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
@@ -306,7 +323,7 @@ h2o.__cancelJob <- function(client, keyName) {
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
   if(!(prog$cancelled || prog$progress == -1.0 || prog$progress == -2.0 || prog$end_time == -1)) {
     h2o.__remoteSend(client, h2o.__PAGE_CANCEL, key=keyName)
-    cat("Job key", keyName, "was cancelled by user")
+    cat("Job key", keyName, "was cancelled by user\n")
   }
 }
 
@@ -338,8 +355,9 @@ h2o.__uniqID <- function(prefix = "") {
 # }
 
 h2o.__checkForFactors <- function(object) {
-    if(class(object) != "H2OParsedData") return(FALSE)
-    any.factor(object)
+  # if(class(object) != "H2OParsedData") return(FALSE)
+  if(!class(object) %in% c("H2OParsedData", "H2OParsedDataVA")) return(FALSE)
+  any.factor(object)
 }
 
 h2o.__version <- function(client) {
@@ -402,18 +420,22 @@ h2o.__unop2 <- function(op, x) {
 h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
-
-  if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+  # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+  LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
+  
+  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) & !( op %in% c('==', '!='))) {
     anyFactorsX <- h2o.__checkForFactors(x)
     anyFactorsY <- h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
 
-  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  # RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  RHS = ifelse(inherits(y, "H2OParsedData"), y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData") myClient = x@h2o
+  # if(class(x) == "H2OParsedData") myClient = x@h2o
+  if(inherits(x, "H2OParsedData")) myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 

@@ -114,7 +114,6 @@ public class ConfusionTask extends MRTask {
     final Value val = DKV.DputIfMatch(cmKey, dummyCMVal, null, null);
     if (val==null) {
       final CMJob cmJob = new CMJob(modelSize,cmKey);
-      cmJob.destination_key = cmKey;
       cmJob.description = "CM computation";
       // and start a new confusion matrix computation
       H2OCountedCompleter fjtask = new H2OCountedCompleter() {

@@ -43,10 +43,12 @@ class Basic(unittest.TestCase):
         print "inspect:", h2o.dump_json(inspect)
 
         # print h2o.dump_json(predict)
+        # no min/max any more with enums?
+
         expectedCols = {
-              "max": 2.0, 
+              # "max": 2.0, 
               # "mean": 1.0, 
-              "min": 0.0, 
+              # "min": 0.0, 
               "naCnt": 0, 
               # "name": 0, 
               # Enum or real?

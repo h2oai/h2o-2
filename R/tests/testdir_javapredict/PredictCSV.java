@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.HashMap;
 
 class PredictCSV {
     private static String modelClassName;
@@ -83,6 +84,23 @@ class PredictCSV {
         BufferedReader input = new BufferedReader(new FileReader(inputCSVFileName));
         BufferedWriter output = new BufferedWriter(new FileWriter(outputCSVFileName));
 
+        System.out.println("COLS " + model.getNumCols());
+        // Create map of input variable domain information.
+        // This contains the categorical string to numeric mapping.
+        HashMap<Integer,HashMap<String,Integer>> domainMap = new HashMap<Integer,HashMap<String,Integer>>();
+        for (int i = 0; i < model.getNumCols(); i++) {
+            String[] domainValues = model.getDomainValues(i);
+            if (domainValues != null) {
+                HashMap<String,Integer> m = new HashMap<String,Integer>();
+                for (int j = 0; j < domainValues.length; j++) {
+                    System.out.println("Putting ("+ i +","+ j +","+ domainValues[j] +")");
+                    m.put(domainValues[j], new Integer(j));
+                }
+
+                domainMap.put(i, m);
+            }
+        }
+
         // Print outputCSV column names.
         output.write("predict");
         for (int i = 0; i < model.getNumResponseClasses(); i++) {
@@ -93,13 +111,20 @@ class PredictCSV {
 
         // Loop over inputCSV one row at a time.
         int lineno = 0;
-        String line = input.readLine();
-        while (line != null) {
+        String line = null;
+        while ((line = input.readLine()) != null) {
             lineno++;
             if (skipFirstLine > 0) {
-                // TODO:  compare that these column headers match model.getNames().
                 skipFirstLine = 0;
-                line = input.readLine();
+                String[] names = line.trim().split(",");
+                String[] modelNames = model.getNames();
+                for (int i=0; i < Math.min(names.length, modelNames.length); i++ )
+                  if ( !names[i].equals(modelNames[i]) ) {
+                    System.out.println("ERROR: Column names does not match: input column " + i + ". "+names[i]+" != model column "+modelNames[i] );
+                    System.exit(1);
+                  }
+                // go to the next line
+                continue;
             }
 
             // Parse the CSV line.  Don't handle quoted commas.  This isn't a parser test.
@@ -108,19 +133,41 @@ class PredictCSV {
             int numInputColumns = model.getNames().length;
             if (inputColumnsArray.length != numInputColumns) {
                 System.out.println("WARNING: Line " + lineno + " has " + inputColumnsArray.length + " columns (expected " + numInputColumns + ")");
-                // System.exit(1);
             }
 
             // Assemble the input values for the row.
             double[] row = new double[inputColumnsArray.length];
             for (int i = 0; i < inputColumnsArray.length; i++) {
+                String cellString = inputColumnsArray[i];
+
+                // System.out.println("Line " + lineno +" column ("+ model.getNames()[i] + " == " + i + ") cellString("+cellString+")");
+
                 String[] domainValues = model.getDomainValues(i);
-                if (domainValues != null) {
-                    System.out.println("ERROR: Unimplemented");
-                    System.exit(1);
+                if (cellString.equals("") ||    // empty field is default NA
+                    (domainValues == null) && ( // if the column is enum then NA is part of domain by default ! 
+                      cellString.equals("NA") ||
+                      cellString.equals("N/A") ||
+                      cellString.equals("-") )
+                    ) {
+                    row[i] = Double.NaN;
+                } else {
+                    if (domainValues != null) {
+                        HashMap m = (HashMap<String,Integer>) domainMap.get(i);
+                        assert (m != null);
+                        Integer cellOrdinalValue = (Integer) m.get(cellString);
+                        if (cellOrdinalValue == null) {
+                            System.out.println("WARNING: Line " + lineno + " column ("+ model.getNames()[i] + " == " + i +") has unknown categorical value (" + cellString + ")");
+                            row[i] = Double.NaN;
+                        }
+                        else {
+                            row[i] = (double) cellOrdinalValue.intValue();
+                        }
+                    }
+                    else {
+                        double value = Double.parseDouble(cellString);
+                        row[i] = value;
+                    }
                 }
-                double value = Double.parseDouble(inputColumnsArray[i]);
-                row[i] = value;
             }
 
             // Do the prediction.
@@ -155,9 +202,6 @@ class PredictCSV {
                 }
             }
             output.write("\n");
-
-            // Prepare for next line of input.
-            line = input.readLine();
         }
 
         // Clean up.
