@@ -51,7 +51,7 @@ public class NeuralNet extends ValidatedJob {
   public double l1 = 0.0;
 
   @API(help = "L2 regularization, can add stability", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double l2 = 0.001;
+  public double l2 = 0.0;
 
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, json = true)
   public double momentum_start = .5;
@@ -60,13 +60,13 @@ public class NeuralNet extends ValidatedJob {
   public long momentum_ramp = 1000000;
 
   @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, json = true)
-  public double momentum_stable = .99;
+  public double momentum_stable = 1.0;
 
   @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
   public double epochs = 10;
 
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
-  public final long seed = new Random().nextLong();
+  public long seed = new Random().nextLong();
 
   @API(help = "Enable expert mode", filter = Default.class, json = false)
   public boolean expert_mode = false;
@@ -75,7 +75,7 @@ public class NeuralNet extends ValidatedJob {
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0, json = true)
-  public double initial_weight_scale = 0.01;
+  public double initial_weight_scale = 1.0;
 
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
@@ -84,7 +84,7 @@ public class NeuralNet extends ValidatedJob {
   public double max_w2 = Double.MAX_VALUE;
 
   @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
-  public long warmup_samples = 1000l;
+  public long warmup_samples = 0l;
 
   @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
   public long score_training = 1000l;
@@ -93,7 +93,7 @@ public class NeuralNet extends ValidatedJob {
   public long score_validation = 0l;
 
   @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = false)
-  public double score_interval = 2;
+  public double score_interval = 5;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
   public boolean diagnostics = true;

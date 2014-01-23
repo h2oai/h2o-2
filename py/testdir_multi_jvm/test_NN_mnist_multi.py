@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
 
             #### Look at model progress, and check the last reported validation error
             modelView = h2o_cmd.runNeuralView(model_key=model_key)
-            relTol = 0.02 if mode == 'SingleThread' else 0.05 ### 5% relative error is acceptable for Hogwild
+            relTol = 0.02 if mode == 'SingleThread' else 0.10 ### 10% relative error is acceptable for Hogwild
             h2o_nn.checkLastValidationError(self, modelView, inspect['numRows'], expectedErr, relTol, **kwargs)
 
             #### Now score using the model, and check the last reported validation error
