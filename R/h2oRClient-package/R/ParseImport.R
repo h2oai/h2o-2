@@ -82,7 +82,7 @@ h2o.assign <- function(data, key) {
 # ----------------------------------- File Import Operations --------------------------------- #
 # WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 # ----------------------------------- Import Folder --------------------------------- #
-h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", version = 1) {
+h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
   if(version == 1)
     h2o.importFolder.VA(object, path, pattern, key, parse, header, sep, col.names)
   else if(version == 2)
@@ -107,10 +107,12 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
+      if(substr(path, nchar(path), nchar(path)) == "/")
+        path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
+      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names)
     } else {
       myData = lapply(res$keys, function(x) { new("H2ORawDataVA", h2o=object, key=x) })
       if(length(res$keys) == 1) myData[[1]] else myData
@@ -137,6 +139,8 @@ h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TR
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
+      if(substr(path, nchar(path), nchar(path)) == "/")
+        path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
@@ -229,6 +233,8 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
   # Return only the files that successfully imported
   if(res$num_succeeded > 0) {
     if(parse) {
+      if(substr(path, nchar(path), nchar(path)) == "/")
+        path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
@@ -306,10 +312,10 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, version = 
 h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   if(class(data) != "H2ORawDataVA") stop("data must be of class H2ORawDataVA")
   if(!is.character(key)) stop("key must be of class character")
-  if(!(missing(header) || is.logical(header))) stop(paste("header cannot be of class", class(header)))
+  if(!missing(header) && !is.logical(header)) stop("header must be of class logical")
   if(!is.character(sep)) stop("sep must be of class character")
-  if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
-  
+  if(!missing(col.names) && class(col.names) != "H2OParsedDataVA") stop(paste("col.names cannot be of class", class(col.names)))
+
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
   if(missing(header) && missing(col.names))
@@ -357,6 +363,31 @@ h2o.exportHDFS <- function(object, path) {
   if(nchar(path) == 0) stop("path must be a non-empty string")
   
   res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
+}
+
+h2o.downloadCSV <- function(data, filename) {
+  if( missing(data)) stop('Must specify data')
+  if(! class(data) %in% c('H2OParsedDataVA', 'H2OParsedData'))
+    stop('data is not an H2O data object')
+  if( missing(filename) ) stop('Must specify filename')
+  
+  str <- paste('http://', data@h2o@ip, ':', data@h2o@port, '/2/DownloadDataset?src_key=', data@key, sep='')
+  has_wget <- '' != Sys.which('wget')
+  has_curl <- '' != Sys.which('curl')
+  if( !(has_wget || has_curl)) stop("I can't find wget or curl on your system")
+  if( has_wget ){
+    cmd <- 'wget'
+    args <- paste('-O', filename, str)
+  } else {
+    cmd <- 'curl'
+    args <- paste('-o', filename, str)
+  }
+  
+  print(paste('cmd:', cmd))
+  print(paste('args:', args))
+  val <- system2(cmd, args, wait=T)
+  if( val != 0 )
+    print(paste('Bad return val', val))
 }
 
 setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })

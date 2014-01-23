@@ -128,6 +128,13 @@ def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noP
     gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
     return gbmView
 
+def runNeuralView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+    if not node: node = h2o.nodes[0]
+    if not model_key: 
+        raise Exception("\nNo model_key was supplied to the neural view!")
+    neuralView = node.neural_view(model_key,timeoutSecs=timeoutSecs)
+    return neuralView
+
 def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]
     if not modelKey:
