@@ -32,7 +32,11 @@ else
 endif
 	R CMD build h2oRClient-package
 	echo h2oRClient_$(PROJECT_VERSION).tar.gz > info.txt
+ifeq ($(OS),Windows_NT)
+	md5deep h2oRClient_$(PROJECT_VERSION).tar.gz | cut -d' ' -f1 >> info.txt
+else
 	openssl md5 h2oRClient_$(PROJECT_VERSION).tar.gz | sed 's/.*= //' >> info.txt
+endif
 	# Create temporary directory for jarring later
 	mkdir -p ../r_pack_tmp/resources/R
 	cp -p info.txt ../r_pack_tmp/resources/R/info.txt
@@ -47,7 +51,6 @@ clean:
 	rm -f h2oRClient-package/h2oRClient_package.pdf
 	rm -f h2oRClient-package/man/h2oRClient-package.Rd
 	rm -f h2oRClient_*.tar.gz
-	
 	rm -f h2o-package/DESCRIPTION
 	rm -f h2o-package/h2o_package.pdf
 	rm -f h2o-package/man/h2o-package.Rd
