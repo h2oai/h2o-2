@@ -1,0 +1,27 @@
+A directory of performance tests.
+
+Each performance test is a directory of R files.
+Their are at most 4 R files per test: 
+    1. parsing, 
+    2. modeling, 
+    3. predicting, and 
+    4. verifying of results.
+
+Example 1:
+  tests/
+    gbmTest1/
+      gbmTest1_Parse.R
+      gbmTest1_Model.R
+      gbmTest1_Predict.R
+      gbmTest1_Verify.R
+
+Example 2:
+    tests/
+      pcaTest1/
+        pcaTest1_Parse.R
+        pcaTest1_Model.R
+        pcaTest1_Verify.R
+
+Each R file sources the prologue and epilogue files from R directory
+accessible in the parent of this directory.
+

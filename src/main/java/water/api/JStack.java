@@ -4,6 +4,7 @@ import java.text.DateFormat;
 import java.util.Date;
 import water.H2O;
 import water.Iced;
+import water.util.Log;
 import water.util.JStackCollectorTask;
 
 public class JStack extends Request {
@@ -41,6 +42,8 @@ public class JStack extends Request {
     node_name = H2O.SELF.toString();
     cloud_name = H2O.NAME;
     time = DateFormat.getInstance().format(new Date());
+    for( int i=0; i<nodes.length; i++ )
+      Log.debug(Log.Tag.Sys.WATER,nodes[i].name,nodes[i].traces);
     return Response.done(this);
   }
 

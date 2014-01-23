@@ -216,8 +216,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
-            print(glm)
-            (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, "C1", **kwargs)
+            (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, 'C1', **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             if ALGO=='binomial':

@@ -23,6 +23,7 @@ class TestJUnit(unittest.TestCase):
                     'hex.GLMTest',
                     'hex.KMeansTest',
                     'hex.MinorityClassTest',
+                    'hex.NeuralNetSpiralsTest',
                     'hex.rf.RandomForestTest',
                     'hex.rf.RFPredDomainTest',
                     'water.AtomicTest',

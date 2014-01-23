@@ -236,10 +236,10 @@ public abstract class CustomParser extends Iced {
   }
 
   public interface StreamDataOut extends DataOut {
-    public StreamDataOut nextChunk();
-    public StreamDataOut reduce(StreamDataOut dout);
-    public StreamDataOut close();
-    public StreamDataOut close(Futures fs);
+    StreamDataOut nextChunk();
+    StreamDataOut reduce(StreamDataOut dout);
+    StreamDataOut close();
+    StreamDataOut close(Futures fs);
   }
 
   public static class StreamData implements CustomParser.DataIn {
