@@ -93,7 +93,7 @@ public class NeuralNet extends ValidatedJob {
   public long score_validation = 0l;
 
   @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = false)
-  public double score_interval = 5;
+  public double score_interval = 2;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
   public boolean diagnostics = true;
@@ -409,7 +409,7 @@ public class NeuralNet extends ValidatedJob {
     NeuralNetModel model = UKV.get(destination_key);
     if( model != null && source != null) {
       Errors e = model.training_errors[model.training_errors.length - 1];
-      return 0.1f + Math.min(1, e.training_samples / (float) (epochs * source.numRows()));
+      return Math.min(1f, 0.1f + Math.min(1, e.training_samples / (float) (epochs * source.numRows())));
     }
     return 0;
   }
@@ -514,10 +514,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   @Override protected Response redirect() {
-    String redirectName = NeuralNetProgress.class.getSimpleName();
-    return Response.redirect(this, redirectName, //
-            "job_key", job_key, //
-            "destination_key", destination_key);
+    return NeuralNetProgressPage.redirect(this, self(), dest());
   }
 
   public static String link(Key k, String content) {
@@ -586,13 +583,13 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Model parameters")
     public NeuralNet parameters;
 
-    @API(help = "Layers")
+    //@API(help = "Layers")
     public Layer[] layers;
 
-    @API(help = "Layer weights")
+    //@API(help = "Layer weights")
     public float[][] weights;
 
-    @API(help = "Layer biases")
+    //@API(help = "Layer biases")
     public double[][] biases;
 
     @API(help = "Errors on the training set")
@@ -616,6 +613,7 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "RMS weight")
     public double[] rms_weight;
 
+    @API(help = "Unstable")
     public boolean unstable = false;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNet p) {
@@ -669,9 +667,183 @@ public class NeuralNet extends ValidatedJob {
           rms_weight[y] = Math.sqrt(rms_weight[y]/len/l._previous._a.length);
 
           unstable |= Double.isNaN(mean_bias[y])   || Double.isNaN(rms_bias[y])
-                   || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
+                  || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
         }
       }
+    }
+    public void toJavaHtml(StringBuilder sb) {
+      //DocGen.HTML.title(sb, "The Java Neural Net model is not implemented yet.");
+    }
+
+    public boolean generateHTML(String title, StringBuilder sb) {
+      final String mse_format = "%2.6f";
+      final String cross_entropy_format = "%2.6f";
+
+      DocGen.HTML.title(sb,title);
+      DocGen.HTML.paragraph(sb, "Model Key: " + _selfKey);
+      sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_selfKey, "Score on dataset") + ", "
+              + NeuralNet.link(_dataKey, "Compute new model") + "</div>");
+
+      // Plot training error
+      {
+        float[] train_err = new float[training_errors.length];
+        float[] train_samples = new float[training_errors.length];
+        for (int i=0; i<train_err.length; ++i) {
+          train_err[i] = (float)training_errors[i].classification;
+          train_samples[i] = training_errors[i].training_samples;
+        }
+        new D3Plot(train_samples, train_err, "training samples", "classification error",
+                "Classification Error on Training Set").generate(sb);
+      }
+
+      // Plot validation error
+      if (validation_errors != null) {
+        float[] valid_err = new float[validation_errors.length];
+        float[] valid_samples = new float[validation_errors.length];
+        for (int i=0; i<valid_err.length; ++i) {
+          valid_err[i] = (float)validation_errors[i].classification;
+          valid_samples[i] = validation_errors[i].training_samples;
+        }
+        new D3Plot(valid_samples, valid_err, "training samples", "classification error",
+                "Classification Error on Validation Set").generate(sb);
+      }
+
+
+      final boolean classification = isClassifier();
+      final String cmTitle = "Confusion Matrix" + (validation_errors == null ? " (Training Data)" : "");
+
+      // stats for training and validation
+      final Errors train = training_errors[training_errors.length - 1];
+      final Errors valid = validation_errors != null ? validation_errors[validation_errors.length - 1] : null;
+
+      if (classification) {
+        DocGen.HTML.section(sb, "Training classification error: " + formatPct(train.classification));
+      }
+      DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, train.mean_square));
+      if (classification) {
+        DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, train.cross_entropy));
+        if( valid != null ) {
+          DocGen.HTML.section(sb, "Validation classification error: " + formatPct(valid.classification));
+        }
+      }
+      if( validation_errors != null ) {
+        DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, valid.mean_square));
+        if (classification) {
+          DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, valid.cross_entropy));
+        }
+        if (valid.training_time_ms > 0)
+          DocGen.HTML.section(sb, "Training speed: " + valid.training_samples * 1000 / valid.training_time_ms + " samples/s");
+      }
+      else {
+        if (train.training_time_ms > 0)
+          DocGen.HTML.section(sb, "Training speed: " + train.training_samples * 1000 / train.training_time_ms + " samples/s");
+      }
+      if (parameters != null && parameters.diagnostics) {
+        DocGen.HTML.section(sb, "Status of Hidden and Output Layers");
+        sb.append("<table class='table table-striped table-bordered table-condensed'>");
+        sb.append("<tr>");
+        sb.append("<th>").append("#").append("</th>");
+        sb.append("<th>").append("Units").append("</th>");
+        sb.append("<th>").append("Activation").append("</th>");
+        sb.append("<th>").append("Rate").append("</th>");
+        sb.append("<th>").append("L1").append("</th>");
+        sb.append("<th>").append("L2").append("</th>");
+        sb.append("<th>").append("Momentum").append("</th>");
+        sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
+        sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
+        sb.append("</tr>");
+        for (int i=1; i<layers.length; ++i) {
+          sb.append("<tr>");
+          sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
+          sb.append("<td>").append("<b>").append(layers[i].units).append("</b>").append("</td>");
+          sb.append("<td>").append(layers[i].getClass().getSimpleName().replace("Vec","").replace("Chunk", "")).append("</td>");
+          sb.append("<td>").append(String.format("%.5g", layers[i].rate(train.training_samples))).append("</td>");
+          sb.append("<td>").append(layers[i].l1).append("</td>");
+          sb.append("<td>").append(layers[i].l2).append("</td>");
+          final String format = "%g";
+          sb.append("<td>").append(layers[i].momentum(train.training_samples)).append("</td>");
+          sb.append("<td>(").append(String.format(format, mean_weight[i])).
+                  append(", ").append(String.format(format, rms_weight[i])).append(")</td>");
+          sb.append("<td>(").append(String.format(format, mean_bias[i])).
+                  append(", ").append(String.format(format, rms_bias[i])).append(")</td>");
+          sb.append("</tr>");
+        }
+        sb.append("</table>");
+      }
+      if (unstable) {
+        final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
+                + "  Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+        DocGen.HTML.section(sb, "============================================================================================================");
+        DocGen.HTML.section(sb, msg);
+        DocGen.HTML.section(sb, "============================================================================================================");
+      }
+      if( confusion_matrix != null && confusion_matrix.length < 100 ) {
+        assert(classification);
+        String[] classes = classNames();
+        NeuralNetScore.confusion(sb, cmTitle, classes, confusion_matrix);
+      }
+      sb.append("<h3>" + "Progress" + "</h3>");
+      String training = "Number of training set samples for scoring: " + train.score_training;
+      if (train.score_training > 0) {
+        if (train.score_training < 1000) training += " (low, scoring might be inaccurate)";
+        if (train.score_training > 10000) training += " (large, scoring can be slow -> consider scoring manually)";
+      }
+      DocGen.HTML.section(sb, training);
+      if (valid != null) {
+        String validation = "Number of validation set samples for scoring: " + valid.score_validation;
+        if (valid.score_validation > 0) {
+          if (valid.score_validation < 1000) validation += " (low, scoring might be inaccurate)";
+          if (valid.score_validation > 10000) validation += " (large, scoring can be slow -> consider scoring manually)";
+        }
+        DocGen.HTML.section(sb, validation);
+      }
+      sb.append("<table class='table table-striped table-bordered table-condensed'>");
+      sb.append("<tr>");
+      sb.append("<th>Training Time</th>");
+      sb.append("<th>Training Samples</th>");
+      sb.append("<th>Training MSE</th>");
+      if (classification) {
+        sb.append("<th>Training MCE</th>");
+        sb.append("<th>Training Classification Error</th>");
+      }
+      sb.append("<th>Validation MSE</th>");
+      if (classification) {
+        sb.append("<th>Validation MCE</th>");
+        sb.append("<th>Validation Classification Error</th>");
+      }
+      sb.append("</tr>");
+      for( int i = training_errors.length - 1; i >= 0; i-- ) {
+        sb.append("<tr>");
+        sb.append("<td>" + PrettyPrint.msecs(training_errors[i].training_time_ms, true) + "</td>");
+        if( validation_errors != null ) {
+          sb.append("<td>" + String.format("%,d", validation_errors[i].training_samples) + "</td>");
+        } else {
+          sb.append("<td>" + String.format("%,d", training_errors[i].training_samples) + "</td>");
+        }
+        sb.append("<td>" + String.format(mse_format, training_errors[i].mean_square) + "</td>");
+        if (classification) {
+          sb.append("<td>" + String.format(cross_entropy_format, training_errors[i].cross_entropy) + "</td>");
+          sb.append("<td>" + formatPct(training_errors[i].classification) + "</td>");
+        }
+        if( validation_errors != null ) {
+          sb.append("<td>" + String.format(mse_format, validation_errors[i].mean_square) + "</td>");
+          if (classification) {
+            sb.append("<td>" + String.format(cross_entropy_format, validation_errors[i].cross_entropy) + "</td>");
+            sb.append("<td>" + formatPct(validation_errors[i].classification) + "</td>");
+          }
+        } else
+          sb.append("<td></td><td></td><td></td>");
+        sb.append("</tr>");
+      }
+      sb.append("</table>");
+      return true;
+    }
+
+    private static String formatPct(double pct) {
+      String s = "N/A";
+      if( !Double.isNaN(pct) )
+        s = String.format("%5.2f %%", 100 * pct);
+      return s;
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
@@ -710,244 +882,6 @@ public class NeuralNet extends ValidatedJob {
       return null;
     }
 
-    public Response redirect(Request req) {
-      String redirectName = new NeuralNetProgress().href();
-      return Response.redirect(req, redirectName, "destination_key", _selfKey);
-    }
-  }
-
-  public static class NeuralNetProgress extends Progress2 {
-    static final int API_WEAVER = 1;
-    static public DocGen.FieldDoc[] DOC_FIELDS;
-
-    private NeuralNet job;
-    private NeuralNetModel model;
-
-    @API(help = "Model parameters")
-    public NeuralNet parameters;
-
-    @API(help = "Errors on the training set")
-    public Errors[] training_errors;
-
-    @API(help = "Errors on the validation set")
-    public Errors[] validation_errors;
-
-    @API(help = "Dataset headers")
-    public String[] class_names;
-
-    @API(help = "Confusion matrix")
-    public long[][] confusion_matrix;
-
-    @Override protected String name() {
-      return DOC_GET;
-    }
-
-    @Override protected Response serve() {
-      job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
-      model = UKV.get(destination_key);
-      if( model != null ) {
-        parameters = model.parameters;
-        training_errors = model.training_errors;
-        validation_errors = model.validation_errors;
-        class_names = model.classNames();
-        confusion_matrix = model.confusion_matrix;
-        if (model.unstable && job != null) {
-          Log.info("Aborting job due to numerical instability (exponential growth).");
-          job.cancel();
-        }
-      }
-      return super.serve();
-    }
-
-    @Override public boolean toHTML(StringBuilder sb) {
-      final String mse_format = "%2.6f";
-      final String cross_entropy_format = "%2.6f";
-      if( model != null ) {
-
-        DocGen.HTML.paragraph(sb, "Model Key: " + model._selfKey);
-        sb.append("<div class='alert'>Actions: " + water.api.Predict.link(model._selfKey, "Score on dataset") + ", "
-                + NeuralNet.link(model._dataKey, "Compute new model") + "</div>");
-
-        // Plot training error
-        {
-          float[] train_err = new float[training_errors.length];
-          float[] train_samples = new float[training_errors.length];
-          for (int i=0; i<train_err.length; ++i) {
-            train_err[i] = (float)training_errors[i].classification;
-            train_samples[i] = training_errors[i].training_samples;
-          }
-          new D3Plot(train_samples, train_err, "training samples", "classification error",
-                  "Classification Error on Training Set").generate(sb);
-        }
-
-        // Plot validation error
-        if (model.validation_errors != null) {
-          float[] valid_err = new float[validation_errors.length];
-          float[] valid_samples = new float[validation_errors.length];
-          for (int i=0; i<valid_err.length; ++i) {
-            valid_err[i] = (float)validation_errors[i].classification;
-            valid_samples[i] = validation_errors[i].training_samples;
-          }
-          new D3Plot(valid_samples, valid_err, "training samples", "classification error",
-                  "Classification Error on Validation Set").generate(sb);
-        }
-
-
-        final boolean classification = model.isClassifier();
-        final String cmTitle = "Confusion Matrix" + (model.validation_errors == null ? " (Training Data)" : "");
-
-        // stats for training and validation
-        final Errors train = model.training_errors[model.training_errors.length - 1];
-        final Errors valid = model.validation_errors != null ? model.validation_errors[model.validation_errors.length - 1] : null;
-
-        if (classification) {
-          DocGen.HTML.section(sb, "Training classification error: " + formatPct(train.classification));
-        }
-        DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, train.mean_square));
-        if (classification) {
-          DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, train.cross_entropy));
-          if( valid != null ) {
-            DocGen.HTML.section(sb, "Validation classification error: " + formatPct(valid.classification));
-          }
-        }
-        if( model.validation_errors != null ) {
-          DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, valid.mean_square));
-          if (classification) {
-            DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, valid.cross_entropy));
-          }
-          if( job != null ) {
-            // the number samples during validation set scoring is higher -> use that
-            long ps = valid.training_samples * 1000 / job.runTimeMs();
-            DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
-          }
-        }
-        else {
-          if( job != null ) {
-            // the number samples during training set is the only number we have
-            long ps = train.training_samples * 1000 / job.runTimeMs();
-            DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
-          }
-        }
-        if (parameters != null && parameters.diagnostics) {
-          DocGen.HTML.section(sb, "Status of Hidden and Output Layers");
-          sb.append("<table class='table table-striped table-bordered table-condensed'>");
-          sb.append("<tr>");
-          sb.append("<th>").append("#").append("</th>");
-          sb.append("<th>").append("Units").append("</th>");
-          sb.append("<th>").append("Activation").append("</th>");
-          sb.append("<th>").append("Rate").append("</th>");
-          sb.append("<th>").append("L1").append("</th>");
-          sb.append("<th>").append("L2").append("</th>");
-          sb.append("<th>").append("Momentum").append("</th>");
-          sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
-          sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
-          sb.append("</tr>");
-          for (int i=1; i<model.layers.length; ++i) {
-            sb.append("<tr>");
-            sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
-            sb.append("<td>").append("<b>").append(model.layers[i].units).append("</b>").append("</td>");
-            sb.append("<td>").append(model.layers[i].getClass().getSimpleName().replace("Vec","").replace("Chunk", "")).append("</td>");
-            sb.append("<td>").append(model.layers[i].rate(train.training_samples)).append("</td>");
-            sb.append("<td>").append(model.layers[i].l1).append("</td>");
-            sb.append("<td>").append(model.layers[i].l2).append("</td>");
-            final String format = "%g";
-            sb.append("<td>").append(model.layers[i].momentum(train.training_samples)).append("</td>");
-            sb.append("<td>(").append(String.format(format, model.mean_weight[i])).
-                    append(", ").append(String.format(format, model.rms_weight[i])).append(")</td>");
-            sb.append("<td>(").append(String.format(format, model.mean_bias[i])).
-                    append(", ").append(String.format(format, model.rms_bias[i])).append(")</td>");
-            sb.append("</tr>");
-          }
-          sb.append("</table>");
-        }
-        if (model.unstable) {
-          final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
-                  + "  Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
-          DocGen.HTML.section(sb, "============================================================================================================");
-          DocGen.HTML.section(sb, msg);
-          DocGen.HTML.section(sb, "============================================================================================================");
-        }
-        if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
-          assert(classification);
-          String[] classes = model.classNames();
-          NeuralNetScore.confusion(sb, cmTitle, classes, model.confusion_matrix);
-        }
-        sb.append("<h3>" + "Progress" + "</h3>");
-        String training = "Number of training set samples for scoring: " + train.score_training;
-        if (train.score_training > 0) {
-          if (train.score_training < 1000) training += " (low, scoring might be inaccurate)";
-          if (train.score_training > 10000) training += " (large, scoring can be slow -> consider scoring manually)";
-        }
-        DocGen.HTML.section(sb, training);
-        if (valid != null) {
-          String validation = "Number of validation set samples for scoring: " + valid.score_validation;
-          if (valid.score_validation > 0) {
-            if (valid.score_validation < 1000) validation += " (low, scoring might be inaccurate)";
-            if (valid.score_validation > 10000) validation += " (large, scoring can be slow -> consider scoring manually)";
-          }
-          DocGen.HTML.section(sb, validation);
-        }
-        sb.append("<table class='table table-striped table-bordered table-condensed'>");
-        sb.append("<tr>");
-        sb.append("<th>Training Time</th>");
-        sb.append("<th>Training Samples</th>");
-        sb.append("<th>Training MSE</th>");
-        if (classification) {
-          sb.append("<th>Training MCE</th>");
-          sb.append("<th>Training Classification Error</th>");
-        }
-        sb.append("<th>Validation MSE</th>");
-        if (classification) {
-          sb.append("<th>Validation MCE</th>");
-          sb.append("<th>Validation Classification Error</th>");
-        }
-        sb.append("</tr>");
-        for( int i = training_errors.length - 1; i >= 0; i-- ) {
-          sb.append("<tr>");
-          sb.append("<td>" + PrettyPrint.msecs(training_errors[i].training_time_ms, true) + "</td>");
-          if( validation_errors != null ) {
-            sb.append("<td>" + String.format("%,d", validation_errors[i].training_samples) + "</td>");
-          } else {
-            sb.append("<td>" + String.format("%,d", training_errors[i].training_samples) + "</td>");
-          }
-          sb.append("<td>" + String.format(mse_format, training_errors[i].mean_square) + "</td>");
-          if (classification) {
-            sb.append("<td>" + String.format(cross_entropy_format, training_errors[i].cross_entropy) + "</td>");
-            sb.append("<td>" + formatPct(training_errors[i].classification) + "</td>");
-          }
-          if( validation_errors != null ) {
-            sb.append("<td>" + String.format(mse_format, validation_errors[i].mean_square) + "</td>");
-            if (classification) {
-              sb.append("<td>" + String.format(cross_entropy_format, validation_errors[i].cross_entropy) + "</td>");
-              sb.append("<td>" + formatPct(validation_errors[i].classification) + "</td>");
-            }
-          } else
-            sb.append("<td></td><td></td><td></td>");
-          sb.append("</tr>");
-        }
-        sb.append("</table>");
-      }
-      else {
-        sb.append("No model yet...");
-      }
-      return true;
-    }
-
-    private static String formatPct(double pct) {
-      String s = "N/A";
-      if( !Double.isNaN(pct) )
-        s = String.format("%5.2f %%", 100 * pct);
-      return s;
-    }
-
-    @Override protected Response jobDone(Job job, Key dst) {
-      return Response.done(this);
-    }
-
-    public static String link(Key job, Key model, String content) {
-      NeuralNetProgress req = new NeuralNetProgress();
-      return "<a href='" + req.href() + ".html?job_key=" + job + "&destination_key=" + model + "'>" + content + "</a>";
-    }
   }
 
   public static class NeuralNetScore extends ModelJob {
