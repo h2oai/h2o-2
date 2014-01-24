@@ -38,10 +38,11 @@ public final class ParseDataset2 extends Job {
   }
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
+    setup.checkColumnNames();
     // Some quick sanity checks: no overwriting your input key, and a resource check.
     long sum=0;
     for( Key k : keys ) {
-      if( dest.equals(k) ) 
+      if( dest.equals(k) )
         throw new IllegalArgumentException("Destination key "+dest+" must be different from all sources");
       sum += DKV.get(k).length(); // Sum of all input filesizes
     }
