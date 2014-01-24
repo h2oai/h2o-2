@@ -828,24 +828,32 @@ setMethod("as.name", "H2OParsedData", function(x) {
 # TODO: Need to change ... to environment variables and pass to substitute method,
 #       Can't figure out how to access outside environment from within lapply
 setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
-  # h2olist <- lapply(list(...), function(x) { if(class(x) == "H2OParsedData") x@key else x })
-  # idx = which(names(h2olist) == "")
-  # names(h2olist)[idx] <- unlist(unname(list(...)))[idx]
-  
-  # lapply(list(...), function(x) { if(class(x) == "H2OParsedData") assign(x, as.name(x@key)) })
-  # if(deparse(substitute(X)) != X@key)
-  #  assign(deparse(substitute(X)), as.name(X@key))
+  if(missing(X) || !class(X) %in% c("H2OParsedData", "H2OParsedDataVA"))
+    stop("X must be a H2O parsed data object")
+  if(missing(MARGIN) || MARGIN != 1 && MARGIN != 2)
+    stop("MARGIN must be either 1 (rows) or 2 (cols)")
+  if(missing(FUN) || !is.function(FUN))
+    stop("FUN must be an R function")
   
   myList <- list(...)
-  tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric")} )
-  if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
-  # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
+  if(length(myList) > 0) {
+    tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "H2OParsedDataVA", "numeric") } )
+    if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
+    
+    idx = which(sapply(myList, function(x) { class(x) %in% c("H2OParsedData", "H2OParsedDataVA") }))
+    # myList <- lapply(myList, function(x) { if(class(x) %in% c("H2OParsedData", "H2OParsedDataVA")) x@key else x })
+    myList[idx] <- lapply(myList[idx], function(x) { x@key })
+    # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
+    
+    if(any(names(myList) == ""))
+      stop("Must specify corresponding variable names of ", myList[names(myList) == ""])
+  }
   
+  # Substitute in function name: FUN <- match.fun(FUN)
   myfun = deparse(substitute(FUN))
   len = length(myfun)
-
-  if(len > 2 && myfun[len] == "}")
-    myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), myfun[len])
+  if(len > 3 && substr(myfun[1], nchar(myfun[1]), nchar(myfun[1])) == "{" && myfun[len] == "}")
+    myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), "}")
   else
     myfun = paste(myfun, collapse = "")
   params = c(X@key, MARGIN, myfun)
