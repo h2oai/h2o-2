@@ -836,9 +836,9 @@ class ASTQtile extends ASTOp {
   @Override void apply(Env env, int argcnt) {
     Frame x, probs;
     double   p[];
-    if ((probs = env.ary(-2)).vecs().length > 1)
+    if ((probs = env.ary(-1)).vecs().length > 1)
       throw new IllegalArgumentException("Argument #2 in Quantile contains more than 1 column.");
-    if ((x = env.ary(-3)).vecs().length > 1)
+    if ((x = env.ary(-2)).vecs().length > 1)
       throw new IllegalArgumentException("Argument #1 in Quantile contains more than 1 column.");
     Vec pv = probs.anyVec();
     p = new double[(int)pv.length()];
@@ -861,7 +861,7 @@ class ASTQtile extends ASTOp {
     }
     nc.close(0,null);
     Vec v = av.close(null);
-    env.poppush(argcnt, new Frame(v), null);
+    env.poppush(argcnt, new Frame(new String[]{"Quantile"}, new Vec[]{v}), null);
   }
   static class Resample extends MRTask2<Resample> {
     final int _total;
@@ -874,8 +874,9 @@ class ASTQtile extends ASTOp {
       int n = 0, fill=0;
       double val;
       if (ns == chk._len)
-        for (n = 0; n < ns; n++)
+        for (n = 0; n < ns; n++) {
           if (!Double.isNaN(val = chk.at0(n))) _local[fill++] = val;
+        }
       else
         for (n = 0; n < ns; n++) {
           int i = r.nextInt(chk._len);
