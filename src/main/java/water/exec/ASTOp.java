@@ -113,6 +113,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTSumNaRm());
     // Misc
     putPrefix(new ASTSeq   ());
+    putPrefix(new ASTQtile ());
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
     putPrefix(new ASTTable ());
@@ -834,21 +835,58 @@ class ASTQtile extends ASTOp {
   @Override ASTQtile make() { return new ASTQtile(); }
   @Override void apply(Env env, int argcnt) {
     Frame x, probs;
-    if ((probs = env.peekAry()).vecs().length > 1)
+    double   p[];
+    if ((probs = env.ary(-2)).vecs().length > 1)
       throw new IllegalArgumentException("Argument #2 in Quantile contains more than 1 column.");
-    if ((x = env.ary(-2)).vecs().length > 1)
+    if ((x = env.ary(-3)).vecs().length > 1)
       throw new IllegalArgumentException("Argument #1 in Quantile contains more than 1 column.");
-
+    Vec pv = probs.anyVec();
+    p = new double[(int)pv.length()];
+    for (int i = 0; i < pv.length(); i++)
+      if ((p[i]=pv.at((long)i)) < 0 || p[i] > 1)
+        throw new  IllegalArgumentException("Quantile: probs must be in the range of [0, 1].");
+    double samples[] = new Resample(10000).doAll(x)._local;
+    Arrays.sort(samples);
+    // create output vec
+    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
+    AppendableVec av = new AppendableVec(key);
+    NewChunk nc = new NewChunk(av,0);
+    for (double prob : p) {
+      double value;
+      int ix = (int)(samples.length * prob);
+      if (ix >= samples.length) value = x.anyVec().max();
+      else if (prob == 0) value = x.anyVec().min();
+      else value = samples[ix];
+      nc.addNum(value);
+    }
+    nc.close(0,null);
+    Vec v = av.close(null);
+    env.poppush(argcnt, new Frame(v), null);
   }
   static class Resample extends MRTask2<Resample> {
-    final int _nsample;
-    public _samples;
-    public Resample(int nsample) { _nsample = nsample; }
+    final int _total;
+    public double _local[];
+    public Resample(int nsample) { _total = nsample; }
     @Override public void map(Chunk chk) {
-      int n = (int)(_nsample*(double)chk._len/vecs(0).length());
+      Random r = new Random(chk._start);
+      int ns = Math.min(chk._len,(int)(_total*(double)chk._len/vecs(0).length()));
+      _local = new double[ns];
+      int n = 0, fill=0;
+      double val;
+      if (ns == chk._len)
+        for (n = 0; n < ns; n++)
+          if (!Double.isNaN(val = chk.at0(n))) _local[fill++] = val;
+      else
+        for (n = 0; n < ns; n++) {
+          int i = r.nextInt(chk._len);
+          if (!Double.isNaN(val = chk.at0(i))) _local[fill++] = val;
+        }
+      _local = Arrays.copyOf(_local,fill);
     }
     @Override public void reduce(Resample other) {
-
+      int appendAt = _local.length;
+      _local = Arrays.copyOf(_local, _local.length+other._local.length);
+      System.arraycopy(other._local,0,_local,appendAt,other._local.length);
     }
   }
 }
