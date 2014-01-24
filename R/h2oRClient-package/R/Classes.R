@@ -533,7 +533,16 @@ setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
 })
-setMethod("colnames<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
+
+setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
+          function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
+
+setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+          function(x, value) {
+            if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
+            else if(any(duplicated(value))) stop("Column names must be unique")
+            h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
+          })
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
 setMethod("names<-", "H2OParsedData", function(x, value) { names(x) <- value })
@@ -976,15 +985,6 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
-  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
-
-setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
-  function(x, value) {
-    if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
-    stop("Unimplemented"); return(x)
-})
-
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
 
 setMethod("nrow", "H2OParsedDataVA", function(x) {
@@ -1012,11 +1012,11 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
 
-  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
-  for(i in 1:ncol(x)) {
-    if(!is.null(res2$levels[[i]]))
-      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
-  }
+#   res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+#   for(i in 1:ncol(x)) {
+#     if(!is.null(res2$levels[[i]]))
+#       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
+#   }
   return(x.slice)
 })
 
@@ -1034,11 +1034,11 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
-  for(i in 1:ncol(x)) {
-    if(!is.null(res2$levels[[i]]))
-      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
-  }
+#   res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+#   for(i in 1:ncol(x)) {
+#     if(!is.null(res2$levels[[i]]))
+#       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
+#   }
   return(x.slice)
 })
 
