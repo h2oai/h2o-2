@@ -16,6 +16,8 @@ public class RPackage extends Request {
 
     String info = Boot._init.loadContent("/R/info.txt");
     String info_split[] = info.split("\\r?\\n");
+    if(info_split == null || info_split.length != 2)
+      throw new RuntimeException("md5 checksum file not found or written incorrectly");
     result.addProperty("filename", info_split[0]);
     result.addProperty("md5_hash", info_split[1]);
 

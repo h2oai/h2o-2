@@ -59,7 +59,6 @@ h2o.__logIt <- function(m, tmp, commandOrErr) {
 # Internal functions & declarations
 h2o.__PAGE_CANCEL = "Cancel.json"
 h2o.__PAGE_CLOUD = "Cloud.json"
-h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
@@ -95,6 +94,7 @@ h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 h2o.__HACK_LEVELS = "2/Levels.json"
+h2o.__HACK_SETCOLNAMES = "SetColumnNames.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"

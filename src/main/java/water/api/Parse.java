@@ -116,6 +116,7 @@ public class Parse extends Request {
         _parserType.setValue(setup._setup._pType);
         _separator.setValue(setup._setup._separator);
         _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
+        setup.checkColumnNames();
         return res;
       }catch(ParseSetupGuessException e){
         if(e._gSetup != null)

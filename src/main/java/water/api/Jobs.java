@@ -5,6 +5,7 @@ import java.net.URLEncoder;
 import java.util.Date;
 import java.text.ParseException;
 
+import water.DKV;
 import water.Job;
 import water.Key;
 
@@ -80,7 +81,7 @@ public class Jobs extends Request {
         try {
           key = URLEncoder.encode(str,"UTF-8");
         } catch( UnsupportedEncodingException e ) { key = str; }
-        return "".equals(key) ? key : "<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
+        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : "<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
       }
     });
     r.setBuilder(JOBS + "." + START_TIME, new ArrayRowElementBuilder() {
