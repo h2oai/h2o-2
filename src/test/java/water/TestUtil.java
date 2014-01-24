@@ -178,7 +178,7 @@ public class TestUtil {
     int numrows = -1;
     for( int i = 0; i < arys.length; i++ ) {
       ValueArray.Column col = cols[i] = new ValueArray.Column();
-      col._name = Integer.toString(i);
+      col._name = "C" + Integer.toString(i+1);
       col._off = off;
       col._scale = 1;
       col._min = Double.MAX_VALUE;
