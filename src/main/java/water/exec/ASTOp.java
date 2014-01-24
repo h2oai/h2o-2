@@ -3,8 +3,8 @@ package water.exec;
 import java.util.*;
 
 import water.*;
+import water.api.QuantilesPage;
 import water.fvec.*;
-import water.util.Log;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -818,6 +818,38 @@ class ASTSeq extends ASTOp {
     Vec v = av.close(null);
     env.pop();
     env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+  }
+}
+
+// Compute sample quantiles given a set of cutoffs.
+class ASTQtile extends ASTOp {
+  @Override String opStr() { return "quantile"; }
+  ASTQtile( ) {
+    super(new String[]{"quantile","x","probs"},
+          new Type[]{Type.ARY, Type.ARY, Type.ARY},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTQtile make() { return new ASTQtile(); }
+  @Override void apply(Env env, int argcnt) {
+    Frame x, probs;
+    if ((probs = env.peekAry()).vecs().length > 1)
+      throw new IllegalArgumentException("Argument #2 in Quantile contains more than 1 column.");
+    if ((x = env.ary(-2)).vecs().length > 1)
+      throw new IllegalArgumentException("Argument #1 in Quantile contains more than 1 column.");
+
+  }
+  static class Resample extends MRTask2<Resample> {
+    final int _nsample;
+    public _samples;
+    public Resample(int nsample) { _nsample = nsample; }
+    @Override public void map(Chunk chk) {
+      int n = (int)(_nsample*(double)chk._len/vecs(0).length());
+    }
+    @Override public void reduce(Resample other) {
+
+    }
   }
 }
 
