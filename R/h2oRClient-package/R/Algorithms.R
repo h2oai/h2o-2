@@ -74,21 +74,26 @@ h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldR
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), version = 1) {
-  if(version == 1)
-    h2o.glm.VA(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
-  else if(version == 2)
+h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1) {
+  if(version == 1) {
+    if(missing(thresholds))
+      thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA))
+    h2o.glm.VA(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p, thresholds)
+  } else if(version == 2) {
+    if(!missing(thresholds)) stop("thresholds not supported under FluidVecs")
     h2o.glm.FV(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
-  else
+  } else
     stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
 
 # --------------------------------- ValueArray -------------------------------------- #
-h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1.0e-5, epsilon=1.0e-5, standardize=TRUE, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA))) {
+h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1.0e-5, epsilon=1.0e-5, standardize=TRUE, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA)), thresholds=ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA))) {
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
   
+  if(missing(family) || !family %in% c("gaussian", "binomial", "poisson", "gamma", "tweedie"))
+    stop("family must be one of gaussian, binomial, poisson, gamma, and tweedie")
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if(!is.numeric(alpha)) stop("alpha must be numeric")
@@ -99,24 +104,27 @@ h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1.0e-5, 
   if( epsilon < 0 ) stop('epsilon must be >= 0')
   if( !is.logical(standardize) ) stop('standardize must be logical (TRUE or FALSE)')
   if( !is.numeric(tweedie.p) ) stop('tweedie.p must be numeric')
+  if(!is.numeric(thresholds)) stop("thresholds must be numeric")
+  if(family != "binomial" && !(missing(thresholds) || is.na(thresholds))) stop("thresholds may only be set for family binomial")
   
   # NB: externally, 1 based indexing; internally, 0 based
   if((missing(lambda) || length(lambda) == 1) && (missing(alpha) || length(alpha) == 1))
-    h2o.glm.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize)
+    h2o.glm.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize, tweedie.p, thresholds)
   else {
     if(!missing(tweedie.p) && !is.na(tweedie.p)) print('tweedie variance power not available in GLM grid search under ValueArray')
-    h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize)
+    h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize, thresholds)
   }
 }
 
-h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
+h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p, thresholds) {
   if(family == 'tweedie' && (tweedie.p < 1 || tweedie.p > 2 )) stop('tweedie.p must be in (1,2)')
   if(family != "tweedie" && !(missing(tweedie.p) || is.na(tweedie.p) ) ) stop('tweedie.p may only be set for family tweedie')
   
+  thres = seq_to_string(thresholds)
   if(family != 'tweedie')
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key=data@key, y=y, x=paste(x, sep="", collapse=","), family=family, n_folds=nfolds, alpha=alpha, lambda=lambda, expert_settings=expert_settings, beta_epsilon=beta_epsilon, standardize=as.numeric(standardize), case_mode="=", case=1.0)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key=data@key, y=y, x=paste(x, sep="", collapse=","), family=family, n_folds=nfolds, alpha=alpha, lambda=lambda, expert_settings=expert_settings, beta_epsilon=beta_epsilon, standardize=as.numeric(standardize), case_mode="=", case=1.0, thresholds=thres)
   else
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key=data@key, y=y, x=paste(x, sep="", collapse=","), family=family, n_folds=nfolds, alpha=alpha, lambda=lambda, expert_settings=expert_settings, beta_epsilon=beta_epsilon, standardize=as.numeric(standardize), case_mode="=", case=1.0, tweedie_power=tweedie.p)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key=data@key, y=y, x=paste(x, sep="", collapse=","), family=family, n_folds=nfolds, alpha=alpha, lambda=lambda, expert_settings=expert_settings, beta_epsilon=beta_epsilon, standardize=as.numeric(standardize), case_mode="=", case=1.0, tweedie_power=tweedie.p, thresholds=thres)
   
   destKey = res$destination_key
   h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
@@ -145,8 +153,9 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_s
   new("H2OGLMModelVA", key=destKey, data=data, model=modelOrig, xval=res_xval)
 }
 
-h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize) {
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_eps = epsilon, standardize = as.numeric(standardize), case_mode="=", case=1.0, parallel=1)
+h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, thresholds) {
+  thres = seq_to_string(thresholds)
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_eps = epsilon, standardize = as.numeric(standardize), case_mode="=", case=1.0, parallel=1, thresholds=thres)
   
   destKey = res$destination_key
   h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
@@ -914,3 +923,12 @@ build_cm <- function(cm, cf_names) {
   return(cf_matrix)
 }
 
+seq_to_string <- function(vec = as.numeric(NA)) {
+  vec <- sort(vec)
+  if(length(vec) > 2) {
+    vec_diff = diff(vec)
+    if(abs(max(vec_diff) - min(vec_diff)) < .Machine$double.eps^0.5)
+      return(paste(min(vec), max(vec), vec_diff[1], sep = ":"))
+  }
+  return(paste(vec, collapse = ","))
+}
