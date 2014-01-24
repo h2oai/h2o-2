@@ -534,18 +534,10 @@ setMethod("colnames", "H2OParsedData", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
-          function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
-
-setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
-          function(x, value) {
-            if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
-            else if(any(duplicated(value))) stop("Column names must be unique")
-            h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
-          })
+setMethod("colnames<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
-setMethod("names<-", "H2OParsedData", function(x, value) { names(x) <- value })
+setMethod("names<-", "H2OParsedData", function(x, value) { colnames(x) <- value })
 # setMethod("nrow", "H2OParsedData", function(x) { h2o.__unop2("nrow", x) })
 # setMethod("ncol", "H2OParsedData", function(x) { h2o.__unop2("ncol", x) })
 
@@ -839,8 +831,8 @@ setMethod("as.name", "H2OParsedData", function(x) {
 setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   if(missing(X) || !class(X) %in% c("H2OParsedData", "H2OParsedDataVA"))
     stop("X must be a H2O parsed data object")
-  if(missing(MARGIN) || MARGIN != 1 && MARGIN != 2)
-    stop("MARGIN must be either 1 (rows) or 2 (cols)")
+  if(missing(MARGIN) || !(length(MARGIN) <= 2 && all(MARGIN %in% c(1,2))))
+    stop("MARGIN must be either 1 (rows), 2 (cols), or a vector containing both")
   if(missing(FUN) || !is.function(FUN))
     stop("FUN must be an R function")
   
@@ -852,8 +844,8 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
     idx = which(sapply(myList, function(x) { class(x) %in% c("H2OParsedData", "H2OParsedDataVA") }))
     # myList <- lapply(myList, function(x) { if(class(x) %in% c("H2OParsedData", "H2OParsedDataVA")) x@key else x })
     myList[idx] <- lapply(myList[idx], function(x) { x@key })
-    # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
     
+    # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
     if(any(names(myList) == ""))
       stop("Must specify corresponding variable names of ", myList[names(myList) == ""])
   }
@@ -985,7 +977,18 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
+setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
+  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
+
+setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+  function(x, value) {
+    if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
+    else if(any(duplicated(value))) stop("Column names must be unique")
+    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
+  })
+
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
+setMethod("names<-", "H2OParsedDataVA", function(x, value) { colnames(x) <- value })
 
 setMethod("nrow", "H2OParsedDataVA", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_rows) })

@@ -79,14 +79,21 @@ h2o.assign <- function(data, key) {
   return(data)
 }
 
-h2o.push <- function(client = new("H2OClient"), object, key) {
+h2o.push <- function(client, object, key) {
+  if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   if(missing(object)) stop("must specify object to push")
-  if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
-  if(!is.character(key)) stop("key must be of class character")
-  if(nchar(key) == 0) stop("key cannot be an empty string")
+  else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
+  if(missing(key)) key <- deparse(substitute(object))
+  else if(!is.character(key)) stop("key must be of class character")
+  else if(nchar(key) == 0) stop("key cannot be an empty string")
   
-  if(is.function(object)) object <- match.fun(object)
-  res = h2o.__exec2_dest_key(client, object, key)
+  if(is.numeric(object))
+    res = h2o.__exec2_dest_key(client, object, key)
+  else if(is.function(object)) {
+    object <- match.fun(object)
+    res = h2o.__exec2_dest_key(client, object, key)
+    # TODO: Push function to the H2O server
+  }
 }
 
 # ----------------------------------- File Import Operations --------------------------------- #
@@ -410,8 +417,8 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, va
 })
 
 # ----------------------- Diagnostics ----------------------- #
-h2o.checkCloud <- function(client) {
-  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+h2o.clusterStatus <- function(client) {
+  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   myURL = paste("http://", client@ip, ":", client@port, "/", h2o.__PAGE_CLOUD, sep = "")
   if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
