@@ -1,10 +1,5 @@
 package water.fvec;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-import java.util.zip.*;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -14,11 +9,18 @@ import water.parser.*;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
 import water.parser.CustomParser.StreamDataOut;
-import water.parser.ParseDataset.Compression;
 import water.parser.Enum;
-import water.util.*;
+import water.parser.ParseDataset.Compression;
+import water.util.Utils;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
@@ -47,7 +49,7 @@ public final class ParseDataset2 extends Job {
     }
     long memsz=0;               // Cluster memory
     for( H2ONode h2o : H2O.CLOUD._memary )
-      memsz += h2o._heartbeat.get_max_mem();
+      memsz += h2o.get_max_mem();
     if( sum > memsz*4 )
       throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
 
