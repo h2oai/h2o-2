@@ -312,9 +312,9 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, version = 
 h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   if(class(data) != "H2ORawDataVA") stop("data must be of class H2ORawDataVA")
   if(!is.character(key)) stop("key must be of class character")
-  if(!missing(header) && !is.logical(header)) stop("header must be of class logical")
+  if(!(missing(header) || is.logical(header))) stop("header must be of class logical")
   if(!is.character(sep)) stop("sep must be of class character")
-  if(!missing(col.names) && class(col.names) != "H2OParsedDataVA") stop(paste("col.names cannot be of class", class(col.names)))
+  if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
 
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
