@@ -973,13 +973,16 @@ public class DTree extends Iced {
       else bodySb.i().p("preds[0] = preds[1];").nl();
     }
 
+    /* Numeric type used in generated code to hold predicted value between the calls. */
+    static final String PRED_TYPE = "float";
+
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx, int maxTreesInForest) {
       predictBody.i().p("// Call forest predicting class ").p(c).nl();
       predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters - "+fidx*maxTreesInForest+");").nl();
       forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
       forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
-      forest.i().p("public static float predict(double[] data, int maxIters) {").nl().ii(1);
-      forest.i().p("float pred  = 0;").nl();
+      forest.i().p("public static ").p(PRED_TYPE).p(" predict(double[] data, int maxIters) {").nl().ii(1);
+      forest.i().p(PRED_TYPE).p(" pred  = 0;").nl();
       forest.i().p("int   iters = maxIters;").nl();
     }
     private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
@@ -1106,8 +1109,8 @@ public class DTree extends Iced {
     // code preambule
     protected void preamble(SB sb, int subtree) throws RuntimeException {
       String subt = subtree>0?String.valueOf(subtree):"";
-      sb.i().p("static final float predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
-      sb.i().p("float pred = ");
+      sb.i().p("static final ").p(TreeModel.PRED_TYPE).p(" predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
+      sb.i().p(TreeModel.PRED_TYPE).p(" pred = ");
     }
 
     // close the code
