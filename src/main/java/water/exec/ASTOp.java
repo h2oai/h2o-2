@@ -583,7 +583,7 @@ abstract class ASTReducerOp extends ASTOp {
     assert ins.length==1;
     if (out == null || out.length!=1) out = new double[1];
     double s = _init;
-    for (double v : ins[0]) if (!_narm) s = op(s,v);
+    for (double v : ins[0]) if (!_narm || !Double.isNaN(v)) s = op(s,v);
     out[0] = s;
     return out;
   }
@@ -1339,11 +1339,12 @@ class ASTRApply extends ASTOp {
     throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
   }
   private static class RapplyTask extends MRTask2<RapplyTask> {
-    private final ASTOp _op;
+    private ASTOp _op;
     private final int _outlen;
     public RapplyTask(ASTOp op, int outlen) {_op = op; _outlen = outlen;}
     @Override
     public void map(Chunk[] cs, NewChunk[] ncs) {
+      if (_op instanceof ASTFunc) _op = (ASTFunc)_op.clone();
       final double[] rowin  = new double[cs.length];
       final double[] rowout = new double[_outlen];
       final Env2 perMapper = Env2.makeDummy();

@@ -8,7 +8,6 @@ import java.util.Arrays;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -198,11 +197,13 @@ class ASTApply extends AST {
     assert env.isFcn();
     ASTOp op = env.getFcn0();
     double[] ins[] = new double[_args.length-1][];
-    for (int i = 0; i < _args.length-1; i++) {
-      _args[i+1].evalR(env);
-      ins[i] = env.isAry() ? env.getAry0() : new double[]{env.getDbl0()};
+    for (int i = 1; i < _args.length; i++) {
+      _args[i].evalR(env);
+      ins[i-1] = env.isAry() ? env.getAry0() : new double[]{env.getDbl0()};
     }
-    env.setAry0(op.map(env, null, ins));
+    double out[] = op.map(env, null, ins);
+    env.setAry0(out);
+    //env.setAry0(op.map(env, null, ins));
   }
 }
 

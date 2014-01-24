@@ -93,7 +93,7 @@ public class ASTFunc extends ASTOp {
     assert caller!=null;
     if (caller != _caller) {
       _caller = caller;
-      _envR = _envR ==null?new Env2(null,this): _envR.copy();
+      _envR = new Env2(null,this);
     }
     assert _vars.length-1 == ins.length;
     for (int i = 0; i < ins.length; i++) _envR.setAry(i, ins[i]);
