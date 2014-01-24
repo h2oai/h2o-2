@@ -111,6 +111,7 @@ public class NeuralNet extends ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
+    if (arg._name.equals("ignored_cols")) arg.disable("Not currently supported.");
     if (arg._name.equals("input_dropout_ratio") &&
             (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
             ) {
