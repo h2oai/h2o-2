@@ -128,6 +128,7 @@ public class Env extends Iced {
     _key[idx] = fr!=null ? id : null;
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
+
   // Copy from TOS into stack.  Pop's all intermediate.
   // Example: pop_into_stk(-4)  BEFORE: A,B,C,D,TOS  AFTER: D,TOS
   void pop_into_stk( int x ) {

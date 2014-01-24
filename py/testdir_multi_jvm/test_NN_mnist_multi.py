@@ -80,17 +80,13 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 600
             start = time.time()
-            nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-            h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
-            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=10, retryDelaySecs=5)
+            nn = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
-            #### Look at model progress, and check the last reported validation error
-            modelView = h2o_cmd.runNeuralView(model_key=model_key)
             relTol = 0.02 if mode == 'SingleThread' else 0.10 ### 10% relative error is acceptable for Hogwild
-            h2o_nn.checkLastValidationError(self, modelView, inspect['numRows'], expectedErr, relTol, **kwargs)
+            h2o_nn.checkLastValidationError(self, nn['neuralnet_model'], inspect['numRows'], expectedErr, relTol, **kwargs)
 
-            #### Now score using the model, and check the last reported validation error
+            ### Now score using the model, and check the validation error
             kwargs = {
                 'source' : validation_key,
                 'max_rows': 0,
@@ -106,7 +102,7 @@ class Basic(unittest.TestCase):
             if mode != 'MapReduce':
                 print 'WARNING: Running in non-MapReduce mode on multiple nodes! Only one node contributes to results.'
 
-            h2o.beta_features = False
+        h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()

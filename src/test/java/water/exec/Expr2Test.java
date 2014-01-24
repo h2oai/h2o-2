@@ -227,6 +227,10 @@ public class Expr2Test extends TestUtil {
       //checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
       //checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
 
+      // Quantile
+      checkStr("quantile(seq_len(10),seq_len(10)/10)");
+      checkStr("quantile(runif(seq_len(10000)),seq_len(10)/10)");
+      checkStr("quantile(h.hex[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))");
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope
 
     } finally {
@@ -258,8 +262,7 @@ public class Expr2Test extends TestUtil {
     assertFalse( env.isAry() );
     assertFalse( env.isFcn() );
     double res = env.popDbl();
-    assertEquals(d,res,d/1e8);
-    env.pop();
+    assertEquals(d, res, d / 1e8);
     env.remove();
     debug_print(s);
   }

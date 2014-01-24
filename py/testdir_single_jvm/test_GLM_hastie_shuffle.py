@@ -33,7 +33,7 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     start = time.time()
     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLM in",  (time.time() - start), "secs (python measured)"
-    h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
+    h2o_glm.simpleCheckGLM(self, glm, "c8", **kwargs)
 
     # compare this glm to the first one. since the files are replications, the results
     # should be similar?

@@ -2,14 +2,14 @@ import h2o_cmd, h2o, h2o_util
 import re, random, math
 
 ## Check that the last scored validation error is within a certain relative error of the expected result
-def checkLastValidationError(self, modelView, rows, expectedErr, relTol, **kwargs):
+def checkLastValidationError(self, model, rows, expectedErr, relTol, **kwargs):
 
-    errsLast = modelView['validation_errors'][-1] # last scoring result
+    errsLast = model['validation_errors'][-1] # last scoring result
     h2o.verboseprint("NN 'Last scoring on test set:'", h2o.dump_json(errsLast))
     expectedSamples = rows * kwargs['epochs']
     print 'Expecting ' + format(expectedSamples) + ' training samples'
     if errsLast['training_samples'] != expectedSamples:
-        raise Exception("Training samples should be equal to %s" % expectedSamples)
+        raise Exception("Number of training samples should be equal to %s" % expectedSamples)
 
     print "Expected test set error: " + format(expectedErr)
     print "Actual   test set error: " + format(errsLast['classification'])

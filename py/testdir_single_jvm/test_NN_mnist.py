@@ -76,15 +76,12 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 600
             start = time.time()
-            nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-            h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
-            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=10, retryDelaySecs=5)
+            nn = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
             #### Look at model progress, and check the last reported validation error
-            modelView = h2o_cmd.runNeuralView(model_key=model_key)
-            relTol = 0.02 if mode == 'SingleThread' else 0.05 ### 5% relative error is acceptable for Hogwild
-            h2o_nn.checkLastValidationError(self, modelView, inspect['numRows'], expectedErr, relTol, **kwargs)
+            relTol = 0.03 if mode == 'SingleThread' else 0.10 ### 5% relative error is acceptable for Hogwild
+            h2o_nn.checkLastValidationError(self, nn['neuralnet_model'], inspect['numRows'], expectedErr, relTol, **kwargs)
 
             #### Now score using the model, and check the validation error
             kwargs = {
@@ -99,7 +96,7 @@ class Basic(unittest.TestCase):
             nnScoreResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, **kwargs)
             h2o_nn.checkScoreResult(self, nnScoreResult, expectedErr, relTol, **kwargs)
 
-            h2o.beta_features = False
+        h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()
