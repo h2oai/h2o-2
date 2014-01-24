@@ -3,7 +3,6 @@ package water.exec;
 import java.util.*;
 
 import water.*;
-import water.api.QuantilesPage;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -1333,9 +1332,7 @@ class ASTRApply extends ASTOp {
       //    }
       //  }
       //}.doAll(outlen,fr).outputFrame(names, null);
-      Log.info("start rapply.");
       Frame out = new RapplyTask(op,outlen).doAll(outlen,fr).outputFrame(names,null);
-      Log.info("done rapply.");
       env.poppush(4,out,null);
       return;
     }
@@ -1350,13 +1347,11 @@ class ASTRApply extends ASTOp {
       final double[] rowin  = new double[cs.length];
       final double[] rowout = new double[_outlen];
       final Env2 perMapper = Env2.makeDummy();
-      Log.info("start map.");
       for (int i = 0; i < cs[0]._len; i++) {
         for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
         double ro[] = _op.map(perMapper,rowout,rowin);
         for (int c = 0; c < ncs.length; c++) ncs[c].addNum(ro[c]);
       }
-      Log.info("done map.");
     }
   }
 }
