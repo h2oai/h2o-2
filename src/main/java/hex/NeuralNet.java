@@ -795,15 +795,15 @@ public class NeuralNet extends ValidatedJob {
       sb.append("<h3>" + "Progress" + "</h3>");
       String training = "Number of training set samples for scoring: " + train.score_training;
       if (train.score_training > 0) {
-        if (train.score_training < 1000) training += " (low, scoring might be inaccurate)";
-        if (train.score_training > 10000) training += " (large, scoring can be slow -> consider scoring manually)";
+        if (train.score_training < 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (train.score_training > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
       }
       DocGen.HTML.section(sb, training);
       if (valid != null) {
         String validation = "Number of validation set samples for scoring: " + valid.score_validation;
         if (valid.score_validation > 0) {
-          if (valid.score_validation < 1000) validation += " (low, scoring might be inaccurate)";
-          if (valid.score_validation > 10000) validation += " (large, scoring can be slow -> consider scoring manually)";
+          if (valid.score_training < 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+          if (valid.score_training > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         }
         DocGen.HTML.section(sb, validation);
       }
@@ -952,7 +952,20 @@ public class NeuralNet extends ValidatedJob {
       DocGen.HTML.section(sb, "Mean square error: " + mean_square_error);
       if (classification) {
         DocGen.HTML.section(sb, "Mean cross entropy: " + cross_entropy);
-        confusion(sb, "Confusion Matrix", response.domain(), confusion_matrix);
+
+        String[] domain = null;
+        if (response.domain() != null) {
+          domain = response.domain();
+        } else {
+          // find the names for the categories from the model's domains, after finding the correct column
+          int idx = source.find(response);
+          if( idx == -1 ) {
+            Vec vm = response.masterVec();
+            if( vm != null ) idx = source.find(vm);
+          }
+          if (idx != -1) domain = model._domains[idx];
+        }
+        confusion(sb, "Confusion Matrix", domain, confusion_matrix);
       }
       return true;
     }
