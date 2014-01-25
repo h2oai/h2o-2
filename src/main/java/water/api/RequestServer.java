@@ -237,6 +237,28 @@ public class RequestServer extends NanoHTTPD {
   }
 
   // uri serve -----------------------------------------------------------------
+  void maybeLogRequest (String uri, String method, Properties parms) {
+    boolean filterOutRepetitiveStuff = true;
+
+    if (filterOutRepetitiveStuff) {
+      if (uri.endsWith(".css")) return;
+      if (uri.endsWith(".js")) return;
+      if (uri.endsWith(".png")) return;
+      if (uri.startsWith("/Typeahead")) return;
+      if (uri.startsWith("/Cloud.json")) return;
+      if (uri.endsWith("LogAndEcho.json")) return;
+      if (uri.contains("Progress")) return;
+    }
+
+    String log = String.format("%-4s %s", method, uri);
+    for( Object arg : parms.keySet() ) {
+      String value = parms.getProperty((String) arg);
+      if( value != null && value.length() != 0 )
+        log += " " + arg + "=" + value;
+    }
+    Log.info(Sys.HTTPD, log);
+  }
+
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
@@ -245,6 +267,8 @@ public class RequestServer extends NanoHTTPD {
     // determine the request type
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
+
+    maybeLogRequest(uri, method, parms);
     try {
       // determine if we have known resource
       Request request = _requests.get(requestName);
