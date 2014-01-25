@@ -928,7 +928,7 @@ public class DTree extends Iced {
       int treesInForest = 0;
       SB forest = new SB();
       // divide trees into small forests per 100 trees
-      /* DEBUG line */ bodySb.i().p("// System.err.println(\"Row (gencode.predict): \" + java.util.Arrays.toString(data));");
+      /* DEBUG line */ bodySb.i().p("// System.err.println(\"Row (gencode.predict): \" + java.util.Arrays.toString(data));").nl();
       bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
       for( int c=0; c<nclasses(); c++ ) {
         toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
