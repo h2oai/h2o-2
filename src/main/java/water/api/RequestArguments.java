@@ -1,17 +1,16 @@
 package water.api;
 
+import com.google.common.base.Objects;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+import com.google.gson.JsonObject;
 import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.*;
+import hex.KMeansModel;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
-
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.*;
-
 import water.*;
 import water.Request2.TypeaheadKey;
 import water.ValueArray.Column;
@@ -22,10 +21,9 @@ import water.fvec.Vec;
 import water.util.Check;
 import water.util.RString;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
-import com.google.gson.JsonObject;
+import java.io.File;
+import java.lang.reflect.Field;
+import java.util.*;
 
 /** All arguments related classes are defined in this guy.
  *
@@ -1578,7 +1576,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected String parse(String input) throws IllegalArgumentException {
       return input;
     }
-    @Override protected String queryDescription() { return "Existing file or directory, can be on nfs,hdfs or S3"; }
+    @Override protected String queryDescription() { return "Existing file or directory, can be on nfs, hdfs or S3"; }
     @Override protected String defaultValue() { return ""; }
     @Override protected String[] errors() { return new String[] { "File not found" }; }
   }

@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         csvPathname_test  = 'covtype/covtype.20k.data'
         hex_key = 'covtype.hex'
         validation_key = hex_key
-        timeoutSecs = 10
+        timeoutSecs = 30
         parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
         ###No need - use training as validation
         ###parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
         response = inspect['numCols'] - 1
 
         modes = [
-            'SingleThread', 
+            'SingleThread',
             'SingleNode',
             ]
 
@@ -76,17 +76,13 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 600
             start = time.time()
-            nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=10, retryDelaySecs=5)
-            h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
+            nn = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
-            #### Look at model progress, and check the last reported validation error
-            modelView = h2o_cmd.runNeuralView(model_key=model_key)
-            relTol = 0.02 if mode == 'SingleThread' else 0.15 ### 15% relative error is acceptable for Hogwild
-            h2o_nn.checkLastValidationError(self, modelView, inspect['numRows'], expectedErr, relTol, **kwargs)
+            relTol = 0.03 if mode == 'SingleThread' else 0.15 ### 15% relative error is acceptable for Hogwild
+            h2o_nn.checkLastValidationError(self, nn['neuralnet_model'], inspect['numRows'], expectedErr, relTol, **kwargs)
 
-            #### Now score using the model, and check the last reported validation error
+            ### Now score using the model, and check the validation error
             kwargs = {
                 'source' : validation_key,
                 'max_rows': 0,
@@ -95,11 +91,11 @@ class Basic(unittest.TestCase):
                 'classification': 1,
                 'destination_key': 'score_' + identifier + '.hex',
                 'model': model_key,
-            }
+                }
             nnScoreResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, **kwargs)
             h2o_nn.checkScoreResult(self, nnScoreResult, expectedErr, relTol, **kwargs)
 
-            h2o.beta_features = False
+        h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()
