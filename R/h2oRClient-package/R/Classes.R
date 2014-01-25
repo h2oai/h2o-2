@@ -734,7 +734,7 @@ setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.r
   # res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res$dest_key, view=res$num_rows)
   # col <- sapply(res2$rows, function(x) { x[[2]] })
   col <- as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res$dest_key))[[1]]
-  names(col) <- paste(100*probs, "%", sep="")
+  if(names) names(col) <- paste(100*probs, "%", sep="")
   return(col)
 })
 

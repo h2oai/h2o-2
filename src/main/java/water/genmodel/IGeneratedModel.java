@@ -70,5 +70,5 @@ public interface IGeneratedModel {
      * Returns the expected size of preds array which is passed to {@link #predict(double[], float[])} function.
      * @return expected size of preds array
      */
-    public int predsSize();
+    public int getPredsSize();
 }

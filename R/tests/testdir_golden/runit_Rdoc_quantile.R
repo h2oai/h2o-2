@@ -6,11 +6,9 @@ test.rdocquantiles.golden <- function(H2Oserver) {
 
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(H2Oserver, path = prosPath)
-quantile(prostate.hex)
-
-
-quantile(prostate.hex[,3:5])
-
+quantile(prostate.hex[,3])
+for(i in 1:ncol(prostate.hex))
+  quantile(prostate.hex[,i])
 
 testEnd()
 }
