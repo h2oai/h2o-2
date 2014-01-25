@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import water.H2O;
-import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -21,12 +20,12 @@ public class ASTFunc extends ASTOp {
   ASTFunc( String vars[], String locals[], Type vtypes[], AST body, int tmps ) {
     super(vars,vtypes,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _locals=locals; _tmps=tmps;
   }
-  ASTFunc( String vars[], Type t, AST body, int tmps ){
-    super(vars,t,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _tmps=tmps;
+  ASTFunc( String vars[], String locals[], Type t, AST body, int tmps ){
+    super(vars,t,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _locals=locals; _body = body; _tmps=tmps;
   }
   @Override String opStr() { return "fun"; }
   //@Override ASTOp make() { throw H2O.fail();}
-  @Override ASTOp make() { return new ASTFunc(_vars, _t.copy(), _body, _tmps); }
+  @Override ASTOp make() { return new ASTFunc(_vars,_locals, _t.copy(), _body, _tmps); }
   static ASTOp parseFcn(Exec2 E ) {
     int x = E._x;
     String var = E.isID();
