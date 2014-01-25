@@ -718,22 +718,24 @@ any.factor <- function(x) {
   as.logical(h2o.__unop2("any.factor", x))
 }
 
-setMethod("quantile", "H2OParsedData", function(x, probs = c(0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99), na.rm = FALSE, names = TRUE) {
-  if(any.factor(x)) stop("factors are not allowed")
-  if(na.rm) stop("Unimplemented")
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  temp = sapply(res$summaries, function(x) { x$stats$pctile })
-  # filt = !sapply(temp, is.null)
-  # temp = temp[filt]
-  if(length(temp) == 0) return(NULL)
-
-  # myFeat = res$names[filt[1:length(res$names)]]
-  # myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
-  myFeat = sapply(res$summaries, function(x) { x$colname })
-  myQuantiles = res$summaries[[1]]$stats$pct
-  if(any(!probs %in% myQuantiles)) stop("Only the following quantiles are supported: ", paste(myQuantiles, collapse=", "))
-  temp2 = matrix(unlist(temp), ncol = length(myFeat), dimnames = list(paste(100*myQuantiles, "%", sep=""), myFeat))
-  temp2[match(probs, myQuantiles),]
+setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE) {
+  if(ncol(x) != 1) stop("quantile only operates on a single column")
+  if(is.factor(x)) stop("factors are not allowed")
+  if(!is.numeric(probs)) stop("probs must be a numeric vector")
+  if(any(probs < 0 | probs > 1)) stop("probs must fall in the range of [0,1]")
+  if(!na.rm && h2o.__unop2("any.na", x)) stop("missing values and NaN's not allowed if 'na.rm' is FALSE")
+  
+  myFeat <- colnames(x)
+  myProbs <- paste("c(", paste(probs, collapse = ","), ")", sep = "")
+  expr = paste("quantile(", x@key, ",", myProbs, ")", sep = "")
+  
+  res = h2o.__exec2(x@h2o, expr)
+  # col <- as.numeric(strsplit(res$result, "\n")[[1]][-1])
+  # res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res$dest_key, view=res$num_rows)
+  # col <- sapply(res2$rows, function(x) { x[[2]] })
+  col <- as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res$dest_key))[[1]]
+  names(col) <- paste(100*probs, "%", sep="")
+  return(col)
 })
 
 setGeneric("histograms", function(object) { standardGeneric("histograms") })
