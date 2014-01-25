@@ -37,7 +37,7 @@ public abstract class GeneratedModel implements IGeneratedModel {
     return result;
   }
 
-  @Override public int predsSize() {
+  @Override public int getPredsSize() {
     return isClassifier() ? 1+getNumResponseClasses() : 2;
   }
 }
