@@ -46,6 +46,7 @@ public abstract class ASTOp extends AST {
   static final public HashMap<String,ASTOp> UNI_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> BIN_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> PREFIX_OPS    = new HashMap();
+  static final public HashMap<String,ASTOp> UDF_OPS       = new HashMap();
   // Too avoid a cyclic class-loading dependency, these are init'd before subclasses.
   static final String VARS1[] = new String[]{ "", "x"};
   static final String VARS2[] = new String[]{ "", "x","y"};
@@ -127,8 +128,14 @@ public abstract class ASTOp extends AST {
   static private void putUniInfix(ASTOp ast) { UNI_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putBinInfix(ASTOp ast) { BIN_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putPrefix  (ASTOp ast) {    PREFIX_OPS.put(ast.opStr(),ast); }
+  static         void putUDF     (ASTOp ast, String fn) {     UDF_OPS.put(fn,ast); }
+  static         void removeUDF  (String fn) { UDF_OPS.remove(fn); }
   static public ASTOp isOp(String id) {
     // This order matters. If used as a prefix OP, `+` and `-` are binary only.
+    ASTOp op4 =       UDF_OPS.get(id); if( op4 != null ) return op4;
+    return isBuiltinOp(id);
+  }
+  static public ASTOp isBuiltinOp(String id) {
     ASTOp op3 =    PREFIX_OPS.get(id); if( op3 != null ) return op3;
     ASTOp op2 = BIN_INFIX_OPS.get(id); if( op2 != null ) return op2;
     ASTOp op1 = UNI_INFIX_OPS.get(id);                   return op1;
@@ -136,10 +143,15 @@ public abstract class ASTOp extends AST {
   static public boolean isInfixOp(String id) {
     return BIN_INFIX_OPS.containsKey(id) || UNI_INFIX_OPS.containsKey(id);
   }
+  static public boolean isUDF(String id) {
+    return UDF_OPS.containsKey(id);
+  }
+  static public boolean isUDF(ASTOp op) { return isUDF(op.opStr()); }
   static public Set<String> opStrs() {
     Set<String> all = UNI_INFIX_OPS.keySet();
     all.addAll(BIN_INFIX_OPS.keySet());
     all.addAll(PREFIX_OPS.keySet());
+    all.addAll(UDF_OPS.keySet());
     return all;
   }
 
@@ -156,7 +168,14 @@ public abstract class ASTOp extends AST {
     _vars = vars;
     assert ts.length==vars.length : "No vars?" + this;
   }
-
+  ASTOp( String vars[], Type t, int form, int prec, int asso) {
+    super(t);
+    _form = form;
+    _precedence = prec;
+    _association = asso;
+    _vars = vars;
+    assert t._ts.length==vars.length : "No vars?" + this;
+  }
   abstract String opStr();
   abstract ASTOp  make();
 
@@ -183,22 +202,29 @@ public abstract class ASTOp extends AST {
     ASTOp op = isOp(id);  // The order matters. If used as a prefix OP, `+` and `-` are binary only.
     // Also, if assigning to a built-in function then do not parse-as-a-fcn.
     // Instead it will default to parsing as an ID in ASTAssign.parse
-    if( op != null && !E.peek('=') ) return op.make();
+    if( op != null ) {
+      int x1 = E._x;
+      if (!E.peek('=') && !(E.peek('<') && E.peek('-'))) {
+        E._x = x1; return op.make();
+      }
+    }
     E._x = x;
     return ASTFunc.parseFcn(E);
   }
 
-  // Parse a prefix OP or return null.
-  static ASTOp parsePrefixOp(Exec2 E) {
-    int x = E._x;
-    String id = E.isID();
-    if( id == null ) return null;
-    ASTOp op = PREFIX_OPS.get(id);
-    if( op != null ) return op.make();
-    E._x = x;                 // Roll back, no parse happened
-    // Attempt a user-mode function parse
-    return ASTFunc.parseFcn(E);
-  }
+  //// Parse a prefix OP or return null.
+  //static ASTOp parsePrefixOp(Exec2 E) {
+  //  int x = E._x;
+  //  String id = E.isID();
+  //  if( id == null ) return null;
+  //  ASTOp op = PREFIX_OPS.get(id);
+  //  if( op != null ) return op.make();
+  //  E._x = x;                 // Roll back, no parse happened
+  //  // Attempt a user-mode function parse
+  //  return ASTFunc.parseFcn(E);
+  //}
+
+  // Parse
 
   // Parse a unary infix OP or return null.
   static ASTOp parseUniInfixOp(Exec2 E) {

@@ -113,6 +113,16 @@ public abstract class Layer extends Iced {
   transient Training _training;
 
   /**
+   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
+   * For simplicity and performance, we simply use the largest values to encode a missing value.
+   * If we run into exactly one of those values with regular neural net updates, then we're very
+   * likely also running into overflow problems, which will trigger a NaN somewhere, which will be
+   * caught and lead to automatic job cancellation.
+   */
+  public static final int missing_int_value = Integer.MAX_VALUE; //encode missing label or target
+  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
+
+  /**
    * Helper class for dropout, only to be used from within a Layer
    */
   private class Dropout {
@@ -222,8 +232,9 @@ public abstract class Layer extends Iced {
    */
   final void bprop(int u, double g, double r, double m) {
     double r2 = 0;
+    final int off = u * _previous._a.length;
     for( int i = 0; i < _previous._a.length; i++ ) {
-      int w = u * _previous._a.length + i;
+      int w = off + i;
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
       double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
@@ -256,8 +267,7 @@ public abstract class Layer extends Iced {
     if( r2 > max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
       final double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
       for( int i = 0; i < _previous._a.length; i++ ) {
-        int w = u * _previous._a.length + i;
-        _w[w] *= scale;
+        _w[off + i] *= scale;
       }
     }
     double d = g;
@@ -462,6 +472,11 @@ public abstract class Layer extends Iced {
     }
   }
 
+  /**
+   * A ChunksInput layer populates the activation values from a FVec chunk.
+   * Missing values will lead to a 0 activation value in the input layer, which is equivalent to
+   * setting it to the *average* column value before normalizing. In effect, missing column values are ignored.
+   */
   static class ChunksInput extends Input {
     transient Chunk[] _chunks;
     double[] _subs, _muls;
@@ -477,26 +492,32 @@ public abstract class Layer extends Iced {
       _categoricals_mins = stats.categoricals_mins;
     }
 
-    @Override protected void fprop(boolean training) {
+    /**
+     * forward propagation means filling the activation values with all the row's column values
+     */
+    @Override protected void fprop(boolean ignored) {
       set(_chunks, _a, (int) _pos, _subs, _muls, _categoricals_lens, _categoricals_mins);
     }
 
     static void set(Chunk[] chunks, double[] a, int row, double[] subs, double[] muls, int[] catLens, int[] catMins) {
       int n = 0;
+      // loop over all columns
       for( int i = 0; i < catLens.length; i++ ) {
+        final boolean missing = chunks[i].isNA0(row);
         double d = chunks[i].at0(row);
-        d = Double.isNaN(d) ? 0 : d;
         if( catLens[i] == 1 ) {
+          //numerical value: normalize
           d -= subs[n];
           d *= muls[n];
-          a[n++] = d;
+          a[n++] = missing ? 0 : d;
         } else {
+          // categorical values: use precomputed stats
           int cat = catLens[i];
           for( int c = 0; c < cat; c++ )
-            a[n + c] = -subs[n + c];
+            a[n + c] = missing ? 0 : -subs[n + c];
           int c = (int) d - catMins[i] - 1;
           if( c >= 0 )
-            a[n + c] = (1 - subs[n + c]) * muls[n + c];
+            a[n + c] = missing ? 0 : (1 - subs[n + c]) * muls[n + c];
           n += cat;
         }
       }
@@ -521,6 +542,10 @@ public abstract class Layer extends Iced {
     }
   }
 
+  /**
+   * Softmax output layer is used for classification
+   * Rows with missing values in the response column will be ignored
+   **/
   public static abstract class Softmax extends Output {
     protected abstract int target();
 
@@ -555,6 +580,7 @@ public abstract class Layer extends Iced {
       double m = momentum(processed);
       double r = rate(processed) * (1 - m);
       int label = target();
+      if (label == missing_int_value) return; //ignore missing response values
       for( int u = 0; u < _a.length; u++ ) {
         final double targetval = (u == label ? 1 : 0);
         double g = targetval - _a[u];
@@ -589,7 +615,7 @@ public abstract class Layer extends Iced {
 
     @Override protected int target() {
       if( vec.isNA(_input._pos) )
-        return -2;
+        return missing_int_value;
       return (int) vec.at8(_input._pos);
     }
 
@@ -612,11 +638,15 @@ public abstract class Layer extends Iced {
 
     @Override protected int target() {
       if( _chunk.isNA0((int) _input._pos) )
-        return -2;
+        return missing_int_value;
       return (int) _chunk.at80((int) _input._pos);
     }
   }
 
+  /**
+   * Linear output layer is used for regression
+   * Rows with missing values in the response column will be ignored
+   **/
   public static abstract class Linear extends Output {
     abstract double[] target();
 
@@ -643,6 +673,7 @@ public abstract class Layer extends Iced {
       double[] v = target();
       assert(loss == NeuralNet.Loss.MeanSquare);
       for( int u = 0; u < _a.length; u++ ) {
+        if (v[u] == missing_double_value) continue; //ignore missing regression targets
         double g = v[u] - _a[u];
         g *= (1 - _a[u]) * _a[u];
         bprop(u, g, r, m);
@@ -655,7 +686,8 @@ public abstract class Layer extends Iced {
     transient double[] _values;
 
     public VecLinear(Vec vec, VecLinear stats) {
-      this.units = stats != null ? stats.units : 1;
+      assert(stats == null || stats.units == 1);
+      units = 1; //regression
       _vec = vec;
       if (stats != null) transferParams(stats);
     }
@@ -663,8 +695,8 @@ public abstract class Layer extends Iced {
     @Override double[] target() {
       if( _values == null )
         _values = new double[units];
-      double d = _vec.at(_input._pos);
-      _values[0] = Double.isNaN(d) ? 0 : d;
+      long pos = _input._pos; //pos is a global index into the vector
+      _values[0] = _vec.isNA(pos) ? missing_double_value : _vec.at(pos);
       return _values;
     }
   }
@@ -674,7 +706,8 @@ public abstract class Layer extends Iced {
     transient double[] _values;
 
     public ChunkLinear(Chunk chunk, VecLinear stats) {
-      units = stats.units;
+      assert(stats == null || stats.units == 1);
+      units = 1;
       _chunk = chunk;
       loss = stats.loss;
       transferParams(stats);
@@ -683,8 +716,8 @@ public abstract class Layer extends Iced {
     @Override double[] target() {
       if( _values == null )
         _values = new double[units];
-      double d = _chunk.at0((int) _input._pos);
-      _values[0] = Double.isNaN(d) ? 0 : d;
+      int pos = (int)_input._pos; //pos is a local index for this chunk
+      _values[0] = _chunk.isNA0(pos) ? missing_double_value : _chunk.at0(pos);
       return _values;
     }
   }
