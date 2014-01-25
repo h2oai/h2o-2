@@ -29,7 +29,10 @@ public class Type {
       ts =_ts.clone(); for (int i = 0; i < ts.length; i++)
         if (_ts[i]!=null) ts[i] = _ts[i].copy();
     }
-    return new Type(_t,ts);
+    int vararg = _t&VARARGS;
+    Type copy = new Type(_t&~VARARGS,ts);
+    copy._t |= vararg;
+    return copy;
   }
 
   // Check no varargs flags, except on the last type of functions

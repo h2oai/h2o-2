@@ -105,6 +105,8 @@ public class Env extends Iced {
     // In a copy-on-modify language, only update the local scope, or return val
     assert d==0 || (d==1 && _display[_tod]==n+1);
     int idx = _display[_tod-d]+n;
+    // Temporary solution to kill a UDF from global name space. Needs to fix in the future.
+    if (_tod == 0) ASTOp.removeUDF(id);
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
     Frame fr =                   _ary[_sp-1];
@@ -112,7 +114,7 @@ public class Env extends Iced {
     _d  [idx] =                  _d  [_sp-1] ;
     _fcn[idx] =           addRef(_fcn[_sp-1]);
     _key[idx] = d==0 && fr!=null ? id : null;
-    // Temporary solution to add a function to global name space. Needs to fix in the future.
+    // Temporary solution to add a UDF to global name space. Needs to fix in the future.
     if (_tod == 0 && _fcn[_sp-1] != null) ASTOp.putUDF(_fcn[_sp-1], id);
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
