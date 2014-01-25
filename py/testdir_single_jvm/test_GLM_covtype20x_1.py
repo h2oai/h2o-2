@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            h2o_glm.simpleCheckGLM(self, glm, "c14", **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, "C14", **kwargs)
 
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            h2o_glm.simpleCheckGLM(self, glm, "c14", **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, "C14", **kwargs)
 
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
@@ -91,7 +91,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            h2o_glm.simpleCheckGLM(self, glm, "c14", **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, "C14", **kwargs)
 
 
 if __name__ == '__main__':
