@@ -80,6 +80,9 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
+  @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double rate_decay = 1.0;
+
   @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
   public double max_w2 = Double.MAX_VALUE;
 
@@ -148,7 +151,9 @@ public class NeuralNet extends ValidatedJob {
     if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
             || arg._name.equals("score_training") || arg._name.equals("score_validation")
             || arg._name.equals("initial_weight_distribution") || arg._name.equals("initial_weight_scale")
-            || arg._name.equals("score_interval") || arg._name.equals("diagnostics")) {
+            || arg._name.equals("score_interval") || arg._name.equals("diagnostics")
+            || arg._name.equals("rate_decay")
+            ) {
       if (!expert_mode)  arg.disable("Only in expert mode.");
     }
   }

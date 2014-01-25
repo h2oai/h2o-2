@@ -33,6 +33,9 @@ public abstract class Layer extends Iced {
   @API(help = "Learning rate")
   public double rate;
 
+  @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))")
+  public double rate_decay;
+
   @API(help = "Learning rate annealing")
   public double rate_annealing;
 
@@ -60,6 +63,7 @@ public abstract class Layer extends Iced {
     initial_weight_distribution = p.initial_weight_distribution;
     initial_weight_scale = p.initial_weight_scale;
     rate = p.rate;
+    rate_decay = p.rate_decay;
     rate_annealing = p.rate_annealing;
     l1 = p.l1;
     l2 = p.l2;
@@ -73,6 +77,7 @@ public abstract class Layer extends Iced {
     initial_weight_distribution = p.initial_weight_distribution;
     initial_weight_scale = p.initial_weight_scale;
     rate = p.rate;
+    rate_decay = p.rate_decay;
     rate_annealing = p.rate_annealing;
     l1 = p.l1;
     l2 = p.l2;
@@ -160,6 +165,7 @@ public abstract class Layer extends Iced {
   }
 
   public void init(Layer[] ls, int index, boolean weights) {
+    rate *= Math.pow(rate_decay, index-1);
     _a = new double[units];
     if (!(this instanceof Output)) {
       _e = new double[units];
