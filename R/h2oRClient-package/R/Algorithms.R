@@ -544,9 +544,9 @@ h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, 
     
     h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!h2o.__isDone(data@h2o, "NN", res)) { Sys.sleep(1) }
-    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNProgress, destination_key=res$destination_key)
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, '_modelKey'=res$destination_key)
 
-    result = h2o.__getNNResults(res2)
+    result = h2o.__getNNResults(res2$neuralnet_model, res2$neuralnet_model$'_domains'[[args$y_i]])
     new("H2ONNModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
@@ -576,9 +576,9 @@ h2o.__getNNSummary <- function(res) {
   return(mySum)
 }
 
-h2o.__getNNResults <- function(res) {
+h2o.__getNNResults <- function(res, class_names = NULL) {
   result = list()
-  result$confusion = build_cm(res$confusion_matrix, res$class_names)
+  result$confusion = build_cm(res$confusion_matrix, class_names)
   nn_train = tail(res$training_errors,1)[[1]]
   nn_valid = tail(res$validation_errors,1)[[1]]
   result$train_class_error = nn_train$classification
@@ -885,7 +885,7 @@ h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, for
 
   model_obj = switch(algo, GBM = "H2OGBMModel", KM = "H2OKMeansModel", RF = "H2ODRFModel", NN = "H2ONNModel")
   grid_obj = switch(algo, GBM = "H2OGBMGrid", KM = "H2OKMeansGrid", RF = "H2ODRFGrid", NN = "H2ONNGrid")
-  model_view = switch(algo, GBM = h2o.__PAGE_GBMModelView, KM = h2o.__PAGE_KM2ModelView, RF = h2o.__PAGE_DRFModelView, NN = h2o.__PAGE_NNProgress)
+  model_view = switch(algo, GBM = h2o.__PAGE_GBMModelView, KM = h2o.__PAGE_KM2ModelView, RF = h2o.__PAGE_DRFModelView, NN = h2o.__PAGE_NNModelView)
 
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
@@ -907,7 +907,7 @@ h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, for
   new(grid_obj, key=dest_key, data=data, model=result, sumtable=myModelSum)
 }
 
-build_cm <- function(cm, cf_names) {
+build_cm <- function(cm, cf_names = NULL) {
   #browser()
   categories = length(cm)
   cf_matrix = t(matrix(unlist(cm), nrow=categories))
@@ -918,8 +918,8 @@ build_cm <- function(cm, cf_names) {
   cf_matrix = rbind(cf_matrix, cf_total)
   cf_matrix = cbind(cf_matrix, round(cf_error, 3))
 
-  # dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
-  dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
+  if(!is.null(cf_names))
+    dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
   return(cf_matrix)
 }
 
