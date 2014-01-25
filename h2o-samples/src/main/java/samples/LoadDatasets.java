@@ -225,6 +225,7 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./test/classifier/coldom_train_1.csv");
     TestUtil.parseFromH2OFolder("smalldata/./test/classifier/coldom_train_2.csv");
     TestUtil.parseFromH2OFolder("smalldata/./test/classifier/coldom_train_3.csv");
+    TestUtil.parseFromH2OFolder("smalldata/./test/classifier/iris_missing_values.csv");
     TestUtil.parseFromH2OFolder("smalldata/./test/classifier/iris_test.csv");
     TestUtil.parseFromH2OFolder("smalldata/./test/classifier/iris_test_extra.csv");
     TestUtil.parseFromH2OFolder("smalldata/./test/classifier/iris_test_extra_with_na.csv");

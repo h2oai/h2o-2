@@ -1,21 +1,24 @@
 package water;
 
-import static water.util.Utils.difference;
-import static water.util.Utils.isEmpty;
+import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
+import water.api.Constants;
+import water.api.DocGen;
+import water.api.Progress2;
+import water.api.Request.Validator.NOPValidator;
+import water.api.RequestServer.API_VERSION;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
+import water.util.Utils;
+import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 
-import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
-import water.api.*;
-import water.api.Request.Validator.NOPValidator;
-import water.api.RequestServer.API_VERSION;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.*;
-import water.util.Utils.ExpectedExceptionForDebug;
+import static water.util.Utils.difference;
+import static water.util.Utils.isEmpty;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -215,6 +218,11 @@ public class Job extends Request2 {
       for( int i = cols.length - 1; i >= 0; i-- )
         if( vecs[cols[i]] == response )
           cols = Utils.remove(cols,i);
+
+      final boolean has_constant_response = response.isEnum() ?
+              response.domain().length <= 1 : response.min() == response.max();
+      if (has_constant_response)
+        throw new IllegalArgumentException("Constant response column!");
     }
   }
 

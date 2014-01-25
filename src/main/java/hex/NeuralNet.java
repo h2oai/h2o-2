@@ -111,6 +111,7 @@ public class NeuralNet extends ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
+    if (arg._name.equals("ignored_cols")) arg.disable("Not currently supported.");
     if (arg._name.equals("input_dropout_ratio") &&
             (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
             ) {
@@ -499,8 +500,9 @@ public class NeuralNet extends ValidatedJob {
         idx = o;
       }
     }
-    if( confusion != null )
-      confusion[output.target()][idx]++;
+    if( confusion != null ) {
+      if (output.target() != Layer.missing_int_value) confusion[output.target()][idx]++;
+    }
     return idx == output.target();
   }
 
@@ -971,7 +973,7 @@ public class NeuralNet extends ValidatedJob {
     }
 
     static void confusion(StringBuilder sb, String title, String[] classes, long[][] confusionMatrix) {
-      sb.append("<h3>" + title + "</h3>");
+      //sb.append("<h3>" + title + "</h3>");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
       sb.append("<tr><th>Actual \\ Predicted</th>");
       if( classes == null ) {
