@@ -688,6 +688,54 @@ public class NeuralNet extends ValidatedJob {
         }
       }
     }
+
+    static void confusion(StringBuilder sb, String title, String[] classes, long[][] confusionMatrix) {
+      sb.append("<h3>" + title + "</h3>");
+      sb.append("<table class='table table-striped table-bordered table-condensed'>");
+      sb.append("<tr><th>Actual \\ Predicted</th>");
+      if( classes == null ) {
+        classes = new String[confusionMatrix.length];
+        for( int i = 0; i < classes.length; i++ )
+          classes[i] = "" + i;
+      }
+      for( String c : classes )
+        sb.append("<th>" + c + "</th>");
+      sb.append("<th>Error</th></tr>");
+      long[] totals = new long[classes.length];
+      long sumTotal = 0;
+      long sumError = 0;
+      for( int crow = 0; crow < classes.length; ++crow ) {
+        long total = 0;
+        long error = 0;
+        sb.append("<tr><th>" + classes[crow] + "</th>");
+        for( int ccol = 0; ccol < classes.length; ++ccol ) {
+          long num = confusionMatrix[crow][ccol];
+          total += num;
+          totals[ccol] += num;
+          if( ccol == crow ) {
+            sb.append("<td style='background-color:LightGreen'>");
+          } else {
+            sb.append("<td>");
+            error += num;
+          }
+          sb.append(num);
+          sb.append("</td>");
+        }
+        sb.append("<td>");
+        sb.append(String.format("%5.3f = %d / %d", (double) error / total, error, total));
+        sb.append("</td></tr>");
+        sumTotal += total;
+        sumError += error;
+      }
+      sb.append("<tr><th>Totals</th>");
+      for( int i = 0; i < totals.length; ++i )
+        sb.append("<td>" + totals[i] + "</td>");
+      sb.append("<td><b>");
+      sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
+      sb.append("</b></td></tr>");
+      sb.append("</table>");
+    }
+
     public void toJavaHtml(StringBuilder sb) {
       //DocGen.HTML.title(sb, "The Java Neural Net model is not implemented yet.");
     }
@@ -797,7 +845,7 @@ public class NeuralNet extends ValidatedJob {
       if( confusion_matrix != null && confusion_matrix.length < 100 ) {
         assert(classification);
         String[] classes = classNames();
-        NeuralNetScore.confusion(sb, cmTitle, classes, confusion_matrix);
+        confusion(sb, cmTitle, classes, confusion_matrix);
       }
       sb.append("<h3>" + "Progress" + "</h3>");
       String training = "Number of training set samples for scoring: " + train.score_training;
@@ -901,129 +949,6 @@ public class NeuralNet extends ValidatedJob {
 
   }
 
-  public static class NeuralNetScore extends ModelJob {
-    static final int API_WEAVER = 1;
-    static public DocGen.FieldDoc[] DOC_FIELDS;
-    static final String DOC_GET = "Neural network scoring";
-
-    @API(help = "Model", required = true, filter = Default.class)
-    public NeuralNetModel model;
-
-    @API(help = "Rows to consider for scoring, 0 (default) means the whole frame", filter = Default.class)
-    public long max_rows;
-
-    @API(help = "Classification error")
-    public double classification_error;
-
-    @API(help = "Mean square error")
-    public double mean_square_error;
-
-    @API(help = "Cross entropy")
-    public double cross_entropy;
-
-    @API(help = "Confusion matrix")
-    public long[][] confusion_matrix;
-
-    public NeuralNetScore() {
-      description = DOC_GET;
-    }
-
-    @Override protected Response serve() {
-      init();
-      Frame[] frs = model.adapt(source, false);
-      int classes = model.layers[model.layers.length - 1].units;
-      confusion_matrix = new long[classes][classes];
-      Layer[] clones = new Layer[model.layers.length];
-      for( int y = 0; y < model.layers.length; y++ ) {
-        clones[y] = model.layers[y].clone();
-        clones[y]._w = model.weights[y];
-        clones[y]._b = model.biases[y];
-      }
-      Vec[] vecs = frs[0].vecs();
-      Vec[] data = Utils.remove(vecs, vecs.length - 1);
-      Vec resp = vecs[vecs.length - 1];
-      Errors e = eval(clones, data, resp, max_rows, confusion_matrix);
-      classification_error = e.classification;
-      mean_square_error = e.mean_square;
-      cross_entropy = e.cross_entropy;
-      if( frs[1] != null )
-        frs[1].remove();
-      return Response.done(this);
-    }
-
-    @Override public boolean toHTML(StringBuilder sb) {
-      final boolean classification = model.isClassifier();
-      if (classification) {
-        DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
-      }
-      DocGen.HTML.section(sb, "Mean square error: " + mean_square_error);
-      if (classification) {
-        DocGen.HTML.section(sb, "Mean cross entropy: " + cross_entropy);
-
-        String[] domain = null;
-        if (response.domain() != null) {
-          domain = response.domain();
-        } else {
-          // find the names for the categories from the model's domains, after finding the correct column
-          int idx = source.find(response);
-          if( idx == -1 ) {
-            Vec vm = response.masterVec();
-            if( vm != null ) idx = source.find(vm);
-          }
-          if (idx != -1) domain = model._domains[idx];
-        }
-        confusion(sb, "Confusion Matrix", domain, confusion_matrix);
-      }
-      return true;
-    }
-
-    static void confusion(StringBuilder sb, String title, String[] classes, long[][] confusionMatrix) {
-      //sb.append("<h3>" + title + "</h3>");
-      sb.append("<table class='table table-striped table-bordered table-condensed'>");
-      sb.append("<tr><th>Actual \\ Predicted</th>");
-      if( classes == null ) {
-        classes = new String[confusionMatrix.length];
-        for( int i = 0; i < classes.length; i++ )
-          classes[i] = "" + i;
-      }
-      for( String c : classes )
-        sb.append("<th>" + c + "</th>");
-      sb.append("<th>Error</th></tr>");
-      long[] totals = new long[classes.length];
-      long sumTotal = 0;
-      long sumError = 0;
-      for( int crow = 0; crow < classes.length; ++crow ) {
-        long total = 0;
-        long error = 0;
-        sb.append("<tr><th>" + classes[crow] + "</th>");
-        for( int ccol = 0; ccol < classes.length; ++ccol ) {
-          long num = confusionMatrix[crow][ccol];
-          total += num;
-          totals[ccol] += num;
-          if( ccol == crow ) {
-            sb.append("<td style='background-color:LightGreen'>");
-          } else {
-            sb.append("<td>");
-            error += num;
-          }
-          sb.append(num);
-          sb.append("</td>");
-        }
-        sb.append("<td>");
-        sb.append(String.format("%5.3f = %d / %d", (double) error / total, error, total));
-        sb.append("</td></tr>");
-        sumTotal += total;
-        sumError += error;
-      }
-      sb.append("<tr><th>Totals</th>");
-      for( int i = 0; i < totals.length; ++i )
-        sb.append("<td>" + totals[i] + "</td>");
-      sb.append("<td><b>");
-      sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
-      sb.append("</b></td></tr>");
-      sb.append("</table>");
-    }
-  }
 
   static int cores() {
     int cores = 0;
