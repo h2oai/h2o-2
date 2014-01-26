@@ -84,7 +84,8 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
     for( Key k : H2O.keySet() )
       if( k.toString().startsWith(_root) ) {
         dels.add(k.toString());
-        UKV.remove(k,fs);
+        if( DKV.get(k).isLockable() ) ((Lockable)DKV.get(k).get()).delete(fs);
+        else UKV.remove(k,fs);
       }
     fs.blockForPending();
 
@@ -107,7 +108,7 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
             ? new Value(k,(int)size,Value.NFS)
             : new Value(k,new ValueArray(k,size),Value.NFS);
           val.setdsk();
-          UKV.put(k, val, fs);
+          DKV.put(k, val, fs);
         }
       }
     }

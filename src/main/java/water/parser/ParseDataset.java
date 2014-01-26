@@ -385,7 +385,7 @@ public final class ParseDataset extends Job {
     }
     long memsz=0;               // Cluster memory
     for( H2ONode h2o : H2O.CLOUD._memary )
-      memsz += h2o._heartbeat.get_max_mem();
+      memsz += h2o.get_max_mem();
     if( sum > memsz*2 )
       throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
 
