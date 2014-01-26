@@ -4,7 +4,6 @@ import java.util.*;
 
 import water.*;
 import water.fvec.*;
-import water.util.Log;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -47,6 +46,7 @@ public abstract class ASTOp extends AST {
   static final public HashMap<String,ASTOp> UNI_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> BIN_INFIX_OPS = new HashMap();
   static final public HashMap<String,ASTOp> PREFIX_OPS    = new HashMap();
+  static final public HashMap<String,ASTOp> UDF_OPS       = new HashMap();
   // Too avoid a cyclic class-loading dependency, these are init'd before subclasses.
   static final String VARS1[] = new String[]{ "", "x"};
   static final String VARS2[] = new String[]{ "", "x","y"};
@@ -113,6 +113,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTSumNaRm());
     // Misc
     putPrefix(new ASTSeq   ());
+    putPrefix(new ASTQtile ());
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
     putPrefix(new ASTTable ());
@@ -127,8 +128,14 @@ public abstract class ASTOp extends AST {
   static private void putUniInfix(ASTOp ast) { UNI_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putBinInfix(ASTOp ast) { BIN_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putPrefix  (ASTOp ast) {    PREFIX_OPS.put(ast.opStr(),ast); }
+  static         void putUDF     (ASTOp ast, String fn) {     UDF_OPS.put(fn,ast); }
+  static         void removeUDF  (String fn) { UDF_OPS.remove(fn); }
   static public ASTOp isOp(String id) {
     // This order matters. If used as a prefix OP, `+` and `-` are binary only.
+    ASTOp op4 =       UDF_OPS.get(id); if( op4 != null ) return op4;
+    return isBuiltinOp(id);
+  }
+  static public ASTOp isBuiltinOp(String id) {
     ASTOp op3 =    PREFIX_OPS.get(id); if( op3 != null ) return op3;
     ASTOp op2 = BIN_INFIX_OPS.get(id); if( op2 != null ) return op2;
     ASTOp op1 = UNI_INFIX_OPS.get(id);                   return op1;
@@ -136,10 +143,15 @@ public abstract class ASTOp extends AST {
   static public boolean isInfixOp(String id) {
     return BIN_INFIX_OPS.containsKey(id) || UNI_INFIX_OPS.containsKey(id);
   }
+  static public boolean isUDF(String id) {
+    return UDF_OPS.containsKey(id);
+  }
+  static public boolean isUDF(ASTOp op) { return isUDF(op.opStr()); }
   static public Set<String> opStrs() {
     Set<String> all = UNI_INFIX_OPS.keySet();
     all.addAll(BIN_INFIX_OPS.keySet());
     all.addAll(PREFIX_OPS.keySet());
+    all.addAll(UDF_OPS.keySet());
     return all;
   }
 
@@ -156,7 +168,14 @@ public abstract class ASTOp extends AST {
     _vars = vars;
     assert ts.length==vars.length : "No vars?" + this;
   }
-
+  ASTOp( String vars[], Type t, int form, int prec, int asso) {
+    super(t);
+    _form = form;
+    _precedence = prec;
+    _association = asso;
+    _vars = vars;
+    assert t._ts.length==vars.length : "No vars?" + this;
+  }
   abstract String opStr();
   abstract ASTOp  make();
 
@@ -183,22 +202,29 @@ public abstract class ASTOp extends AST {
     ASTOp op = isOp(id);  // The order matters. If used as a prefix OP, `+` and `-` are binary only.
     // Also, if assigning to a built-in function then do not parse-as-a-fcn.
     // Instead it will default to parsing as an ID in ASTAssign.parse
-    if( op != null && !E.peek('=') ) return op.make();
+    if( op != null ) {
+      int x1 = E._x;
+      if (!E.peek('=') && !(E.peek('<') && E.peek('-'))) {
+        E._x = x1; return op.make();
+      }
+    }
     E._x = x;
     return ASTFunc.parseFcn(E);
   }
 
-  // Parse a prefix OP or return null.
-  static ASTOp parsePrefixOp(Exec2 E) {
-    int x = E._x;
-    String id = E.isID();
-    if( id == null ) return null;
-    ASTOp op = PREFIX_OPS.get(id);
-    if( op != null ) return op.make();
-    E._x = x;                 // Roll back, no parse happened
-    // Attempt a user-mode function parse
-    return ASTFunc.parseFcn(E);
-  }
+  //// Parse a prefix OP or return null.
+  //static ASTOp parsePrefixOp(Exec2 E) {
+  //  int x = E._x;
+  //  String id = E.isID();
+  //  if( id == null ) return null;
+  //  ASTOp op = PREFIX_OPS.get(id);
+  //  if( op != null ) return op.make();
+  //  E._x = x;                 // Roll back, no parse happened
+  //  // Attempt a user-mode function parse
+  //  return ASTFunc.parseFcn(E);
+  //}
+
+  // Parse
 
   // Parse a unary infix OP or return null.
   static ASTOp parseUniInfixOp(Exec2 E) {
@@ -818,6 +844,76 @@ class ASTSeq extends ASTOp {
     Vec v = av.close(null);
     env.pop();
     env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+  }
+}
+
+// Compute sample quantiles given a set of cutoffs.
+class ASTQtile extends ASTOp {
+  @Override String opStr() { return "quantile"; }
+  ASTQtile( ) {
+    super(new String[]{"quantile","x","probs"},
+          new Type[]{Type.ARY, Type.ARY, Type.ARY},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTQtile make() { return new ASTQtile(); }
+  @Override void apply(Env env, int argcnt) {
+    Frame x, probs;
+    double   p[];
+    if ((probs = env.ary(-1)).vecs().length > 1)
+      throw new IllegalArgumentException("Argument #2 in Quantile contains more than 1 column.");
+    if ((x = env.ary(-2)).vecs().length > 1)
+      throw new IllegalArgumentException("Argument #1 in Quantile contains more than 1 column.");
+    Vec pv = probs.anyVec();
+    p = new double[(int)pv.length()];
+    for (int i = 0; i < pv.length(); i++)
+      if ((p[i]=pv.at((long)i)) < 0 || p[i] > 1)
+        throw new  IllegalArgumentException("Quantile: probs must be in the range of [0, 1].");
+    double samples[] = new Resample(10000).doAll(x)._local;
+    Arrays.sort(samples);
+    // create output vec
+    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
+    AppendableVec av = new AppendableVec(key);
+    NewChunk nc = new NewChunk(av,0);
+    for (double prob : p) {
+      double value;
+      int ix = (int)(samples.length * prob);
+      if (ix >= samples.length) value = x.anyVec().max();
+      else if (prob == 0) value = x.anyVec().min();
+      else value = samples[ix];
+      nc.addNum(value);
+    }
+    nc.close(0,null);
+    Vec v = av.close(null);
+    env.poppush(argcnt, new Frame(new String[]{"Quantile"}, new Vec[]{v}), null);
+  }
+  static class Resample extends MRTask2<Resample> {
+    final int _total;
+    public double _local[];
+    public Resample(int nsample) { _total = nsample; }
+    @Override public void map(Chunk chk) {
+      Random r = new Random(chk._start);
+      int ns = Math.min(chk._len,(int)(_total*(double)chk._len/vecs(0).length()));
+      _local = new double[ns];
+      int n = 0, fill=0;
+      double val;
+      if (ns == chk._len)
+        for (n = 0; n < ns; n++) {
+          if (!Double.isNaN(val = chk.at0(n))) _local[fill++] = val;
+        }
+      else
+        for (n = 0; n < ns; n++) {
+          int i = r.nextInt(chk._len);
+          if (!Double.isNaN(val = chk.at0(i))) _local[fill++] = val;
+        }
+      _local = Arrays.copyOf(_local,fill);
+    }
+    @Override public void reduce(Resample other) {
+      int appendAt = _local.length;
+      _local = Arrays.copyOf(_local, _local.length+other._local.length);
+      System.arraycopy(other._local,0,_local,appendAt,other._local.length);
+    }
   }
 }
 

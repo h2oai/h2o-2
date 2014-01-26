@@ -112,6 +112,8 @@ class PredictCSV {
         // Loop over inputCSV one row at a time.
         int lineno = 0;
         String line = null;
+        // An array to store predicted values
+        float[] preds = new float[model.getPredsSize()];
         while ((line = input.readLine()) != null) {
             lineno++;
             if (skipFirstLine > 0) {
@@ -130,7 +132,7 @@ class PredictCSV {
             // Parse the CSV line.  Don't handle quoted commas.  This isn't a parser test.
             String trimmedLine = line.trim();
             String[] inputColumnsArray = trimmedLine.split(",");
-            int numInputColumns = model.getNames().length;
+            int numInputColumns = model.getNames().length-1; // we do not need response !
             if (inputColumnsArray.length != numInputColumns) {
                 System.out.println("WARNING: Line " + lineno + " has " + inputColumnsArray.length + " columns (expected " + numInputColumns + ")");
             }
@@ -171,12 +173,11 @@ class PredictCSV {
             }
 
             // Do the prediction.
-            float[] preds = new float[model.getNumResponseClasses()+1];
             model.predict(row, preds);
 
             // Emit the result to the output file.
             for (int i = 0; i < preds.length; i++) {
-                if (i == 0) {
+                if (i == 0 && model.isClassifier()) {
                     // See if there is a domain to map this output value to.
                     String[] domainValues = model.getDomainValues(model.getResponseIdx());
                     if (domainValues != null) {
@@ -191,14 +192,10 @@ class PredictCSV {
                         String predictedOutputClassLevel = domainValues[valueAsInt];
                         output.write(predictedOutputClassLevel);
                     }
-                    else {
-                        // Regression.
-                        output.write(Double.toString(preds[i]));
-                    }
-                }
-                else {
-                    output.write(",");
+                } else {
+                    if (i > 0) output.write(",");
                     output.write(Double.toString(preds[i]));
+                    if (!model.isClassifier()) break;
                 }
             }
             output.write("\n");
