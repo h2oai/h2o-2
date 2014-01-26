@@ -135,12 +135,20 @@ class H2OCloudNode:
 
         @return: none
         """
+
         cmd = ["java",
                "-Xmx" + self.xmx,
                "-ea",
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port)]
+
+        # Add S3N credentials to cmd if they exist.
+        ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
+        if (os.path.exists(ec2_hdfs_config_file_name)):
+            cmd.append("-hdfs_config")
+            cmd.append(ec2_hdfs_config_file_name)
+
         self.output_file_name = \
             os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
         f = open(self.output_file_name, "w")
