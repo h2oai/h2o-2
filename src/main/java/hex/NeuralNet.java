@@ -80,7 +80,7 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
-  @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
   public double rate_decay = 1.0;
 
   @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class, json = true)
