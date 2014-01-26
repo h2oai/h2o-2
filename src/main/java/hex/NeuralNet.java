@@ -190,6 +190,39 @@ public class NeuralNet extends ValidatedJob {
     description = DOC_GET;
   }
 
+  @Override protected void logStart() {
+    Log.info("Starting Neural Net model build...");
+    super.logStart();
+    Log.info("    description: " + description);
+
+    Log.info("Execution Mode: " + mode.toString());
+    Log.info("Activation function: " + activation.toString());
+    Log.info("Input layer dropout ratio: " + input_dropout_ratio);
+    String h = "" + hidden[0];
+    for (int i=1; i<hidden.length; ++i) h += ", " + hidden[i];
+    Log.info("Hidden layer sizes: " + h);
+    Log.info("Learning rate: " + rate);
+    Log.info("Learning rate annealing: " + rate_annealing);
+    Log.info("L1 regularization: " + l1);
+    Log.info("L2 regularization: " + l2);
+    Log.info("Initial momentum at the beginning of training: " + momentum_start);
+    Log.info("Number of training samples for which momentum increases: " + momentum_ramp);
+    Log.info("Final momentum after the ramp is over: " + momentum_stable);
+    Log.info("Number of epochs: " + epochs);
+    Log.info("Seed for random numbers: " + seed);
+//    Log.info("Enable expert mode: ", expert_mode);
+    Log.info("Initial weight distribution: " + initial_weight_distribution);
+    Log.info("Initial weight scale: " + initial_weight_scale);
+    Log.info("Loss function: " + loss.toString());
+    Log.info("Learning rate decay factor: " + rate_decay);
+    Log.info("Constraint for squared sum of incoming weights per unit: " + max_w2);
+    Log.info("Number of samples to train with non-distributed mode for improved stability: " + warmup_samples);
+    Log.info("Number of training set samples for scoring: " + score_training);
+    Log.info("Number of validation set samples for scoring: " + score_validation);
+//    Log.info("Minimum interval (in seconds) between scoring: " + score_interval);
+//    Log.info("Enable diagnostics for hidden layers: " + diagnostics);
+  }
+
   @Override public Job fork() {
     init();
     H2OCountedCompleter job = new H2OCountedCompleter() {
@@ -210,6 +243,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
+    logStart();
     RNG.seed = new AtomicLong(seed);
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
