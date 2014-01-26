@@ -21,7 +21,6 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 
 heading("Testing single file importHDFS S3N for VA")
 s3n_iris_file <- "0xdata-public/examples/h2o/R/datasets/iris_wheader.csv"
-
 url <- sprintf("s3n://%s", s3n_iris_file)
 
 iris.hex <- h2o.importHDFS(conn, url)
@@ -35,6 +34,27 @@ if (n != 150) {
 if (class(iris.hex) != "H2OParsedDataVA") {
     stop("iris.hex is the wrong type")
 }
-print ("import worked")
+
+
+#----------------------------------------------------------------------
+# Directory cases.
+#----------------------------------------------------------------------
+
+heading("Testing directory importHDFS S3N for VA")
+s3n_iris_dir <- "0xdata-public/examples/h2o/R/datasets"
+url2 <- sprintf("s3n://%s", s3n_iris_dir)
+
+irisdir.hex <- h2o.importHDFS(conn, url2)
+head(irisdir.hex)
+tail(irisdir.hex)
+n <- nrow(irisdir.hex)
+print(n)
+if (n != 150) {
+    stop("nrows is wrong")
+}
+if (class(irisdir.hex) != "H2OParsedDataVA") {
+    stop("irisdir.hex is the wrong type")
+}
+
 
 PASS_BANNER()
