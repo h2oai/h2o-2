@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=300, **kwargs)
 
             # pass the kwargs with all the params, so we know what we asked for!
-            h2o_glm.simpleCheckGLM(self, glm, 57, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, "C58", **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\nTrial #", trial
 

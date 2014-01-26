@@ -1,24 +1,27 @@
 package water;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.annotation.*;
-import java.lang.reflect.Method;
-import java.net.ServerSocket;
-import java.util.*;
-
+import hex.NeuralNetSpiralsTest;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
-
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.exec.Expr2Test;
 import water.parser.ParseFolderTestBig;
 import water.util.Log;
 import water.util.Utils;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Method;
+import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class JUnitRunner {
   // TODO
@@ -32,6 +35,7 @@ public class JUnitRunner {
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
+    tests.remove(NeuralNetSpiralsTest.class);
     // Pure JUnit test
 //    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);

@@ -607,11 +607,10 @@ public class Frame extends Iced {
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
-      if (rows.length==0)
+      if( rows.length==0 || rows[0] < 0 )
         return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
-      if (rows[0] < 0)
-        return new DeepSlice(rows, c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
       // Vec'ize the index array
+      Futures fs = new Futures();
       AppendableVec av = new AppendableVec("rownames");
       int r = 0;
       int c = 0;
@@ -621,9 +620,10 @@ public class Frame extends Iced {
         for (; r < end; r++) {
           nc.addNum(rows[r]);
         }
-        nc.close(c++, null);
+        nc.close(c++, fs);
       }
-      Vec c0 = av.close(null);   // c0 is the row index vec
+      Vec c0 = av.close(fs);   // c0 is the row index vec
+      fs.blockForPending();
       Frame fr2 = new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
               .outputFrame(names(c2), domains(c2));
       UKV.remove(c0._key);      // Remove hidden vector

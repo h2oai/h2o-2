@@ -9,7 +9,7 @@
 
 \title{Class \code{"H2OClient"}}
 \description{
-An object representing the server/local machine on which H2O is running.
+An object representing the server/ local machine on which H2O is running.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OClient", ...)}
@@ -23,9 +23,12 @@ Objects can be created by calls of the form \code{new("H2OClient", ...)}
 }
 \section{Methods}{
   \describe{
-    \item{h2o.importFile}{\code{signature(object = "H2OClient", path = "character", key = "character", parse = "logical")}: ... }
-    \item{h2o.importFolder}{\code{signature(object = "H2OClient", path = "character", parse = "logical")}: ... }
-    \item{h2o.importURL}{\code{signature(object = "H2OClient", path = "character", key = "character", parse = "logical")}: ... }
+    \item{h2o.importFile}{\code{signature(object = "H2OClient", path = "character", 
+    		+ key = "character", parse = "logical")}: ... }
+    \item{h2o.importFolder}{\code{signature(object = "H2OClient", path = "character", 
+    		+ parse = "logical")}: ... }
+    \item{h2o.importURL}{\code{signature(object = "H2OClient", path = "character", 
+    		+ key = "character", parse = "logical")}: ... }
     \item{show}{\code{signature(object = "H2OClient")}: ... }
 	 }
 }

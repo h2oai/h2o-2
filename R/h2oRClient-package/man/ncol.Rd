@@ -1,11 +1,11 @@
 \name{ncol}
 \alias{ncol}
 \title{
-Returns a count of the number of columns in an H2O parsed data set. 
-}
+Returns a count of the number of columns in an code{\linkS4class{H2OParsedData} object. 
+}}
 \description{
-Returns a count of the number of columns in an H2O parsed data set.
-}
+Returns a count of the number of columns in an code{\linkS4class{H2OParsedData} object.
+}}
 \usage{
 ncol(x)
 }

@@ -105,15 +105,6 @@ public abstract class Request extends RequestBuilders {
         return wrap(server, HTMLHelp());
       case json:
       case www:
-        if( log() ) {
-          String log = getClass().getSimpleName();
-          for( Object arg : parms.keySet() ) {
-            String value = parms.getProperty((String) arg);
-            if( value != null && value.length() != 0 )
-              log += " " + arg + "=" + value;
-          }
-          Log.debug(Sys.HTTPD, log);
-        }
         return serveGrid(server, parms, type);
       case query: {
         for (Argument arg: _arguments)

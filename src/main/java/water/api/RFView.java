@@ -7,6 +7,7 @@ import hex.rf.ConfusionTask.CMJob;
 import java.util.Arrays;
 
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 import com.google.gson.*;
@@ -131,6 +132,13 @@ public class RFView extends /* Progress */ Request {
 
     tasks    = model._totalTrees;
     finished = model.size();
+
+    // Handle cancelled/aborted jobs
+    if (_job.value()!=null) {
+      Job jjob = Job.findJob(_job.value());
+      if (jjob!=null && jjob.cancelled())
+        return Response.error(jjob.exception == null ? "Job was cancelled by user!" : jjob.exception);
+    }
 
     JsonObject response = defaultJsonResponse();
     // CM return and possible computation is requested

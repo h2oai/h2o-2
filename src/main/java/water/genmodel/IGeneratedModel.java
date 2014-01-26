@@ -65,4 +65,10 @@ public interface IGeneratedModel {
     /** Maps given column's enum to integer used by this model.
      * Returns -1 if mapping is not found. */
     public int mapEnum(int colIdx, String enumValue);
+
+    /**
+     * Returns the expected size of preds array which is passed to {@link #predict(double[], float[])} function.
+     * @return expected size of preds array
+     */
+    public int getPredsSize();
 }

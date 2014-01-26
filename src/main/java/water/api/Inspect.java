@@ -1,9 +1,15 @@
 package water.api;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import hex.DGLM.GLMModel;
-import hex.*;
+import hex.GridSearch;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
+import hex.KMeansModel;
+import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetModel;
 import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
@@ -12,9 +18,6 @@ import hex.glm.GLMModelView;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.rf.RFModel;
-
-import java.util.HashMap;
-
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
@@ -25,7 +28,7 @@ import water.parser.CustomParser.PSetupGuess;
 import water.parser.ParseDataset;
 import water.util.Utils;
 
-import com.google.gson.*;
+import java.util.HashMap;
 
 public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
@@ -159,7 +162,7 @@ public class Inspect extends Request {
 //    if( f instanceof GLMValidation)
 //      return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
-      return ((NeuralNetModel) f).redirect(this);
+      return NeuralNetModelView.redirect(this, key);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
@@ -207,10 +210,6 @@ public class Inspect extends Request {
     return r;
   }
 
-
-  public Response serveValueArray(final ValueArray va) {
-    return serveValueArray(va, va._cols.length);
-  }
 
   /**
    * serve the value array with a capped # of columns [0,max_columns)

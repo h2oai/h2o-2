@@ -59,7 +59,6 @@ h2o.__logIt <- function(m, tmp, commandOrErr) {
 # Internal functions & declarations
 h2o.__PAGE_CANCEL = "Cancel.json"
 h2o.__PAGE_CLOUD = "Cloud.json"
-h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
@@ -95,6 +94,7 @@ h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 h2o.__HACK_LEVELS = "2/Levels.json"
+h2o.__HACK_SETCOLNAMES = "SetColumnNames.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
@@ -112,7 +112,8 @@ h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
 h2o.__PAGE_KM2Progress = "2/KMeans2Progress.json"
 h2o.__PAGE_KM2ModelView = "2/KMeans2ModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
-h2o.__PAGE_NNProgress = "2/NeuralNetProgress.json"
+h2o.__PAGE_NNProgressPage = "2/NeuralNetProgressPage.json"
+h2o.__PAGE_NNModelView = "2/NeuralNetModelView.json"
 h2o.__PAGE_PCA = "2/PCA.json"
 h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
@@ -355,8 +356,9 @@ h2o.__uniqID <- function(prefix = "") {
 # }
 
 h2o.__checkForFactors <- function(object) {
-    if(class(object) != "H2OParsedData") return(FALSE)
-    any.factor(object)
+  # if(class(object) != "H2OParsedData") return(FALSE)
+  if(!class(object) %in% c("H2OParsedData", "H2OParsedDataVA")) return(FALSE)
+  any.factor(object)
 }
 
 h2o.__version <- function(client) {
@@ -419,18 +421,22 @@ h2o.__unop2 <- function(op, x) {
 h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
-
-  if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+  # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+  LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
+  
+  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) & !( op %in% c('==', '!='))) {
     anyFactorsX <- h2o.__checkForFactors(x)
     anyFactorsY <- h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
 
-  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  # RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  RHS = ifelse(inherits(y, "H2OParsedData"), y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData") myClient = x@h2o
+  # if(class(x) == "H2OParsedData") myClient = x@h2o
+  if(inherits(x, "H2OParsedData")) myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 

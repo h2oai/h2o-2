@@ -20,8 +20,12 @@ public class ASTFunc extends ASTOp {
   ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) {
     super(vars,vtypes,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _tmps=tmps;
   }
+  ASTFunc( String vars[], Type t, AST body, int tmps ){
+    super(vars,t,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _tmps=tmps;
+  }
   @Override String opStr() { return "fun"; }
-  @Override ASTOp make() { throw H2O.fail();} 
+  //@Override ASTOp make() { throw H2O.fail();}
+  @Override ASTOp make() { return new ASTFunc(_vars, _t.copy(), _body, _tmps); }
   static ASTOp parseFcn(Exec2 E ) {
     int x = E._x;
     String var = E.isID();
@@ -74,7 +78,7 @@ public class ASTFunc extends ASTOp {
     int res_idx = env.pushScope(argcnt-1);
     env.push(_tmps);
     _body.exec(env);
-    env.tos_into_slot(1,res_idx-1,null);
+    env.tos_into_slot(res_idx-1,null);
     env.popScope();
   }
 

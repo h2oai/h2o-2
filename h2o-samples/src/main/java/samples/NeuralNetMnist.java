@@ -31,11 +31,11 @@ import java.util.zip.GZIPInputStream;
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist.class;
-//    samples.launchers.CloudLocal.launch(job, 1);
+    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
-    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
@@ -68,9 +68,9 @@ public class NeuralNetMnist extends Job {
     ls[0] = new VecsInput(data, inputStats);
 //    ls[1] = new Layer.Tanh(50);
 //    ls[2] = new Layer.Tanh(50);
-    ls[1] = new Layer.RectifierDropout(102);
-    ls[2] = new Layer.RectifierDropout(102);
-    ls[3] = new Layer.RectifierDropout(204);
+    ls[1] = new Layer.RectifierDropout(128);
+    ls[2] = new Layer.RectifierDropout(128);
+    ls[3] = new Layer.RectifierDropout(256);
     ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.Loss.CrossEntropy);
 
     NeuralNet p = new NeuralNet();
@@ -100,12 +100,12 @@ public class NeuralNetMnist extends Job {
 //    _trainer = new Trainer.Direct(ls, epochs, self());
 
     // Single-node parallel
-//    System.out.println("Multi-threaded\n");
-//    _trainer = new Trainer.Threaded(ls, epochs, self());
+    System.out.println("Multi-threaded\n");
+    _trainer = new Trainer.Threaded(ls, epochs, self(), -1);
 
     // Distributed parallel
-    System.out.println("MapReduce\n");
-    _trainer = new Trainer.MapReduce(ls, epochs, self()); //this will call cancel() and abort the whole run
+//    System.out.println("MapReduce\n");
+//    _trainer = new Trainer.MapReduce(ls, epochs, self()); //this will call cancel() and abort the whole run
 
     _trainer.start();
   }

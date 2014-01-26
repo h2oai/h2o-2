@@ -36,4 +36,8 @@ public abstract class GeneratedModel implements IGeneratedModel {
       if (from[i]>from[result]) result = i;
     return result;
   }
+
+  @Override public int getPredsSize() {
+    return isClassifier() ? 1+getNumResponseClasses() : 2;
+  }
 }

@@ -1,14 +1,11 @@
 package water.exec;
 
-import java.text.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
 import water.*;
 import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
-import water.util.Log;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -108,6 +105,8 @@ public class Env extends Iced {
     // In a copy-on-modify language, only update the local scope, or return val
     assert d==0 || (d==1 && _display[_tod]==n+1);
     int idx = _display[_tod-d]+n;
+    // Temporary solution to kill a UDF from global name space. Needs to fix in the future.
+    if (_tod == 0) ASTOp.removeUDF(id);
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
     Frame fr =                   _ary[_sp-1];
@@ -115,8 +114,22 @@ public class Env extends Iced {
     _d  [idx] =                  _d  [_sp-1] ;
     _fcn[idx] =           addRef(_fcn[_sp-1]);
     _key[idx] = d==0 && fr!=null ? id : null;
+    // Temporary solution to add a UDF to global name space. Needs to fix in the future.
+    if (_tod == 0 && _fcn[_sp-1] != null) ASTOp.putUDF(_fcn[_sp-1], id);
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
+  // Copy from TOS into a slot, using absolute index.
+  void tos_into_slot( int idx, String id ) {
+    subRef(_ary[idx], _key[idx]);
+    subRef(_fcn[idx]);
+    Frame fr =                   _ary[_sp-1];
+    _ary[idx] = fr==null ? null : addRef(new Frame(fr));
+    _d  [idx] =                  _d  [_sp-1] ;
+    _fcn[idx] =           addRef(_fcn[_sp-1]);
+    _key[idx] = fr!=null ? id : null;
+    assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
+  }
+
   // Copy from TOS into stack.  Pop's all intermediate.
   // Example: pop_into_stk(-4)  BEFORE: A,B,C,D,TOS  AFTER: A,TOS
   void pop_into_stk( int x ) {

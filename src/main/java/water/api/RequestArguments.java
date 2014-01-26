@@ -1,17 +1,16 @@
 package water.api;
 
+import com.google.common.base.Objects;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+import com.google.gson.JsonObject;
 import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.*;
+import hex.KMeansModel;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
-
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.*;
-
 import water.*;
 import water.Request2.TypeaheadKey;
 import water.ValueArray.Column;
@@ -22,10 +21,9 @@ import water.fvec.Vec;
 import water.util.Check;
 import water.util.RString;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
-import com.google.gson.JsonObject;
+import java.io.File;
+import java.lang.reflect.Field;
+import java.util.*;
 
 /** All arguments related classes are defined in this guy.
  *
@@ -591,7 +589,7 @@ public class RequestArguments extends RequestStatics {
         T v = defaultValue();
         value = (v == null) ? "" : v.toString();
       }
-      return "<input" + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
+      return "<input autocomplete=\"off\"" + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
     }
 
     /** JS refresh is a default jQuery hook to the change() method.
@@ -956,7 +954,7 @@ public class RequestArguments extends RequestStatics {
       for (int i = 0 ; i < values.length; ++i) {
         sb.append("<div class='input-prepend" + (suffixes!=null?" input-append":"") + "'>");
         sb.append("<span class='add-on'>" + prefixes[i]+"</span>");
-        sb.append("<input class='span3' name='"+names[i]+"' id='"+_name+String.valueOf(i)+"' type='text' value='"+values[i]+"' placeholder='"+queryDescription()+"'>");
+        sb.append("<input autocomplete=\"off\" class='span3' name='"+names[i]+"' id='"+_name+String.valueOf(i)+"' type='text' value='"+values[i]+"' placeholder='"+queryDescription()+"'>");
         if (suffixes!=null) sb.append("<span class='add-on'>" + suffixes[i]+"</span>");
         sb.append("</div>");
       }
@@ -1578,7 +1576,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected String parse(String input) throws IllegalArgumentException {
       return input;
     }
-    @Override protected String queryDescription() { return "Existing file or directory, can be on nfs,hdfs or S3"; }
+    @Override protected String queryDescription() { return "Existing file or directory, can be on nfs, hdfs or S3"; }
     @Override protected String defaultValue() { return ""; }
     @Override protected String[] errors() { return new String[] { "File not found" }; }
   }
@@ -2445,8 +2443,13 @@ public class RequestArguments extends RequestStatics {
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
       int cidx = fr().find(input);
-      if (cidx == -1)
-        throw new IllegalArgumentException(input+" not a name of column, or a column index");
+      if (cidx == -1) {
+        try {
+          cidx = Integer.parseInt(input);
+        } catch (NumberFormatException e) { cidx = -1; }
+        if (cidx < 0 || cidx >= fr().numCols() )
+          throw new IllegalArgumentException(input+" not a name of column, or a column index");
+      }
       _colIdx.set(cidx);
       return fr().vecs()[cidx];
     }

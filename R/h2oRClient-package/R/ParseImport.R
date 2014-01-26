@@ -68,9 +68,10 @@ h2o.rm <- function(object, keys) {
 }
 
 h2o.assign <- function(data, key) {
-  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  # if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!inherits(data, "H2OParsedData")) stop("data must be an H2O parsed dataset")
   if(!is.character(key)) stop("key must be of class character")
-  if(length(key) == 0) stop("key cannot be an empty string!")
+  if(nchar(key) == 0) stop("key cannot be an empty string")
   if(key == data@key) stop(paste("Destination key must differ from data key", data@key))
   
   res = h2o.__exec2_dest_key(data@h2o, data@key, key)
@@ -78,8 +79,65 @@ h2o.assign <- function(data, key) {
   return(data)
 }
 
+h2o.push <- function(client, object, key) {
+  if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if(missing(object)) stop("must specify object to push")
+  else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
+  if(missing(key)) key <- deparse(substitute(object))
+  else if(!is.character(key)) stop("key must be of class character")
+  else if(nchar(key) == 0) stop("key cannot be an empty string")
+  
+  if(is.numeric(object))
+    res = h2o.__exec2_dest_key(client, object, key)
+  else if(is.function(object)) {
+    object <- match.fun(object)
+    res = h2o.__exec2_dest_key(client, object, key)
+    # TODO: Push function to the H2O server
+  }
+}
+
+# ----------------------------------- File Import Operations --------------------------------- #
 # WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
-h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
+# ----------------------------------- Import Folder --------------------------------- #
+h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+  if(version == 1)
+    h2o.importFolder.VA(object, path, pattern, key, parse, header, sep, col.names)
+  else if(version == 2)
+    h2o.importFolder.FV(object, path, pattern, key, parse, header, sep, col.names)
+  else
+    stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
+}
+
+h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
+  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+  if(!is.character(path)) stop("path must be of class character")
+  if(nchar(path) == 0) stop("path must be a non-empty string")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.logical(parse)) stop("parse must be of class logical")
+  
+  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=path)
+  if(length(res$fails) > 0) {
+    for(i in 1:length(res$fails)) 
+      cat(res$fails[[i]], "failed to import")
+  }
+  
+  # Return only the files that successfully imported
+  if(length(res$files) > 0) {
+    if(parse) {
+      if(substr(path, nchar(path), nchar(path)) == "/")
+        path <- substr(path, 1, nchar(path)-1)
+      regPath = paste(path, pattern, sep="/")
+      srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
+      rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
+      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names)
+    } else {
+      myData = lapply(res$keys, function(x) { new("H2ORawDataVA", h2o=object, key=x) })
+      if(length(res$keys) == 1) myData[[1]] else myData
+    }
+  } else stop("All files failed to import!")
+}
+  
+h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -98,10 +156,12 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
+      if(substr(path, nchar(path), nchar(path)) == "/")
+        path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
-      h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
+      h2o.parseRaw.FV(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
     } else {
       myData = lapply(res$keys, function(x) { new("H2ORawData", h2o=object, key=x) })
       if(length(res$keys) == 1) myData[[1]] else myData
@@ -109,11 +169,135 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
   } else stop("All files failed to import!")
 }
 
-h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
-  h2o.importFolder(object, path, pattern = "", key, parse, header, sep, col.names)
+# ----------------------------------- Import File --------------------------------- #
+h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+  if(version == 1)
+    h2o.importFile.VA(object, path, key, parse, header, sep, col.names)
+  else if(version == 2)
+    h2o.importFile.FV(object, path, key, parse, header, sep, col.names)
+  else
+    stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
 
-h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE) {
+h2o.importFile.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
+  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+  if(!is.character(path)) stop("path must be of class character")
+  if(nchar(path) == 0) stop("path must be a non-empty string")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.logical(parse)) stop("parse must be of class logical")
+  
+  if(missing(key) || nchar(key) == 0)
+    h2o.importFolder.VA(object, path, pattern = "", key = "", parse, header, sep, col.names = col.names)
+  else
+    h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, header, sep, col.names = col.names)
+}
+
+h2o.importFile.FV <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
+  h2o.importFolder.FV(object, path, pattern = "", key, parse, header, sep, col.names)
+}
+
+# ----------------------------------- Import URL --------------------------------- #
+h2o.importURL <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+  if(version == 1)
+    h2o.importURL.VA(object, path, key, parse, header, sep, col.names)
+  else if(version == 2)
+    h2o.importURL.FV(object, path, key, parse, header, sep, col.names)
+  else
+    stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
+}
+
+h2o.importURL.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
+  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+  if(!is.character(path)) stop("path must be of class character")
+  if(nchar(path) == 0) stop("path must be a non-empty string")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.logical(parse)) stop("parse must be of class logical")
+  
+  destKey = ifelse(parse, "", key)
+  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path, key=destKey)
+  rawData = new("H2ORawDataVA", h2o=object, key=res$key)
+  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
+}
+
+h2o.importURL.FV <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
+  print("This function has been deprecated in FluidVecs. In the future, please use h2o.importFile.FV with a http:// prefix instead.")
+  h2o.importFile.FV(object, path, key, parse, header, sep, col.names)
+}
+
+# ----------------------------------- Import HDFS --------------------------------- #
+h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+  if(version == 1)
+    h2o.importHDFS.VA(object, path, pattern, key, parse, header, sep, col.names)
+  else if(version == 2)
+    h2o.importHDFS.FV(object, path, pattern, key, parse, header, sep, col.names)
+  else
+    stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
+}
+
+h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
+  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+  if(!is.character(path)) stop("path must be of class character")
+  if(nchar(path) == 0) stop("path must be a non-empty string")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.logical(parse)) stop("parse must be of class logical")
+  
+  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTHDFS, path=path)
+  if(length(res$failed) > 0) {
+    for(i in 1:res$num_failed) 
+      cat(res$failed[[i]]$file, "failed to import")
+  }
+  
+  # Return only the files that successfully imported
+  if(res$num_succeeded > 0) {
+    if(parse) {
+      if(substr(path, nchar(path), nchar(path)) == "/")
+        path <- substr(path, 1, nchar(path)-1)
+      regPath = paste(path, pattern, sep="/")
+      srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
+      rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
+      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
+    } else {
+      myData = lapply(res$succeeded, function(x) { new("H2ORawDataVA", h2o=object, key=x$key) })
+      if(res$num_succeeded == 1) myData[[1]] else myData
+    }
+  } else stop("All files failed to import!")
+}
+
+h2o.importHDFS.FV <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
+  print("This function has been deprecated in FluidVecs. In the future, please use h2o.importFolder.FV with a hdfs:// prefix instead.")
+  h2o.importFolder.FV(object, path, pattern, key, parse, header, sep, col.names)
+}
+
+# ----------------------------------- Upload File --------------------------------- #
+h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE, version = 1) {
+  if(version == 1)
+    h2o.uploadFile.VA(object, path, key, parse, header, sep, col.names, silent)
+  else if(version == 2)
+    h2o.uploadFile.FV(object, path, key, parse, header, sep, col.names, silent)
+  else
+    stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
+}
+
+h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE) {
+  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+  if(!is.character(path)) stop("path must be of class character")
+  if(nchar(path) == 0) stop("path must be a non-empty string")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.logical(parse)) stop("parse must be of class logical")
+  if(!is.logical(silent)) stop("silent must be of class logical")
+  
+  url = paste("http://", object@ip, ":", object@port, "/PostFile.json", sep="")
+  url = paste(url, "?key=", path, sep="")
+  if(file.exists(h2o.__getCommandLog())) h2o.__logIt(url, NULL, "Command")
+  if(silent)
+    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
+  else
+    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
+  rawData = new("H2ORawDataVA", h2o=object, key=path)
+  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
+}
+
+h2o.uploadFile.FV <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -129,10 +313,43 @@ h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "
   else
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
   rawData = new("H2ORawData", h2o=object, key=path)
-  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
+  if(parse) parsedData = h2o.parseRaw.FV(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
 }
 
-h2o.parseRaw <- function(data, key = "", header, sep = "", col.names) {
+# ----------------------------------- File Parse Operations --------------------------------- #
+h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, version = 1) {
+  if(version == 1)
+    h2o.parseRaw.VA(data, key, header, sep, col.names)
+  else if(version == 2)
+    h2o.parseRaw.FV(data, key, header, sep, col.names)
+  else
+    stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
+}
+
+h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
+  if(class(data) != "H2ORawDataVA") stop("data must be of class H2ORawDataVA")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!(missing(header) || is.logical(header))) stop("header must be of class logical")
+  if(!is.character(sep)) stop("sep must be of class character")
+  if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
+
+  # If both header and column names missing, then let H2O guess if header exists
+  sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
+  if(missing(header) && missing(col.names))
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii)
+  else if(missing(header) && !missing(col.names))
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=1, header_from_file=col.names@key)
+  else if(!missing(header) && missing(col.names))
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
+  else
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
+  
+  # on.exit(h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job))
+  h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
+  parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
+}
+
+h2o.parseRaw.FV <- function(data, key = "", header, sep = "", col.names) {
   if(class(data) != "H2ORawData") stop("data must be of class H2ORawData")
   if(!is.character(key)) stop("key must be of class character")
   if(!(missing(header) || is.logical(header))) stop(paste("header cannot be of class", class(header)))
@@ -154,13 +371,40 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names) {
   h2o.__waitOnJob(data@h2o, res$job_key)
   parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
-
-h2o.importURL <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
-  stop("This function has been deprecated in FluidVecs. Please use h2o.importFile with a http:// prefix instead.")
+          
+#-------------------------------- Miscellaneous -----------------------------------#
+h2o.exportHDFS <- function(object, path) {
+  if(inherits(object, "H2OModelVA")) stop("h2o.exportHDFS does not work under ValueArray")
+  else if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
+  if(!is.character(path)) stop("path must be of class character")
+  if(nchar(path) == 0) stop("path must be a non-empty string")
+  
+  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
 }
 
-h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
-  stop("This function has been deprecated in FluidVecs. Please use h2o.importFolder with a hdfs:// prefix instead.")
+h2o.downloadCSV <- function(data, filename) {
+  if( missing(data)) stop('Must specify data')
+  if(! class(data) %in% c('H2OParsedDataVA', 'H2OParsedData'))
+    stop('data is not an H2O data object')
+  if( missing(filename) ) stop('Must specify filename')
+  
+  str <- paste('http://', data@h2o@ip, ':', data@h2o@port, '/2/DownloadDataset?src_key=', data@key, sep='')
+  has_wget <- '' != Sys.which('wget')
+  has_curl <- '' != Sys.which('curl')
+  if( !(has_wget || has_curl)) stop("I can't find wget or curl on your system")
+  if( has_wget ){
+    cmd <- 'wget'
+    args <- paste('-O', filename, str)
+  } else {
+    cmd <- 'curl'
+    args <- paste('-o', filename, str)
+  }
+  
+  print(paste('cmd:', cmd))
+  print(paste('args:', args))
+  val <- system2(cmd, args, wait=T)
+  if( val != 0 )
+    print(paste('Bad return val', val))
 }
 
 setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })
@@ -171,143 +415,10 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function
 setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, value) {
   res = h2o.__exec2_dest_key(x@h2o, paste("c(", paste(value, collapse=","), ")", sep=""), x@key); return(x)
 })
-          
-#-------------------------------- ValueArray -----------------------------------#
-# Data import operations
-# WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
-h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  if(!is.character(key)) stop("key must be of class character")
-  if(!is.logical(parse)) stop("parse must be of class logical")
-  
-  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=path)
-  if(length(res$fails) > 0) {
-    for(i in 1:length(res$fails)) 
-      cat(res$fails[[i]], "failed to import")
-  }
-  
-  # Return only the files that successfully imported
-  if(length(res$files) > 0) {
-    if(parse) {
-      regPath = paste(path, pattern, sep="/")
-      srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
-      rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
-    } else {
-      myData = lapply(res$keys, function(x) { new("H2ORawDataVA", h2o=object, key=x) })
-      if(length(res$keys) == 1) myData[[1]] else myData
-    }
-  } else stop("All files failed to import!")
-}
-
-h2o.importFile.VA <- function(object, path, key, parse = TRUE, header, sep = "", col.names) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  if(!(missing(key) || is.character(key))) stop(paste("key cannot be of class", class(key)))
-  if(!is.logical(parse)) stop("parse must be of class logical")
-  
-  if(missing(key))
-    h2o.importFolder.VA(object, path, pattern = "", key = "", parse, header, sep, col.names = col.names)
-  else
-    h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, header, sep, col.names = col.names)
-}
-
-h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  if(!is.character(key)) stop("key must be of class character")
-  if(!is.logical(parse)) stop("parse must be of class logical")
-  
-  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTHDFS, path=path)
-  if(length(res$failed) > 0) {
-    for(i in 1:res$num_failed) 
-      cat(res$failed[[i]]$file, "failed to import")
-  }
-  
-  # Return only the files that successfully imported
-  if(res$num_succeeded > 0) {
-    if(parse) {
-      regPath = paste(path, pattern, sep="/")
-      srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
-      rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-      h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
-    } else {
-      myData = lapply(res$succeeded, function(x) { new("H2ORawDataVA", h2o=object, key=x$key) })
-      if(res$num_succeeded == 1) myData[[1]] else myData
-    }
-  } else stop("All files failed to import!")
-}
-
-h2o.exportHDFS <- function(object, path) {
-  if(inherits(object, "H2OModelVA")) stop("h2o.exportHDFS does not work under VA")
-  else if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  
-  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
-}
-
-h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  if(!is.character(key)) stop("key must be of class character")
-  if(!is.logical(parse)) stop("parse must be of class logical")
-  if(!is.logical(silent)) stop("silent must be of class logical")
-  
-  url = paste("http://", object@ip, ":", object@port, "/PostFile.json", sep="")
-  url = paste(url, "?key=", path, sep="")
-  if(silent)
-    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
-  else
-    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
-  rawData = new("H2ORawDataVA", h2o=object, key=path)
-  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
-}
-
-h2o.importURL.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  if(!is.character(key)) stop("key must be of class character")
-  if(!is.logical(parse)) stop("parse must be of class logical")
-  
-  destKey = ifelse(parse, "", key)
-  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path, key=destKey)
-  rawData = new("H2ORawDataVA", h2o=object, key=res$key)
-  if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
-}
-
-h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
-  if(class(data) != "H2ORawDataVA") stop("data must be of class H2ORawData")
-  if(!is.character(key)) stop("key must be of class character")
-  if(!(missing(header) || is.logical(header))) stop(paste("header cannot be of class", class(header)))
-  if(!is.character(sep)) stop("sep must be of class character")
-  if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
-  
-  # If both header and column names missing, then let H2O guess if header exists
-  sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-  if(missing(header) && missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii)
-  else if(missing(header) && !missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=1, header_from_file=col.names@key)
-  else if(!missing(header) && missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
-  else
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
-  
-  # on.exit(h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job))
-  h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
-  parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
-}
 
 # ----------------------- Diagnostics ----------------------- #
-h2o.checkCloud <- function(client) {
-  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+h2o.clusterStatus <- function(client) {
+  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   myURL = paste("http://", client@ip, ":", client@port, "/", h2o.__PAGE_CLOUD, sep = "")
   if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)

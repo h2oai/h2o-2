@@ -5,7 +5,7 @@ test.glm2tweedie.golden <- function(H2Oserver) {
 	
 #Import data: (data are imported from URL as part of test, but are also in small data if needed)
 Log.info("Importing ZINAB data...") 
-zinabH2O<- h2o.importFile(H2Oserver, path="http://www.ats.ucla.edu/stat/data/fish.csv", key="zinabH2O")
+zinabH2O<- h2o.importFile.FV(H2Oserver, path="http://www.ats.ucla.edu/stat/data/fish.csv", key="zinabH2O")
 zinabR<- read.csv("http://www.ats.ucla.edu/stat/data/fish.csv")
 
 #Build matching models in R and H2O - Tweedie

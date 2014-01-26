@@ -4,6 +4,9 @@
 
 # setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_hdfs")
 
+local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
+if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
+
 options(echo=TRUE)
 TEST_ROOT_DIR <- ".."
 source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
@@ -57,7 +60,7 @@ print ("VA import worked")
 
 heading("Testing single file importHDFS for FV")
 url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_iris_file)
-iris.FV.hex <- h2o.importFile(conn, url)
+iris.FV.hex <- h2o.importFile.FV(conn, url)
 head(iris.FV.hex)
 tail(iris.FV.hex)
 n <- nrow(iris.FV.hex)
@@ -92,7 +95,7 @@ print ("VA import worked")
 
 heading("Testing directory importHDFS for FV")
 url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_iris_dir)
-iris.FV.dir.hex <- h2o.importFolder(conn, url, pattern="*.csv")
+iris.FV.dir.hex <- h2o.importFolder.FV(conn, url, pattern="*.csv")
 head(iris.FV.dir.hex)
 tail(iris.FV.dir.hex)
 n <- nrow(iris.FV.dir.hex)

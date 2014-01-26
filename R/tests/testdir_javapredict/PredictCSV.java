@@ -111,22 +111,30 @@ class PredictCSV {
 
         // Loop over inputCSV one row at a time.
         int lineno = 0;
-        String line = input.readLine();
-        while (line != null) {
+        String line = null;
+        // An array to store predicted values
+        float[] preds = new float[model.getPredsSize()];
+        while ((line = input.readLine()) != null) {
             lineno++;
             if (skipFirstLine > 0) {
-                // TODO:  compare that these column headers match model.getNames().
                 skipFirstLine = 0;
-                line = input.readLine();
+                String[] names = line.trim().split(",");
+                String[] modelNames = model.getNames();
+                for (int i=0; i < Math.min(names.length, modelNames.length); i++ )
+                  if ( !names[i].equals(modelNames[i]) ) {
+                    System.out.println("ERROR: Column names does not match: input column " + i + ". "+names[i]+" != model column "+modelNames[i] );
+                    System.exit(1);
+                  }
+                // go to the next line
+                continue;
             }
 
             // Parse the CSV line.  Don't handle quoted commas.  This isn't a parser test.
             String trimmedLine = line.trim();
             String[] inputColumnsArray = trimmedLine.split(",");
-            int numInputColumns = model.getNames().length;
+            int numInputColumns = model.getNames().length-1; // we do not need response !
             if (inputColumnsArray.length != numInputColumns) {
                 System.out.println("WARNING: Line " + lineno + " has " + inputColumnsArray.length + " columns (expected " + numInputColumns + ")");
-                // System.exit(1);
             }
 
             // Assemble the input values for the row.
@@ -136,14 +144,15 @@ class PredictCSV {
 
                 // System.out.println("Line " + lineno +" column ("+ model.getNames()[i] + " == " + i + ") cellString("+cellString+")");
 
-                if (cellString.equals("NA") ||
-                    cellString.equals("N/A") ||
-                    cellString.equals("") ||
-                    cellString.equals("-")) {
+                String[] domainValues = model.getDomainValues(i);
+                if (cellString.equals("") ||    // empty field is default NA
+                    (domainValues == null) && ( // if the column is enum then NA is part of domain by default ! 
+                      cellString.equals("NA") ||
+                      cellString.equals("N/A") ||
+                      cellString.equals("-") )
+                    ) {
                     row[i] = Double.NaN;
-                }
-                else {
-                    String[] domainValues = model.getDomainValues(i);
+                } else {
                     if (domainValues != null) {
                         HashMap m = (HashMap<String,Integer>) domainMap.get(i);
                         assert (m != null);
@@ -164,12 +173,11 @@ class PredictCSV {
             }
 
             // Do the prediction.
-            float[] preds = new float[model.getNumResponseClasses()+1];
             model.predict(row, preds);
 
             // Emit the result to the output file.
             for (int i = 0; i < preds.length; i++) {
-                if (i == 0) {
+                if (i == 0 && model.isClassifier()) {
                     // See if there is a domain to map this output value to.
                     String[] domainValues = model.getDomainValues(model.getResponseIdx());
                     if (domainValues != null) {
@@ -184,20 +192,13 @@ class PredictCSV {
                         String predictedOutputClassLevel = domainValues[valueAsInt];
                         output.write(predictedOutputClassLevel);
                     }
-                    else {
-                        // Regression.
-                        output.write(Double.toString(preds[i]));
-                    }
-                }
-                else {
-                    output.write(",");
+                } else {
+                    if (i > 0) output.write(",");
                     output.write(Double.toString(preds[i]));
+                    if (!model.isClassifier()) break;
                 }
             }
             output.write("\n");
-
-            // Prepare for next line of input.
-            line = input.readLine();
         }
 
         // Clean up.

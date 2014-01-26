@@ -3,15 +3,15 @@ package hex;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
-import hex.NeuralNet.NeuralNetProgress;
-import hex.gbm.GBM.GBMModel;
 import hex.drf.DRF.DRFModel;
-
-import java.util.*;
-
+import hex.gbm.GBM.GBMModel;
 import water.*;
 import water.api.*;
 import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class GridSearch extends Job {
   public Job[] jobs;
@@ -142,7 +142,7 @@ public class GridSearch extends Job {
             else if( info._model instanceof DRFModel )
               link = DRFModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )
-              link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
+              link = NeuralNetModelView.link(link, info._job.destination_key);
             if( info._model instanceof KMeans2Model )
               link = KMeans2ModelView.link(link, info._job.destination_key);
             else

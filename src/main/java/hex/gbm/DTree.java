@@ -787,13 +787,16 @@ public class DTree extends Iced {
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
           }
 
+          // To be consistent with generated code:
+          //   - Double.NaN <  3.7f => return false => right branch is selected (i.e., ab.position()+skip)
+          //   - Double.NaN != 3.7f => return true  => left branch is selected (i.e., ab.position())
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal && ((float)row[colId]) == splitVal) ||
                 (!equal && ((float)row[colId]) >= splitVal) ) {
               ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
-          } else { ab.position(ab.position()+skip); lmask = rmask; }
+          } else if (!equal) { ab.position(ab.position()+skip); lmask = rmask; }
           if( (lmask&8)==8 ) return scoreLeaf(ab);
         }
       }
@@ -922,34 +925,38 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
-      JCodeGen.toClass(fileContextSB, "//Sample of data used by benchmark\nclass DataSample", "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 10, "Sample test data.");
+      JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 10, "Sample test data.");
 
       return sb;
     }
     // Convert Tree model to Java
     @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
-      final int maxfsize = numTrees()*nclasses(); // maximal number of trees in forest
+      // AD-HOC maximal number of trees in forest - in fact constant pool size for Forest class (all UTF String + references to static classes).
+      // TODO: in future this parameter can be a parameter for generator, as well as maxIters
+      final int maxfsize = 4000;
       int fidx = 0; // forest index
       int treesInForest = 0;
       SB forest = new SB();
       // divide trees into small forests per 100 trees
+      /* DEBUG line */ bodySb.i().p("// System.err.println(\"Row (gencode.predict): \" + java.util.Arrays.toString(data));").nl();
       bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
       for( int c=0; c<nclasses(); c++ ) {
-        toJavaForestBegin(bodySb, forest, c, fidx++);
+        toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
         for( int i=0; i < treeBits.length; i++ ) {
           CompressedTree cts[] = treeBits[i];
           if( cts[c] == null ) continue;
           forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
           // append representation of tree predictor
           toJavaTreePredictFct(fileCtxSb, cts[c], i, c);
-          if (++treesInForest > maxfsize) {
+          if (++treesInForest == maxfsize) {
             toJavaForestEnd(bodySb, forest, c, fidx);
-            toJavaForestBegin(bodySb, forest, c, fidx++);
+            toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
             treesInForest = 0;
           }
         }
         toJavaForestEnd(bodySb, forest, c, fidx);
         treesInForest = 0;
+        fidx = 0;
       }
       fileCtxSb.p(forest);
       toJavaUnifyPreds(bodySb);
@@ -966,13 +973,16 @@ public class DTree extends Iced {
       else bodySb.i().p("preds[0] = preds[1];").nl();
     }
 
-    private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
+    /* Numeric type used in generated code to hold predicted value between the calls. */
+    static final String PRED_TYPE = "float";
+
+    private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx, int maxTreesInForest) {
       predictBody.i().p("// Call forest predicting class ").p(c).nl();
-      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters);").nl();
+      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters - "+fidx*maxTreesInForest+");").nl();
       forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
       forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
-      forest.i().p("public static float predict(double[] data, int maxIters) {").nl().ii(1);
-      forest.i().p("float pred  = 0;").nl();
+      forest.i().p("public static ").p(PRED_TYPE).p(" predict(double[] data, int maxIters) {").nl().ii(1);
+      forest.i().p(PRED_TYPE).p(" pred  = 0;").nl();
       forest.i().p("int   iters = maxIters;").nl();
     }
     private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
@@ -1099,8 +1109,8 @@ public class DTree extends Iced {
     // code preambule
     protected void preamble(SB sb, int subtree) throws RuntimeException {
       String subt = subtree>0?String.valueOf(subtree):"";
-      sb.i().p("static final float predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
-      sb.i().p("float pred = ");
+      sb.i().p("static final ").p(TreeModel.PRED_TYPE).p(" predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
+      sb.i().p(TreeModel.PRED_TYPE).p(" pred = ");
     }
 
     // close the code
@@ -1108,7 +1118,7 @@ public class DTree extends Iced {
       sb.p(";").nl();
       sb.i(1).p("return pred;").nl().di(1);
       sb.i().p("}").nl().di(1);
-    };
+    }
 
     @Override protected void pre( int col, float fcmp, boolean equal ) {
       if( _depth > 0 ) {
@@ -1128,7 +1138,7 @@ public class DTree extends Iced {
         preamble(_sb, _subtrees);
         _subtrees++;
       }
-      _sb.p(" (data[").p(col).p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      _sb.p(" ((float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
       assert _bits[_depth]==0;
       _bits[_depth]=1;
     }

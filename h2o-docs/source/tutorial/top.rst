@@ -7,6 +7,7 @@ Walk-Through Tutorials
    :maxdepth: 2
 
    glm
+   glmgrid
    kmeans
    kmeansgrid
    rf

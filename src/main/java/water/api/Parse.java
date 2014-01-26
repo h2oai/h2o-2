@@ -78,7 +78,7 @@ public class Parse extends Request {
       if(_excludeExpression.specified())
         exclude = makePattern(_excludeExpression.value());
       ArrayList<Key> keys = new ArrayList();
-     // boolean badkeys = false;
+      // boolean badkeys = false;
       for( Key key : H2O.keySet() ) { // For all keys
         if( !key.user_allowed() ) continue;
         String ks = key.toString();
@@ -116,6 +116,7 @@ public class Parse extends Request {
         _parserType.setValue(setup._setup._pType);
         _separator.setValue(setup._setup._separator);
         _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
+        setup.checkColumnNames();
         return res;
       }catch(ParseSetupGuessException e){
         if(e._gSetup != null)

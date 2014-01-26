@@ -1,10 +1,5 @@
 package water.fvec;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-import java.util.zip.*;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -14,11 +9,18 @@ import water.parser.*;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
 import water.parser.CustomParser.StreamDataOut;
-import water.parser.ParseDataset.Compression;
 import water.parser.Enum;
-import water.util.*;
+import water.parser.ParseDataset.Compression;
+import water.util.Utils;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
@@ -38,6 +40,20 @@ public final class ParseDataset2 extends Job {
   }
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
+    setup.checkColumnNames();
+    // Some quick sanity checks: no overwriting your input key, and a resource check.
+    long sum=0;
+    for( Key k : keys ) {
+      if( dest.equals(k) )
+        throw new IllegalArgumentException("Destination key "+dest+" must be different from all sources");
+      sum += DKV.get(k).length(); // Sum of all input filesizes
+    }
+    long memsz=0;               // Cluster memory
+    for( H2ONode h2o : H2O.CLOUD._memary )
+      memsz += h2o.get_max_mem();
+    if( sum > memsz*4 )
+      throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
+
     ParseDataset2 job = new ParseDataset2(dest, keys);
     ParserFJTask fjt = new ParserFJTask(job, keys, setup, delete_on_done);
     job.start(fjt);
@@ -129,11 +145,11 @@ public final class ParseDataset2 extends Job {
   public static class EnumUpdateTask extends MRTask2<EnumUpdateTask>{
     private transient int[][][] _emap;
     final Key _eKey;
-    final String [][] _gDomain;
+    final ValueString [][] _gDomain;
     final Enum [][] _lEnums;
     final int  [] _chunk2Enum;
     final int [] _colIds;
-    public EnumUpdateTask(String [][] gDomain, Enum [][]  lEnums, int [] chunk2Enum, Key lDomKey, int [] colIds){
+    public EnumUpdateTask(ValueString [][] gDomain, Enum [][]  lEnums, int [] chunk2Enum, Key lDomKey, int [] colIds){
       _gDomain = gDomain; _lEnums = lEnums; _chunk2Enum = chunk2Enum; _eKey = lDomKey;_colIds = colIds;
     }
 
@@ -148,7 +164,7 @@ public final class ParseDataset2 extends Job {
             emap[i] = new int[e.maxId()+1];
             Arrays.fill(emap[i], -1);
             for(int j = 0; j < _gDomain[i].length; ++j) {
-              ValueString vs = new ValueString(_gDomain[i][j].getBytes());
+              ValueString vs = _gDomain[i][j];
               if( e.containsKey(vs) ) {
                 assert e.getTokenId(vs) <= e.maxId():"maxIdx = " + e.maxId() + ", got " + e.getTokenId(vs);
                 emap[i][e.getTokenId(vs)] = j;
@@ -280,9 +296,9 @@ public final class ParseDataset2 extends Job {
     if( ecols != null && ecols.length > 0 ) {
       EnumFetchTask eft = new EnumFetchTask(H2O.SELF.index(), uzpt._eKey, ecols).invokeOnAllNodes();
       Enum [] enums = eft._gEnums;
-      String [][] ds = new String[ecols.length][];
+      ValueString [][] ds = new ValueString[ecols.length][];
       int j = 0;
-      for(int i:ecols)ds[j++] =  uzpt._dout._vecs[i]._domain = enums[i].computeColumnDomain();
+      for(int i:ecols)uzpt._dout._vecs[i]._domain = ValueString.toString(ds[j++] = enums[i].computeColumnDomain());
       eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
     }
     Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
@@ -575,32 +591,30 @@ public final class ParseDataset2 extends Job {
         _vecs[i].reduce(dout._vecs[i]);
       return this;
     }
-    public FVecDataOut close(){
+    @Override public FVecDataOut close(){
       Futures fs = new Futures();
       close(fs);
       fs.blockForPending();
       return this;
     }
-    public FVecDataOut close(Futures fs){
+    @Override public FVecDataOut close(Futures fs){
+      if( _nvs == null ) return this; // Might call close twice
       for(NewChunk nv:_nvs)nv.close(_cidx, fs);
+      _nvs = null;  // Free for GC
       return this;
     }
-    public FVecDataOut nextChunk(){
+    @Override public FVecDataOut nextChunk(){
       return  new FVecDataOut(_vg, _cidx+1, _nCols, _vecIdStart, _enums);
     }
 
-    public Vec [] closeVecs(){
+    private Vec [] closeVecs(){
       Futures fs = new Futures();
-      Vec [] res = closeVecs(fs);
-      fs.blockForPending();
-      return res;
-    }
-
-    public Vec [] closeVecs(Futures fs){
       _closedVecs = true;
       Vec [] res = new Vec[_vecs.length];
       for(int i = 0; i < _vecs.length; ++i)
         res[i] = _vecs[i].close(fs);
+      _vecs = null;  // Free for GC
+      fs.blockForPending();
       return res;
     }
 
