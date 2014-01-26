@@ -268,13 +268,11 @@ public abstract class Layer extends Iced {
         d = _wm[w];
       }
       _w[w] += r * d;
-      r2 += _w[w] * _w[w];
+      if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
     }
-    if( r2 > max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      final double scale = Math.sqrt(max_w2) / Math.sqrt(r2);
-      for( int i = 0; i < _previous._a.length; i++ ) {
-        _w[off + i] *= scale;
-      }
+    if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+      final double scale = Math.sqrt(max_w2 / r2);
+      for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
     double d = g;
     if( _bm != null ) {
@@ -993,21 +991,16 @@ public abstract class Layer extends Iced {
         double r2 = 0;
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + u;
-          if( _previous._e != null )
-            _previous._e[i] += g * _w[w];
+          if( _previous._e != null ) _previous._e[i] += g * _w[w];
           double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
           _w[w] += r * d;
-          r2 += _w[w] * _w[w];
+          if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
         }
-        if( r2 >  max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+        if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
           final double scale = Math.sqrt(max_w2 / r2);
-          for( int i = 0; i < _previous._a.length; i++ ) {
-            int w = i * _a.length + u;
-            _w[w] *= scale;
-          }
+          for( int i = 0; i < _previous._a.length; i++ ) _w[i * _a.length + u] *= scale;
         }
-        double d = g;
-        _b[u] += r * d;
+        _b[u] += r * g;
       }
     }
   }

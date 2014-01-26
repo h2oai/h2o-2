@@ -80,11 +80,11 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
-  @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
   public double rate_decay = 1.0;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
-  public double max_w2 = Double.MAX_VALUE;
+  @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class, json = true)
+  public double max_w2 = Double.POSITIVE_INFINITY;
 
   @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
   public long warmup_samples = 0l;
