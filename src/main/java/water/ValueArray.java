@@ -721,7 +721,7 @@ public class ValueArray extends Iced implements Cloneable {
           for( int c=0; c<chks.length; c++ ) {
             Chunk C = chks[c];
             if( va._cols[c]._size==8 ) {
-              off += UDP.set8(buf,off,C.isNA(row) ? Long.MIN_VALUE : C.at80(row));
+              off += UDP.set8(buf,off,C.isNA0(row) ? Long.MIN_VALUE : C.at80(row));
             } else {
               off += UDP.set8d(buf,off,C.at0(row));
             }
