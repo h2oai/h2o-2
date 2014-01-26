@@ -176,7 +176,7 @@ public final class ParseDataset extends Job {
           Frame fr = v.get();
           colNames = fr._names;
         } else
-          throw new ParseSetupGuessException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName(),gSetup,null);
+          throw new ParseSetupGuessException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.className(),gSetup,null);
       } else { // check the hdr setup by parsing first bytes
         CustomParser.ParserSetup lSetup = gSetup._setup.clone();
         lSetup._header = true;

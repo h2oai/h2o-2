@@ -1,6 +1,7 @@
 package hex;
 
 import static org.junit.Assert.assertEquals;
+import org.junit.BeforeClass;
 
 import java.util.Random;
 import org.junit.Test;
@@ -9,6 +10,8 @@ import com.google.gson.*;
 import water.*;
 
 public class HistogramTest extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+
   @Test public void testHistogram() {
     Key datakey = Key.make("datakey");
     ValueArray va = null;
