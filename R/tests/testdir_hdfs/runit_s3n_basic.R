@@ -24,17 +24,17 @@ s3n_iris_file <- "0xdata-public/examples/h2o/R/datasets/iris_wheader.csv"
 
 url <- sprintf("s3n://%s", s3n_iris_file)
 
-iris.VA.hex <- h2o.importHDFS.VA(conn, url)
-head(iris.VA.hex)
-tail(iris.VA.hex)
-n <- nrow(iris.VA.hex)
+iris.hex <- h2o.importHDFS(conn, url)
+head(iris.hex)
+tail(iris.hex)
+n <- nrow(iris.hex)
 print(n)
 if (n != 150) {
-    stop("VA nrows is wrong")
+    stop("nrows is wrong")
 }
-if (class(iris.VA.hex) != "H2OParsedDataVA") {
-    stop("iris.VA.hex is the wrong type")
+if (class(iris.hex) != "H2OParsedDataVA") {
+    stop("iris.hex is the wrong type")
 }
-print ("VA import worked")
+print ("import worked")
 
 PASS_BANNER()
