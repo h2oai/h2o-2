@@ -23,7 +23,7 @@ import water.util.Log;
 */
 
 
-public class ValueArray extends Iced implements Cloneable {
+public class ValueArray extends Lockable<ValueArray> implements Cloneable {
 
   public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
@@ -47,13 +47,13 @@ public class ValueArray extends Iced implements Cloneable {
   // The primary compression is to use 1-byte, 2-byte, or 4-byte columns, with
   // an optional offset & scale factor.  These are described in the meta-data.
 
-  public transient Key _key;     // Main Array Key
   public final Column[] _cols;   // The array of column descriptors; the X dimension
   public long[] _rpc;            // Row# for start of each chunk
   public long _numrows;      // Number of rows; the Y dimension.  Can be >>2^32
   public final int _rowsize;     // Size in bytes for an entire row
 
   public ValueArray(Key key, long numrows, int rowsize, Column[] cols ) {
+    super(key);
     // Always some kind of rowsize.  For plain unstructured data use a single
     // byte column format.
     assert rowsize > 0;
@@ -68,10 +68,10 @@ public class ValueArray extends Iced implements Cloneable {
 
   // Variable-sized chunks.  Pass in the number of whole rows in each chunk.
   public ValueArray(Key key, int[] rows, int rowsize, Column[] cols ) {
+    super(key);
     assert rowsize > 0;
     _rowsize = rowsize;
     _cols = cols;
-    _key = key;
     // Roll-up summary the number rows in each chunk, to the starting row# per chunk.
     _rpc = new long[rows.length+1];
     long sum = 0;
@@ -102,12 +102,6 @@ public class ValueArray extends Iced implements Cloneable {
   public final Key getKey() { return _key; }
 
   @Override public ValueArray clone() { return (ValueArray)super.clone(); }
-
-  // Init of transient fields from deserialization calls
-  @Override public final ValueArray init( Key key ) {
-    _key = key;
-    return this;
-  }
 
   /** Pretty print! */
   @Override
@@ -388,7 +382,8 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   static private Futures readPut(Key key, InputStream is, Job job, final Futures fs) throws IOException {
-    UKV.remove(key);
+    // Lock & delete any prior, and lock against future writes
+    ValueArray ary = new ValueArray(key,0).delete_and_lock(job);
     byte[] oldbuf, buf = null;
     int off = 0, sz = 0;
     long szl = off;
@@ -441,7 +436,8 @@ public class ValueArray extends Iced implements Cloneable {
       Key ckey = getChunkKey(cidx,key);
       DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
     }
-    UKV.put(key,new ValueArray(key,szl),fs);
+    // Unlock & set new copy of self
+    new ValueArray(key,szl).unlock(fs);
 
     // Block for all pending DKV puts, which will in turn add blocking requests
     // to the passed-in Future list 'fs'.
@@ -734,5 +730,11 @@ public class ValueArray extends Iced implements Cloneable {
     }.doAll(fr);
 
     return va;
+  }
+
+  /** Actually remove/delete all Chunks from memory. */
+  @Override public void delete_impl(Futures fs) {
+    for( long i=0; i<chunks(); i++ ) // Delete all the chunks
+      DKV.remove(getChunkKey(i),fs);
   }
 }

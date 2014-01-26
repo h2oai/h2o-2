@@ -56,7 +56,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // NOTE THAT IF YOU MODIFY any fields of a POJO that is part of a Value,
   // - this is NOT the recommended programming style,
-  // - those changes are visible to all on the node,
+  // - those changes are visible to all CPUs on the writing node,
   // - but not to other nodes, and
   // - the POJO might be dropped by the MemoryManager and reconstituted from
   //   disk and/or the byte array back to it's original form, losing your changes.
@@ -232,6 +232,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return sb;
   }
 
+  public boolean isLockable(){ return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Lockable); }
   public boolean isArray()   { return _type == TypeMap.VALUE_ARRAY; }
   public boolean isFrame()   { return _type == TypeMap.FRAME; }
   public boolean isVec()     { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Vec); }

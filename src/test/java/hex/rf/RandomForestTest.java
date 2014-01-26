@@ -15,8 +15,6 @@ public class RandomForestTest extends TestUtil {
   // Test kaggle/creditsample-test data
   @org.junit.Test public void kaggle_credit() {
     Key okey = loadAndParseFile("credit.hex", "smalldata/kaggle/creditsample-training.csv.gz");
-    UKV.remove(Key.make("smalldata/kaggle/creditsample-training.csv.gz_UNZIPPED"));
-    UKV.remove(Key.make("smalldata\\kaggle\\creditsample-training.csv.gz_UNZIPPED"));
     ValueArray val = DKV.get(okey).get();
 
     // Check parsed dataset
@@ -42,9 +40,8 @@ public class RandomForestTest extends TestUtil {
     assertEquals("Number of classes", 2,  model.classes());
     assertEquals("Number of trees", ntrees, model.size());
 
-    model.deleteKeys();
-    UKV.remove(modelKey);
-    UKV.remove(okey);
+    model.delete();
+    val.delete();
   }
 
   /*@org.junit.Test*/ public void covtype() {
@@ -73,9 +70,8 @@ public class RandomForestTest extends TestUtil {
     assertEquals("Number of classes", 10,  model.classes());
     assertEquals("Number of trees", ntrees, model.size());
 
-    model.deleteKeys();
-    UKV.remove(modelKey);
-    UKV.remove(okey);
+    model.delete();
+    val.delete();
   }
 
 }

@@ -46,9 +46,9 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
     File f2 = find_test_file("smalldata/glm_test/prostate_cat_replaced.csv");
     Key ikey2 = NFSFileVec.make(f2);
     Key okey2 = Key.make("glm_model2");
+    Frame fr2=null;
     try{
-      ParseDataset2.parse(okey2, new Key[]{ikey2});
-      Frame fr2 = DKV.get(okey2).get();
+      fr2=ParseDataset2.parse(okey2, new Key[]{ikey2});
       DataInfo dinfo = new DataInfo(fr2, 0, false);
       GramTask gt = new GramTask(null, dinfo, true,false);
       gt.doAll(dinfo._adaptedFrame);
@@ -63,8 +63,7 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
         for(int j = 0; j < exp_result.length-1; ++j)
           assertEquals(exp_result[i][j],gt._nobs*res[i][j],1e-5);
     }finally{
-      UKV.remove(ikey2);
-      UKV.remove(okey2);
+      fr2.delete();
     }
   }
 

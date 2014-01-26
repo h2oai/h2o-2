@@ -93,7 +93,7 @@ public class FlowTest2 {
 
       
     } finally {
-      UKV.remove(k);
+      Lockable.delete(k);
     }
   }
 

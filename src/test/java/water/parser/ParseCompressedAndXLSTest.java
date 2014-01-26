@@ -23,10 +23,10 @@ public class ParseCompressedAndXLSTest extends TestUtil {
       assertTrue(v2.isBitIdentical(v3));
       assertTrue(v3.isBitIdentical(v4));
     } finally {
-      if(k1 != null)UKV.remove(k1);
-      if(k2 != null)UKV.remove(k2);
-      if(k3 != null)UKV.remove(k3);
-      if(k4 != null)UKV.remove(k4);
+      Lockable.delete(k1);
+      Lockable.delete(k2);
+      Lockable.delete(k3);
+      Lockable.delete(k4);
     }
   }
 }

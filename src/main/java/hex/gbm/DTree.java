@@ -539,7 +539,7 @@ public class DTree extends Iced {
       treeStats = null;
     }
     public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
-      super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
+      super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
       errs[errs.length-1] = err;
@@ -595,10 +595,10 @@ public class DTree extends Iced {
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
-      DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
+      DocGen.HTML.paragraph(sb,"Model Key: "+_key);
       DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
       generateModelDescription(sb);
-      DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,water.api.Predict.link(_key,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Generate a display using the last scored Model.  Not all models are
@@ -890,11 +890,11 @@ public class DTree extends Iced {
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
 
       if( numTrees() * treeStats.meanLeaves > 5000 ) {
-        String modelName = JCodeGen.toJavaId(_selfKey.toString());
+        String modelName = JCodeGen.toJavaId(_key.toString());
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
-        sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_selfKey).append(" > ").append(modelName).append(".java\n");
+        sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_key).append(" > ").append(modelName).append(".java\n");
         sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
         sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m ").append(modelName).append('\n');
         sb.append("*/");
@@ -906,7 +906,7 @@ public class DTree extends Iced {
     @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
       sb = super.toJavaInit(sb, fileContextSB);
 
-      String modelName = JCodeGen.toJavaId(_selfKey.toString());
+      String modelName = JCodeGen.toJavaId(_key.toString());
 
       sb.ii(1);
       // Generate main method

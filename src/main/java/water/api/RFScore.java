@@ -39,8 +39,8 @@ public class RFScore extends Request {
   }
 
   private void clearCachedCM() {
-    UKV.remove(ConfusionTask.keyForCM(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),true));
-    UKV.remove(ConfusionTask.keyForCM(_modelKey.value()._selfKey,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),false));
+    UKV.remove(ConfusionTask.keyForCM(_modelKey.value()._key,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),true));
+    UKV.remove(ConfusionTask.keyForCM(_modelKey.value()._key,_numTrees.value(),Key.make(_dataKey.originalValue()),_classCol.value(),false));
   }
 
   @Override protected Response serve() {
@@ -57,6 +57,6 @@ public class RFScore extends Request {
     // Always clear CM matrix and recompute them to be sure that no stalled CM is in the system
     clearCachedCM();
 
-    return RFView.redirect(response, null, _modelKey.value()._selfKey, _dataKey.value()._key, model._totalTrees, _classCol.value(), _weights.originalValue(), false, false);
+    return RFView.redirect(response, null, _modelKey.value()._key, _dataKey.value()._key, model._totalTrees, _classCol.value(), _weights.originalValue(), false, false);
   }
 }

@@ -332,7 +332,7 @@ public class NeuralNet extends ValidatedJob {
 
           // remove validation data
           if( adapted != null && adapted[1] != null )
-            adapted[1].remove();
+            adapted[1].delete();
           Log.info("Training finished.");
         } catch( Exception ex ) {
           cancel(ex);
@@ -364,7 +364,7 @@ public class NeuralNet extends ValidatedJob {
         model.validation_errors = validErrors;
 
         model.confusion_matrix = cm;
-        UKV.put(model._selfKey, model);
+        UKV.put(model._key, model);
         return e.training_samples;
       }
 
@@ -712,7 +712,7 @@ public class NeuralNet extends ValidatedJob {
 
     public Response redirect(Request req) {
       String redirectName = new NeuralNetProgress().href();
-      return Response.redirect(req, redirectName, "destination_key", _selfKey);
+      return Response.redirect(req, redirectName, "destination_key", _key);
     }
   }
 
@@ -764,8 +764,8 @@ public class NeuralNet extends ValidatedJob {
       final String cross_entropy_format = "%2.6f";
       if( model != null ) {
 
-        DocGen.HTML.paragraph(sb, "Model Key: " + model._selfKey);
-        sb.append("<div class='alert'>Actions: " + water.api.Predict.link(model._selfKey, "Score on dataset") + ", "
+        DocGen.HTML.paragraph(sb, "Model Key: " + model._key);
+        sb.append("<div class='alert'>Actions: " + water.api.Predict.link(model._key, "Score on dataset") + ", "
                 + NeuralNet.link(model._dataKey, "Compute new model") + "</div>");
 
         // Plot training error
@@ -996,7 +996,7 @@ public class NeuralNet extends ValidatedJob {
       mean_square_error = e.mean_square;
       cross_entropy = e.cross_entropy;
       if( frs[1] != null )
-        frs[1].remove();
+        frs[1].delete();
       return Response.done(this);
     }
 

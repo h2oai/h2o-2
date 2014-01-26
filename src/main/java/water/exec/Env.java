@@ -246,7 +246,7 @@ public class Env extends Iced {
     if( fr == null ) return null;
     Futures fs = null;
     for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
-    if( key != null && fs != null ) UKV.remove(Key.make(key),fs);
+    if( key != null && fs != null ) fr.delete(fs);
     if( fs != null )
       fs.blockForPending();
     return null;
@@ -310,21 +310,20 @@ public class Env extends Iced {
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
         Frame fr = popAry();    // Pop w/o lowering refcnt
-        Frame fr2=fr;
         String skey = key();
+        Frame fr2=new Frame(Key.make(skey),fr._names.clone(),fr.vecs().clone());
         for( int i=0; i<fr.numCols(); i++ ) {
           Vec v = fr.vecs()[i];
           int refcnt = _refcnt.get(v);
           assert refcnt > 0;
           if( refcnt > 1 ) {    // Need a deep-copy now
-            if( fr2==fr ) fr2 = new Frame(fr);
             Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
             fr2.replace(i,v2);  // Replace with private deep-copy
             subRef(v,null);     // Now lower refcnt for good assertions
             addRef(v2);
           } // But not down to zero (do not delete items in global scope)
         }
-        UKV.put(Key.make(_key[_sp]),fr2);
+        fr2.update(); // Update in K/V
       } else
         popUncheck();
     }

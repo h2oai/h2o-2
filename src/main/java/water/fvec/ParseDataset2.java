@@ -274,13 +274,13 @@ public final class ParseDataset2 extends Job {
   // Top-level parser driver
   private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup, boolean delete_on_done) {
     assert setup._ncols > 0;
-    // remove any previous instance and insert a sentinel (to ensure no one has
-    // been writing to the same keys during our parse)!
-    UKV.remove(job.dest());
     if( fkeys.length == 0) {
       job.cancel();
       return;
     }
+    // Remove any previous instance and insert a sentinel (to ensure no one has
+    // been writing to the same keys during our parse)!
+    Frame fr = new Frame(job.dest(),new String[0],new Vec[0]).delete_and_lock(job);
     Vec v = getVec(fkeys[0]);
     MultiFileParseTask uzpt = new MultiFileParseTask(v.group(),setup,job._progress).invoke(fkeys);
     EnumUpdateTask eut = null;
@@ -299,7 +299,8 @@ public final class ParseDataset2 extends Job {
       for(int i:ecols)uzpt._dout._vecs[i]._domain = ValueString.toString(ds[j++] = enums[i].computeColumnDomain());
       eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
     }
-    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
+    Frame tmp = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
+    fr.add(tmp,tmp._names);
     // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
     SVFTask t = new SVFTask(fr);
     t.invokeOnAllNodes();
@@ -308,11 +309,15 @@ public final class ParseDataset2 extends Job {
       for(int i = 0; i < evecs.length; ++i)evecs[i] = fr.vecs()[ecols[i]];
       eut.doAll(evecs);
     }
-    // Jam the frame of columns into the K/V store
+    // Release the frame for overwriting
     Futures fs = new Futures();
-    UKV.put(job.dest(),fr,fs);
+    fr.unlock(fs);
     // Remove CSV files from H2O memory
-    if( delete_on_done ) for( Key k : fkeys ) UKV.remove(k,fs);
+    if( delete_on_done ) for( Key k : fkeys ) { 
+        Value val = DKV.get(k); 
+        if( val.isVec() ) UKV.remove(k); // Might be ByteVecs
+        else ((Lockable)val.get()).delete(); // Might be simple Frames over ByteVecs
+      }
     fs.blockForPending();
     job.remove();
   }

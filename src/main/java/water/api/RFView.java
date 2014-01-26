@@ -201,7 +201,7 @@ public class RFView extends /* Progress */ Request {
     Response r;
     if (done) {
       r = jobDone(response);
-      r.addHeader("<div class='alert'>" + /*RFScore.link(MODEL_KEY, model._selfKey, "Use this model for scoring.") */ GeneratePredictionsPage.link(model._selfKey, "Predict!")+ " </div>");
+      r.addHeader("<div class='alert'>" + /*RFScore.link(MODEL_KEY, model._key, "Use this model for scoring.") */ GeneratePredictionsPage.link(model._key, "Predict!")+ " </div>");
     } else { r = Response.poll(response, finished, tasks);  }
     r.setBuilder(JSON_CM, new ConfusionMatrixBuilder());
     r.setBuilder(TREES, new TreeListBuilder());

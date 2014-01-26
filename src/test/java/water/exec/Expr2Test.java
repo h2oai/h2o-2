@@ -24,7 +24,6 @@ public class Expr2Test extends TestUtil {
       //File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
-      UKV.remove(fkey);
 
       // Simple numbers & simple expressions
       checkStr("1.23",1.23);
@@ -230,7 +229,7 @@ public class Expr2Test extends TestUtil {
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope
 
     } finally {
-      UKV.remove(dest);         // Remove original hex frame key
+      Lockable.delete(dest);    // Remove original hex frame key
     }
   }
 
