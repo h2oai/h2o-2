@@ -24,7 +24,7 @@ public class KMeans2 extends ColumnsJob {
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
 
-  @API(help = "Clusters initialization", filter = Default.class)
+  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses intial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class)
   public Initialization initialization = Initialization.None;
 
   @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 1, lmax = 100000)
