@@ -896,7 +896,7 @@ public class DTree extends Iced {
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_key).append(" > ").append(modelName).append(".java\n");
         sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
-        sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m ").append(modelName).append('\n');
+        sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
         sb.append("*/");
       } else
         DocGen.HTML.escape(sb,toJava());
