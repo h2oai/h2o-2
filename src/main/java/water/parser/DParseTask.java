@@ -204,7 +204,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       return new Value(_key,bits2);
     }
 
-    @Override public void onSuccess(){
+    @Override public void onSuccess(Value old){
       _bits = null;             // Do not return the bits
     }
   }

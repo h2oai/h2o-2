@@ -388,7 +388,7 @@ public class Job extends Request2 {
         }
         return old;
       }
-      @Override public void onSuccess(){
+      @Override public void onSuccess(Value old){
         if(_job != null){
           final Job job = _job;
           H2O.submitTask(new H2OCountedCompleter() {

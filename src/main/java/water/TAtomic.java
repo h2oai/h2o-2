@@ -19,4 +19,7 @@ public abstract class TAtomic<T extends Iced> extends Atomic<TAtomic<T>> {
     T nnn = atomic(old);
     return  nnn == null ? null : new Value(_key,nnn);
   }
+  @Override public void onSuccess( Value old ) { onSuccess(old==null?null:(T)old.get()); }
+  // Upcast the old value to T
+  public void onSuccess( T old ) { }
 }

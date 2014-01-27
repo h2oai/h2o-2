@@ -62,7 +62,7 @@ public class GLMGrid extends Job {
         old._runTime = Math.max(runTime,old._runTime);
         return old;
       }
-      @Override public void onSuccess() {
+      @Override public void onSuccess(Value old) {
         // we're done, notify
         if(done) remove();
       };
