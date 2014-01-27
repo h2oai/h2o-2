@@ -5,7 +5,9 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.*;
+import water.api.DocGen;
+import water.api.NeuralNetProgressPage;
+import water.api.RequestServer;
 import water.fvec.*;
 import water.util.D3Plot;
 import water.util.Log;
@@ -114,6 +116,10 @@ public class NeuralNet extends ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
+    if (arg._name.equals("classification")) {
+      classification = true;
+      arg.disable("Regression is not currently supported.");
+    }
     if (arg._name.equals("ignored_cols")) arg.disable("Not currently supported.");
     if (arg._name.equals("input_dropout_ratio") &&
             (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
@@ -494,7 +500,7 @@ public class NeuralNet extends ValidatedJob {
       e.mean_square = 0;
       e.cross_entropy = 0;
       for( input._pos = 0; input._pos < len; input._pos++ ) {
-        if( ((Softmax) ls[ls.length - 1]).target() == -2 ) //NA
+        if( ((Softmax) ls[ls.length - 1]).target() == Layer.missing_int_value ) //NA
           continue;
         if( correct(ls, e, cm) )
           correct++;
@@ -507,9 +513,9 @@ public class NeuralNet extends ValidatedJob {
     else {
       e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( !Double.isNaN(ls[ls.length - 1]._a[0]) )
+        if( ls[ls.length - 1]._a[0] != Layer.missing_double_value )
           error(ls, e);
-      e.classification = Double.NaN;
+      e.classification = Double.POSITIVE_INFINITY;
       e.mean_square /= len;
     }
     input._pos = 0;
