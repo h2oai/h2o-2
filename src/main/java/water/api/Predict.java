@@ -29,10 +29,11 @@ public class Predict extends Request2 {
     try {
       if( model == null )
         throw new IllegalArgumentException("Model is missing");
-      Frame fr;
+      Frame fr = new Frame(prediction,new String[0],new Vec[0]).delete_and_lock(null);
       if( model instanceof Model )
            fr = ((   Model)model).score(data);
       else fr = ((OldModel)model).score(data);
+      fr.unlock();
       UKV.put(prediction, fr);
       return Inspect2.redirect(this, prediction.toString());
     } catch( Throwable t ) {
