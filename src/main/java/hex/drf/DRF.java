@@ -154,7 +154,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     fr.add("OUT_BAG_TREES", response.makeZero());
 
     DRFModel model = new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
-    model.delete_and_lock(this);
+    model.delete_and_lock(self());
 
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
@@ -187,10 +187,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(varimp));
       // Update the model
       model.varimp = varimp;
-      DKV.put(outputKey, model);
     }
 
-    cleanUp(fr,t_build); // Shared cleanup
+    model.unlock(self());       // Update and unlock model
+    cleanUp(fr,t_build);        // Shared cleanup
   }
 
   /* From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp

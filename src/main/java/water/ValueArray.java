@@ -383,7 +383,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
 
   static private Futures readPut(Key key, InputStream is, Job job, final Futures fs) throws IOException {
     // Lock & delete any prior, and lock against future writes
-    ValueArray ary = new ValueArray(key,0).delete_and_lock(job);
+    ValueArray ary = new ValueArray(key,0).delete_and_lock(job.dest());
     byte[] oldbuf, buf = null;
     int off = 0, sz = 0;
     long szl = off;
@@ -437,7 +437,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
     }
     // Unlock & set new copy of self
-    new ValueArray(key,szl).unlock(fs);
+    new ValueArray(key,szl).unlock(job.self());
 
     // Block for all pending DKV puts, which will in turn add blocking requests
     // to the passed-in Future list 'fs'.

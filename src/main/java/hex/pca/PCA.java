@@ -79,8 +79,8 @@ public class PCA extends ColumnsJob {
     DataInfo dinfo = new DataInfo(fr, 0, standardize);
     GramTask tsk = new GramTask(this, dinfo, false,false).doAll(dinfo._adaptedFrame);
     PCAModel myModel = buildModel(dinfo, tsk);
-    myModel.delete_and_lock(this);
-    myModel.unlock();
+    myModel.delete_and_lock(self());
+    myModel.unlock(self());
     return Status.Done;
   }
 

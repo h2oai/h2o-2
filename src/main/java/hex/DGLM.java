@@ -1902,7 +1902,7 @@ public abstract class DGLM {
     } else {
       beta = denormalizedBeta = null;
     }
-    new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params, lsm, 0, 0, false, 0, 0, null).delete_and_lock(job);
+    new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params, lsm, 0, 0, false, 0, 0, null).delete_and_lock(job.self());
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {

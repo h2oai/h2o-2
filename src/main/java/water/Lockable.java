@@ -1,5 +1,6 @@
 package water;
 
+import java.util.Arrays;
 import water.api.DocGen;
 import water.api.Request.API;
 
@@ -10,13 +11,9 @@ import water.api.Request.API;
  * output VA/Frame, to guard against double-parsing.
  *
  * Supports:
- *   read_lock      - block until acquire a shared read-lock
- *   try_read_lock  - attempt lock; return false if write-locked after timeout
- *   write_lock     - block until acquire a exclusive write-lock
- *   try_write_lock - attempt lock; return false if read-locked after timeout
- *   unlock         - unlock prior lock; error if not locked
- *   lockers        - Return a list of locking jobs
- *   delete         - block until obtain a write-lock; then delete_impl()
+ *   lock-and-delete-old-and-update (for new Keys)
+ *   lock-and-delete                (for removing old Keys)
+ *   unlock
  *
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  * @version 1.0
@@ -41,6 +38,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // Create unlocked
   public Lockable( Key key ) { _key = key; }
 
+  // -----------
   // Atomic create+overwrite of prior key.
   // If prior key exists, block until acquire a write-lock.
   // The call delete_impl, removing all of a prior key.
@@ -53,12 +51,8 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // (2)  FR,VA.waiting...                       FR,VA+job-locked atomic xtn loop
   // (3)                                            VA.delete_impl onSuccess
   // (4)  FR         <--update success <--       FR+job-locked
-
-  public T delete_and_lock( Job locker ) {
-    // Atomically acquire lock
-    assert _key != null;        // Must have a Key to be lockable (not all Frames ever exist in the K/V)
-    System.out.println("Locking "+_key+" by "+locker);
-    Key job_key = locker == null ? null : locker.job_key;
+  public T delete_and_lock( Key job_key ) {
+    System.out.println("Locking "+_key+" by "+job_key);
     new WriteUpdateLock(job_key).invoke(_key);
     return (T)this;
   }
@@ -70,11 +64,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   private class WriteUpdateLock extends TAtomic<Lockable> {
     final Key _job_key;         // Job doing the locking
     WriteUpdateLock( Key job_key ) { _job_key = job_key; }
-    // This code runs on master, in a loop until the returned value is
-    // atomically updated over the Lockable's _key.
     @Override public Lockable atomic(Lockable old) {
-      // "old" is a private defensive copy of the old Lockable - no other
-      // writers.  We can read it without concern for races.
       if( old != null ) {                // Prior Lockable exists?
         assert !old.is_locked(_job_key); // No double locking by same job
         if( !old.is_unlocked() ) // Blocking for some other Job to finish???
@@ -96,23 +86,23 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   }
 
 
+  // -----------
   // Atomic lock & remove self.
-  public void delete( ) { new WriteDeleteLock().invoke(_key); }
-  public Futures delete(Futures fs) { delete(); return fs; }
+  public void delete( ) { 
+    WriteDeleteLock wl = new WriteDeleteLock();
+    if( _key==null ) wl.onSuccess(this); // No key, so a local Frame only
+    else wl.invoke(_key);                // Remote/global delete
+  }
   public static void delete( Key k ) {
     if( k == null ) return;
     Value val = DKV.get(k);
-    if( !val.isLockable() ) DKV.remove(k);
-    else ((Lockable)val.get()).delete();
+    if( !val.isLockable() ) UKV.remove(k); // Simple things being deleted
+    else ((Lockable)val.get()).delete();   // Lockable being deleted
   }
 
   // Obtain the write-lock on _key, then delete.
   private class WriteDeleteLock extends TAtomic<Lockable> {
-    // This code runs on master, in a loop until the returned value is
-    // atomically updated over the Lockable's _key.
     @Override public Lockable atomic(Lockable old) {
-      // "old" is a private defensive copy of the old Lockable - no other
-      // writers.  We can read it without concern for races.
       if( old != null &&         // Prior Lockable exists?
           !old.is_unlocked() )   // Blocking for some other Job to finish???
         throw H2O.unimpl();
@@ -126,11 +116,12 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
       if( old != null ) {
         Futures fs = new Futures();
         old.delete_impl(fs);
-        DKV.remove(_key,fs);    // Delete self also
+        if( _key != null ) DKV.remove(_key,fs); // Delete self also
         fs.blockForPending();
       }
     }
   }
+
 
   // Atomically set a new version of self
   public void update() {
@@ -139,23 +130,46 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     DKV.put(_key,this);         // Just lazy freshen copy of self
   }
 
+  // -----------
   // Atomically set a new version of self & unlock.
-  public void unlock( ) { unlock(new Futures()).blockForPending(); }
-  public Futures unlock( Futures fs ) {
-    // Default non-unlocking empty implementation!!!
-    DKV.put(_key,this,fs);      // Just freshen copy of self
-    System.out.println("Unlocking "+_key);
-    return fs;
+  public void unlock( Key job_key ) { 
+    System.out.println("Unlocking "+_key+" by "+job_key);
+    new Unlock(job_key).invoke(_key); 
   }
 
+  // Freshen 'this' and unlock
+  private class Unlock extends TAtomic<Lockable> {
+    final Key _job_key;         // Job doing the unlocking
+    Unlock( Key job_key ) { _job_key = job_key; }
+    @Override public Lockable atomic(Lockable old) {
+      assert old.is_locked(_job_key); // 
+      set_unlocked(old._lockers,_job_key);
+      return Lockable.this;
+    }
+  }
+
+  // -----------
   // Accessers for locking state.  No self-checking, just primitive results.
   private boolean is_locked(Key job_key) { 
     if( _lockers==null ) return false;
-    for( Key k : _lockers ) if( job_key.equals(k) ) return true;
+    for( Key k : _lockers ) if( job_key==k || (job_key != null && job_key.equals(k)) ) return true;
     return false;
   }
   private boolean is_unlocked() { return _lockers== null; }
   private void set_write_lock( Key job_key ) { _lockers=new Key[]{job_key}; }
+  private void set_unlocked(Key lks[], Key job_key) {
+    if( lks[0]==job_key ) {     // Is write-locked?
+      _lockers = null;          // Then unlocked
+    } else if( lks.length==2 ) {// One reader
+      _lockers = null;          // So unlocked
+    } else {                    // Else one of many readers
+      _lockers = Arrays.copyOf(lks,lks.length-1);
+      int j=0;
+      for( int i=1; i<lks.length; i++ )
+        if( !job_key.equals(lks[i]) ) 
+          _lockers[j++] = lks[i];
+    }
+  }
 
 
   // Remove any subparts before removing the whole thing

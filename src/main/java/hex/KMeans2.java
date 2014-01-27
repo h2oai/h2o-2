@@ -144,14 +144,13 @@ public class KMeans2 extends ColumnsJob {
         cc._mults = mults;
         cc.doAll(1, vecs);
         Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[1][]);
-        fr2.delete_and_lock(KMeans2.this);
-        fr2.unlock();
+        fr2.delete_and_lock(self()).unlock(self());
         break;
       }
       if( cancelled() )
         break;
     }
-    model.unlock();
+    model.unlock(self());
     return Status.Done;
   }
 

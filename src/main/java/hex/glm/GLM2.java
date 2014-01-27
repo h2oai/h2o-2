@@ -261,7 +261,7 @@ public class GLM2 extends ModelJob {
           H2OCallback fin = new H2OCallback<GLMValidationTask>() {
             @Override public void callback(GLMValidationTask tsk) {
               boolean improved = _model.setAndTestValidation(_lambdaIdx,tsk._res);
-              _model.unlock();
+              _model.unlock(self());
               if(!diverged && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
                 _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
                 glmt._val = null;
@@ -336,7 +336,7 @@ public class GLM2 extends ModelJob {
             solver._proximalPenalty = _proximalPenalty;
             solver._wgiven = _wgiven;
             GLMModel model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
-            model.delete_and_lock(GLM2.this);
+            model.delete_and_lock(self());
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,GLM2.this._fjtask));
             firstIter.dfork(_dinfo._adaptedFrame);
           }

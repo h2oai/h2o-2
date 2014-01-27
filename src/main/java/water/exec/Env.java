@@ -247,9 +247,8 @@ public class Env extends Iced {
     if( fr == null ) return null;
     Futures fs = null;
     for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
-    if( key != null && fs != null ) fr.delete(fs);
-    if( fs != null )
-      fs.blockForPending();
+    if( fs != null ) fs.blockForPending();
+    if( key != null && fs != null ) fr.delete();
     return null;
   }
   // Lower refcounts on all vecs captured in the inner environment

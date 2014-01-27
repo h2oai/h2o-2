@@ -302,7 +302,7 @@ public class NeuralNet extends ValidatedJob {
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
     
-    model.delete_and_lock(this);
+    model.delete_and_lock(self());
 
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     final Trainer trainer;
