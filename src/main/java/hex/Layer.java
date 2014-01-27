@@ -87,15 +87,12 @@ public abstract class Layer extends Iced {
     max_w2 = p.max_w2;
   }
 
-  // Weights, biases, activity, error
-  // TODO hold transients only for current two layers
-  // TODO extract transients & code in separate one-shot trees to avoid cloning
-  protected transient float[] _w; //use float to save space
-  protected transient double[] _b, _a, _e;
+  // Layer state: activity, error
+  protected transient double[] _a, _e;
 
-  // Momentum for weights and biases
-  protected transient float[] _wm;
-  protected transient double[] _bm;
+  // Shared state: weights and biases (and their momenta)
+  protected transient float[] _w, _wm;
+  protected transient double[] _b, _bm;
 
   // Previous and input layers
   protected transient Layer _previous;
