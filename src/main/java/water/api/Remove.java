@@ -1,8 +1,9 @@
 package water.api;
 
+import water.Futures;
+import water.Lockable;
 import water.UKV;
 import water.Value;
-import water.Futures;
 
 import com.google.gson.JsonObject;
 
@@ -16,7 +17,8 @@ public class Remove extends Request {
     Value v = _key.value();
 
     try {
-      UKV.remove(v._key);       // Standard blocking remove
+      if( v.isLockable() ) Lockable.delete(v._key);
+      else UKV.remove(v._key);  // Standard blocking remove
     } catch( Exception e ) {
       return Response.error(e.getMessage());
     }
