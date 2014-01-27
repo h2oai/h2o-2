@@ -244,6 +244,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith(".css")) return;
       if (uri.endsWith(".js")) return;
       if (uri.endsWith(".png")) return;
+      if (uri.endsWith(".ico")) return;
       if (uri.startsWith("/Typeahead")) return;
       if (uri.startsWith("/Cloud.json")) return;
       if (uri.endsWith("LogAndEcho.json")) return;

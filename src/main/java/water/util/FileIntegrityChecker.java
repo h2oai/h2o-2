@@ -101,7 +101,7 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
         if( keys  != null ) keys .add(k.toString());
         if(_newApi) {
           NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
-          UKV.put(k, new Frame(new String[] { "0" }, new Vec[] { nfs }), fs);
+          new Frame(k,new String[] { "0" }, new Vec[] { nfs }).delete_and_lock(null).unlock();
         } else {
           long size = f.length();
           Value val = (size < 2*ValueArray.CHUNK_SZ)
