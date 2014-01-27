@@ -5,7 +5,9 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.*;
+import water.api.DocGen;
+import water.api.NeuralNetProgressPage;
+import water.api.RequestServer;
 import water.fvec.*;
 import water.util.D3Plot;
 import water.util.Log;
@@ -80,8 +82,11 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit (values ~15 are OK as regularizer)", filter = Default.class, json = true)
-  public double max_w2 = Double.MAX_VALUE;
+  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
+  public double rate_decay = 1.0;
+
+  @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class, json = true)
+  public double max_w2 = Double.POSITIVE_INFINITY;
 
   @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
   public long warmup_samples = 0l;
@@ -111,6 +116,10 @@ public class NeuralNet extends ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
+    if (arg._name.equals("classification")) {
+      classification = true;
+      arg.disable("Regression is not currently supported.");
+    }
     if (arg._name.equals("ignored_cols")) arg.disable("Not currently supported.");
     if (arg._name.equals("input_dropout_ratio") &&
             (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
@@ -148,7 +157,9 @@ public class NeuralNet extends ValidatedJob {
     if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
             || arg._name.equals("score_training") || arg._name.equals("score_validation")
             || arg._name.equals("initial_weight_distribution") || arg._name.equals("initial_weight_scale")
-            || arg._name.equals("score_interval") || arg._name.equals("diagnostics")) {
+            || arg._name.equals("score_interval") || arg._name.equals("diagnostics")
+            || arg._name.equals("rate_decay")
+            ) {
       if (!expert_mode)  arg.disable("Only in expert mode.");
     }
   }
@@ -185,6 +196,39 @@ public class NeuralNet extends ValidatedJob {
     description = DOC_GET;
   }
 
+  @Override protected void logStart() {
+    Log.info("Starting Neural Net model build...");
+    super.logStart();
+    Log.info("    description: " + description);
+
+    Log.info("Execution Mode: " + mode.toString());
+    Log.info("Activation function: " + activation.toString());
+    Log.info("Input layer dropout ratio: " + input_dropout_ratio);
+    String h = "" + hidden[0];
+    for (int i=1; i<hidden.length; ++i) h += ", " + hidden[i];
+    Log.info("Hidden layer sizes: " + h);
+    Log.info("Learning rate: " + rate);
+    Log.info("Learning rate annealing: " + rate_annealing);
+    Log.info("L1 regularization: " + l1);
+    Log.info("L2 regularization: " + l2);
+    Log.info("Initial momentum at the beginning of training: " + momentum_start);
+    Log.info("Number of training samples for which momentum increases: " + momentum_ramp);
+    Log.info("Final momentum after the ramp is over: " + momentum_stable);
+    Log.info("Number of epochs: " + epochs);
+    Log.info("Seed for random numbers: " + seed);
+//    Log.info("Enable expert mode: ", expert_mode);
+    Log.info("Initial weight distribution: " + initial_weight_distribution);
+    Log.info("Initial weight scale: " + initial_weight_scale);
+    Log.info("Loss function: " + loss.toString());
+    Log.info("Learning rate decay factor: " + rate_decay);
+    Log.info("Constraint for squared sum of incoming weights per unit: " + max_w2);
+    Log.info("Number of samples to train with non-distributed mode for improved stability: " + warmup_samples);
+    Log.info("Number of training set samples for scoring: " + score_training);
+    Log.info("Number of validation set samples for scoring: " + score_validation);
+//    Log.info("Minimum interval (in seconds) between scoring: " + score_interval);
+//    Log.info("Enable diagnostics for hidden layers: " + diagnostics);
+  }
+
   @Override public Job fork() {
     init();
     H2OCountedCompleter job = new H2OCountedCompleter() {
@@ -205,6 +249,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   void startTrain() {
+    logStart();
     RNG.seed = new AtomicLong(seed);
     running = true;
 //    Vec[] vecs = Utils.append(_train, response);
@@ -455,7 +500,7 @@ public class NeuralNet extends ValidatedJob {
       e.mean_square = 0;
       e.cross_entropy = 0;
       for( input._pos = 0; input._pos < len; input._pos++ ) {
-        if( ((Softmax) ls[ls.length - 1]).target() == -2 ) //NA
+        if( ((Softmax) ls[ls.length - 1]).target() == Layer.missing_int_value ) //NA
           continue;
         if( correct(ls, e, cm) )
           correct++;
@@ -468,9 +513,9 @@ public class NeuralNet extends ValidatedJob {
     else {
       e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( !Double.isNaN(ls[ls.length - 1]._a[0]) )
+        if( ls[ls.length - 1]._a[0] != Layer.missing_double_value )
           error(ls, e);
-      e.classification = Double.NaN;
+      e.classification = Double.POSITIVE_INFINITY;
       e.mean_square /= len;
     }
     input._pos = 0;
@@ -683,6 +728,54 @@ public class NeuralNet extends ValidatedJob {
         }
       }
     }
+
+    static void confusion(StringBuilder sb, String title, String[] classes, long[][] confusionMatrix) {
+      sb.append("<h3>" + title + "</h3>");
+      sb.append("<table class='table table-striped table-bordered table-condensed'>");
+      sb.append("<tr><th>Actual \\ Predicted</th>");
+      if( classes == null ) {
+        classes = new String[confusionMatrix.length];
+        for( int i = 0; i < classes.length; i++ )
+          classes[i] = "" + i;
+      }
+      for( String c : classes )
+        sb.append("<th>" + c + "</th>");
+      sb.append("<th>Error</th></tr>");
+      long[] totals = new long[classes.length];
+      long sumTotal = 0;
+      long sumError = 0;
+      for( int crow = 0; crow < classes.length; ++crow ) {
+        long total = 0;
+        long error = 0;
+        sb.append("<tr><th>" + classes[crow] + "</th>");
+        for( int ccol = 0; ccol < classes.length; ++ccol ) {
+          long num = confusionMatrix[crow][ccol];
+          total += num;
+          totals[ccol] += num;
+          if( ccol == crow ) {
+            sb.append("<td style='background-color:LightGreen'>");
+          } else {
+            sb.append("<td>");
+            error += num;
+          }
+          sb.append(num);
+          sb.append("</td>");
+        }
+        sb.append("<td>");
+        sb.append(String.format("%5.3f = %d / %d", (double) error / total, error, total));
+        sb.append("</td></tr>");
+        sumTotal += total;
+        sumError += error;
+      }
+      sb.append("<tr><th>Totals</th>");
+      for( int i = 0; i < totals.length; ++i )
+        sb.append("<td>" + totals[i] + "</td>");
+      sb.append("<td><b>");
+      sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
+      sb.append("</b></td></tr>");
+      sb.append("</table>");
+    }
+
     public void toJavaHtml(StringBuilder sb) {
       //DocGen.HTML.title(sb, "The Java Neural Net model is not implemented yet.");
     }
@@ -792,7 +885,7 @@ public class NeuralNet extends ValidatedJob {
       if( confusion_matrix != null && confusion_matrix.length < 100 ) {
         assert(classification);
         String[] classes = classNames();
-        NeuralNetScore.confusion(sb, cmTitle, classes, confusion_matrix);
+        confusion(sb, cmTitle, classes, confusion_matrix);
       }
       sb.append("<h3>" + "Progress" + "</h3>");
       String training = "Number of training set samples for scoring: " + train.score_training;
@@ -896,129 +989,6 @@ public class NeuralNet extends ValidatedJob {
 
   }
 
-  public static class NeuralNetScore extends ModelJob {
-    static final int API_WEAVER = 1;
-    static public DocGen.FieldDoc[] DOC_FIELDS;
-    static final String DOC_GET = "Neural network scoring";
-
-    @API(help = "Model", required = true, filter = Default.class)
-    public NeuralNetModel model;
-
-    @API(help = "Rows to consider for scoring, 0 (default) means the whole frame", filter = Default.class)
-    public long max_rows;
-
-    @API(help = "Classification error")
-    public double classification_error;
-
-    @API(help = "Mean square error")
-    public double mean_square_error;
-
-    @API(help = "Cross entropy")
-    public double cross_entropy;
-
-    @API(help = "Confusion matrix")
-    public long[][] confusion_matrix;
-
-    public NeuralNetScore() {
-      description = DOC_GET;
-    }
-
-    @Override protected Response serve() {
-      init();
-      Frame[] frs = model.adapt(source, false);
-      int classes = model.layers[model.layers.length - 1].units;
-      confusion_matrix = new long[classes][classes];
-      Layer[] clones = new Layer[model.layers.length];
-      for( int y = 0; y < model.layers.length; y++ ) {
-        clones[y] = model.layers[y].clone();
-        clones[y]._w = model.weights[y];
-        clones[y]._b = model.biases[y];
-      }
-      Vec[] vecs = frs[0].vecs();
-      Vec[] data = Utils.remove(vecs, vecs.length - 1);
-      Vec resp = vecs[vecs.length - 1];
-      Errors e = eval(clones, data, resp, max_rows, confusion_matrix);
-      classification_error = e.classification;
-      mean_square_error = e.mean_square;
-      cross_entropy = e.cross_entropy;
-      if( frs[1] != null )
-        frs[1].remove();
-      return Response.done(this);
-    }
-
-    @Override public boolean toHTML(StringBuilder sb) {
-      final boolean classification = model.isClassifier();
-      if (classification) {
-        DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
-      }
-      DocGen.HTML.section(sb, "Mean square error: " + mean_square_error);
-      if (classification) {
-        DocGen.HTML.section(sb, "Mean cross entropy: " + cross_entropy);
-
-        String[] domain = null;
-        if (response.domain() != null) {
-          domain = response.domain();
-        } else {
-          // find the names for the categories from the model's domains, after finding the correct column
-          int idx = source.find(response);
-          if( idx == -1 ) {
-            Vec vm = response.masterVec();
-            if( vm != null ) idx = source.find(vm);
-          }
-          if (idx != -1) domain = model._domains[idx];
-        }
-        confusion(sb, "Confusion Matrix", domain, confusion_matrix);
-      }
-      return true;
-    }
-
-    static void confusion(StringBuilder sb, String title, String[] classes, long[][] confusionMatrix) {
-      //sb.append("<h3>" + title + "</h3>");
-      sb.append("<table class='table table-striped table-bordered table-condensed'>");
-      sb.append("<tr><th>Actual \\ Predicted</th>");
-      if( classes == null ) {
-        classes = new String[confusionMatrix.length];
-        for( int i = 0; i < classes.length; i++ )
-          classes[i] = "" + i;
-      }
-      for( String c : classes )
-        sb.append("<th>" + c + "</th>");
-      sb.append("<th>Error</th></tr>");
-      long[] totals = new long[classes.length];
-      long sumTotal = 0;
-      long sumError = 0;
-      for( int crow = 0; crow < classes.length; ++crow ) {
-        long total = 0;
-        long error = 0;
-        sb.append("<tr><th>" + classes[crow] + "</th>");
-        for( int ccol = 0; ccol < classes.length; ++ccol ) {
-          long num = confusionMatrix[crow][ccol];
-          total += num;
-          totals[ccol] += num;
-          if( ccol == crow ) {
-            sb.append("<td style='background-color:LightGreen'>");
-          } else {
-            sb.append("<td>");
-            error += num;
-          }
-          sb.append(num);
-          sb.append("</td>");
-        }
-        sb.append("<td>");
-        sb.append(String.format("%5.3f = %d / %d", (double) error / total, error, total));
-        sb.append("</td></tr>");
-        sumTotal += total;
-        sumError += error;
-      }
-      sb.append("<tr><th>Totals</th>");
-      for( int i = 0; i < totals.length; ++i )
-        sb.append("<td>" + totals[i] + "</td>");
-      sb.append("<td><b>");
-      sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
-      sb.append("</b></td></tr>");
-      sb.append("</table>");
-    }
-  }
 
   static int cores() {
     int cores = 0;
