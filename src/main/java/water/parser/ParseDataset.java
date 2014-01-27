@@ -508,7 +508,7 @@ public final class ParseDataset extends Job {
             }
             _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");
             ValueArray.readPut(_fileInfo[_idx]._okey, is,_job);
-            ((ValueArray)DKV.get(_fileInfo[_idx]._ikey).get()).delete(); // Delete zip after unzipping
+            Lockable.delete(_fileInfo[_idx]._ikey); // Delete zip after unzipping
             v = DKV.get(_fileInfo[_idx]._okey);
             onProgressSizeChange(2*(v.length() - csz), _job); // the 2 passes will go over larger file!
             assert v != null;

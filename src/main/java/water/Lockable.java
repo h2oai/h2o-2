@@ -90,8 +90,9 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
 
   public static void delete( Key k ) {
     if( k == null ) return;
-    Lockable lk = DKV.get(k).get();
-    lk.delete();
+    Value val = DKV.get(k);
+    if( !val.isLockable() ) DKV.remove(k);
+    else ((Lockable)val.get()).delete();
   }
 
   // Atomically set a new version of self 
