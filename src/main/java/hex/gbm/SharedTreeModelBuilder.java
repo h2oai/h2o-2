@@ -1,19 +1,21 @@
 package hex.gbm;
 
 import hex.rng.MersenneTwisterRNG;
-
-import java.util.Arrays;
-import java.util.Random;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.Utils;
 
-// Build (distributed) Trees.  Used for both Gradiant Boosted Method and Random
+import java.util.Arrays;
+import java.util.Random;
+
+// Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
 //
 // While this is a wholly H2O-design, we found these papers afterwards that
