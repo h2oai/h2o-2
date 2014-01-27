@@ -33,8 +33,8 @@ public class Predict extends Request2 {
       if( model instanceof Model )
            fr = ((   Model)model).score(data);
       else fr = ((OldModel)model).score(data);
+      fr = new Frame(prediction,fr._names,fr.vecs()); // Jam in the frame key
       fr.unlock();
-      UKV.put(prediction, fr);
       return Inspect2.redirect(this, prediction.toString());
     } catch( Throwable t ) {
       Log.err(t);

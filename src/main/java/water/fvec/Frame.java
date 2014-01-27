@@ -252,7 +252,7 @@ public class Frame extends Lockable<Frame> {
 
   public final String[] names() { return _names; }
   public int  numCols() { return vecs().length; }
-  public long numRows(){ return anyVec().length();}
+  public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
 
   // Number of columns when categoricals expanded.
   // Note: One level is dropped in each categorical col.
