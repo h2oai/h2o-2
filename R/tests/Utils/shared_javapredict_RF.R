@@ -2,10 +2,10 @@ heading(  "BEGIN TEST"  )
 conn <- new(   "H2OClient"  , ip=myIP, port=myPort)
 
 heading(   "Uploading train data to H2O"  )
-iris_train.hex <- h2o.uploadFile.FV(conn, train)
+iris_train.hex <- h2o.uploadFile(conn, train)
 
 heading(   "Creating DRF model in H2O"  )
-iris.rf.h2o <- h2o.randomForest.FV(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize )
+iris.rf.h2o <- h2o.randomForest(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize )
 print(iris.rf.h2o)
 
 heading(   "Downloading Java prediction model code from H2O"  )
