@@ -24,7 +24,6 @@ public class Expr2Test extends TestUtil {
       //File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
-      UKV.remove(fkey);
 
       // Simple numbers & simple expressions
       checkStr("1.23",1.23);
@@ -227,10 +226,14 @@ public class Expr2Test extends TestUtil {
       //checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
       //checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
 
+      // Quantile
+      checkStr("quantile(seq_len(10),seq_len(10)/10)");
+      checkStr("quantile(runif(seq_len(10000)),seq_len(10)/10)");
+      checkStr("quantile(h.hex[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))");
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope
 
     } finally {
-      UKV.remove(dest);         // Remove original hex frame key
+      Lockable.delete(dest);    // Remove original hex frame key
     }
   }
 
@@ -258,7 +261,7 @@ public class Expr2Test extends TestUtil {
     assertFalse( env.isAry() );
     assertFalse( env.isFcn() );
     double res = env.popDbl();
-    assertEquals(d,res,d/1e8);
+    assertEquals(d, res, d / 1e8);
     env.remove();
     debug_print(s);
   }

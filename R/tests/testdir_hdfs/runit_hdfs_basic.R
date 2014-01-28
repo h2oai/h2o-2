@@ -4,6 +4,9 @@
 
 # setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_hdfs")
 
+local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
+if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
+
 options(echo=TRUE)
 TEST_ROOT_DIR <- ".."
 source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))

@@ -18,15 +18,17 @@ import com.google.common.base.Throwables;
  * E.g. to exclude a Vec from a computation on a Frame, create a new Frame that
  * references all the Vecs but this one.
  */
-public class Frame extends Iced {
+public class Frame extends Lockable<Frame> {
   public String[] _names;
   Key[] _keys;          // Keys for the vectors
   transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
-  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = null; }
+  public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
-  public Frame( String[] names, Vec[] vecs ) {
+  public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
+  public Frame( Key key, String[] names, Vec[] vecs ) {
+    super(key);
     // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
@@ -115,7 +117,7 @@ public class Frame extends Iced {
 
   /** Appends an entire Frame */
   public Frame add( Frame fr, String names[] ) {
-    assert anyVec().group().equals(fr.anyVec().group());
+    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group());
     for( String name : names )
       if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len0= _names.length;
@@ -250,7 +252,7 @@ public class Frame extends Iced {
 
   public final String[] names() { return _names; }
   public int  numCols() { return vecs().length; }
-  public long numRows(){ return anyVec().length();}
+  public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
 
   // Number of columns when categoricals expanded.
   // Note: One level is dropped in each categorical col.
@@ -334,16 +336,9 @@ public class Frame extends Iced {
     return fs;
   }
 
-  public void remove() {
-    remove(new Futures());
-  }
-
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
-  public void remove(Futures fs){
-    if(vecs().length > 0){
-      for( Vec v : _vecs )
-        UKV.remove(v._key,fs);
-    }
+  @Override public void delete_impl(Futures fs) {
+    for( Vec v : _vecs ) UKV.remove(v._key,fs);
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];

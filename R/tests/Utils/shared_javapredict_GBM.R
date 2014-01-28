@@ -6,7 +6,8 @@ heading("Uploading train data to H2O")
 iris_train.hex <- h2o.uploadFile(conn, train)
 
 heading("Creating GBM model in H2O")
-iris.gbm.h2o <- h2o.gbm(x = x, y = y, data = iris_train.hex, n.trees = n.trees, interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode, shrinkage = shrinkage)
+distribution <- if (exists("distribution")) distribution else "multinomial"
+iris.gbm.h2o <- h2o.gbm(x = x, y = y, data = iris_train.hex, distribution = distribution, n.trees = n.trees, interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode, shrinkage = shrinkage)
 print(iris.gbm.h2o)
 
 heading("Downloading Java prediction model code from H2O")
@@ -40,7 +41,7 @@ cmd <- sprintf("javac -cp %s/h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m %s/Pr
 safeSystem(cmd)
 
 heading("Predicting with Java POJO")
-cmd <- sprintf("java -ea -cp %s/h2o-model.jar:%s -Xmx2g -XX:MaxPermSize=256m PredictCSV --header --model %s --input %s/in.csv --output %s/out_pojo.csv", H2O_JAR_DIR, tmpdir_name, model_key, tmpdir_name, tmpdir_name)
+cmd <- sprintf("java -ea -cp %s/h2o-model.jar:%s -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m PredictCSV --header --model %s --input %s/in.csv --output %s/out_pojo.csv", H2O_JAR_DIR, tmpdir_name, model_key, tmpdir_name, tmpdir_name)
 safeSystem(cmd)
 
 heading("Comparing predictions between H2O and Java POJO")

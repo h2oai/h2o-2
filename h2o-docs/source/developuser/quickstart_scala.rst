@@ -1,10 +1,9 @@
-H2O For Scala 
-------------------
+H\ :sub:`2`\ O For Scala 
+-------------------------------
 
 
 .. raw:: html
 
     <div style="margin-top:10px;">
-    <Iframe width=900 height=900 src="../bits/tree/h2oscala/h2o-scala" frameborder="0" allowfullscreen></iframe>
-     </div>  
-
+      <iframe width=900 height=600 src="../bits/h2o-scala/README.txt" frameborder="0" allowfullscreen></iframe>
+    </div>

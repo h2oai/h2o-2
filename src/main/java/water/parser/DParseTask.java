@@ -406,8 +406,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     _myrows = 0;
     // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
     // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
-    if(DKV.get(_job.dest()) != null)
-      UKV.remove(_job.dest());
     if(_parser.parallelParseSupported())
       this.invoke(_sourceDataset._key);
     else {
@@ -460,14 +458,13 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._min = _min[i];
       cols[i]._mean = _mean[i];
       cols[i]._sigma = _sigma[i];
-      cols[i]._name = _colNames != null?_colNames[i]:(Integer.toString(i));
+      cols[i]._name = _colNames != null?_colNames[i]:("C"+(Integer.toString(i+1)));
       off += Math.abs(cols[i]._size);
     }
     // let any pending progress reports finish
     DKV.write_barrier();
     // finally make the value array header
-    ValueArray ary = new ValueArray(_job.dest(), _numRows, off, cols);
-    UKV.put(_job.dest(), ary);
+    new ValueArray(_job.dest(), _numRows, off, cols).unlock(new Futures()).blockForPending();
   }
 
   protected void createEnums() {

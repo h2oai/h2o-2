@@ -27,10 +27,11 @@ public class GLMTest2  extends TestUtil {
    Key parsed = Key.make("gaussian_test_data_parsed");
    Key modelKey = Key.make("gaussian_test");
    GLMModel model = null;
+   Frame fr = null;
    try {
      // make data so that the expected coefficients is icept = col[0] = 1.0
      FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9");
-     Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
+     fr = ParseDataset2.parse(parsed, new Key[]{raw});
      DataInfo dinfo = new DataInfo(fr, 1, false);
      GLMParams glm = new GLMParams(Family.gaussian);
      new GLM2("GLM test of gaussian(linear) regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
@@ -39,8 +40,7 @@ public class GLMTest2  extends TestUtil {
      assertEquals(0.0,coefs.get("Intercept"),1e-4);
      assertEquals(0.1,coefs.get("x"),1e-4);
    }finally{
-     UKV.remove(raw);
-     UKV.remove(parsed);
+     if( fr != null ) fr.delete();
      if(model != null)model.delete();
    }
  }
@@ -54,10 +54,11 @@ public class GLMTest2  extends TestUtil {
    Key parsed = Key.make("poisson_test_data_parsed");
    Key modelKey = Key.make("poisson_test");
    GLMModel model = null;
+   Frame fr = null;
    try {
      // make data so that the expected coefficients is icept = col[0] = 1.0
      FVecTest.makeByteVec(raw, "x,y\n0,2\n1,4\n2,8\n3,16\n4,32\n5,64\n6,128\n7,256");
-     Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
+     fr = ParseDataset2.parse(parsed, new Key[]{raw});
      DataInfo dinfo = new DataInfo(fr, 1, false);
      GLMParams glm = new GLMParams(Family.poisson);
      new GLM2("GLM test of poisson regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
@@ -67,7 +68,7 @@ public class GLMTest2  extends TestUtil {
      //new byte []{1,2,3,4,5,6,7,8, 9, 10,11,12,13,14},
 //     new byte []{0,1,2,3,1,4,9,18,23,31,20,25,37,45});
      model.delete();
-     UKV.remove(raw);
+     fr.delete();
      FVecTest.makeByteVec(raw, "x,y\n1,0\n2,1\n3,2\n4,3\n5,1\n6,4\n7,9\n8,18\n9,23\n10,31\n11,20\n12,25\n13,37\n14,45\n");
      fr = ParseDataset2.parse(parsed, new Key[]{raw});
      dinfo = new DataInfo(fr, 1, false);
@@ -76,8 +77,7 @@ public class GLMTest2  extends TestUtil {
      assertEquals(0.3396,model.beta()[1],1e-4);
      assertEquals(0.2565,model.beta()[0],1e-4);
    }finally{
-     UKV.remove(raw);
-     UKV.remove(parsed);
+     if( fr != null ) fr.delete();
      if(model != null)model.delete();
    }
  }
@@ -90,25 +90,25 @@ public class GLMTest2  extends TestUtil {
    * @throws InterruptedException
    */
   @Test public void testGammaRegression() throws InterruptedException, ExecutionException {
-    Key raw = Key.make("gamma_test_data_raw");
-    Key parsed = Key.make("gamma_test_data_parsed");
-    Key modelKey = Key.make("gamma_test");
     GLMModel model = null;
+    Frame fr = null;
     try {
       // make data so that the expected coefficients is icept = col[0] = 1.0
+      Key raw = Key.make("gamma_test_data_raw");
+      Key parsed = Key.make("gamma_test_data_parsed");
       FVecTest.makeByteVec(raw, "x,y\n0,1\n1,0.5\n2,0.3333333\n3,0.25\n4,0.2\n5,0.1666667\n6,0.1428571\n7,0.125");
-      Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
+      fr = ParseDataset2.parse(parsed, new Key[]{raw});
 //      /public GLM2(String desc, Key dest, Frame src, Family family, Link link, double alpha, double lambda) {
       double [] vals = new double[] {1.0,1.0};
       //public GLM2(String desc, Key dest, Frame src, Family family, Link link, double alpha, double lambda) {
       DataInfo dinfo = new DataInfo(fr, 1, false);
       GLMParams glm = new GLMParams(Family.gamma);
+      Key modelKey = Key.make("gamma_test");
       new GLM2("GLM test of gamma regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       model = DKV.get(modelKey).get();
       for(double c:model.beta())assertEquals(1.0, c,1e-4);
     }finally{
-      UKV.remove(raw);
-      UKV.remove(parsed);
+      if( fr != null ) fr.delete();
       if(model != null)model.delete();
     }
   }
@@ -118,11 +118,12 @@ public class GLMTest2  extends TestUtil {
     Key raw = Key.make("gaussian_test_data_raw");
     Key parsed = Key.make("gaussian_test_data_parsed");
     Key modelKey = Key.make("gaussian_test");
+    Frame fr = null;
     GLMModel model = null;
     try {
       // make data so that the expected coefficients is icept = col[0] = 1.0
       FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9\n0,0\n1,0\n2,0\n3,0\n4,0\n5,0\n6,0\n7,0\n8,0\n9,0");
-      Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
+      fr = ParseDataset2.parse(parsed, new Key[]{raw});
       double [] powers = new double [] {1.5,1.1,1.9};
       double [] intercepts = new double []{3.643,1.318,9.154};
       double [] xs = new double []{-0.260,-0.0284,-0.853};
@@ -135,12 +136,9 @@ public class GLMTest2  extends TestUtil {
         HashMap<String, Double> coefs = model.coefficients();
         assertEquals(intercepts[i],coefs.get("Intercept"),1e-3);
         assertEquals(xs[i],coefs.get("x"),1e-3);
-        model.delete();
-        model = null;
       }
     }finally{
-      UKV.remove(raw);
-      UKV.remove(parsed);
+      if( fr != null ) fr.delete();
       if(model != null)model.delete();
     }
   }
@@ -156,11 +154,12 @@ public class GLMTest2  extends TestUtil {
   @Test public void testCars() throws InterruptedException, ExecutionException{
     Key parsed = Key.make("cars_parsed");
     Key modelKey = Key.make("cars_model");
+    Frame fr = null;
     GLMModel model = null;
     try{
       String [] ignores = new String[]{"name"};
       String response = "power (hp)";
-      Frame fr = getFrameForFile(parsed, "smalldata/cars.csv", ignores, response);
+      fr = getFrameForFile(parsed, "smalldata/cars.csv", ignores, response);
       DataInfo dinfo = new DataInfo(fr, 1, true);
       GLMParams glm = new GLMParams(Family.poisson,0,Family.poisson.defaultLink,0);
       new GLM2("GLM test on cars.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
@@ -191,7 +190,7 @@ public class GLMTest2  extends TestUtil {
       for(int i = 0; i < cfs1.length; ++i)
         assertEquals(vls3[i], coefs.get(cfs1[i]),1e-4);
     } finally {
-      UKV.remove(parsed);
+      if( fr != null ) fr.delete();
       if(model != null)model.delete();
     }
   }
@@ -232,7 +231,7 @@ public class GLMTest2  extends TestUtil {
       assertEquals(378.3, val.residualDeviance(),1e-1);
       assertEquals(396.3, val.aic(),1e-1);
     } finally {
-      UKV.remove(parsed);
+      fr.delete();
       if(model != null)model.delete();
     }
   }
@@ -240,16 +239,12 @@ public class GLMTest2  extends TestUtil {
   private static Frame getFrameForFile(Key outputKey, String path,String [] ignores, String response){
     File f = TestUtil.find_test_file(path);
     Key k = NFSFileVec.make(f);
-    try{
-      Frame fr = ParseDataset2.parse(outputKey, new Key[]{k});
-      if(ignores != null)
-        for(String s:ignores) UKV.remove(fr.remove(s)._key);
-      // put the response to the end
-      fr.add(response, fr.remove(response));
-      return fr;
-    }finally{
-      UKV.remove(k);
-    }
+    Frame fr = ParseDataset2.parse(outputKey, new Key[]{k});
+    if(ignores != null)
+      for(String s:ignores) UKV.remove(fr.remove(s)._key);
+    // put the response to the end
+    fr.add(response, fr.remove(response));
+    return fr;
   }
 
 

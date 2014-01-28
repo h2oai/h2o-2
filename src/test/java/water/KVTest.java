@@ -123,7 +123,7 @@ public class KVTest extends TestUtil {
       sum += bh._x[i];
     assertEquals(file.length(),sum);
   
-    UKV.remove(h2okey);
+    Lockable.delete(h2okey);
   }
   
   // Byte-wise histogram
@@ -193,7 +193,6 @@ public class KVTest extends TestUtil {
     Key fkey = load_test_file("smalldata/cars.csv");
     Key okey = Key.make("cars.hex");
     ParseDataset.parse(okey,new Key[]{fkey});
-    UKV.remove(fkey);
     ValueArray va = DKV.get(okey).get();
     // Compute LinearRegression between columns 2 & 3
     JsonObject res = LinearRegression.run(va,2,3);
@@ -201,6 +200,6 @@ public class KVTest extends TestUtil {
     assertEquals(-124.57816399564385, res.get("Beta0"      ).getAsDouble(), 0.000001);
     assertEquals( 0.9058985668996267, res.get("RSquared"   ).getAsDouble(), 0.000001);
     assertEquals( 0.9352584499359637, res.get("Beta1StdErr").getAsDouble(), 0.000001);
-    UKV.remove(okey);
+    va.delete();
   }
 }

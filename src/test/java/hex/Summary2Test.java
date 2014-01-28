@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 
 public class Summary2Test extends TestUtil {
   @BeforeClass
-  public static void stall() { stall_till_cloudsize(1); }
+  public static void stall() { stall_till_cloudsize(3); }
 
   @Test public void testConstColumn() {
     Key key = Key.make("testConst.hex");
@@ -36,7 +36,7 @@ public class Summary2Test extends TestUtil {
     for (double pv : s._pctile)
       assertEquals(0.1, pv, 0.00001);
 
-    UKV.remove(key);
+    fr.delete();
   }
 
   @Test public void testEnumColumn() {
@@ -54,7 +54,7 @@ public class Summary2Test extends TestUtil {
     s.finishUp(vec);
 
     assertEquals(306, s.hcnt.length);
-    UKV.remove(key);
+    fr.delete();
   }
 
   @Test public void testIntColumn() {
@@ -74,7 +74,7 @@ public class Summary2Test extends TestUtil {
     assertEquals(0, s.hcnt[4]); // no 7 cylinder cars
     assertEquals(4, (int)s._pctile[0]);
     assertEquals(8, (int)s._pctile[s._pctile.length - 1]);
-    UKV.remove(key);
+    fr.delete();
   }
 
   public static void main(String[] args) throws Exception {

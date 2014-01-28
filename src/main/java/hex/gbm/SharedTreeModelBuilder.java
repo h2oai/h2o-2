@@ -580,7 +580,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Compute a CM & MSE
       doAll(adapValidation, build_tree_per_node);
       // Remove the extra adapted Vecs
-      frs[1].remove();
+      frs[1].delete();
       // Remove temporary result
       return this;
     }

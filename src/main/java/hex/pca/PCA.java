@@ -79,7 +79,8 @@ public class PCA extends ColumnsJob {
     DataInfo dinfo = new DataInfo(fr, 0, standardize);
     GramTask tsk = new GramTask(this, dinfo, false,false).doAll(dinfo._adaptedFrame);
     PCAModel myModel = buildModel(dinfo, tsk);
-    UKV.put(destination_key, myModel);
+    myModel.delete_and_lock(this);
+    myModel.unlock();
     return Status.Done;
   }
 

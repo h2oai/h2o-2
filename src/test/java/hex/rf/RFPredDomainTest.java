@@ -58,10 +58,9 @@ public class RFPredDomainTest extends TestUtil {
     assertArrayEquals("Confusion matrix", expCM, cm._matrix);
     assertArrayEquals("CM domain", expDomain, cm.domain());
 
-    model.deleteKeys();
-    UKV.remove(modelKey);
-    UKV.remove(testKey);
-    UKV.remove(trainKey);
+    model.delete();
+    testData.delete();
+    trainData.delete();
     UKV.remove(cmJob.dest());
   }
 

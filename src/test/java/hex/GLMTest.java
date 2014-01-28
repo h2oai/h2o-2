@@ -95,7 +95,7 @@ public class GLMTest extends TestUtil {
         assertEquals(err, validation.get("err").getAsDouble(), validationPrecision);
     } finally {
       if(m != null)
-        m.remove();
+        m.delete();
     }
   }
 
@@ -105,19 +105,19 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testGammaRegression() {
     Key datakey = Key.make("datakey");
+    // make data so that the expected coefficients is icept = col[0] = 1.0
+    ValueArray va = va_maker(datakey,
+                             new byte []{  0, 1,   2,         3,    4,   5,          6,         7        },
+                             new double[]{1.0, 0.5, 0.3333333, 0.25, 0.20, 0.1666667, 0.1428571, 0.1250000});
     try {
-      // make data so that the expected coefficients is icept = col[0] = 1.0
-      ValueArray va = va_maker(datakey,
-                  new byte []{  0, 1,   2,         3,    4,   5,          6,         7        },
-                 new double[]{1.0, 0.5, 0.3333333, 0.25, 0.20, 0.1666667, 0.1428571, 0.1250000});
       int cols [] = new int[]{0,1};
       DataFrame data = DGLM.getData(va, cols, null, false);
-      String [] coefs = new String[] {"Intercept","0"};
+      String [] coefs = new String[] {"Intercept","C1"};
       double [] vals = new double[] {1.0,1.0};
       runGLMTest(data, new ADMMSolver(0,0), new GLMParams(Family.gamma), 1, coefs, vals, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
       runGLMTest(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.gamma), 1, coefs, vals, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
     }finally{
-      UKV.remove(datakey);
+      va.delete();
     }
   }
 
@@ -127,20 +127,19 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testPoissonRegression() {
     Key datakey = Key.make("datakey");
-    Key datakey2 = Key.make("datakey2");
+    // Test 1, synthetic dataset
+    ValueArray va =
+      va_maker(datakey,
+               new byte [] { 0, 1, 2, 3 , 4 , 5 , 6  , 7  },
+               new double[]{ 2, 4, 8, 16, 32, 64, 128, 256});
     try {
-      // Test 1, synthetic dataset
-      ValueArray va =
-        va_maker(datakey,
-                 new byte [] { 0, 1, 2, 3 , 4 , 5 , 6  , 7  },
-                 new double[]{ 2, 4, 8, 16, 32, 64, 128, 256});
       DataFrame data = DGLM.getData(va, new int [] {0,1}, null, false);
-      String [] coefs = new String [] {"Intercept","0"};
+      String [] coefs = new String [] {"Intercept","C1"};
       double [] vals =  new double [] {Math.log(2),Math.log(2)};
       runGLMTest(data, new ADMMSolver(0,0), new GLMParams(Family.poisson), 1, coefs, vals, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
       runGLMTest(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.poisson), 1, coefs, vals, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
       // Test 2, example from http://www.biostat.umn.edu/~dipankar/bmtry711.11/lecture_13.pdf
-      va = va_maker(datakey2,
+      va = va_maker(datakey,
                    new byte []{1,2,3,4,5,6,7,8, 9, 10,11,12,13,14},
                    new byte []{0,1,2,3,1,4,9,18,23,31,20,25,37,45});
       vals[0] = 0.3396; vals[1] = 0.2565;
@@ -149,8 +148,7 @@ public class GLMTest extends TestUtil {
       // TODO: GG fails here (produces bad results
       //runGLMTest(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.poisson), 1, coefs, vals, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
     }finally{
-      UKV.remove(datakey);
-      UKV.remove(datakey2);
+      va.delete();
     }
   }
 
@@ -161,8 +159,8 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testCars(){
     Key k = loadAndParseFile("h.hex","smalldata/cars.csv");
+    ValueArray ary = DKV.get(k).get();
     try{
-      ValueArray ary = DKV.get(k).get();
       // PREDICT POWER
       String [] cfs1 = new String[]{"Intercept","economy (mpg)", "cylinders", "displacement (cc)", "weight (lb)", "0-60 mph (s)", "year"};
       int [] cols = ary.getColumnIds(new String[]{"economy (mpg)", "cylinders", "displacement (cc)", "weight (lb)", "0-60 mph (s)", "year", "power (hp)"});
@@ -184,7 +182,7 @@ public class GLMTest extends TestUtil {
       // TODO: GG is producing really low-precision results here...
       runGLMTest(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.gaussian), 1, cfs1, vls3, Double.NaN, Double.NaN, Double.NaN, 3111, Double.NaN,5e-1,5e-1);
     } finally {
-      UKV.remove(k);
+      ary.delete();
     }
   }
 
@@ -197,8 +195,8 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testProstate(){
     Key k = loadAndParseFile("h.hex","smalldata/glm_test/prostate_cat_replaced.csv");
+    ValueArray ary = DKV.get(k).get();
     try{
-      ValueArray ary = DKV.get(k).get();
       // R results
       //(Intercept)       AGE       RACER2       RACER3        DPROS        DCAPS          PSA          VOL      GLEASON
       // -8.14867     -0.01368      0.32337     -0.38028      0.55964      0.49548      0.02794     -0.01104      0.97704
@@ -209,7 +207,7 @@ public class GLMTest extends TestUtil {
       runGLMTest(data, new ADMMSolver(0,0), new GLMParams(Family.binomial), 1,  cfs1, vals, 512.3, 378.3, Double.NaN, 396.3 , Double.NaN,1e-3,5e-1);
       runGLMTest(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.binomial), 1,  cfs1, vals, 512.3, 378.3, Double.NaN, 396.3 , Double.NaN,1e-1,5e-1);
     } finally {
-      UKV.remove(k);
+      ary.delete();
     }
   }
 
@@ -221,11 +219,8 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testCredit(){
     Key k = loadAndParseFile("h.hex","smalldata/kaggle/creditsample-test.csv.gz");
-    try{
-      ValueArray ary = DKV.get(k).get();
-    } finally {
-      UKV.remove(k);
-    }
+    ValueArray ary = DKV.get(k).get();
+    ary.delete();
   }
 
   /**
@@ -233,8 +228,8 @@ public class GLMTest extends TestUtil {
    */
   @Test public void testPoissonTst1(){
     Key k = loadAndParseFile("h.hex","smalldata/glm_test/poisson_tst1.csv");
+    ValueArray ary = DKV.get(k).get();
     try{
-      ValueArray ary = DKV.get(k).get();
       String [] colnames = new String [] {"prog","math","num_awards"};
       String [] coefs    = new String [] {"Intercept","prog.General","prog.Vocational","math"};
       double [] vals     = new double [] {-4.1627,      -1.08386,       -0.71405,        0.07015 };
@@ -243,7 +238,7 @@ public class GLMTest extends TestUtil {
       runGLMTest(data, new ADMMSolver(0,0), new GLMParams(Family.poisson), 1, coefs, vals, Double.NaN, Double.NaN, Double.NaN, Double.NaN, Double.NaN,1e-3,1e-1);
       runGLMTest(data, new GeneralizedGradientSolver(0,0), new GLMParams(Family.poisson), 1, coefs, vals, Double.NaN, Double.NaN, Double.NaN, Double.NaN,Double.NaN,1e-3,1e-1);
     } finally {
-      UKV.remove(k);
+      ary.delete();
     }
   }
 
@@ -251,13 +246,13 @@ public class GLMTest extends TestUtil {
   // Test GLM on a simple dataset that has an easy Linear Regression.
   @Test public void testLinearRegression() {
     Key datakey = Key.make("datakey");
+    // Make some data to test with.
+    // Equation is: y = 0.1*x+0
+    ValueArray va =
+      va_maker(datakey,
+               new byte []{  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9 },
+               new float[]{0.0f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f});
     try {
-      // Make some data to test with.
-      // Equation is: y = 0.1*x+0
-      ValueArray va =
-        va_maker(datakey,
-                 new byte []{  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9 },
-                 new float[]{0.0f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f});
       // Compute LinearRegression between columns 0 & 1
       JsonObject lr = LinearRegression.run(va,0,1);
       assertEquals( 0.0, lr.get("Beta0"   ).getAsDouble(), 0.000001);
@@ -267,10 +262,11 @@ public class GLMTest extends TestUtil {
       JsonObject glm = computeGLM(Family.gaussian,lsms,va,null); // Solve it!
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals( 0.0, coefs.get("Intercept").getAsDouble(), 0.000001);
-      assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      assertEquals( 0.1, coefs.get("C1")        .getAsDouble(), 0.000001);
+      GLMModel glmmodel = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel.delete();
     } finally {
-      UKV.remove(datakey);
+      va.delete();
     }
   }
 
@@ -278,13 +274,13 @@ public class GLMTest extends TestUtil {
   // simple tweedie test
   @Test public void testTweedieRegression() {
     Key datakey = Key.make("datakey");
+    // Make some data to test with.
+    // Equation is: y = 0.1*x+0
+    ValueArray va =
+      va_maker(datakey,
+               new byte []{  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9,  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9 },
+               new float[]{0.0f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f});
     try {
-      // Make some data to test with.
-      // Equation is: y = 0.1*x+0
-      ValueArray va =
-        va_maker(datakey,
-                 new byte []{  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9,  0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9 },
-                 new float[]{0.0f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f});
       LSMSolver lsms = new ADMMSolver(0,0);
       double[] var_powers = new double[]{ 1.5,    1.1,     1.9, };
       double[] beta0s = new double[]{     3.643,  1.318,   9.154,};
@@ -297,11 +293,12 @@ public class GLMTest extends TestUtil {
         JsonObject glm = computeGLM(family, lsms, va, null); // Solve it!
         JsonObject coefs = glm.get("coefficients").getAsJsonObject();
         assertEquals( "tweedie test variance power = " + var_powers[ test ], beta0s[ test ], coefs.get("Intercept").getAsDouble(), 0.001);
-        assertEquals( "tweedie test variance power = " + var_powers[ test ], beta1s[ test ], coefs.get("0")        .getAsDouble(), 0.001);
-        UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+        assertEquals( "tweedie test variance power = " + var_powers[ test ], beta1s[ test ], coefs.get("C1")        .getAsDouble(), 0.001);
+        GLMModel glmmodel = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+        glmmodel.delete();
       }
     } finally {
-      UKV.remove(datakey);
+      va.delete();
     }
   }
 
@@ -309,21 +306,22 @@ public class GLMTest extends TestUtil {
   // Now try with a more complex binomial regression
   @Test public void testLogReg_Basic() {
     Key datakey = Key.make("datakey");
+    // Make some data to test with.  2 columns, all numbers from 0-9
+    ValueArray va = va_maker(datakey,2,10, new DataExpr() {
+        public double expr( byte[] x ) { return 1.0/(1.0+Math.exp(-(0.1*x[0]+0.3*x[1]-2.5))); } } );
     try {
-      // Make some data to test with.  2 columns, all numbers from 0-9
-      ValueArray va = va_maker(datakey,2,10, new DataExpr() {
-         public double expr( byte[] x ) { return 1.0/(1.0+Math.exp(-(0.1*x[0]+0.3*x[1]-2.5))); } } );
 
       LSMSolver lsms = new ADMMSolver(0,0); // Default normalization of NONE
       JsonObject glm = computeGLMlog(lsms,va); // Solve it!
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.000001);
-      assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
-      assertEquals( 0.3, coefs.get("1")        .getAsDouble(), 0.000001);
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      assertEquals( 0.1, coefs.get("C1")        .getAsDouble(), 0.000001);
+      assertEquals( 0.3, coefs.get("C2")        .getAsDouble(), 0.000001);
+      GLMModel glmmodel = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel.delete();
 
     } finally {
-      UKV.remove(datakey);
+      va.delete();
     }
   }
 
@@ -344,71 +342,72 @@ public class GLMTest extends TestUtil {
 
   @Test public void testLogReg_Dirty() {
     Key datakey = Key.make("datakey");
-    try {
-      Random R = new Random(0x987654321L);
-      for( int i=0; i<10; i++ ) {
-        double[] coefs = new double[] { R.nextDouble(),R.nextDouble(),R.nextDouble() };
-        ValueArray va = va_maker(datakey,2,10, new DataExpr_Dirty(R, coefs));
-
-        LSMSolver lsms = new ADMMSolver(0,0); // Default normalization of NONE;
-        JsonObject glm = computeGLMlog(lsms,va); // Solve it!
-        JsonObject res = glm.get("coefficients").getAsJsonObject();
-        assertEquals(coefs[0], res.get("0")        .getAsDouble(), 0.001);
-        assertEquals(coefs[1], res.get("1")        .getAsDouble(), 0.001);
-        assertEquals(coefs[2], res.get("Intercept").getAsDouble(), 0.001);
-        UKV.remove(datakey);
-        UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
-      }
-    } finally {
-      UKV.remove(datakey);
+    Random R = new Random(0x987654321L);
+    for( int i=0; i<10; i++ ) {
+      double[] coefs = new double[] { R.nextDouble(),R.nextDouble(),R.nextDouble() };
+      ValueArray va = va_maker(datakey,2,10, new DataExpr_Dirty(R, coefs));
+      
+      LSMSolver lsms = new ADMMSolver(0,0); // Default normalization of NONE;
+      JsonObject glm = computeGLMlog(lsms,va); // Solve it!
+      JsonObject res = glm.get("coefficients").getAsJsonObject();
+      assertEquals(coefs[0], res.get("C1")        .getAsDouble(), 0.001);
+      assertEquals(coefs[1], res.get("C2")        .getAsDouble(), 0.001);
+      assertEquals(coefs[2], res.get("Intercept").getAsDouble(), 0.001);
+      va.delete();
+      GLMModel glmmodel = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel.delete();
     }
   }
 
   @Test public void testLogReg_Penalty() {
     Key datakey = Key.make("datakey");
+    // Make some data to test with.  2 columns, all numbers from 0-9
+    ValueArray va = va_maker(datakey,2,10, new DataExpr() {
+        public double expr( byte[] x ) { return 1.0/(1.0+Math.exp(-(0.1*x[0]+0.3*x[1]-2.5))); } } );
     try {
-      // Make some data to test with.  2 columns, all numbers from 0-9
-      ValueArray va = va_maker(datakey,2,10, new DataExpr() {
-          public double expr( byte[] x ) { return 1.0/(1.0+Math.exp(-(0.1*x[0]+0.3*x[1]-2.5))); } } );
 
       // No penalty
       LSMSolver lsms0 = new ADMMSolver(0,0); // Default normalization of NONE;
       JsonObject glm = computeGLMlog(lsms0,va); // Solve it!
       JsonObject coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
-      assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
-      assertEquals( 0.3, coefs.get("1")        .getAsDouble(), 0.000001);
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      assertEquals( 0.1, coefs.get("C1")        .getAsDouble(), 0.000001);
+      assertEquals( 0.3, coefs.get("C2")        .getAsDouble(), 0.000001);
+      GLMModel glmmodel1 = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel1.delete();
 
       // L1 penalty
       LSMSolver lsms1 = new ADMMSolver(0.0,0.0); // Default normalization of NONE;
       glm = computeGLMlog(lsms1,va); // Solve it!
       coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
-      assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
-      assertEquals( 0.3, coefs.get("1")        .getAsDouble(), 0.000001);
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      assertEquals( 0.1, coefs.get("C1")        .getAsDouble(), 0.000001);
+      assertEquals( 0.3, coefs.get("C2")        .getAsDouble(), 0.000001);
+      GLMModel glmmodel2 = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel2.delete();
 
       // L2 penalty
       LSMSolver lsms2 = new ADMMSolver(0.0,0.0); // Default normalization of NONE;
       glm = computeGLMlog(lsms2,va); // Solve it!
       coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
-      assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
-      assertEquals( 0.3, coefs.get("1")        .getAsDouble(), 0.000001);
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      assertEquals( 0.1, coefs.get("C1")        .getAsDouble(), 0.000001);
+      assertEquals( 0.3, coefs.get("C2")        .getAsDouble(), 0.000001);
+      GLMModel glmmodel3 = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel3.delete();
 
       // ELASTIC penalty
       LSMSolver lsmsx = new ADMMSolver(0.0,0.0); // Default normalization of NONE;
       glm = computeGLMlog(lsmsx,va); // Solve it!
       coefs = glm.get("coefficients").getAsJsonObject();
       assertEquals(-2.5, coefs.get("Intercept").getAsDouble(), 0.00001);
-      assertEquals( 0.1, coefs.get("0")        .getAsDouble(), 0.000001);
-      assertEquals( 0.3, coefs.get("1")        .getAsDouble(), 0.000001);
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      assertEquals( 0.1, coefs.get("C1")        .getAsDouble(), 0.000001);
+      assertEquals( 0.3, coefs.get("C2")        .getAsDouble(), 0.000001);
+      GLMModel glmmodel4 = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel4.delete();
 
     } finally {
-      UKV.remove(datakey);
+      va.delete();
     }
   }
 
@@ -417,14 +416,14 @@ public class GLMTest extends TestUtil {
   // Currently broken, as Exec1 has been removed and Exec2 only produces Vecs
   // not VAs.  An alternative would be to select "case==3".
   /*@Test*/ public void testLogReg_CARS_CSV() {
-    Key k1=null,k2=null;
+    Key k1= loadAndParseFile("h.hex","smalldata/cars.csv");
+    ValueArray va=null;
     try {
-      k1 = loadAndParseFile("h.hex","smalldata/cars.csv");
       // Fold the cylinders down to 1/0 for 3/not-3
       //k2 = Exec2.exec("h.hex[,3]=(h.hex[,3]==3)","h2.hex");
       // Columns for displacement, power, weight, 0-60, year, then response is cylinders
       int[] cols= new int[]{3,4,5,6,7,2};
-      ValueArray va = DKV.get(k1).get();
+      va = DKV.get(k1).get();
       // Compute the coefficients
       LSMSolver lsmsx = new ADMMSolver(0,0.0);
       JsonObject glm = computeGLM( Family.binomial, lsmsx, va, cols );
@@ -453,11 +452,11 @@ public class GLMTest extends TestUtil {
         double cyl = va.data(ab,i,2); // 1==3-cyl, 0==not-3-cyl
         assertEquals(cyl,p,0.005); // Hopefully fairly close to 0 for 3-cylinder, 1 for not-3
       }
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      GLMModel glmmodel = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel.delete();
 
     } finally {
-      UKV.remove(k1);
-      if( k2 != null ) UKV.remove(k2);
+      if( va != null ) va.delete();
     }
   }
 
@@ -480,7 +479,7 @@ public class GLMTest extends TestUtil {
     final double icept = coefs.get("Intercept").getAsDouble();
     final double c[] = new double[5];
     for( int i=0; i<c.length; i++ )
-      c[i] = coefs.get(Integer.toString(i)).getAsDouble();
+      c[i] = coefs.get("C" + Integer.toString(i+1)).getAsDouble();
 
     // Now run the dataset through the equation and see how close we got
     AutoBuffer ab = va.getChunk(0);
@@ -494,8 +493,9 @@ public class GLMTest extends TestUtil {
       final long actl = va.data(ab,i,5);          // Actual
       assertEquals(actl,p);
     }
-    UKV.remove(k1);
-    UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+    va.delete();
+    GLMModel glmmodel = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+    glmmodel.delete();
 
     // No convergence warnings
     final JsonElement je = glm.get("warnings");
@@ -509,15 +509,15 @@ public class GLMTest extends TestUtil {
   // Categorical Test!  Lets make a simple categorical test case
   @Test public void testLogRegCat_Basic() {
     Key datakey = Key.make("datakey");
+    // Make some data to test with.
+    // Low's = 0,0,0  ==> should predict as 0
+    // Med's = 0,1,0  ==> should predict as 0.3333...
+    // Highs = 1,1,1  ==> should predict as 1
+    ValueArray va =
+      va_maker(datakey,
+               new String[]{ "Low", "Med", "High", "Low", "Med", "High", "Low", "Med", "High" },
+               new byte  []{     0,     0,      1,     0,     1,      1,     0,     0,     1  });
     try {
-      // Make some data to test with.
-      // Low's = 0,0,0  ==> should predict as 0
-      // Med's = 0,1,0  ==> should predict as 0.3333...
-      // Highs = 1,1,1  ==> should predict as 1
-      ValueArray va =
-        va_maker(datakey,
-                 new String[]{ "Low", "Med", "High", "Low", "Med", "High", "Low", "Med", "High" },
-                 new byte  []{     0,     0,      1,     0,     1,      1,     0,     0,     1  });
 
       LSMSolver lsms = new ADMMSolver(0,0.0); // Default normalization of NONE
       JsonObject glm = computeGLMlog(lsms,va); // Solve it!
@@ -526,9 +526,10 @@ public class GLMTest extends TestUtil {
       //assertCat(jcoefs,icept,"Low" ,0.0      );// now folded into the intercept
       assertCat(jcoefs,icept,"Med" ,0.3333333);
       assertCat(jcoefs,icept,"High",1.0      );
-      UKV.remove(Key.make(glm.get(Constants.MODEL_KEY).getAsString()));
+      GLMModel glmmodel = DKV.get(Key.make(glm.get(Constants.MODEL_KEY).getAsString())).get();
+      glmmodel.delete();
     } finally {
-      UKV.remove(datakey);
+      va.delete();
     }
   }
 
@@ -543,7 +544,7 @@ public class GLMTest extends TestUtil {
     // When computing the math, all predictors are zero except the one...  so
     // the equation expansion only needs to sum the one coeficient multiplied
     // by 1, plus the intercept.
-    double coef = jcoefs.get("0."+category).getAsDouble();
+    double coef = jcoefs.get("C1."+category).getAsDouble();
     double predict = 1.0/(1.0+Math.exp(-(coef*1.0/* + all other terms are 0 */+icept)));
     assertEquals(expected,predict,0.001);
   }
@@ -567,8 +568,8 @@ public class GLMTest extends TestUtil {
     try {
       m = DGLM.startGLMJob(df, lsms, glmp, null, 2, true).get();
     } finally {
-      if( m != null ) m.remove();
-      UKV.remove(k1);
+      va.delete();
+      if( m != null ) m.delete();
     }
   }
 }

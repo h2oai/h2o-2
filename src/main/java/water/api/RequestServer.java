@@ -1,32 +1,40 @@
 package water.api;
 
-import hex.*;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Closeables;
 import hex.GridSearch.GridSearchProgress;
+import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
-import hex.NeuralNet.NeuralNetProgress;
+import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetScore;
 import hex.drf.DRF;
 import hex.gbm.GBM;
-import hex.glm.*;
-import hex.pca.*;
+import hex.glm.GLM2;
+import hex.glm.GLMGridView;
+import hex.glm.GLMModelView;
+import hex.glm.GLMProgress;
+import hex.pca.PCA;
+import hex.pca.PCAModelView;
+import hex.pca.PCAProgressPage;
+import hex.pca.PCAScore;
+import water.Boot;
+import water.H2O;
+import water.NanoHTTPD;
+import water.api.Script.RunScript;
+import water.api.Upload.PostFile;
+import water.deploy.LaunchJar;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
+import water.util.Utils.ExpectedExceptionForDebug;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-
-import water.*;
-import water.api.Script.RunScript;
-import water.api.Upload.PostFile;
-import water.deploy.LaunchJar;
-import water.util.*;
-import water.util.Log.Tag.Sys;
-import water.util.Utils.ExpectedExceptionForDebug;
-
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
@@ -142,7 +150,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new RPackage.RDownload());
-    registerRequest(new NeuralNetProgress());
+    registerRequest(new NeuralNetModelView());
+    registerRequest(new NeuralNetProgressPage());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
     registerRequest(new PCAProgressPage());
@@ -164,7 +173,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new LogAndEcho());
     registerRequest(new GLMProgress());
     registerRequest(new hex.glm.GLMGridProgress());
-    registerRequest(new water.api.Levels());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels2());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels());    // Ditto the above for ValueArray objects
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
@@ -228,6 +238,29 @@ public class RequestServer extends NanoHTTPD {
   }
 
   // uri serve -----------------------------------------------------------------
+  void maybeLogRequest (String uri, String method, Properties parms) {
+    boolean filterOutRepetitiveStuff = true;
+
+    if (filterOutRepetitiveStuff) {
+      if (uri.endsWith(".css")) return;
+      if (uri.endsWith(".js")) return;
+      if (uri.endsWith(".png")) return;
+      if (uri.endsWith(".ico")) return;
+      if (uri.startsWith("/Typeahead")) return;
+      if (uri.startsWith("/Cloud.json")) return;
+      if (uri.endsWith("LogAndEcho.json")) return;
+      if (uri.contains("Progress")) return;
+    }
+
+    String log = String.format("%-4s %s", method, uri);
+    for( Object arg : parms.keySet() ) {
+      String value = parms.getProperty((String) arg);
+      if( value != null && value.length() != 0 )
+        log += " " + arg + "=" + value;
+    }
+    Log.info(Sys.HTTPD, log);
+  }
+
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
@@ -236,6 +269,8 @@ public class RequestServer extends NanoHTTPD {
     // determine the request type
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
+
+    maybeLogRequest(uri, method, parms);
     try {
       // determine if we have known resource
       Request request = _requests.get(requestName);

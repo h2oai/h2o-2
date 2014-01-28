@@ -533,10 +533,11 @@ setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
 })
+
 setMethod("colnames<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
-setMethod("names<-", "H2OParsedData", function(x, value) { names(x) <- value })
+setMethod("names<-", "H2OParsedData", function(x, value) { colnames(x) <- value })
 # setMethod("nrow", "H2OParsedData", function(x) { h2o.__unop2("nrow", x) })
 # setMethod("ncol", "H2OParsedData", function(x) { h2o.__unop2("ncol", x) })
 
@@ -683,7 +684,7 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   x.slice = as.data.frame(x[seq_len(n),])
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -700,7 +701,7 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   idx = seq.int(to = nrx, length.out = n)
   x.slice = as.data.frame(x[idx,])
   rownames(x.slice) = idx
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -717,22 +718,24 @@ any.factor <- function(x) {
   as.logical(h2o.__unop2("any.factor", x))
 }
 
-setMethod("quantile", "H2OParsedData", function(x, probs = c(0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99), na.rm = FALSE, names = TRUE) {
-  if(any.factor(x)) stop("factors are not allowed")
-  if(na.rm) stop("Unimplemented")
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  temp = sapply(res$summaries, function(x) { x$stats$pctile })
-  # filt = !sapply(temp, is.null)
-  # temp = temp[filt]
-  if(length(temp) == 0) return(NULL)
-
-  # myFeat = res$names[filt[1:length(res$names)]]
-  # myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
-  myFeat = sapply(res$summaries, function(x) { x$colname })
-  myQuantiles = res$summaries[[1]]$stats$pct
-  if(any(!probs %in% myQuantiles)) stop("Only the following quantiles are supported: ", paste(myQuantiles, collapse=", "))
-  temp2 = matrix(unlist(temp), ncol = length(myFeat), dimnames = list(paste(100*myQuantiles, "%", sep=""), myFeat))
-  temp2[match(probs, myQuantiles),]
+setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE) {
+  if(ncol(x) != 1) stop("quantile only operates on a single column")
+  if(is.factor(x)) stop("factors are not allowed")
+  if(!is.numeric(probs)) stop("probs must be a numeric vector")
+  if(any(probs < 0 | probs > 1)) stop("probs must fall in the range of [0,1]")
+  if(!na.rm && h2o.__unop2("any.na", x)) stop("missing values and NaN's not allowed if 'na.rm' is FALSE")
+  
+  myFeat <- colnames(x)
+  myProbs <- paste("c(", paste(probs, collapse = ","), ")", sep = "")
+  expr = paste("quantile(", x@key, ",", myProbs, ")", sep = "")
+  
+  res = h2o.__exec2(x@h2o, expr)
+  # col <- as.numeric(strsplit(res$result, "\n")[[1]][-1])
+  # res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res$dest_key, view=res$num_rows)
+  # col <- sapply(res2$rows, function(x) { x[[2]] })
+  col <- as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res$dest_key))[[1]]
+  if(names) names(col) <- paste(100*probs, "%", sep="")
+  return(col)
 })
 
 setGeneric("histograms", function(object) { standardGeneric("histograms") })
@@ -816,7 +819,7 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
 
 setMethod("levels", "H2OParsedData", function(x) {
   if(ncol(x) != 1) return(NULL)
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   res$levels[[1]]
 })
 
@@ -828,24 +831,32 @@ setMethod("as.name", "H2OParsedData", function(x) {
 # TODO: Need to change ... to environment variables and pass to substitute method,
 #       Can't figure out how to access outside environment from within lapply
 setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
-  # h2olist <- lapply(list(...), function(x) { if(class(x) == "H2OParsedData") x@key else x })
-  # idx = which(names(h2olist) == "")
-  # names(h2olist)[idx] <- unlist(unname(list(...)))[idx]
-  
-  # lapply(list(...), function(x) { if(class(x) == "H2OParsedData") assign(x, as.name(x@key)) })
-  # if(deparse(substitute(X)) != X@key)
-  #  assign(deparse(substitute(X)), as.name(X@key))
+  if(missing(X) || !class(X) %in% c("H2OParsedData", "H2OParsedDataVA"))
+    stop("X must be a H2O parsed data object")
+  if(missing(MARGIN) || !(length(MARGIN) <= 2 && all(MARGIN %in% c(1,2))))
+    stop("MARGIN must be either 1 (rows), 2 (cols), or a vector containing both")
+  if(missing(FUN) || !is.function(FUN))
+    stop("FUN must be an R function")
   
   myList <- list(...)
-  tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric")} )
-  if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
-  # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
+  if(length(myList) > 0) {
+    tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "H2OParsedDataVA", "numeric") } )
+    if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
+    
+    idx = which(sapply(myList, function(x) { class(x) %in% c("H2OParsedData", "H2OParsedDataVA") }))
+    # myList <- lapply(myList, function(x) { if(class(x) %in% c("H2OParsedData", "H2OParsedDataVA")) x@key else x })
+    myList[idx] <- lapply(myList[idx], function(x) { x@key })
+    
+    # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
+    if(any(names(myList) == ""))
+      stop("Must specify corresponding variable names of ", myList[names(myList) == ""])
+  }
   
+  # Substitute in function name: FUN <- match.fun(FUN)
   myfun = deparse(substitute(FUN))
   len = length(myfun)
-
-  if(len > 2 && myfun[len] == "}")
-    myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), myfun[len])
+  if(len > 3 && substr(myfun[1], nchar(myfun[1]), nchar(myfun[1])) == "{" && myfun[len] == "}")
+    myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), "}")
   else
     myfun = paste(myfun, collapse = "")
   params = c(X@key, MARGIN, myfun)
@@ -868,7 +879,7 @@ str.H2OParsedData <- function(object, ...) {
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
   rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
-  res2 = h2o.__remoteSend(object@h2o, h2o.__HACK_LEVELS, source = object@key)
+  res2 = h2o.__remoteSend(object@h2o, h2o.__HACK_LEVELS2, source = object@key)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
@@ -968,16 +979,18 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
-  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
+setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
+  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
 
-setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
+setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
   function(x, value) {
-    if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
-    stop("Unimplemented"); return(x)
-})
+    if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
+    else if(any(duplicated(value))) stop("Column names must be unique")
+    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
+  })
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
+setMethod("names<-", "H2OParsedDataVA", function(x, value) { colnames(x) <- value })
 
 setMethod("nrow", "H2OParsedDataVA", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_rows) })
@@ -1004,7 +1017,7 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
 
-  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, key = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res2$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
@@ -1026,7 +1039,7 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, key = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res2$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])

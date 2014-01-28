@@ -2,12 +2,12 @@ package water.parser;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 
 
 import water.*;
 import water.fvec.ParseDataset2.ParseProgressMonitor;
+import water.parser.ParseDataset.ParseSetupGuessException;
 
 
 public abstract class CustomParser extends Iced {
@@ -44,6 +44,11 @@ public abstract class CustomParser extends Iced {
       _errors = errors;
       _data = data;
     }
+
+    public void checkColumnNames(){
+      _setup.checkColumnNames();
+    }
+
     public final boolean valid(){
       return _setup._ncols > 0 && _validLines > 0 && _invalidLines < _validLines;
     }
@@ -96,6 +101,21 @@ public abstract class CustomParser extends Iced {
       _header = header;
       _columnNames = columnNames;
       _singleQuotes = singleQuotes;
+    }
+    public void checkColumnNames(){
+      if(_header){
+        HashSet<String> uniqueNames = new HashSet<String>();
+        HashSet<String> conflictingNames = new HashSet<String>();
+        for(String n:_columnNames){
+          if(!uniqueNames.contains(n)){
+            uniqueNames.add(n);
+          } else {
+            conflictingNames.add(n);
+          }
+        }
+        if(!conflictingNames.isEmpty())
+          throw new ParseSetupGuessException("Invalid header. Got conflicting column names. " + conflictingNames.toString(),null,null);
+      }
     }
     public ParserSetup clone(){
       return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes);

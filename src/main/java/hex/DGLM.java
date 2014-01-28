@@ -981,26 +981,6 @@ public abstract class DGLM {
       return sb.toString();
     }
 
-    @Override public void delete() {
-      // nuke sub-models
-      if( _vals != null ) for( GLMValidation v : _vals )
-        UKV.remove(v._key);
-    }
-
-    //public GLMModel() {
-    //  _status = Status.NotStarted;
-    //  _colCatMap = null;
-    //  _beta = null;
-    //  _normBeta = null;
-    //  _glmParams = null;
-    //  _s = null;
-    //  _standardized = false;
-    //  _converged = false;
-    //  _iterations = 0;
-    //  _time = 0;
-    //  _solver = null;
-    //  _dof = _nCols = _nLines = _response = 0;
-    //}
 
     public GLMModel(Status status, float progress, Key k, DataFrame data, double[] beta, double[] normBeta,
         GLMParams glmp, LSMSolver solver, long nLines, long nCols, boolean converged, int iters, long time,
@@ -1036,7 +1016,7 @@ public abstract class DGLM {
     }
 
     public void store() {
-      UKV.put(_selfKey, clone());
+      clone().update();
     }
 
     @Override
@@ -1047,11 +1027,13 @@ public abstract class DGLM {
       res._vals = res._vals == null?null:res._vals.clone();
       return res;
     }
-    public void remove() {
-      UKV.remove(_selfKey);
-      if( _vals != null ) for( GLMValidation val : _vals )
-        if( val._modelKeys != null ) for( Key k : val._modelKeys )
-          UKV.remove(k);
+
+    @Override public void delete_impl(Futures fs) { 
+      if( _vals != null ) 
+        for( GLMValidation val : _vals )
+          if( val._modelKeys != null ) 
+            for( Key k : val._modelKeys )
+              ((GLMModel)DKV.get(k).get()).delete();
     }
 
     private static class YMUVal extends Iced {
@@ -1204,7 +1186,7 @@ public abstract class DGLM {
       valtsk.invoke(ary._key);
       GLMValidation res = valtsk._res;
       res._dataKey = ary._key;
-      res._modelKey = this._selfKey;
+      res._modelKey = this._key;
       res._time = System.currentTimeMillis() - t1;
       if( _glmParams._family._family != Family.binomial ) res._err = Math.sqrt(res._err / res._n);
       res._dataKey = ary._key;
@@ -1269,8 +1251,7 @@ public abstract class DGLM {
         }
       }
       if( job.cancelled() ) throw new JobCancelledException();
-      GLMValidation res = new GLMValidation(_selfKey, tsk._models, ErrMetric.SUMC, thresholds,
-          System.currentTimeMillis() - t1);
+      GLMValidation res = new GLMValidation(_key, tsk._models, ErrMetric.SUMC, thresholds, System.currentTimeMillis() - t1);
       if( _vals == null ) _vals = new GLMValidation[] { res };
       else {
         _vals = Arrays.copyOf(_vals, _vals.length + 1);
@@ -1289,7 +1270,7 @@ public abstract class DGLM {
       res.addProperty("dof", _dof);
       res.addProperty("nLines", _nLines);
       res.addProperty("nCols", _nCols);
-      res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
+      res.addProperty(Constants.MODEL_KEY, _key.toString());
       if( _warnings != null ) {
         JsonArray warnings = new JsonArray();
         for( String w : _warnings )
@@ -1921,8 +1902,7 @@ public abstract class DGLM {
     } else {
       beta = denormalizedBeta = null;
     }
-    UKV.put(job.dest(), new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params,
-        lsm, 0, 0, false, 0, 0, null));
+    new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params, lsm, 0, 0, false, 0, 0, null).delete_and_lock(job);
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {

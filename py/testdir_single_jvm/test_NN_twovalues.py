@@ -99,9 +99,7 @@ class test_NN_twovalues(unittest.TestCase):
             timeoutSecs = 60
             start = time.time()
             h2o.beta_features = True
-            nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-            h2o.verboseprint("\nnnResult:", h2o.dump_json(nnResult))
-            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=10, retryDelaySecs=5)
+            h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "trial #", trial, "NN end on ", csvFilename, ' took', time.time() - start, 'seconds'
 
             #### Now score using the model, and check the validation error

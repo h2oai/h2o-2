@@ -1,5 +1,9 @@
 package water;
 
+import water.nbhm.NonBlockingHashMap;
+import water.nbhm.NonBlockingHashMapLong;
+import water.util.Log;
+
 import java.io.IOException;
 import java.net.*;
 import java.nio.channels.DatagramChannel;
@@ -7,10 +11,6 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import water.nbhm.NonBlockingHashMap;
-import water.nbhm.NonBlockingHashMapLong;
-import water.util.Log;
 
 /**
  * A <code>Node</code> in an <code>H2O</code> Cloud.
@@ -177,6 +177,10 @@ public class H2ONode extends Iced implements Comparable {
 
   // index of this node in the current cloud... can change at the next cloud.
   public int index() { return H2O.CLOUD.nidx(this); }
+
+  // max memory for this node.
+  // no need to ask the (possibly not yet populated) heartbeat if we want to know the local max memory.
+  public long get_max_mem() { return this == H2O.SELF ? Runtime.getRuntime().maxMemory() : _heartbeat.get_max_mem(); }
 
   // ---------------
   // A queue of available TCP sockets

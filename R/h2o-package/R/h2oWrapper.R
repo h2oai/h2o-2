@@ -208,6 +208,15 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
     rm(".Last", envir = .GlobalEnv)
 }
 
+# .onUnload <- function(libpath) {
+#   ip = "127.0.0.1"; port = 54321
+#   myURL = paste("http://", ip, ":", port, sep = "")
+#   
+#   require(RCurl); require(rjson)
+#   if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
+#     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
+# }
+
 h2o.startJar <- function(memory = "2g") {
   command <- Sys.which("java")
   #

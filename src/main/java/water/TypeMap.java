@@ -19,6 +19,10 @@ public class TypeMap {
     "water.ValueArray",   // used in TypeaheadKeys
     "water.fvec.C1NChunk",// used as constant in parser
     "water.fvec.Frame",   // used in TypeaheadKeys & Exec2
+    "water.TaskPutKey",   // Needed to write that first Key
+    "water.Key",          // Needed to write that first Key
+    "water.Value",        // Needed to write that first Key
+    "water.TaskGetKey",   // Read that first Key
     "water.Job$List",     // First Key which locks the cloud for all JUnit tests
   };
   // String -> ID mapping

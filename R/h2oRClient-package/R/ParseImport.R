@@ -71,12 +71,29 @@ h2o.assign <- function(data, key) {
   # if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
   if(!inherits(data, "H2OParsedData")) stop("data must be an H2O parsed dataset")
   if(!is.character(key)) stop("key must be of class character")
-  if(length(key) == 0) stop("key cannot be an empty string")
+  if(nchar(key) == 0) stop("key cannot be an empty string")
   if(key == data@key) stop(paste("Destination key must differ from data key", data@key))
   
   res = h2o.__exec2_dest_key(data@h2o, data@key, key)
   data@key = key
   return(data)
+}
+
+h2o.push <- function(client, object, key) {
+  if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if(missing(object)) stop("must specify object to push")
+  else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
+  if(missing(key)) key <- deparse(substitute(object))
+  else if(!is.character(key)) stop("key must be of class character")
+  else if(nchar(key) == 0) stop("key cannot be an empty string")
+  
+  if(is.numeric(object))
+    res = h2o.__exec2_dest_key(client, object, key)
+  else if(is.function(object)) {
+    object <- match.fun(object)
+    res = h2o.__exec2_dest_key(client, object, key)
+    # TODO: Push function to the H2O server
+  }
 }
 
 # ----------------------------------- File Import Operations --------------------------------- #
@@ -312,9 +329,9 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, version = 
 h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   if(class(data) != "H2ORawDataVA") stop("data must be of class H2ORawDataVA")
   if(!is.character(key)) stop("key must be of class character")
-  if(!missing(header) && !is.logical(header)) stop("header must be of class logical")
+  if(!(missing(header) || is.logical(header))) stop("header must be of class logical")
   if(!is.character(sep)) stop("sep must be of class character")
-  if(!missing(col.names) && class(col.names) != "H2OParsedDataVA") stop(paste("col.names cannot be of class", class(col.names)))
+  if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
 
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
@@ -400,8 +417,8 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, va
 })
 
 # ----------------------- Diagnostics ----------------------- #
-h2o.checkCloud <- function(client) {
-  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+h2o.clusterStatus <- function(client) {
+  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   myURL = paste("http://", client@ip, ":", client@port, "/", h2o.__PAGE_CLOUD, sep = "")
   if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)

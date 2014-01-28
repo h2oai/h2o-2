@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=20, **kwargs)
         print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
-        h2o_glm.simpleCheckGLM(self, glm, 8, **kwargs)
+        h2o_glm.simpleCheckGLM(self, glm, "C9", **kwargs)
 
         if not h2o.browse_disable:
             h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
