@@ -32,10 +32,6 @@ Before modeling, parse data into H\ :sub:`2`\ O as follows:
 .. image:: PCAparse.png
    :width: 70%
 
-After parsing:
-
-.. image:: PCAparse2.png
-   :width: 70%
 
 
 

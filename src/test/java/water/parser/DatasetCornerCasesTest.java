@@ -23,7 +23,6 @@ public class DatasetCornerCasesTest extends TestUtil {
     Key fkey = load_test_file("smalldata/test/HTWO-87-two-lines-dataset.csv");
     Key okey = Key.make("HTWO-87-two-lines-dataset.hex");
     ParseDataset.parse(okey,new Key[]{fkey});
-    UKV.remove(fkey);
     ValueArray val = DKV.get(okey).get();
 
     // Check parsed dataset
@@ -50,11 +49,11 @@ public class DatasetCornerCasesTest extends TestUtil {
       RFModel model = result.get();
       assertEquals("Number of classes == 1", 1,  model.classes());
       assertTrue("Number of trees > 0 ", model.size()> 0);
-      model.deleteKeys();
+      model.delete();
     } catch( IllegalArgumentException e ) {
       assertEquals("java.lang.IllegalArgumentException: Found 1 classes: Response column must be an integer in the interval [2,254]",e.toString());
     }
-    UKV.remove(okey);
+    val.delete();
   }
 
   /* The following tests deal with one line dataset ended by different number of newlines. */
@@ -93,7 +92,6 @@ public class DatasetCornerCasesTest extends TestUtil {
     assertEquals(filename + ": number of rows   == 2", 2, val._numrows);
     assertEquals(filename + ": number of cols   == 9", 9, val._cols.length);
 
-    UKV.remove(fkey);
-    UKV.remove(okey);
+    val.delete();
   }
 }

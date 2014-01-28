@@ -294,7 +294,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].finalize_AIC_AUC();
         _xvals[i].nobs = _nobs-_xvals[i].nobs;
         _xmodels[i].setAndTestValidation(0, _xvals[i]);
-        DKV.put(_xmodels[i]._selfKey, _xmodels[i],fs);
+        DKV.put(_xmodels[i]._key, _xmodels[i],fs);
       }
       _res = new GLMXValidation(_model, _xmodels,_lambdaIdx,_nobs);
       fs.blockForPending();
@@ -304,7 +304,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @Override
   public String toString(){
     final double [] beta = beta(), norm_beta = norm_beta();
-    StringBuilder sb = new StringBuilder("GLM Model (key=" + _selfKey + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + "):\n");
+    StringBuilder sb = new StringBuilder("GLM Model (key=" + _key + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + "):\n");
     final int cats = data_info._cats;
     int k = 0;
     for(int i = 0; i < cats; ++i)

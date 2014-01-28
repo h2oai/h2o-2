@@ -20,9 +20,9 @@ public class BitCmpTest extends TestUtil {
       assertFalse(v1.isBitIdentical(v3));
       assertFalse(v3.isBitIdentical(v2));
     } finally {
-      if(k1 != null)UKV.remove(k1);
-      if(k2 != null)UKV.remove(k2);
-      if(k3 != null)UKV.remove(k3);
+      Lockable.delete(k1);
+      Lockable.delete(k2);
+      Lockable.delete(k3);
     }
   }
 }

@@ -89,10 +89,7 @@ public class NeuralNetIrisTest extends TestUtil {
 
                 // Parse Iris and shuffle the same way as ref
                 Key file = NFSFileVec.make(find_test_file(PATH));
-                Key pars = Key.make();
-                Frame frame = ParseDataset2.parse(pars, new Key[] { file });
-
-                UKV.remove(file);
+                Frame frame = ParseDataset2.parse(Key.make(), new Key[] { file });
 
                 double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
                 for( int c = 0; c < frame.numCols(); c++ )
@@ -229,11 +226,11 @@ public class NeuralNetIrisTest extends TestUtil {
                 (trainAcc != train.classification || testAcc != test.classification ? " HOGWILD! " : ""));
                 Log.info("REF  training error : " + trainAcc*100 + "%, test error: " + testAcc*100 + "%");
 
-                UKV.remove(pars);
+                frame.delete();
                 for( int i = 0; i < ls.length; i++ )
                   ls[i].close();
-                _train.remove();
-                _test.remove();
+                _train.delete();
+                _test.delete();
 
                 if (trainer != NeuralNet.ExecutionMode.SingleThread) {
                   hogwild_runs++;

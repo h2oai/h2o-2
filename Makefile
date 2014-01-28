@@ -233,6 +233,8 @@ dw_3:
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
+	mkdir -p $(BUILD_WEBSITE_DIR)/bits/h2o-scala
+	cp -p h2o-scala/README.md $(BUILD_WEBSITE_DIR)/bits/h2o-scala/README.txt
 
 # Note:  to get pdfunite on a mac, try:
 #     $ brew install poppler

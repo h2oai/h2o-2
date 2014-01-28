@@ -54,7 +54,7 @@ public class UploadFileVec extends FileVec {
     Key newVecKey = Vec.newKey();
 
     try {
-      UKV.remove(key);
+      new Frame(key,new String[0],new Vec[0]).delete_and_lock(null);
 
       UploadFileVec uv = new UploadFileVec(newVecKey);
       assert uv.writable();
@@ -94,8 +94,8 @@ public class UploadFileVec extends FileVec {
       DKV.put(newVecKey, uv, fs);
       String[] sarr = {"bytes"};
       Vec[] varr = {uv};
-      Frame f = new Frame(sarr, varr);
-      UKV.put(key, f, fs);
+      Frame f = new Frame(key,sarr, varr);
+      f.unlock();
 
       Log.info("    Success.");
     }
@@ -103,7 +103,7 @@ public class UploadFileVec extends FileVec {
       // Clean up and do not leak keys.
       Log.err("Exception caught in Frame::readPut; attempting to clean up the new frame and vector");
       Log.err(e);
-      UKV.remove(key);
+      Lockable.delete(key);
       DKV.remove(newVecKey);
       Log.err("Frame::readPut cleaned up new frame and vector successfully");
       throw e;

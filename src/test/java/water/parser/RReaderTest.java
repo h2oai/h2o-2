@@ -31,9 +31,9 @@ public class RReaderTest extends TestUtil {
         row[j] = iris.datad(i,j);
       assertEquals(iris.datad(i,iris._cols.length-1),m.score(row),0.0001);
     }
-    model.deleteKeys();
-    UKV.remove(key);
-    UKV.remove(irisk);
+    m.delete();
+    model.delete();
+    iris.delete();
   }
 
   @Test
@@ -61,9 +61,9 @@ public class RReaderTest extends TestUtil {
     }
     assertEquals(100,errs);
 
-    model.deleteKeys();
-    UKV.remove(key);
-    UKV.remove(prok);
+    M.delete();
+    model.delete();
+    pro.delete();
   }
 
   /*@Test*/
@@ -97,9 +97,9 @@ public class RReaderTest extends TestUtil {
     long dt = now-start;
     System.err.println("Took "+dt+"msec/"+pro._numrows+" = "+1000*dt/pro._numrows+" usec/row");
 
-    model.deleteKeys();
-    UKV.remove(key);
-    UKV.remove(prok);
+    M.delete();
+    model.delete();
+    pro.delete();
   }
 
 }

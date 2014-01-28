@@ -91,7 +91,7 @@ public class GLMGridView extends Request2 {
         if(m.glm.family != Family.gamma)
           sb.append("<td>" + aicStr(m.aic()) +  "</td>");
         sb.append("<td>" + devExplainedStr(m.devExplained()) +  "</td>");
-        sb.append("<td>" + GLMModelView.link("View Model", m._selfKey) + "</td>");
+        sb.append("<td>" + GLMModelView.link("View Model", m._key) + "</td>");
 //        if(job != null && !job.isDone())DocGen.HTML.progress(job.progress(), sb.append("<td>")).append("</td>");
 //        else sb.append("<td class='alert alert-success'>" + "DONE" + "</td>");
         sb.append("</tr>");

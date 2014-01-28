@@ -57,7 +57,7 @@ public class GLMGrid extends Job {
       boolean done = false;
       @Override
       public GLMModels atomic(GLMModels old) {
-        old._ms[idx] = model._selfKey;
+        old._ms[idx] = model._key;
         done = ++old._count == old._ms.length;
         old._runTime = Math.max(runTime,old._runTime);
         return old;

@@ -231,7 +231,7 @@ class Basic(unittest.TestCase):
 
         self.assertAlmostEqual(best_threshold, 0.35, delta=0.01*best_threshold, msg='best_threshold %s is too different from %s' % (best_threshold, 0.35))
 
-        modelKey = glm['glm_model']['_selfKey']
+        modelKey = glm['glm_model']['_key']
         predict_and_compare_csvs(model_key=modelKey)
 
 if __name__ == '__main__':

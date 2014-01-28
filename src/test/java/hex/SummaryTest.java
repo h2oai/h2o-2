@@ -28,14 +28,14 @@ public class SummaryTest extends TestUtil {
     assertEquals(ary.length(),csum._bins[0]);
     assertEquals(0, csum._n_na);
     assertEquals(0, csum._nzero);
-    UKV.remove(vkey);
+    ary.delete();
   }
 
 
   @Test public void testNonConstSummary(){
     Key vkey = loadAndParseFile("enum_test.hex","./smalldata/test/test_percentiles_distns.csv.gz");
+    ValueArray array = UKV.get(vkey);
     try {
-      ValueArray array = UKV.get(vkey);
       int[] cols = new int[ 2 ];
 
       // search for columns zeroone and zerotwo
@@ -75,15 +75,14 @@ public class SummaryTest extends TestUtil {
       assertEquals(316, csum._bins[ 1 ]);
       assertEquals(331, csum._bins[ 2 ]);
     } finally {
-      if (vkey != null)
-        UKV.remove( vkey );
+      array.delete();
     }
   }
 
   @Test public void testEnumSummary(){
     Key vkey = loadAndParseFile("enum_test.hex","./smalldata/test/test_percentiles_distns.csv.gz");
+    ValueArray array = UKV.get(vkey);
     try {
-      ValueArray array = UKV.get(vkey);
       int[] cols = new int[ 2 ];
 
       // search for columns zerooneF and zerotwoF
@@ -125,8 +124,7 @@ public class SummaryTest extends TestUtil {
       assertEquals(316, csum._bins[ 1 ]);
       assertEquals(331, csum._bins[ 2 ]);
     } finally {
-      if (vkey != null)
-        UKV.remove( vkey );
+      array.delete();
     }
   }
 

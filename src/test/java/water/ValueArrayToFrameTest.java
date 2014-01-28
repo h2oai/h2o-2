@@ -57,14 +57,10 @@ public class ValueArrayToFrameTest extends TestUtil {
     } catch( Exception e ) {
       throw new RuntimeException(e);
     } finally {
-      if( key != null )
-        UKV.remove(key);
-      if( key1 != null )
-        UKV.remove(key1);
-      if( key2 != null )
-        UKV.remove(key2);
-      if( frame != null )
-        frame.remove();
+      Lockable.delete(key);
+      Lockable.delete(key1);
+      Lockable.delete(key2);
+      if( frame != null ) frame.delete();
     }
   }
 }

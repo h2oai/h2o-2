@@ -154,7 +154,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     fr.add("OUT_BAG_TREES", response.makeZero());
 
     DRFModel model = new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
-    DKV.put(outputKey, model);
+    model.delete_and_lock(this);
 
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
