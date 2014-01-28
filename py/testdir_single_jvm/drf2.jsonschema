@@ -12,7 +12,7 @@
             "_names": { "type":"array", "items":
                 { "type":"string" }
             },
-            "_selfKey": { "type":"string" },
+            "_key": { "type":"string" },
             "cms": { "type":"array", "items":
                 { "type":"array" }
             },

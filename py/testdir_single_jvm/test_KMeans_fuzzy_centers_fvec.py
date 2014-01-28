@@ -141,7 +141,7 @@ class Basic(unittest.TestCase):
                 within_cluster_variances = kmeans['model']['within_cluster_variances']
                 print "trial:", trial, "within_cluster_variances:", within_cluster_variances
             else:
-                model_key = kmeans["destination_key"]
+                model_key = kmeans["_key"]
                 kmeansResult = h2o_cmd.runInspect(key=model_key)
                 error = kmeansResult['KMeansModel']['error']
             # compute the sum of the squares of the distance for each cluster
