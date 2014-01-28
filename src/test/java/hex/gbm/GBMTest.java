@@ -216,7 +216,7 @@ public class GBMTest extends TestUtil {
       preds.delete();
 
     } finally {
-      gbmmodel.delete();        // Remove the model
+      if( gbmmodel != null ) gbmmodel.delete(); // Remove the model
       gbm.source.delete();      // Remove original hex frame key
       UKV.remove(gbm.response._key);
       gbm.remove();             // Remove GBM Job

@@ -280,7 +280,7 @@ public class GLM2 extends ModelJob {
           if(glmt._val != null){
             glmt._val.finalize_AIC_AUC();
             _model.setAndTestValidation(_lambdaIdx,glmt._val);//.store();
-            _model.update();
+            _model.update(self());
           }
           int iter = glmt._iter+1;
           GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);

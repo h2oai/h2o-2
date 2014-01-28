@@ -111,7 +111,7 @@ public class KMeans extends Job {
 
         res._iteration++;
         res._clusters = clusters;
-        res.update();
+        res.update(self());
       }
 
       clusters = recluster(clusters, k, rand, init);
@@ -136,7 +136,7 @@ public class KMeans extends Job {
       }
       res._error = task._error;
       res._iteration++;
-      res.update();
+      res.update(self());
       if( res._iteration >= res._maxIter )
         break;
       if( cancelled() )

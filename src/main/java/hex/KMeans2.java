@@ -109,7 +109,7 @@ public class KMeans2 extends ColumnsJob {
         model.centers = normalize ? denormalize(clusters, vecs) : clusters;
         model.total_within_SS = sqr._sqr;
         model.iterations++;
-        model.update();
+        model.update(self());
       }
 
       clusters = recluster(clusters, k, rand, initialization);
@@ -136,7 +136,7 @@ public class KMeans2 extends ColumnsJob {
       model.total_SS = model.total_within_SS + model.between_cluster_SS;
       model.size = task._rows;
       model.iterations++;
-      model.update();
+      model.update(self());
       if( model.iterations >= max_iter ) {
         Clusters cc = new Clusters();
         cc._clusters = clusters;

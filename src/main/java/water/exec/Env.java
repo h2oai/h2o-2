@@ -323,7 +323,7 @@ public class Env extends Iced {
             addRef(v2);
           } // But not down to zero (do not delete items in global scope)
         }
-        fr2.update(); // Update in K/V
+        fr2.update(null); // Update in K/V
       } else
         popUncheck();
     }
