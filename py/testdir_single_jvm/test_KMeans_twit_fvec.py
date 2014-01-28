@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
 
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             # can't inspect a kmeans2 model?
-            # inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_selfKey'], verbose=True)
+            # inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_key'], verbose=True)
 
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected2, allowedDelta, trial=trial)

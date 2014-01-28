@@ -159,7 +159,7 @@ class Basic(unittest.TestCase):
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             parseKey = parseResultTrain['destination_key']
-            rfModelKey  = rfView['drf_model']['_selfKey']
+            rfModelKey  = rfView['drf_model']['_key']
             predictKey = 'Predict.hex'
             start = time.time()
 
