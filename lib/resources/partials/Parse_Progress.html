@@ -1,0 +1,194 @@
+
+<!-- App Main Content Block -->
+<main id="page-Progress" adjust-height>
+
+	<!-- Content Header -->
+	<header>
+
+		<!-- "Wave" Progress -->
+		<canvas id="wave-progress" progress-wave></canvas><!-- /end "Wave" Progress -->
+
+		<div class="wrap">
+
+			<!-- Hex file name -->
+			<h2>
+				{{ ParseSettingsService.dst }}
+				<small>Destination key</small>
+			</h2>
+			<!-- /end Hex file name -->
+
+			<!--<h1>Parse complette <em class="error">Failed</em></h1>-->
+
+			<!-- Progress Bar -->
+			<div class="progress">
+				<h1>Parse in progress</h1>
+				<span class="timeleft"><i class="icon-clock"></i> {{ ParseJobStatusDataService.jobStatus.progressPercent() }}% </span>
+
+				<progress max="100" value="{{ ParseJobStatusDataService.jobStatus.progressPercent() }}">
+					<div class="progress-bar">
+						<span ng-style="{width : ParseJobStatusDataService.jobStatus.progressPercent() + '%' }"></span>
+					</div>
+				</progress>
+			</div><!-- /end Progress Bar -->
+
+		</div>
+
+	</header><!-- /end Content Header -->
+
+	<!-- Content Wrap -->
+	<section adjust-height>
+
+        <listerrors to="errors"
+	                filter="{sender:['ParseJobStatusDataService'], type:['jobError']}">
+
+			<!-- Cloud -->
+			<section id="Parse_cloud"
+					 ng-hide="errors.length">
+
+                <spinneroverlay options="{alignment:'center', edgeMargin:'25px', size:'30px', color:'gray'}"
+                                ng-show="!StatisticsPollerDataService.hadFirstContact() && !errors.length">
+                </spinneroverlay>
+
+				<header>
+					<h1>Cloud size:
+						<i class="icon-monitor">
+							<span>
+								{{ StatisticsPollerDataService.clusterStatistics.nodes.length }}
+							</span>
+						</i>
+					</h1>
+					<h2>
+						&nbsp;
+						<span>
+							{{ StatisticsPollerDataService.clusterStatistics.nodeName }}
+							<em>{{ StatisticsPollerDataService.clusterStatistics.cloudName }} </em>
+						</span>
+					</h2>
+				</header>
+
+				<table>
+					<thead>
+						<tr>
+							<th>&nbsp;</th>
+							<th>Memory</th>
+							<th>System load</th>
+							<th>Last contact</th>
+							<th>Num keys</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr ng-repeat="node in StatisticsPollerDataService.clusterStatistics.nodes track by node.name">
+							<td><i class="icon-monitor"><span>{{ $index + 1 }}</span></i></td>
+							<td class="chart">
+								<div class="memorylabel">
+									<!--
+									<div class="label used" style="width: {{ node.usedMemPercent() }}%">{{ node.usedMemBytes() | humanizeFilesize }}</div>
+									<div class="label total" style="width: {{ node.totMemPercent() }}%">{{ node.totMemBytes | humanizeFilesize }}</div>
+									<div class="label total" style="width: {{ node.maxMemPercent() }}%">{{ node.maxMemBytes | humanizeFilesize }}</div>
+									-->
+
+									<div class="label used" style="width: 30%">{{ node.usedMemBytes() | humanizeFilesize }}</div>
+									<div class="label total" style="width: 30%">{{ node.totMemBytes | humanizeFilesize }}</div>
+									<div class="label total" style="width: 30%">{{ node.maxMemBytes | humanizeFilesize }}</div>
+								</div>
+								<div class="memoryload"
+									 data-used="{{ node.usedMemBytes() | humanizeFilesize }}"
+									 data-total="{{ node.totMemBytes | humanizeFilesize }}"
+									 data-max="{{ node.maxMemBytes | humanizeFilesize }}">
+
+									<span class="used" ng-style="{width: node.usedMemPercent() + '%' }"></span>
+									<span class="total" ng-style="{width: node.totMemPercent() + '%' }"></span>
+								</div>
+								<div class="memoryname">
+									<div class="label used" style="width: 30%">Free</div>
+									<div class="label total" style="width: 30%">Total</div>
+									<div class="label max" style="width: 30%">Max</div>
+
+								</div>
+							</td>
+							<td class="system-load">{{ node.systemLoad | roundFloat:2 }}</td>
+							<td class="last-contact">{{ node.lastContact | humanizeRelativeTimeFromTimestamp }}</td>
+							<td>{{ node.numKeys }}</td>
+						</tr>
+					</tbody>
+				</table>
+			</section><!-- /end Cloud -->
+
+			<div id="Parse_summary"
+				 ng-show="errors.length">
+
+				<h1>Errors: {{ errors.length }}</h1>
+
+				<div class="item error"
+					 ng-repeat="error in errors track by $index">
+
+					<i class="icon"></i>
+					<span class="info">{{ error.message }}</span>
+					<span class="filename" title="{{error.subject}}">{{ error.subject | lastPathComponent | pathEllipsis:19 }}</span>
+				</div>
+
+				<div ng-if="ParseJobStatusDataService.isCompleteWithError()" id="Email_for_help">
+					<h1>Let us help</h1>
+					<p>
+						All information needed to investigate and help you with your case will be downloaded so that you can attach them to the email (we collect only H2O logs, your data is safe and not sent).
+					</p>
+					<a class="button action next" title="Get logs" ng-click="">Get logs <i class="icon-arrow_right"></i></a>
+					<div title="phone"><h2 class="phone">+1 (580) 555 555</h2></div>
+				</div>
+			</div>
+
+        </listerrors>
+	</section><!-- /end Content Wrap -->
+
+	<!-- Content Footer -->
+	<footer>
+
+		<!-- Control Buttons -->
+		<nav class="pager">
+			<ul>
+				<li>
+                    <spinneroverlay options="{alignment:'center', edgeMargin:'25px', size:'30px', color:'white'}"
+                                    ng-show="ErrorAndStatusService.isLoading('ParseJobCancelService')">
+                    </spinneroverlay>
+
+					<!-- [Notice] "Back" button -->
+					<a class="button back" title="Back"
+					   ng-if="ParseJobStatusDataService.isCompleteWithError()"
+					   ui-sref='preview'>
+					   	<i class="icon-arrow_left"></i> Back
+					</a>
+
+					<!-- [Notice] "Cancel" button -->
+					<a class="button cancel" title="Cancel"
+					   ng-if="!ParseJobStatusDataService.isComplete()"
+					   ng-confirm-click="This will stop the parsing process completely. Are you sure you want to cancel? "
+					   confirmed-click="cancelParse()">
+						<i class="icon-cancel"></i> Cancel
+					</a>
+				</li>
+				<li>
+                    <spinneroverlay options="{alignment:'center', edgeMargin:'25px', size:'30px', color:'white'}"
+                                    ng-show="ErrorAndStatusService.isLoading('ParseService')">
+                    </spinneroverlay>
+					<!-- [Notice] "Next" button -->
+					<!--<a class="button action next" href="#" title="Next">Next <i class="icon-arrow"></i></a>-->
+
+					<!-- [Notice] "Parse" button -->
+					<!--<a class="button action parse" href="#" title="Parse">Parse <i class="icon-parse"></i></a>-->
+
+					<!-- [Notice] "OK" button -->
+					<!--<a class="button action ok" href="#" title="OK">OK <i class="icon-ok"></i></a>-->
+
+					<!-- [Notice] "Try again" button -->
+					<a class="button try-again" title="Try again without these files"
+					   ng-if="ParseJobStatusDataService.isCompleteWithError()"
+					   ng-click="retryWithoutErrorneousFiles()">
+						<i class="icon-refresh"></i> Try again without these files
+					</a>
+				</li>
+			</ul>
+		</nav><!-- /end Control Buttons -->
+
+	</footer><!-- /end Content Footer -->
+
+</main><!-- /end App Main Content Block -->

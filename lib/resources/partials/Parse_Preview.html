@@ -1,0 +1,425 @@
+<dialog id="chooseDataSourceDialogID" height="370px">
+	<div id="overlay-File_upload">
+
+		<h1>Upload file with header</h1>
+
+	    <choose-data-source-form multiple="false"
+	                             on-success-callback="chooseDataSourceFormDidFinish"
+	                             is-ready-model="isReadyToUpload"
+	                             save-proceed-method-in="chooseDataSourceFormStartUploadMethod">
+	    </choose-data-source-form>
+
+	    <!-- [Notice] "Next" button -->
+	    <a class="button action next" ng-class="{disabled:!isReadyToUpload}" ng-click="chooseDataSourceFormStartUploadMethod()">
+	    	Upload
+	        <spinneroverlay options="{alignment:'center', edgeMargin:'25px', size:'30px', color:'black'}"
+	                        ng-show="ErrorAndStatusService.isLoading('ParseFileUploaderService') || ErrorAndStatusService.isLoading('ParseGetHeaderService')">
+	        </spinneroverlay>
+	    </a>
+	</div>
+</dialog>
+
+<!-- App Main Content Block -->
+<main id="page-Preview" adjust-height>
+
+	<!-- Content Header -->
+	<header>
+
+		<hgroup>
+			<h2>{{ ParseSettingsService.dst }}<small>Destination key</small></h2>
+			<h1>Preview</h1>
+		</hgroup>
+
+	</header><!-- /end Content Header -->
+
+	<!-- Content Wrap -->
+	<section adjust-height>
+
+		<form action="#" method="post" id="widget-Data_manipulation">
+
+			<!-- 'Preview' menu -->
+			<menu id="menu-Edit_menu">
+				<ul>
+					<li>
+						<a id="btn-Edit_headers" ng-click="openHeaderOptions()" class="button" href="#" title="Did we guess header wrong">Did we guess header wrong <i class="icon-arrow_right"></i></a>
+					</li>
+					<li>
+						<a id="btn-Edit_data" ng-click="openDataOptions()" class="button" href="#" title="Did we guess data wrong">Did we guess data wrong <i class="icon-arrow_right"></i></a>
+					</li>
+				</ul>
+			</menu><!-- /end 'Preview' menu -->
+
+			<!-- 'Header options' menu -->
+			<menu id="menu-Header_file_select">
+				<ul>
+					<li>
+						<select name="file_with_header"
+								chosen
+								data-placeholder="Select file with header"
+								ng-model="ParseSettingsService.headerFile"
+								ng-options="f.key as (f.lastPathComponent() | pathEllipsis:35) for f in ParseSettingsService.files | filter:{excluded:false}">
+						</select>
+
+						<a  class="button overlay-File_upload_open"
+							title="Upload file with header"
+							ng-click="DialogService.open(chooseDataSourceDialogID)">
+								<i class="icon-upload"></i>
+								<span class="tooltip">Upload file with header</span>
+							</a>
+					</li>
+				</ul>
+			</menu><!-- /end 'Header options' menu -->
+
+			<div class="wrap">
+                <spinneroverlay options="{alignment:'center top', size:'30px', edgeMargin: '70px', color:'black', topOffset:'175px'}"
+                                ng-show="ErrorAndStatusService.isLoading('ParsePreviewService')">
+                </spinneroverlay>
+                <overlay options="{alignment:'center top', size:'200px', edgeMargin: '70px', color:'black', topOffset:'175px'}"
+                                ng-show="ParsePreviewService.needsRefresh && !ErrorAndStatusService.isLoading('ParsePreviewService')">
+                	<a ng-click="ParsePreviewService.refreshPreview()" style="cursor: pointer;">
+                		<button class="action button refresh">Refresh preview <i class="icon-repeat"></i></button>
+                	</a>
+                </overlay>
+
+				<table>
+
+					<!-- 'Preview' head -->
+					<thead>
+
+						<!-- 'Header options' separators -->
+						<tr class="header separators">
+							<th colspan="5" style="position: relative;">
+
+								<div class="wrap">
+									<table>
+										<tbody>
+											<td>
+												<!-- 'Header options' - skip header -->
+												<label id="chk-Skip_header">
+													<input type="checkbox" name="skip_header"
+													       ng-model="ParseSettingsService.skipHeader"> Skip header
+												</label><!-- /end 'Header options' - skip header -->
+											</td>
+											<td>Header separator</td>
+											<td>
+												<label>
+													<autoradio model="ParseSettingsService.headerSeparator"
+															   checked-if-value="','"
+															   on-selection-set-value="','" />
+													Comma
+												</label>
+											</td>
+											<td>
+												<label>
+													<autoradio model="ParseSettingsService.headerSeparator"
+															   checked-if-value="';'"
+															   on-selection-set-value="';'" />
+													Semicolon
+												</label>
+											</td>
+											<td>
+												<label>
+													<autoradio model="ParseSettingsService.headerSeparator"
+															   checked-if-value="'\t'"
+															   on-selection-set-value="'\t'" />
+													Tab
+												</label>
+											</td>
+											<td>
+													<autoradio model="ParseSettingsService.headerSeparator"
+															   checked-if-value-not-in="[',',';','\t']" />
+													<select data-placeholder="other"
+															chosen
+															disable-search="true"
+															width="'140px'"
+															ng-model="ParseSettingsService.headerSeparator"
+															ng-options="s.separator as s.displayName for s in ParseSettingsService.SEPARATORS">
+												<span ng-hide="ParseSettingsService.headerSeparator == 'RESET'">
+													or
+													<input type="text" placeholder="Type other separator here"
+													       ng-model="ParseSettingsService.headerSeparator">
+												</span>
+											</td>
+										</tbody>
+									</table>
+								</div>
+
+							</th>
+						</tr><!-- /end 'Header options' separators -->
+
+						<!-- 'Data options' separators -->
+						<tr class="data separators">
+							<th colspan="5">
+								<div class="wrap">
+									<table>
+										<tbody>
+											<td>Data separator</td>
+											<td>
+												<label>
+													<autoradio model="ParseSettingsService.dataSeparator"
+															   checked-if-value="','"
+															   on-selection-set-value="','" />
+												   Comma
+												</label>
+											</td>
+											<td>
+												<label>
+													<autoradio model="ParseSettingsService.dataSeparator"
+															   checked-if-value="';'"
+															   on-selection-set-value="';'" />
+										            Semicolon
+												</label>
+											</td>
+											<td>
+												<label>
+													<autoradio model="ParseSettingsService.dataSeparator"
+															   checked-if-value="'\t'"
+															   on-selection-set-value="'\t'" />
+													Tab
+												</label>
+											</td>
+											<td>
+													<autoradio model="ParseSettingsService.dataSeparator"
+															   checked-if-value-not-in="[',',';','\t']" />
+													<select data-placeholder="other"
+															chosen
+															disable-search="true"
+															width="'182px'"
+															ng-model="ParseSettingsService.dataSeparator"
+															ng-options="s.separator as s.displayName for s in ParseSettingsService.SEPARATORS">
+													</select>
+												<span ng-hide="ParseSettingsService.dataSeparator == 'RESET'">
+													or
+													<input type="text" placeholder="Type other separator here"
+													       ng-model="ParseSettingsService.dataSeparator">
+												</span>
+											</td>
+										</tbody>
+									</table>
+								</div>
+							</th>
+						</tr><!-- /end 'Data options' separators -->
+
+					</thead>
+					<!-- /end 'Preview' head -->
+
+					</tbody>
+				</table>
+
+				<virtualtable data-provider="tableDataProvider"
+				              refresh-event="ParsePreviewDataChanged"
+				              options="{'rowHeightPx': 43, 'minColumnWidthPx': 194, 'leftOffsetPx':50}"
+				              fast-ng-class="{'stale': ParsePreviewService.needsRefresh || ErrorAndStatusService.isLoading('ParsePreviewService')}"
+				              adjust-height>
+
+					<div class="row"
+					     sly-repeat="row in rows"
+					     sly-evaluate-only-when="row.hash"
+					     fast-ng-class="{'labels':row.index == 0, 'options':row.index == 1, 'data':row.index > 1, 'odd':row.index % 2}"
+					     fast-ng-style="{'height':row.height+'px'}">
+
+					    <div ng-if="row.index == 0">
+							<div class="cell leftCell"
+								 fast-ng-style="{'top': row.offsetY+'px'}">Row</div>
+						</div>
+					    <div ng-if="row.index == 1">
+							<div class="cell leftCell"
+								 fast-ng-style="{'top': row.offsetY+'px'}">
+							&nbsp;
+							</div>
+						</div>
+					    <div ng-if="row.index > 1">
+							<div class="cell leftCell"
+								 fast-ng-style="{'top': row.offsetY+'px'}">
+							{{row.index - 1}}
+							</div>
+						</div>
+
+						<div class="cell"
+							 sly-repeat="cell in row.cells"
+						     sly-evaluate-only-when="cell.hash"
+						     fast-ng-style="{'width':cell.width+'px', 'height':row.height+'px', 'top':row.offsetY+'px', 'left':cell.offsetX+'px'}">
+
+						    <div ng-if="row.index == 0">
+						    	<span>{{cell.index + 1}}</span>
+									<input type="text"
+										   ng-model="ParseSettingsService.parserConfigData.columns[cell.index].header"
+										   blur-on-enter
+										   ng-on-blur-if-dirty="markColumnsAsDirty()">
+							</div>
+
+						    <div ng-if="row.index == 1">
+								<div class="settings">
+									<a title=""><i class="icon-settings"></i></a>
+									<div class="drop">
+										<ul>
+											<li>
+												<a href="#" title="Remove all without data">Remove all without data</a>
+											</li>
+										</ul>
+									</div>
+								</div>
+								<select chosen
+										disable-search="true"
+										ng-model="ParseSettingsService.parserConfigData.columns[cell.index].type"
+										ng-options="t.type as t.displayName for t in ParseSettingsService.COLUMN_TYPES"
+										ng-change="markColumnsAsDirty()">
+								</select>
+						    </div>
+
+						    <div ng-if="row.index > 1"> {{cell.value}}</div>
+						</div>
+					</div>
+				</virtualtable>
+			</div>
+
+		</form>
+
+		<!-- Scripts that should be moved to AngularJS -->
+
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$('#widget-Data_manipulation table thead .options .settings').on('click', function(e) { preventDefault(); });
+				$('#widget-Data_manipulation table thead .options .settings').hover(
+					function() {
+						$('.drop', $(this)).show();
+					},
+					function() {
+						$('.drop', $(this)).hide();
+					}
+				);
+
+				// ----------- EDIT DATA OPTIONS ANIMATION ----------------------------------------------------------------
+				$('#btn-Edit_data').on('click', function(e) {
+					e.preventDefault();
+
+					$('body main header h1').text('Data options');
+
+					$('#menu-Edit_menu').fadeTo('slow', 0, function() {
+						$('#widget-Data_manipulation table thead .data.separators').animate({height: "50px"}, 500, "swing",
+							function() {
+							$('#widget-Data_manipulation table thead .data.separators').addClass('open');
+						});
+						$('#widget-Data_manipulation table thead .data.separators .wrap').animate({height: "50px"}, 500, "swing");
+					});
+
+				});
+
+				// ----------- EDIT HEADER OPTIONS ANIMATION ----------------------------------------------------------------
+				$('#btn-Edit_headers').on('click', function(e) {
+					e.preventDefault();
+
+					$('body main header h1').text('Header options');
+
+					$('#widget-Data_manipulation menu').fadeOut('slow', function() {
+						$(this).siblings('#menu-Header_file_select').fadeIn('slow', function() {
+							$('#widget-Data_manipulation table > thead .header').animate({height: "50px"}, 500, "swing",
+								function() {
+								$('#widget-Data_manipulation table > thead .header').addClass('open');
+							});
+							$('#widget-Data_manipulation table > thead .header .wrap').animate({height: "50px"}, 500, "swing");
+							$('#chk-Skip_header').fadeIn();
+						});
+					});
+					$(window).trigger("resize");
+				});
+
+				function reverseShowHeaderOptionsAnimation() {
+					// revert animations
+					$('body main header h1').text('Preview');
+
+					$('#widget-Data_manipulation table > thead .header .wrap').animate({height: "0px"}, 500, "swing");
+					$('#widget-Data_manipulation table > thead .header').removeClass('open');
+					$('#widget-Data_manipulation table > thead .header').animate({height: "0px"}, 500, "swing", function() {
+						$('#menu-Header_file_select').fadeOut('slow', function() {
+							$('#menu-Edit_menu').fadeIn('slow');
+						});
+					});
+					$(window).trigger("resize");
+				}
+
+				function reverseShowDataOptionsAnimation() {
+					// revert animations
+					$('body main header h1').text('Preview');
+
+					$('#widget-Data_manipulation table > thead .data.separators .wrap').animate({height: "0px"}, 500, "swing");
+					$('#widget-Data_manipulation table > thead .data.separators').removeClass('open');
+					$('#widget-Data_manipulation table > thead .data.separators').animate({height: "0px"}, 500, "swing", function() {
+						$('#menu-Edit_menu').fadeTo('slow', 1);
+					});
+				}
+
+				$(".button.action.ok").on('click', function(e) {
+					e.preventDefault();
+					if ($('body main header h1').text() == 'Header options') { // lame check if we are during header data manipulation
+						reverseShowHeaderOptionsAnimation();
+					} else {
+						reverseShowDataOptionsAnimation();
+					}
+
+				});
+
+				$(".button.cancel").on('click', function(e) {
+					e.preventDefault();
+					if ($('body main header h1').text() == 'Header options') { // lame check if we are during header data manipulation
+						reverseShowHeaderOptionsAnimation();
+					} else {
+						reverseShowDataOptionsAnimation();
+					}
+				});
+
+				$('#menu-Header_file_select .button').hover(
+					function() {
+						$('.tooltip', $(this)).fadeIn();
+					},
+					function() {
+						$('.tooltip', $(this)).fadeOut();
+					}
+				);
+
+			});
+		</script>
+
+	</section><!-- /end Content Wrap -->
+
+	<!-- Content Footer -->
+	<footer>
+
+		<!-- Control Buttons -->
+		<nav class="pager">
+			<ul>
+				<li>
+					<!-- [Notice] "Back" button -->
+
+					<a class="button back" ng-hide="dataOptionsOpened || headerOptionsOpened" ui-sref='filter_files' title="Back"><i class="icon-arrow_left"></i> Back</a>
+
+					<!-- [Notice] "Cancel" button -->
+					<a class="button cancel" ng-click="cancelOptions()" ng-show="dataOptionsOpened || headerOptionsOpened" title="Cancel"><i class="icon-cancel"></i> Cancel</a>
+				</li>
+				<li>
+                    <spinneroverlay options="{alignment:'center', edgeMargin:'25px', size:'30px', color:'white'}"
+                                    ng-show="ErrorAndStatusService.isLoading('ParseService')">
+                    </spinneroverlay>
+
+					<!-- [Notice] "Next" button -->
+					<!--<a class="button action next" href="#" title="Next">Next <i class="icon-arrow"></i></a>-->
+
+					<!-- [Notice] "Parse" button -->
+					<a class="button action parse" title="Parse"
+					   ng-hide="dataOptionsOpened || headerOptionsOpened"
+					   ng-click="startParse()">
+					   	Parse <i class="icon-parse"></i>
+					</a>
+
+					<!-- [Notice] "OK" button -->
+					<a class="button action ok" ng-click="okOptions()" ng-show="dataOptionsOpened || headerOptionsOpened" title="OK">OK <i class="icon-check"></i></a>
+
+					<!-- [Notice] "Try again" button -->
+					<!--<a class="button try-again" href="#" title="Try again without these files"><i class="icon-repeat"></i> Try again without these files</a>-->
+				</li>
+			</ul>
+		</nav><!-- /end Control Buttons -->
+
+	</footer><!-- /end Content Footer -->
+
+</main><!-- /end App Main Content Block -->

@@ -1,0 +1,137 @@
+
+<!-- App Main Content Block -->
+<main id="page-Filter_files" adjust-height>
+
+	<!-- Content Header -->
+	<header>
+
+		<h1>Filter files</h1>
+
+	</header><!-- /end Content Header -->
+
+	<!-- Content Wrap -->
+	<section adjust-height>
+
+		<!-- Files filter -->
+		<form action="#" method="post" class="filter" id="widget-Files_filter">
+
+			<label class="inline-fields-group">
+				<span class="label">Dataset name:</span>
+				<input type="text" name="dataset_name" placeholder="data_file.hex" ng-model="ParseSettingsService.dst">
+			</label>
+
+			<div class="wrap">
+
+				<fieldset adjust-height>
+					<div class="header">
+						<h3>Included <small>{{ includedFilesCount }}/{{ filesCount }}</small></h3>
+
+						<span class="inline-fields-group">
+							<select name="regexp_mode" ng-model="regexpExclusionMode">
+								<option value="exclude">Exclude only</option>
+								<option value="include">Include only</option>
+							</select>
+							<input type="text" name="regexp_value" placeholder="Regexp here"
+							       ng-model="regexpString"
+							       ng-class="{invalid:!regexpStringIsValid}">
+							<input type="button" name="regexp_submit" value="ok"
+							       ng-click="regexpSubmit()">
+						</span>
+					</div>
+
+					<div id="included-list-wrapper" class="list-wrapper" multidrop="{onDrop:'includeIndices', isBeingDroppedSelector:'.selected'}" data-drop="true" data-jqyoui-options="{accept:'.uriRow.excluded', activeClass:'drag-over-area'}" adjust-height>
+						<table class="files-list" name="included_files" table-select>
+							<tr class="uriRow included" jqyoui-draggable data-drag="true" multidrop-model="$index" ng-repeat="file in ParseSettingsService.files" ng-if="isShownInTheIncludeList($index)" ng-class="{'selected-by-regexp':((regexpExclusionMode == 'exclude' && isSelectedByRegexp($index)) || regexpExclusionMode == 'include' && isNotSelectedByRegexp($index))}" drag-helper-class="file-icon-helper">
+								<td title="{{ file.key }}"><i class="icon-file"></i>{{ file.lastPathComponent() | pathEllipsis:23 }}</td>
+								<td class="filesize">{{ file.filesize | humanizeFilesize }}</td>
+							</tr>
+						</table>
+						<div class="drop-overlay"></div>
+					</div>
+				</fieldset>
+
+				<fieldset adjust-height>
+					<div class="header">
+						<h3>Excluded <small>{{ excludedFilesCount }}/{{ filesCount }}</small></h3>
+
+						<a class="button reset" ng-click="resetChanges()"><i class="icon-refresh"></i> reset</a>
+					</div>
+
+					<div id="excluded-list-wrapper" class="list-wrapper" multidrop="{onDrop:'excludeIndices', isBeingDroppedSelector:'.selected'}" data-drop="true" data-jqyoui-options="{accept:'.uriRow.included', activeClass:'drag-over-area'}" adjust-height>
+						<div class="info-wrap"><div class="info"><i class="icon-move"></i><span class="text"><br>Drop files here<br>to exclude.</span></div></div>
+						<table class="files-list" name="excluded_files" table-select>
+							<tr class="uriRow excluded" jqyoui-draggable data-drag="true" multidrop-model="$index" ng-repeat="file in ParseSettingsService.files" ng-if="isShownInTheExcludeList($index)" drag-helper-class="file-icon-helper">
+								<td title="{{ file.key }}"><i class="icon-file"></i>{{ file.lastPathComponent() | pathEllipsis:23 }}</td>
+								<td class="filesize">{{ file.filesize | humanizeFilesize }}</td>
+							</tr>
+						</table>
+						<div class="drop-overlay"></div>
+					</div>
+				</fieldset>
+
+			</div>
+
+		</form><!-- /end Files filter -->
+
+		<!-- Scripts that should be moved to AngularJS -->
+		<script type="text/javascript">
+			function adjustFileFilterHeight()
+			{
+				$('#widget-Files_filter').each(function() {
+					$('.select-field', $(this)).each(function() {
+						$(this).css({
+							'height' : (parseInt($(window).height()) - (parseInt($(this).offset().top) + parseInt($('body > main > footer').height()) + 45)) + 'px',
+							'min-height' : (300 - parseInt($(this).siblings('.header').height())) + 'px'
+						});
+					});
+				});
+			}
+
+
+			$(document).ready(function() {
+				adjustFileFilterHeight();
+
+				$('#widget-Files_filter .inline-fields-group select').chosen({
+					disable_search_threshold: 10
+				});
+			});
+
+			$(window).resize(function() {
+				adjustFileFilterHeight();
+			});
+		</script>
+
+	</section><!-- /end Content Wrap -->
+
+	<!-- Content Footer -->
+	<footer>
+
+		<!-- Control Buttons -->
+		<nav class="pager">
+			<ul>
+				<li>
+					<!-- [Notice] "Back" button -->
+					<a class="button back" ng-confirm-click="This will cause you to lose the settings you tweaked on the next pages. Sure you want to go back? " confirmed-click="goBack()" title="Back"><i class="icon-arrow_left"></i> Back</a>
+
+					<!-- [Notice] "Cancel" button -->
+					<!--<a class="button cancel" href="#" title="Cancel"><i class="icon-times"></i> Cancel</a>-->
+				</li>
+				<li>
+					<!-- [Notice] "Next" button -->
+					<a class="button action next" ng-class="{disabled:!readyToGoNext()}" title="Next" ng-click="goNext()">Next <i class="icon-arrow_right"></i></a>
+
+					<!-- [Notice] "Parse" button -->
+					<!--<a class="button action parse" href="#" title="Parse">Parse <i class="icon-random"></i></a>-->
+
+					<!-- [Notice] "OK" button -->
+					<!--<a class="button action ok" href="#" title="OK">OK <i class="icon-ok"></i></a>-->
+
+					<!-- [Notice] "Try again" button -->
+					<!--<a class="button try-again" href="#" title="Try again without these files"><i class="icon-repeat"></i> Try again without these files</a>-->
+				</li>
+			</ul>
+		</nav><!-- /end Control Buttons -->
+
+	</footer><!-- /end Content Footer -->
+
+</main><!-- /end App Main Content Block -->

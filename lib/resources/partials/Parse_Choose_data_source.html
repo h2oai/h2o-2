@@ -1,0 +1,47 @@
+
+        <!-- App Main Content Block -->
+        <main id="page-Choose_data_source" adjust-height>
+
+            <!-- Content Header -->
+            <header>
+
+                <h1>Choose data source</h1>
+
+            </header><!-- /end Content Header -->
+
+            <!-- Content Wrap -->
+            <section adjust-height>
+                <choose-data-source-form multiple="true"
+                                         on-success-callback="chooseDataSourceFormDidFinish"
+                                         is-ready-model="isReadyToUpload"
+                                         save-proceed-method-in="chooseDataSourceFormStartUploadMethod">
+                </choose-data-source-form>
+            </section><!-- /end Content Wrap -->
+
+            <!-- Content Footer -->
+            <footer>
+
+                <!-- Control Buttons -->
+                <nav class="pager">
+                    <ul>
+                        <li>
+                            <!-- [Notice] "Back" button -->
+                            <!--<a class="button back" href="#" title="Back"><i class="icon-long-arrow-left"></i> Back</a>-->
+
+                            <!-- [Notice] "Cancel" button -->
+                            <!--<a class="button cancel" href="#" title="Cancel"><i class="icon-times"></i> Cancel</a>-->
+                        </li>
+                        <li>
+                            <spinneroverlay options="{alignment:'center', edgeMargin:'25px', size:'30px', color:'white'}"
+                                            ng-show="ErrorAndStatusService.isLoading('ParseFileUploaderService')">
+                            </spinneroverlay>
+
+                            <!-- [Notice] "Next" button -->
+                            <a class="button action next" ng-class="{disabled:!isReadyToUpload}" ng-click="chooseDataSourceFormStartUploadMethod()" title="Next">Next <i class="icon-arrow_right"></i></a>
+                        </li>
+                    </ul>
+                </nav><!-- /end Control Buttons -->
+
+            </footer><!-- /end Content Footer -->
+
+        </main><!-- /end App Main Content Block -->

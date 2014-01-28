@@ -1,0 +1,61 @@
+<!-- Data source selector -->
+<form action="#" method="post" class="tabs upload" id="widget-Data_source_selector" tabs>
+    <nav>
+        <ul>
+            <li ng-click="setCurrentTab('http')" class="open">
+                <a href="#tab-Data_source-URI" title="URI"><i class="icon-web"></i> URI</a>
+            </li>
+            <li ng-click="setCurrentTab('hdfs')">
+                <a href="#tab-Data_source-HDFS" title="HDFS"><i class="img-icon-hdfs"></i> HDFS</a>
+            </li>
+            <li ng-click="setCurrentTab('s3')">
+                <a href="#tab-Data_source-S3" title="S3"><i class="img-icon-s3"></i> S3</a>
+            </li>
+            <li ng-click="setCurrentTab('cluster')">
+                <a href="#tab-Data_source-Cluster" title="Cluster"><i class="icon-cluster"></i> Cluster</a>
+            </li>
+            <li ng-click="setCurrentTab('fileUpload')">
+                <a href="#tab-Data_source-Upload" title="Upload"><i class="icon-upload"></i> Upload</a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="content">
+
+        <!-- Data source : URI -->
+        <fieldset class="tab open" id="tab-Data_source-URI">
+
+            <input class="input" type="text" name="data_source_uri" placeholder="URI goes here (e.g. http://)" ng-model="uris['http']" ng-trim="false" autofocus ui-keypress="{13:'saveProceedMethodIn()'}">
+
+        </fieldset><!-- /end Data source : URI -->
+
+        <!-- Data source : HDFS -->
+        <fieldset class="tab" id="tab-Data_source-HDFS">
+
+            <input class="input" type="text" name="data_source_uri" placeholder="URI goes here (e.g. http://)" ng-model="uris['hdfs']" ng-trim="false" ui-keypress="{13:'saveProceedMethodIn()'}">
+
+        </fieldset><!-- /end Data source : HDFS -->
+
+        <!-- Data source : S3 -->
+        <fieldset class="tab" id="tab-Data_source-S3">
+
+            <input class="input typeahead-input" type="text" name="data_source_uri" placeholder="URI goes here (e.g. http://)" ng-model="uris['s3']" sf-typeahead datasets="TypeaheadService.s3Dataset" ng-trim="false" ui-keypress="{13:'saveProceedMethodIn()'}">
+
+        </fieldset><!-- /end Data source : S3 -->
+
+        <!-- Data source : Cluster -->
+        <fieldset class="tab" id="tab-Data_source-Cluster">
+
+            <p>Make sure that the file is present on all machines in exact the same location.</p>
+
+            <input class="input typeahead-input" type="text" name="data_source_uri" placeholder="Cluster path goes here (e.g. /home/example.csv)" ng-model="uris['cluster']" sf-typeahead datasets="TypeaheadService.clusterDataset" ng-trim="false" ui-keypress="{13:'saveProceedMethodIn()'}">
+
+        </fieldset><!-- /end Data source : Cluster -->
+
+        <!-- Data source : Upload -->
+        <fieldset class="tab" id="tab-Data_source-Upload">
+            <input ng-if="multiple" class="input" type="file" ng-file-select="updateFiles($files)" multiple>
+            <input ng-if="!multiple" class="input" type="file" ng-file-select="updateFiles($files)">
+        </fieldset><!-- /end Data source : Upload -->
+    </div>
+</form><!-- /end Data source selector -->
