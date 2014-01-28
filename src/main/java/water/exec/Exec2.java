@@ -57,15 +57,18 @@ public class Exec2 {
 
   public static Env exec( String str ) throws IllegalArgumentException {
     // Preload the global environment from existing Frames
-    Env env = new Env();
     ArrayList<ASTId> global = new ArrayList<ASTId>();
+    ArrayList<Key>   locked = new ArrayList<Key>  ();
+    Env env = new Env(locked);
     for( Value v : H2O.values() ) { // Add Frames to parser's namespace
       Frame fr;
       if( v.type()==TypeMap.VALUE_ARRAY ) fr = ValueArray.asFrame(v);
       else if( v.type()==TypeMap.FRAME  ) fr = v.get();
       else continue;
-      env.push(fr,v._key.toString());
       global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
+      env.push(fr,v._key.toString());
+      fr.read_lock(null);
+      locked.add(fr._key);
     }
 
     // Some global constants
@@ -75,16 +78,16 @@ public class Exec2 {
     global.add(new ASTId(Type.DBL,"Inf",0,global.size())); env.push(Double.POSITIVE_INFINITY);
 
     // Parse.  Type-errors get caught here and throw IAE
-    int argcnt = global.size();
-    Exec2 ex = new Exec2(str, global);
-    AST ast = ex.parse();
-
     try {
+      int argcnt = global.size();
+      Exec2 ex = new Exec2(str, global);
+      AST ast = ex.parse();
+
       env.push(global.size()-argcnt);   // Push space for temps
       ast.exec(env);
       env.postWrite();
     } catch( RuntimeException t ) {
-      env.remove();
+      env.remove_and_unlock();
       throw t;
     }
     return env;

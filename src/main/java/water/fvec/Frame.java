@@ -179,7 +179,7 @@ public class Frame extends Lockable<Frame> {
   public Vec remove( int idx ) {
     int len = _names.length;
     if( idx < 0 || idx >= len ) return null;
-    Vec v = _vecs[idx];
+    Vec v = vecs()[idx];
     System.arraycopy(_names,idx+1,_names,idx,len-idx-1);
     System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
     System.arraycopy(_keys ,idx+1,_keys ,idx,len-idx-1);
@@ -338,10 +338,7 @@ public class Frame extends Lockable<Frame> {
 
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   @Override public Futures delete_impl(Futures fs) {
-    for( Vec v : _vecs ) { 
-      assert v != null && v._key != null : "Broken vecs"; 
-      UKV.remove(v._key,fs); 
-    }
+    for( Vec v : vecs() ) UKV.remove(v._key,fs);
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];

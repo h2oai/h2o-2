@@ -44,6 +44,7 @@ public class KMeans2 extends ColumnsJob {
   }
 
   @Override protected Status exec() {
+    source.read_lock(self());
     String sourceArg = input("source");
     Key sourceKey = null;
     if( sourceArg != null )
@@ -59,6 +60,7 @@ public class KMeans2 extends ColumnsJob {
     String[] namesResp = Utils.append(names, "response");
     String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    model.delete_and_lock(self());
     model.k = k; model.normalized = normalize;
 
     // TODO remove when stats are propagated with vecs?
@@ -151,6 +153,7 @@ public class KMeans2 extends ColumnsJob {
         break;
     }
     model.unlock(self());
+    source.unlock(self());
     return Status.Done;
   }
 

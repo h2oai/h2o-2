@@ -45,6 +45,7 @@ public class KMeans extends Job {
     res._maxIter = maxIter;
     res._initialization = init;
     res.delete_and_lock(job.self());
+    va.read_lock(job.self());
     // Updated column mapping selection after removing various junk columns
     final int[] filteredCols = res.columnMapping(va.colNames());
 
@@ -143,6 +144,7 @@ public class KMeans extends Job {
         break;
     }
     res.unlock(self());
+    va.unlock(self());
     remove();
   }
 

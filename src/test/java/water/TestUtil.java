@@ -356,11 +356,7 @@ public class TestUtil {
     if(okey == null)
         okey = Key.make(file.getName());
     Key fkey = NFSFileVec.make(file);
-    try {
-      return ParseDataset2.parse(okey, new Key[] { fkey });
-    } finally {
-      UKV.remove(fkey);
-    }
+    return ParseDataset2.parse(okey, new Key[] { fkey });
   }
 
   public static Frame frame(String[] names, double[]... rows) {

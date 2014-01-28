@@ -51,9 +51,16 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // (2)  FR,VA.waiting...                       FR,VA+job-locked atomic xtn loop
   // (3)                                            VA.delete_impl onSuccess
   // (4)  FR         <--update success <--       FR+job-locked
+
+  // Returns OLD guy
+  public Lockable write_lock( Key job_key ) {
+    System.out.println("write-locking "+_key+" by "+job_key);
+    return ((WriteUpdateLock)new WriteUpdateLock(job_key).invoke(_key))._old;
+  }
+  // Returns NEW guy
   public T delete_and_lock( Key job_key ) {
-    System.out.println("clear&Locking "+_key+" by "+job_key);
-    Lockable old = ((WriteUpdateLock)new WriteUpdateLock(job_key).invoke(_key))._old;
+    System.out.println("clear & write-lock"+_key+" by "+job_key);
+    Lockable old =  write_lock(job_key);
     if( old != null ) old.delete_impl(new Futures()).blockForPending();
     return (T)this;
   }
@@ -68,8 +75,10 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     WriteUpdateLock( Key job_key ) { _job_key = job_key; }
     @Override public Lockable atomic(Lockable old) {
       _old = old;
-      if( old != null ) {                // Prior Lockable exists?
-        assert !old.is_locked(_job_key) : "Key "+_key+" already locked by "+_job_key+", lks="+Arrays.toString(old._lockers); // No double locking by same job
+      if( old != null ) {       // Prior Lockable exists?
+        assert !old.is_wlocked() : "Key "+_key+" already locked by "+_job_key+", lks="+Arrays.toString(old._lockers); // No double locking by same job
+        if( old.is_locked(_job_key) ) // read-locked by self? (double-write-lock checked above)
+          old.set_unlocked(old._lockers,_job_key); // Remove read-lock; will atomically upgrade to write-lock
         if( !old.is_unlocked() ) { // Blocking for some other Job to finish???
           System.out.println("Unable to clear&Lock because "+_key+" is locked by "+Arrays.toString(old._lockers));
           throw H2O.unimpl();
@@ -120,8 +129,10 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // -----------
   // Atomically get a read-lock, preventing future deletes or updates
   public void read_lock( Key job_key ) {
-    System.out.println("Read-locking "+_key+" by "+job_key);
-    new ReadLock(job_key).invoke(_key);
+    if( _key != null ) {
+      System.out.println("Read-locking "+_key+" by "+job_key);
+      new ReadLock(job_key).invoke(_key);
+    }
   }
 
   // Obtain read-lock
@@ -148,7 +159,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     final Key _job_key;         // Job doing the unlocking
     Update( Key job_key ) { _job_key = job_key; }
     @Override public Lockable atomic(Lockable old) {
-      assert old != null && old.is_locked(_job_key);
+      assert old != null && old.is_wlocked();
       _lockers = old._lockers;  // Keep lock state
       return Lockable.this;     // Freshen this
     }
@@ -157,8 +168,10 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // -----------
   // Atomically set a new version of self & unlock.
   public void unlock( Key job_key ) { 
-    System.out.println("Unlocking "+_key+" by "+job_key);
-    new Unlock(job_key).invoke(_key); 
+    if( _key != null ) {
+      System.out.println("Unlocking "+_key+" by "+job_key);
+      new Unlock(job_key).invoke(_key); 
+    }
   }
 
   // Freshen 'this' and unlock

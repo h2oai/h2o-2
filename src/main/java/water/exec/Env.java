@@ -1,8 +1,6 @@
 package water.exec;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 import water.*;
 import water.fvec.*;
@@ -34,8 +32,9 @@ public class Env extends Iced {
   transient boolean _allow_tmp;           // Deep-copy allowed to tmp
   transient boolean _busy_tmp;            // Assert temp is available for use
   transient Frame  _tmp;                  // The One Big Active Tmp
+  transient final ArrayList<Key> _locked; // The original set of locked frames
 
-  Env() {
+  Env(ArrayList<Key> locked) {
     _key = new String[4]; // Key for Frame
     _ary = new Frame [4]; // Frame (or null if not a frame)
     _d   = new double[4]; // Double (only if frame & func are null)
@@ -43,6 +42,7 @@ public class Env extends Iced {
     _display= new int[4];
     _refcnt = new HashMap<Vec,Integer>();
     _sb = new StringBuilder();
+    _locked = locked;
   }
 
   public int sp() { return _sp; }
@@ -216,6 +216,7 @@ public class Env extends Iced {
     // All other fields are ignored/zero
     _refcnt = null;
     _sb = null;
+    _locked = null;
   }
 
 
@@ -248,7 +249,6 @@ public class Env extends Iced {
     Futures fs = null;
     for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
     if( fs != null ) fs.blockForPending();
-    if( key != null && fs != null ) fr.delete();
     return null;
   }
   // Lower refcounts on all vecs captured in the inner environment
@@ -303,7 +303,7 @@ public class Env extends Iced {
 
 
   // Remove everything
-  public void remove() {
+  public void remove_and_unlock() {
     // Remove all shallow scopes
     while( _tod > 0 ) popScope();
     // Push changes at the outer scope into the K/V store
@@ -323,10 +323,13 @@ public class Env extends Iced {
             addRef(v2);
           } // But not down to zero (do not delete items in global scope)
         }
-        fr2.update(null); // Update in K/V
+        if( _locked.contains(fr2._key) ) fr2.write_lock(null);     // Upgrade to write-lock
+        else { fr2.delete_and_lock(null); _locked.add(fr2._key); } // Clear prior & set new data
       } else
         popUncheck();
     }
+    // Unlock all also
+   for( Key k : _locked ) ((Frame)UKV.get(k)).unlock(null);
   }
 
   // Done writing into all things.  Allow rollups.

@@ -20,7 +20,7 @@ import water.*;
  */
 public class RFPredDomainTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
 
   static final long[] a(long ...p) { return p; }
 
