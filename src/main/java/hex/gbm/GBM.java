@@ -1,6 +1,5 @@
 package hex.gbm;
 
-import static water.util.Utils.div;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
@@ -10,8 +9,13 @@ import water.api.DocGen;
 import water.api.GBMProgressPage;
 import water.fvec.Chunk;
 import water.fvec.Frame;
-import water.util.*;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
+import water.util.SB;
+import water.util.Utils;
+
+import static water.util.Utils.div;
 
 // Gradient Boosted Trees
 //
@@ -216,7 +220,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
       ds[0] = Math.exp(chk_tree(chks,0).at0(row));
-      ds[1] = 1.0/ds[0]; // exp(-d) === 1/d
+      ds[1] = 1.0/ds[0]; // exp(-d) === 1/exp(d)
       return ds[0]+ds[1];
     }
     double sum=0;
