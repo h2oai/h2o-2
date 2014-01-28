@@ -150,9 +150,11 @@ setMethod("show", "H2ONNModel", function(object) {
 
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
-  cat("\nTraining square error:", model$train_sqr_error)
+  cat("\nTraining mean square error:", model$train_sqr_error)
+  cat("\nTraining cross entropy:", model$train_cross_entropy)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
+  cat("\nValidation cross entropy:", model$valid_cross_entropy)
   cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
@@ -979,10 +981,10 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
   function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
 
-setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
   function(x, value) {
     if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
     else if(any(duplicated(value))) stop("Column names must be unique")
