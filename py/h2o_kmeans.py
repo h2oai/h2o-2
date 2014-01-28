@@ -22,7 +22,7 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
 
     # Check other things in the json response dictionary 'kmeans' here
     if h2o.beta_features:
-        destination_key = kmeans['model']['_selfKey']
+        destination_key = kmeans['model']['_key']
         # Exception: rjson error in inspect: Argument 'src_key' error: benign_k.hex:Key is not a Frame
 
         # can't use inspect on a model key? now?
@@ -61,7 +61,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     if h2o.beta_features:
         # can't use inspect on a model key? now?
         model = kmeans['model']
-        model_key = model['_selfKey']
+        model_key = model['_key']
         centers = model['centers']
         cluster_variances = model["within_cluster_variances"]
         error = model["total_within_SS"]
