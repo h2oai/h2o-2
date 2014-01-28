@@ -1,54 +1,60 @@
 package water.api;
 
+import com.google.gson.*;
+
 import water.*;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.RString;
+import water.ValueArray.Column;
 
-public class Levels extends Request2 {
-  static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+public class Levels extends Request {
+  protected final H2OHexKey _key = new H2OHexKey(KEY);
+  protected final HexColumnSelect _columns = new HexColumnSelect(X, _key, 2500);
+  protected final Int             _max_column   = new Int(COLUMNS_DISPLAY, MAX_COLUMNS_TO_DISPLAY);
 
-  // This Request supports the HTML 'GET' command, and this is the help text
-  // for GET.
-  static final String DOC_GET = "Returns the factor levels of each column in a frame";
+  static final int MAX_COLUMNS_TO_DISPLAY = 1000;
 
-  @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
-  Frame source;
-
-  class colsFilter1 extends MultiVecSelect { public colsFilter1() { super("source");} }
-  @API(help = "Select columns", filter=colsFilter1.class)
-  int[] cols;
-
-  @API(help = "Maximum columns to show summaries of", filter = Default.class, lmin = 1,  lmax = 1000)
-  int max_ncols = 1000;
-
-  @API(help = "Factor levels of each column")
-  String[][] levels;
-
-  public static String link(Key k, String content) {
-    RString rs = new RString("<a href='Levels.query?source=%$key'>"+content+"</a>");
-    rs.replace("key", k.toString());
-    return rs.toString();
+  public static String link(Key k, String s){
+    return "<a href='Levels.html?key="+k+"'>" + s + "</a>";
   }
 
   @Override protected Response serve() {
-    if( source == null ) return RequestServer._http404.serve();
-    // select all columns by default
-    if( cols == null ) {
-      cols = new int[Math.min(source.vecs().length,max_ncols)];
-      for(int i = 0; i < cols.length; i++) cols[i] = i;
-    }
-    Vec[] vecs = new Vec[cols.length];
-    String[] names = new String[cols.length];
-    for (int i = 0; i < cols.length; i++) {
-      vecs[i] = source.vecs()[cols[i]];
-      names[i] = source._names[cols[i]];
+    int[] colIds = _columns.value();
+    ValueArray ary = _key.value();
+
+    final boolean did_trim_columns;
+    final int max_columns_to_display;
+    if (_max_column.value() >= 0)
+      max_columns_to_display = Math.min(_max_column.value(), colIds.length == 0 ? ary._cols.length : colIds.length);
+    else
+      max_columns_to_display = Math.min(MAX_COLUMNS_TO_DISPLAY, colIds.length == 0 ? ary._cols.length : colIds.length);
+
+    if(colIds.length == 0){
+      did_trim_columns = ary._cols.length > max_columns_to_display;
+      colIds = new int[ Math.min(ary._cols.length, max_columns_to_display) ];
+      for(int i = 0; i < colIds.length; ++i) colIds[i] = i;
+    } else if (colIds.length > max_columns_to_display){
+      int [] cols2 = new int[ max_columns_to_display ];
+      for (int j=0; j < max_columns_to_display; j++) cols2[ j ] = colIds[ j ];
+      colIds = cols2;
+      did_trim_columns = true;
+    } else {
+      did_trim_columns = false;
     }
 
-    levels = new String[cols.length][];
-    for(int i = 0; i < cols.length; i++)
-      levels[i] = vecs[i].domain() == null ? null : vecs[i].domain().clone();
-    return Response.done(this);
+    JsonObject res = new JsonObject();
+    JsonArray levels = new JsonArray();
+    for(int i = 0; i < colIds.length; i++) {
+      Column c = ary._cols[colIds[i]];
+      if(c.isEnum()) {
+        JsonArray level_names = new JsonArray();
+        for(int j = 0; j < c._domain.length; j++)
+          level_names.add(new JsonPrimitive(c._domain[j]));
+        levels.add(level_names);
+      } else
+        levels.add(null);
+    }
+    res.add("levels", levels);
+    res.add("trim_cols", new JsonPrimitive(did_trim_columns));
+    return Response.done(res);
   }
+
 }

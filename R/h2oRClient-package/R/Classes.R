@@ -684,7 +684,7 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   x.slice = as.data.frame(x[seq_len(n),])
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -701,7 +701,7 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   idx = seq.int(to = nrx, length.out = n)
   x.slice = as.data.frame(x[idx,])
   rownames(x.slice) = idx
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -819,7 +819,7 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
 
 setMethod("levels", "H2OParsedData", function(x) {
   if(ncol(x) != 1) return(NULL)
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   res$levels[[1]]
 })
 
@@ -879,7 +879,7 @@ str.H2OParsedData <- function(object, ...) {
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
   rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
-  res2 = h2o.__remoteSend(object@h2o, h2o.__HACK_LEVELS, source = object@key)
+  res2 = h2o.__remoteSend(object@h2o, h2o.__HACK_LEVELS2, source = object@key)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
@@ -1017,11 +1017,11 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
 
-#   res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
-#   for(i in 1:ncol(x)) {
-#     if(!is.null(res2$levels[[i]]))
-#       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
-#   }
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, key = x@key)
+  for(i in 1:ncol(x)) {
+    if(!is.null(res2$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
+  }
   return(x.slice)
 })
 
@@ -1039,11 +1039,11 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-#   res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
-#   for(i in 1:ncol(x)) {
-#     if(!is.null(res2$levels[[i]]))
-#       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
-#   }
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, key = x@key)
+  for(i in 1:ncol(x)) {
+    if(!is.null(res2$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
+  }
   return(x.slice)
 })
 
