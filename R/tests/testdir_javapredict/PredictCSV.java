@@ -164,8 +164,7 @@ class PredictCSV {
                         else {
                             row[i] = (double) cellOrdinalValue.intValue();
                         }
-                    }
-                    else {
+                    } else {
                         double value = Double.parseDouble(cellString);
                         row[i] = value;
                     }

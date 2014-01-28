@@ -10,7 +10,10 @@ import java.net.URL;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.*;
+
 
 import sun.misc.Unsafe;
 import water.*;
@@ -985,5 +988,21 @@ public class Utils {
   public static boolean contains(String[] names, String name) {
     for (String n : names) if (n.equals(name)) return true;
     return false;
+  }
+
+  /** Java-string illegal characters which need to be escaped */
+  public static final Pattern[] ILLEGAL_CHARACTERS = new Pattern[] { Pattern.compile("\\",Pattern.LITERAL), Pattern.compile("\"",Pattern.LITERAL) };
+  public static final String[]  REPLACEMENTS       = new String [] { "\\\\\\\\", "\\\\\"" };
+
+  /** Escape all " and \ characters to provide a proper Java-like string
+   * Does not escape unicode characters.
+   */
+  public static String escapeJava(String s) {
+    assert ILLEGAL_CHARACTERS.length == REPLACEMENTS.length;
+    for (int i=0; i<ILLEGAL_CHARACTERS.length; i++ ) {
+      Matcher m = ILLEGAL_CHARACTERS[i].matcher(s);
+      s = m.replaceAll(REPLACEMENTS[i]);
+    }
+    return s;
   }
 }

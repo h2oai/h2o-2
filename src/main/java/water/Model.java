@@ -63,7 +63,7 @@ public abstract class Model extends Lockable<Model> {
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
 
   /** Remove any Model internal Keys */
-  @Override public void delete_impl(Futures fs) { 
+  @Override public void delete_impl(Futures fs) {
     /* None in the default Model */
   }
 
@@ -386,7 +386,7 @@ public abstract class Model extends Lockable<Model> {
         sb.p("new String[] {");
         for (int j=0; j<dom.length; j++) {
           if (j>0) sb.p(',');
-          sb.p('"').p(dom[j]).p('"');
+          sb.p('"').pj(dom[j]).p('"');
         }
         sb.p("}");
       }
