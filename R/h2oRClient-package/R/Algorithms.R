@@ -35,13 +35,13 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     # while(!h2o.__isDone(data@h2o, "GBM", res)) { Sys.sleep(1) }
     res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=res$destination_key)
     
-    result = h2o.__getGBMResults(res2$gbm_model, y_i, distribution == 'multinomial')
+    result = h2o.__getGBMResults(res2$gbm_model, distribution == 'multinomial')
     result$distribution <- distribution
     new("H2OGBMModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
     # h2o.gridsearch.internal("GBM", data, res$job_key, res$destination_key, validation, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt= (distribution=='multinomial'))
-    h2o.gridsearch.internal("GBM", data, res, validation, args$y_i, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt = (distribution == 'multinomial'))
+    h2o.gridsearch.internal("GBM", data, res, validation, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt = (distribution == 'multinomial'))
   }
 }
 
@@ -61,10 +61,10 @@ h2o.__getGBMSummary <- function(res, isClassificationAndYesTheBloodyModelShouldR
   return(mySum)
 }
 
-h2o.__getGBMResults <- function(res, y_i, isClassificationAndYesTheBloodyModelShouldReportIt) {
+h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldReportIt) {
   result = list()
   if( isClassificationAndYesTheBloodyModelShouldReportIt ){
-    class_names = res$'_domains'[[y_i]]
+    class_names = tail(res$'_domains', 1)[[1]]
     result$confusion = build_cm(tail(res$cm, 1)[[1]], class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
   } else
@@ -533,7 +533,7 @@ h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, 
   if(!(classification %in% c(0, 1)) )
     stop(paste(classification, "is not a valid classification index; only [0,1] are supported"))
 
-  if(length(layers) == 1 && length(rate) == 1 && length(l1_reg) == 1 && length(l2_reg) == 1 && length(epoch) == 1) {
+  if(length(rate) == 1 && length(l1_reg) == 1 && length(l2_reg) == 1 && length(epoch) == 1) {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
         classification=as.numeric(classification), activation=activation, rate=rate,
         hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
@@ -542,14 +542,14 @@ h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, 
     # while(!h2o.__isDone(data@h2o, "NN", res)) { Sys.sleep(1) }
     res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, '_modelKey'=res$destination_key)
 
-    result = h2o.__getNNResults(res2$neuralnet_model, args$y_i)
+    result = h2o.__getNNResults(res2$neuralnet_model)
     new("H2ONNModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
                            classification=as.numeric(classification), activation=activation, rate=rate,
                            hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
-    # h2o.gridsearch.internal("NN", data, res$job_key, res$destination_key, validation, args$y_i)
-    h2o.gridsearch.internal("NN", data, res, validation, args$y_i)
+    # h2o.gridsearch.internal("NN", data, res$job_key, res$destination_key, validation)
+    h2o.gridsearch.internal("NN", data, res, validation)
   }
 }
 
@@ -572,9 +572,9 @@ h2o.__getNNSummary <- function(res) {
   return(mySum)
 }
 
-h2o.__getNNResults <- function(res, y_i) {
+h2o.__getNNResults <- function(res) {
   result = list()
-  class_names = res$'_domains'[[y_i]]
+  class_names = tail(res$'_domains', 1)[[1]]
   result$confusion = build_cm(res$confusion_matrix, class_names)
   nn_train = tail(res$training_errors,1)[[1]]
   nn_valid = tail(res$validation_errors,1)[[1]]
@@ -759,12 +759,12 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
     # while(!h2o.__isDone(data@h2o, "RF2", res)) { Sys.sleep(1) }
     res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRFModelView, '_modelKey'=res$destination_key)
 
-    result = h2o.__getDRFResults(res2$drf_model, args$y_i)
+    result = h2o.__getDRFResults(res2$drf_model)
     new("H2ODRFModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed)
     # h2o.gridsearch.internal("RF", data, res$job_key, res$destination_key, validation, args$y_i)
-    h2o.gridsearch.internal("RF", data, res, validation, args$y_i)
+    h2o.gridsearch.internal("RF", data, res, validation)
   }
 }
 
@@ -789,7 +789,7 @@ h2o.__getDRFResults <- function(res, y_i) {
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
 
-  class_names = res$'_domains'[[y_i]]
+  class_names = tail(res$'_domains', 1)[[1]]
   result$confusion = build_cm(tail(res$cm, 1)[[1]], class_names)  #res$'_domains'[[length(res$'_domains')]])
   result$mse = res$errs
   result$ntree = res$N
@@ -871,7 +871,7 @@ verify_dataxy <- function(data, x, y) {
 }
 
 # h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
-h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, y_i = 1, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt = TRUE) {
+h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt = TRUE) {
   if(!algo %in% c("GBM", "KM", "RF", "NN")) stop("General grid search not supported for ", algo)
   prog_view = switch(algo, GBM = h2o.__PAGE_GBMProgress, KM = h2o.__PAGE_KM2Progress, RF = h2o.__PAGE_DRFProgress, NN = h2o.__PAGE_NNProgress)
   
@@ -896,7 +896,7 @@ h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, y_i
       resH = h2o.__remoteSend(data@h2o, model_view, '_modelKey'=allModels[[i]]$destination_key)
     myModelSum[[i]] = switch(algo, GBM = h2o.__getGBMSummary(resH[[3]], forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKM2Summary(resH[[3]]), RF = h2o.__getDRFSummary(resH[[3]]), NN = h2o.__getNNSummary(resH))
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
-    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]], y_i, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKM2Results(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]], y_i), NN = h2o.__getNNResults(resH, y_i))
+    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]], forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKM2Results(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]]), NN = h2o.__getNNResults(resH))
 
     if(algo == "KM")
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig)

@@ -825,10 +825,6 @@ setMethod("levels", "H2OParsedData", function(x) {
   res$levels[[1]]
 })
 
-setMethod("as.name", "H2OParsedData", function(x) {
-  deparse(substitute(x))
-})
-
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Need to change ... to environment variables and pass to substitute method,
 #       Can't figure out how to access outside environment from within lapply
