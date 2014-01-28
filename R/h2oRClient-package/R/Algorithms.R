@@ -47,7 +47,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
 
 h2o.__getGBMSummary <- function(res, isClassificationAndYesTheBloodyModelShouldReportIt) {
   mySum = list()
-  mySum$model_key = res$'_selfKey'
+  mySum$model_key = res$'_key'
   mySum$ntrees = res$N
   mySum$max_depth = res$max_depth
   mySum$min_rows = res$min_rows
@@ -256,7 +256,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
     # while(!h2o.__isDone(data@h2o, "GLM2", res)) { Sys.sleep(1) }
 
     res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=res$destination_key)
-    resModel = res2$glm_model; destKey = resModel$'_selfKey'
+    resModel = res2$glm_model; destKey = resModel$'_key'
     modelOrig = h2o.__getGLM2Results(resModel, x, y)
 
     # Get results from cross-validation
@@ -313,7 +313,7 @@ h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, lamb
 
 h2o.__getGLM2Summary <- function(model) {
   mySum = list()
-  mySum$model_key = model$'_selfKey'
+  mySum$model_key = model$'_key'
   mySum$alpha = model$alpha
   mySum$lambda_min = min(model$lambda)
   mySum$lambda_max = max(model$lambda)
@@ -468,7 +468,7 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
     res2 = res2$model
 
     result = h2o.__getKM2Results(res2, data) #, centers)
-    new("H2OKMeansModel", key=res2$'_selfKey', data=data, model=result)
+    new("H2OKMeansModel", key=res2$'_key', data=data, model=result)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize))
     # h2o.gridsearch.internal("KM", data, res$job_key, res$destination_key)
@@ -478,7 +478,7 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
 
 h2o.__getKM2Summary <- function(res) {
   mySum = list()
-  mySum$model_key = res$'_selfKey'
+  mySum$model_key = res$'_key'
   mySum$k = res$k
   mySum$max_iter = res$iterations
   mySum$error = res$error
@@ -487,7 +487,7 @@ h2o.__getKM2Summary <- function(res) {
 
 h2o.__getKM2Results <- function(res, data) {
   #rand_pred_key = h2o.__uniqID("KMeansClusters")
-  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
+  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_key', data=data@key, prediction=rand_pred_key)
   #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
 
   clusters_key <- paste(res$'_clustersKey', sep = "")
@@ -771,7 +771,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
 
 h2o.__getDRFSummary <- function(res) {
   mySum = list()
-  mySum$model_key = res$'_selfKey'
+  mySum$model_key = res$'_key'
   mySum$ntrees = res$N
   mySum$max_depth = res$max_depth
   mySum$min_rows = res$min_rows
