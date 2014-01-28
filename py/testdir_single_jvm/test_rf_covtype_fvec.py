@@ -132,7 +132,7 @@ class Basic(unittest.TestCase):
 
 
             ### print "rfView", h2o.dump_json(rfView)
-            model_key = rfResult['drf_model']['_selfKey']
+            model_key = rfResult['drf_model']['_key']
             data_key = rfResult['drf_model']['_dataKey']
             ntrees = kwargs['ntrees']
             rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, retryDelaySecs=5, doSimpleCheck=False)

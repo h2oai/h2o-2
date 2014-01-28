@@ -413,7 +413,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
   
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = cols_ind)
   job_key = res$response$redirect_request_args$job; destKey = res$destination_key
-  
+
   h2o.__waitOnJob(data@h2o, job_key)
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, job = job_key, key = destKey)
   res2 = res2$KMeansModel

@@ -88,7 +88,7 @@ class Basic(unittest.TestCase):
             rf_model = rfv['drf_model']
             used_trees = rf_model['N']
             data_key = rf_model['_dataKey']
-            model_key = rf_model['_selfKey']
+            model_key = rf_model['_key']
 
 
             # RFView (score on test)****************************************

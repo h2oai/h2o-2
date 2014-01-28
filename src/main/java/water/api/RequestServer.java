@@ -173,7 +173,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new LogAndEcho());
     registerRequest(new GLMProgress());
     registerRequest(new hex.glm.GLMGridProgress());
-    registerRequest(new water.api.Levels());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels2());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels());    // Ditto the above for ValueArray objects
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
