@@ -863,9 +863,15 @@ public class Utils {
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
-  public static float[] div(float[] nums, float n) {
+  public static float[] div(float[] nums, final float n) {
     assert !Float.isInfinite(n); // Almost surely not what you want
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  public static double[] div(double[] nums, final double n) {
+    assert !Double.isInfinite(n); // Almost surely not what you want
+    final double mult = 1/n;
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] * mult;
     return nums;
   }
   /**

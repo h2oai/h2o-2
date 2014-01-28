@@ -15,6 +15,7 @@ import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
+import hex.nn.NNModel;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.rf.RFModel;
@@ -163,6 +164,8 @@ public class Inspect extends Request {
 //      return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
       return NeuralNetModelView.redirect(this, key);
+    if(f instanceof NNModel)
+      return NNModelView.redirect(this, key);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
