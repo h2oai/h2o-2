@@ -734,8 +734,9 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
   }
 
   /** Actually remove/delete all Chunks from memory. */
-  @Override public void delete_impl(Futures fs) {
+  @Override public Futures delete_impl(Futures fs) {
     for( long i=0; i<chunks(); i++ ) // Delete all the chunks
       DKV.remove(getChunkKey(i),fs);
+    return fs;
   }
 }

@@ -53,10 +53,8 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // (4)  FR         <--update success <--       FR+job-locked
   public T delete_and_lock( Key job_key ) {
     System.out.println("clear&Locking "+_key+" by "+job_key);
-    Value val = DKV.get(_key);
-    Lockable old = val==null?null:(Lockable)val.get();
-    assert old==null || !old.is_locked(job_key) : "Key "+_key+" already locked by "+job_key+", lks="+Arrays.toString(old._lockers);
-    new WriteUpdateLock(job_key).invoke(_key);
+    Lockable old = ((WriteUpdateLock)new WriteUpdateLock(job_key).invoke(_key))._old;
+    if( old != null ) old.delete_impl(new Futures()).blockForPending();
     return (T)this;
   }
 
@@ -66,33 +64,35 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // Spins, if several requests are competing for a lock.
   private class WriteUpdateLock extends TAtomic<Lockable> {
     final Key _job_key;         // Job doing the locking
+    Lockable _old;              // Return the old thing, for deleting later
     WriteUpdateLock( Key job_key ) { _job_key = job_key; }
     @Override public Lockable atomic(Lockable old) {
+      _old = old;
       if( old != null ) {                // Prior Lockable exists?
         assert !old.is_locked(_job_key) : "Key "+_key+" already locked by "+_job_key+", lks="+Arrays.toString(old._lockers); // No double locking by same job
-        if( !old.is_unlocked() ) // Blocking for some other Job to finish???
+        if( !old.is_unlocked() ) { // Blocking for some other Job to finish???
+          System.out.println("Unable to clear&Lock because "+_key+" is locked by "+Arrays.toString(old._lockers));
           throw H2O.unimpl();
+        }
       }
       // Update-in-place the defensive copy
       set_write_lock(_job_key);
       return Lockable.this;
-    }
-    @Override public void onSuccess( Lockable old ) {
-      if( old != null ) {
-        Futures fs = new Futures();
-        old.delete_impl(fs);
-        fs.blockForPending();
-      }
     }
   }
 
   // -----------
   // Atomic lock & remove self.
   public void delete( ) { 
-    if( _key != null ) System.out.println("Lock/Deleting "+_key);
-    WriteDeleteLock wl = new WriteDeleteLock();
-    if( _key==null ) wl.onSuccess(this); // No key, so a local Frame only
-    else wl.invoke(_key);                // Remote/global delete
+    Lockable old = this;
+    if( _key != null ) {
+      System.out.println("Lock/Deleting "+_key);
+      old = ((WriteDeleteLock)new WriteDeleteLock().invoke(_key))._old;
+    }
+    Futures fs = new Futures();
+    if( old != null ) old.delete_impl(fs);
+    if( _key != null ) DKV.remove(_key,fs); // Delete self also
+    fs.blockForPending();
   }
   public static void delete( Key k ) {
     if( k == null ) return;
@@ -103,7 +103,9 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
 
   // Obtain the write-lock on _key, then delete.
   private class WriteDeleteLock extends TAtomic<Lockable> {
+    Lockable _old;              // Return the old thing, for deleting later
     @Override public Lockable atomic(Lockable old) {
+      _old = old;
       if( old != null &&         // Prior Lockable exists?
           !old.is_unlocked() ) { // Blocking for some other Job to finish???
         System.out.println("lock/del fails because "+_key+" locked by : "+Arrays.toString(old._lockers));
@@ -112,14 +114,6 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
       // Update-in-place the defensive copy
       old.set_write_lock(null);
       return old;
-    }
-    @Override public void onSuccess( Lockable old ) {
-      if( old != null ) {
-        Futures fs = new Futures();
-        old.delete_impl(fs);
-        if( _key != null ) DKV.remove(_key,fs); // Delete self also
-        fs.blockForPending();
-      }
     }
   }
 
@@ -220,5 +214,5 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
 
 
   // Remove any subparts before removing the whole thing
-  protected abstract void delete_impl( Futures fs );
+  protected abstract Futures delete_impl( Futures fs );
 }

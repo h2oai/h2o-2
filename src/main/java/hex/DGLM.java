@@ -862,7 +862,7 @@ public abstract class DGLM {
         Lockable.delete(_models[setup._id]);
       }
       // cleanup before sending back
-      DKV.remove(key);
+      UKV.remove(key);
       _betaStart = null;
       _lsm = null;
       _glmp = null;
@@ -1030,12 +1030,13 @@ public abstract class DGLM {
       return res;
     }
 
-    @Override public void delete_impl(Futures fs) { 
+    @Override public Futures delete_impl(Futures fs) { 
       if( _vals != null ) 
         for( GLMValidation val : _vals )
           if( val._modelKeys != null ) 
             for( Key k : val._modelKeys )
               ((GLMModel)DKV.get(k).get()).delete();
+      return fs;
     }
 
     private static class YMUVal extends Iced {
@@ -1904,6 +1905,7 @@ public abstract class DGLM {
     } else {
       beta = denormalizedBeta = null;
     }
+    data._ary.read_lock(job.self()); // Read-lock the input dataset
     new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params, lsm, 0, 0, false, 0, 0, null).delete_and_lock(job.self());
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
@@ -1913,6 +1915,8 @@ public abstract class DGLM {
           job.remove();
         } catch( JobCancelledException e ) {
           Lockable.delete(job.dest());
+        } finally {
+          data._ary.unlock(job.self()); // Read-lock the input dataset
         }
         tryComplete();
       }

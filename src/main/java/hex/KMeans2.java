@@ -360,8 +360,9 @@ public class KMeans2 extends ColumnsJob {
     }
 
     /** Remove any Model internal Keys */
-    @Override public void delete_impl(Futures fs) { 
+    @Override public Futures delete_impl(Futures fs) { 
       Lockable.delete(_clustersKey);
+      return fs;
     }
   }
 
