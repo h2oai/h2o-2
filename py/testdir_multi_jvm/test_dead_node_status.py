@@ -34,11 +34,11 @@ class Basic(unittest.TestCase):
         print "We probably need some status to interrogate to understand a node is in red state?"
         print "And I probably need to wait 60 secs to get to red state"
         time.sleep(120)
-        h2o.verify_cloud_size(nodeList, verbose=True)
+        h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
         time.sleep(5)
-        h2o.verify_cloud_size(nodeList, verbose=True)
+        h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
         time.sleep(5)
-        h2o.verify_cloud_size(nodeList, verbose=True)
+        h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
 
 if __name__ == '__main__':
     h2o.unit_main()
