@@ -73,7 +73,7 @@ public class PCAModel extends Model {
   @Override public void delete() { super.delete(); }
 
   @Override public String toString(){
-    StringBuilder sb = new StringBuilder("PCA Model (key=" + _selfKey + " , trained on " + _dataKey + "):\n");
+    StringBuilder sb = new StringBuilder("PCA Model (key=" + _key + " , trained on " + _dataKey + "):\n");
     return sb.toString();
   }
 
@@ -115,10 +115,10 @@ public class PCAModel extends Model {
 
   public void generateHTML(String title, StringBuilder sb) {
     if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
-    DocGen.HTML.paragraph(sb, "Model Key: " + _selfKey);
+    DocGen.HTML.paragraph(sb, "Model Key: " + _key);
 
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
-    sb.append("<div class='alert'>Actions: " + PCAScore.link(_selfKey, "Score on dataset") + ", "
+    sb.append("<div class='alert'>Actions: " + PCAScore.link(_key, "Score on dataset") + ", "
         + PCA.link(_dataKey, "Compute new model") + "</div>");
     screevarString(sb);
     sb.append("<span style='display: inline-block;'>");

@@ -90,7 +90,12 @@ Interpreting Results
 """""""""""""""""""""
 
 GBM results for classification models are comprised of a confusion
-matrix and the mean squared error of each tree. 
+matrix and the mean squared error of each tree. Note that when MSE for 
+each tree is returned, the first and second MSE values are the same. 
+The initial MSE is calculated for the dependent variable, and is given 
+as a baseline against which to evaluate the predictive performance of 
+each next basis function. The first MSE value given is the MSE for the 
+data set before any trees are built. 
 
 An example of a confusion matrix is given below:
 

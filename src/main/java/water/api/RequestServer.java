@@ -170,10 +170,12 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
+    registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
     registerRequest(new GLMProgress());
     registerRequest(new hex.glm.GLMGridProgress());
-    registerRequest(new water.api.Levels());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels2());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels());    // Ditto the above for ValueArray objects
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
@@ -244,6 +246,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith(".css")) return;
       if (uri.endsWith(".js")) return;
       if (uri.endsWith(".png")) return;
+      if (uri.endsWith(".ico")) return;
       if (uri.startsWith("/Typeahead")) return;
       if (uri.startsWith("/Cloud.json")) return;
       if (uri.endsWith("LogAndEcho.json")) return;

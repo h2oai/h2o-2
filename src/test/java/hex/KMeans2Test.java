@@ -37,15 +37,12 @@ public class KMeans2Test extends TestUtil {
       algo.seed = SEED;
       algo.invoke();
       KMeans2Model res = UKV.get(algo.destination_key);
-      Key clusterKey = Key.make(res._clustersKey);
       double[][] clusters = res.centers;
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);
-      UKV.remove(clusterKey);
+      res.delete();
     } finally {
-      frame.remove();
-      if( algo != null && algo.destination_key != null )
-        UKV.remove(algo.destination_key);
+      frame.delete();
     }
   }
 
@@ -73,7 +70,6 @@ public class KMeans2Test extends TestUtil {
       Timer t = new Timer();
       algo.invoke();
       KMeans2Model res = UKV.get(algo.destination_key);
-      Key clusterKey = Key.make(res._clustersKey);
       Log.debug(Sys.KMEAN, " testGaussian rows:" + rows + ", ms:" + t);
       double[][] clusters = res.centers;
 
@@ -87,11 +83,9 @@ public class KMeans2Test extends TestUtil {
         }
         Assert.assertTrue(found);
       }
-      UKV.remove(clusterKey);
+      res.delete();
     } finally {
-      frame.remove();
-      if( algo != null && algo.destination_key != null )
-        UKV.remove(algo.destination_key);
+      frame.delete();
     }
   }
 
@@ -144,12 +138,9 @@ public class KMeans2Test extends TestUtil {
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeans2Model res = UKV.get(algo.destination_key);
-    Key clusterKey = Key.make(res._clustersKey);
     Assert.assertEquals(algo.k, res.centers.length);
-    UKV.remove(dest);
-    UKV.remove(clusterKey);
-    if( algo != null && algo.destination_key != null )
-      UKV.remove(algo.destination_key);
+    frame.delete();
+    res.delete();
   }
 
   @Test public void testSphere() {
@@ -165,11 +156,8 @@ public class KMeans2Test extends TestUtil {
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeans2Model res = UKV.get(algo.destination_key);
-    Key clusterKey = Key.make(res._clustersKey);
     Assert.assertEquals(algo.k, res.centers.length);
-    UKV.remove(dest);
-    UKV.remove(clusterKey);
-    if( algo != null && algo.destination_key != null )
-      UKV.remove(algo.destination_key);
+    frame.delete();
+    res.delete();
   }
 }

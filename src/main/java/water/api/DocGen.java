@@ -43,6 +43,7 @@ public abstract class DocGen {
     createFile("DRF2.rst", new DRF().ReSTHelp());
     createFile("GLM2.rst", new GLM2().ReSTHelp());
     createFile("KMeans2.rst", new KMeans2().ReSTHelp());
+    createFile("Summary2.rst", new Summary2().ReSTHelp());
   }
 
   /** The main method launched in the H2O environment and

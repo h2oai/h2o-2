@@ -58,8 +58,7 @@ public class ParserTest extends TestUtil {
         else
           Assert.assertTrue(expected[i][j]+" -- "+va.datad(i,j),compareDoubles(expected[i][j],va.datad(i,j),0.001));
       }
-    UKV.remove(k);
-    UKV.remove(inputkey);
+    va.delete();
   }
 
   @Test public void testBasic() {
@@ -366,9 +365,8 @@ public class ParserTest extends TestUtil {
     Key fkey = load_test_file("smalldata/kaggle/bestbuy_train_10k.csv.gz");
     Key okey = Key.make("bestbuy.hex");
     ParseDataset.parse(okey,new Key[]{fkey});
-    UKV.remove(fkey);
     ValueArray va = DKV.get(okey).get();
-    UKV.remove(okey);
+    va.delete();
   }
 
   @Test public void testMixedSeps() {

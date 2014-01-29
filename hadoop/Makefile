@@ -56,7 +56,7 @@ build_inner:
 	@echo "    public static boolean usingYarn() { return $(YARN); }" >> $(F)
 	@echo "}" >> $(F)
 	mkdir classes/$(HADOOP_VERSION)
-	javac -Xlint:deprecation -source 1.6 -target 1.6 -sourcepath src/main/java -classpath "$(COMMON_JARS)${SEP}$(HADOOP_JARS)" -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
+	javac -Xlint:-deprecation -source 1.6 -target 1.6 -sourcepath src/main/java -classpath "$(COMMON_JARS)${SEP}$(HADOOP_JARS)" -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
 	jar cf target/h2odriver_$(HADOOP_VERSION).jar -C classes/$(HADOOP_VERSION) .
 
 clean:

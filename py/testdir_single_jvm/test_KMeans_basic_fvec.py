@@ -64,7 +64,6 @@ class Basic(unittest.TestCase):
             }
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
 
-            #    kmeans['destination_key'] = 'benign_k.hex'
             ## h2o.verboseprint("kmeans result:", h2o.dump_json(kmeans))
             modelView = h2o.nodes[0].kmeans_model_view(model='benign_k.hex')
             h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))

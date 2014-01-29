@@ -92,7 +92,7 @@ public class GLMProgressPage extends Request {
     private void modelHTML( GLMModel m, JsonObject json, StringBuilder sb ) {
       switch(m.status()){
       case Done:
-        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._selfKey,m._vals[0].bestThreshold(), "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
+        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._key,m._vals[0].bestThreshold(), "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
         break;
       case ComputingModel:
       case ComputingValidation:
@@ -233,11 +233,9 @@ public class GLMProgressPage extends Request {
       int i=0;
       for( Entry<String,JsonElement> e : ee )
         cs[i++] = new Coef(e);
-      if( m._glmParams._family._family == Family.binomial )
-        Arrays.sort(cs,new Comparator<Coef>() {
+      Arrays.sort(cs,new Comparator<Coef>() {
             @Override public int compare(Coef c0, Coef c1) { return (c0._d<c1._d) ? 1 : (c0._d==c1._d?0:-1);}
           });
-
       StringBuilder sb = new StringBuilder();
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr>");
@@ -312,7 +310,7 @@ public class GLMProgressPage extends Request {
             String mname = "Model " + i++;
             sb.append("<tr>");
             try {
-              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._selfKey.toString(),"UTF-8")+"'>" + mname + "</a></td>");
+              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._key.toString(),"UTF-8")+"'>" + mname + "</a></td>");
             } catch( UnsupportedEncodingException e ) {
               throw  Log.errRTExcept(e);
             }
@@ -331,7 +329,7 @@ public class GLMProgressPage extends Request {
             String mname = "Model " + i++;
             sb.append("<tr>");
             try {
-              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._selfKey.toString(),"UTF-8")+"'>" + mname + "</a></td>");
+              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._key.toString(),"UTF-8")+"'>" + mname + "</a></td>");
             } catch( UnsupportedEncodingException e ) {
               throw  Log.errRTExcept(e);
             }

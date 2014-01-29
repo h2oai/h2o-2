@@ -30,12 +30,12 @@ class Basic(unittest.TestCase):
 
         print "GLM binomial wth 1 X column at a time" 
         print "Result check: abs. value of coefficient and intercept returned are bigger than zero"
-        for colX in xrange(54):
+        for colX in xrange(1,55):
             if x == "": 
-                x = str(colX)
+                x = 'C' + str(colX)
             else:
                 # x = x + "," + str(colX)
-                x = str(colX)
+                x = 'C' + str(colX)
 
             sys.stdout.write('.')
             sys.stdout.flush() 

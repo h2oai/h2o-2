@@ -16,8 +16,7 @@ public class GBMTest extends TestUtil {
 
   static final String ignored_aircols[] = new String[] { "DepTime", "ArrTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay", "IsDepDelayed"};
 
-  @Test
-  public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     // Regression tests
     basicGBM("./smalldata/cars.csv","cars.hex",
              new PrepData() { int prep(Frame fr ) { UKV.remove(fr.remove("name")._key); return ~fr.find("economy (mpg)"); }});
@@ -68,18 +67,15 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    GBM gbm = null;
-    Frame fr = null;
+    GBM gbm = null;               // The Builder
+    GBM.GBMModel gbmmodel = null; // The Model
     try {
       gbm = new GBM();
-      gbm.source = fr = ParseDataset2.parse(dest,new Key[]{fkey});
+      Frame fr = gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       int idx = prep.prep(fr);
       if( idx < 0 ) { gbm.classification = false; idx = ~idx; }
-      String rname = fr._names[idx];
       gbm.response = fr.vecs()[idx];
-      fr.remove(idx);           // Move response to the end
-      fr.add(rname,gbm.response);
       gbm.ntrees = 4;
       gbm.max_depth = 4;
       gbm.min_rows = 1;
@@ -88,40 +84,36 @@ public class GBMTest extends TestUtil {
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.learn_rate = .2f;
       gbm.invoke();
-
-      fr = gbm.score(gbm.source);
-
-      GBM.GBMModel gbmmodel = UKV.get(gbm.dest());
+      gbmmodel = UKV.get(gbm.dest());
       //System.out.println(gbmmodel.toJava());
 
+      Frame preds = gbm.score(gbm.source);
+      preds.delete();
+
     } finally {
-      UKV.remove(dest);         // Remove original hex frame key
-      if( gbm != null ) {
-        UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.response._key);
-        gbm.remove();           // Remove GBM Job
-        if( fr != null ) fr.remove();
-      }
+      gbm.source.delete();              // Remove original hex frame key
+      if( gbmmodel != null ) gbmmodel.delete(); // Remove the model
+      gbm.remove();             // Remove GBM Job
     }
   }
 
   // Test-on-Train.  Slow test, needed to build a good model.
   @Test public void testGBMTrainTest() {
-    File file1 = TestUtil.find_test_file("..//classifcation1Train.txt");
+    File file1 = TestUtil.find_test_file("smalldata/gbm_test/ecology_model.csv");
     if( file1 == null ) return; // Silently ignore if file not found
     Key fkey1 = NFSFileVec.make(file1);
     Key dest1 = Key.make("train.hex");
-    File file2 = TestUtil.find_test_file("..//classification1Test.txt");
+    File file2 = TestUtil.find_test_file("smalldata/gbm_test/ecology_eval.csv");
     Key fkey2 = NFSFileVec.make(file2);
     Key dest2 = Key.make("test.hex");
-    GBM gbm = null;
-    Frame fr = null, fpreds = null;
+    GBM gbm = null;               // The Builder
+    GBM.GBMModel gbmmodel = null; // The Model
+    Frame ftest = null, fpreds = null;
     try {
       gbm = new GBM();
-      fr = ParseDataset2.parse(dest1,new Key[]{fkey1});
-      UKV.remove(fkey1);
-      UKV.remove(fr.remove("agentId")._key); // Remove unique ID; too predictive
-      gbm.response = fr.remove("outcome");  // Train on the outcome
+      Frame fr = ParseDataset2.parse(dest1,new Key[]{fkey1});
+      UKV.remove(fr.remove("Site")._key); // Remove unique ID; too predictive
+      gbm.response = fr.vecs()[fr.find("Angaus")];   // Train on the outcome
       gbm.source = fr;
       gbm.ntrees = 5;
       gbm.max_depth = 10;
@@ -129,16 +121,16 @@ public class GBMTest extends TestUtil {
       gbm.min_rows = 10;
       gbm.nbins = 100;
       gbm.invoke();
+      gbmmodel = UKV.get(gbm.dest());
 
       // Test on the train data
-      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
-      UKV.remove(fkey2);
+      ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
       fpreds = gbm.score(ftest);
 
       // Build a confusion matrix
       ConfusionMatrix CM = new ConfusionMatrix();
       CM.actual = ftest;
-      CM.vactual = ftest.vecs()[ftest.find("outcome")];
+      CM.vactual = ftest.vecs()[ftest.find("Angaus")];
       CM.predict = fpreds;
       CM.vpredict = fpreds.vecs()[fpreds.find("predict")];
       CM.serve();               // Start it, do it
@@ -152,8 +144,9 @@ public class GBMTest extends TestUtil {
         for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
         acts[a] = sum;
       }
-      String adomain[] = ConfusionMatrix.show(acts ,CM.vactual .domain());
-      String pdomain[] = ConfusionMatrix.show(preds,CM.vpredict.domain());
+      String[] tfs = new String[]{"False","True","NA"};
+      String adomain[] = ConfusionMatrix.show(acts ,tfs);
+      String pdomain[] = ConfusionMatrix.show(preds,tfs);
 
       StringBuilder sb = new StringBuilder();
       sb.append("Act/Prd\t");
@@ -185,21 +178,17 @@ public class GBMTest extends TestUtil {
       System.out.println(sb);
 
     } finally {
-      UKV.remove(dest1);        // Remove original hex frame key
-      UKV.remove(fkey2);
-      UKV.remove(dest2);
-      if( gbm != null ) {
-        UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.response._key);
-        gbm.remove();           // Remove GBM Job
-      }
-      if( fr != null ) fr.remove();
-      if( fpreds != null ) fpreds.remove();
+      gbm.source.delete(); // Remove the original hex frame key
+      if( ftest  != null ) ftest .delete();
+      if( fpreds != null ) fpreds.delete();
+      if( gbmmodel != null ) gbmmodel.delete(); // Remove the model
+      UKV.remove(gbm.response._key);
+      gbm.remove();           // Remove GBM Job
     }
   }
 
   // Adapt a trained model to a test dataset with different enums
-  /*@Test*/ public void testModelAdapt() {
+  @Test public void testModelAdapt() {
     File file1 = TestUtil.find_test_file("./smalldata/kaggle/KDDTrain.arff.gz");
     Key fkey1 = NFSFileVec.make(file1);
     Key dest1 = Key.make("KDDTrain.hex");
@@ -207,31 +196,30 @@ public class GBMTest extends TestUtil {
     Key fkey2 = NFSFileVec.make(file2);
     Key dest2 = Key.make("KDDTest.hex");
     GBM gbm = null;
-    Frame fr = null;
+    GBM.GBMModel gbmmodel = null; // The Model
     try {
       gbm = new GBM();
       gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
-      UKV.remove(fkey1);
-      gbm.response = gbm.source.remove(41); // Response is col 41
+      gbm.response = gbm.source.vecs()[41]; // Response is col 41
       gbm.ntrees = 2;
       gbm.max_depth = 8;
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
       gbm.nbins = 50;
       gbm.invoke();
+      gbmmodel = UKV.get(gbm.dest());
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
       Frame preds = gbm.score(ftest);
+      ftest.delete();
+      preds.delete();
 
     } finally {
-      UKV.remove(dest1);        // Remove original hex frame key
-      if( gbm != null ) {
-        UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.response._key);
-        gbm.remove();           // Remove GBM Job
-        if( fr != null ) fr.remove();
-      }
+      gbmmodel.delete();        // Remove the model
+      gbm.source.delete();      // Remove original hex frame key
+      UKV.remove(gbm.response._key);
+      gbm.remove();             // Remove GBM Job
     }
   }
 }

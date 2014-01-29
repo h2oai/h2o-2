@@ -50,6 +50,6 @@ public class ScoreTest extends TestUtil {
         errs++;
     }
     Assert.assertEquals(2,errs);
-    UKV.remove(irisk);
+    ary.delete();
   }
 }
