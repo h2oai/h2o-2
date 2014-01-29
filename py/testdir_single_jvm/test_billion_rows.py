@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
             # one coefficient is checked a little more
-            colX = 0
+            colX = 'C1'
 
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
