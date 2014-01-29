@@ -96,6 +96,7 @@ h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 h2o.__HACK_LEVELS = "Levels.json"
 h2o.__HACK_LEVELS2 = "2/Levels2.json"
 h2o.__HACK_SETCOLNAMES = "SetColumnNames.json"
+h2o.__HACK_SETCOLNAMES2 = "2/SetColumnNames2.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"

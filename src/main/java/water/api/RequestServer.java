@@ -170,6 +170,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
+    registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
     registerRequest(new GLMProgress());
     registerRequest(new hex.glm.GLMGridProgress());
