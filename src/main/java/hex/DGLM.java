@@ -1138,9 +1138,9 @@ public abstract class DGLM {
           _res._err += drt._res._err;
           _res._caseCount += drt._res._caseCount;
           if( _res._cm != null ) {
-            for( int i = 0; i < _thresholds.length; ++i )
-              _res._cm[i].add(_res._cm[i]);
-          } else _res._cm = _res._cm;
+            for( int i = 0; i < _res._cm.length; ++i )
+              _res._cm[i].add(drt._res._cm[i]);
+          } else _res._cm = drt._res._cm;
         }
       }
     }
