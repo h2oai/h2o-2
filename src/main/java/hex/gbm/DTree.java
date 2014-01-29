@@ -1138,7 +1138,8 @@ public class DTree extends Iced {
         preamble(_sb, _subtrees);
         _subtrees++;
       }
-      _sb.p(" ((float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      // All NAs are going always to the left
+      _sb.p(" (Double.isNaN(data[").p(col).p("]) || (float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
       assert _bits[_depth]==0;
       _bits[_depth]=1;
     }
