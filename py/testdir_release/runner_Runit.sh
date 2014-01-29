@@ -191,6 +191,8 @@ printenv | grep H2OWrapperDir
 #autoGen RUnits
 #!/bin/bash
 
+myR ../../R/tests/Utils/runnerSetupPackage 300
+
 for test in $(find ../../R/tests/ | grep -v Utils | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
 do
     if [ -d $test ];
