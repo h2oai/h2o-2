@@ -159,10 +159,10 @@ public abstract class Neurons extends Iced {
       _e = new double[units];
     }
     if (!isInput()) {
-      _previous = neurons[index-1];
+      _previous = neurons[index-1]; //incoming neurons
       _minfo = minfo;
-      _w = minfo.weights[index-1];
-      _b = minfo.biases[index];
+      _w = minfo.weights[index-1]; //incoming weights
+      _b = minfo.biases[index]; //bias for this layer
     }
   }
 
@@ -185,21 +185,21 @@ public abstract class Neurons extends Iced {
       double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
 
       // TODO finish per-weight acceleration, doesn't help for now
-//      if( _wp != null && d != 0 ) {
-//        boolean sign = _wp[w] >= 0;
-//        double mult = Math.abs(_wp[w]);
-//        // If the gradient kept its sign, increase
-//        if( (d >= 0) == sign )
-//          mult += .05f;
-//        else {
-//          if( mult > 1 )
-//            mult *= .95f;
-//          else
-//            sign = !sign;
+//        if( _wp != null && d != 0 ) {
+//          boolean sign = _wp[w] >= 0;
+//          double mult = Math.abs(_wp[w]);
+//          // If the gradient kept its sign, increase
+//          if( (d >= 0) == sign )
+//            mult += .05f;
+//          else {
+//            if( mult > 1 )
+//              mult *= .95f;
+//            else
+//              sign = !sign;
+//          }
+//          d *= mult;
+//          _wp[w] = sign ? mult : -mult;
 //        }
-//        d *= mult;
-//        _wp[w] = sign ? mult : -mult;
-//      }
 
       // momenta are disabled for now
 //      if( _wm != null ) {

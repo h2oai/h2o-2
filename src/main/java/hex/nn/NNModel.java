@@ -6,6 +6,7 @@ import water.Key;
 import water.Model;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.fvec.Chunk;
 import water.util.Utils;
 
 import java.util.Random;
@@ -214,6 +215,7 @@ public class NNModel extends Model {
 
   public NNModel(Key jobKey, Key selfKey, DataInfo dinfo, NN params, NNModel.NNModelInfo modelinfo) {
     super(selfKey,null,dinfo._adaptedFrame);
+
     job_key = jobKey;
     data_info = dinfo;
     run_time = 0;
@@ -221,18 +223,32 @@ public class NNModel extends Model {
     model_info = modelinfo != null ? modelinfo.deep_copy() : new NNModelInfo(params, data_info.fullN(), params.response.toEnum().cardinality());
   }
 
+  @Override
+  protected float[] score0(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds) {
+    return super.score0(chks, row_in_chunk, tmp, preds);
+  }
+
   @Override protected float[] score0(double[] data, float[] preds) {
     Neurons[] neurons = NNTask.makeNeurons(data_info,model_info);
 
-    double[] nums = new double[data_info._catOffsets.length-1];
-    int[] cats = new int[data.length - nums.length];
+//    public final int fullN(){return _nums + _catOffsets[_cats];}
+//    public final int largestCat(){return _cats > 0?_catOffsets[1]:0;}
+//    public final int numStart(){return _catOffsets[_cats];}
 
-    System.arraycopy(data, 0, nums, 0, nums.length);
-    for(int i = data_info._cats; i < data.length; ++i) cats[i] = (int)data[i];
+    // expanded categoricals
+    int[] cats = new int[data_info.numStart()];
+    for(int i = 0; i < cats.length; ++i) cats[i] = (int)data[data_info._catOffsets[i]];
+
+    // numerical values
+    double[] nums = new double[data_info.fullN() - data_info.numStart()];
+    System.arraycopy(data, data_info.numStart(), nums, 0, nums.length);
 
     NNTask.step(neurons, data_info, model_info, false, nums, cats, null);
 
     double[] out = neurons[neurons.length - 1]._a;
+    if (out.length != preds.length) {
+      System.out.println("Need to call .toEnum()!");
+    };
     assert out.length == preds.length;
     // convert to float
     float[] out2 = new float[out.length];
@@ -240,8 +256,8 @@ public class NNModel extends Model {
     return out2;
   }
   public boolean generateHTML(String title, StringBuilder sb) {
-    DocGen.HTML.title(sb,title);
-    DocGen.HTML.title(sb,"Epochs: " + epoch_counter);
+    DocGen.HTML.title(sb, title);
+    DocGen.HTML.title(sb, "Epochs: " + epoch_counter);
     return true;
   }
   public boolean toJavaHtml(StringBuilder sb) { return false; }
