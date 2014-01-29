@@ -60,13 +60,16 @@ public class Exec2 {
     ArrayList<ASTId> global = new ArrayList<ASTId>();
     ArrayList<Key>   locked = new ArrayList<Key>  ();
     Env env = new Env(locked);
-    for( Value v : H2O.values() ) { // Add Frames to parser's namespace
+    H2O.globalKeySet( "water.fvec.Frame" ); // Bring Frames from all over local
+    H2O.globalKeySet( "water.ValueArray" ); // Bring VA's   from all over local
+    for( Key k : H2O.localKeySet() ) {      // Add Frames to parser's namespace
+      Value val = H2O.raw_get(k);
       Frame fr;
-      if( v.type()==TypeMap.VALUE_ARRAY ) fr = ValueArray.asFrame(v);
-      else if( v.type()==TypeMap.FRAME  ) fr = v.get();
+      if( val.type()==TypeMap.VALUE_ARRAY ) fr = ValueArray.asFrame(DKV.get(k));
+      else if( val.type()==TypeMap.FRAME  ) fr = DKV.get(k).get();
       else continue;
-      global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
-      env.push(fr,v._key.toString());
+      global.add(new ASTId(Type.ARY,k.toString(),0,global.size()));
+      env.push(fr,k.toString());
       fr.read_lock(null);
       locked.add(fr._key);
     }

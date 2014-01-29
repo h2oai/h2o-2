@@ -338,7 +338,7 @@ public class Frame extends Lockable<Frame> {
 
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   @Override public Futures delete_impl(Futures fs) {
-    for( Vec v : vecs() ) UKV.remove(v._key,fs);
+    for( Key k : _keys ) UKV.remove(k,fs);
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];

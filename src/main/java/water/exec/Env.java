@@ -325,11 +325,16 @@ public class Env extends Iced {
         }
         if( _locked.contains(fr2._key) ) fr2.write_lock(null);     // Upgrade to write-lock
         else { fr2.delete_and_lock(null); _locked.add(fr2._key); } // Clear prior & set new data
+        fr2.unlock(null);
+        _locked.remove(fr2._key); // Unlocked already
       } else
         popUncheck();
     }
-    // Unlock all also
-   for( Key k : _locked ) ((Frame)UKV.get(k)).unlock(null);
+    // Unlock all things that do not survive, plus also delete them
+    for( Key k : _locked ) {
+      Frame fr = UKV.get(k);
+      fr.unlock(null);  fr.delete(); // Should be atomic really
+    }
   }
 
   // Done writing into all things.  Allow rollups.

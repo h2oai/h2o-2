@@ -44,7 +44,7 @@ public class TestUtil {
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     if( leaked_keys > 0 ) {
-      for( Key k : H2O.keySet() ) {
+      for( Key k : H2O.localKeySet() ) {
         Value value = DKV.get(k);
         Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
         // Ok to leak VectorGroups
@@ -380,7 +380,7 @@ public class TestUtil {
     System.err.println("-->> Store dump <<--");
     System.err.println("    " + msg);
     System.err.println(" Keys: " + H2O.store_size());
-    for ( Key k : H2O.keySet()) System.err.println(" * " + k);
+    for ( Key k : H2O.localKeySet()) System.err.println(" * " + k);
     System.err.println("----------------------");
   }
 }

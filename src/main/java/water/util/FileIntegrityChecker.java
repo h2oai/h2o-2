@@ -80,7 +80,7 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
                            ArrayList<String> dels) {
 
     // Remove & report all Keys that match the root prefix
-    for( Key k : H2O.keySet() )
+    for( Key k : H2O.localKeySet() )
       if( k.toString().startsWith(_root) ) {
         dels.add(k.toString());
         Lockable.delete(k);

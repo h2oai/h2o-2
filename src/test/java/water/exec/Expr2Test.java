@@ -25,10 +25,6 @@ public class Expr2Test extends TestUtil {
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
 
-      checkStr("x=h.hex");
-      checkStr("-(x = 3)",-3);
-      checkStr("x<-+");
-
       // Simple numbers & simple expressions
       checkStr("1.23",1.23);
       checkStr(" 1.23 + 2.34",3.57);
@@ -237,7 +233,7 @@ public class Expr2Test extends TestUtil {
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope
 
     } finally {
-      //Lockable.delete(dest);    // Remove original hex frame key
+      Lockable.delete(dest);    // Remove original hex frame key
     }
   }
 

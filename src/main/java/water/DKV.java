@@ -108,8 +108,8 @@ public abstract class DKV {
       // Hit in local cache?
       if( val != null ) {
         if( len > val._max ) len = val._max; // See if we have enough data cached locally
-        assert len == 0 || val.rawMem() != null || val.rawPOJO() != null || val.isPersisted() : "key="+key+" len="+len+" val._max="+val._max+", nothing cached";
-        return val;
+        if( len == 0 || val.rawMem() != null || val.rawPOJO() != null || val.isPersisted() ) return val;
+        assert !key.home(); // Master must have *something*; we got nothing & need to fetch
       }
 
       // While in theory we could read from any replica, we always need to
