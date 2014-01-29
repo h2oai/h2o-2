@@ -1885,8 +1885,9 @@ public abstract class DGLM {
   public static DataFrame getData(ValueArray ary, int[] colIds, Sampling s, boolean standardize) {
     int [] cols = new int[colIds.length];
     int j = 0;
-    for(int i:colIds) if(ary._cols[i]._min < ary._cols[i]._max)
-      cols[j++] = i;
+    for(int i = 0; i < colIds.length-1; ++i) if(ary._cols[colIds[i]]._min < ary._cols[colIds[i]]._max)
+      cols[j++] = colIds[i];
+    cols[j++] = colIds[colIds.length-1];
     return new DataFrame(ary, Arrays.copyOf(cols,j), s, standardize, true);
   }
 
