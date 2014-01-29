@@ -1088,6 +1088,7 @@ public abstract class DGLM {
 
       @Override public void map(Key key) {
         GLMValidation res = new GLMValidation();
+        final OldModel adaptedModel = (OldModel)_adaptedModel.clone();
         if( _m._glmParams._family._family == Family.binomial ) {
           res._cm = new ConfusionMatrix[_thresholds.length];
           for( int i = 0; i < _thresholds.length; ++i )
@@ -1102,7 +1103,7 @@ public abstract class DGLM {
           if( s != null && s.skip(rid) ) continue;
           if(ary.isNA(bits, rid, response))continue;
           double yr = ary.datad(bits, rid, response);
-          double ym = _adaptedModel.score(ary, bits, rid);
+          double ym = adaptedModel.score(ary, bits, rid);
           if(Double.isNaN(ym))continue;
           ++res._n;
           if(_m._glmParams._caseMode != CaseMode.none)
