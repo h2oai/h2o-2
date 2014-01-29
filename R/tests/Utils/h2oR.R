@@ -220,6 +220,7 @@ function(ipPort) {
     envPath  = Sys.getenv("H2OWrapperDir")
     wrapDir  = ifelse(envPath == "", defaultPath, envPath)
     wrapName = list.files(wrapDir, pattern  = "h2o")[1]
+    cat("wrapDir:", wrapDir, "wrapName:", wrapName)
     wrapPath = paste(wrapDir, wrapName, sep = "/")
     
     if (!file.exists(wrapPath))
