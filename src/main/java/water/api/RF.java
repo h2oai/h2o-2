@@ -105,7 +105,7 @@ public class RF extends Request {
 
     Key dataKey = ary._key;
     Key modelKey = _modelKey.value()!=null ? _modelKey.value() : RFModel.makeKey();
-    UKV.remove(modelKey);       // Remove any prior model first
+    Lockables.delete(modelKey); // Remove any prior model first
     for (int i = 0; i <= ntree; ++i) {
       UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,true));
       UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,false));
