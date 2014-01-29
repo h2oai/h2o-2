@@ -9,7 +9,7 @@ then
 fi
 
 # Adjust based on the build of H2O you want to download.
-h2oBranch=master
+h2oBranch=rel-iwasawa
 
 echo "Fetching latest build number for branch ${h2oBranch}..."
 curl --silent -o latest https://h2o-release.s3.amazonaws.com/h2o/${h2oBranch}/latest
