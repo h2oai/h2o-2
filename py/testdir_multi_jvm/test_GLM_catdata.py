@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             kwargs = {'y': 7, 'x': '1,2,3,4,5,6', 'family': "binomial", 'n_folds': 3, 'lambda': 1e-4}
             timeoutSecs = 200
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
-            h2o_glm.simpleCheckGLM(self, glm, 6, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C7', **kwargs)
 
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             ### h2b.browseJsonHistoryAsUrlLastMatch("GLM")

@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C14', **kwargs)
             h2o.check_sandbox_for_errors()
 
             # Elastic
@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C14', **kwargs)
             h2o.check_sandbox_for_errors()
 
             # L1
@@ -91,7 +91,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noise=('JStack', None), **kwargs)
             print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C14', **kwargs)
             h2o.check_sandbox_for_errors()
 
 

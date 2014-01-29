@@ -150,9 +150,11 @@ setMethod("show", "H2ONNModel", function(object) {
 
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
-  cat("\nTraining square error:", model$train_sqr_error)
+  cat("\nTraining mean square error:", model$train_sqr_error)
+  cat("\nTraining cross entropy:", model$train_cross_entropy)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
+  cat("\nValidation cross entropy:", model$valid_cross_entropy)
   cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
@@ -534,7 +536,22 @@ setMethod("colnames", "H2OParsedData", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
+setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
+  function(x, value) {
+    if(class(value) == "H2OParsedDataVA") stop("value must be a FluidVecs object")
+    else if(ncol(value) != ncol(x)) stop("Mismatched number of columns")
+    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, copy_from=value@key)
+    return(x)
+})
+
+setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+  function(x, value) {
+    if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
+    else if(any(duplicated(value))) stop("Column names must be unique")
+    else if(length(value) != (num = ncol(x))) stop(paste("Must specify a vector of exactly", num, "column names"))
+    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, comma_separated_list=value)
+    return(x)
+})
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
 setMethod("names<-", "H2OParsedData", function(x, value) { colnames(x) <- value })
@@ -823,10 +840,6 @@ setMethod("levels", "H2OParsedData", function(x) {
   res$levels[[1]]
 })
 
-setMethod("as.name", "H2OParsedData", function(x) {
-  deparse(substitute(x))
-})
-
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Need to change ... to environment variables and pass to substitute method,
 #       Can't figure out how to access outside environment from within lapply
@@ -979,15 +992,15 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
   function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
 
-setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
   function(x, value) {
     if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
     else if(any(duplicated(value))) stop("Column names must be unique")
     h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
-  })
+})
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
 setMethod("names<-", "H2OParsedDataVA", function(x, value) { colnames(x) <- value })
