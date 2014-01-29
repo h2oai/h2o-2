@@ -787,16 +787,16 @@ public class DTree extends Iced {
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
           }
 
-          // To be consistent with generated code:
-          //   - Double.NaN <  3.7f => return false => right branch is selected (i.e., ab.position()+skip)
-          //   - Double.NaN != 3.7f => return true  => left branch is selected (i.e., ab.position())
+          // WARNING: Generated code has to be consistent with this code:
+          //   - Double.NaN <  3.7f => return false => BUT left branch has to be selected (i.e., ab.position())
+          //   - Double.NaN != 3.7f => return true  => left branch has to be select selected (i.e., ab.position())
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal && ((float)row[colId]) == splitVal) ||
                 (!equal && ((float)row[colId]) >= splitVal) ) {
               ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
-          } else if (!equal) { ab.position(ab.position()+skip); lmask = rmask; }
+          } /* else Double.isNaN() is true => use left branch */
           if( (lmask&8)==8 ) return scoreLeaf(ab);
         }
       }
@@ -1138,7 +1138,8 @@ public class DTree extends Iced {
         preamble(_sb, _subtrees);
         _subtrees++;
       }
-      _sb.p(" ((float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      // All NAs are going always to the left
+      _sb.p(" (Double.isNaN(data[").p(col).p("]) || (float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
       assert _bits[_depth]==0;
       _bits[_depth]=1;
     }

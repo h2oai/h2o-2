@@ -150,9 +150,11 @@ setMethod("show", "H2ONNModel", function(object) {
 
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
-  cat("\nTraining square error:", model$train_sqr_error)
+  cat("\nTraining mean square error:", model$train_sqr_error)
+  cat("\nTraining cross entropy:", model$train_cross_entropy)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
+  cat("\nValidation cross entropy:", model$valid_cross_entropy)
   cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
@@ -534,7 +536,22 @@ setMethod("colnames", "H2OParsedData", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
+setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
+  function(x, value) {
+    if(class(value) == "H2OParsedDataVA") stop("value must be a FluidVecs object")
+    else if(ncol(value) != ncol(x)) stop("Mismatched number of columns")
+    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, target=x@key, copy_from=value@key)
+    return(x)
+})
+
+setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+  function(x, value) {
+    if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
+    else if(any(duplicated(value))) stop("Column names must be unique")
+    else if(length(value) != (num = ncol(x))) stop(paste("Must specify a vector of exactly", num, "column names"))
+    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, target=x@key, comma_separated_list=value)
+    return(x)
+})
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
 setMethod("names<-", "H2OParsedData", function(x, value) { colnames(x) <- value })
@@ -684,7 +701,7 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   x.slice = as.data.frame(x[seq_len(n),])
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -701,7 +718,7 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   idx = seq.int(to = nrx, length.out = n)
   x.slice = as.data.frame(x[idx,])
   rownames(x.slice) = idx
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -819,12 +836,8 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
 
 setMethod("levels", "H2OParsedData", function(x) {
   if(ncol(x) != 1) return(NULL)
-  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS2, source = x@key)
   res$levels[[1]]
-})
-
-setMethod("as.name", "H2OParsedData", function(x) {
-  deparse(substitute(x))
 })
 
 #----------------------------- Work in Progress -------------------------------#
@@ -879,7 +892,7 @@ str.H2OParsedData <- function(object, ...) {
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
   rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
-  res2 = h2o.__remoteSend(object@h2o, h2o.__HACK_LEVELS, source = object@key)
+  res2 = h2o.__remoteSend(object@h2o, h2o.__HACK_LEVELS2, source = object@key)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
@@ -979,15 +992,15 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
   unlist(lapply(res$cols, function(y) y$name))
 })
 
-setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
   function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
 
-setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
   function(x, value) {
     if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
     else if(any(duplicated(value))) stop("Column names must be unique")
     h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
-  })
+})
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
 setMethod("names<-", "H2OParsedDataVA", function(x, value) { colnames(x) <- value })
@@ -1017,11 +1030,11 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
 
-#   res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
-#   for(i in 1:ncol(x)) {
-#     if(!is.null(res2$levels[[i]]))
-#       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
-#   }
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, key = x@key)
+  for(i in 1:ncol(x)) {
+    if(!is.null(res2$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
+  }
   return(x.slice)
 })
 
@@ -1039,11 +1052,11 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-#   res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, source = x@key)
-#   for(i in 1:ncol(x)) {
-#     if(!is.null(res2$levels[[i]]))
-#       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
-#   }
+  res2 = h2o.__remoteSend(x@h2o, h2o.__HACK_LEVELS, key = x@key)
+  for(i in 1:ncol(x)) {
+    if(!is.null(res2$levels[[i]]))
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
+  }
   return(x.slice)
 })
 

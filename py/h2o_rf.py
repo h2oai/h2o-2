@@ -146,7 +146,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         varimp = rf_model['varimp']
         treeStats = rf_model['treeStats']
         data_key = rf_model['_dataKey']
-        model_key = rf_model['_selfKey']
+        model_key = rf_model['_key']
         classification_error = pctWrong
 
         if not noPrint: 
@@ -237,7 +237,7 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwar
     parseKey = scoreParseResult['destination_key']
     if h2o.beta_features:
         # this is how we're supposed to do scorin?
-        rfModelKey  = trainResult['drf_model']['_selfKey']
+        rfModelKey  = trainResult['drf_model']['_key']
         predictKey = 'Predict.hex'
         start = time.time()
         predictResult = h2o_cmd.runPredict(

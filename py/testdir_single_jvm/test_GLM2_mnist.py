@@ -136,7 +136,7 @@ class Basic(unittest.TestCase):
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
                 h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
-                modelKey = glm['glm_model']['_selfKey']
+                modelKey = glm['glm_model']['_key']
 
                 # This seems wrong..what's the format of the cm?
                 if 1==0:

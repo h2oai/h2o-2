@@ -104,7 +104,7 @@ class Basic(unittest.TestCase):
             rf_model = rfv['drf_model']
             used_trees = rf_model['N']
             data_key = rf_model['_dataKey']
-            model_key = rf_model['_selfKey']
+            model_key = rf_model['_key']
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
             oobeTrainPctRight = 100.0 - classification_error

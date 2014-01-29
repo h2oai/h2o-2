@@ -9,7 +9,6 @@ Walk-Through Tutorials
    glm
    glmgrid
    kmeans
-   kmeansgrid
    rf
    pca
    gbm
