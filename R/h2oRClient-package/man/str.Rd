@@ -21,7 +21,7 @@ str(x)
 A table listing summary information including variable names, types (for example enum or number, count of observations and columns.)
 }
 
-}
+
 \examples{
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
 + silentUpgrade = TRUE, promptUpgrade = FALSE)
