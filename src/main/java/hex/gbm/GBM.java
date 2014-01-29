@@ -1,6 +1,9 @@
 package hex.gbm;
 
 import static water.util.Utils.div;
+
+import java.util.Arrays;
+
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
@@ -46,16 +49,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // we get Infinities, and then shortly NaN's.  Rescale the data so the
         // largest value is +/-1 and the other values are smaller.
         // See notes here:  http://www.hongliangjie.com/2011/01/07/logsum/
-        float rescale=0;
+        float maxval=Float.NEGATIVE_INFINITY;
         float dsum=0;
         if (nclasses()==2)  p[1] = - p[0];
         // Find a max
-        for( float k : p ) rescale = Math.max(rescale,k);
+        for( float k : p ) maxval = Math.max(maxval,k);
+        assert !Float.isInfinite(maxval) : "Something is wrong with GBM trees since returned prediction is " + Arrays.toString(p);
         for(int k=0; k<p.length;k++)
-          dsum+=(p[k]=(float)Math.exp(p[k]-rescale));
-        float q = (float) (rescale + Math.log(dsum));
-        dsum = 0;
-        for(int k=0; k<p.length;k++) dsum += (p[k] = (float) Math.exp(p[k]-q));
+          dsum+=(p[k]=(float)Math.exp(p[k]-maxval));
         div(p,dsum);
       } else { // regression
         // do nothing for regression
@@ -70,14 +71,12 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected void toJavaUnifyPreds(SB bodyCtxSB) {
       if (isClassifier()) {
         bodyCtxSB.i().p("// Compute Probabilities for classifier (scale via http://www.hongliangjie.com/2011/01/07/logsum/)").nl();
-        bodyCtxSB.i().p("float dsum = 0, rescale = 0;").nl();
+        bodyCtxSB.i().p("float dsum = 0, maxval = Float.NEGATIVE_INFINITY;").nl();
         if (nclasses()==2) {
           bodyCtxSB.i().p("preds[2] = -preds[1];").nl();
         }
-        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) rescale = Math.max(rescale,preds[i]);").nl();
-        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i]-rescale));").nl();
-        bodyCtxSB.i().p("float q = (float) (rescale + Math.log(dsum)); dsum = 0;").nl();
-        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i]-q));").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) maxval = Math.max(maxval, preds[i]);").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i] - maxval));").nl();
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / dsum;").nl();
       }
     }
