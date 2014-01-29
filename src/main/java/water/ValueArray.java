@@ -568,16 +568,15 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       // No cached conversion.  Make one and store it in DKV.
       int cn = conversionNumber.getAndIncrement();
       Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
-      Futures fs = new Futures();
-      Frame frame = convert(fs);
-      DKV.put(k2, frame, fs);
-      fs.blockForPending();
+      Frame frame = convert(k2);
       Log.info("Conversion " + cn + " complete.");
       return frame;
     }
   }
 
-  private Frame convert(Futures fs) {
+  private Frame convert(Key k2) {
+    new Frame(k2,new String[0], new Vec[0]).delete_and_lock(null);
+    Futures fs = new Futures();
     String[] names = new String[_cols.length];
     // A new random VectorGroup
     Key keys[] = new Vec.VectorGroup().addVecs(_cols.length);
@@ -589,7 +588,10 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       avs[i]._domain = _cols[i]._domain;
       vecs[i] = avs[i].close(fs);
     }
-    return new Frame(names, vecs);
+    fs.blockForPending();
+    Frame fr = new Frame(k2,names,vecs);
+    fr.unlock(null);            // Set & unlock new frame
+    return fr;
   }
 
   static class Converter extends MRTask<Converter> {
@@ -739,4 +741,5 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       DKV.remove(getChunkKey(i),fs);
     return fs;
   }
+  @Override public String errStr() { return "Dataset"; }
 }

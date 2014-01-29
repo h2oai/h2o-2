@@ -344,6 +344,7 @@ public class Frame extends Lockable<Frame> {
     _keys = new Key[0];
     return fs;
   }
+  @Override public String errStr() { return "Dataset"; }
 
   public long byteSize() {
     long sum=0;

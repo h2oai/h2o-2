@@ -80,7 +80,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
         if( old.is_locked(_job_key) ) // read-locked by self? (double-write-lock checked above)
           old.set_unlocked(old._lockers,_job_key); // Remove read-lock; will atomically upgrade to write-lock
         if( !old.is_unlocked() ) // Blocking for some other Job to finish???
-          throw new IllegalArgumentException("write-lock of prior "+_key+" fails because already locked by "+Arrays.toString(old._lockers));
+          throw new IllegalArgumentException(old.errStr()+" "+_key+" is already in use.  Unable to use it now.  Consider using a different destination name.");
       }
       // Update & set the new value
       set_write_lock(_job_key);
@@ -114,7 +114,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
       if( old == null ) return null; // No prior key to delete?
       _old = old;
       if(  !old.is_unlocked() ) // Blocking for some other Job to finish???
-        throw new IllegalArgumentException("lock&delete fails because "+_key+" locked by : "+Arrays.toString(old._lockers));
+        throw new IllegalArgumentException(old.errStr()+" "+_key+" is in use.  Unable to delete now.");
       // Update-in-place the defensive copy
       old.set_write_lock(null);
       return old;
@@ -137,7 +137,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     @Override public Lockable atomic(Lockable old) {
       if( old == null ) throw new IllegalArgumentException("Nothing to lock!");
       if( old.is_wlocked() )
-        throw new IllegalArgumentException("Unable to read-lock "+_key+" by job "+_job_key+" because write_locked by job "+_lockers[0]);
+        throw new IllegalArgumentException( old.errStr()+" "+_key+" is being created;  Unable to read it now.");
       old.set_read_lock(_job_key);
       return old;
     }
@@ -224,4 +224,6 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
 
   // Remove any subparts before removing the whole thing
   protected abstract Futures delete_impl( Futures fs );
+  // Pretty string when locking fails
+  protected abstract String errStr();
 }
