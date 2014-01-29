@@ -995,7 +995,7 @@ public abstract class DGLM {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
-      assert _va._cols.length == _colCatMap.length;
+      assert _va._cols.length == _colCatMap.length-1;
       _beta = beta;
       _normBeta = normBeta;
       _glmParams = glmp;
