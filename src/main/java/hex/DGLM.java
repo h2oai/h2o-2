@@ -995,6 +995,7 @@ public abstract class DGLM {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
+      assert _va._cols.length == _colCatMap.length;
       _beta = beta;
       _normBeta = normBeta;
       _glmParams = glmp;
@@ -1882,7 +1883,11 @@ public abstract class DGLM {
   }
 
   public static DataFrame getData(ValueArray ary, int[] colIds, Sampling s, boolean standardize) {
-    return new DataFrame(ary, colIds, s, standardize, true);
+    int [] cols = new int[colIds.length];
+    int j = 0;
+    for(int i:colIds) if(ary._cols[i]._min < ary._cols[i]._max)
+      cols[j++] = i;
+    return new DataFrame(ary, Arrays.copyOf(cols,j), s, standardize, true);
   }
 
   public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params,
