@@ -32,7 +32,7 @@ public class RReaderTest extends TestUtil {
       assertEquals(iris.datad(i,iris._cols.length-1),m.score(row),0.0001);
     }
     m.delete();
-    model.delete();
+    if( m != model ) model.delete();
     iris.delete();
   }
 

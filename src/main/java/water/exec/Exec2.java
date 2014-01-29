@@ -57,15 +57,21 @@ public class Exec2 {
 
   public static Env exec( String str ) throws IllegalArgumentException {
     // Preload the global environment from existing Frames
-    Env env = new Env();
     ArrayList<ASTId> global = new ArrayList<ASTId>();
-    for( Value v : H2O.values() ) { // Add Frames to parser's namespace
-      Frame fr;
-      if( v.type()==TypeMap.VALUE_ARRAY ) fr = ValueArray.asFrame(v);
-      else if( v.type()==TypeMap.FRAME  ) fr = v.get();
-      else continue;
-      env.push(fr,v._key.toString());
-      global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
+    ArrayList<Key>   locked = new ArrayList<Key>  ();
+    Env env = new Env(locked);
+    H2O.globalKeySet( "water.fvec.Frame" ); // Bring Frames from all over local
+    H2O.globalKeySet( "water.ValueArray" ); // Bring VA's   from all over local
+    for( Key k : H2O.localKeySet() )        // Add VA's to parser's namespace
+      if( H2O.raw_get(k).type()==TypeMap.VALUE_ARRAY ) 
+        ValueArray.asFrame(DKV.get(k));
+    for( Key k : H2O.localKeySet() ) {      // Add Frames to parser's namespace
+      if( H2O.raw_get(k).type()!=TypeMap.FRAME  ) continue;
+      Frame fr = DKV.get(k).get();
+      global.add(new ASTId(Type.ARY,k.toString(),0,global.size()));
+      env.push(fr,k.toString());
+      fr.read_lock(null);
+      locked.add(fr._key);
     }
 
     // Some global constants
@@ -75,16 +81,16 @@ public class Exec2 {
     global.add(new ASTId(Type.DBL,"Inf",0,global.size())); env.push(Double.POSITIVE_INFINITY);
 
     // Parse.  Type-errors get caught here and throw IAE
-    int argcnt = global.size();
-    Exec2 ex = new Exec2(str, global);
-    AST ast = ex.parse();
-
     try {
+      int argcnt = global.size();
+      Exec2 ex = new Exec2(str, global);
+      AST ast = ex.parse();
+
       env.push(global.size()-argcnt);   // Push space for temps
       ast.exec(env);
       env.postWrite();
     } catch( RuntimeException t ) {
-      env.remove();
+      env.remove_and_unlock();
       throw t;
     }
     return env;

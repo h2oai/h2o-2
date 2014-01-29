@@ -131,9 +131,10 @@ public class RFModel extends OldModel implements Progress {
   }
 
   /** Free all internal tree keys. */
-  @Override public void delete_impl(Futures fs) { 
+  @Override public Futures delete_impl(Futures fs) { 
     for( Key k : _tkeys )
       UKV.remove(k,fs);
+    return fs;
   }
 
   /**

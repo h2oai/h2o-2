@@ -61,7 +61,7 @@ public abstract class DRF {
     // Start the timer.
     drf._t_main = new Timer();
     // Push the RFModel globally first
-    drf._rfmodel.delete_and_lock(job);
+    drf._rfmodel.delete_and_lock(job.self());
     DKV.write_barrier();
 
     return drf;

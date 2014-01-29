@@ -124,7 +124,8 @@ mySetup() {
     echo "Running this cmd:"
     echo $cmd
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    ./sh2junit.py -name $1 -timeout 30 -- $cmd
+    basename=${1##*/}
+    ./sh2junit.py -name $basename -timeout 30 -- $cmd
 }
 
 myR() {

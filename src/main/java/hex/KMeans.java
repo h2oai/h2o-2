@@ -44,7 +44,8 @@ public class KMeans extends Job {
     res._randSeed = randSeed;
     res._maxIter = maxIter;
     res._initialization = init;
-    res.delete_and_lock(job);
+    res.delete_and_lock(job.self());
+    va.read_lock(job.self());
     // Updated column mapping selection after removing various junk columns
     final int[] filteredCols = res.columnMapping(va.colNames());
 
@@ -111,7 +112,7 @@ public class KMeans extends Job {
 
         res._iteration++;
         res._clusters = clusters;
-        res.update();
+        res.update(self());
       }
 
       clusters = recluster(clusters, k, rand, init);
@@ -136,13 +137,14 @@ public class KMeans extends Job {
       }
       res._error = task._error;
       res._iteration++;
-      res.update();
+      res.update(self());
       if( res._iteration >= res._maxIter )
         break;
       if( cancelled() )
         break;
     }
-    res.unlock(new Futures()).blockForPending();
+    res.unlock(self());
+    va.unlock(self());
     remove();
   }
 

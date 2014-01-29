@@ -48,7 +48,7 @@ public abstract class Log {
   public static interface Tag {
     /** Which subsystem of h2o? */
     public static enum Sys implements Tag {
-      RANDF, GBM__, DRF__, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCORM;
+      RANDF, GBM__, DRF__, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCORM, LOCKS;
       boolean _enable;
     }
 

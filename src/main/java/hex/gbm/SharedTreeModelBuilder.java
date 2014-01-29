@@ -122,6 +122,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
     String sv = input("validation");
     final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
+    
+    // Lock the input datasets against deletes
+    source.read_lock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.read_lock(self());
 
     Frame fr = new Frame(_names, _train);
     fr.add(_responseName,response);
@@ -171,6 +176,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       UKV.remove(fr.remove(fr.numCols()-1)._key);
     // If we made a response column with toEnum, nuke it.
     if( _gen_enum ) UKV.remove(response._key);
+
+    // Unlock the input datasets against deletes
+    source.unlock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.unlock(self());
+
     remove();                   // Remove Job
   }
 
@@ -193,7 +204,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     model = makeModel(model, ktrees,
                       sc==null ? Double.NaN : sc.mse(),
                       sc==null ? null : (_nclass>1?sc._cm:null), tstats);
-    DKV.put(outputKey, model);
+    model.update(self());
     return model;
   }
 

@@ -29,7 +29,7 @@ public class StoreView extends Request {
     int len = 0;
     String filter = _filter.value();
     // Gather some keys that pass all filters
-    for( Key key : H2O.keySet() ) {
+    for( Key key : H2O.localKeySet() ) {
       if( filter != null && // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue; // Ignore this filtered-out key
