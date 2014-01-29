@@ -531,7 +531,6 @@ public abstract class DGLM {
     /**
      * Per family deviance computation.
      *
-     * @param family
      * @param yr
      * @param ym
      * @return
@@ -854,7 +853,7 @@ public abstract class DGLM {
       Sampling s = new Sampling(setup._id, _folds, false);
       assert _models[setup._id] == null;
       Key mkey = _models[setup._id] = GLMModel.makeKey(false);
-      DataFrame data = DGLM.getData(_ary, _cols, s, _standardize);
+      DataFrame data = getData(_ary, _cols, s, _standardize);
       new GLMModel(Status.ComputingValidation, 0.0f, mkey, data, null, null, _glmp, _lsm, 0, 0, false, 0, 0, null).delete_and_lock(_job.self());
       try {
         DGLM.buildModel(_job, mkey, data, _lsm, _glmp,_betaStart.clone(), 0, _parallel);
@@ -1092,6 +1091,7 @@ public abstract class DGLM {
 
       @Override public void map(Key key) {
         GLMValidation res = new GLMValidation();
+        final OldModel adaptedModel = (OldModel)_adaptedModel.clone();
         if( _m._glmParams._family._family == Family.binomial ) {
           res._cm = new ConfusionMatrix[_thresholds.length];
           for( int i = 0; i < _thresholds.length; ++i )
@@ -1106,7 +1106,7 @@ public abstract class DGLM {
           if( s != null && s.skip(rid) ) continue;
           if(ary.isNA(bits, rid, response))continue;
           double yr = ary.datad(bits, rid, response);
-          double ym = _adaptedModel.score(ary, bits, rid);
+          double ym = adaptedModel.score(ary, bits, rid);
           if(Double.isNaN(ym))continue;
           ++res._n;
           if(_m._glmParams._caseMode != CaseMode.none)
@@ -1949,8 +1949,12 @@ public abstract class DGLM {
       return solver.solve(gram, beta);
     }
   }
-  public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+  public static GLMModel buildModel(Job job, Key resKey, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams params,
       double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
+    return buildModel(job, resKey, getData(ary, cols, null, standardize), lsm, params, oldBeta, xval, parallel);
+  }
+  private static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+                                    double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
     Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
     GLMModel currentModel = null;
     ArrayList<String> warns = new ArrayList<String>();
