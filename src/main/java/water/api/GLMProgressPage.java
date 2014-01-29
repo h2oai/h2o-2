@@ -233,11 +233,9 @@ public class GLMProgressPage extends Request {
       int i=0;
       for( Entry<String,JsonElement> e : ee )
         cs[i++] = new Coef(e);
-      if( m._glmParams._family._family == Family.binomial )
-        Arrays.sort(cs,new Comparator<Coef>() {
+      Arrays.sort(cs,new Comparator<Coef>() {
             @Override public int compare(Coef c0, Coef c1) { return (c0._d<c1._d) ? 1 : (c0._d==c1._d?0:-1);}
           });
-
       StringBuilder sb = new StringBuilder();
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr>");

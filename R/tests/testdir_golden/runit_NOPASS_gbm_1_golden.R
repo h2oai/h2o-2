@@ -19,7 +19,7 @@ REPMSE<- err[4,]
 pred<- as.data.frame(h2o.predict(fith2o, newdata=smtreesH2O))
 diff<- pred-smtreesR[,4]
 diffsq<- diff^2
-EXPMSE< mean(diffsq)
+EXPMSE<- mean(diffsq)
 
 Log.info("Print model MSE... \n")
 Log.info(paste("Length of H2O MSE Vec: ", length(fith2o@model$err),      "\t\t", "Expected Length   : ", 10))

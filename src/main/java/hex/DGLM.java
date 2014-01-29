@@ -997,6 +997,7 @@ public abstract class DGLM {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
+      assert _va._cols.length == _colCatMap.length-1;
       _beta = beta;
       _normBeta = normBeta;
       _glmParams = glmp;
@@ -1140,9 +1141,9 @@ public abstract class DGLM {
           _res._err += drt._res._err;
           _res._caseCount += drt._res._caseCount;
           if( _res._cm != null ) {
-            for( int i = 0; i < _thresholds.length; ++i )
-              _res._cm[i].add(_res._cm[i]);
-          } else _res._cm = _res._cm;
+            for( int i = 0; i < _res._cm.length; ++i )
+              _res._cm[i].add(drt._res._cm[i]);
+          } else _res._cm = drt._res._cm;
         }
       }
     }
@@ -1885,7 +1886,12 @@ public abstract class DGLM {
   }
 
   public static DataFrame getData(ValueArray ary, int[] colIds, Sampling s, boolean standardize) {
-    return new DataFrame(ary, colIds, s, standardize, true);
+    int [] cols = new int[colIds.length];
+    int j = 0;
+    for(int i = 0; i < colIds.length-1; ++i) if(ary._cols[colIds[i]]._min < ary._cols[colIds[i]]._max)
+      cols[j++] = colIds[i];
+    cols[j++] = colIds[colIds.length-1];
+    return new DataFrame(ary, Arrays.copyOf(cols,j), s, standardize, true);
   }
 
   public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params,

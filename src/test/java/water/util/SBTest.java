@@ -13,4 +13,11 @@ public class SBTest {
     Assert.assertEquals("Float.POSITIVE_INFINITY", new SB().pj(Float.POSITIVE_INFINITY).toString());
     Assert.assertEquals("Float.NEGATIVE_INFINITY", new SB().pj(Float.NEGATIVE_INFINITY).toString());
   }
+
+  @Test
+  public void testStringSerialization() {
+    Assert.assertEquals("Duff Gordon, Sir. Cosmo Edmund (\\\"\\\"Mr Morgan\\\"\\\")", new SB().pj("Duff Gordon, Sir. Cosmo Edmund (\"\"Mr Morgan\"\")").toString());
+    Assert.assertEquals("Test \\\\ backslash serialization \\\\", new SB().pj("Test \\ backslash serialization \\").toString());
+    Assert.assertEquals("Test \\\"\\\\ backslash and quote serialization \\\\\\\"", new SB().pj("Test \"\\ backslash and quote serialization \\\"").toString());
+  }
 }

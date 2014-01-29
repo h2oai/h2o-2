@@ -57,15 +57,13 @@ Get R Studio talking to your instance of H\ :sub:`2`\ O by typing in the call:
 Your IP and port may be different, depending on whether you are running H\ :sub:`2`\ O from your computer or a server. If you are running on a server, where it says IP enter the IP address of the server, and the appropriate port number. In the picture below the IP number is everything before the colon, and the port number is the 5 digit string after the colon.
 
 
-.. image:: Ripandport.png
-   :width: 70%
-
 
 Upgrading the H\ :sub:`2`\ O R Packages
 """""""""""""""""""""""""""""""""""""""
 
 
 Users may wish to manually upgrade their R packages. For instance, if you are running the bleeding edge developer build, it’s possible that the code has changed, but that the revision number has not, in which case manually upgrading ensures the most current version of not only the H2O code, but the corresponding R code as well.
+It is highly recommended that users close and restart R, manually remove (by clicking the x next to BOTH h2o packages, as shown in the picture above), and reinstall. 
 
 
 

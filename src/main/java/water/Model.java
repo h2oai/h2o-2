@@ -321,7 +321,7 @@ public abstract class Model extends Lockable<Model> {
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/h2o-model.jar > h2o-model.jar").nl();
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/2/").p(this.getClass().getSimpleName()).p("View.java?_modelKey=").pobj(_key).p(" > ").p(modelName).p(".java").nl();
     sb.p("//     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
-    sb.p("//     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m ").p(modelName).nl();
+    sb.p("//     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").p(modelName).nl();
     sb.p("//").nl();
     sb.p("//     (Note:  Try java argument -XX:+PrintCompilation to show runtime JIT compiler behavior.)").nl();
     sb.nl();
@@ -384,7 +384,7 @@ public abstract class Model extends Lockable<Model> {
         sb.p("new String[] {");
         for (int j=0; j<dom.length; j++) {
           if (j>0) sb.p(',');
-          sb.p('"').p(dom[j]).p('"');
+          sb.p('"').pj(dom[j]).p('"');
         }
         sb.p("}");
       }
