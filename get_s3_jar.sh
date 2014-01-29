@@ -67,6 +67,8 @@ cp -f ./h2o*$version/h2o.jar target/h2o.jar
 cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
 
 echo "copying the downloaded R dir to  target/R"
+# rm the dir in case any old files in there
+rm -f -r target/R
 cp -f -r ./h2o*$version/R target/R
 
 # this is the one we point the R tests to. but we want a generic, no version name for them (like h2o/target)
