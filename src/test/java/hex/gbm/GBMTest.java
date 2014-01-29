@@ -1,12 +1,18 @@
 package hex.gbm;
 
-import static org.junit.Assert.assertEquals;
-import java.io.File;
-import java.util.Arrays;
-import org.junit.*;
-import water.*;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import water.Key;
+import water.TestUtil;
+import water.UKV;
 import water.api.ConfusionMatrix;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
+
+import java.io.File;
+
+import static org.junit.Assert.assertEquals;
 
 public class GBMTest extends TestUtil {
 
@@ -143,46 +149,7 @@ public class GBMTest extends TestUtil {
       CM.vpredict = fpreds.vecs()[fpreds.find("predict")];
       CM.serve();               // Start it, do it
 
-      // Really crappy cut-n-paste of what should be in the ConfusionMatrix class itself
-      long cm[][] = CM.cm;
-      long acts [] = new long[cm   .length];
-      long preds[] = new long[cm[0].length];
-      for( int a=0; a<cm.length; a++ ) {
-        long sum=0;
-        for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
-        acts[a] = sum;
-      }
-      String adomain[] = ConfusionMatrix.show(acts ,CM.vactual .domain());
-      String pdomain[] = ConfusionMatrix.show(preds,CM.vpredict.domain());
-
-      StringBuilder sb = new StringBuilder();
-      sb.append("Act/Prd\t");
-      for( String s : pdomain )
-        if( s != null )
-          sb.append(s).append('\t');
-      sb.append("Error\n");
-
-      long terr=0;
-      for( int a=0; a<cm.length; a++ ) {
-        if( adomain[a] == null ) continue;
-        sb.append(adomain[a]).append('\t');
-        long correct=0;
-        for( int p=0; p<pdomain.length; p++ ) {
-          if( pdomain[p] == null ) continue;
-          if( adomain[a].equals(pdomain[p]) ) correct = cm[a][p];
-          sb.append(cm[a][p]).append('\t');
-        }
-        long err = acts[a]-correct;
-        terr += err;            // Bump totals
-        sb.append(String.format("%5.3f = %d / %d\n", (double)err/acts[a], err, acts[a]));
-      }
-      sb.append("Totals\t");
-      for( int p=0; p<pdomain.length; p++ )
-        if( pdomain[p] != null )
-          sb.append(preds[p]).append("\t");
-      sb.append(String.format("%5.3f = %d / %d\n", (double)terr/CM.vactual.length(), terr, CM.vactual.length()));
-
-      System.out.println(sb);
+      System.out.println(CM.toASCII(new StringBuilder()));
 
     } finally {
       UKV.remove(dest1);        // Remove original hex frame key

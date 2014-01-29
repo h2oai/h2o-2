@@ -163,4 +163,54 @@ public class ConfusionMatrix extends Request2 {
     DocGen.HTML.arrayTail(sb);
     return true;
   }
+
+  public StringBuilder toASCII( StringBuilder sb ) {
+    assert(cm != null);
+    long acts [] = new long[cm   .length];
+    long preds[] = new long[cm[0].length];
+    for( int a=0; a<cm.length; a++ ) {
+      long sum=0;
+      for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
+      acts[a] = sum;
+    }
+    String adomain[] = ConfusionMatrix.show(acts ,vactual .toEnum().domain());
+    String pdomain[] = ConfusionMatrix.show(preds,vpredict.toEnum().domain());
+
+    // determine max length of each space-padded field
+    int maxlen = 0;
+    for( String s : pdomain ) if( s != null ) maxlen = Math.max(maxlen, s.length());
+    long sum = 0;
+    for( int a=0; a<cm.length; a++ ) {
+      if( adomain[a] == null ) continue;
+      for( int p=0; p<pdomain.length; p++ ) { if( pdomain[p] == null ) continue; sum += cm[a][p]; }
+    }
+    maxlen = Math.max(8, Math.max(maxlen, String.valueOf(sum).length()) + 2);
+    final String fmt  = "%" + maxlen + "d";
+    final String fmtS = "%" + maxlen + "s";
+
+    sb.append(String.format(fmtS, "Act/Prd"));
+    for( String s : pdomain ) if( s != null ) sb.append(String.format(fmtS, s));
+    sb.append("   " + String.format(fmtS, "Error\n"));
+
+    long terr=0;
+    for( int a=0; a<cm.length; a++ ) {
+      if( adomain[a] == null ) continue;
+      sb.append(String.format(fmtS,adomain[a]));
+      long correct=0;
+      for( int p=0; p<pdomain.length; p++ ) {
+        if( pdomain[p] == null ) continue;
+        if( adomain[a].equals(pdomain[p]) ) correct = cm[a][p];
+        sb.append(String.format(fmt,cm[a][p]));
+      }
+      long err = acts[a]-correct;
+      terr += err;            // Bump totals
+      sb.append("   " + String.format("%5.3f = %d / %d\n", (double)err/acts[a], err, acts[a]));
+    }
+    sb.append(String.format(fmtS, "Totals"));
+    for( int p=0; p<pdomain.length; p++ )
+      if( pdomain[p] != null )
+        sb.append(String.format(fmt, preds[p]));
+    sb.append("   " + String.format("%5.3f = %d / %d\n", (double)terr/vactual.length(), terr, vactual.length()));
+    return sb;
+  }
 }
