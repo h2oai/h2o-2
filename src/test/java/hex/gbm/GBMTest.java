@@ -222,4 +222,38 @@ public class GBMTest extends TestUtil {
       gbm.remove();             // Remove GBM Job
     }
   }
+
+  // A test of locking the input dataset during model building.
+  @Test public void testModelLock() {
+    GBM gbm = new GBM();
+    try {
+      Frame fr = gbm.source = parseFrame(Key.make("air.hex"),"./smalldata/airlines/allyears2k_headers.zip");
+      for( String s : ignored_aircols ) UKV.remove(fr.remove(s)._key);
+      int idx =  fr.find("IsArrDelayed");
+      gbm.response = fr.vecs()[idx];
+      gbm.ntrees = 10;
+      gbm.max_depth = 5;
+      gbm.min_rows = 1;
+      gbm.nbins = 20;
+      gbm.cols = new int[fr.numCols()];
+      for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
+      gbm.learn_rate = .2f;
+      gbm.fork();
+      try { Thread.sleep(100); } catch( Exception _ ) { }
+
+      try { 
+        fr.delete();            // Attempted delete while model-build is active
+        H2O.fail();             // Should toss IAE instead of reaching here
+      } catch( IllegalArgumentException _ ) {
+      }
+      
+      GBM.GBMModel model = gbm.get();
+      if( model != null ) model.delete();
+
+    } finally {
+      gbm.source.delete();              // Remove original hex frame key
+      gbm.remove();             // Remove GBM Job
+    }
+  }
+
 }
