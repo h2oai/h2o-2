@@ -555,17 +555,19 @@ h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, 
 
 h2o.__getNNSummary <- function(res) {
   mySum = list()
-  mySum$model_key = res$destination_key
-  mySum$activation = res$activation
-  mySum$hidden = res$hidden
-  mySum$rate = res$rate
-  mySum$rate_annealing = res$rate_annealing
-  mySum$momentum_start = res$momentum_start
-  mySum$momentum_ramp = res$momentum_ramp
-  mySum$momentum_stable = res$momentum_stable
-  mySum$l1_reg = res$l1
-  mySum$l2_reg = res$l2
-  mySum$epochs = res$epochs
+  resP = res$parameters
+  
+  mySum$model_key = resP$destination_key
+  mySum$activation = resP$activation
+  mySum$hidden = resP$hidden
+  mySum$rate = resP$rate
+  mySum$rate_annealing = resP$rate_annealing
+  mySum$momentum_start = resP$momentum_start
+  mySum$momentum_ramp = resP$momentum_ramp
+  mySum$momentum_stable = resP$momentum_stable
+  mySum$l1_reg = resP$l1
+  mySum$l2_reg = resP$l2
+  mySum$epochs = resP$epochs
 
   temp = matrix(unlist(res$confusion_matrix), nrow = length(res$confusion_matrix))
   mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
@@ -890,13 +892,12 @@ h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, for
   for(i in 1:length(allModels)) {
     if(algo == "KM")
       resH = h2o.__remoteSend(data@h2o, model_view, model=allModels[[i]]$destination_key)
-    else if(algo == "NN")
-      resH = h2o.__remoteSend(data@h2o, model_view, job_key=allModels[[i]]$job_key, destination_key=allModels[[i]]$destination_key)
     else
       resH = h2o.__remoteSend(data@h2o, model_view, '_modelKey'=allModels[[i]]$destination_key)
-    myModelSum[[i]] = switch(algo, GBM = h2o.__getGBMSummary(resH[[3]], forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKM2Summary(resH[[3]]), RF = h2o.__getDRFSummary(resH[[3]]), NN = h2o.__getNNSummary(resH))
+
+    myModelSum[[i]] = switch(algo, GBM = h2o.__getGBMSummary(resH[[3]], forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKM2Summary(resH[[3]]), RF = h2o.__getDRFSummary(resH[[3]]), NN = h2o.__getNNSummary(resH[[3]]))
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
-    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]], forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKM2Results(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]]), NN = h2o.__getNNResults(resH))
+    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]], forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKM2Results(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]]), NN = h2o.__getNNResults(resH[[3]]))
 
     if(algo == "KM")
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig)
