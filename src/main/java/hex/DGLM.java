@@ -531,7 +531,6 @@ public abstract class DGLM {
     /**
      * Per family deviance computation.
      *
-     * @param family
      * @param yr
      * @param ym
      * @return
@@ -855,7 +854,7 @@ public abstract class DGLM {
       assert _models[setup._id] == null;
       _models[setup._id] = GLMModel.makeKey(false);
       try {
-        DGLM.buildModel(_job, _models[setup._id], DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp,_betaStart.clone(), 0, _parallel);
+        DGLM.buildModel(_job, _models[setup._id], getData(_ary, _cols, s, _standardize), _lsm, _glmp,_betaStart.clone(), 0, _parallel);
       } catch( JobCancelledException e ) {
         UKV.remove(_models[setup._id]);
       }
@@ -1943,8 +1942,12 @@ public abstract class DGLM {
       return solver.solve(gram, beta);
     }
   }
-  public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+  public static GLMModel buildModel(Job job, Key resKey, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams params,
       double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
+    return buildModel(job, resKey, getData(ary, cols, null, standardize), lsm, params, oldBeta, xval, parallel);
+  }
+  private static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+                                    double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
     Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
     GLMModel currentModel = null;
     ArrayList<String> warns = new ArrayList<String>();
