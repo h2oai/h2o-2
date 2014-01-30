@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 3;
+  public static final int NODES = 1;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
@@ -40,8 +40,8 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       // tests = JUnitRunner.all();
-      tests.add(hex.NeuralNetSpiralsTest.class);
-      tests.add(hex.NeuralNetIrisTest.class);
+//      tests.add(hex.NeuralNetSpiralsTest.class);
+      tests.add(hex.NeuralNetIrisTest2.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}
