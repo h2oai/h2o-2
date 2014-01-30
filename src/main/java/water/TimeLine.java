@@ -248,11 +248,14 @@ public class TimeLine extends UDP {
    */
   public static void printMyTimeLine(){
     long [] s = TimeLine.snapshot();
-    System.out.println("===================================<TIMELINE>==============================================");
+    System.err.println("===================================<TIMELINE>==============================================");
     for(int i = 0; i < TimeLine.length(); ++i) {
-      if(!TimeLine.isEmpty(s, i) && ((TimeLine.l0(s, i) & 0xFF) == UDP.udp.exec.ordinal()))
-        System.out.println(TimeLine.ms(s, i) + ": " + (((TimeLine.ns(s, i) & 4) != 0)?"TCP":"UDP")  +  TimeLine.inet(s, i) + " | " + UDP.printx16(TimeLine.l0(s, i), TimeLine.l8(s, i)));
+      long lo = TimeLine.l0(s, i),hi = TimeLine.l8(s, i);
+      int port = (int)((lo >> 8) & 0xFFFF);
+      String op = TimeLine.send_recv(s,i) == 0?"SEND":"RECV";
+      if(!TimeLine.isEmpty(s, i) && (lo & 0xFF) == UDP.udp.exec.ordinal())
+        System.err.println(TimeLine.ms(s, i) + ": " + op + " " + (((TimeLine.ns(s, i) & 4) != 0)?"TCP":"UDP")  +  TimeLine.inet(s, i) + ":" + port + " | " + UDP.printx16(lo, hi));
     }
-    System.out.println("===========================================================================================");
+    System.err.println("===========================================================================================");
   }
 }
