@@ -85,12 +85,8 @@ public class GLMScore extends Request {
       Response r = Response.done(res);
       r.setBuilder("", new GLMValidationBuilder(m,v));
       return r;
-    }catch(GLMException e){
-      Log.err(e);
-      return Response.error(e.getMessage());
     } catch (Throwable t) {
-      Log.err(t);
-      return Response.error(t.getMessage());
+      return Response.error(t);
     }
   }
 }

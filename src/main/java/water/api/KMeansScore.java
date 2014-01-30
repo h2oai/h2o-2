@@ -47,7 +47,7 @@ public class KMeansScore extends Request {
       res.add("score", kms.toJson());
       return Response.done(res);
     } catch( Error e ) {
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
   }
 }

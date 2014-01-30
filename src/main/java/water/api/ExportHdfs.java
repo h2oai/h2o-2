@@ -33,8 +33,7 @@ public class ExportHdfs extends Request {
       if( data != null ) PersistHdfs.store(new Path(path), data);
       else throw new UnsupportedOperationException("Only models can be exported");
     } catch( Exception e ) {
-      Log.err(e);
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
     JsonObject json = new JsonObject();
     Response r = Response.done(json);

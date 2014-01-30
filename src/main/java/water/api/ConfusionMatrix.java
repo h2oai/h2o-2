@@ -63,8 +63,7 @@ public class ConfusionMatrix extends Request2 {
       cm = new CM(va.domain().length, vp.domain().length).doAll(va,vp)._cm;
       return Response.done(this);
     } catch (Throwable t) {
-      Log.err(t);
-      return Response.error(t.getMessage());
+      return Response.error(t);
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
       if (vp!=null) UKV.remove(vp._key);

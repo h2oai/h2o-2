@@ -30,8 +30,7 @@ public class Get extends Request {
       res.addHeader("Content-Disposition", "attachment; filename="+key.toString());
       return res;
     } catch (Exception e) {
-      Log.err(e);
-      return wrap(server,build(Response.error(e.getMessage())));
+      return wrap(server,build(Response.error(e)));
     }
   }
 

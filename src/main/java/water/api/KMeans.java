@@ -53,10 +53,8 @@ public class KMeans extends Request {
       Response r = Progress.redirect(response, job.self(), job.dest());
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch( IllegalArgumentException e ) {
-      return Response.error(e.getMessage());
     } catch( Error e ) {
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
   }
 
