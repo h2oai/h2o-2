@@ -1,9 +1,7 @@
 package hex;
 
-import water.fvec.NewChunk;
-import water.fvec.Chunk;
-import water.fvec.Frame;
 import water.MRTask2;
+import water.Key;
 import water.fvec.*;
 
 import java.util.Arrays;
@@ -12,7 +10,7 @@ import java.util.ArrayList;
 public class OneHot extends MRTask2<OneHot>{
     int[] _offsets;
 
-    public static Frame expandDataset(Frame fr) {//, int[] ignored) {
+    public static Frame expandDataset(Frame fr, Key destkey) {//, int[] ignored) {
         ArrayList<Vec> nvecs = new ArrayList<Vec>();
         ArrayList<Vec> evecs = new ArrayList<Vec>();
         ArrayList<String> eNames = new ArrayList<String>();
@@ -44,7 +42,7 @@ public class OneHot extends MRTask2<OneHot>{
         ss.doAll(l,evecs.toArray(new Vec[evecs.size()]));
 
 
-        Frame fr2 = ss.outputFrame(eNames.toArray(new String[eNames.size()]),new String[l][]);
+        Frame fr2 = ss.outputFrame(destkey,eNames.toArray(new String[eNames.size()]),new String[l][]);
         fr2.add(new Frame(nNames.toArray(new String[nNames.size()]), nvecs.toArray(new Vec[nvecs.size()])),false);
         return fr2;
     }

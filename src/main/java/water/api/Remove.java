@@ -20,7 +20,7 @@ public class Remove extends Request {
       if( v.isLockable() ) Lockable.delete(v._key);
       else UKV.remove(v._key);  // Standard blocking remove
     } catch( Exception e ) {
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
 
     JsonObject response = new JsonObject();
