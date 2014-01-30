@@ -2,6 +2,7 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
@@ -324,7 +325,11 @@ public class RequestServer extends NanoHTTPD {
       mime = "text/css";
     else if (uri.endsWith(".html"))
       mime = "text/html";
-    return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    // return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    NanoHTTPD.Response res = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    res.addHeader("Content-Length", Long.toString(bytes.length));
+    res.addHeader("Content-Disposition", "attachment; filename=" + uri);
+    return res;
   }
 
 }
