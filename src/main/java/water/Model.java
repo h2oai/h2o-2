@@ -63,9 +63,8 @@ public abstract class Model extends Lockable<Model> {
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
 
   /** Remove any Model internal Keys */
-  @Override public void delete_impl(Futures fs) {
-    /* None in the default Model */
-  }
+  @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
+  @Override public String errStr() { return "Model"; }
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }

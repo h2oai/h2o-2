@@ -128,7 +128,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, Timer t_build ) {
 
     GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, max_depth, min_rows, nbins, learn_rate);
-    model.delete_and_lock(this);
+    model.delete_and_lock(self());
 
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
@@ -158,6 +158,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     }
     // Final scoring
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false, false);
+    model.unlock(self());       // Update and unlock model
     cleanUp(fr,t_build); // Shared cleanup
   }
 

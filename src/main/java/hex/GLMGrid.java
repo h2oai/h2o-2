@@ -62,7 +62,7 @@ public class GLMGrid extends Job {
         old._runTime = Math.max(runTime,old._runTime);
         return old;
       }
-      @Override public void onSuccess() {
+      @Override public void onSuccess(Value old) {
         // we're done, notify
         if(done) remove();
       };
@@ -91,7 +91,7 @@ public class GLMGrid extends Job {
       ValueArray ary = DKV.get(_aryKey).get();
       try{
         for( int l1 = 1; l1 <= _job._lambdas.length && !_job.cancelled(); l1++ ) {
-          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, _standardize), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
+          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),ary, _job._xs, _standardize, new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
           beta = m._normBeta.clone();
           _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job.start_time,fs);
         }

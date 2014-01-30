@@ -531,7 +531,6 @@ public abstract class DGLM {
     /**
      * Per family deviance computation.
      *
-     * @param family
      * @param yr
      * @param ym
      * @return
@@ -853,14 +852,16 @@ public abstract class DGLM {
       GLMXvalSetup setup = DKV.get(key).get();
       Sampling s = new Sampling(setup._id, _folds, false);
       assert _models[setup._id] == null;
-      _models[setup._id] = GLMModel.makeKey(false);
+      Key mkey = _models[setup._id] = GLMModel.makeKey(false);
+      DataFrame data = getData(_ary, _cols, s, _standardize);
+      new GLMModel(Status.ComputingValidation, 0.0f, mkey, data, null, null, _glmp, _lsm, 0, 0, false, 0, 0, null).delete_and_lock(_job.self());
       try {
-        DGLM.buildModel(_job, _models[setup._id], DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp,_betaStart.clone(), 0, _parallel);
+        DGLM.buildModel(_job, mkey, data, _lsm, _glmp,_betaStart.clone(), 0, _parallel);
       } catch( JobCancelledException e ) {
-        UKV.remove(_models[setup._id]);
+        Lockable.delete(_models[setup._id]);
       }
       // cleanup before sending back
-      DKV.remove(key);
+      UKV.remove(key);
       _betaStart = null;
       _lsm = null;
       _glmp = null;
@@ -1016,25 +1017,26 @@ public abstract class DGLM {
       return _converged;
     }
 
-    public void store() {
-      clone().update();
+    public void store(Key job_key) {
+      clone().update(job_key);
     }
 
     @Override
     public GLMModel clone(){
       GLMModel res = (GLMModel)super.clone();
-      res._beta = res._beta.clone();
-      res._normBeta  = res._normBeta.clone();
+      if( res._beta != null ) res._beta = res._beta.clone();
+      if( res._normBeta != null ) res._normBeta  = res._normBeta.clone();
       res._vals = res._vals == null?null:res._vals.clone();
       return res;
     }
 
-    @Override public void delete_impl(Futures fs) { 
+    @Override public Futures delete_impl(Futures fs) { 
       if( _vals != null ) 
         for( GLMValidation val : _vals )
           if( val._modelKeys != null ) 
             for( Key k : val._modelKeys )
               ((GLMModel)DKV.get(k).get()).delete();
+      return fs;
     }
 
     private static class YMUVal extends Iced {
@@ -1089,6 +1091,7 @@ public abstract class DGLM {
 
       @Override public void map(Key key) {
         GLMValidation res = new GLMValidation();
+        final OldModel adaptedModel = (OldModel)_adaptedModel.clone();
         if( _m._glmParams._family._family == Family.binomial ) {
           res._cm = new ConfusionMatrix[_thresholds.length];
           for( int i = 0; i < _thresholds.length; ++i )
@@ -1103,7 +1106,7 @@ public abstract class DGLM {
           if( s != null && s.skip(rid) ) continue;
           if(ary.isNA(bits, rid, response))continue;
           double yr = ary.datad(bits, rid, response);
-          double ym = _adaptedModel.score(ary, bits, rid);
+          double ym = adaptedModel.score(ary, bits, rid);
           if(Double.isNaN(ym))continue;
           ++res._n;
           if(_m._glmParams._caseMode != CaseMode.none)
@@ -1908,7 +1911,8 @@ public abstract class DGLM {
     } else {
       beta = denormalizedBeta = null;
     }
-    new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params, lsm, 0, 0, false, 0, 0, null).delete_and_lock(job);
+    data._ary.read_lock(job.self()); // Read-lock the input dataset
+    new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params, lsm, 0, 0, false, 0, 0, null).delete_and_lock(job.self());
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
@@ -1916,7 +1920,9 @@ public abstract class DGLM {
           assert !job.cancelled();
           job.remove();
         } catch( JobCancelledException e ) {
-          UKV.remove(job.dest());
+          Lockable.delete(job.dest());
+        } finally {
+          data._ary.unlock(job.self()); // Read-lock the input dataset
         }
         tryComplete();
       }
@@ -1943,8 +1949,12 @@ public abstract class DGLM {
       return solver.solve(gram, beta);
     }
   }
-  public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+  public static GLMModel buildModel(Job job, Key resKey, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams params,
       double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
+    return buildModel(job, resKey, getData(ary, cols, null, standardize), lsm, params, oldBeta, xval, parallel);
+  }
+  private static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+                                    double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
     Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
     GLMModel currentModel = null;
     ArrayList<String> warns = new ArrayList<String>();
@@ -1976,6 +1986,7 @@ public abstract class DGLM {
     lsmSolveTime += System.currentTimeMillis() - t;
     currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
         params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
+    currentModel.update(job.self());            // Lock the new model
     if( params._family._family != Family.gaussian ) do { // IRLSM
       if( oldBeta == null ) oldBeta = MemoryManager.malloc8d(data.expandedSz());
       if( job.cancelled() ) throw new JobCancelledException();
@@ -1996,13 +2007,13 @@ public abstract class DGLM {
       currentModel = new GLMModel(Status.ComputingModel, progress, resKey, data, data.denormalizeBeta(newBeta),
           newBeta, params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, warnings);
       currentModel._lsmSolveTime = lsmSolveTime;
-      currentModel.store();
+      currentModel.store(job.self());
     } while( ++iter < params._maxIter && !converged );
     currentModel._lsmSolveTime = lsmSolveTime;
     currentModel._status = Status.ComputingValidation;
-    currentModel.store();
+    currentModel.store(job.self());
     if( xval > 1 ) // ... and x-validate
-    currentModel.xvalidate(job, data._ary, xval, DEFAULT_THRESHOLDS, parallel);
+      currentModel.xvalidate(job, data._ary, xval, DEFAULT_THRESHOLDS, parallel);
     else currentModel.validateOn(job, data._ary, data.getSamplingComplement(), DEFAULT_THRESHOLDS); // Full scoring on original dataset
     currentModel._status = Status.Done;
     if(currentModel.rank() > nobs)
@@ -2010,7 +2021,7 @@ public abstract class DGLM {
     String[] warnings = new String[warns.size()];
     warns.toArray(warnings);
     currentModel._warnings = warnings;
-    currentModel.store();
+    currentModel.unlock(job.self());
     DKV.write_barrier();
     return currentModel;
   }

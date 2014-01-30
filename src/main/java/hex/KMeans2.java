@@ -44,6 +44,7 @@ public class KMeans2 extends ColumnsJob {
   }
 
   @Override protected Status exec() {
+    source.read_lock(self());
     String sourceArg = input("source");
     Key sourceKey = null;
     if( sourceArg != null )
@@ -59,6 +60,7 @@ public class KMeans2 extends ColumnsJob {
     String[] namesResp = Utils.append(names, "response");
     String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    model.delete_and_lock(self());
     model.k = k; model.normalized = normalize;
 
     // TODO remove when stats are propagated with vecs?
@@ -109,7 +111,7 @@ public class KMeans2 extends ColumnsJob {
         model.centers = normalize ? denormalize(clusters, vecs) : clusters;
         model.total_within_SS = sqr._sqr;
         model.iterations++;
-        model.update();
+        model.update(self());
       }
 
       clusters = recluster(clusters, k, rand, initialization);
@@ -136,7 +138,7 @@ public class KMeans2 extends ColumnsJob {
       model.total_SS = model.total_within_SS + model.between_cluster_SS;
       model.size = task._rows;
       model.iterations++;
-      model.update();
+      model.update(self());
       if( model.iterations >= max_iter ) {
         Clusters cc = new Clusters();
         cc._clusters = clusters;
@@ -144,14 +146,14 @@ public class KMeans2 extends ColumnsJob {
         cc._mults = mults;
         cc.doAll(1, vecs);
         Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[1][]);
-        fr2.delete_and_lock(KMeans2.this);
-        fr2.unlock();
+        fr2.delete_and_lock(self()).unlock(self());
         break;
       }
       if( cancelled() )
         break;
     }
-    model.unlock();
+    model.unlock(self());
+    source.unlock(self());
     return Status.Done;
   }
 
@@ -361,8 +363,9 @@ public class KMeans2 extends ColumnsJob {
     }
 
     /** Remove any Model internal Keys */
-    @Override public void delete_impl(Futures fs) { 
+    @Override public Futures delete_impl(Futures fs) { 
       Lockable.delete(_clustersKey);
+      return fs;
     }
   }
 

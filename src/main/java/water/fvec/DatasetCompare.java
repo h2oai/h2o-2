@@ -82,7 +82,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
         ex.put(f.getPath(), e);
       }finally{
         if(vaRaw != null)UKV.remove(vaRaw);
-        for(Key k:H2O.keySet())UKV.remove(k);
+        for(Key k:H2O.localKeySet())UKV.remove(k);
         UKV.remove(vaHex);
         UKV.remove(frHex);
         if(frRaw != null)UKV.remove(frRaw);

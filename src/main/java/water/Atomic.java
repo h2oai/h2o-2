@@ -27,7 +27,7 @@ public abstract class Atomic<T extends Atomic> extends DTask {
    *  atomic update.  Override this if you need to perform some action after
    *  the update succeeds (eg cleanup).
    */
-  public void onSuccess(){}
+  public void onSuccess( Value old ){}
 
   /** Block until it completes, even if run remotely */
   public final T invoke( Key key ) {
@@ -60,7 +60,7 @@ public abstract class Atomic<T extends Atomic> extends DTask {
       // Attempt atomic update
       Value res = DKV.DputIfMatch(_key,val2,val1,fs);
       if( res == val1 ) {       // Success?
-        onSuccess();            // Call user's post-XTN function
+        onSuccess(val1);        // Call user's post-XTN function
         fs.blockForPending();   // Block for any pending invalidates on the atomic update
         break;
       }

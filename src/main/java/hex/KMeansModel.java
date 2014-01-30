@@ -189,8 +189,8 @@ public class KMeansModel extends OldModel implements Progress {
     static final int ROW_SIZE = 4;
 
     public static Job run(final Key dest, final KMeansModel model, final ValueArray ary) {
-      UKV.remove(dest); // Delete dest first, or chunk size from previous key can crash job
       final ChunkProgressJob job = new ChunkProgressJob(ary.chunks(),dest);
+      new ValueArray(dest,0).delete_and_lock(job.self());
       final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
         @Override public void compute2() {
           KMeansApply kms = new KMeansApply();
@@ -212,8 +212,7 @@ public class KMeansModel extends OldModel implements Progress {
           c._domain = null;
           c._n = ary.numRows();
           ValueArray res = new ValueArray(dest, ary.numRows(), c._size, new Column[] { c });
-          DKV.put(dest, res);
-          DKV.write_barrier();
+          res.unlock(job.self());
           job.remove();
           tryComplete();
         }

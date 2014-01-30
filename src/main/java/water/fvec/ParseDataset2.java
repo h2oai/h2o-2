@@ -282,7 +282,7 @@ public final class ParseDataset2 extends Job {
     }
     // Remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
-    Frame fr = new Frame(job.dest(),new String[0],new Vec[0]).delete_and_lock(job);
+    Frame fr = new Frame(job.dest(),new String[0],new Vec[0]).delete_and_lock(job.self());
     Vec v = getVec(fkeys[0]);
     MultiFileParseTask uzpt = new MultiFileParseTask(v.group(),setup,job._progress).invoke(fkeys);
     EnumUpdateTask eut = null;
@@ -312,15 +312,9 @@ public final class ParseDataset2 extends Job {
       eut.doAll(evecs);
     }
     // Release the frame for overwriting
-    Futures fs = new Futures();
-    fr.unlock(fs);
+    fr.unlock(job.self());
     // Remove CSV files from H2O memory
-    if( delete_on_done ) for( Key k : fkeys ) { 
-        Value val = DKV.get(k); 
-        if( val.isVec() ) UKV.remove(k); // Might be ByteVecs
-        else ((Lockable)val.get()).delete(); // Might be simple Frames over ByteVecs
-      }
-    fs.blockForPending();
+    if( delete_on_done ) for( Key k : fkeys ) Lockable.delete(k);
     job.remove();
   }
 

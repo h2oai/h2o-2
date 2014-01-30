@@ -383,7 +383,8 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
 
   static private Futures readPut(Key key, InputStream is, Job job, final Futures fs) throws IOException {
     // Lock & delete any prior, and lock against future writes
-    ValueArray ary = new ValueArray(key,0).delete_and_lock(job);
+    Key job_key = job==null ? null : job.self();
+    ValueArray ary = new ValueArray(key,0).delete_and_lock(job_key);
     byte[] oldbuf, buf = null;
     int off = 0, sz = 0;
     long szl = off;
@@ -437,7 +438,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
     }
     // Unlock & set new copy of self
-    new ValueArray(key,szl).unlock(fs);
+    new ValueArray(key,szl).unlock(job_key);
 
     // Block for all pending DKV puts, which will in turn add blocking requests
     // to the passed-in Future list 'fs'.
@@ -567,16 +568,15 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       // No cached conversion.  Make one and store it in DKV.
       int cn = conversionNumber.getAndIncrement();
       Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
-      Futures fs = new Futures();
-      Frame frame = convert(fs);
-      DKV.put(k2, frame, fs);
-      fs.blockForPending();
+      Frame frame = convert(k2);
       Log.info("Conversion " + cn + " complete.");
       return frame;
     }
   }
 
-  private Frame convert(Futures fs) {
+  private Frame convert(Key k2) {
+    new Frame(k2,new String[0], new Vec[0]).delete_and_lock(null);
+    Futures fs = new Futures();
     String[] names = new String[_cols.length];
     // A new random VectorGroup
     Key keys[] = new Vec.VectorGroup().addVecs(_cols.length);
@@ -588,7 +588,10 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       avs[i]._domain = _cols[i]._domain;
       vecs[i] = avs[i].close(fs);
     }
-    return new Frame(names, vecs);
+    fs.blockForPending();
+    Frame fr = new Frame(k2,names,vecs);
+    fr.unlock(null);            // Set & unlock new frame
+    return fr;
   }
 
   static class Converter extends MRTask<Converter> {
@@ -703,7 +706,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
 
     // Make the VA header
     final ValueArray va = new ValueArray(vaKey, rows, off, cols );
-    UKV.put(vaKey,va);
+    va.delete_and_lock(null);
 
     // Now fill in the data chunks
     final int rowsize = off;
@@ -728,13 +731,16 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       }
       @Override public void closeLocal() { _fs.blockForPending(); }
     }.doAll(fr);
+    va.unlock(null);
 
     return va;
   }
 
   /** Actually remove/delete all Chunks from memory. */
-  @Override public void delete_impl(Futures fs) {
+  @Override public Futures delete_impl(Futures fs) {
     for( long i=0; i<chunks(); i++ ) // Delete all the chunks
       DKV.remove(getChunkKey(i),fs);
+    return fs;
   }
+  @Override public String errStr() { return "Dataset"; }
 }
