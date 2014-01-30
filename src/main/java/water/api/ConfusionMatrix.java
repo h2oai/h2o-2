@@ -164,7 +164,7 @@ public class ConfusionMatrix extends Request2 {
     return true;
   }
 
-  public StringBuilder toASCII( StringBuilder sb ) {
+  public double toASCII( StringBuilder sb ) {
     assert(cm != null);
     long acts [] = new long[cm   .length];
     long preds[] = new long[cm[0].length];
@@ -211,6 +211,6 @@ public class ConfusionMatrix extends Request2 {
       if( pdomain[p] != null )
         sb.append(String.format(fmt, preds[p]));
     sb.append("   " + String.format("%5.3f = %d / %d\n", (double)terr/vactual.length(), terr, vactual.length()));
-    return sb;
+    return (double)terr/vactual.length();
   }
 }

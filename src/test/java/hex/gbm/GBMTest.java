@@ -149,7 +149,9 @@ public class GBMTest extends TestUtil {
       CM.vpredict = fpreds.vecs()[fpreds.find("predict")];
       CM.serve();               // Start it, do it
 
-      System.out.println(CM.toASCII(new StringBuilder()));
+      StringBuilder sb = new StringBuilder();
+      CM.toASCII(sb);
+      System.out.println(sb);
 
     } finally {
       UKV.remove(dest1);        // Remove original hex frame key
