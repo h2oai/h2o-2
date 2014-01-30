@@ -99,13 +99,14 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     }
     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
     # download.file(paste(myURL, "R", myFile, sep="/"), destfile = paste(getwd(), myFile, sep="/"), mode = "wb")
-    temp = getBinaryURL(paste(myURL, "R", myFile, sep="/"))
-    writeBin(temp, paste(getwd(), myFile, sep="/"))
-
-    if(as.character(serverMD5) != as.character(md5sum(paste(getwd(), myFile, sep="/"))))
-      warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
-    install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
-    file.remove(paste(getwd(), myFile, sep="/"))
+#     temp = getBinaryURL(paste(myURL, "R", myFile, sep="/"))
+#     writeBin(temp, paste(getwd(), myFile, sep="/"))
+# 
+#     if(as.character(serverMD5) != as.character(md5sum(paste(getwd(), myFile, sep="/"))))
+#       warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
+#     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
+#     file.remove(paste(getwd(), myFile, sep="/"))
+    install.packages("h2oRClient", repos = paste(myURL, "R", sep = "/"), type = "source")
   }
 }
 

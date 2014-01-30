@@ -465,11 +465,11 @@ h2o.downloadAllLogs <- function(client, dir_name = ".", file_name = NULL) {
   url = paste("http://", client@ip, ":", client@port, "/", h2o.__DOWNLOAD_LOGS, sep="")
   if(!file.exists(dir_name)) dir.create(dir_name)
   
-  # Get file name from HTTP header of response
   cat("Downloading H2O logs from server...\n")
   h = basicHeaderGatherer()
   tempfile = getBinaryURL(url, headerfunction = h$update, verbose = TRUE)
   
+  # Get filename from HTTP header of response
   if(is.null(file_name)) {
     # temp = strsplit(as.character(Sys.time()), " ")[[1]]
     # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])

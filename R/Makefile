@@ -38,13 +38,20 @@ else
 	openssl md5 h2oRClient_$(PROJECT_VERSION).tar.gz | sed 's/.*= //' >> info.txt
 endif
 	# Create temporary directory for jarring later
-	mkdir -p ../r_pack_tmp/resources/R
+	# mkdir -p ../r_pack_tmp/resources/R
+	mkdir -p ../r_pack_tmp/resources/R/src/contrib
 	cp -p info.txt ../r_pack_tmp/resources/R/info.txt
-	cp -p h2oRClient_$(PROJECT_VERSION).tar.gz ../r_pack_tmp/resources/R
+	# cp -p h2oRClient_$(PROJECT_VERSION).tar.gz ../r_pack_tmp/resources/R
+	cp -p h2oRClient_$(PROJECT_VERSION).tar.gz ../r_pack_tmp/resources/R/src/contrib	
+	cp -p h2oRClient-package/DESCRIPTION ../r_pack_tmp/resources/R/src/contrib/PACKAGES
+
 	# Add to resources directory
-	mkdir -p ../lib/resources/R
+	# mkdir -p ../lib/resources/R
+	mkdir -p ../lib/resources/R/src/contrib
 	mv info.txt ../lib/resources/R/info.txt
-	mv h2oRClient_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
+	# mv h2oRClient_$(PROJECT_VERSION).tar.gz ../lib/resources/R
+	mv h2oRClient_$(PROJECT_VERSION).tar.gz ../lib/resources/R/src/contrib
+	cp -p h2oRClient-package/DESCRIPTION ../lib/resources/R/src/contrib/PACKAGES
 
 clean:
 	rm -f h2oRClient-package/DESCRIPTION
