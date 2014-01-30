@@ -992,6 +992,7 @@ g_use_cloud = False
 g_use_ip = None
 g_use_port = None
 g_no_run = False
+g_jvm_xmx = "1g"
 
 # Global variables that are set internally.
 g_output_dir = None
@@ -1071,6 +1072,8 @@ def usage():
     print("")
     print("    --norun       Perform side effects like wipe, but don't actually run tests.")
     print("")
+    print("    --jvm.xmx     Configure size of launched JVM running H2O. E.g. '--jvm.xmx 3g'")
+    print("")
     print("    If neither --test nor --testlist is specified, then the list of tests is")
     print("    discovered automatically as files matching '*runit*.R'.")
     print("")
@@ -1134,6 +1137,7 @@ def parse_args(argv):
     global g_use_ip
     global g_use_port
     global g_no_run
+    global g_jvm_xmx
 
     i = 1
     while (i < len(argv)):
@@ -1195,6 +1199,11 @@ def parse_args(argv):
             g_use_ip = m.group(1)
             port_string = m.group(2)
             g_use_port = int(port_string)
+        elif (s == "--jvm.xmx"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            g_jvm_xmx = argv[i]
         elif (s == "--norun"):
             g_no_run = True
         elif (s == "-h" or s == "--h" or s == "-help" or s == "--help"):
@@ -1269,7 +1278,6 @@ def main(argv):
 
     # Calculate and set other variables.
     nodes_per_cloud = 1
-    xmx = "1g"
     h2o_jar = os.path.abspath(
         os.path.join(os.path.join(os.path.join(os.path.join(
             test_root_dir, ".."), ".."), "target"), "h2o.jar"))
@@ -1292,7 +1300,7 @@ def main(argv):
 
     g_runner = RUnitRunner(test_root_dir,
                            g_use_cloud, g_use_ip, g_use_port,
-                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
+                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx, g_output_dir)
 
     # Build test list.
     if (g_test_to_run is not None):
