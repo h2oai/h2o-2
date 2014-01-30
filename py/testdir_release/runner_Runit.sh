@@ -124,8 +124,9 @@ mySetup() {
     echo "Running this cmd:"
     echo $cmd
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    basename=${1##*/}
-    ./sh2junit.py -name $basename -timeout 30 -- $cmd
+    basen=`basename "$1"`
+    echo "basen: $basen"
+    ./sh2junit.py -name $basen -timeout 30 -- $cmd
 }
 
 myR() {
@@ -150,7 +151,7 @@ myR() {
     # this is where we downloaded to. 
     # notice no version number
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
-    export H2OWrapperDir=../../h2o-downloaded/R
+    export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
     echo "H2OWrapperDir should be $H2OWrapperDir"
     ls $H2OWrapperDir/h2o*.tar.gz
 
@@ -164,7 +165,9 @@ myR() {
     # don't fail on errors, since we want to check the logs in case that has more info!
     set +e
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    ./sh2junit.py -name $1 -timeout $timeout -- $cmd || true
+    basen=`basename "$1"`
+    echo "basen: $basen"
+    ./sh2junit.py -name $basen -timeout $timeout -- $cmd || true
 
     # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
     # think of h2o.check_sandbox_for_errors()
@@ -184,7 +187,7 @@ echo "Okay to run h2oWrapper.R every time for now"
 mySetup libPaths
 
 # can be slow if it had to reinstall all packages?
-export H2OWrapperDir=../../h2o-downloaded/R
+export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
 echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
 
@@ -192,6 +195,11 @@ printenv | grep H2OWrapperDir
 #!/bin/bash
 
 myR ../../R/tests/Utils/runnerSetupPackage 300
+
+# myR ../../R/tests/testdir_munging/histograms/runit_histograms 1200
+
+
+# sleep 3600
 
 for test in $(find ../../R/tests/ | grep -v Utils | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
 do
@@ -209,11 +217,9 @@ do
         testDirName=$(basename $testDir)
     fi  
     myR $testDirName/$testName 300
+    sleep 180
 done
 
-#single="testdir_single_jvm"
-# this guy was failing? not sure why
-#myR $single/runit_histograms 1200
 # airlines is failing summary. put it last
 #myR $single/runit_libR_airlines 120
 # If this one fals, fail this script so the bash dies 

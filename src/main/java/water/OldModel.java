@@ -176,9 +176,8 @@ public abstract class OldModel extends Lockable<OldModel> {
   }
 
   /** Remove any Model internal Keys */
-  @Override public void delete_impl(Futures fs) { 
-    /* None in the default Model */
-  }
+  @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
+  @Override public String errStr() { return "Model"; }
 
   /**
    * Simple model wrapper adapting original model to different dataset.
@@ -244,9 +243,8 @@ public abstract class OldModel extends Lockable<OldModel> {
     @Override public final OldModel adapt(ValueArray ary){return M.adapt(ary);}
     @Override public final OldModel adapt(String [] cols){return M.adapt(cols);}
     /** Remove any Model internal Keys */
-    @Override public void delete_impl(Futures fs) { 
-      /* None in the default Model */
-    }
+    @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
+    @Override public String errStr() { return "Model"; }
   }
 
   /**

@@ -60,10 +60,15 @@ fi
 rm -f -r h2o*$version
 unzip h2o_$version.zip
 
-echo "moving h2o.jar and overwriting target/h2o.jar"
+echo "copying h2o.jar to target/h2o.jar"
 mkdir -p target
 cp -f ./h2o*$version/h2o.jar target/h2o.jar
 cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
+
+echo "copying downloaded R dir to target"
+# rm it first in case of old files
+rm -f -r target/R
+cp -f -r ./h2o*$version/R target/R
 
 # this is the one we point the R tests to. but we want a generic, no version name for them (like h2o/target)
 rm -f -r ./h2o-downloaded

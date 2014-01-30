@@ -302,7 +302,7 @@ public class NeuralNet extends ValidatedJob {
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
     
-    model.delete_and_lock(this);
+    model.delete_and_lock(self());
 
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     final Trainer trainer;
@@ -410,7 +410,7 @@ public class NeuralNet extends ValidatedJob {
         model.validation_errors = validErrors;
 
         model.confusion_matrix = cm;
-        model.update();
+        model.update(self());
 
         // terminate model building if we detect that a model is unstable
         if (model.unstable) NeuralNet.running = false;

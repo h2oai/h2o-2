@@ -59,7 +59,7 @@ public class Exec2 extends Request2 {
         scalar = env.popDbl();
         sb.append(Double.toString(scalar));
       }
-      env.remove();
+      env.remove_and_unlock();
       result=sb.toString();
       return Response.done(this);
     }

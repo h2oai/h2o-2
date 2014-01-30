@@ -95,7 +95,7 @@ public class UploadFileVec extends FileVec {
       String[] sarr = {"bytes"};
       Vec[] varr = {uv};
       Frame f = new Frame(key,sarr, varr);
-      f.unlock();
+      f.unlock(null);
 
       Log.info("    Success.");
     }

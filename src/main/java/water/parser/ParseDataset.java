@@ -276,7 +276,7 @@ public final class ParseDataset extends Job {
     int j = 0;
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse!
-    new ValueArray(job.dest(),0).delete_and_lock(job);
+    new ValueArray(job.dest(),0).delete_and_lock(job.self());
     Key [] nonEmptyKeys = new Key[keys.length];
     for (int i = 0; i < keys.length; ++i) {
       Value v = DKV.get(keys[i]);

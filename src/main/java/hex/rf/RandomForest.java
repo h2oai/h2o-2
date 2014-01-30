@@ -52,6 +52,8 @@ public class RandomForest {
     }
 
     if(drfParams._parallel) DRemoteTask.invokeAll(trees);
+    Lockable model = UKV.get(job.dest());
+    model.unlock(job.self());
     Log.debug(Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
   }
 

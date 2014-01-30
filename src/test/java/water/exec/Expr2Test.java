@@ -11,7 +11,7 @@ import water.*;
 import water.fvec.*;
 
 public class Expr2Test extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -238,6 +238,7 @@ public class Expr2Test extends TestUtil {
   }
 
   void checkStr( String s ) {
+    System.out.println(s);
     Env env=null;
     try { 
       System.out.println(s);
@@ -252,25 +253,27 @@ public class Expr2Test extends TestUtil {
       }
     } 
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
-    if( env != null ) env.remove();
+    if( env != null ) env.remove_and_unlock();
     debug_print(s);
   }
 
   void checkStr( String s, double d ) {
+    System.out.println(s);
     Env env = Exec2.exec(s);
     assertFalse( env.isAry() );
     assertFalse( env.isFcn() );
     double res = env.popDbl();
     assertEquals(d, res, d / 1e8);
-    env.remove();
+    env.remove_and_unlock();
     debug_print(s);
   }
 
   void checkStr( String s, String err ) {
+    System.out.println(s);
     Env env = null;
     try {
       env = Exec2.exec(s);
-      env.remove();
+      env.remove_and_unlock();
       fail(); // Supposed to throw; reaching here is an error
     } catch ( IllegalArgumentException e ) {
       assertEquals(err, e.getMessage());

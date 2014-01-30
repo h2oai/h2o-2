@@ -1,6 +1,7 @@
 package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.util.Arrays;
 import org.junit.*;
@@ -216,10 +217,46 @@ public class GBMTest extends TestUtil {
       preds.delete();
 
     } finally {
-      gbmmodel.delete();        // Remove the model
+      if( gbmmodel != null ) gbmmodel.delete(); // Remove the model
       gbm.source.delete();      // Remove original hex frame key
       UKV.remove(gbm.response._key);
       gbm.remove();             // Remove GBM Job
     }
   }
+
+  // A test of locking the input dataset during model building.
+  @Test public void testModelLock() {
+    GBM gbm = new GBM();
+    try {
+      Frame fr = gbm.source = parseFrame(Key.make("air.hex"),"./smalldata/airlines/allyears2k_headers.zip");
+      for( String s : ignored_aircols ) UKV.remove(fr.remove(s)._key);
+      int idx =  fr.find("IsArrDelayed");
+      gbm.response = fr.vecs()[idx];
+      gbm.ntrees = 10;
+      gbm.max_depth = 5;
+      gbm.min_rows = 1;
+      gbm.nbins = 20;
+      gbm.cols = new int[fr.numCols()];
+      for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
+      gbm.learn_rate = .2f;
+      gbm.fork();
+      try { Thread.sleep(100); } catch( Exception _ ) { }
+
+      try { 
+        fr.delete();            // Attempted delete while model-build is active
+        H2O.fail();             // Should toss IAE instead of reaching here
+      } catch( IllegalArgumentException _ ) {
+      } catch( DException.DistributedException de ) {
+        assertTrue( de.getMessage().indexOf("java.lang.IllegalArgumentException") != -1 );
+      }
+      
+      GBM.GBMModel model = gbm.get();
+      if( model != null ) model.delete();
+
+    } finally {
+      if( gbm.source != null ) gbm.source.delete(); // Remove original hex frame key
+      gbm.remove();             // Remove GBM Job
+    }
+  }
+
 }
