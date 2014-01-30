@@ -103,6 +103,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   public static void delete( Key k ) {
     if( k == null ) return;
     Value val = DKV.get(k);
+    if( val == null ) return;              // Or just nothing there to delete
     if( !val.isLockable() ) UKV.remove(k); // Simple things being deleted
     else ((Lockable)val.get()).delete();   // Lockable being deleted
   }
