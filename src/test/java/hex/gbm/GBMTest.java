@@ -1,6 +1,7 @@
 package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.util.Arrays;
 import org.junit.*;
@@ -245,13 +246,15 @@ public class GBMTest extends TestUtil {
         fr.delete();            // Attempted delete while model-build is active
         H2O.fail();             // Should toss IAE instead of reaching here
       } catch( IllegalArgumentException _ ) {
+      } catch( DException.DistributedException de ) {
+        assertTrue( de.getMessage().indexOf("java.lang.IllegalArgumentException") != -1 );
       }
       
       GBM.GBMModel model = gbm.get();
       if( model != null ) model.delete();
 
     } finally {
-      gbm.source.delete();              // Remove original hex frame key
+      gbm.source.delete();      // Remove original hex frame key
       gbm.remove();             // Remove GBM Job
     }
   }
