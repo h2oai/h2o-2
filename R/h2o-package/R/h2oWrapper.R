@@ -106,7 +106,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
 #       warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
 #     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
 #     file.remove(paste(getwd(), myFile, sep="/"))
-    install.packages("h2oRClient", repos = paste(myURL, "R", sep = "/"), type = "source")
+    install.packages("h2oRClient", repos = paste(myURL, "R", sep = "/"))
   }
 }
 

@@ -328,7 +328,7 @@ public class RequestServer extends NanoHTTPD {
     // return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
     NanoHTTPD.Response res = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
     res.addHeader("Content-Length", Long.toString(bytes.length));
-    res.addHeader("Content-Disposition", "attachment; filename=" + uri);
+    // res.addHeader("Content-Disposition", "attachment; filename=" + uri);
     return res;
   }
 
