@@ -57,7 +57,7 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   // Helper
-  static Neurons[] makeNeurons(DataInfo dinfo, NNModel.NNModelInfo minfo) {
+  public static Neurons[] makeNeurons(DataInfo dinfo, NNModel.NNModelInfo minfo) {
     final NN params = minfo.parameters;
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output
@@ -85,7 +85,7 @@ public class NNTask extends FrameTask<NNTask> {
     }
     // output
     if( params.classification ) {
-      neurons[neurons.length - 1] = new Neurons.Softmax(params.response.toEnum().cardinality(), params.loss);
+      neurons[neurons.length - 1] = new Neurons.Softmax(dinfo._adaptedFrame.lastVec().domain().length, params.loss);
     }
     else
       neurons[neurons.length - 1] = new Neurons.Linear(1);
@@ -100,7 +100,6 @@ public class NNTask extends FrameTask<NNTask> {
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
   static void step(Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
-
     for (int i=1; i<neurons.length-1; ++i) {
       neurons[i].fprop(training);
     }

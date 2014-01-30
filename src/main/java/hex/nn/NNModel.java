@@ -23,7 +23,7 @@ public class NNModel extends Model {
   DataInfo data_info;
 
   @API(help="model info", json = true)
-  NNModelInfo model_info;
+  public NNModelInfo model_info;
 
   @API(help="Overall run time", json = true)
   long run_time;
@@ -188,10 +188,10 @@ public class NNModel extends Model {
         unstable |= mean_bias[y] > thresh   || rms_bias[y] > thresh
                 || mean_weight[y] > thresh  || rms_weight[y] > thresh;
 
-        System.out.println("Layer " + y + " mean weight: " + mean_weight[y]);
-        System.out.println("Layer " + y + " rms  weight: " + rms_weight[y]);
-        System.out.println("Layer " + y + " mean   bias: " + mean_bias[y]);
-        System.out.println("Layer " + y + " rms    bias: " + rms_bias[y]);
+//        System.out.println("Layer " + y + " mean weight: " + mean_weight[y]);
+//        System.out.println("Layer " + y + " rms  weight: " + rms_weight[y]);
+//        System.out.println("Layer " + y + " mean   bias: " + mean_bias[y]);
+//        System.out.println("Layer " + y + " rms    bias: " + rms_bias[y]);
       }
     }
 

@@ -154,6 +154,8 @@ public class NN extends Job.ValidatedJob {
     }
   }
 
+  public Frame score( Frame fr ) { return ((NNModel)UKV.get(dest())).score(fr);  }
+
   @Override public Key defaultDestKey(){return null;}
   @Override public Key defaultJobKey() {return null;}
 
@@ -253,7 +255,10 @@ public class NN extends Job.ValidatedJob {
 
   @Override protected Status exec() {
     logStart();
-    buildModel();
+    initModel();
+    trainModel();
+    if( _gen_enum ) UKV.remove(response._key);
+    remove();
     return Status.Done;
   }
 
@@ -261,14 +266,17 @@ public class NN extends Job.ValidatedJob {
     return NNProgressPage.redirect(this, self(), dest());
   }
 
-  public void buildModel(){
-    final Key outputKey = dest();
-    UKV.remove(outputKey);
+  public void initModel() {
+    UKV.remove(dest());
     NNModel.NNModelInfo modelinfo = null;
-    NNModel model = new NNModel(outputKey, self(), _dinfo, this, modelinfo);
-    DKV.put(outputKey, model);
+    NNModel model = new NNModel(dest(), self(), _dinfo, this, modelinfo);
+    DKV.put(dest(), model);
     assert(model.isClassifier() == classification);
+  }
 
+  public void trainModel(){
+    NNModel model = UKV.get(dest());
+    NNModel.NNModelInfo modelinfo = model.model_info;
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     for (int epoch = 1; epoch <= epochs; ++epoch) {
       boolean training = true;
@@ -276,13 +284,11 @@ public class NN extends Job.ValidatedJob {
       NNTask nntask = new NNTask(this, _dinfo, this, modelinfo, training).doAll(_dinfo._adaptedFrame);
       modelinfo = nntask._output;
       if (diagnostics) modelinfo.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
-      System.out.println("Scoring on " + (validation == null ? "training" : "validation" ) + " dataset.");
       doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], epoch==epochs);
       model.epoch_counter = epoch;
-      DKV.put(outputKey, model);
+      DKV.put(dest(), model);
     }
-    if( _gen_enum ) UKV.remove(response._key);
-    remove();
+    if (adapted != null) adapted[1].remove();
     System.out.println("Job finished.");
   }
 
@@ -292,14 +298,13 @@ public class NN extends Job.ValidatedJob {
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
 //    Score sc = null;
-    if( force || (now-_firstScore < 4000) || // Score every time for 4 secs
+    if( force ||
             // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
             (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
             (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
 
-      final Frame[] score = model.adapt(ftest, false);
-      final Frame fpreds = model.score(score[0]);
+      final Frame fpreds = model.score(ftest);
 
       ConfusionMatrix CM = new ConfusionMatrix();
       CM.actual = ftest;
@@ -309,7 +314,11 @@ public class NN extends Job.ValidatedJob {
       CM.serve();
 
       System.out.println("Confusion Matrix:");
-      System.out.println(CM.toASCII(new StringBuilder()));
+      StringBuilder sb = new StringBuilder();
+      CM.toASCII(sb);
+      System.out.println(sb);
+
+      fpreds.remove();
 
       _timeLastScoreEnd = System.currentTimeMillis();
     }

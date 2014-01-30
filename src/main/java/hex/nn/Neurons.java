@@ -89,15 +89,15 @@ public abstract class Neurons extends Iced {
 
   // Layer state
   // activity, error
-  protected transient double[] _a, _e;
+  public transient double[] _a, _e;
 
   // Previous and input layers
-  protected transient Neurons _previous;
+  public transient Neurons _previous;
 
   // Shared model info (once per node)
   protected transient NNModel.NNModelInfo _minfo;
-  protected transient float[] _w;
-  protected transient double[] _b;
+  public transient float[] _w;
+  public transient double[] _b;
 
   // Dropout (for input + hidden layers)
   transient Dropout dropout;
@@ -242,10 +242,18 @@ public abstract class Neurons extends Iced {
   public static class Input extends Neurons {
 
     FrameTask.DataInfo _dinfo;
+    int _numStart;
+
+    public Input(int units, int numStart) {
+      super(units);
+      _numStart = numStart;
+      _a = new double[units];
+    }
 
     Input(int units, FrameTask.DataInfo d) {
       super(units);
       _dinfo = d;
+      _numStart = _dinfo.numStart();
       _a = new double[units];
     }
 
@@ -261,6 +269,7 @@ public abstract class Neurons extends Iced {
 
 
     public void setInput(final double[] data) {
+      assert(_dinfo != null);
       double [] nums = MemoryManager.malloc8d(_dinfo._nums);
       int    [] cats = MemoryManager.malloc4(_dinfo._cats);
       int i = 0, ncats = 0;
@@ -280,7 +289,7 @@ public abstract class Neurons extends Iced {
     public void setInput(final double[] nums, final int numcat, final int[] cats) {
       Arrays.fill(_a, 0.);
       for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
-      System.arraycopy(nums, 0, _a, _dinfo.numStart(), nums.length);
+      System.arraycopy(nums, 0, _a, _numStart, nums.length);
     }
 
   }
