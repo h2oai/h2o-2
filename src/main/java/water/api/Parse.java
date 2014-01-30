@@ -79,7 +79,7 @@ public class Parse extends Request {
         exclude = makePattern(_excludeExpression.value());
       ArrayList<Key> keys = new ArrayList();
       // boolean badkeys = false;
-      for( Key key : H2O.localKeySet() ) { // For all keys
+      for( Key key : H2O.globalKeySet(null) ) { // For all keys
         if( !key.user_allowed() ) continue;
         String ks = key.toString();
         if( !p.matcher(ks).matches() ) // Ignore non-matching keys
