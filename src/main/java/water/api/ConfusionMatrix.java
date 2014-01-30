@@ -173,8 +173,21 @@ public class ConfusionMatrix extends Request2 {
       for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
       acts[a] = sum;
     }
-    String adomain[] = ConfusionMatrix.show(acts ,vactual .toEnum().domain());
-    String pdomain[] = ConfusionMatrix.show(preds,vpredict.toEnum().domain());
+    Vec vaE = null, vpE = null;
+    String adomain[] = null;
+    String pdomain[] = null;
+    try {
+      vaE = vactual.toEnum();
+      vpE = vpredict.toEnum();
+      adomain = ConfusionMatrix.show(acts ,vaE.domain());
+      pdomain = ConfusionMatrix.show(preds,vpE.domain());
+    } catch (Throwable t) {
+      Log.err(t);
+      return Double.NaN;
+    } finally {
+      if (vaE!=null)  UKV.remove(vaE._key);
+      if (vpE!=null)  UKV.remove(vpE._key);
+    }
 
     // determine max length of each space-padded field
     int maxlen = 0;
@@ -210,7 +223,9 @@ public class ConfusionMatrix extends Request2 {
     for( int p=0; p<pdomain.length; p++ )
       if( pdomain[p] != null )
         sb.append(String.format(fmt, preds[p]));
-    sb.append("   " + String.format("%5.3f = %d / %d\n", (double)terr/vactual.length(), terr, vactual.length()));
-    return (double)terr/vactual.length();
+    double total_err_rate = (double)terr/vactual.length();
+    sb.append("   " + String.format("%5.3f = %d / %d\n", total_err_rate, terr, vactual.length()));
+
+    return total_err_rate;
   }
 }
