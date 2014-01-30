@@ -220,21 +220,6 @@ h2o.__formatError <- function(error,prefix="  ") {
   result
 }
 
-h2o.__dumpLogs <- function(client) {
-  ip = client@ip
-  port = client@port
-  
-  # Sends the given arguments as URL arguments to the given page on the specified server
-  url = paste("http://", ip, ":", port, "/", h2o.__DOWNLOAD_LOGS, sep="")
-  temp = strsplit(as.character(Sys.time()), " ")[[1]]
-  myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
-  myFile = paste("h2ologs_", myDate, "_", myTime, ".zip", sep="")
-  errorFolder = "h2o_error_logs"
-  
-  if(!file.exists(errorFolder)) dir.create(errorFolder)
-  download.file(url, destfile = paste(getwd(), "h2o_error_logs", myFile, sep="/"))
-}
-
 h2o.__poll <- function(client, keyName) {
   if(missing(client)) stop("client is missing!")
   if(class(client) != "H2OClient") stop("client must be a H2OClient object")

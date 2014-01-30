@@ -453,3 +453,35 @@ h2o.logAndEcho <- function(conn, message) {
   echo_message = res$message
   return (echo_message)
 }
+
+h2o.downloadAllLogs <- function(client, dir_name = ".", file_name = NULL) {
+  if(class(client) != "H2OClient") stop("client must be of class H2OClient")
+  if(!is.character(dir_name)) stop("dir_name must be of class character")
+  if(!is.null(file_name)) {
+    if(!is.character(file_name)) stop("file_name must be of class character")
+    else if(nchar(file_name) == 0) stop("file_name must be a non-empty string")
+  }
+  
+  url = paste("http://", client@ip, ":", client@port, "/", h2o.__DOWNLOAD_LOGS, sep="")
+  if(!file.exists(dir_name)) dir.create(dir_name)
+  
+  # Get file name from HTTP header of response
+  cat("Downloading H2O logs from server...\n")
+  h = basicHeaderGatherer()
+  tempfile = getBinaryURL(url, headerfunction = h$update, verbose = TRUE)
+  
+  if(is.null(file_name)) {
+    # temp = strsplit(as.character(Sys.time()), " ")[[1]]
+    # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
+    # file_name = paste("h2ologs_", myDate, "_", myTime, ".zip", sep="")
+    atch = h$value()[["Content-Disposition"]]
+    ind = regexpr("filename=", atch)[[1]]
+    if(ind == -1) stop("Header corrupted: Expected attachment filename in Content-Disposition")
+    file_name = substr(atch, ind+nchar("filename="), nchar(atch))
+  }
+  myPath = paste(normalizePath(dir_name), file_name, sep = "/")
+  
+  cat("Writing H2O logs to", myPath, "\n")
+  # download.file(url, destfile = myPath)
+  writeBin(tempfile, myPath)
+}
