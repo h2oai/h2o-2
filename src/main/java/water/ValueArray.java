@@ -706,7 +706,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
 
     // Make the VA header
     final ValueArray va = new ValueArray(vaKey, rows, off, cols );
-    UKV.put(vaKey,va);
+    va.delete_and_lock(null);
 
     // Now fill in the data chunks
     final int rowsize = off;
@@ -731,6 +731,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       }
       @Override public void closeLocal() { _fs.blockForPending(); }
     }.doAll(fr);
+    va.unlock(null);
 
     return va;
   }
