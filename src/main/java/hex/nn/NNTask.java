@@ -28,8 +28,8 @@ public class NNTask extends FrameTask<NNTask> {
   // initialize node-local shared data (weights and biases)
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    System.out.println("setupLocal");
-    if (_input == null) _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _params.response.toEnum().cardinality());
+    if (_input == null) _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
+
     _output = _input.deep_copy();
     _input = null;
   }
@@ -37,12 +37,12 @@ public class NNTask extends FrameTask<NNTask> {
   // create local workspace (neurons)
   // and link them to shared weights
   @Override protected void chunkInit(){
-    System.out.println("chunkInit");
     _neurons = makeNeurons(_dinfo, _output);
   }
 
-  @Override public final void processRow(final double [] nums, final int ignored, final int [] cats, double [] responses){
-    step(_neurons, _dinfo, _output, _training, nums, cats, responses);
+  @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
+    ((Neurons.Input)_neurons[0]).setInput(nums, numcats, cats);
+    step(_neurons, _output, _training, responses);
   }
 
   @Override protected void chunkDone(){ }
@@ -62,7 +62,7 @@ public class NNTask extends FrameTask<NNTask> {
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output
     // input
-    neurons[0] = new Neurons.Input(dinfo.fullN());
+    neurons[0] = new Neurons.Input(dinfo.fullN(), dinfo);
     // hidden
     for( int i = 0; i < h.length; i++ ) {
       switch( params.activation ) {
@@ -98,9 +98,9 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   // forward/backward propagation
-  static void step(Neurons[] neurons, DataInfo dinfo, NNModel.NNModelInfo minfo,
-                   boolean training, final double[] nums, final int [] cats, double[] responses) {
-    ((Neurons.Input)neurons[0]).fprop(nums, cats, dinfo); //copy nums and cats into _a ("activation" of input neurons)
+  // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
+  static void step(Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
+
     for (int i=1; i<neurons.length-1; ++i) {
       neurons[i].fprop(training);
     }
@@ -124,7 +124,7 @@ public class NNTask extends FrameTask<NNTask> {
         neurons[i].bprop();
       }
       minfo.processed++;
-      if (minfo.processed % 1000 == 0) System.out.println("Processed: " + minfo.processed);
+      if (minfo.processed % 10000 == 0) System.out.println("Processed: " + minfo.processed);
     }
   }
 

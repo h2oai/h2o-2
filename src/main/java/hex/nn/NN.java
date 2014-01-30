@@ -19,6 +19,7 @@ public class NN extends Job.ValidatedJob {
   public static final String DOC_GET = "Neural Network";
 
   public DataInfo _dinfo;
+  boolean _gen_enum;
 
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
@@ -88,10 +89,6 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
   public boolean diagnostics = true;
-
-  public enum ExecutionMode {
-    SingleThread, SingleNode, MapReduce
-  }
 
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
@@ -204,22 +201,31 @@ public class NN extends Job.ValidatedJob {
 
 
   @Override protected Response serve() {
-    if( !response.isEnum() && classification ) {
-      response = response.toEnum();
-    }
-    assert(!classification || response.isEnum());
+    // Make a DataInfo object that contains only the normalized data and meaningful columns
     // TODO: copied from GLM2 -> outsource, centralize
+    // start
     init();
     Frame fr = new Frame(source._names.clone(), source.vecs().clone());
     fr.remove(ignored_cols);
 
     final Vec[] vecs =  fr.vecs();
     ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
-    for(int i = 0; i < vecs.length-1; ++i)// put response to the end
+    for(int i = 0; i < vecs.length-1; ++i) {// put response to the end
       if(vecs[i] == response){
-        fr.add(fr._names[i], fr.remove(i));
+        if (classification) {
+          _gen_enum = true;
+          fr.add(fr._names[i], fr.remove(i).toEnum());
+        }
+        else
+          fr.add(fr._names[i], fr.remove(i));
         break;
       }
+    }
+    if (classification && !response.isEnum() && vecs[vecs.length-1] == response) {
+      _gen_enum = true;
+      vecs[vecs.length-1] = vecs[vecs.length-1].toEnum();
+    }
+
     for(int i = 0; i < vecs.length-1; ++i) // remove constant cols and cols with too many NAs
       if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
 
@@ -228,7 +234,9 @@ public class NN extends Job.ValidatedJob {
       for(int i = 0; i < cols.length; ++i)cols[i] = constantOrNAs.get(i);
       fr.remove(cols);
     }
+
     _dinfo = new DataInfo(fr, 1, true);
+    // end
 
     if(destination_key == null)destination_key = Key.make("NNModel_"+Key.make());
     if(job_key == null)job_key = Key.make("NNJob_"+Key.make());
@@ -268,52 +276,40 @@ public class NN extends Job.ValidatedJob {
       NNTask nntask = new NNTask(this, _dinfo, this, modelinfo, training).doAll(_dinfo._adaptedFrame);
       modelinfo = nntask._output;
       if (diagnostics) modelinfo.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
-      doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0]);
+      System.out.println("Scoring on " + (validation == null ? "training" : "validation" ) + " dataset.");
+      doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], epoch==epochs);
       model.epoch_counter = epoch;
       DKV.put(outputKey, model);
     }
+    if( _gen_enum ) UKV.remove(response._key);
+    remove();
+    System.out.println("Job finished.");
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected void doScoring(NNModel model, Frame fr) {
+  protected void doScoring(NNModel model, Frame ftest, boolean force) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
 //    Score sc = null;
-    if( (now-_firstScore < 4000) || // Score every time for 4 secs
+    if( force || (now-_firstScore < 4000) || // Score every time for 4 secs
             // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
             (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
             (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
 
-      final Frame[] score = model.adapt(fr, false);
-      final Vec prediction = model.score(score[0]).lastVec();
+      final Frame[] score = model.adapt(ftest, false);
+      final Frame fpreds = model.score(score[0]);
 
       ConfusionMatrix CM = new ConfusionMatrix();
-      CM.actual = fr;
-      CM.vactual = fr.lastVec();
-      CM.predict = score[0];
-      CM.vpredict = prediction;
+      CM.actual = ftest;
+      CM.vactual = ftest.lastVec();
+      CM.predict = fpreds;
+      CM.vpredict = fpreds.vecs()[0];
       CM.serve();
 
-      // Really crappy cut-n-paste of what should be in the ConfusionMatrix class itself
-      long cm[][] = CM.cm;
-      long acts [] = new long[cm   .length];
-      long preds[] = new long[cm[0].length];
-      for( int a=0; a<cm.length; a++ ) {
-        long sum=0;
-        for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
-        acts[a] = sum;
-      }
-      String adomain[] = ConfusionMatrix.show(acts ,CM.vactual .toEnum().domain());
-      String pdomain[] = ConfusionMatrix.show(preds,CM.vpredict.toEnum().domain());
-
-      StringBuilder sb = new StringBuilder();
-      sb.append("Act/Prd\t");
-      for( String s : pdomain )
-        if( s != null )
-          sb.append(s).append('\t');
-      sb.append("Error\n");
+      System.out.println("Confusion Matrix:");
+      System.out.println(CM.toASCII(new StringBuilder()));
 
       _timeLastScoreEnd = System.currentTimeMillis();
     }

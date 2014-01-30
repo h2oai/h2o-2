@@ -4,6 +4,7 @@ import hex.FrameTask;
 import hex.ParamsSearch;
 import water.AutoBuffer;
 import water.Iced;
+import water.MemoryManager;
 import water.api.DocGen;
 import water.api.Request.API;
 
@@ -240,8 +241,12 @@ public abstract class Neurons extends Iced {
 
   public static class Input extends Neurons {
 
-    Input(int units) {
+    FrameTask.DataInfo _dinfo;
+
+    Input(int units, FrameTask.DataInfo d) {
       super(units);
+      _dinfo = d;
+      _a = new double[units];
     }
 
     @Override protected void bprop() { throw new UnsupportedOperationException(); }
@@ -254,16 +259,28 @@ public abstract class Neurons extends Iced {
     @API(help = "Dropout rate for the input layer")
     double _dropout_rate;
 
-    public void fprop(double[] nums, int[] cats, FrameTask.DataInfo dinfo) {
-      if (_a == null || _a.length != dinfo.fullN())
-        _a = new double[dinfo.fullN()];
 
-      Arrays.fill(_a, 0.);
-      if (nums.length > 0) System.arraycopy(nums, 0, _a, 0, nums.length);
-      for (int cat : cats) {
-        assert(cat > nums.length);
-        _a[cat] = 1.0;
+    public void setInput(final double[] data) {
+      double [] nums = MemoryManager.malloc8d(_dinfo._nums);
+      int    [] cats = MemoryManager.malloc4(_dinfo._cats);
+      int i = 0, ncats = 0;
+      for(; i < _dinfo._cats; ++i){
+        int c = (int)data[i];
+        if(c != 0)cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
       }
+      final int n = data.length-_dinfo._responses;
+      for(;i < n;++i){
+        double d = data[i];
+        if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
+        nums[i-_dinfo._cats] = d;
+      }
+      setInput(nums, ncats, cats);
+    }
+
+    public void setInput(final double[] nums, final int numcat, final int[] cats) {
+      Arrays.fill(_a, 0.);
+      for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
+      System.arraycopy(nums, 0, _a, _dinfo.numStart(), nums.length);
     }
 
   }

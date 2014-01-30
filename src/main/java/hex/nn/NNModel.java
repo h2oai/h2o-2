@@ -6,7 +6,6 @@ import water.Key;
 import water.Model;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.fvec.Chunk;
 import water.util.Utils;
 
 import java.util.Random;
@@ -220,35 +219,17 @@ public class NNModel extends Model {
     data_info = dinfo;
     run_time = 0;
     start_time = System.currentTimeMillis();
-    model_info = modelinfo != null ? modelinfo.deep_copy() : new NNModelInfo(params, data_info.fullN(), params.response.toEnum().cardinality());
-  }
-
-  @Override
-  protected float[] score0(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds) {
-    return super.score0(chks, row_in_chunk, tmp, preds);
+    model_info = modelinfo != null ? modelinfo.deep_copy() :
+            new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {
-    Neurons[] neurons = NNTask.makeNeurons(data_info,model_info);
+    Neurons[] neurons = NNTask.makeNeurons(data_info, model_info);
 
-//    public final int fullN(){return _nums + _catOffsets[_cats];}
-//    public final int largestCat(){return _cats > 0?_catOffsets[1]:0;}
-//    public final int numStart(){return _catOffsets[_cats];}
-
-    // expanded categoricals
-    int[] cats = new int[data_info.numStart()];
-    for(int i = 0; i < cats.length; ++i) cats[i] = (int)data[data_info._catOffsets[i]];
-
-    // numerical values
-    double[] nums = new double[data_info.fullN() - data_info.numStart()];
-    System.arraycopy(data, data_info.numStart(), nums, 0, nums.length);
-
-    NNTask.step(neurons, data_info, model_info, false, nums, cats, null);
+    ((Neurons.Input)neurons[0]).setInput(data);
+    NNTask.step(neurons, model_info, false, null);
 
     double[] out = neurons[neurons.length - 1]._a;
-    if (out.length != preds.length) {
-      System.out.println("Need to call .toEnum()!");
-    };
     assert out.length == preds.length;
     // convert to float
     float[] out2 = new float[out.length];
