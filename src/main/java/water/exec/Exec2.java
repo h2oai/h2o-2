@@ -62,14 +62,24 @@ public class Exec2 {
     Env env = new Env(locked);
     H2O.globalKeySet( "water.fvec.Frame" ); // Bring Frames from all over local
     H2O.globalKeySet( "water.ValueArray" ); // Bring VA's   from all over local
-    for( Key k : H2O.localKeySet() )        // Add VA's to parser's namespace
-      if( H2O.raw_get(k).type()==TypeMap.VALUE_ARRAY ) 
-        ValueArray.asFrame(DKV.get(k));
-    for( Key k : H2O.localKeySet() ) {      // Add Frames to parser's namespace
-      if( H2O.raw_get(k).type()!=TypeMap.FRAME  ) continue;
-      Frame fr = DKV.get(k).get();
-      global.add(new ASTId(Type.ARY,k.toString(),0,global.size()));
-      env.push(fr,k.toString());
+    for( Key k : H2O.localKeySet() ) {      // Convert all VAs to Frames
+      Value val = H2O.raw_get(k);
+      if( val != null && val.isArray() ) {
+        Frame frAuto = ValueArray.asFrame(DKV.get(k));
+        // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.  
+        // The VA is lost.
+        Frame fr2 = new Frame(k,frAuto._names,frAuto.vecs());
+        frAuto.remove(0,fr2.numCols());
+        frAuto.delete();
+        fr2.delete_and_lock(null).unlock(null);
+      }
+    }
+    for( Key k : H2O.localKeySet() ) { // Add Frames to parser's namespace
+      if( !H2O.raw_get(k).isFrame() ) continue;
+      Frame fr = DKV.get(k).get(); // Fetch whole thing
+      String kstr = k.toString();
+      global.add(new ASTId(Type.ARY,kstr,0,global.size()));
+      env.push(fr,kstr);
       fr.read_lock(null);
       locked.add(fr._key);
     }
