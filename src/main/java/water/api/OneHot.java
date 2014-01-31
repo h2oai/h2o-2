@@ -34,8 +34,8 @@ public class OneHot extends Request2 {
           Frame oneHotFrame = hex.OneHot.expandDataset(fr,destination_key);
           for (int i : ignored_cols) oneHotFrame.add(source._names[i], source.vecs()[i]);
           oneHotFrame.unlock(null);
-        } catch(Throwable t) {
-          return Response.error(t.getMessage());
+        } catch( Throwable t ) {
+          return Response.error(t);
         }
         return Inspect2.redirect(this, destination_key.toString());
     }

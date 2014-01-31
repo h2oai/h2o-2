@@ -52,7 +52,7 @@ public class RReader extends Request {
       Response r = RReaderProgress.redirect(response, dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch( Error e ) {
+    } catch( Throwable e ) {
       return Response.error(e);
     }
   }

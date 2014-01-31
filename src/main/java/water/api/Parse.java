@@ -118,7 +118,7 @@ public class Parse extends Request {
         _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
         setup.checkColumnNames();
         return res;
-      }catch(ParseSetupGuessException e){
+      } catch( ParseSetupGuessException e ) {
         if(e._gSetup != null)
           record()._value = new PSetup(keys, e._failed,e._gSetup);
         throw new IllegalArgumentException(e.getMessage());
@@ -203,7 +203,7 @@ public class Parse extends Request {
           for( String s : colnames ) sb.append("<th>").append(s).append("</th>");
           sb.append("</tr></table>");
         }
-      }catch(Exception e){}
+      } catch( Exception e ) { }
       return sb.toString();
     }
 
@@ -317,7 +317,7 @@ public class Parse extends Request {
       Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch (Error e) {
+    } catch( Throwable e ) {
       return Response.error(e);
     }
   }

@@ -130,7 +130,7 @@ public class RequestStatics extends Constants {
         sb.append(i==0?'?':'&').append(args2[i]).append('=');
         try {
           sb.append(URLEncoder.encode(args2[i+1].toString(),"UTF-8"));
-        } catch (UnsupportedEncodingException ex) {
+        } catch( UnsupportedEncodingException ex ) {
           throw  Log.errRTExcept(ex);
         }
       }
@@ -147,7 +147,7 @@ public class RequestStatics extends Constants {
       sb.append("=");
       try {
         sb.append(URLEncoder.encode(e.getAsString(),"UTF-8"));
-      } catch (UnsupportedEncodingException ex) {
+      } catch( UnsupportedEncodingException ex ) {
         throw  Log.errRTExcept(ex);
       }
     }

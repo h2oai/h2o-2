@@ -74,7 +74,7 @@ public class ImportFiles2 extends Request2 {
         else serveLocalDisk();
       }
       return Response.done(this);
-    } catch( Exception e ) {
+    } catch( Throwable e ) {
       return Response.error(e);
     }
   }
@@ -110,7 +110,7 @@ public class ImportFiles2 extends Request2 {
       for(S3ObjectSummary obj:currentList.getObjectSummaries())
         try {
           succ.add(S3FileVec.make(obj,fs).toString());
-        } catch( Exception e ) {
+        } catch( Throwable e ) {
           fail.add(obj.getKey());
           Log.err("Failed to loadfile from S3: path = " + obj.getKey() + ", error = " + e.getClass().getName() + ", msg = " + e.getMessage());
         }
@@ -154,7 +154,7 @@ public class ImportFiles2 extends Request2 {
       String[] keysArr = { k.toString() };
       keys = keysArr;
     }
-    catch (Exception e) {
+    catch( Throwable e) {
       String[] arr = { path };
       fails = arr;
       files = new String[0];
