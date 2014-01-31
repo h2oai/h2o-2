@@ -107,14 +107,14 @@ class Basic(unittest.TestCase):
         if h2o.beta_features:
             paramDict = drf2ParamDict
             params = {
-                'ntrees': 6, 
+                'ntrees': 20, 
                 'destination_key': 'RF_model'
             }
         else:
             paramDict = drf1ParamDict
             params = {
-                'ntree': 6, 
-                'out_of_bag_error_estimate': 0, 
+                'ntree': 20, 
+                'out_of_bag_error_estimate': 1, 
                 'model_key': 'RF_model'
             }
 

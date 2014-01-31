@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_params_rand2(self):
+    def test_rf_params_rand2_ncaa(self):
         csvPathname = 'ncaa/Players.csv'
         for trial in range(4):
             # params is mutable. This is default.

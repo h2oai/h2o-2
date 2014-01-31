@@ -244,6 +244,9 @@ public abstract class Model extends Lockable<Model> {
         } else adaptedVec = frvecs[c].makeTransf(map[c]);
         avecs.add(frvecs[c] = adaptedVec);
         anames.add(names[c]); // Collect right names
+      } else if (toEnum[c]) { // Vector was transformed to enum domain, but does not need adaptation we need to record it
+        avecs.add(frvecs[c]);
+        anames.add(names[c]);
       }
     return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
   }

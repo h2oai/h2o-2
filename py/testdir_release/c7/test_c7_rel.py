@@ -12,10 +12,12 @@ print "The path resolver in python tests will find it in the home dir of the use
 print "to run h2o..i.e from the config json which builds the cloud and passes that info to the test"
 print "via the cloned cloud mechanism (h2o-nodes.json)"
 
+
+DO_GLM = False
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c7_rel(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
@@ -62,13 +64,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             }
 
         timeoutSecs = 3600
-        start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
-        elapsed = time.time() - start
-        print "glm completed in", elapsed, "seconds.", \
-            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-        h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+        if DO_GLM:
+            start = time.time()
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+            elapsed = time.time() - start
+            print "glm completed in", elapsed, "seconds.", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
         # do summary of the parsed dataset last, since we know it fails on this dataset
         summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])

@@ -22,11 +22,11 @@ diffsq<- diff^2
 EXPMSE<- mean(diffsq)
 
 Log.info("Print model MSE... \n")
-Log.info(paste("Length of H2O MSE Vec: ", length(fith2o@model$err),      "\t\t", "Expected Length   : ", 10))
+Log.info(paste("Length of H2O MSE Vec: ", length(fith2o@model$err),      "\t\t", "Expected Length   : ", 4))
 Log.info(paste("H2O Reported MSE  : ", REPMSE, "\t\t", "R Expected MSE   : ", EXPMSE))
 
 Log.info("Compare model statistics in R to model statistics in H2O")
-expect_equal(length(fith2o@model$err), 3)
+expect_equal(length(fith2o@model$err), 4) # 3 errs per for each sub-forest + one error for empty forest.
 expect_equal(REPMSE, EXPMSE)
 
 testEnd()
