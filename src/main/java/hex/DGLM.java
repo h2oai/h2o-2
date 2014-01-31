@@ -854,7 +854,6 @@ public abstract class DGLM {
       assert _models[setup._id] == null;
       Key mkey = _models[setup._id] = GLMModel.makeKey(false);
       DataFrame data = getData(_ary, _cols, s, _standardize);
-      new GLMModel(Status.ComputingValidation, 0.0f, mkey, data, null, null, _glmp, _lsm, 0, 0, false, 0, 0, null).delete_and_lock(_job.self());
       try {
         DGLM.buildModel(_job, mkey, data, _lsm, _glmp,_betaStart.clone(), 0, _parallel);
       } catch( JobCancelledException e ) {
@@ -1254,7 +1253,7 @@ public abstract class DGLM {
           tsk.reduce(child);
         }
       }
-      if( job.cancelled() ) throw new JobCancelledException();
+      if( !Job.isRunning(job.self()) ) throw new JobCancelledException();
       GLMValidation res = new GLMValidation(_key, tsk._models, ErrMetric.SUMC, thresholds, System.currentTimeMillis() - t1);
       if( _vals == null ) _vals = new GLMValidation[] { res };
       else {
@@ -1782,7 +1781,7 @@ public abstract class DGLM {
       }
       NewRowVecTask<GLMValidation> tsk = new NewRowVecTask<GLMValidation>(job, this, data);
       tsk.invoke(data._ary._key);
-      if( job != null && job.cancelled() ) throw new JobCancelledException();
+      if( job != null && !Job.isRunning(job.self()) ) throw new JobCancelledException();
       GLMValidation res = tsk._result;
       res._time = System.currentTimeMillis() - t1;
       if( _glmp._family._family != Family.binomial ) res._err = Math.sqrt(res._err / res._n);
@@ -1912,12 +1911,11 @@ public abstract class DGLM {
       beta = denormalizedBeta = null;
     }
     data._ary.read_lock(job.self()); // Read-lock the input dataset
-    new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params, lsm, 0, 0, false, 0, 0, null).delete_and_lock(job.self());
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
           buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
-          assert !job.cancelled();
+          assert Job.isRunning(job.self());
           job.remove();
         } catch( JobCancelledException e ) {
           Lockable.delete(job.dest());
@@ -1956,7 +1954,6 @@ public abstract class DGLM {
   private static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
                                     double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
     Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
-    GLMModel currentModel = null;
     ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
     // make sure we have a valid response variable for the current family
@@ -1984,12 +1981,12 @@ public abstract class DGLM {
     long t = System.currentTimeMillis();
     solve(lsm,gram, newBeta,warns);
     lsmSolveTime += System.currentTimeMillis() - t;
-    currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
+    GLMModel currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
         params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
-    currentModel.update(job.self());            // Lock the new model
+    currentModel.delete_and_lock(job.self()); // Lock the new model
     if( params._family._family != Family.gaussian ) do { // IRLSM
       if( oldBeta == null ) oldBeta = MemoryManager.malloc8d(data.expandedSz());
-      if( job.cancelled() ) throw new JobCancelledException();
+      if( !Job.isRunning(job.self()) ) throw new JobCancelledException();
       double[] b = oldBeta;
       oldBeta = (gramF._beta = newBeta);
       newBeta = b;

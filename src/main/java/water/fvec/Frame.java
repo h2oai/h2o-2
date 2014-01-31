@@ -52,10 +52,11 @@ public class Frame extends Lockable<Frame> {
   }
   public Frame subframe(String [] names){
     Vec [] vecs = new Vec[names.length];
+    vecs();                     // Preload the vecs
     HashMap<String, Integer> map = new HashMap<String, Integer>();
     for(int i = 0; i < _names.length; ++i)map.put(_names[i], i);
     for(int i = 0; i < names.length; ++i)
-      if(map.containsKey(names[i]))vecs[i] = _vecs[map.get(names[i])];
+      if(map.containsKey(names[i])) vecs[i] = _vecs[map.get(names[i])];
       else throw new IllegalArgumentException("Missing column called "+names[i]);
     return new Frame(names,vecs);
   }

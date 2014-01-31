@@ -1,6 +1,7 @@
 package hex.gbm;
 
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
+import static water.util.Utils.append;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 import hex.gbm.DTree.TreeModel.CompressedTree;
@@ -538,26 +539,38 @@ public class DTree extends Iced {
       treeBits = new CompressedTree[0][];
       treeStats = null;
     }
-    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+    // Simple copy ctor, null value of parameter means copy from prior-model
+    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, long[][][] cms, TreeStats tstats) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
-      errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
-      errs[errs.length-1] = err;
-      cms = Arrays.copyOf(prior.cms,prior.cms.length+1);
-      cms[cms.length-1] = cm;
-      if(trees == null)treeBits = prior.treeBits;
-      else {
-        assert trees.length == nclasses(): "Trees="+trees.length+" nclasses()="+nclasses();
-        treeBits = Arrays.copyOf(prior.treeBits,prior.treeBits.length+1);
-        CompressedTree ts[] = treeBits[treeBits.length-1] = new CompressedTree[trees.length];
-        for( int c=0; c<trees.length; c++ )
-          if( trees[c] != null )
-              ts[c] = trees[c].compress();
-      }
-      treeStats = tstats;
       this.max_depth = prior.max_depth;
       this.min_rows = prior.min_rows;
       this.nbins = prior.nbins;
+
+      if (treeBits != null) this.treeBits  = treeBits; else this.treeBits  = prior.treeBits;
+      if (errs     != null) this.errs      = errs;     else this.errs      = prior.errs;
+      if (cms      != null) this.cms       = cms;      else this.cms       = prior.cms;
+      if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
+    }
+
+    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+      this(prior, append(prior.treeBits, trees), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats);
+    }
+    public TreeModel(TreeModel prior, DTree[] trees, TreeStats tstats) {
+      this(prior, append(prior.treeBits, trees), null, null, tstats);
+    }
+    public TreeModel(TreeModel prior, double err, long [][] cm) {
+      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null);
+    }
+
+    private static final CompressedTree[][] append(CompressedTree[][] prior, DTree[] tree ) {
+      if (tree==null) return prior;
+      prior = Arrays.copyOf(prior, prior.length+1);
+      CompressedTree ts[] = prior[prior.length-1] = new CompressedTree[tree.length];
+      for( int c=0; c<tree.length; c++ )
+        if( tree[c] != null )
+            ts[c] = tree[c].compress();
+      return prior;
     }
 
     // Number of trees actually in the model (instead of expected/planned)
@@ -925,8 +938,12 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
-      JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 10, "Sample test data.");
-
+      if( _dataKey != null ) {
+        Value dataval = DKV.get(_dataKey);
+        water.fvec.Frame frdata = ValueArray.asFrame(dataval);
+        water.fvec.Frame frsub = frdata.subframe(_names);
+        JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+      }
       return sb;
     }
     // Convert Tree model to Java

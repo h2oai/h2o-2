@@ -565,14 +565,15 @@ public final class H2O {
   private static class GlobalKeyFilterClass extends DRemoteTask<GlobalKeyFilterClass> {
     final int _typeid;
     final H2ONode _self;
-    GlobalKeyFilterClass( String clzname ) { _typeid = TypeMap.onIce(clzname); _self = SELF; }
+    GlobalKeyFilterClass( String clzname ) { _typeid = clzname==null ? 0 : TypeMap.onIce(clzname); _self = SELF; }
     @Override public void lcompute() {
       if( H2O.SELF != _self ) { // No need to send to self!
         Futures fs = new Futures();
         for( Key k : localKeySet() ) {
           Value val = H2O.get(k);
           if( val != null && k.home() && k.user_allowed() && // Exists, maybe needed at remote
-              val.type()==_typeid  )                         // Filter for class
+              !val.isReplicatedTo(_self) &&                  // Already replicated at remote?
+              (_typeid==0 || val.type()==_typeid)  ) // Filter for class
             fs.add(RPC.call(_self,new TaskSendKey(k,val)));
         }
         fs.blockForPending();
@@ -580,6 +581,7 @@ public final class H2O {
       tryComplete();
     }
     @Override public void reduce( GlobalKeyFilterClass gkfc ) { }
+    @Override public boolean logVerbose() { return false; }
   }
 
 

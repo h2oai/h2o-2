@@ -26,17 +26,18 @@ class Basic(unittest.TestCase):
         # csvPathname = csvFilename
         bucket = 'home-0xdiag-datasets'
         csvFilename = "train_set.csv"
+        hex_key = "train_set.hex"
         csvPathname = "allstate/" + csvFilename
         timeoutSecs = 500
         trialMax = 3
         for trial in range(trialMax):
             trialStart = time.time()
             start = time.time()
-            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3n',
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
             elapsed = time.time() - start
-            print s3nKey, 'h2o reported parse time:', parseResult['response']['time']
-            print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
+            print hex_key, 'h2o reported parse time:', parseResult['response']['time']
+            print "parse end on ", hex_key, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseResult['destination_key']
 

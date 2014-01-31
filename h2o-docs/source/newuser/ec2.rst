@@ -8,7 +8,7 @@ For people that want to quickly give it a try, we provide an AMI that
 you can start from.
 
 The README.txt file embedded below describes scripts that can be found
-in the ec2 directory of the downloadable zip file, or in the ec2
+in the EC2 directory of the downloadable zip file, or in the EC2
 directory of the github repository.
 
 .. raw:: html

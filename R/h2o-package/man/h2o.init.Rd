@@ -4,7 +4,7 @@
 \description{
 Connects to a running H2O instance and checks the local H2O R package is the correct version (i.e. that the version of the R package and the version of H2O are the same).}
 \usage{
-h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, Xmx = "2g")}
+h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, Xmx = "1g")}
 
 \arguments{
   \item{ip}{Object of class \code{"character"} representing the IP address of the server where H2O is running.}

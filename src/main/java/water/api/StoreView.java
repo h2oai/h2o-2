@@ -29,7 +29,7 @@ public class StoreView extends Request {
     int len = 0;
     String filter = _filter.value();
     // Gather some keys that pass all filters
-    for( Key key : H2O.localKeySet() ) {
+    for( Key key : H2O.globalKeySet(null) ) {
       if( filter != null && // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue; // Ignore this filtered-out key
@@ -52,7 +52,7 @@ public class StoreView extends Request {
     JsonArray ary = new JsonArray();
     for( int i=offset; i<offset+_view.value(); i++ ) {
       if( i >= len ) break;
-      Value val = H2O.get(keys[i]);
+      Value val = DKV.get(keys[i]);
       if( val != null ) {
         JsonObject jo = formatKeyRow(cloud,keys[i],val);
         ary.add(jo);

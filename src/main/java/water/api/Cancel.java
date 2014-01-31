@@ -23,7 +23,7 @@ public class Cancel extends Request {
     try {
       Job.findJob(Key.make(key)).cancel();
     } catch( Exception e ) {
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
     JsonObject response = new JsonObject();
     return Response.redirect(response, Jobs.class, null);

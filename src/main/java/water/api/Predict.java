@@ -37,8 +37,7 @@ public class Predict extends Request2 {
       fr.unlock(null);
       return Inspect2.redirect(this, prediction.toString());
     } catch( Throwable t ) {
-      Log.err(t);
-      return Response.error(t.getMessage());
+      return Response.error(t);
     }
   }
 }

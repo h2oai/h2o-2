@@ -105,7 +105,7 @@ public class KMeans extends Job {
         sampler.invoke(va._key);
         clusters = Utils.append(clusters, sampler._clust2);
 
-        if( cancelled() ) {
+        if( !isRunning(self()) ) {
           remove();
           return;
         }
@@ -140,7 +140,7 @@ public class KMeans extends Job {
       res.update(self());
       if( res._iteration >= res._maxIter )
         break;
-      if( cancelled() )
+      if( !isRunning(self()) )
         break;
     }
     res.unlock(self());

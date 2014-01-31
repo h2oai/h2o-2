@@ -260,8 +260,8 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def keys(verbose:Boolean = false) = {
     import scala.collection.JavaConversions._ // import implicit inversion for Java collections
     println("*** Available keys *** ")
-    if (H2O.keySet().isEmpty()) println("<None>")
-    else H2O.keySet().foreach((k:Key) => if (k.user_allowed() || verbose) println(k))
+    if (H2O.globalKeySet(null).isEmpty()) println("<None>")
+    else H2O.globalKeySet(null).foreach((k:Key) => if (k.user_allowed() || verbose) println(k))
     println("-----------------------")
   }
   // Access to DKV store is defined by reference
@@ -273,7 +273,7 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def jobs() = { 
     val aj = Job.all()
     aj foreach { j:Job =>
-      val cancelled = if (j.end_time == 0) j.cancelled() else j.end_time == Job.CANCELLED_END_TIME
+      val cancelled = if (j.end_time == 0) Job.isRunning(j.self()) else j.end_time == Job.CANCELLED_END_TIME
       val progress = if (j.end_time == 0) (if (cancelled) "DONE" else j.progress()) else "DONE" 
       println(j.description + " | " + (if (cancelled) "CANCELLED" else progress))
       }

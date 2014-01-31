@@ -15,7 +15,7 @@ public class RemoveAll extends JSONOnlyRequest {
       RemoveAllKeysTask collector = new RemoveAllKeysTask();
       collector.invokeOnAllNodes();
     } catch( Exception e ) {
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
 
     JsonObject response = new JsonObject();
