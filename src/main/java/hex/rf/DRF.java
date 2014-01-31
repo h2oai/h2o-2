@@ -9,6 +9,7 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.ValueArray.Column;
+import water.api.Constants;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
@@ -99,11 +100,15 @@ public abstract class DRF {
         throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params._sample);
       if (_params._numSplitFeatures!=-1 && (_params._numSplitFeatures< 1 || _params._numSplitFeatures>cs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(cs.length-1)+"]");
-      if (_params._useNonLocalData && !canLoadAll( (ValueArray) UKV.get(_rfmodel._dataKey) ))
-        throw new IllegalArgumentException("Cannot load all data from remote nodes. Please provide more memory for JVMs or un-check the option 'Use non local data' (however, it will affect resulting accuracy).");
+      ChunkAllocInfo cai = new ChunkAllocInfo();
+      if (_params._useNonLocalData && !canLoadAll( (ValueArray) UKV.get(_rfmodel._dataKey), cai ))
+        throw new IllegalArgumentException(
+            "Cannot load all data from remote nodes - " +
+            "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
+            "Please provide more memory for JVMs or disable the option '"+Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
     }
 
-    private boolean canLoadAll(ValueArray ary) {
+    private boolean canLoadAll(final ValueArray ary, ChunkAllocInfo cai) {
       long[] localChunks = new long[H2O.CLOUD.size()];
       // Collect number of local chunks
       for(int i=0; i<ary.chunks(); i++) {
@@ -117,9 +122,21 @@ public abstract class DRF {
         long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
         Log.debug(Sys.RANDF, i + ": computed available mem: " + PrettyPrint.bytes(nodeFreeMemory));
         Log.debug(Sys.RANDF, i + ": remote chunks require: " + PrettyPrint.bytes(memoryForChunks));
-        if (nodeFreeMemory  - memoryForChunks <= 0) return false;
+        if (nodeFreeMemory  - memoryForChunks <= 0) {
+          cai.node = H2O.CLOUD._memary[i];
+          cai.availableMemory = nodeFreeMemory;
+          cai.requiredMemory = memoryForChunks;
+          return false;
+        }
       }
       return true;
+    }
+
+    /** Helper POJO to store required chunk allocation. */
+    private static class ChunkAllocInfo {
+      H2ONode node;
+      long availableMemory;
+      long requiredMemory;
     }
 
     /**Inhale the data, build a DataAdapter and kick-off the computation.

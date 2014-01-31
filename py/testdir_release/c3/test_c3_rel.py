@@ -79,7 +79,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                         ignore_x.append(i)
 
                     # have to the zero-based offset by 1 (h2o is one-based now)
-                    x = ",".join(map(lambda x: "C" + str(x), x+1))
+                    x = ",".join(map(lambda x: "C" + str(x+1), x))
                     ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
 
                     GLMkwargs = {
