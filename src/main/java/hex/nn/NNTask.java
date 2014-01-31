@@ -12,7 +12,7 @@ public class NNTask extends FrameTask<NNTask> {
   final protected NN _params;
   boolean _training;
 
-  public NNModel.NNModelInfo _input, _output;
+  public NNModel.NNModelInfo _minfo;
 
   transient Neurons[] _neurons;
 
@@ -21,42 +21,37 @@ public class NNTask extends FrameTask<NNTask> {
     super(job,dinfo,cmp);
     _params=params;
     _training=training;
-    _input=input;
+    _minfo=input;
   }
 
   // initialize node-local shared data (weights and biases)
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    if (_input == null) {
-      _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
-      _input.initializeMembers();
+    if (_minfo == null) {
+      _minfo = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
+      _minfo.initializeMembers();
     }
-
-    _output = _input;
-    _input = new NNModel.NNModelInfo();
-    _input = null;
   }
 
   // create local workspace (neurons)
   // and link them to shared weights
   @Override protected void chunkInit(){
-    _neurons = makeNeurons(_dinfo, _output);
+    _neurons = makeNeurons(_dinfo, _minfo);
   }
 
   @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
     ((Neurons.Input)_neurons[0]).setInput(nums, numcats, cats);
-    step(_neurons, _output, _training, responses);
+    step(_neurons, _minfo, _training, responses);
   }
 
   @Override protected void chunkDone(){ }
 
   @Override public void reduce(NNTask other){
-    _output.add(other._output);
+    _minfo.add(other._minfo);
   }
 
   @Override protected void postGlobal(){
-    _output.div(H2O.CLOUD.size());
-    _input = _output.clone();
+    _minfo.div(H2O.CLOUD.size());
   }
 
   // Helper
@@ -107,6 +102,8 @@ public class NNTask extends FrameTask<NNTask> {
     if (minfo.parameters.classification) {
       ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
       if (training) {
+        for( int i = 1; i < neurons.length - 1; i++ )
+          Arrays.fill(neurons[i]._e, 0);
         assert((double)(int)responses[0] == responses[0]);
         final int target = (int)responses[0];
         ((Neurons.Softmax)neurons[neurons.length-1]).bprop(target);
