@@ -151,7 +151,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
       // ESL2, page 387, Step 2b ii, iii, iv
       ktrees = buildNextKTrees(fr);
-      if( cancelled() ) break; // If canceled during building, do not bulkscore
+      if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
       tstats.updateBy(ktrees);
@@ -282,7 +282,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Adds a layer to the trees each pass.
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
-      if( cancelled() ) return null;
+      if( !Job.isRunning(self()) ) return null;
 
       hcs = buildLayer(fr, ktrees, leafs, hcs, false, false);
 

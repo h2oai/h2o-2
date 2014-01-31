@@ -104,7 +104,7 @@ public class Tree extends H2OCountedCompleter {
 
   // Actually build the tree
   @Override public void compute2() {
-    if(!_job.cancelled()) {
+    if(Job.isRunning(_job.self())) {
       Timer timer    = new Timer();
       _stats[0]      = new ThreadLocal<Statistic>();
       _stats[1]      = new ThreadLocal<Statistic>();
