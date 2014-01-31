@@ -604,6 +604,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Remove the extra adapted Vecs
       frs[1].delete();
       // Remove temporary result
+      res.delete();
       return this;
     }
 
