@@ -24,6 +24,7 @@ class Basic(unittest.TestCase):
     def test_poisson_alirline87_s3n_thru_hdfs(self):
         bucket = 'h2o-airlines-unpacked'
         csvFilename = "year1987.csv"
+        hex_key = "year1987.hex"
         csvPathname = csvFilename
         trialMax = 2
         timeoutSecs = 500
@@ -31,11 +32,11 @@ class Basic(unittest.TestCase):
             trialStart = time.time()
             hex_key = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3n',
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=1200)
             elapsed = time.time() - start
             print hex_key, 'h2o reported parse time:', parseResult['response']['time']
-            print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
+            print "parse end on ", hex_key, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseResult['destination_key']
 

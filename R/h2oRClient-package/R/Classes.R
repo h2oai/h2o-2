@@ -111,16 +111,15 @@ setMethod("show", "H2OGLMModel", function(object) {
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
 
-  # if(model$family == "binomial") {
-  if(model$family$family == "binomial") {
+  family = model$params$family$family
+  if(family == "binomial") {
     cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5), "\n")
     cat("\nConfusion Matrix:\n"); print(model$confusion,2)
   }
 
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
-    # if(model$family == "binomial") {
-    if(model$family$family == "binomial") {
+    if(family == "binomial") {
       modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
       colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
     } else {
@@ -163,7 +162,7 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("Distributed Random Forest Model Key:", object@key)
 
   model = object@model
-  cat("\nNumber of trees:", model$ntree)
+  cat("\nNumber of trees:", model$params$ntree)
   cat("\nTree statistics:\n"); print(model$forest)
   cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
@@ -182,7 +181,7 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("GBM Model Key:", object@key)
 
   model = object@model
-  if( model$classification ){
+  if(model$params$distribution == "multinomial") {
     cat("\n\nConfusion matrix:\nReported on", object@valid@key, "\n");
     print(model$confusion)
   }
@@ -935,16 +934,15 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
 
-  # if(model$family == "binomial") {
-  if(model$family$family == "binomial") {
+  family = model$params$family$family
+  if(family == "binomial") {
     cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$threshold,5), "\n")
     cat("\nConfusion Matrix:\n"); print(model$confusion)
   }
 
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
-    # if(model$family == "binomial") {
-    if(model$family$family == "binomial") {
+    if(family == "binomial") {
       modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
       colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
     } else {
