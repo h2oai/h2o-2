@@ -138,39 +138,44 @@ class PredictCSV {
             }
 
             // Assemble the input values for the row.
-            double[] row = new double[inputColumnsArray.length];
-            for (int i = 0; i < inputColumnsArray.length; i++) {
-                String cellString = inputColumnsArray[i];
+            double[] row = new double[numInputColumns];
+            int j = 0;
+            for (j = 0; j < inputColumnsArray.length; j++) {
+                String cellString = inputColumnsArray[j];
 
                 // System.out.println("Line " + lineno +" column ("+ model.getNames()[i] + " == " + i + ") cellString("+cellString+")");
 
-                String[] domainValues = model.getDomainValues(i);
+                String[] domainValues = model.getDomainValues(j);
                 if (cellString.equals("") ||    // empty field is default NA
                     (domainValues == null) && ( // if the column is enum then NA is part of domain by default ! 
                       cellString.equals("NA") ||
                       cellString.equals("N/A") ||
                       cellString.equals("-") )
                     ) {
-                    row[i] = Double.NaN;
+                    row[j] = Double.NaN;
                 } else {
                     if (domainValues != null) {
-                        HashMap m = (HashMap<String,Integer>) domainMap.get(i);
+                        HashMap m = (HashMap<String,Integer>) domainMap.get(j);
                         assert (m != null);
                         Integer cellOrdinalValue = (Integer) m.get(cellString);
                         if (cellOrdinalValue == null) {
-                            System.out.println("WARNING: Line " + lineno + " column ("+ model.getNames()[i] + " == " + i +") has unknown categorical value (" + cellString + ")");
-                            row[i] = Double.NaN;
+                            System.out.println("WARNING: Line " + lineno + " column ("+ model.getNames()[j] + " == " + j +") has unknown categorical value (" + cellString + ")");
+                            row[j] = Double.NaN;
                         }
                         else {
-                            row[i] = (double) cellOrdinalValue.intValue();
+                            row[j] = (double) cellOrdinalValue.intValue();
                         }
-                    }
-                    else {
-                        double value = Double.parseDouble(cellString);
-                        row[i] = value;
+                    } else {
+                        try {
+                          double value = Double.parseDouble(cellString);
+                          row[j] = value;
+                        } catch (java.lang.NumberFormatException e) {
+                          row[j] = Double.NaN;
+                        }
                     }
                 }
             }
+            for (; j< numInputColumns; j++) row[j] = Double.NaN;
 
             // Do the prediction.
             model.predict(row, preds);

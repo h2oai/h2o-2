@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
             print "Checking completed job, with no polling using initial response:", h2o.dump_json(glm)
         
             a = h2o.nodes[0].poll_url(glm, noPoll=True)
-            h2o_glm.simpleCheckGLM(self, a, 57, **kwargs)
+            h2o_glm.simpleCheckGLM(self, a, 'C58', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

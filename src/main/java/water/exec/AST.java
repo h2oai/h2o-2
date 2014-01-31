@@ -18,10 +18,11 @@ abstract public class AST extends Iced {
   final transient Type _t;
   AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E ) {
+    int x = E._x;
     AST ast2, ast = ASTApply.parseInfix(E,null,0);
     if( ast == null ) return ASTAssign.parseNew(E);
-    // In case of a slice, try match an assignment
-    if( ast instanceof ASTSlice || ast instanceof ASTId )
+    // In case of a slice or id, try match an assignment
+    if( ast instanceof ASTSlice || ast instanceof ASTId)
       if( (ast2 = ASTAssign.parse(E,ast)) != null ) return ast2;
     // Next try match an IFELSE statement
     if( (ast2 = ASTIfElse.parse(E,ast)) != null ) return ast2;
@@ -109,12 +110,17 @@ class ASTApply extends AST {
 
   // Parse a prefix operator
   static AST parsePrefix(Exec2 E) {
+    int x0 = E._x;
     AST pre = parseVal(E);
     if( pre == null ) return null;
     while( true ) {
-      if( pre._t.isNotFun() ) return pre; // Bail now if clearly not a function
+      //if( pre._t.isNotFun() ) return pre; // Bail now if clearly not a function
       int x = E._x;
       if( !E.peek('(') ) return pre; // Plain op, no prefix application
+      if (pre._t.isNotFun()) {
+        E._x = x0; if ((pre = ASTOp.parse(E)) == null) E.throwErr("No potential function was found.", x0);
+        if( !E.peek('(') ) return pre;
+      }
       AST args[] = new AST[] { pre, null };
       int i=1;
       if( !E.peek(')') ) {
@@ -409,7 +415,7 @@ class ASTAssign extends AST {
     _eval.exec(env);            // RHS before LHS (R eval order)
     if( _lhs instanceof ASTId ) {
       ASTId id = (ASTId)_lhs;
-      env.tos_into_slot(id._depth,id._num,id._id);
+      env.tos_into_slot(id._depth, id._num, id._id);
       return;
     }
     // Peel apart a slice assignment

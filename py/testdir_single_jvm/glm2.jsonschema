@@ -14,7 +14,7 @@
                 "_names": { "type": "array", "items": 
                     { "type": "string" }
                 },
-                "_selfKey": { "type": "string",
+                "_key": { "type": "string",
                 },
                 "alpha": { "type": "number" },
                 "best_lambda_idx": { "type": "number" }

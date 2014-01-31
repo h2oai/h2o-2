@@ -20,20 +20,19 @@ public class KMeansTest extends TestUtil {
   @Test public void test1Dimension() {
     Key source = Key.make("datakey");
     Key target = Key.make("datakey.kmeans");
-
+    ValueArray va = null;
+    KMeansModel res = null;
     try {
-      ValueArray va = va_maker(source, //
-          new double[] { 1.2, 5.6, 3.7, 0.6, 0.1, 2.6 });
-
+      va = va_maker(source, new double[] { 1.2, 5.6, 3.7, 0.6, 0.1, 2.6 });
       KMeans.start(target, va, 2, Initialization.Furthest, 100, SEED, false, 0).get();
-      KMeansModel res = UKV.get(target);
+      res = UKV.get(target);
       double[][] clusters = res.clusters();
 
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);
     } finally {
-      UKV.remove(source);
-      UKV.remove(target);
+      if( va != null ) va.delete();
+      if( res != null ) res.delete();
     }
   }
 
@@ -44,7 +43,8 @@ public class KMeansTest extends TestUtil {
   public void testGaussian(int rows) {
     Key source = Key.make("datakey");
     Key target = Key.make("datakey.kmeans");
-
+    ValueArray va = null;
+    KMeansModel res = null;
     try {
       final int columns = 100;
       double[][] goals = new double[8][columns];
@@ -54,11 +54,11 @@ public class KMeansTest extends TestUtil {
       for( int i = 0; i < cols.length; i++ )
         cols[i] = i;
 
-      ValueArray va = va_maker(source, (Object[]) array);
+      va = va_maker(source, (Object[]) array);
       Timer t = new Timer();
       KMeans.start(target, va, goals.length, Initialization.Furthest, 100, SEED, false, cols).get();
       Log.debug(Sys.KMEAN, " testGaussian rows:" + rows + ", ms:" + t);
-      KMeansModel res = UKV.get(target);
+      res = UKV.get(target);
       double[][] clusters = res.clusters();
 
       for( double[] goal : goals ) {
@@ -72,8 +72,8 @@ public class KMeansTest extends TestUtil {
         Assert.assertTrue(found);
       }
     } finally {
-      UKV.remove(source);
-      UKV.remove(target);
+      if( va != null ) va.delete();
+      if( res != null ) res.delete();
     }
   }
 
@@ -122,8 +122,8 @@ public class KMeansTest extends TestUtil {
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeansModel res = UKV.get(target);
     res.clusters();
-    UKV.remove(k1);
-    UKV.remove(target);
+    va.delete();
+    res.delete();
   }
 
   @Test public void testSphere() {
@@ -133,7 +133,7 @@ public class KMeansTest extends TestUtil {
     KMeans.start(target, va, 3, Initialization.Furthest, 100, SEED, false, 0, 1, 2).get();
     KMeansModel res = UKV.get(target);
     res.clusters();
-    UKV.remove(k1);
-    UKV.remove(target);
+    va.delete();
+    res.delete();
   }
 }

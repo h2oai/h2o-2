@@ -3,8 +3,6 @@
 H\ :sub:`2`\ O in R Studio
 ---------------------------
 
-Installation of H\ :sub:`2`\ O Package in R
-""""""""""""""""""""""""""""""""""""""""""""
 
 These instructions assume you are using R Studio 2.14.0 or later.  
 
@@ -22,9 +20,9 @@ Start an instance of H\ :sub:`2`\ O. For help with this see :ref:`GettingStarted
 Users should be aware that in order for H\ :sub:`2`\ O to successfully run through R, an instance of H\ :sub:`2`\ O must also simultaneously be running. If the instance of H\ :sub:`2`\ O is stopped, the R program will no longer run, and work done will be lost. 
 
 
-**STEP 3: R Studio Users**
+**STEP 3**
 
-Install the H\ :sub:`2`\ O package, and the H\ :sub:`2`\ O client package simultaneously by clicking on install package 
+Install the H\ :sub:`2`\ O package, and the H\ :sub:`2`\ O client package simultaneously by clicking on **Install Package** 
 
 .. image:: Rinstall.png
    :width: 70%
@@ -35,10 +33,10 @@ Walk through the installer helper to the H\ :sub:`2`\ O downloaded folder.
    :width: 70%
 
 
-Once the correct path has been specified click "Install." This will install the package in R. 
+Once the correct path has been specified click **Install.** This will install the package in R. 
 
 
-Start the H\ :sub:`2`\ O package by clicking the check box next to the package name "h2o". 
+Start the H\ :sub:`2`\ O package by clicking the check box next to the package name **h2o**. 
   
 
 .. image:: Rcheckbox.png
@@ -57,15 +55,13 @@ Get R Studio talking to your instance of H\ :sub:`2`\ O by typing in the call:
 Your IP and port may be different, depending on whether you are running H\ :sub:`2`\ O from your computer or a server. If you are running on a server, where it says IP enter the IP address of the server, and the appropriate port number. In the picture below the IP number is everything before the colon, and the port number is the 5 digit string after the colon.
 
 
-.. image:: Ripandport.png
-   :width: 70%
-
 
 Upgrading the H\ :sub:`2`\ O R Packages
 """""""""""""""""""""""""""""""""""""""
 
 
-Users may wish to manually upgrade their R packages. For instance, if you are running the bleeding edge developer build, it’s possible that the code has changed, but that the revision number has not, in which case manually upgrading ensures the most current version of not only the H2O code, but the corresponding R code as well.
+Users may wish to manually upgrade their R packages. For instance, if you are running the bleeding edge developer build, it’s possible that the code has changed, but that the revision number has not, in which case manually upgrading ensures the most current version of not only the H\ :sub:`2`\ O code, but the corresponding R code as well.
+It is highly recommended that users close and restart R, manually remove (by clicking the x next to BOTH h2o packages, as shown in the picture above), and reinstall. 
 
 
 

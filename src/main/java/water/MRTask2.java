@@ -39,20 +39,21 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // If TRUE, run entirely local - which will pull all the data locally.
   private boolean _run_local;
 
-  public Frame outputFrame(String [] names, String [][] domains){
+  public Frame outputFrame(String [] names, String [][] domains){ return outputFrame(null,names,domains); }
+  public Frame outputFrame(Key key, String [] names, String [][] domains){
     Futures fs = new Futures();
-    Frame res = outputFrame(names, domains, fs);
+    Frame res = outputFrame(key, names, domains, fs);
     fs.blockForPending();
     return res;
   }
-  public Frame outputFrame(String [] names, String [][] domains, Futures fs){
+  public Frame outputFrame(Key key, String [] names, String [][] domains, Futures fs){
     if(_noutputs == 0)return null;
     Vec [] vecs = new Vec[_noutputs];
     for(int i = 0; i < _noutputs; ++i){
       _appendables[i]._domain = domains==null ? null : domains[i];
       vecs[i] = _appendables[i].close(fs);
     }
-    return new Frame(names,vecs);
+    return new Frame(key,names,vecs);
   }
 
   /** Override with your map implementation.  This overload is given a single

@@ -79,7 +79,7 @@ public class Parse extends Request {
         exclude = makePattern(_excludeExpression.value());
       ArrayList<Key> keys = new ArrayList();
       // boolean badkeys = false;
-      for( Key key : H2O.keySet() ) { // For all keys
+      for( Key key : H2O.globalKeySet(null) ) { // For all keys
         if( !key.user_allowed() ) continue;
         String ks = key.toString();
         if( !p.matcher(ks).matches() ) // Ignore non-matching keys
@@ -317,10 +317,8 @@ public class Parse extends Request {
       Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch (IllegalArgumentException e) {
-      return Response.error(e.getMessage());
     } catch (Error e) {
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
   }
   private class Separator extends InputSelect<Byte> {

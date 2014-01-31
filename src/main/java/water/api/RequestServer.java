@@ -2,6 +2,7 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
@@ -174,10 +175,12 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
+    registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
     registerRequest(new GLMProgress());
     registerRequest(new hex.glm.GLMGridProgress());
-    registerRequest(new water.api.Levels());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels2());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels());    // Ditto the above for ValueArray objects
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
@@ -241,6 +244,29 @@ public class RequestServer extends NanoHTTPD {
   }
 
   // uri serve -----------------------------------------------------------------
+  void maybeLogRequest (String uri, String method, Properties parms) {
+    boolean filterOutRepetitiveStuff = true;
+
+    if (filterOutRepetitiveStuff) {
+      if (uri.endsWith(".css")) return;
+      if (uri.endsWith(".js")) return;
+      if (uri.endsWith(".png")) return;
+      if (uri.endsWith(".ico")) return;
+      if (uri.startsWith("/Typeahead")) return;
+      if (uri.startsWith("/Cloud.json")) return;
+      if (uri.endsWith("LogAndEcho.json")) return;
+      if (uri.contains("Progress")) return;
+    }
+
+    String log = String.format("%-4s %s", method, uri);
+    for( Object arg : parms.keySet() ) {
+      String value = parms.getProperty((String) arg);
+      if( value != null && value.length() != 0 )
+        log += " " + arg + "=" + value;
+    }
+    Log.info(Sys.HTTPD, log);
+  }
+
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
@@ -249,6 +275,8 @@ public class RequestServer extends NanoHTTPD {
     // determine the request type
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
+
+    maybeLogRequest(uri, method, parms);
     try {
       // determine if we have known resource
       Request request = _requests.get(requestName);
@@ -301,7 +329,11 @@ public class RequestServer extends NanoHTTPD {
       mime = "text/css";
     else if (uri.endsWith(".html"))
       mime = "text/html";
-    return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    // return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    NanoHTTPD.Response res = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    res.addHeader("Content-Length", Long.toString(bytes.length));
+    // res.addHeader("Content-Disposition", "attachment; filename=" + uri);
+    return res;
   }
 
 }

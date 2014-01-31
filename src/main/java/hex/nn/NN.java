@@ -251,13 +251,13 @@ public class NN extends Job.ValidatedJob {
       modelinfo = nntask._output;
       if (diagnostics) modelinfo.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
       final String label =  (validation == null ? "Training" : "Validation")
-              + " error after training for " + model.epoch_counter
+              + " error after training for " + epoch
               + " epochs (" + model.model_info.processed + " samples):";
       doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
       model.epoch_counter = epoch;
       DKV.put(dest(), model);
     }
-    if (adapted != null) adapted[1].remove();
+    if (adapted != null) adapted[1].delete();
     System.out.println("Job finished.\n\n");
   }
 

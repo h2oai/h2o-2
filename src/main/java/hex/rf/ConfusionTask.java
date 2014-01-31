@@ -81,7 +81,7 @@ public class ConfusionTask extends MRTask {
    */
   private ConfusionTask(CMJob job, RFModel model, int treesToUse, Key datakey, int classcol, double[] classWt, boolean computeOOB ) {
     _job        = job;
-    _modelKey   = model._selfKey;
+    _modelKey   = model._key;
     _datakey    = datakey;
     _classcol   = classcol;
     _classWt    = classWt != null && classWt.length > 0 ? classWt : null;
@@ -90,13 +90,13 @@ public class ConfusionTask extends MRTask {
     shared_init();
   }
 
-  public Key keyForCM() { return keyForCM(_model._selfKey,_treesUsed,_datakey,_classcol,_computeOOB); }
+  public Key keyForCM() { return keyForCM(_model._key,_treesUsed,_datakey,_classcol,_computeOOB); }
   static public Key keyForCM(Key modelKey, int msize, Key datakey, int classcol, boolean computeOOB) {
     return Key.make("ConfusionMatrix of (" + datakey+"["+classcol+"],"+modelKey+"["+msize+"],"+(computeOOB?"1":"0")+")");
   }
 
   public static void remove(RFModel model, Key datakey, int classcol, boolean computeOOB) {
-    Key key = keyForCM(model._selfKey, model.size(), datakey, classcol, computeOOB);
+    Key key = keyForCM(model._key, model.size(), datakey, classcol, computeOOB);
     UKV.remove(key);
   }
 
@@ -108,7 +108,7 @@ public class ConfusionTask extends MRTask {
   }
   static public CMJob make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
     // Create a unique key for CM regarding given RFModel, validation data and parameters
-    final Key cmKey = keyForCM(model._selfKey, modelSize, datakey, classcol, computeOOB);
+    final Key cmKey = keyForCM(model._key, modelSize, datakey, classcol, computeOOB);
     // Start a new job if CM is not yet computed
     final Value dummyCMVal = new Value(cmKey, CMFinal.make());
     final Value val = DKV.DputIfMatch(cmKey, dummyCMVal, null, null);
@@ -507,7 +507,7 @@ public class ConfusionTask extends MRTask {
     }
     /** Create a new confusion matrix. */
     public static final CMFinal make(CM cm, RFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB) {
-      return new CMFinal(cm, model._selfKey, domain, errorsPerTree, computedOOB, true);
+      return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true);
     }
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }

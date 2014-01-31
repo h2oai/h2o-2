@@ -6,7 +6,7 @@ public class RemoveAllKeysTask extends DRemoteTask {
   public RemoveAllKeysTask() {}
 
   @Override public void lcompute() {
-    int keysetSize = H2O.keySet().size();
+    int keysetSize = H2O.localKeySet().size();
     int numNodes = H2O.CLOUD._memary.length;
     int nodeIdx = H2O.SELF.index();
     Log.info("Removing "+keysetSize+" keys on this node; nodeIdx("+nodeIdx+") numNodes("+numNodes+")");
@@ -19,7 +19,7 @@ public class RemoveAllKeysTask extends DRemoteTask {
 
     // Now remove all keys.
     Futures fs = new Futures();
-    for( Key key : H2O.keySet() )
+    for( Key key : H2O.localKeySet() )
       DKV.remove(key, fs);
 
     fs.blockForPending();

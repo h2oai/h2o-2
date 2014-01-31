@@ -48,6 +48,6 @@ public class VecStatsTest extends TestUtil {
     Assert.assertEquals(min, v.min(), epsilon);
     Assert.assertEquals(mean, v.mean(), epsilon);
     Assert.assertEquals(sigma, v.sigma(), epsilon);
-    frame.remove();
+    frame.delete();
   }
 }

@@ -1,5 +1,9 @@
 package hex.gbm;
 
+import static water.util.Utils.div;
+
+import java.util.Arrays;
+
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
@@ -9,13 +13,8 @@ import water.api.DocGen;
 import water.api.GBMProgressPage;
 import water.fvec.Chunk;
 import water.fvec.Frame;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.RString;
-import water.util.SB;
-import water.util.Utils;
-
-import static water.util.Utils.div;
 
 // Gradient Boosted Trees
 //
@@ -49,18 +48,15 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // Because we call Math.exp, we have to be numerically stable or else
         // we get Infinities, and then shortly NaN's.  Rescale the data so the
         // largest value is +/-1 and the other values are smaller.
-        float rescale=0;
-        for( float k : p ) rescale = Math.max(rescale,Math.abs(k));
-        if( rescale < 1.0f ) rescale=1.0f;
+        // See notes here:  http://www.hongliangjie.com/2011/01/07/logsum/
+        float maxval=Float.NEGATIVE_INFINITY;
         float dsum=0;
-        if (nclasses()==2) {
-          p[0] = (float)Math.exp(p[0]/rescale);
-          p[1] = 1/p[0];
-          dsum = p[0]+p[1];
-        } else {
-          for(int k=0; k<p.length;k++)
-            dsum+=(p[k]=(float)Math.exp(p[k]/rescale));
-        }
+        if (nclasses()==2)  p[1] = - p[0];
+        // Find a max
+        for( float k : p ) maxval = Math.max(maxval,k);
+        assert !Float.isInfinite(maxval) : "Something is wrong with GBM trees since returned prediction is " + Arrays.toString(p);
+        for(int k=0; k<p.length;k++)
+          dsum+=(p[k]=(float)Math.exp(p[k]-maxval));
         div(p,dsum);
       } else { // regression
         // do nothing for regression
@@ -74,18 +70,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
     @Override protected void toJavaUnifyPreds(SB bodyCtxSB) {
       if (isClassifier()) {
-        bodyCtxSB.i().p("// Compute Probabilities for classifier").nl();
-        bodyCtxSB.i().p("float sum = 0, rescale = 0;").nl();
-        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) rescale = Math.max(rescale,Math.abs(preds[i]));").nl();
-        bodyCtxSB.i().p("if (rescale < 1.0f) rescale = 1.0f;").nl();
+        bodyCtxSB.i().p("// Compute Probabilities for classifier (scale via http://www.hongliangjie.com/2011/01/07/logsum/)").nl();
+        bodyCtxSB.i().p("float dsum = 0, maxval = Float.NEGATIVE_INFINITY;").nl();
         if (nclasses()==2) {
-          bodyCtxSB.i().p("preds[1] = (float)Math.exp(preds[1]/rescale);").nl();
-          bodyCtxSB.i().p("preds[2] = 1.0f/preds[1];").nl(); // field preds[0] is dedicated for resulting prediction
-          bodyCtxSB.i().p("sum = preds[1]+preds[2]; ").nl();
-        } else {
-          bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) sum += (preds[i]=(float) Math.exp(preds[i]/rescale));").nl();
+          bodyCtxSB.i().p("preds[2] = -preds[1];").nl();
         }
-        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) maxval = Math.max(maxval, preds[i]);").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i] - maxval));").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / dsum;").nl();
       }
     }
   }
@@ -136,7 +128,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, Timer t_build ) {
 
     GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, max_depth, min_rows, nbins, learn_rate);
-    DKV.put(outputKey, model);
+    model.delete_and_lock(self());
 
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
@@ -159,13 +151,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
       // ESL2, page 387, Step 2b ii, iii, iv
       ktrees = buildNextKTrees(fr);
-      if( cancelled() ) break; // If canceled during building, do not bulkscore
+      if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
       tstats.updateBy(ktrees);
     }
     // Final scoring
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false, false);
+    model.unlock(self());       // Update and unlock model
     cleanUp(fr,t_build); // Shared cleanup
   }
 
@@ -220,7 +213,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
       ds[0] = Math.exp(chk_tree(chks,0).at0(row));
-      ds[1] = 1.0/ds[0]; // exp(-d) === 1/exp(d)
+      ds[1] = 1.0/ds[0]; // exp(-d) === 1/d
       return ds[0]+ds[1];
     }
     double sum=0;
@@ -289,7 +282,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Adds a layer to the trees each pass.
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
-      if( cancelled() ) return null;
+      if( !Job.isRunning(self()) ) return null;
 
       hcs = buildLayer(fr, ktrees, leafs, hcs, false, false);
 

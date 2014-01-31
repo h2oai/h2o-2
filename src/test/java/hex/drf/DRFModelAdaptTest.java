@@ -129,13 +129,11 @@ public class DRFModelAdaptTest extends TestUtil {
 
     } finally {
       // Test cleanup
-      if (model!=null) UKV.remove(model._selfKey);
-      if (frTrain!=null) frTrain.remove();
-      UKV.remove(trainKey);
-      if (frTest!=null) frTest.remove();
-      UKV.remove(testKey);
+      if( model  !=null ) model  .delete();
+      if( frTrain!=null ) frTrain.delete();
+      if( frTest !=null ) frTest .delete();
       // Remove adapted vectors which were saved into KV-store, rest of vectors are remove by frTest.remove()
-      if (frAdapted!=null) frAdapted[1].remove();
+      if (frAdapted!=null) frAdapted[1].delete();
     }
   }
 

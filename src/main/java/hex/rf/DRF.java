@@ -25,9 +25,9 @@ public abstract class DRF {
       Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
 
     // Create DRF remote task
-    DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
+    DRFJob  drfJob  = new DRFJob(ntrees);
+    DRFTask drfTask = create(drfJob,modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Create DRF user job & start it
-    DRFJob  drfJob  = new DRFJob(drfTask);
     drfJob.destination_key = modelKey;
     drfJob.start(drfTask);
     drfTask._job = drfJob;
@@ -40,7 +40,7 @@ public abstract class DRF {
   /** Create and configure a new DRF remote task.
    *  It does not execute DRF !!! */
   private static DRFTask create(
-    Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
+    Job job, Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
     StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
     Sampling.Strategy samplingStrategy, float sample, float[] strataSamples,
     int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
@@ -61,7 +61,7 @@ public abstract class DRF {
     // Start the timer.
     drf._t_main = new Timer();
     // Push the RFModel globally first
-    UKV.put(modelKey, drf._rfmodel);
+    drf._rfmodel.delete_and_lock(job.self());
     DKV.write_barrier();
 
     return drf;
@@ -307,11 +307,9 @@ public abstract class DRF {
 
   /** DRF job showing progress with reflect to a number of generated trees. */
   public static class DRFJob extends Job {
-    transient DRFTask _drfTask;
 
-    public DRFJob(DRFTask drfTask) {
-      _drfTask = drfTask;
-      description = "RandomForest_" + drfTask._params._ntrees + "trees";
+    public DRFJob(int ntrees) {
+      description = "RandomForest_" + ntrees + "trees";
     }
 
     @Override public Job start(H2OCountedCompleter fjtask) {

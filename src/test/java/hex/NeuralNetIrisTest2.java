@@ -202,9 +202,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
 //              if (toE) UKV.remove(vecs[vecs.length-1]._key);
               UKV.remove(pars);
-              _train.remove();
-              _test.remove();
-              fr.remove();
+              _train.delete();
+              _test.delete();
+              fr.delete();
               UKV.remove(p.dest());
 
               hogwild_runs++;

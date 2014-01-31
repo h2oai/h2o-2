@@ -257,7 +257,7 @@ public class NNModel extends Model {
     StringBuilder sb = new StringBuilder();
     final double error = CM.toASCII(sb);
     if (printCM) System.out.println(label + "\n" + sb);
-    fpreds.remove();
+    fpreds.delete();
     return error;
   }
 

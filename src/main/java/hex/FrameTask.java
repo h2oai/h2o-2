@@ -229,7 +229,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
-    if(_job != null && _job.cancelled())throw new JobCancelledException();
+    if(_job != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     chunkInit();
     final int nrows = chunks[0]._len;
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);

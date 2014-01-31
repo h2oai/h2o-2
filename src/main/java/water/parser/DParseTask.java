@@ -204,7 +204,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       return new Value(_key,bits2);
     }
 
-    @Override public void onSuccess(){
+    @Override public void onSuccess(Value old){
       _bits = null;             // Do not return the bits
     }
   }
@@ -406,8 +406,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     _myrows = 0;
     // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
     // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
-    if(DKV.get(_job.dest()) != null)
-      UKV.remove(_job.dest());
     if(_parser.parallelParseSupported())
       this.invoke(_sourceDataset._key);
     else {
@@ -466,8 +464,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     // let any pending progress reports finish
     DKV.write_barrier();
     // finally make the value array header
-    ValueArray ary = new ValueArray(_job.dest(), _numRows, off, cols);
-    UKV.put(_job.dest(), ary);
+    new ValueArray(_job.dest(), _numRows, off, cols).unlock(_job.self());
   }
 
   protected void createEnums() {
@@ -528,7 +525,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
    * splitting it into equal sized chunks.
    */
   @Override public void map(Key key) {
-    if(_job.cancelled())
+    if(!Job.isRunning(_job.self()))
       throw new JobCancelledException();
     _map = true;
     Key aryKey = null;
@@ -586,7 +583,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
 
   @Override
   public void reduce(DParseTask dpt) {
-    if(_job.cancelled())
+    if(!Job.isRunning(_job.self()))
       return;
     assert dpt._map;
     if(_sigma == null)_sigma = dpt._sigma;

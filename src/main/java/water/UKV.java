@@ -22,36 +22,21 @@ public abstract class UKV {
     fs.blockForPending();         // Block for remote-put to complete
   }
   static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key, val),fs); }
+  // Do the DKV.put.  DISALLOW this interface for Lockables.  Lockables all
+  // have to use the Lockable interface for all updates.
   static public void put( Key key, Value val, Futures fs ) {
+    assert !val.isLockable();
     Value res = DKV.put(key,val,fs);
-    // If the old Value was a large array, we need to delete the leftover
-    // chunks - they are unrelated to the new Value which might be either
-    // bigger or smaller than the old Value.
-    if( res != null && res.isArray() )
-      remove(res,fs);
-  }
-  static public void remove( Key key ) { removeAll(new Key[]{key}); }
-  static public void removeAll(Key[] keys) {
-    Futures fs = new Futures();
-    for(Key key: keys) remove(key,fs);
-    fs.blockForPending();       // Block until all is deleted
+    assert res == null || !res.isLockable();
   }
   // Recursively remove, gathering all the pending remote key-deletes
-  static public void remove( Key key, Futures fs ) {
+  static public void remove( Key key ) { remove(key,new Futures()).blockForPending(); }
+  static public Futures remove( Key key, Futures fs ) {
     Value val = DKV.get(key,32,H2O.GET_KEY_PRIORITY); // Get the existing Value, if any
-    remove(val,fs);             // Remove internal chunks with main key active
-    DKV.remove(key,fs); // Might need to be atomic with the above?
-  }
-  // Remove the Chunk parts of Frames and Vecs and ValueArrays
-  static private void remove( Value val, Futures fs ) {
-    if( val == null ) return;   // Trivial delete
-    if( val.isArray() ) {       // See if this is an Array
-      ValueArray ary = val.get();
-      for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
-        DKV.remove(ary.getChunkKey(i),fs);
-    }
-    if( val.isVec  () ) ((Vec  )val.get()).remove(fs);
-    if( val.isFrame() ) ((Frame)val.get()).remove(fs);
+    assert val==null || !val.isLockable();
+    if( val != null && val.isVec() ) ((Vec  )val.get()).remove(fs);
+    DKV.remove(key,fs);
+    return fs;
   }
 
   // User-Weak-Get a Key from the distributed cloud.

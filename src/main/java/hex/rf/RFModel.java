@@ -118,7 +118,7 @@ public class RFModel extends OldModel implements Progress {
   public String name(int atree) {
     if( atree == -1 ) atree = size();
     assert atree <= size();
-    return _selfKey.toString() + "[" + atree + "]";
+    return _key.toString() + "[" + atree + "]";
   }
 
   /** Return the bits for a particular tree */
@@ -130,10 +130,11 @@ public class RFModel extends OldModel implements Progress {
     return ts[tree_id];
   }
 
-  /** Bad name, I know. But free all internal tree keys. */
-  public void deleteKeys() {
+  /** Free all internal tree keys. */
+  @Override public Futures delete_impl(Futures fs) { 
     for( Key k : _tkeys )
-      UKV.remove(k);
+      UKV.remove(k,fs);
+    return fs;
   }
 
   /**

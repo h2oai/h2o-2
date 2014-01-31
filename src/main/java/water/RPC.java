@@ -177,8 +177,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
   }
   private V result(){
-    Throwable t = _dt.getDException();
-    if(t != null)throw  new RuntimeException(t);
+    DException.DistributedException t = _dt.getDException();
+    if( t != null ) throw t;
     return _dt;
   }
   // Similar to FutureTask.get() but does not throw any exceptions.  Returns

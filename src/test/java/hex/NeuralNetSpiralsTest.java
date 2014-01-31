@@ -24,7 +24,6 @@ public class NeuralNetSpiralsTest extends TestUtil {
     Key file = NFSFileVec.make(find_test_file("smalldata/neural/two_spiral.data"));
     Key parse = Key.make();
     Frame frame = ParseDataset2.parse(parse, new Key[]{file});
-    UKV.remove(file);
 
     Vec[] data = Utils.remove(frame.vecs(), frame.vecs().length - 1);
     Vec labels = frame.vecs()[frame.vecs().length - 1];
@@ -66,7 +65,7 @@ public class NeuralNetSpiralsTest extends TestUtil {
       Assert.fail("Classification error is not 0, but " + train.classification);
     }
 
-    UKV.remove(parse);
+    frame.delete();
     for( int i = 0; i < ls.length; i++ )
       ls[i].close();
   }

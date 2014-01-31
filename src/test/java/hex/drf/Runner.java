@@ -94,7 +94,7 @@ public class Runner {
     Frame train = TestUtil.parseFrame(trainkey,ARGS.trainFile);
     Frame test = null; 
     if( !Float.isNaN(ARGS.splitTestTrain) ) {
-      water.exec.Exec2.exec("r=runif(train.hex); test.hex=train.hex[r>=0.7,]; train.hex=train.hex[r<0.7,]").remove();
+      water.exec.Exec2.exec("r=runif(train.hex); test.hex=train.hex[r>=0.7,]; train.hex=train.hex[r<0.7,]").remove_and_unlock();
       train = UKV.get(trainkey);
       test  = UKV.get( testkey);
     } else if( ARGS.testFile.length() != 0 ) {

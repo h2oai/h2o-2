@@ -10,7 +10,10 @@ import java.net.URL;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.*;
+
 
 import sun.misc.Unsafe;
 import water.*;
@@ -863,15 +866,14 @@ public class Utils {
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
-  public static float[] div(float[] nums, final float n) {
-    assert !Float.isInfinite(n); // Almost surely not what you want
+  public static float[] div(float[] nums, float n) {
+    assert !Float.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
-  public static double[] div(double[] nums, final double n) {
-    assert !Double.isInfinite(n); // Almost surely not what you want
-    final double mult = 1/n;
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] * mult;
+  public static double[] div(double[] nums, double n) {
+    assert !Double.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
   /**
@@ -991,5 +993,21 @@ public class Utils {
   public static boolean contains(String[] names, String name) {
     for (String n : names) if (n.equals(name)) return true;
     return false;
+  }
+
+  /** Java-string illegal characters which need to be escaped */
+  public static final Pattern[] ILLEGAL_CHARACTERS = new Pattern[] { Pattern.compile("\\",Pattern.LITERAL), Pattern.compile("\"",Pattern.LITERAL) };
+  public static final String[]  REPLACEMENTS       = new String [] { "\\\\\\\\", "\\\\\"" };
+
+  /** Escape all " and \ characters to provide a proper Java-like string
+   * Does not escape unicode characters.
+   */
+  public static String escapeJava(String s) {
+    assert ILLEGAL_CHARACTERS.length == REPLACEMENTS.length;
+    for (int i=0; i<ILLEGAL_CHARACTERS.length; i++ ) {
+      Matcher m = ILLEGAL_CHARACTERS[i].matcher(s);
+      s = m.replaceAll(REPLACEMENTS[i]);
+    }
+    return s;
   }
 }

@@ -30,7 +30,8 @@ function(exdir) {
 sandbox<-
 function() {
   test_name <- R.utils::commandArgs(asValues=TRUE)$"-f"
-  Rsandbox <- paste("./Rsandbox_", test_name, sep = "")
+  # test_name can be a path..just what the basename
+  Rsandbox <- paste("./Rsandbox_", basename(test_name), sep = "")
   dir.create(Rsandbox, showWarnings = FALSE)
   commandsLog <- paste(Rsandbox, "/commands.log", sep = "")
   errorsLog <- paste(Rsandbox, "/errors.log", sep = "")
@@ -220,6 +221,7 @@ function(ipPort) {
     envPath  = Sys.getenv("H2OWrapperDir")
     wrapDir  = ifelse(envPath == "", defaultPath, envPath)
     wrapName = list.files(wrapDir, pattern  = "h2o")[1]
+    cat("wrapDir:", wrapDir, "wrapName:", wrapName)
     wrapPath = paste(wrapDir, wrapName, sep = "/")
     
     if (!file.exists(wrapPath))

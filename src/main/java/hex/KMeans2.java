@@ -24,7 +24,7 @@ public class KMeans2 extends ColumnsJob {
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
 
-  @API(help = "Clusters initialization", filter = Default.class)
+  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses intial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class)
   public Initialization initialization = Initialization.None;
 
   @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 1, lmax = 100000)
@@ -44,6 +44,7 @@ public class KMeans2 extends ColumnsJob {
   }
 
   @Override protected Status exec() {
+    source.read_lock(self());
     String sourceArg = input("source");
     Key sourceKey = null;
     if( sourceArg != null )
@@ -59,6 +60,7 @@ public class KMeans2 extends ColumnsJob {
     String[] namesResp = Utils.append(names, "response");
     String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    model.delete_and_lock(self());
     model.k = k; model.normalized = normalize;
 
     // TODO remove when stats are propagated with vecs?
@@ -104,12 +106,12 @@ public class KMeans2 extends ColumnsJob {
         sampler.doAll(vecs);
         clusters = Utils.append(clusters, sampler._sampled);
 
-        if( cancelled() )
+        if( !isRunning(self()) )
           return Status.Done;
         model.centers = normalize ? denormalize(clusters, vecs) : clusters;
         model.total_within_SS = sqr._sqr;
         model.iterations++;
-        UKV.put(destination_key, model);
+        model.update(self());
       }
 
       clusters = recluster(clusters, k, rand, initialization);
@@ -136,22 +138,22 @@ public class KMeans2 extends ColumnsJob {
       model.total_SS = model.total_within_SS + model.between_cluster_SS;
       model.size = task._rows;
       model.iterations++;
-      UKV.put(destination_key, model);
+      model.update(self());
       if( model.iterations >= max_iter ) {
         Clusters cc = new Clusters();
         cc._clusters = clusters;
         cc._means = means;
         cc._mults = mults;
         cc.doAll(1, vecs);
-        Frame fr2 = cc.outputFrame(new String[]{"Cluster ID"}, new String[1][]);
-        Key clustersIDKey = Key.make(destination_key.toString() + "_clusters");
-        model._clustersKey = clustersIDKey.toString();
-        UKV.put(clustersIDKey, fr2);
+        Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[1][]);
+        fr2.delete_and_lock(self()).unlock(self());
         break;
       }
-      if( cancelled() )
+      if( !isRunning(self()) )
         break;
     }
+    model.unlock(self());
+    source.unlock(self());
     return Status.Done;
   }
 
@@ -208,7 +210,7 @@ public class KMeans2 extends ColumnsJob {
         rowHTML(sb, new String[]{"Total Sum of Squares", "Total Within Cluster Sum of Squares", "Between Cluster Sum of Squares"}, row);
         DocGen.HTML.section(sb, "Cluster Assignments by Observation: ");
         RString rs = new RString("<a href='Inspect2.html?src_key=%$key'>%content</a>");
-        rs.replace("key", model._selfKey + "_clusters");
+        rs.replace("key", model._key + "_clusters");
         rs.replace("content", "View the row-by-row cluster assignments");
         sb.append(rs.toString());
         //sb.append("<iframe src=\"" + "/Inspect.html?key=KMeansClusters\"" + "width = \"850\" height = \"550\" marginwidth=\"25\" marginheight=\"25\" scrolling=\"yes\"></iframe>" );
@@ -318,7 +320,7 @@ public class KMeans2 extends ColumnsJob {
     public double[] between_cluster_variances;
 
     @API(help = "The row-by-row cluster assignments")
-    public String _clustersKey;
+    public final Key _clustersKey;
 
     // Normalization caches
     private transient double[][] _normClust;
@@ -326,6 +328,7 @@ public class KMeans2 extends ColumnsJob {
 
     public KMeans2Model(Key selfKey, Key dataKey, String names[], String domains[][]) {
       super(selfKey, dataKey, names, domains);
+      _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
 
     @Override public float progress() {
@@ -357,6 +360,12 @@ public class KMeans2 extends ColumnsJob {
 
     @Override protected float[] score0(double[] data, float[] preds) {
       throw new UnsupportedOperationException();
+    }
+
+    /** Remove any Model internal Keys */
+    @Override public Futures delete_impl(Futures fs) { 
+      Lockable.delete(_clustersKey);
+      return fs;
     }
   }
 

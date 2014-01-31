@@ -49,7 +49,7 @@ public class GLMGridProgress extends Request {
     for( GLMModel m : models.sorted() ) {
       JsonObject o = new JsonObject();
       LSMSolver lsm = m._solver;
-      o.addProperty(KEY, m._selfKey.toString());
+      o.addProperty(KEY, m._key.toString());
       o.addProperty(LAMBDA, lsm._lambda);
       o.addProperty(ALPHA, lsm._alpha);
       if(m._glmParams._family._family == Family.binomial) {

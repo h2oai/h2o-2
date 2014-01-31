@@ -1,5 +1,8 @@
 
 PROJECT_VERSION ?= 99.70
+R_VERSION = 3.0
+REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
+REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
 
 # Do a best-effort attempt to see if the R user has pdflatex installed
 # and avoid running it if they don't.
@@ -37,14 +40,50 @@ ifeq ($(OS),Windows_NT)
 else
 	openssl md5 h2oRClient_$(PROJECT_VERSION).tar.gz | sed 's/.*= //' >> info.txt
 endif
+
+	# Create file with description of all packages
+	cp -p h2oRClient-package/DESCRIPTION PACKAGES
+	# gzip -c PACKAGES > PACKAGES.gz
+
 	# Create temporary directory for jarring later
-	mkdir -p ../r_pack_tmp/resources/R
+	mkdir -p ../r_pack_tmp/resources/R/src/contrib
 	cp -p info.txt ../r_pack_tmp/resources/R/info.txt
-	cp -p h2oRClient_$(PROJECT_VERSION).tar.gz ../r_pack_tmp/resources/R
+	cp -p h2oRClient_$(PROJECT_VERSION).tar.gz PACKAGES ../r_pack_tmp/resources/R/src/contrib
+	# cp -p PACKAGES.gz ../r_pack_tmp/resources/R/src/contrib/PACKAGES.gz
+
 	# Add to resources directory
-	mkdir -p ../lib/resources/R
+	mkdir -p ../lib/resources/R/src/contrib
 	mv info.txt ../lib/resources/R/info.txt
-	mv h2oRClient_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
+	mv h2oRClient_$(PROJECT_VERSION).tar.gz ../lib/resources/R/src/contrib
+	cp -p PACKAGES ../lib/resources/R/src/contrib
+	# cp -p PACKAGES.gz ../lib/resources/R/src/contrib/PACKAGES.gz
+
+	# Build binary for each OS
+ifeq ($(shell uname), Linux)
+	R CMD INSTALL -l $(TMP) --build h2oRClient-package
+else
+	R CMD INSTALL --build h2oRClient-package
+endif
+
+ifneq ($(OS),Windows_NT)
+	tar zxvf h2oRClient_$(PROJECT_VERSION).tgz
+	zip -r h2oRClient_$(PROJECT_VERSION).zip h2oRClient
+
+	mkdir -p ../r_pack_tmp/resources/R/$(REPO_PATH_MAC)
+	mkdir -p ../lib/resources/R/$(REPO_PATH_MAC)
+	cp -p h2oRClient_$(PROJECT_VERSION).tgz PACKAGES ../r_pack_tmp/resources/R/$(REPO_PATH_MAC)
+	# cp -p PACKAGES.gz ../lib/resources/R/$(REPO_PATH_MAC)
+	mv h2oRClient_$(PROJECT_VERSION).tgz ../lib/resources/R/$(REPO_PATH_MAC)
+	cp -p PACKAGES ../lib/resources/R/$(REPO_PATH_MAC)/PACKAGES
+	# cp -p PACKAGES.gz ../lib/resources/R/$(REPO_PATH_MAC)/PACKAGES.gz
+endif
+
+	mkdir -p ../r_pack_tmp/resources/R/$(REPO_PATH_WIN)
+	mkdir -p ../lib/resources/R/$(REPO_PATH_WIN)
+	cp -p h2oRClient_$(PROJECT_VERSION).zip PACKAGES ../r_pack_tmp/resources/R/$(REPO_PATH_WIN)
+	# cp -p PACKAGES.gz ../r_pack_tmp/resources/R/$(REPO_PATH_WIN)
+	mv h2oRClient_$(PROJECT_VERSION).zip PACKAGES ../lib/resources/R/$(REPO_PATH_WIN)
+	# mv PACKAGES.gz ../lib/resources/R/$(REPO_PATH_WIN)
 
 clean:
 	rm -f h2oRClient-package/DESCRIPTION

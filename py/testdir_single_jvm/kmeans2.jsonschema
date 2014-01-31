@@ -4,7 +4,7 @@
         "Request2": { "type": "number" },
         "model": { "type": "object", "properties": {
             "_dataKey": { "type": "string" },
-            "_selfKey": { "type": "string" },
+            "_key": { "type": "string" },
             "_domains": { "type": "array", "items": 
                 { "type": "string" }
             },

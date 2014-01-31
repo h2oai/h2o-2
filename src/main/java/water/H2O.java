@@ -551,9 +551,38 @@ public final class H2O {
 
   public static Value raw_get( Key key ) { return STORE.get(key); }
   public static Key getk( Key key ) { return STORE.getk(key); }
-  public static Set<Key> keySet( ) { return STORE.keySet(); }
+  public static Set<Key> localKeySet( ) { return STORE.keySet(); }
   public static Collection<Value> values( ) { return STORE.values(); }
   public static int store_size() { return STORE.size(); }
+
+  // Global KeySet.  
+  // Pulls global keys locally, then hands out a local keySet.
+  // Since this can get big, allow some filtering.
+  public static Set<Key> globalKeySet( String clzname ) {
+    new GlobalKeyFilterClass(clzname).invokeOnAllNodes();
+    return localKeySet();
+  }
+  private static class GlobalKeyFilterClass extends DRemoteTask<GlobalKeyFilterClass> {
+    final int _typeid;
+    final H2ONode _self;
+    GlobalKeyFilterClass( String clzname ) { _typeid = clzname==null ? 0 : TypeMap.onIce(clzname); _self = SELF; }
+    @Override public void lcompute() {
+      if( H2O.SELF != _self ) { // No need to send to self!
+        Futures fs = new Futures();
+        for( Key k : localKeySet() ) {
+          Value val = H2O.get(k);
+          if( val != null && k.home() && k.user_allowed() && // Exists, maybe needed at remote
+              !val.isReplicatedTo(_self) &&                  // Already replicated at remote?
+              (_typeid==0 || val.type()==_typeid)  ) // Filter for class
+            fs.add(RPC.call(_self,new TaskSendKey(k,val)));
+        }
+        fs.blockForPending();
+      }
+      tryComplete();
+    }
+    @Override public void reduce( GlobalKeyFilterClass gkfc ) { }
+    @Override public boolean logVerbose() { return false; }
+  }
 
 
   // --------------------------------------------------------------------------

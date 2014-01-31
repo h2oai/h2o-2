@@ -30,8 +30,8 @@ public class RPackage extends Request {
     @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
       String info = Boot._init.loadContent("/R/info.txt");
       String fname = info.split("\\r?\\n")[0];
-      InputStream is = Boot._init.getResource2("/R/" + fname);
-      byte[] result;
+      InputStream is = Boot._init.getResource2("/R/src/contrib/" + fname);
+      byte[] result = null;
       try {
         result = IOUtils.toByteArray(is);
       } catch( IOException e ) {

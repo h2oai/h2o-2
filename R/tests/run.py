@@ -135,12 +135,20 @@ class H2OCloudNode:
 
         @return: none
         """
+
         cmd = ["java",
                "-Xmx" + self.xmx,
                "-ea",
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port)]
+
+        # Add S3N credentials to cmd if they exist.
+        ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
+        if (os.path.exists(ec2_hdfs_config_file_name)):
+            cmd.append("-hdfs_config")
+            cmd.append(ec2_hdfs_config_file_name)
+
         self.output_file_name = \
             os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
         f = open(self.output_file_name, "w")
@@ -376,6 +384,7 @@ class Test:
         self.cancelled = False
         self.terminated = False
         self.returncode = Test.test_did_not_complete()
+        self.start_seconds = -1
         self.pid = -1
         self.ip = None
         self.port = -1
@@ -392,6 +401,7 @@ class Test:
         if (self.cancelled or self.terminated):
             return
 
+        self.start_seconds = time.time()
         self.ip = ip
         self.port = port
 
@@ -614,7 +624,7 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-    def build_test_list(self, test_group=None):
+    def build_test_list(self, test_group, run_small, run_medium, run_large):
         """
         Recursively find the list of tests to run and store them in the object.
         Fills in self.tests and self.tests_not_started.
@@ -632,10 +642,30 @@ class RUnitRunner:
             for f in files:
                 if (not re.match(".*runit.*\.[rR]$", f)):
                     continue
+
+                is_small = False
+                is_medium = False
+                is_large = False
+
+                if (re.match(".*large.*", f)):
+                    is_large = True
+                elif (re.match(".*medium.*", f)):
+                    is_large = True
+                else:
+                    is_small = True
+
+                if (is_small and not run_small):
+                    continue
+                if (is_medium and not run_medium):
+                    continue
+                if (is_large and not run_large):
+                    continue
+
                 if (test_group is not None):
                     test_short_dir = self._calc_test_short_dir(os.path.join(root, f))
                     if test_group.lower() not in test_short_dir:
                         continue
+
                 self.add_test(os.path.join(root, f))
 
     def add_test(self, test_path):
@@ -897,11 +927,13 @@ class RUnitRunner:
 
     def _report_test_result(self, test):
         port = test.get_port()
+        now = time.time()
+        duration = now - test.start_seconds
         if (test.get_passed()):
-            s = "PASS      %d %-70s" % (port, test.get_test_name())
+            s = "PASS      %d %4ds %-70s" % (port, duration, test.get_test_name())
             self._log(s)
         else:
-            s = "     FAIL %d %-70s %s" % (port, test.get_test_name(), test.get_output_dir_file_name())
+            s = "     FAIL %d %4ds %-70s %s" % (port, duration, test.get_test_name(), test.get_output_dir_file_name())
             self._log(s)
             f = self._get_failed_filehandle_for_appending()
             f.write(test.get_test_dir_file_name() + "\n")
@@ -953,10 +985,14 @@ g_wipe_output_dir = False
 g_test_to_run = None
 g_test_list_file = None
 g_test_group = None
+g_run_small = True
+g_run_medium = True
+g_run_large = True
 g_use_cloud = False
 g_use_ip = None
 g_use_port = None
 g_no_run = False
+g_jvm_xmx = "1g"
 
 # Global variables that are set internally.
 g_output_dir = None
@@ -1000,6 +1036,7 @@ def usage():
           " [--test path/to/test.R]"
           " [--testlist path/to/list/file]"
           " [--testgroup group]"
+          " [--testsize (s|m|l)]"
           " [--usecloud ip:port]"
           " [--norun]")
     print("")
@@ -1026,10 +1063,16 @@ def usage():
     print("    --testgroup   Test a group of tests by function:")
     print("                  pca, glm, kmeans, gbm, rf, algos, golden, munging")
     print("")
+    print("    --testsize    Sizes (and by extension length) of tests to run:")
+    print("                  s=small (seconds), m=medium (a minute or two), l=large (longer)")
+    print("                  (Default is to run all tests.)")
+    print("")
     print("    --usecloud    ip:port of cloud to send tests to instead of starting clouds.")
     print("                  (When this is specified, numclouds is ignored.)")
     print("")
     print("    --norun       Perform side effects like wipe, but don't actually run tests.")
+    print("")
+    print("    --jvm.xmx     Configure size of launched JVM running H2O. E.g. '--jvm.xmx 3g'")
     print("")
     print("    If neither --test nor --testlist is specified, then the list of tests is")
     print("    discovered automatically as files matching '*runit*.R'.")
@@ -1040,11 +1083,17 @@ def usage():
     print("    Just accept the defaults and go (note: output dir must not exist):")
     print("        "+g_script_name)
     print("")
+    print("    Remove all random seeds (i.e. make new ones) but don't run any tests:")
+    print("        "+g_script_name+" --wipeall --norun")
+    print("")
     print("    For a powerful laptop with 8 cores (keep default numclouds):")
     print("        "+g_script_name+" --wipeall")
     print("")
     print("    For a big server with 32 cores:")
     print("        "+g_script_name+" --wipeall --numclouds 16")
+    print("")
+    print("    Just run the tests that finish quickly")
+    print("        "+g_script_name+" --wipeall --testsize s")
     print("")
     print("    Run one specific test, keeping old random seeds:")
     print("        "+g_script_name+" --wipe --test path/to/test.R")
@@ -1056,13 +1105,19 @@ def usage():
     print("")
     print("    Run tests on a pre-existing cloud (e.g. in a debugger), keeping old random seeds:")
     print("        "+g_script_name+" --wipe --usecloud ip:port")
-    print("")
     sys.exit(1)
 
 
 def unknown_arg(s):
     print("")
     print("ERROR: Unknown argument: " + s)
+    print("")
+    usage()
+
+
+def bad_arg(s):
+    print("")
+    print("ERROR: Illegal use of (otherwise valid) argument: " + s)
     print("")
     usage()
 
@@ -1075,10 +1130,14 @@ def parse_args(argv):
     global g_test_to_run
     global g_test_list_file
     global g_test_group
+    global g_run_small
+    global g_run_medium
+    global g_run_large
     global g_use_cloud
     global g_use_ip
     global g_use_port
     global g_no_run
+    global g_jvm_xmx
 
     i = 1
     while (i < len(argv)):
@@ -1114,6 +1173,20 @@ def parse_args(argv):
             if (i > len(argv)):
                 usage()
             g_test_group = argv[i]
+        elif (s == "--testsize"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            v = argv[i]
+            if (re.match(r'(s)?(m)?(l)?', v)):
+                if (not 's' in v):
+                    g_run_small = False
+                if (not 'm' in v):
+                    g_run_medium = False
+                if (not 'l' in v):
+                    g_run_large = False
+            else:
+                bad_arg(s)
         elif (s == "--usecloud"):
             i += 1
             if (i > len(argv)):
@@ -1126,6 +1199,11 @@ def parse_args(argv):
             g_use_ip = m.group(1)
             port_string = m.group(2)
             g_use_port = int(port_string)
+        elif (s == "--jvm.xmx"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            g_jvm_xmx = argv[i]
         elif (s == "--norun"):
             g_no_run = True
         elif (s == "-h" or s == "--h" or s == "-help" or s == "--help"):
@@ -1200,7 +1278,6 @@ def main(argv):
 
     # Calculate and set other variables.
     nodes_per_cloud = 1
-    xmx = "1g"
     h2o_jar = os.path.abspath(
         os.path.join(os.path.join(os.path.join(os.path.join(
             test_root_dir, ".."), ".."), "target"), "h2o.jar"))
@@ -1223,17 +1300,16 @@ def main(argv):
 
     g_runner = RUnitRunner(test_root_dir,
                            g_use_cloud, g_use_ip, g_use_port,
-                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
+                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx, g_output_dir)
 
     # Build test list.
     if (g_test_to_run is not None):
         g_runner.add_test(g_test_to_run)
     elif (g_test_list_file is not None):
         g_runner.read_test_list_file(g_test_list_file)
-    elif (g_test_group is not None):
-        g_runner.build_test_list(g_test_group)
     else:
-        g_runner.build_test_list()
+        # Test group can be None or not.
+        g_runner.build_test_list(g_test_group, g_run_small, g_run_medium, g_run_large)
 
     # If no run is specified, then do an early exit here.
     if (g_no_run):

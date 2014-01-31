@@ -154,7 +154,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     fr.add("OUT_BAG_TREES", response.makeZero());
 
     DRFModel model = new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
-    DKV.put(outputKey, model);
+    model.delete_and_lock(self());
 
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
@@ -174,7 +174,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
       ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
-      if( cancelled() ) break; // If canceled during building, do not bulkscore
+      if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
       tstats.updateBy(ktrees);
@@ -187,10 +187,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(varimp));
       // Update the model
       model.varimp = varimp;
-      DKV.put(outputKey, model);
     }
 
-    cleanUp(fr,t_build); // Shared cleanup
+    model.unlock(self());       // Update and unlock model
+    cleanUp(fr,t_build);        // Shared cleanup
   }
 
   /* From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp
@@ -303,7 +303,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Adds a layer to the trees each pass.
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
-      if( cancelled() ) return null;
+      if( !Job.isRunning(self()) ) return null;
 
       hcs = buildLayer(fr, ktrees, leafs, hcs, true, build_tree_per_node);
 

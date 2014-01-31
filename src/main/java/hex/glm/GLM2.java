@@ -220,7 +220,7 @@ public class GLM2 extends ModelJob {
 
     @Override public Iteration clone(){return new Iteration(_model,_solver,_dinfo,_fjt);}
     @Override public void callback(final GLMIterationTask glmt) {
-      if(!cancelled()){
+      if(isRunning(self())){
         double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
         double [] newBetaDeNorm = null;
         _solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
@@ -241,19 +241,21 @@ public class GLM2 extends ModelJob {
         }
         boolean done = false;
 //        _model = _oldModel.clone();
-        done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
+        done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || !isRunning(self());
         _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
         if(done){
           H2OCallback fin = new H2OCallback<GLMValidationTask>() {
             @Override public void callback(GLMValidationTask tsk) {
               boolean improved = _model.setAndTestValidation(_lambdaIdx,tsk._res);
-              DKV.put(_model._selfKey, _model);
               if(!diverged && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
+                _model.update(self());
                 _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
                 glmt._val = null;
                 Iteration.this.callback(glmt);
-              } else    // nope, we're done
+              } else {   // nope, we're done
+                _model.unlock(self());
                 _fjt.tryComplete(); // signal we're done to anyone waiting for the job
+              }
             }
             @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
               _fjt.completeExceptionally(ex);
@@ -266,7 +268,7 @@ public class GLM2 extends ModelJob {
           if(glmt._val != null){
             glmt._val.finalize_AIC_AUC();
             _model.setAndTestValidation(_lambdaIdx,glmt._val);//.store();
-            UKV.put(_model._selfKey, _model);
+            _model.update(self());
           }
           int iter = glmt._iter+1;
           GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);
@@ -297,7 +299,6 @@ public class GLM2 extends ModelJob {
     logStart();
 
     assert alpha.length == 1;
-    UKV.remove(dest());
     new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
       @Override public void callback(final YMUTask ymut){
         if(ymut._ymin == ymut._ymax){
@@ -323,6 +324,7 @@ public class GLM2 extends ModelJob {
             solver._proximalPenalty = _proximalPenalty;
             solver._wgiven = _wgiven;
             GLMModel model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
+            model.delete_and_lock(self());
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,GLM2.this._fjtask));
             firstIter.dfork(_dinfo._adaptedFrame);
           }

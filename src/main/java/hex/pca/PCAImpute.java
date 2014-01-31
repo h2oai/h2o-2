@@ -1,6 +1,5 @@
 package hex.pca;
 
-import water.DKV;
 import water.Job.FrameJob;
 import water.api.DocGen;
 import water.fvec.Frame;
@@ -24,7 +23,7 @@ public class PCAImpute extends FrameJob {
 
   @Override protected Status exec() {
     Frame fr = source;
-    DKV.put(destination_key, fr);
+    new Frame(destination_key,fr._names.clone(),fr.vecs().clone()).delete_and_lock(null).unlock(null);
     return Status.Done;
   }
 

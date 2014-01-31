@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype20x(self):
+    def test_poisson_covtype20x(self):
         if localhost:
             csvFilenameList = [
                 ('covtype20x.data', 480),
@@ -71,21 +71,21 @@ class Basic(unittest.TestCase):
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C14', **kwargs)
 
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C14', **kwargs)
 
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C14', **kwargs)
 
 
 if __name__ == '__main__':

@@ -17,12 +17,13 @@ public class HdfsFileVec extends FileVec {
   }
   public static Key make(FileStatus f, Futures fs) {
     long size = f.getLen();
-    Key k = Key.make(f.getPath().toString());
+    String fname = f.getPath().toString();
+    Key k = Key.make(fname);
     Key k2 = Vec.newKey(k);
     // Insert the top-level FileVec key into the store
     Vec v = new HdfsFileVec(k2,size);
     DKV.put(k2, v, fs);
-    UKV.put(k, new Frame(new String[]{"0"},new Vec[]{v}));
+    new Frame(k,new String[]{fname},new Vec[]{v}).delete_and_lock(null).unlock(null);
     return k;
   }
   private HdfsFileVec(Key key, long len) {super(key,len,Value.HDFS);}

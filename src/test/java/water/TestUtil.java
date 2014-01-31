@@ -44,7 +44,7 @@ public class TestUtil {
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     if( leaked_keys > 0 ) {
-      for( Key k : H2O.keySet() ) {
+      for( Key k : H2O.localKeySet() ) {
         Value value = DKV.get(k);
         Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
         // Ok to leak VectorGroups
@@ -128,10 +128,7 @@ public class TestUtil {
   public static Key loadAndParseFile(String keyName, String path) {
     Key fkey = load_test_file(path);
     Key okey = Key.make(keyName);
-    if( DKV.get(okey) != null )
-      DKV.remove(okey);
     ParseDataset.parse(okey, new Key[] { fkey });
-    UKV.remove(fkey);
     return okey;
   }
 
@@ -140,8 +137,6 @@ public class TestUtil {
     Arrays.sort(keys);
     Key okey = Key.make(keyName);
     ParseDataset.parse(okey, keys);
-    for( Key k : keys )
-      UKV.remove(k);
     return okey;
   }
 
@@ -171,7 +166,7 @@ public class TestUtil {
   // Build a ValueArray from a collection of normal arrays.
   // The arrays must be all the same length.
   public static ValueArray va_maker(Key key, Object... arys) {
-    UKV.remove(key);
+    new ValueArray(key,0).delete_and_lock(null);
     // Gather basic column info, 1 column per array
     ValueArray.Column cols[] = new ValueArray.Column[arys.length];
     char off = 0;
@@ -286,7 +281,7 @@ public class TestUtil {
       col._sigma = Math.sqrt(col._sigma / (col._n - 1));
 
     // Write out data & keys
-    DKV.put(key, ary, fs);
+    ary.unlock(null);
     fs.blockForPending();
     return ary;
   }
@@ -361,11 +356,7 @@ public class TestUtil {
     if(okey == null)
         okey = Key.make(file.getName());
     Key fkey = NFSFileVec.make(file);
-    try {
-      return ParseDataset2.parse(okey, new Key[] { fkey });
-    } finally {
-      UKV.remove(fkey);
-    }
+    return ParseDataset2.parse(okey, new Key[] { fkey });
   }
 
   public static Frame frame(String[] names, double[]... rows) {
@@ -389,7 +380,7 @@ public class TestUtil {
     System.err.println("-->> Store dump <<--");
     System.err.println("    " + msg);
     System.err.println(" Keys: " + H2O.store_size());
-    for ( Key k : H2O.keySet()) System.err.println(" * " + k);
+    for ( Key k : H2O.localKeySet()) System.err.println(" * " + k);
     System.err.println("----------------------");
   }
 }

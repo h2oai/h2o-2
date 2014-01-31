@@ -17,8 +17,8 @@ public class ParseFolderTest extends TestUtil {
       Value v2 = DKV.get(k2);
       assertTrue("parsed values do not match!",v1.isBitIdentical(v2));
     } finally {
-      if(k1 != null)UKV.remove(k1);
-      if(k2 != null)UKV.remove(k2);
+      Lockable.delete(k1);
+      Lockable.delete(k2);
     }
   }
 }

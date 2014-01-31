@@ -51,9 +51,9 @@ public class GLMModelView extends Request2 {
       sb.append("No model yet...");
       return true;
     }
-    DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._selfKey);
+    DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._key);
     if(glm_model.submodels != null)
-      DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._key,"Predict!"));
     String succ = (glm_model.warnings == null || glm_model.warnings.length == 0)?"alert-success":"alert-warning";
     sb.append("<div class='alert " + succ + "'>");
     pprintTime(sb.append(glm_model.iteration() + " iterations computed in "),glm_model.run_time);
@@ -80,7 +80,7 @@ public class GLMModelView extends Request2 {
         final Submodel sm = glm_model.submodels[i];
         if(sm.validation == null)break;
         if(glm_model.lambdas[i] == lambda)firstRow.append("\t\t<td><b>" + DFORMAT2.format(glm_model.lambdas[i]) + "</b></td>\n");
-        else firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.lambdas[i]),glm_model._selfKey,glm_model.lambdas[i]) + "</td>\n");
+        else firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.lambdas[i]),glm_model._key,glm_model.lambdas[i]) + "</td>\n");
         secondRow.append("\t\t<td>" + (sm.rank-1) + "</td>\n");
         thirdRow.append("\t\t<td>" + DFORMAT.format(1-sm.validation.residual_deviance/sm.validation.null_deviance) + "</td>\n");
         fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family==Family.binomial?sm.validation.auc:sm.validation.aic) + "</td>\n");
@@ -455,7 +455,7 @@ public class GLMModelView extends Request2 {
       glm_model = v.get();
       if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
     }
-    if( jjob == null || jjob.end_time > 0 || jjob.cancelled() )
+    if( jjob == null || jjob.end_time > 0 || jjob.isCancelled() )
       return Response.done(this);
     return Response.poll(this,(int)(100*jjob.progress()),100,"_modelKey",_modelKey.toString());
   }

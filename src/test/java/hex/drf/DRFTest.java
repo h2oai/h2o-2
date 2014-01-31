@@ -150,14 +150,13 @@ public class DRFTest extends TestUtil {
 
   public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM, expRespDom, 10/*max_depth*/, 20/*nbins*/, 0/*optflag*/); }
   public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, long[][] expCM, String[] expRespDom, int max_depth, int nbins, int optflags) throws Throwable {
-    DRF drf = null;
-    Frame frTrain = null, frTest = null;
+    DRF drf = new DRF();
     Key destTrain = Key.make(hexnametrain);
     Key destTest  = hexnametest!=null?Key.make(hexnametest):null;
-    Frame pred = null;
+    Frame frTest = null, pred = null;
+    DRFModel model = null;
     try {
-      drf = new DRF();
-      frTrain = drf.source = parseFrame(destTrain, fnametrain);
+      Frame frTrain = drf.source = parseFrame(destTrain, fnametrain);
       unifyFrame(drf, frTrain, prep);
       // Configure DRF
       drf.classification = true;
@@ -172,7 +171,7 @@ public class DRFTest extends TestUtil {
       // Invoke DRF and block till the end
       drf.invoke();
       // Get the model
-      DRFModel model = UKV.get(drf.dest());
+      model = UKV.get(drf.dest());
       // And compare CMs
       assertCM(expCM, model.cms[model.cms.length-1]);
       Assert.assertEquals("Number of trees differs!", ntree, model.errs.length-1);
@@ -186,15 +185,12 @@ public class DRFTest extends TestUtil {
       t.printStackTrace();
       throw t;
     } finally {
-      frTrain.remove();
-      UKV.remove(destTrain);
-      if (frTest!=null) { frTest.remove(); UKV.remove(destTest); }
-      if( drf != null ) {
-        UKV.remove(drf.dest()); // Remove the model
-        UKV.remove(drf.response._key);
-        drf.remove();
-        if( pred != null ) pred.remove();
-      }
+      drf.source.delete();
+      UKV.remove(drf.response._key);
+      drf.remove();
+      if (frTest!=null) frTest.delete();
+      if( model != null ) model.delete(); // Remove the model
+      if( pred != null ) pred.delete();
     }
   }
 

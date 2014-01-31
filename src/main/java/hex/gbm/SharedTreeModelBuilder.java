@@ -1,19 +1,17 @@
 package hex.gbm;
 
 import hex.rng.MersenneTwisterRNG;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Log;
+import water.fvec.*;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.Utils;
-
-import java.util.Arrays;
-import java.util.Random;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
@@ -124,6 +122,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
     String sv = input("validation");
     final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
+    
+    // Lock the input datasets against deletes
+    source.read_lock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.read_lock(self());
 
     Frame fr = new Frame(_names, _train);
     fr.add(_responseName,response);
@@ -173,6 +176,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       UKV.remove(fr.remove(fr.numCols()-1)._key);
     // If we made a response column with toEnum, nuke it.
     if( _gen_enum ) UKV.remove(response._key);
+
+    // Unlock the input datasets against deletes
+    source.unlock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.unlock(self());
+
     remove();                   // Remove Job
   }
 
@@ -195,7 +204,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     model = makeModel(model, ktrees,
                       sc==null ? Double.NaN : sc.mse(),
                       sc==null ? null : (_nclass>1?sc._cm:null), tstats);
-    DKV.put(outputKey, model);
+    model.update(self());
     return model;
   }
 
@@ -582,7 +591,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Compute a CM & MSE
       doAll(adapValidation, build_tree_per_node);
       // Remove the extra adapted Vecs
-      frs[1].remove();
+      frs[1].delete();
       // Remove temporary result
       return this;
     }

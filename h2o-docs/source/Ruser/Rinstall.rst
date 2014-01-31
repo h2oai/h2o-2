@@ -28,19 +28,19 @@ program will no longer run, and work done will be lost.
 
 Install the H\ :sub:`2`\ O package, and the H\ :sub:`2`\ O client
 package simultaneously by entering the following call into your R
-console with an instance of H2O already running (if H2O is not
+console with an instance of H\ :sub:`2`\ O already running (if H\ :sub:`2`\ O is not
 running, an instance will be started automatically at ip=LocalHost and
 port=54321).  
 
 **DO NOT CUT AND PASTE THIS CALL.** Please replace "foo" and the
 revision number  with the appropriate file path and revision number
-specifying your downloaded and unzipped H2O file. 
+specifying your downloaded and unzipped H\ :sub:`2`\ O file. 
 
 ::
 
   install.packages("foo/R/h2o_2.1.0.99999.tar.gz", repos = NULL, type = "source")
  
-Once the correct path has been specified, the H2O package will be
+Once the correct path has been specified, the H\ :sub:`2`\ O package will be
 installed. 
 
 **STEP 4:**
@@ -64,8 +64,8 @@ This call *may* return the output:
 **Do you want to install H2O R package 2.1.0.99999.1389130748 from the
 server (Y/N)?**
 
-Respond Y or YES. This is the mechanism by which the revision of the H2O R 
-package and the H2O instance running on the server are verified as matching 
+Respond Y or YES. This is the mechanism by which the revision of the H\ :sub:`2`\ O R 
+package and the H\ :sub:`2`\ O instance running on the server are verified as matching 
 and compatible. 
 
 
@@ -75,13 +75,13 @@ Users may wish to manually upgrade their R packages. For instance, if
 you are running the bleeding edge developer build, it’s possible that
 the code has changed, but that the revision number has not, in which
 case manually upgrading ensures the most current version of not only
-the H2O code, but the corresponding R code as well.
+the H\ :sub:`2`\ O code, but the corresponding R code as well.
 
 This can be done using the following commands.
 
 **IMPORTANT**
 Before you cut and paste these commands please check that the file path to 
-the version ofH2O R you would like to install is correct. 
+the version of H\ :sub:`2`\ O R you would like to install is correct. Replace **foo** with the correct file path. 
 
 ::
   

@@ -20,7 +20,7 @@ import water.*;
  */
 public class RFPredDomainTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
 
   static final long[] a(long ...p) { return p; }
 
@@ -58,10 +58,9 @@ public class RFPredDomainTest extends TestUtil {
     assertArrayEquals("Confusion matrix", expCM, cm._matrix);
     assertArrayEquals("CM domain", expDomain, cm.domain());
 
-    model.deleteKeys();
-    UKV.remove(modelKey);
-    UKV.remove(testKey);
-    UKV.remove(trainKey);
+    model.delete();
+    testData.delete();
+    trainData.delete();
     UKV.remove(cmJob.dest());
   }
 

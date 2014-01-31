@@ -7,7 +7,7 @@ zeroList = [
     ]
 
 exprList = [
-        'Result<n> = sum(<keyX>[<col1>])',
+        'Result<n> = sum(<keyX>[,<col1>])',
     ]
 
 DO_SUMMARY = True

@@ -22,10 +22,10 @@ import static hex.NeuralNet.ExecutionMode.*;
 
 
 /**
- * Neural network.
- *
- * @author cypof
- */
+* Neural network.
+*
+* @author cypof
+*/
 public class NeuralNet extends ValidatedJob {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
@@ -134,8 +134,8 @@ public class NeuralNet extends ValidatedJob {
     if( arg._name.equals("mode") ) {
       if (H2O.CLOUD._memary.length > 1) {
         //TODO: re-enable this
-//        arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
-//        mode = ExecutionMode.MapReduce;
+// arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
+// mode = ExecutionMode.MapReduce;
 
         //Temporary solution
         arg.disable("Distributed MapReduce mode is not yet fully supported. Will run in single-node mode, wasting "
@@ -174,17 +174,17 @@ public class NeuralNet extends ValidatedJob {
   }
 
   /**
-   * Activation functions
-   * Tanh, Rectifier and RectifierWithDropout have been tested.  TanhWithDropout and Maxout are experimental.
-   */
+* Activation functions
+* Tanh, Rectifier and RectifierWithDropout have been tested. TanhWithDropout and Maxout are experimental.
+*/
   public enum Activation {
     Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
   }
 
   /**
-   * Loss functions
-   * CrossEntropy is recommended
-   */
+* Loss functions
+* CrossEntropy is recommended
+*/
   public enum Loss {
     MeanSquare, CrossEntropy
   }
@@ -252,11 +252,11 @@ public class NeuralNet extends ValidatedJob {
     logStart();
     RNG.seed = new AtomicLong(seed);
     running = true;
-//    Vec[] vecs = Utils.append(_train, response);
-//    reChunk(vecs);
-//    final Vec[] train = new Vec[vecs.length - 1];
-//    System.arraycopy(vecs, 0, train, 0, train.length);
-//    final Vec trainResp = classification ? vecs[vecs.length - 1].toEnum() : vecs[vecs.length - 1];
+// Vec[] vecs = Utils.append(_train, response);
+// reChunk(vecs);
+// final Vec[] train = new Vec[vecs.length - 1];
+// System.arraycopy(vecs, 0, train, 0, train.length);
+// final Vec trainResp = classification ? vecs[vecs.length - 1].toEnum() : vecs[vecs.length - 1];
 
     final Vec[] train = _train;
     final Vec trainResp = classification ? response.toEnum() : response;
@@ -301,8 +301,8 @@ public class NeuralNet extends ValidatedJob {
     NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, this);
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
-
-    UKV.put(destination_key, model);
+    
+    model.delete_and_lock(self());
 
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     final Trainer trainer;
@@ -370,7 +370,7 @@ public class NeuralNet extends ValidatedJob {
 
             if (num >= num_samples_total) break;
             if (mode != MapReduce) {
-              if (cancelled() || !running) break;
+              if (!isRunning(self()) || !running) break;
             } else {
               if (!running) break; //MapReduce calls cancel() early, we are waiting for running = false
             }
@@ -378,7 +378,7 @@ public class NeuralNet extends ValidatedJob {
 
           // remove validation data
           if( adapted != null && adapted[1] != null )
-            adapted[1].remove();
+            adapted[1].delete();
           Log.info("Training finished.");
         } catch( Exception ex ) {
           cancel(ex);
@@ -410,7 +410,7 @@ public class NeuralNet extends ValidatedJob {
         model.validation_errors = validErrors;
 
         model.confusion_matrix = cm;
-        UKV.put(model._selfKey, model);
+        model.update(self());
 
         // terminate model building if we detect that a model is unstable
         if (model.unstable) NeuralNet.running = false;
@@ -717,14 +717,14 @@ public class NeuralNet extends ValidatedJob {
           rms_bias[y] = Math.sqrt(rms_bias[y]/len);
           rms_weight[y] = Math.sqrt(rms_weight[y]/len/l._previous._a.length);
 
-          unstable |= Double.isNaN(mean_bias[y])   || Double.isNaN(rms_bias[y])
+          unstable |= Double.isNaN(mean_bias[y]) || Double.isNaN(rms_bias[y])
                   || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
 
           // Abort the run if weights or biases are unreasonably large (Note that all input values are normalized upfront)
           // This can happen with Rectifier units when L1/L2/max_w2 are all set to 0, especially when using more than 1 hidden layer.
           final double thresh = 1e10;
-          unstable |= mean_bias[y] > thresh   || rms_bias[y] > thresh
-                  || mean_weight[y] > thresh  || rms_weight[y] > thresh;
+          unstable |= mean_bias[y] > thresh || rms_bias[y] > thresh
+                  || mean_weight[y] > thresh || rms_weight[y] > thresh;
         }
       }
     }
@@ -737,8 +737,8 @@ public class NeuralNet extends ValidatedJob {
       final String cross_entropy_format = "%2.6f";
 
       DocGen.HTML.title(sb,title);
-      DocGen.HTML.paragraph(sb, "Model Key: " + _selfKey);
-      sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_selfKey, "Score on dataset") + ", "
+      DocGen.HTML.paragraph(sb, "Model Key: " + _key);
+      sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", "
               + NeuralNet.link(_dataKey, "Compute new model") + "</div>");
 
       // Plot training error
@@ -829,7 +829,7 @@ public class NeuralNet extends ValidatedJob {
       }
       if (unstable) {
         final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
-                + "  Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+                + " Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
         DocGen.HTML.section(sb, "=======================================================================================");
         DocGen.HTML.section(sb, msg);
         DocGen.HTML.section(sb, "=======================================================================================");
@@ -987,7 +987,7 @@ public class NeuralNet extends ValidatedJob {
       mean_square_error = e.mean_square;
       cross_entropy = e.cross_entropy;
       if( frs[1] != null )
-        frs[1].remove();
+        frs[1].delete();
       return Response.done(this);
     }
 
@@ -1073,8 +1073,8 @@ public class NeuralNet extends ValidatedJob {
   }
 
   /**
-   * Makes sure small datasets are spread over enough chunks to parallelize training.
-   */
+* Makes sure small datasets are spread over enough chunks to parallelize training.
+*/
   public static void reChunk(Vec[] vecs) {
     final int splits = cores() * 2; // More in case of unbalance
     if( vecs[0].nChunks() < splits ) {
@@ -1127,3 +1127,4 @@ public class NeuralNet extends ValidatedJob {
     }
   }
 }
+

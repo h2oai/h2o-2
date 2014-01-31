@@ -80,14 +80,13 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
                            ArrayList<String> dels) {
 
     // Remove & report all Keys that match the root prefix
-    Futures fs = new Futures();
-    for( Key k : H2O.keySet() )
+    for( Key k : H2O.localKeySet() )
       if( k.toString().startsWith(_root) ) {
         dels.add(k.toString());
-        UKV.remove(k,fs);
+        Lockable.delete(k);
       }
-    fs.blockForPending();
 
+    Futures fs = new Futures();
     Key k = null;
     // Find all Keys which match ...
     for( int i = 0; i < _files.length; ++i ) {
@@ -100,14 +99,14 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
         if( keys  != null ) keys .add(k.toString());
         if(_newApi) {
           NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
-          UKV.put(k, new Frame(new String[] { "0" }, new Vec[] { nfs }), fs);
+          new Frame(k,new String[] { "0" }, new Vec[] { nfs }).delete_and_lock(null).unlock(null);
         } else {
           long size = f.length();
           Value val = (size < 2*ValueArray.CHUNK_SZ)
             ? new Value(k,(int)size,Value.NFS)
             : new Value(k,new ValueArray(k,size),Value.NFS);
           val.setdsk();
-          UKV.put(k, val, fs);
+          DKV.put(k, val, fs);
         }
       }
     }

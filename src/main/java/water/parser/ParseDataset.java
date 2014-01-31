@@ -176,7 +176,7 @@ public final class ParseDataset extends Job {
           Frame fr = v.get();
           colNames = fr._names;
         } else
-          throw new ParseSetupGuessException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName(),gSetup,null);
+          throw new ParseSetupGuessException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.className(),gSetup,null);
       } else { // check the hdr setup by parsing first bytes
         CustomParser.ParserSetup lSetup = gSetup._setup.clone();
         lSetup._header = true;
@@ -274,7 +274,9 @@ public final class ParseDataset extends Job {
     }
     setup.checkColumnNames();
     int j = 0;
-    UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
+    // remove any previous instance and insert a sentinel (to ensure no one has
+    // been writing to the same keys during our parse!
+    new ValueArray(job.dest(),0).delete_and_lock(job.self());
     Key [] nonEmptyKeys = new Key[keys.length];
     for (int i = 0; i < keys.length; ++i) {
       Value v = DKV.get(keys[i]);
@@ -294,6 +296,7 @@ public final class ParseDataset extends Job {
           DParseTask p2 = p1.createPassTwo();
           p2.passTwo();
           p2.createValueArrayHeader();
+          Lockable.delete(keys[0]);
           job.remove();
           return;
         } else
@@ -333,8 +336,11 @@ public final class ParseDataset extends Job {
         System.err.println(phaseTwo._error);
         throw new RuntimeException("The dataset format is not recognized/supported");
       }
+      // Delete source files after pass 2
       FileInfo finfo = fileInfo.get(keys[i]);
-      UKV.remove(finfo._okey);
+      Value val = DKV.get(finfo._okey);
+      if( val.isArray() ) ((ValueArray)val.get()).delete();
+      else DKV.remove(finfo._okey);
     }
     phaseTwo.normalizeSigma();
     phaseTwo._colNames = setup._columnNames;
@@ -379,7 +385,7 @@ public final class ParseDataset extends Job {
     }
     long memsz=0;               // Cluster memory
     for( H2ONode h2o : H2O.CLOUD._memary )
-      memsz += h2o._heartbeat.get_max_mem();
+      memsz += h2o.get_max_mem();
     if( sum > memsz*2 )
       throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
 
@@ -502,13 +508,14 @@ public final class ParseDataset extends Job {
             }
             _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");
             ValueArray.readPut(_fileInfo[_idx]._okey, is,_job);
+            Lockable.delete(_fileInfo[_idx]._ikey); // Delete zip after unzipping
             v = DKV.get(_fileInfo[_idx]._okey);
             onProgressSizeChange(2*(v.length() - csz), _job); // the 2 passes will go over larger file!
             assert v != null;
           }catch (EOFException e){
             if(ris != null && ris instanceof RIStream){
               RIStream r = (RIStream)ris;
-              System.err.println("Unexpected eof after reading " + r.off() + "bytes, expeted size = " + r.expectedSz());
+              System.err.println("Unexpected eof after reading " + r.off() + "bytes, expected size = " + r.expectedSz());
             }
             System.err.println("failed decompressing data " + key.toString() + " with compression " + comp);
             throw new RuntimeException(e);

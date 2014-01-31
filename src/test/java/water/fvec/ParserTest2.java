@@ -44,8 +44,7 @@ public class ParserTest2 extends TestUtil {
         Assert.assertTrue((Double.isNaN(parsedVal) == Double.isNaN(expected[i][j])));
         Assert.assertTrue(Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
       }
-    UKV.remove(k);
-    UKV.remove(inputkey);
+    fr.delete();
   }
 
   @Test public void testBasic() {
@@ -429,9 +428,8 @@ public class ParserTest2 extends TestUtil {
   @Test public void testTimeParse() {
     Key fkey = NFSFileVec.make(find_test_file("smalldata/kaggle/bestbuy_train_10k.csv.gz"));
     Key okey = Key.make("bestbuy.hex");
-    ParseDataset2.parse(okey,new Key[]{fkey});
-    UKV.remove(fkey);
-    UKV.remove(okey);
+    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
+    fr.delete();
   }
 
   @Test public void testMixedSeps() {
@@ -495,8 +493,7 @@ public class ParserTest2 extends TestUtil {
       }
       ++j;
     }
-    UKV.remove(rkey);
-    UKV.remove(okey);
+    fr.delete();
   }
 
 
@@ -514,7 +511,7 @@ public class ParserTest2 extends TestUtil {
       Assert.assertEquals(fr.numCols(),11);
       Assert.assertEquals(fr.numRows(), 7);
     } finally {
-      UKV.remove(k);
+      Lockable.delete(k);
     }
   }
 

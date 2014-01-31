@@ -18,15 +18,17 @@ import com.google.common.base.Throwables;
  * E.g. to exclude a Vec from a computation on a Frame, create a new Frame that
  * references all the Vecs but this one.
  */
-public class Frame extends Iced {
+public class Frame extends Lockable<Frame> {
   public String[] _names;
   Key[] _keys;          // Keys for the vectors
   transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
-  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = null; }
+  public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
-  public Frame( String[] names, Vec[] vecs ) {
+  public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
+  public Frame( Key key, String[] names, Vec[] vecs ) {
+    super(key);
     // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
@@ -50,10 +52,11 @@ public class Frame extends Iced {
   }
   public Frame subframe(String [] names){
     Vec [] vecs = new Vec[names.length];
+    vecs();                     // Preload the vecs
     HashMap<String, Integer> map = new HashMap<String, Integer>();
     for(int i = 0; i < _names.length; ++i)map.put(_names[i], i);
     for(int i = 0; i < names.length; ++i)
-      if(map.containsKey(names[i]))vecs[i] = _vecs[map.get(names[i])];
+      if(map.containsKey(names[i])) vecs[i] = _vecs[map.get(names[i])];
       else throw new IllegalArgumentException("Missing column called "+names[i]);
     return new Frame(names,vecs);
   }
@@ -115,7 +118,7 @@ public class Frame extends Iced {
 
   /** Appends an entire Frame */
   public Frame add( Frame fr, String names[] ) {
-    assert anyVec().group().equals(fr.anyVec().group());
+    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group());
     for( String name : names )
       if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len0= _names.length;
@@ -177,7 +180,7 @@ public class Frame extends Iced {
   public Vec remove( int idx ) {
     int len = _names.length;
     if( idx < 0 || idx >= len ) return null;
-    Vec v = _vecs[idx];
+    Vec v = vecs()[idx];
     System.arraycopy(_names,idx+1,_names,idx,len-idx-1);
     System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
     System.arraycopy(_keys ,idx+1,_keys ,idx,len-idx-1);
@@ -250,7 +253,7 @@ public class Frame extends Iced {
 
   public final String[] names() { return _names; }
   public int  numCols() { return vecs().length; }
-  public long numRows(){ return anyVec().length();}
+  public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
 
   // Number of columns when categoricals expanded.
   // Note: One level is dropped in each categorical col.
@@ -334,20 +337,15 @@ public class Frame extends Iced {
     return fs;
   }
 
-  public void remove() {
-    remove(new Futures());
-  }
-
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
-  public void remove(Futures fs){
-    if(vecs().length > 0){
-      for( Vec v : _vecs )
-        UKV.remove(v._key,fs);
-    }
+  @Override public Futures delete_impl(Futures fs) {
+    for( Key k : _keys ) UKV.remove(k,fs);
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];
+    return fs;
   }
+  @Override public String errStr() { return "Dataset"; }
 
   public long byteSize() {
     long sum=0;

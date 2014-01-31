@@ -23,6 +23,18 @@ public class Type {
   Type( int t, Type[] ts ) { assert varargs_clean(t,ts); _t=t; _ts=ts; }
   Type( int t, Type[] ts, float f ) { this(t,ts); _t|=VARARGS;}
 
+  Type copy() {
+    Type[] ts = null;
+    if (_ts!=null) {
+      ts =_ts.clone(); for (int i = 0; i < ts.length; i++)
+        if (_ts[i]!=null) ts[i] = _ts[i].copy();
+    }
+    int vararg = _t&VARARGS;
+    Type copy = new Type(_t&~VARARGS,ts);
+    copy._t |= vararg;
+    return copy;
+  }
+
   // Check no varargs flags, except on the last type of functions
   private boolean varargs_clean( int t, Type ts[] ) {
     if( (t&VARARGS)!=0 ) return false; // Need to clean this upfront

@@ -26,7 +26,7 @@ public class MinorityClassTest extends TestUtil {
     ValueArray data = DKV.get(key).get();
     int [] h = MinorityClasses.globalHistogram(MinorityClasses.histogram(data, _classIdx));
     assertTrue(Arrays.equals(expectedHist, h));
-    UKV.remove(key);
+    data.delete();
   }
 
   @Test public void testExtraction(){
@@ -47,7 +47,7 @@ public class MinorityClassTest extends TestUtil {
       for( Key k : u._chunks )
         UKV.remove(k);
     }
-    UKV.remove(key);
+    data.delete();
   }
 
   public static void main(String [] args){

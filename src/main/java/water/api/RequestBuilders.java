@@ -383,7 +383,15 @@ public class RequestBuilders extends RequestQueries {
 
     /** Returns new error response with given error message.
      */
+    public static Response error(Throwable e) {
+      if( !(e instanceof IllegalAccessException ))
+        Log.err(e);
+      String message = e.getMessage();
+      if( message == null ) message = e.getClass().toString();
+      return error(message);
+    }
     public static Response error(String message) {
+      if( message == null ) message = "no error message";
       JsonObject obj = new JsonObject();
       obj.addProperty(ERROR,message);
       Response r = new Response(Status.error,obj);

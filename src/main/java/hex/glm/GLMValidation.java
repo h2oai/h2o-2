@@ -61,7 +61,7 @@ public class GLMValidation extends Iced {
       xval_models = new Key[xvalModels.length];
       for(int i = 0; i < xvalModels.length; ++i){
         add(xvalModels[i].validation());
-        xval_models[i] = xvalModels[i]._selfKey;
+        xval_models[i] = xvalModels[i]._key;
       }
       this.nobs = nobs;
       finalize_AIC_AUC();

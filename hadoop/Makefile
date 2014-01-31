@@ -18,6 +18,9 @@ mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 hdp1.3.2_JAR_DIR=../lib/hadoop/hdp1.3.2
 hdp1.3.2_JARS=$(hdp1.3.2_JAR_DIR)/hadoop-core-1.2.0.1.3.2.0-111.jar
 
+hdp2.0.6_JAR_DIR=../lib/hadoop/hdp2.0.6
+hdp2.0.6_JARS=$(hdp2.0.6_JAR_DIR)/hadoop-common-2.2.0.2.0.6.0-101.jar${SEP}$(hdp2.0.6_JAR_DIR)/hadoop-mapreduce-client-core-2.2.0.2.0.6.0-101.jar${SEP}${hdp2.0.6_JAR_DIR}/hadoop-annotations-2.2.0.2.0.6.0-101.jar
+
 # ------------------------------
 
 # Figure out classpath separator for Unix vs. Windows
@@ -53,7 +56,7 @@ build_inner:
 	@echo "    public static boolean usingYarn() { return $(YARN); }" >> $(F)
 	@echo "}" >> $(F)
 	mkdir classes/$(HADOOP_VERSION)
-	javac -Xlint:deprecation -source 1.6 -target 1.6 -sourcepath src/main/java -classpath "$(COMMON_JARS)${SEP}$(HADOOP_JARS)" -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
+	javac -Xlint:-deprecation -source 1.6 -target 1.6 -sourcepath src/main/java -classpath "$(COMMON_JARS)${SEP}$(HADOOP_JARS)" -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
 	jar cf target/h2odriver_$(HADOOP_VERSION).jar -C classes/$(HADOOP_VERSION) .
 
 clean:
@@ -68,6 +71,7 @@ build: clean
 	$(MAKE) build_inner HADOOP_VERSION=cdh4      YARN=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn YARN=true
 	$(MAKE) build_inner HADOOP_VERSION=hdp1.3.2  YARN=false
+	$(MAKE) build_inner HADOOP_VERSION=hdp2.0.6  YARN=false
 	rm -rf ../target/hadoop
 	mkdir ../target/hadoop
 	cp README.txt ../target/hadoop

@@ -1,14 +1,9 @@
 package water.exec;
 
-import java.text.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 import water.*;
 import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
-import water.util.Log;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -37,8 +32,9 @@ public class Env extends Iced {
   transient boolean _allow_tmp;           // Deep-copy allowed to tmp
   transient boolean _busy_tmp;            // Assert temp is available for use
   transient Frame  _tmp;                  // The One Big Active Tmp
+  transient final ArrayList<Key> _locked; // The original set of locked frames
 
-  Env() {
+  Env(ArrayList<Key> locked) {
     _key = new String[4]; // Key for Frame
     _ary = new Frame [4]; // Frame (or null if not a frame)
     _d   = new double[4]; // Double (only if frame & func are null)
@@ -46,6 +42,7 @@ public class Env extends Iced {
     _display= new int[4];
     _refcnt = new HashMap<Vec,Integer>();
     _sb = new StringBuilder();
+    _locked = locked;
   }
 
   public int sp() { return _sp; }
@@ -108,6 +105,8 @@ public class Env extends Iced {
     // In a copy-on-modify language, only update the local scope, or return val
     assert d==0 || (d==1 && _display[_tod]==n+1);
     int idx = _display[_tod-d]+n;
+    // Temporary solution to kill a UDF from global name space. Needs to fix in the future.
+    if (_tod == 0) ASTOp.removeUDF(id);
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
     Frame fr =                   _ary[_sp-1];
@@ -115,6 +114,8 @@ public class Env extends Iced {
     _d  [idx] =                  _d  [_sp-1] ;
     _fcn[idx] =           addRef(_fcn[_sp-1]);
     _key[idx] = d==0 && fr!=null ? id : null;
+    // Temporary solution to add a UDF to global name space. Needs to fix in the future.
+    if (_tod == 0 && _fcn[_sp-1] != null) ASTOp.putUDF(_fcn[_sp-1], id);
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
   // Copy from TOS into a slot, using absolute index.
@@ -215,6 +216,7 @@ public class Env extends Iced {
     // All other fields are ignored/zero
     _refcnt = null;
     _sb = null;
+    _locked = null;
   }
 
 
@@ -246,9 +248,7 @@ public class Env extends Iced {
     if( fr == null ) return null;
     Futures fs = null;
     for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
-    if( key != null && fs != null ) UKV.remove(Key.make(key),fs);
-    if( fs != null )
-      fs.blockForPending();
+    if( fs != null ) fs.blockForPending();
     return null;
   }
   // Lower refcounts on all vecs captured in the inner environment
@@ -303,30 +303,37 @@ public class Env extends Iced {
 
 
   // Remove everything
-  public void remove() {
+  public void remove_and_unlock() {
     // Remove all shallow scopes
     while( _tod > 0 ) popScope();
     // Push changes at the outer scope into the K/V store
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
         Frame fr = popAry();    // Pop w/o lowering refcnt
-        Frame fr2=fr;
         String skey = key();
+        Frame fr2=new Frame(Key.make(skey),fr._names.clone(),fr.vecs().clone());
         for( int i=0; i<fr.numCols(); i++ ) {
           Vec v = fr.vecs()[i];
           int refcnt = _refcnt.get(v);
           assert refcnt > 0;
           if( refcnt > 1 ) {    // Need a deep-copy now
-            if( fr2==fr ) fr2 = new Frame(fr);
             Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
             fr2.replace(i,v2);  // Replace with private deep-copy
             subRef(v,null);     // Now lower refcnt for good assertions
             addRef(v2);
           } // But not down to zero (do not delete items in global scope)
         }
-        UKV.put(Key.make(_key[_sp]),fr2);
+        if( _locked.contains(fr2._key) ) fr2.write_lock(null);     // Upgrade to write-lock
+        else { fr2.delete_and_lock(null); _locked.add(fr2._key); } // Clear prior & set new data
+        fr2.unlock(null);
+        _locked.remove(fr2._key); // Unlocked already
       } else
         popUncheck();
+    }
+    // Unlock all things that do not survive, plus also delete them
+    for( Key k : _locked ) {
+      Frame fr = UKV.get(k);
+      fr.unlock(null);  fr.delete(); // Should be atomic really
     }
   }
 
