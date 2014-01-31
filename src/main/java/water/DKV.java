@@ -48,6 +48,10 @@ public abstract class DKV {
     return DputIfMatch(key, val, old, fs, false);
   }
   static public Value DputIfMatch( Key key, Value val, Value old, Futures fs, boolean dontCache ) {
+//    System.err.println("Key: " + key);
+//    Thread.dumpStack();
+//    System.err.flush();
+
     // TEMPORARY DURING VALUEARRAY TO FLUIDVEC TRANSITION.
     // When ValueArray object writes occur to DKV, whack any possible associated
     // auto-converted Frame object.
