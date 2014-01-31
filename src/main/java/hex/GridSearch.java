@@ -20,7 +20,7 @@ public class GridSearch extends Job {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
-    while( head < jobs.length && !cancelled() ) {
+    while( head < jobs.length && isRunning(self()) ) {
       if( tail - head < max && tail < jobs.length )
         jobs[tail++].fork();
       else {

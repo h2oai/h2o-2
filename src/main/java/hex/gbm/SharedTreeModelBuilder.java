@@ -122,7 +122,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
     String sv = input("validation");
     final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
-    
+
     // Lock the input datasets against deletes
     source.read_lock(self());
     if( validation != null && !source._key.equals(validation._key) )
@@ -191,6 +191,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
     Score sc = null;
+    // If validation is specified we use a model for scoring, so we need to update it!
+    // First we save model with trees and then update it with resulting error
+    // Double update - before scoring
+    model = makeModel(model, ktrees, tstats);
+    model.update(self());
     if( score_each_iteration ||
         finalScoring ||
         (now-_firstScore < 4000) || // Score every time for 4 secs
@@ -198,12 +203,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
          (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
+      // Perform scoring
       sc = new Score().doIt(model, fr, validation, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
-    model = makeModel(model, ktrees,
+    // Double update - after scoring
+    model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
-                      sc==null ? null : (_nclass>1?sc._cm:null), tstats);
+                      sc==null ? null : (_nclass>1?sc._cm:null));
     model.update(self());
     return model;
   }
@@ -674,7 +681,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 
-  protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], DTree.TreeModel.TreeStats tstats);
+  protected abstract TM makeModel( TM model, double err, long cm[][]);
+  protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
 
