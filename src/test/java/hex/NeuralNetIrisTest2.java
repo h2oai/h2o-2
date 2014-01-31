@@ -49,14 +49,12 @@ public class NeuralNetIrisTest2 extends TestUtil {
     // Testing different things
     // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
     // Note: Initial weight distributions are copied, but what is tested is the stability behavior.
-    //NN.Activation[] activations = { NN.Activation.Tanh, NN.Activation.Rectifier };
-    NN.Activation[] activations = { NN.Activation.Tanh };
-    //NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
-    NN.Loss[] losses = { NN.Loss.MeanSquare };
+    NN.Activation[] activations = { NN.Activation.Tanh, NN.Activation.Rectifier };
+    NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
     NN.InitialWeightDistribution[] dists = {
             NN.InitialWeightDistribution.Normal,
             //NN.InitialWeightDistribution.Uniform,
-            //NN.InitialWeightDistribution.UniformAdaptive
+            NN.InitialWeightDistribution.UniformAdaptive
             };
     double[] initial_weight_scales = { 0.0258 };
     double[] holdout_ratios = { 0.8 };
@@ -77,8 +75,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
               NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
 
-              //final long seed = new Random().nextLong(); //Actually change the seed every time!
-              final long seed = 0;
+              final long seed = new Random().nextLong(); //Actually change the seed every time!
               Log.info("Using seed " + seed);
               ref.init(activation, Utils.getDeterRNG(seed), holdout_ratio);
 
@@ -158,9 +155,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
               ref.train((int)p.epochs, p.rate, loss);
 
               // Train H2O
-              p.trainModel();
-              mymodel = UKV.get(p.dest()); //get the model
-              neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info); //link the weights to the neurons
+              p.trainModel(false);
+              mymodel = UKV.get(p.dest()); //get the trained model
+              neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info); //link the weights to the neurons, for easy access
 
               // tiny absolute and relative tolerances for single threaded mode
               double abseps = 1e-15;
@@ -178,19 +175,13 @@ public class NeuralNetIrisTest2 extends TestUtil {
               }
               weight_mse /= l._a.length * l._previous._a.length;
 
-              // Make sure output layer (predictions) are equal
-              for( int o = 0; o < neurons[2]._a.length; o++ ) {
-                double a = ref._nn.outputs[o];
-                double b = neurons[2]._a[o];
-//                compareVal(a, b, abseps, releps);
-              }
+              // H2O
+              final double myTrainAcc = mymodel.classificationError(_train, "Final training error:", true);
+              final double myTestAcc  = mymodel.classificationError(_test,  "Final testing error:",  true);
 
-              double myTrainAcc = mymodel.classificationError(_train, "Final training error:", true);
-              double myTestAcc  = mymodel.classificationError(_test,  "Final testing error:",  true);
-              mymodel.delete();
-
-              double trainAcc = ref._nn.Accuracy(ref._trainData);
-              double testAcc = ref._nn.Accuracy(ref._testData);
+              // Reference
+              final double trainAcc = ref._nn.Accuracy(ref._trainData);
+              final double testAcc = ref._nn.Accuracy(ref._testData);
 
               final boolean hogwild_error = (trainAcc != myTrainAcc || testAcc != myTestAcc);
               Log.info("DONE. " + (hogwild_error ? "Multithreading resulted in errors due to race conditions (Hogwild!)." : ""));
@@ -200,6 +191,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       (trainAcc != myTrainAcc|| testAcc != myTestAcc? " HOGWILD! " : ""));
               Log.info("REF  training error : " + trainAcc*100 + "%, test error: " + testAcc*100 + "%");
 
+              mymodel.delete();
               _train.delete();
               _test.delete();
               fr.delete();
