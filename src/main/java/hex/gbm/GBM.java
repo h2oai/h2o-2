@@ -41,6 +41,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       super(prior, trees, err, cm, tstats);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
+    public GBMModel(DTree.TreeModel prior, DTree[] trees, TreeStats tstats) {
+      super(prior, trees, tstats);
+      this.learn_rate = ((GBMModel)prior).learn_rate;
+    }
+    public GBMModel(DTree.TreeModel prior, double err, long [][] cm) {
+      super(prior, err, cm);
+      this.learn_rate = ((GBMModel)prior).learn_rate;
+    }
 
     @Override protected float[] score0(double[] data, float[] preds) {
       float[] p = super.score0(data, preds);
@@ -84,8 +92,11 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
-  @Override protected GBMModel makeModel( GBMModel model, DTree ktrees[], double err, long cm[][], TreeStats tstats) {
-    return new GBMModel(model, ktrees, err, cm, tstats);
+  @Override protected GBMModel makeModel( GBMModel model, double err, long cm[][]) {
+    return new GBMModel(model, err, cm);
+  }
+  @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
+    return new GBMModel(model, ktrees, tstats);
   }
   public GBM() { description = "Distributed GBM"; }
 
@@ -138,6 +149,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     DTree[] ktrees = null;              // Trees
     TreeStats tstats = new TreeStats(); // Tree stats
     for( tid=0; tid<ntrees; tid++) {
+      // During first iteration model contains 0 trees, then 0-trees, then 1-tree,...
+      // BUT if validation is not specified model does not participate in voting
+      // but on-the-fly computed data are used
       model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, false, false);
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
@@ -151,6 +165,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
       // ESL2, page 387, Step 2b ii, iii, iv
       ktrees = buildNextKTrees(fr);
+      Log.info(Sys.GBM__, (tid+1) + ". tree was built.");
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
