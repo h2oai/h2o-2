@@ -84,9 +84,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
               // Parse Iris and shuffle the same way as ref
               Key file = NFSFileVec.make(find_test_file(PATH));
-              Key pars = Key.make();
-              Frame frame = ParseDataset2.parse(pars, new Key[] { file });
-              UKV.remove(file);
+              Frame frame = ParseDataset2.parse(Key.make("iris_nn2"), new Key[] { file });
 
               double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
               String[] names = new String[frame.numCols()];
@@ -107,6 +105,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
               int limit = (int) (frame.numRows() * holdout_ratio);
               _train = frame(names, Utils.subarray(rows, 0, limit));
               _test = frame(names, Utils.subarray(rows, limit, (int) frame.numRows() - limit));
+              frame.delete();
 
               NN p = new NN();
               p.seed = seed;
@@ -131,7 +130,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
               p.source = _train;
               p.validation = null;
               p.response = _train.lastVec();
-              p.destination_key = Key.make("iris_test.hex");
+              p.destination_key = Key.make("iris_test.model");
               p.ignored_cols = null;
 
               Frame fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true);
@@ -188,6 +187,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
               double myTrainAcc = mymodel.classificationError(_train, "Final training error:", true);
               double myTestAcc  = mymodel.classificationError(_test,  "Final testing error:",  true);
+              mymodel.delete();
 
               double trainAcc = ref._nn.Accuracy(ref._trainData);
               double testAcc = ref._nn.Accuracy(ref._testData);
@@ -200,12 +200,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       (trainAcc != myTrainAcc|| testAcc != myTestAcc? " HOGWILD! " : ""));
               Log.info("REF  training error : " + trainAcc*100 + "%, test error: " + testAcc*100 + "%");
 
-//              if (toE) UKV.remove(vecs[vecs.length-1]._key);
-              UKV.remove(pars);
               _train.delete();
               _test.delete();
               fr.delete();
-              UKV.remove(p.dest());
 
               hogwild_runs++;
             }

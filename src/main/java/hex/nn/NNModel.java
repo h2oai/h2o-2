@@ -220,7 +220,7 @@ public class NNModel extends Model {
     return res;
   }
 
-  public NNModel(Key jobKey, Key selfKey, DataInfo dinfo, NN params) {
+  public NNModel(Key selfKey, Key jobKey, DataInfo dinfo, NN params) {
     super(selfKey,null,dinfo._adaptedFrame);
 
     job_key = jobKey;

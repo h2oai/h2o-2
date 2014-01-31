@@ -235,9 +235,8 @@ public class NN extends Job.ValidatedJob {
   public void initModel() {
     logStart();
     NN.RNG.seed.set(seed);
-    UKV.remove(dest());
     NNModel model = new NNModel(dest(), self(), _dinfo, this);
-    DKV.put(dest(), model);
+    model.delete_and_lock(self());
   }
 
   public void trainModel(){
@@ -255,9 +254,10 @@ public class NN extends Job.ValidatedJob {
               + " epochs (" + model.model_info.processed + " samples):";
       doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
       model.epoch_counter = epoch;
-      DKV.put(dest(), model);
+      model.update(self());
     }
     if (adapted != null) adapted[1].delete();
+    model.unlock(self());
     System.out.println("Job finished.\n\n");
   }
 
