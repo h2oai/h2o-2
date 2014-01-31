@@ -5,6 +5,7 @@ import hex.rng.MersenneTwisterRNG;
 import java.util.Arrays;
 import java.util.Random;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
@@ -122,7 +123,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
     String sv = input("validation");
     final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
-    
+
     // Lock the input datasets against deletes
     source.read_lock(self());
     if( validation != null && !source._key.equals(validation._key) )
@@ -191,6 +192,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
     Score sc = null;
+    // If validation is specified we use a model for scoring, so we need to update it!
+    // First we save model with trees and then update it with resulting error
+    // Double update - before scoring
+    model = makeModel(model, ktrees, tstats);
+    model.update(self());
     if( score_each_iteration ||
         finalScoring ||
         (now-_firstScore < 4000) || // Score every time for 4 secs
@@ -198,12 +204,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
          (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
+      // Perform scoring
       sc = new Score().doIt(model, fr, validation, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
-    model = makeModel(model, ktrees,
+    // Double update - after scoring
+    model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
-                      sc==null ? null : (_nclass>1?sc._cm:null), tstats);
+                      sc==null ? null : (_nclass>1?sc._cm:null));
     model.update(self());
     return model;
   }
@@ -246,7 +254,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Histograms for every tree, split & active column
     final DHistogram _hcs[/*tree-relative node-id*/][/*column*/];
     final boolean _subset;      // True if working a subset of cols
-    public ScoreBuildHistogram(int k, DTree tree, int leaf, DHistogram hcs[][], boolean subset) {
+    public ScoreBuildHistogram(H2OCountedCompleter cc, int k, DTree tree, int leaf, DHistogram hcs[][], boolean subset) {
+      super(cc);
       _k   = k;
       _tree= tree;
       _leaf= leaf;
@@ -498,7 +507,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _build_tree_per_node = build_tree_per_node;
     }
     @Override public void compute2() {
-      int leafk = _leafs[_k];
       // Fuse 2 conceptual passes into one:
       // Pass 1: Score a prior DHistogram, and make new Node assignments
       // to every row.  This involves pulling out the current assigned Node,
@@ -507,9 +515,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(_k,_tree,leafk,_hcs[_k],_subset).doAll(_fr2,_build_tree_per_node);
+      new ScoreBuildHistogram(this,_k,_tree,_leafs[_k],_hcs[_k],_subset).dfork(0,_fr2,_build_tree_per_node);
+    }
+    @Override public void onCompletion(CountedCompleter caller) {
+      ScoreBuildHistogram sbh = (ScoreBuildHistogram)caller;
       //System.out.println(sbh.profString());
 
+      final int leafk = _leafs[_k];
       int tmax = _tree.len();   // Number of total splits in tree K
       for( int leaf=leafk; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
         DTree.UndecidedNode udn = _tree.undecided(leaf);
@@ -527,7 +539,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       for( int nl = tmax; nl<_tree.len(); nl ++ )
         _hcs[_k][nl-tmax] = _tree.undecided(nl)._hs;
       _tree.depth++;            // Next layer done
-      tryComplete();
     }
   }
 
@@ -593,6 +604,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Remove the extra adapted Vecs
       frs[1].delete();
       // Remove temporary result
+      res.delete();
       return this;
     }
 
@@ -674,7 +686,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 
-  protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], DTree.TreeModel.TreeStats tstats);
+  protected abstract TM makeModel( TM model, double err, long cm[][]);
+  protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
 

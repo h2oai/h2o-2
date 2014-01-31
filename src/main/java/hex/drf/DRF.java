@@ -65,8 +65,14 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       _sample_rate = sample_rate;
       _seed = seed;
     }
-    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
-      super(prior, trees, err, cm, tstats);
+    public DRFModel(DRFModel prior, DTree[] trees, TreeStats tstats) {
+      super(prior, trees, tstats);
+      _mtries = prior._mtries;
+      _sample_rate = prior._sample_rate;
+      _seed = prior._seed;
+    }
+    public DRFModel(DRFModel prior, double err, long [][] cm) {
+      super(prior, err, cm);
       _mtries = prior._mtries;
       _sample_rate = prior._sample_rate;
       _seed = prior._seed;
@@ -95,8 +101,11 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
-  @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], double err, long cm[][], TreeStats tstats) {
-    return new DRFModel(model, ktrees, err, cm, tstats);
+  @Override protected DRFModel makeModel( DRFModel model, double err, long cm[][]) {
+    return new DRFModel(model, err, cm);
+  }
+  @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
+    return new DRFModel(model, ktrees, tstats);
   }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 999; min_rows = 1; }
 
@@ -174,6 +183,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
       ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
+      Log.info(Sys.DRF__, (tid+1) + ". tree was built.");
       if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
