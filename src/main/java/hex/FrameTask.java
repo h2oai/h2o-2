@@ -1,11 +1,8 @@
 package hex;
 
 import water.H2O.H2OCountedCompleter;
-import water.Iced;
-import water.Job;
+import water.*;
 import water.Job.JobCancelledException;
-import water.MRTask2;
-import water.MemoryManager;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -101,7 +98,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      *
      * @param source A frame to be expanded and sanity checked
      * @param response (should be part of source)
-     * @param toEnum Wheter or not to turn categoricals into enums
+     * @param toEnum Whether or not to turn categoricals into enums
      * @return Frame to be used by FrameTask
      */
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum) {
@@ -111,18 +108,16 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
       for(int i = 0; i < vecs.length-1; ++i) {// put response to the end (if not already)
         if(vecs[i] == response){
-          if (toEnum) {
-            fr.add(fr._names[i], fr.remove(i).toEnum()); //convert int classes to enums
-          }
-          else {
-            fr.add(fr._names[i], fr.remove(i));
-          }
+          final String n = fr._names[i];
+          if (toEnum) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
+          else fr.add(n, fr.remove(i));
           break;
         }
       }
       // special case for when response was at the end already
       if (toEnum && !response.isEnum() && vecs[vecs.length-1] == response) {
-        vecs[vecs.length-1] = vecs[vecs.length-1].toEnum();
+        final String n = fr._names[vecs.length-1];
+        fr.add(n, fr.remove(vecs.length-1).toEnum());
       }
       for(int i = 0; i < vecs.length-1; ++i) // remove constant cols and cols with too many NAs
         if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
@@ -229,7 +224,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
-    if(_job != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
+    if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     chunkInit();
     final int nrows = chunks[0]._len;
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
