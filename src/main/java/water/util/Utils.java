@@ -418,6 +418,18 @@ public class Utils {
     return res;
   }
 
+  public static double[] append(double[] a, double e) {
+    a = Arrays.copyOf(a,a.length+1);
+    a[a.length-1] = e;
+    return a;
+  }
+
+  public static long[][][] append(long[][][] a, long[][] e) {
+    a = Arrays.copyOf(a,a.length+1);
+    a[a.length-1] = e;
+    return a;
+  }
+
   public static <T> T[] append(T[] a, T... b) {
     if( a==null ) return b;
     T[] tmp = Arrays.copyOf(a,a.length+b.length);
