@@ -6,8 +6,10 @@ import water.Key;
 import water.Model;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.fvec.Frame;
 import water.util.Utils;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import static hex.nn.NN.RNG.getRNG;
@@ -70,6 +72,7 @@ public class NNModel extends Model {
 //  public double[] _bm;
 
 //    public float[] incoming_weights(int layer) { return weights[layer-1]; }
+    public NNModelInfo() {}
 
     public NNModelInfo(NN params, int num_input, int num_output) {
       parameters = params;
@@ -86,9 +89,19 @@ public class NNModel extends Model {
       // biases (only for hidden layers and output layer)
       biases = new double[layers+2][];
       for (int i=0; i<=layers+1; ++i) biases[i] = new double[units[i]];
-      randomize(getRNG());
     }
-    NNModelInfo deep_copy() {
+
+    void initializeMembers() {
+      randomizeWeights();
+      for (int i=0; i<=parameters.hidden.length+1; ++i) {
+        if (parameters.activation == NN.Activation.Rectifier
+                || parameters.activation == NN.Activation.Maxout) {
+          Arrays.fill(biases[i], 1.);
+        }
+      }
+
+    }
+    public NNModelInfo clone() {
       NNModelInfo n = new NNModelInfo(parameters, units[0], units[units.length-1]);
       n.processed = processed;
       n.weights = weights.clone();
@@ -113,18 +126,13 @@ public class NNModel extends Model {
       return min + rand.nextFloat() * (max - min);
     }
 
-    /**
-     *
-     // helper to initialize weights
-     // adaptive initialization uses prefactor * sqrt(6 / (units_input_layer + units_this_layer))
-     // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
-     * @param rng random generator to use
-     */
-    void randomize(Random rng) {
+    void randomizeWeights() {
       for (int i=0; i<weights.length; ++i) {
-        final double range = Math.sqrt(6. / (units[i] + units[i+1]));
+        final Random rng = getRNG(); //Use a newly seeded generator for each layer for backward compatibility (for now)
         for( int j = 0; j < weights[i].length; j++ ) {
           if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.UniformAdaptive) {
+            // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
+            final double range = Math.sqrt(6. / (units[i] + units[i+1]));
             weights[i][j] = (float)uniformDist(rng, -range, range);
           }
           else if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.Uniform) {
@@ -212,15 +220,15 @@ public class NNModel extends Model {
     return res;
   }
 
-  public NNModel(Key jobKey, Key selfKey, DataInfo dinfo, NN params, NNModel.NNModelInfo modelinfo) {
+  public NNModel(Key jobKey, Key selfKey, DataInfo dinfo, NN params) {
     super(selfKey,null,dinfo._adaptedFrame);
 
     job_key = jobKey;
     data_info = dinfo;
     run_time = 0;
     start_time = System.currentTimeMillis();
-    model_info = modelinfo != null ? modelinfo.deep_copy() :
-            new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
+    model_info = new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
+    model_info.initializeMembers();
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {
@@ -236,6 +244,23 @@ public class NNModel extends Model {
     for (int i=0; i<out.length; ++i) out2[i] = (float)out[i];
     return out2;
   }
+
+  public double classificationError(Frame ftest, String label, boolean printCM) {
+    Frame fpreds;
+    fpreds = score(ftest);
+    water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+    CM.actual = ftest;
+    CM.vactual = ftest.lastVec();
+    CM.predict = fpreds;
+    CM.vpredict = fpreds.vecs()[0];
+    CM.serve();
+    StringBuilder sb = new StringBuilder();
+    final double error = CM.toASCII(sb);
+    if (printCM) System.out.println(label + "\n" + sb);
+    fpreds.remove();
+    return error;
+  }
+
   public boolean generateHTML(String title, StringBuilder sb) {
     DocGen.HTML.title(sb, title);
     DocGen.HTML.title(sb, "Epochs: " + epoch_counter);

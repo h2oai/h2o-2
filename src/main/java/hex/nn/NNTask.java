@@ -5,6 +5,8 @@ import water.H2O;
 import water.H2O.H2OCountedCompleter;
 import water.Job;
 
+import java.util.Arrays;
+
 public class NNTask extends FrameTask<NNTask> {
 
   final protected NN _params;
@@ -22,15 +24,16 @@ public class NNTask extends FrameTask<NNTask> {
     _input=input;
   }
 
-
-
-
   // initialize node-local shared data (weights and biases)
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    if (_input == null) _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
+    if (_input == null) {
+      _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
+      _input.initializeMembers();
+    }
 
-    _output = _input.deep_copy();
+    _output = _input;
+    _input = new NNModel.NNModelInfo();
     _input = null;
   }
 
@@ -53,7 +56,7 @@ public class NNTask extends FrameTask<NNTask> {
 
   @Override protected void postGlobal(){
     _output.div(H2O.CLOUD.size());
-    _input = _output.deep_copy();
+    _input = _output.clone();
   }
 
   // Helper
@@ -84,9 +87,8 @@ public class NNTask extends FrameTask<NNTask> {
       }
     }
     // output
-    if( params.classification ) {
+    if( params.classification )
       neurons[neurons.length - 1] = new Neurons.Softmax(dinfo._adaptedFrame.lastVec().domain().length, params.loss);
-    }
     else
       neurons[neurons.length - 1] = new Neurons.Linear(1);
 
@@ -100,9 +102,8 @@ public class NNTask extends FrameTask<NNTask> {
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
   static void step(Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
-    for (int i=1; i<neurons.length-1; ++i) {
+    for (int i=1; i<neurons.length-1; ++i)
       neurons[i].fprop(training);
-    }
     if (minfo.parameters.classification) {
       ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
       if (training) {
@@ -114,16 +115,18 @@ public class NNTask extends FrameTask<NNTask> {
     else {
       ((Neurons.Linear)neurons[neurons.length-1]).fprop();
       if (training) {
+        for( int i = 1; i < neurons.length - 1; i++ )
+          Arrays.fill(neurons[i]._e, 0);
         final double target = responses[0];
         ((Neurons.Linear)neurons[neurons.length-1]).bprop(target);
       }
     }
     if (training) {
-      for (int i=neurons.length-2; i>0; --i) {
+      for (int i=neurons.length-2; i>0; --i)
         neurons[i].bprop();
-      }
       minfo.processed++;
-      if (minfo.processed % 10000 == 0) System.out.println("Processed: " + minfo.processed);
+      if (minfo.processed % 10000 == 0)
+        System.out.println("Processed: " + minfo.processed);
     }
   }
 
