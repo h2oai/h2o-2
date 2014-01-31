@@ -126,7 +126,7 @@ function() {
 
 .emitBinomResults<-
 function() {
-  r <- list(binom_result = 
+  r <- list(binomial_result = 
                 list(auc = auc,
                      precision = precision[[1]],
                      recall = recall[[1]],
@@ -157,8 +157,8 @@ function() {
 
 .emitMultinomResults<-
 function() {
-  r <- list(multinom_result = .confusionMatrix())
-  .coda("MULTINOM", r)
+  r <- list(multinomial_result = .confusionMatrix())
+  .coda("MULTINOMIAL", r)
 }
 
 .emitPredictResults<-

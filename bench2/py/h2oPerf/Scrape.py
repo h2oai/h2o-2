@@ -1,12 +1,6 @@
 from Table import *
 import json
 
-#This contains a way of capturing the stdout/stderr from R.
-#There are multiple R subprocesses to scrape:
-#R import/parse
-#R model
-#R predict/score (further specifics for different types of math results)
-
 class Scraper:
     """
     Objects of this class scrape the R stdouterr for
@@ -157,10 +151,15 @@ class ModelScraper(Scraper):
         Additionally handles the KMeans clustering results table.
         @return: None
         """
-        #check for KMeans
-        #scrape & insert kmeans results
-        #scrape & insert model results
-       
+        kmeans_result = self.__scrape_kmeans_result__()
+        if kmeans_result:
+            self.test_run_clustering_result = TableRow("test_run_clustering_result")
+            self.test_run_clustering_result.row.update(kmeans_result)
+            self.test_run_clustering_result.update()
+
+        self.test_run_model_result.row['model_json'] = str(self.__scrape_model_result__())
+        self.test_run_model_result.update()
+
     def __scrape_kmeans_result__(self):
         kmeans_r = ""
         with open(self.output_file_name, "r") as f:
@@ -172,8 +171,8 @@ class ModelScraper(Scraper):
                     break
                 if "KMEANS RESULT" in line and "print" not in line:
                     flag = True
-        return kmeans_r["kmeans_result"]
-  
+        return None if kmeans_r["kmeans_result"]["k"] == "None" else kmeans_r["kmeans_result"]
+
     def __scrape_model_result__(self):
         model_r = ""
         with open(self.output_file_name, "r") as f:
@@ -185,7 +184,7 @@ class ModelScraper(Scraper):
                     break
                 if "MODEL RESULT" in line and "print" not in line:
                     flag = True
-        return model_r["model_result"]
+        return model_r["model_result"]["model_json"]
 
 class PredictScraper(Scraper):
     """
@@ -214,11 +213,11 @@ class PredictScraper(Scraper):
         self.output_dir = object.output_dir
         self.output_file_name = object.output_file_name
 
-        self.test_run_binomial_classification_result = \
-            TableRow("test_run_binomial_classification_result")
-        self.test_run_cm_result = TableRow("test_run_cm_result")
-        self.test_run_phase_result = TableRow("test_run_phase_result")
-        self.test_run_regression_result = TableRow("test_run_regression_result")
+        self.test_run_binomial_classification_result = "" #\
+            #TableRow("test_run_binomial_classification_result")
+        self.test_run_cm_result = "" #TableRow("test_run_cm_result")
+        self.test_run_phase_result = "" #TableRow("test_run_phase_result")
+        self.test_run_regression_result = "" #TableRow("test_run_regression_result")
 
         self.test_run_multinomial_classification_result = "" #This is "" for now since we are using a dense format.
                                                              #That is 1 row for each class in the response.
@@ -233,9 +232,19 @@ class PredictScraper(Scraper):
     Some preliminary scraping will be done here to obtain the correct result type.
     @return: None
     """
+        predict_type = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    predict_type = line.strip()
+                    flag = False
+                    break
+                if "PREDICT TYPE" in line and "print" not in line:
+                    flag = True
+        self.result_type = predict_type
+        self.__switch__()
         
-    
-
     def __switch__(self):
     """
     Overrides the __switch__ method of the parent class.
@@ -246,11 +255,69 @@ class PredictScraper(Scraper):
 
     Multinomial classification is the only case where there will
     be multiple rows inserted, all other results constitute a single row
-    in their respective tables. 
+    in their respective tables.
+
+    One important note is that the scrapers in this case handle the
+    database insertions.
     """
         return {'regression' : self.__scrape_regression_result__(),
                 'cm'         : self.__scrape_cm_result__(),
                 'binomial'   : self.__scrape_binomial_result__(),
                 'multinomial': self.__scrape_multinomial_result__(),
                 }[self.result_type]
+
+    def __scrape_regression_result__(self):
+        regression_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    regression_r = json.loads(line)
+                    flag = False
+                    break
+                if "REGRESSION" in line and "print" not in line:
+                    flag = True
+        #do the insert
+
+    def __scrape_cm_result__(self):
+        cm_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    cm_r = json.loads(line)
+                    flag = False
+                    break
+                if "CM" in line and "print" not in line:
+                    flag = True
+        #do the insert
+
+    def __scrape_binomial_result__(self):
+        binomial_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    binomial_r = json.loads(line)
+                    flag = False
+                    break
+                if "BINOMIAL" in line and "print" not in line:
+                    flag = True
+        self.test_run_binomial_classification_result = TableRow("test_run_binomial_classification_result")
+        self.test_run_binomial_classification_result.row.update(binomial_r['binomial_result'])
+        self.test_run_binomial_classification_result.update()
+        return None
+
+    def __scrape_multinomial_result__(self):
+        multinomial_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    multinomial_r = json.loads(line)
+                    flag = False
+                    break
+                if "MULTINOMIAL" in line and "print" not in line:
+                    flag = True
+        #do the insert
 
