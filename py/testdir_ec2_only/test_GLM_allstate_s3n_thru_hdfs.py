@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60))
             elapsed = time.time() - start
-            print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
+            print "parse end on ", hex_key, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "parse result:", parseResult['destination_key']
 
