@@ -189,9 +189,6 @@ public class NN extends Job.ValidatedJob {
     Log.info("Number of validation set samples for scoring: " + score_validation);
 //    Log.info("Minimum interval (in seconds) between scoring: " + score_interval);
 //    Log.info("Enable diagnostics for hidden layers: " + diagnostics);
-    Log.info("Starting Neural Net model build...");
-    super.logStart();
-    Log.info("    description: " + description);
   }
 
   /** Return the query link to this page */
@@ -222,7 +219,7 @@ public class NN extends Job.ValidatedJob {
 
   @Override protected Status exec() {
     initModel();
-    trainModel();
+    trainModel(true);
     if( _gen_enum ) UKV.remove(response._key);
     remove();
     return Status.Done;
@@ -239,7 +236,7 @@ public class NN extends Job.ValidatedJob {
     model.delete_and_lock(self());
   }
 
-  public void trainModel(){
+  public void trainModel(boolean scorewhiletraining){
     NNModel model = UKV.get(dest());
     NNModel.NNModelInfo modelinfo = model.model_info;
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
@@ -247,12 +244,13 @@ public class NN extends Job.ValidatedJob {
       boolean training = true;
       // train for one epoch, starting with weights/biases from modelinfo
       NNTask nntask = new NNTask(this, _dinfo, this, modelinfo, training).doAll(_dinfo._adaptedFrame);
-      modelinfo = nntask._output;
+      modelinfo = nntask._minfo;
       if (diagnostics) modelinfo.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
       final String label =  (validation == null ? "Training" : "Validation")
               + " error after training for " + epoch
               + " epochs (" + model.model_info.processed + " samples):";
-      doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
+      if (scorewhiletraining)
+        doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
       model.epoch_counter = epoch;
       model.update(self());
     }

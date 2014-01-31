@@ -95,9 +95,9 @@ public abstract class Neurons extends Iced {
   public transient Neurons _previous;
 
   // Shared model info (once per node)
-  protected transient NNModel.NNModelInfo _minfo;
-  public transient float[] _w;
-  public transient double[] _b;
+  protected transient NNModel.NNModelInfo _minfo; //reference to shared model info
+  public transient float[] _w; //reference to _minfo._w[layer] for convenience
+  public transient double[] _b; //reference to _minfo._b[layer] for convenience
 
   // Dropout (for input + hidden layers)
   transient Dropout dropout;
@@ -156,7 +156,7 @@ public abstract class Neurons extends Iced {
     transferParams(p);
     rate *= Math.pow(rate_decay, index-1);
     _a = new double[units];
-    if (!(this instanceof Output)) {
+    if (!(this instanceof Output) && !(this instanceof Input)) {
       _e = new double[units];
     }
     if (!isInput()) {
