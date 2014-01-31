@@ -7,8 +7,10 @@
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
 end_time <<- round(System$currentTimeMillis())[[1]]
-correct_pass <<- TRUE
-time_pass <<- TRUE
+correct_pass <<- 1
+time_pass <<- 1
+passed <<- ifelse(correct_pass && time_pass, 1, 0)
+
 
 #"Private" Methods
 .dataSources<-
@@ -76,7 +78,7 @@ function() {
                      end_epoch_ms = end_time,
                      timing_passed = time_pass,
                      correctness_passed = correct_pass,
-                     passed = time_pass && correct_pass))
+                     passed = passed))
   .coda("PHASE", r)
 }
 

@@ -1,5 +1,7 @@
 from Scrape import *
 from Table import *
+import re, os, subprocess, time
+
 class Process:
     """
     @param test_dir: Full absolute path to the test directory.
@@ -16,7 +18,7 @@ class Process:
 
         self.canceled = False
         self.terminated = False
-        self.returncode = self.__did_complete__()
+        self.returncode = None #self.__did_complete__()
         self.ip = None
         self.pid = -1
         self.port = None
@@ -27,7 +29,7 @@ class Process:
         """
         Poll to see if process completed.
         """
-        return __did_complete__()
+        return self.__did_complete__()
 
     def cancel(self):
         """
@@ -42,7 +44,7 @@ class Process:
         """
         self.terminated = True
         if (self.pid > 0):
-            print("Killing R process with PID {}".format(self.pid)
+            print("Killing R process with PID {}".format(self.pid))
             try:
                 self.child.terminate()
             except OSError:
@@ -133,19 +135,12 @@ class RProc(Process):
 
         self.canceled = False
         self.terminated = False
-        self.returncode = self.__did_complete__()
+        self.returncode = None #self.__did_complete__()
         self.ip = None
         self.pid = -1
         self.port = None
         self.port = None
         self.child = None
-
-        #start the r subproc
-        #get stdout, stderr
-        #needs is_finished()
-        #if is_finished() then update the appropriate tablees
-        #How to specify the appropriate table:
-          #Take rtype and information from the R stdout to get table specifics
 
     def start(self, ip, port):
         """ 

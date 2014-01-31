@@ -1,5 +1,6 @@
 from Table import *
-import json
+import json, os, re, subprocess, time
+import MySQLdb
 
 class Scraper:
     """
@@ -22,25 +23,25 @@ class Scraper:
         self.output_dir = output_dir
         self.output_file_name = output_file_name
         self.contamination = os.path.join(self.output_dir, "contamination_message")
-        self.contaminated = os.exists(self.contamination)
+        self.contaminated = 1 if os.path.exists(self.contamination) else 0
         self.contamination_message = ""
         if self.contaminated:
             with open(self.contamination, "r") as f:
                 self.contamination_message = f.readlines()
 
     def scrape(self):
-    """
-    Switches out to the phase scraper for scraping R output.
-    The subclass object is then invoked and an object with
-    table information is percolated back to the caller.
-    """
+        """
+        Switches out to the phase scraper for scraping R output.
+        The subclass object is then invoked and an object with
+        table information is percolated back to the caller.
+        """
         phase_scraper = self.__switch__()
         return phase_scraper.invoke()
 
     def __switch__(self):
-    """
-    Switch to scraper for the appropriate phase.
-    """
+        """
+        Switch to scraper for the appropriate phase.
+        """
         return {
             'parse': ParseScraper(self), 
             'model': ModelScraper(self), 
@@ -61,8 +62,11 @@ class Scraper:
         return phase_r['phase_result']
 
     def insert_phase_result(self):
+        print self.test_run_phase_result
+        print self.test_run_phase_result.row
+        print dir(self.test_run_phase_result)
         with open(self.output_file_name, "r") as f:
-            self.test_run_phase_result.row['stdouterr'] = f.readlines()
+            self.test_run_phase_result.row['stdouterr'] = MySQLdb.escape_string(f.read().replace('\n', ''))
         self.test_run_phase_result.row['contaminated'] = self.contaminated
         self.test_run_phase_result.row['contamination_message'] = self.contamination_message
         self.test_run_phase_result.row.update(self.__scrape_phase_result__())
@@ -139,7 +143,7 @@ class ModelScraper(Scraper):
         self.output_file_name = object.output_file_name
         self.test_run_clustering_result = ""
         self.contaminated = object.contaminated
-        self.contamination_message = \ 
+        self.contamination_message = \
             "No contamination." if not self.contaminated else object.contamination_message
         self.test_run_model_result = TableRow("test_run_model_result")
         self.test_run_phase_result = TableRow("test_run_phase_result")
@@ -224,7 +228,7 @@ class PredictScraper(Scraper):
         self.insert_phase_result()
 
     def invoke(self):
-    """
+        """
     Scrapes the stdouterr from the R phase. 
     This invoke method will pass off control to the appropriate result scraper
     using the __switch__ override.
@@ -246,20 +250,20 @@ class PredictScraper(Scraper):
         self.__switch__()
         
     def __switch__(self):
-    """
-    Overrides the __switch__ method of the parent class.
+        """
+        Overrides the __switch__ method of the parent class.
 
-    This switch method handles the different types of math
-    results: regression, multionomial classification, CM result,
-             binomial classification
+        This switch method handles the different types of math
+        results: regression, multionomial classification, CM result,
+                 binomial classification
 
-    Multinomial classification is the only case where there will
-    be multiple rows inserted, all other results constitute a single row
-    in their respective tables.
+        Multinomial classification is the only case where there will
+        be multiple rows inserted, all other results constitute a single row
+        in their respective tables.
 
-    One important note is that the scrapers in this case handle the
-    database insertions.
-    """
+        One important note is that the scrapers in this case handle the
+        database insertions.
+        """
         return {'regression' : self.__scrape_regression_result__(),
                 'cm'         : self.__scrape_cm_result__(),
                 'binomial'   : self.__scrape_binomial_result__(),

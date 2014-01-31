@@ -107,6 +107,8 @@ class H2OCloudNode:
         self.cloud_name = cloud_name
         self.h2o_jar = h2o_jar
         self.ip = ip
+        print "H2O CLOUD NODE"
+        print ip
         self.base_port = base_port
         self.xmx = xmx
         self.output_dir = output_dir
@@ -263,7 +265,7 @@ class H2OCloud:
         user = getpass.getuser()
         user = ''.join(user.split())
 
-        self.cloud_name = "H2O_runit_{}_{}".format(user, n)
+        self.cloud_name = "H2O_perfTest_{}_{}".format(user, n)
         self.nodes = [] 
         self.jobs_run = 0
 
