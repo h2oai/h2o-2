@@ -76,11 +76,12 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     @Override public Lockable atomic(Lockable old) {
       _old = old;
       if( old != null ) {       // Prior Lockable exists?
-        assert !old.is_wlocked() : "Key "+_key+" already locked; lks="+Arrays.toString(old._lockers); // No double locking by same job
+        assert !old.is_wlocked(_job_key) : "Key "+_key+" already locked; lks="+Arrays.toString(old._lockers); // No double locking by same job
         if( old.is_locked(_job_key) ) // read-locked by self? (double-write-lock checked above)
           old.set_unlocked(old._lockers,_job_key); // Remove read-lock; will atomically upgrade to write-lock
         if( !old.is_unlocked() ) // Blocking for some other Job to finish???
           throw new IllegalArgumentException(old.errStr()+" "+_key+" is already in use.  Unable to use it now.  Consider using a different destination name.");
+        assert old.is_unlocked() : "Not unlocked when locking "+Arrays.toString(old._lockers)+" for "+_job_key;
       }
       // Update & set the new value
       set_write_lock(_job_key);
@@ -90,40 +91,38 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
 
   // -----------
   // Atomic lock & remove self.  Nothing remains when done.
-  public void delete( ) { 
+
+  // Write-lock & delete 'k'.  Will fail if 'k' is locked by anybody.
+  public static void delete( Key k ) { delete(k,null); }
+  // Write-lock & delete 'k'.  Will fail if 'k' is locked by anybody other than 'job_key'
+  public static void delete( Key k, Key job_key ) {
+    if( k == null ) return;
+    Value val = DKV.get(k);
+    if( val == null ) return;              // Or just nothing there to delete
+    if( !val.isLockable() ) UKV.remove(k); // Simple things being deleted
+    else ((Lockable)val.get()).delete(job_key,0.0f); // Lockable being deleted
+  }
+  // Will fail if locked by anybody.
+  public void delete( ) { delete(null,0.0f); }
+  // Will fail if locked by anybody other than 'job_key'
+  public void delete( Key job_key, float dummy ) { 
     if( _key != null ) {
-      Log.debug(Log.Tag.Sys.LOCKS,"lock-then-delete "+_key);
-      new WriteDeleteLock().invoke(_key);
+      Log.debug(Log.Tag.Sys.LOCKS,"lock-then-delete "+_key+" by job "+job_key);
+      new PriorWriteLock(job_key).invoke(_key);
     }
     Futures fs = new Futures();
     delete_impl(fs);
     if( _key != null ) DKV.remove(_key,fs); // Delete self also
     fs.blockForPending();
   }
-  public static void delete( Key k ) {
-    if( k == null ) return;
-    Value val = DKV.get(k);
-    if( val == null ) return;              // Or just nothing there to delete
-    if( !val.isLockable() ) UKV.remove(k); // Simple things being deleted
-    else ((Lockable)val.get()).delete();   // Lockable being deleted
-  }
-
-  // Obtain the write-lock on _key, then delete.
-  private class WriteDeleteLock extends TAtomic<Lockable> {
-    Lockable _old;              // Return the old thing, for deleting later
-    @Override public Lockable atomic(Lockable old) {
-      if( old == null ) return null; // No prior key to delete?
-      _old = old;
-      if(  !old.is_unlocked() ) // Blocking for some other Job to finish???
-        throw new IllegalArgumentException(old.errStr()+" "+_key+" is in use.  Unable to delete now.");
-      // Update-in-place the defensive copy
-      old.set_write_lock(null);
-      return old;
-    }
-  }
 
   // -----------
   // Atomically get a read-lock, preventing future deletes or updates
+  public static void read_lock( Key k, Key job_key ) {
+    Value val = DKV.get(k);
+    if( val.isLockable() )
+      ((Lockable)val.get()).read_lock(job_key); // Lockable being locked
+  }
   public void read_lock( Key job_key ) { 
     if( _key != null ) {
       Log.debug(Log.Tag.Sys.LOCKS,"shared-read-lock "+_key+" by job "+job_key);
@@ -132,7 +131,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   }
 
   // Obtain read-lock
-  private class ReadLock extends TAtomic<Lockable> {
+  static private class ReadLock extends TAtomic<Lockable> {
     final Key _job_key;         // Job doing the unlocking
     ReadLock( Key job_key ) { _job_key = job_key; }
     @Override public Lockable atomic(Lockable old) {
@@ -176,6 +175,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     final Key _job_key;         // Job doing the unlocking
     Unlock( Key job_key ) { _job_key = job_key; }
     @Override public Lockable atomic(Lockable old) {
+      assert old.is_locked(_job_key);
       set_unlocked(old._lockers,_job_key);
       return Lockable.this;
     }
@@ -185,13 +185,16 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   // Accessers for locking state.  Minimal self-checking; primitive results.
   private boolean is_locked(Key job_key) { 
     if( _lockers==null ) return false;
-    for( Key k : _lockers ) if( job_key==k || (job_key != null && k != null && job_key.equals(k)) ) return true;
+    for( int i=(_lockers.length==1?0:1); i<_lockers.length; i++ ) {
+      Key k = _lockers[i];
+      if( job_key==k || (job_key != null && k != null && job_key.equals(k)) ) return true;
+    }
     return false;
   }
   private boolean is_wlocked() { return _lockers!=null && _lockers.length==1; }
+  private boolean is_wlocked(Key job_key) { return is_wlocked() && _lockers[0].equals(job_key); }
   private boolean is_unlocked() { return _lockers== null; }
   private void set_write_lock( Key job_key ) { 
-    assert is_unlocked();
     _lockers=new Key[]{job_key}; 
     assert is_locked(job_key);
   }
@@ -208,7 +211,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
       _lockers = null;           // Then unlocked
     } else if( lks.length==2 ) { // One reader
       assert lks[0]==null;       // Not write-locked
-      assert lks[1]==job_key || job_key.equals(lks[1]);
+      assert lks[1]==job_key || (job_key != null && job_key.equals(lks[1]));
       _lockers = null;          // So unlocked
     } else {                    // Else one of many readers
       assert lks.length>2;
