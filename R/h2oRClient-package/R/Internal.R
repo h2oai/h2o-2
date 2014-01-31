@@ -261,7 +261,7 @@ h2o.__waitOnJob <- function(client, job_key, pollInterval = 1, progressBar = TRU
   if(progressBar) {
     pb = txtProgressBar(style = 3)
     tryCatch(while((prog = h2o.__poll(client, job_key)) != -1) { Sys.sleep(pollInterval); setTxtProgressBar(pb, prog) },
-             error = function(e) {cat("Polling fails: ",e)},
+             error = function(e) { cat("Polling fails: ", e) },
              finally = h2o.__cancelJob(client, job_key))
     setTxtProgressBar(pb, 1.0); close(pb)
   } else
