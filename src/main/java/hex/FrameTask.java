@@ -1,13 +1,18 @@
 package hex;
 
-import hex.glm.GLMParams.CaseMode;
-
-import java.util.Arrays;
-
-import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.Iced;
+import water.Job;
 import water.Job.JobCancelledException;
-import water.fvec.*;
+import water.MRTask2;
+import water.MemoryManager;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
@@ -87,6 +92,48 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         System.arraycopy(normMul, 0, _normMul, 0, normMul.length);
       }
     }
+
+    /**
+     * Prepare a Frame (with a single response) to be processed by the FrameTask
+     * 1) Place response at the end
+     * 2) Remove rows with constant values and rows with >20% NaNs
+     * 3) Possibly turn integer categoricals into enums
+     *
+     * @param source A frame to be expanded and sanity checked
+     * @param response (should be part of source)
+     * @param toEnum Wheter or not to turn categoricals into enums
+     * @return Frame to be used by FrameTask
+     */
+    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum) {
+      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      if (ignored_cols != null) fr.remove(ignored_cols);
+      final Vec[] vecs =  fr.vecs();
+      ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+      for(int i = 0; i < vecs.length-1; ++i) {// put response to the end (if not already)
+        if(vecs[i] == response){
+          if (toEnum) {
+            fr.add(fr._names[i], fr.remove(i).toEnum()); //convert int classes to enums
+          }
+          else {
+            fr.add(fr._names[i], fr.remove(i));
+          }
+          break;
+        }
+      }
+      // special case for when response was at the end already
+      if (toEnum && !response.isEnum() && vecs[vecs.length-1] == response) {
+        vecs[vecs.length-1] = vecs[vecs.length-1].toEnum();
+      }
+      for(int i = 0; i < vecs.length-1; ++i) // remove constant cols and cols with too many NAs
+        if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
+      if(!constantOrNAs.isEmpty()){
+        int [] cols = new int[constantOrNAs.size()];
+        for(int i = 0; i < cols.length; ++i)cols[i] = constantOrNAs.get(i);
+        fr.remove(cols);
+      }
+      return fr;
+    }
+
     public DataInfo(Frame fr, int nResponses, boolean standardize){
       _nfolds = _foldId = 0;
       _standardize = standardize;
