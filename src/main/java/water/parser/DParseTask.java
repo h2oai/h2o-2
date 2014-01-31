@@ -525,7 +525,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
    * splitting it into equal sized chunks.
    */
   @Override public void map(Key key) {
-    if(_job.cancelled())
+    if(!Job.isRunning(_job.self()))
       throw new JobCancelledException();
     _map = true;
     Key aryKey = null;
@@ -583,7 +583,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
 
   @Override
   public void reduce(DParseTask dpt) {
-    if(_job.cancelled())
+    if(!Job.isRunning(_job.self()))
       return;
     assert dpt._map;
     if(_sigma == null)_sigma = dpt._sigma;

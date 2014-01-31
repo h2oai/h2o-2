@@ -370,7 +370,7 @@ public class NeuralNet extends ValidatedJob {
 
             if (num >= num_samples_total) break;
             if (mode != MapReduce) {
-              if (cancelled() || !running) break;
+              if (!isRunning(self()) || !running) break;
             } else {
               if (!running) break; //MapReduce calls cancel() early, we are waiting for running = false
             }

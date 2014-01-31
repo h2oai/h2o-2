@@ -106,7 +106,7 @@ public class KMeans2 extends ColumnsJob {
         sampler.doAll(vecs);
         clusters = Utils.append(clusters, sampler._sampled);
 
-        if( cancelled() )
+        if( !isRunning(self()) )
           return Status.Done;
         model.centers = normalize ? denormalize(clusters, vecs) : clusters;
         model.total_within_SS = sqr._sqr;
@@ -149,7 +149,7 @@ public class KMeans2 extends ColumnsJob {
         fr2.delete_and_lock(self()).unlock(self());
         break;
       }
-      if( cancelled() )
+      if( !isRunning(self()) )
         break;
     }
     model.unlock(self());

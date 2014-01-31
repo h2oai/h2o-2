@@ -234,7 +234,7 @@ public class GLM2 extends ModelJob {
 
     @Override public Iteration clone(){return new Iteration(_model,_solver,_dinfo,_fjt);}
     @Override public void callback(final GLMIterationTask glmt) {
-      if(!cancelled()){
+      if(isRunning(self())){
         double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
         double [] newBetaDeNorm = null;
         _solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
@@ -255,19 +255,21 @@ public class GLM2 extends ModelJob {
         }
         boolean done = false;
 //        _model = _oldModel.clone();
-        done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
+        done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || !isRunning(self());
         _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
         if(done){
           H2OCallback fin = new H2OCallback<GLMValidationTask>() {
             @Override public void callback(GLMValidationTask tsk) {
               boolean improved = _model.setAndTestValidation(_lambdaIdx,tsk._res);
-              _model.unlock(self());
               if(!diverged && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
+                _model.update(self());
                 _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
                 glmt._val = null;
                 Iteration.this.callback(glmt);
-              } else    // nope, we're done
+              } else {   // nope, we're done
+                _model.unlock(self());
                 _fjt.tryComplete(); // signal we're done to anyone waiting for the job
+              }
             }
             @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
               _fjt.completeExceptionally(ex);
