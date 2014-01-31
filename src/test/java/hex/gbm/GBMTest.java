@@ -262,7 +262,7 @@ public class GBMTest extends TestUtil {
       if( model != null ) model.delete();
 
     } finally {
-      if( gbm.source != null ) gbm.source.delete(); // Remove original hex frame key
+      if( gbm.source != null ) gbm.source.delete(gbm.self(),0.0f); // Remove original hex frame key
       gbm.remove();             // Remove GBM Job
     }
   }
