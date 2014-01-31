@@ -36,6 +36,8 @@ import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
@@ -239,6 +241,32 @@ public class RequestServer extends NanoHTTPD {
       }, "Request Server launcher").start();
   }
 
+  public static String maybeTransformRequest (String uri) {
+    if (uri.isEmpty() || uri.equals("/")) {
+      return "/Tutorials.html";
+    }
+
+    Pattern p = Pattern.compile("/R/bin/([^/]+)/contrib/([^/]+)(.*)");
+    Matcher m = p.matcher(uri);
+    boolean b = m.matches();
+    if (b) {
+      // On Jenkins, this command sticks his own R version's number
+      // into the package that gets built.
+      //
+      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
+      //
+      String versionOfRThatJenkinsUsed = "3.0";
+
+      String platform = m.group(1);
+      String version = m.group(2);
+      String therest = m.group(3);
+      String s = "/R/bin/" + platform + "/contrib/" + versionOfRThatJenkinsUsed + therest;
+      return s;
+    }
+
+    return uri;
+  }
+
   // uri serve -----------------------------------------------------------------
   void maybeLogRequest (String uri, String method, Properties parms) {
     boolean filterOutRepetitiveStuff = true;
@@ -267,7 +295,7 @@ public class RequestServer extends NanoHTTPD {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
     // update arguments and determine control variables
-    if( uri.isEmpty() || uri.equals("/") ) uri = "/Tutorials.html";
+    uri = maybeTransformRequest(uri);
     // determine the request type
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
