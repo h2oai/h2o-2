@@ -71,7 +71,7 @@ public class ConfusionMatrix extends Request2 {
     }
   }
 
-  // Compute the co-occurence matrix
+  // Compute the co-occurrence matrix
   private static class CM extends MRTask2<CM> {
     /* @IN */ final int _ca_len;
     /* @IN */ final int _cp_len;
@@ -172,12 +172,17 @@ public class ConfusionMatrix extends Request2 {
       for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
       acts[a] = sum;
     }
-    Vec vaE = null, vpE = null;
+    Vec vaE = null, vpE = null, avp = null;
     String adomain[] = null;
     String pdomain[] = null;
     try {
       vaE = vactual.toEnum();
       vpE = vpredict.toEnum();
+      // The vectors are from different groups => align them, but properly delete it after computation
+      if (!vaE.group().equals(vpE.group())) {
+        avp = vpE;
+        vpE = vaE.align(vpE);
+      }
       adomain = ConfusionMatrix.show(acts ,vaE.domain());
       pdomain = ConfusionMatrix.show(preds,vpE.domain());
     } catch (Throwable t) {
@@ -186,6 +191,7 @@ public class ConfusionMatrix extends Request2 {
     } finally {
       if (vaE!=null)  UKV.remove(vaE._key);
       if (vpE!=null)  UKV.remove(vpE._key);
+      if (avp!=null)  UKV.remove(avp._key);
     }
 
     // determine max length of each space-padded field
