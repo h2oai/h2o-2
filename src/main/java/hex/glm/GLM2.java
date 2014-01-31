@@ -11,11 +11,6 @@ import hex.glm.GLMTask.GLMIterationTask;
 import hex.glm.GLMTask.LMAXTask;
 import hex.glm.GLMTask.YMUTask;
 import hex.glm.LSMSolver.ADMMSolver;
-
-import java.text.DecimalFormat;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCallback;
@@ -24,8 +19,14 @@ import water.H2O.JobCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
 import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.*;
+import water.util.Log;
+import water.util.RString;
+import water.util.Utils;
+
+import java.text.DecimalFormat;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GLM2 extends ModelJob {
 //  private transient GLM2 [] _subjobs;
@@ -169,22 +170,7 @@ public class GLM2 extends ModelJob {
     init();
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
-    Frame fr = new Frame(source._names.clone(),source.vecs().clone());
-    fr.remove(ignored_cols);
-    final Vec [] vecs =  fr.vecs();
-    ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
-    for(int i = 0; i < vecs.length-1; ++i)// put response to the end
-      if(vecs[i] == response){
-        fr.add(fr._names[i], fr.remove(i));
-        break;
-      }
-    for(int i = 0; i < vecs.length-1; ++i) // remove constant cols and cols with too many NAs
-      if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
-    if(!constantOrNAs.isEmpty()){
-      int [] cols = new int[constantOrNAs.size()];
-      for(int i = 0; i < cols.length; ++i)cols[i] = constantOrNAs.get(i);
-      fr.remove(cols);
-    }
+    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false);
     _dinfo = new DataInfo(fr, 1, standardize);
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
