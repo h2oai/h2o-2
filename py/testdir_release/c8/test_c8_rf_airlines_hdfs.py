@@ -67,7 +67,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         return scoreParseResult 
 
     def test_c8_rf_airlines_hdfs(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         trainParseResult = self.loadTrainData()
         kwargs   = paramsTrainRF.copy()
         trainResult = h2o_rf.trainRF(trainParseResult, **kwargs)
