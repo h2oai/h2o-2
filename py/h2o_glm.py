@@ -83,16 +83,22 @@ def simpleCheckGLMScore(self, glmScore, family='gaussian', allowFailWarning=Fals
         print "%15s %s" % ("auc:\t", validation['auc'])
         print "%15s %s" % ("threshold:\t", validation['threshold'])
 
+    err = False
     if family=="poisson" or family=="gaussian":
-        print "%15s %s" % ("aic:\t", validation['aic'])
+        if 'aic' not in validation:
+            print "aic is missing from the glm json response"
+            err = True
 
     if math.isnan(validation['err']):
-        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validation['err'])
-        raise Exception(emsg)
+        print "Why is this err = 'nan'?? %6s %s" % ("err:\t", validation['err'])
+        err = True
 
     if math.isnan(validation['resDev']):
-        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
-        raise Exception(emsg)
+        print "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
+        err = True
+
+    if err:
+        raise Exception ("How am I supposed to tell that any of these errors should be ignored?")
 
     # legal?
     if math.isnan(validation['nullDev']):

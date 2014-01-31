@@ -40,9 +40,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
                 (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
-                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster
@@ -75,18 +72,20 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = range(542) # don't include the output column
                     # remove the output too! (378)
                     ignore_x = []
-                    for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
+                    # for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
+                    for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541,378]:
                         x.remove(i)
                         ignore_x.append(i)
 
-                    x = ",".join(map(lambda x: "C" + str(x), x))
-                    ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
+                    # increment by one, because we are no long zero offset!
+                    x = ",".join(map(lambda x: "C" + str(x+1), x))
+                    ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 
                     GLMkwargs = {
-                        'ignored_cols': ignore_x, 
                         'family': 'binomial',
-                        'response': 'C378', 
-                        'case_val': 15, 
+                        'x': x,
+                        'y': 'C379', 
+                        'case': 15, 
                         'case_mode': '>',
                         'max_iter': 4, 
                         'n_folds': 1, 
@@ -113,12 +112,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
 
     def test_A_c2_rel_short(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c2_rel_long(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         self.sub_c2_rel_long()
 
 
