@@ -1253,7 +1253,7 @@ public abstract class DGLM {
           tsk.reduce(child);
         }
       }
-      if( job.cancelled() ) throw new JobCancelledException();
+      if( !Job.isRunning(job.self()) ) throw new JobCancelledException();
       GLMValidation res = new GLMValidation(_key, tsk._models, ErrMetric.SUMC, thresholds, System.currentTimeMillis() - t1);
       if( _vals == null ) _vals = new GLMValidation[] { res };
       else {
@@ -1781,7 +1781,7 @@ public abstract class DGLM {
       }
       NewRowVecTask<GLMValidation> tsk = new NewRowVecTask<GLMValidation>(job, this, data);
       tsk.invoke(data._ary._key);
-      if( job != null && job.cancelled() ) throw new JobCancelledException();
+      if( job != null && !Job.isRunning(job.self()) ) throw new JobCancelledException();
       GLMValidation res = tsk._result;
       res._time = System.currentTimeMillis() - t1;
       if( _glmp._family._family != Family.binomial ) res._err = Math.sqrt(res._err / res._n);
@@ -1915,7 +1915,7 @@ public abstract class DGLM {
       @Override public void compute2() {
         try {
           buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
-          assert !job.cancelled();
+          assert Job.isRunning(job.self());
           job.remove();
         } catch( JobCancelledException e ) {
           Lockable.delete(job.dest());
@@ -1986,7 +1986,7 @@ public abstract class DGLM {
     currentModel.delete_and_lock(job.self()); // Lock the new model
     if( params._family._family != Family.gaussian ) do { // IRLSM
       if( oldBeta == null ) oldBeta = MemoryManager.malloc8d(data.expandedSz());
-      if( job.cancelled() ) throw new JobCancelledException();
+      if( !Job.isRunning(job.self()) ) throw new JobCancelledException();
       double[] b = oldBeta;
       oldBeta = (gramF._beta = newBeta);
       newBeta = b;

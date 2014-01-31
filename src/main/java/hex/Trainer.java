@@ -106,7 +106,7 @@ public abstract class Trainer {
       for( ; _limit == 0 || _processed < _limit; _processed++ ) {
         step();
         input.move();
-        if( _job != null && (Job.cancelled(_job) || !NeuralNet.running ) )
+        if( _job != null && (!Job.isRunning(_job) || !NeuralNet.running ) )
           break;
       }
     }
@@ -169,7 +169,7 @@ public abstract class Trainer {
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
             for( long i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
-              if( job != null && (Job.cancelled(job) || !NeuralNet.running ) )
+              if( job != null && (!Job.isRunning(job) || !NeuralNet.running ) )
                 break;
               try {
                 trainer.step();
@@ -326,7 +326,7 @@ public abstract class Trainer {
       final boolean home = _key.home();
       Thread thread = new Thread() {
         @Override public void run() {
-          while( _job == null || !Job.cancelled(_job) ) {
+          while( _job == null || Job.isRunning(_job) ) {
             if( !home )
               _node.sync();
             else {
@@ -377,7 +377,7 @@ public abstract class Trainer {
     int _count;
 
     @Override public void compute2() {
-      if( (_count < 0 || --_count >= 0) && (_node._job == null || !Job.cancelled(_node._job)) ) {
+      if( (_count < 0 || --_count >= 0) && (_node._job == null || Job.isRunning(_node._job)) ) {
         for( Chunk[] cs : _node._chunks ) {
           DescentChunk task = new DescentChunk();
           task._node = _node;
@@ -397,7 +397,7 @@ public abstract class Trainer {
     Chunk[] _cs;
 
     @Override public void compute2() {
-      if( _node._job == null || (!Job.cancelled(_node._job) && NeuralNet.running)) {
+      if( _node._job == null || (Job.isRunning(_node._job) && NeuralNet.running)) {
         Layer[] clones = new Layer[_node._ls.length];
         ChunksInput input = new ChunksInput(Utils.remove(_cs, _cs.length - 1), (VecsInput) _node._ls[0]);
         clones[0] = input;

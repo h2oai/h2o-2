@@ -129,7 +129,7 @@ public class NeuralNetMnist extends Job {
     final AtomicInteger evals = new AtomicInteger(1);
     timer.schedule(new TimerTask() {
       @Override public void run() {
-        if( NeuralNetMnist.this.cancelled() )
+        if( !Job.isRunning(self()) )
           timer.cancel();
         else {
           double time = (System.nanoTime() - start) / 1e9;

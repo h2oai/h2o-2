@@ -233,7 +233,7 @@ public class KMeansModel extends OldModel implements Progress {
      */
     @Override public void map(Key key) {
       assert key.home();
-      if( !_job.cancelled() ) {
+      if( Job.isRunning(_job.self()) ) {
         ValueArray va = DKV.get(_arykey).get();
         AutoBuffer bits = va.getChunk(key);
         long startRow = va.startRow(ValueArray.getChunkIndex(key));
