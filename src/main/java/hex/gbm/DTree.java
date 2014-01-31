@@ -938,8 +938,12 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
-      JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 10, "Sample test data.");
-
+      if( _dataKey != null ) {
+        Value dataval = DKV.get(_dataKey);
+        water.fvec.Frame frdata = ValueArray.asFrame(dataval);
+        water.fvec.Frame frsub = frdata.subframe(_names);
+        JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+      }
       return sb;
     }
     // Convert Tree model to Java
