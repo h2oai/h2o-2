@@ -14,10 +14,15 @@ import java.util.Collections;
 import java.util.Comparator;
 
 public class GridSearch extends Job {
+  Lockable _src;
   public Job[] jobs;
 
+  public GridSearch(Lockable src){
+    _src = src;
+  }
   @Override protected Status exec() {
     UKV.put(destination_key, this);
+    if(_src != null)_src.read_lock(self());
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
     while( head < jobs.length && isRunning(self()) ) {
@@ -32,6 +37,9 @@ public class GridSearch extends Job {
       }
     }
     return Status.Done;
+  }
+  public void remove() {
+    if(_src != null)_src.unlock(self());
   }
 
   @Override protected void onCancelled() {

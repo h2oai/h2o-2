@@ -250,13 +250,15 @@ function() {
   Log.info("Checking Package dependencies for this test.\n")
   if (!"RUnit"    %in% rownames(installed.packages())) install.packages("RUnit")
   if (!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
-  
+  if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils") 
+
   if (Sys.info()['sysname'] == "Windows")
     options(RCurlOptions = list(cainfo = system.file("CurlSSL", "cacert.pem", package = "RCurl")))
 
-  Log.info("Loading RUnit and testthat\n")
+  Log.info("Loading RUnit and testthat and R.utils\n")
   require(RUnit)
   require(testthat)
+  require(R.utils)
 }
 
 #

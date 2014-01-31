@@ -12,6 +12,8 @@ print "The path resolver in python tests will find it in the home dir of the use
 print "to run h2o..i.e from the config json which builds the cloud and passes that info to the test"
 print "via the cloned cloud mechanism (h2o-nodes.json)"
 
+
+DO_GLM = False
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c7_rel(self):
@@ -62,13 +64,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             }
 
         timeoutSecs = 3600
-        start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
-        elapsed = time.time() - start
-        print "glm completed in", elapsed, "seconds.", \
-            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-        h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+        if DO_GLM:
+            start = time.time()
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+            elapsed = time.time() - start
+            print "glm completed in", elapsed, "seconds.", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
         # do summary of the parsed dataset last, since we know it fails on this dataset
         summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])

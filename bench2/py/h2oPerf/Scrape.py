@@ -61,16 +61,16 @@ class Scraper:
                     flag = True
         return phase_r['phase_result']
 
-    def insert_phase_result(self):
-        print self.test_run_phase_result
-        print self.test_run_phase_result.row
-        print dir(self.test_run_phase_result)
-        with open(self.output_file_name, "r") as f:
-            self.test_run_phase_result.row['stdouterr'] = MySQLdb.escape_string(f.read().replace('\n', ''))
-        self.test_run_phase_result.row['contaminated'] = self.contaminated
-        self.test_run_phase_result.row['contamination_message'] = self.contamination_message
-        self.test_run_phase_result.row.update(self.__scrape_phase_result__())
-        self.test_run_phase_result.update()
+    @staticmethod
+    def insert_phase_result(object):
+        object.test_run_phase_result = TableRow("test_run_phase_result")
+        time.sleep(1)
+        with open(object.output_file_name, "r") as f:
+            object.test_run_phase_result.row['stdouterr'] = MySQLdb.escape_string(f.read().replace('\n', ''))
+        object.test_run_phase_result.row['contaminated'] = object.contaminated
+        object.test_run_phase_result.row['contamination_message'] = object.contamination_message
+        object.test_run_phase_result.row.update(object.__scrape_phase_result__())
+        object.test_run_phase_result.update()
 
 class ParseScraper(Scraper):
     """
@@ -96,8 +96,7 @@ class ParseScraper(Scraper):
                          'train_dataset_url': '',
                          'test_dataset_url': ''}
 
-        self.test_run_phase_result = TableRow("test_run_phase_result")
-        self.insert_phase_result()
+        Scraper.insert_phase_result(self)
 
     def invoke(self):
         """
@@ -147,7 +146,7 @@ class ModelScraper(Scraper):
             "No contamination." if not self.contaminated else object.contamination_message
         self.test_run_model_result = TableRow("test_run_model_result")
         self.test_run_phase_result = TableRow("test_run_phase_result")
-        self.insert_phase_result()
+        Scraper.insert_phase_result(self)
 
     def invoke(self):
         """
@@ -161,7 +160,8 @@ class ModelScraper(Scraper):
             self.test_run_clustering_result.row.update(kmeans_result)
             self.test_run_clustering_result.update()
 
-        self.test_run_model_result.row['model_json'] = str(self.__scrape_model_result__())
+        self.test_run_model_result.row['model_json'] = \
+                          MySQLdb.escape_string(str(self.__scrape_model_result__()))
         self.test_run_model_result.update()
 
     def __scrape_kmeans_result__(self):
@@ -216,6 +216,9 @@ class PredictScraper(Scraper):
         self.test_short_dir = object.test_short_dir
         self.output_dir = object.output_dir
         self.output_file_name = object.output_file_name
+        self.contaminated = object.contaminated
+        self.contamination_message = \
+            "No contamination." if not self.contaminated else object.contamination_message
 
         self.test_run_binomial_classification_result = "" #\
             #TableRow("test_run_binomial_classification_result")
@@ -225,7 +228,7 @@ class PredictScraper(Scraper):
 
         self.test_run_multinomial_classification_result = "" #This is "" for now since we are using a dense format.
                                                              #That is 1 row for each class in the response.
-        self.insert_phase_result()
+        Scraper.insert_phase_result(self)
 
     def invoke(self):
         """
@@ -241,7 +244,7 @@ class PredictScraper(Scraper):
             flag = False
             for line in f:
                 if flag:
-                    predict_type = line.strip()
+                    predict_type = self.__get_predict_type__(line.strip())[0]
                     flag = False
                     break
                 if "PREDICT TYPE" in line and "print" not in line:
@@ -249,6 +252,14 @@ class PredictScraper(Scraper):
         self.result_type = predict_type
         self.__switch__()
         
+    def __get_predict_type__(self, type_candidate):
+        """ 
+        Returns the type: 'parse', 'model', 'predict'
+        """
+        types = ['binomial', 'regression', 'multinomial', 'cm']
+        rf = type_candidate.lower()
+        return [t for t in types if t in rf] 
+
     def __switch__(self):
         """
         Overrides the __switch__ method of the parent class.

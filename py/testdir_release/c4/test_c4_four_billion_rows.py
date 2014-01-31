@@ -68,8 +68,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'y': 'C' + str(1), 
                 'n_folds': 0, 
                 'family': 'binomial',
-                'case': '=', 
-                'case_val': 1
+                'case_mode': '=', 
+                'case': 1
             }
             # one coefficient is checked a little more
             colX = 0
