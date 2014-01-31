@@ -213,7 +213,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     } else {                    // Else one of many readers
       assert lks.length>2;
       _lockers = Arrays.copyOf(lks,lks.length-1);
-      int j=0;
+      int j=1;                  // Skip the initial null slot
       for( int i=1; i<lks.length; i++ )
         if( !job_key.equals(lks[i]) ) 
           _lockers[j++] = lks[i];
