@@ -11,7 +11,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def sub_c3_rel_long(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         # a kludge
         h2o.setup_benchmark_log()
 
@@ -42,8 +42,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
                 (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
@@ -85,9 +83,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
 
                     GLMkwargs = {
-                        'ignored_cols': ignore_x, 
-                        'response': 'C378', 
-                        'case_val': 15, 'case_mode': '>',
+                        'x': x,
+                        'y': 'C378', 
+                        'case': 15, 
+                        'case_mode': '>',
                         'max_iter': 4, 
                         'n_folds': 1, 
                         'family': 'binomial',
@@ -112,7 +111,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
     def test_B_c3_rel_long(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         self.sub_c3_rel_long()
 
 if __name__ == '__main__':

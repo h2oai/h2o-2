@@ -9,7 +9,9 @@ LOG_MACHINE_STATS = False
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
-    def sub_c2_rel_long(self):
+
+    def sub_c3_fvec_long(self):
+        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
@@ -25,7 +27,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         else:
             csvFilenameList= [
                 ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+                # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 1800),
             ]
 
         if LOG_MACHINE_STATS:
@@ -40,6 +42,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
                 (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+                importFullList = importResult['files']
+                importFailList = importResult['fails']
+                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster
@@ -72,21 +77,18 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = range(542) # don't include the output column
                     # remove the output too! (378)
                     ignore_x = []
-                    # for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
                     for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
                         x.remove(i)
                         ignore_x.append(i)
 
-                    # increment by one, because we are no long zero offset!
+                    # add one since we are no longer 0 based offset
                     x = ",".join(map(lambda x: "C" + str(x+1), x))
                     ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 
                     GLMkwargs = {
-                        'family': 'binomial',
-                        'x': x,
-                        'y': 'C379', 
-                        'case': 15, 
-                        'case_mode': '>',
+                        'ignored_cols': ignore_x, 
+                        'response': 'C379', 
+                        'case_val': 15, 'case_mode': '>',
                         'max_iter': 4, 
                         'n_folds': 1, 
                         'family': 'binomial',
@@ -110,16 +112,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-
-    def test_A_c2_rel_short(self):
-        h2o.beta_features = False
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
-
-    def test_B_c2_rel_long(self):
-        h2o.beta_features = False
-        self.sub_c2_rel_long()
-
+    def test_B_c3_fvec_long(self):
+        h2o.beta_features = True
+        self.sub_c3_fvec_long()
 
 if __name__ == '__main__':
     h2o.unit_main()

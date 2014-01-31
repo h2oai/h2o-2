@@ -10,7 +10,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c6_maprfs(self):
-        h2o.beta_features = False
+        h2o.beta_features = True
         print "\nLoad a list of files from maprfs, parse and do 1 RF tree"
         # larger set in my local dir
         # fails because classes aren't integers
@@ -113,7 +113,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "\n" + csvFilename
                 start = time.time()
                 kwargs = {
-                    'ntree': 1
+                    'ntrees': 1
                     }
                 paramsString = json.dumps(kwargs)
                 RFview = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=2000,

@@ -4,17 +4,17 @@ import h2o, h2o_hosts, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
-    'ntree': 5, 
-    'depth': 15,
-    'bin_limit': 100,
-    'ignore': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
+    'ntrees': 5, 
+    'max_depth': 15,
+    'nbins': 100,
+    'ignored_cols_by_name': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
     'timeoutSecs': 14800,
-    'response_variable': 'IsDepDelayed'
+    'response': 'IsDepDelayed'
     }
 
 # RF test parameters
 paramsScoreRF = {
-    # 'vactual': 'IsDepDelayed',
+    'vactual': 'IsDepDelayed',
     'timeoutSecs': 14800,
     }
 
@@ -51,9 +51,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         elapsed = time.time() - start
         print "Inspect:", parseResult['destination_key'], "took", elapsed, "seconds"
         h2o_cmd.infoFromInspect(inspect, csvPathname)
-        num_rows = inspect['num_rows']
-        num_cols = inspect['num_cols']
-        print "num_rows:", num_rows, "num_cols", num_cols
+        numRows = inspect['numRows']
+        numCols = inspect['numCols']
+        print "numRows:", numRows, "numCols", numCols
         return parseResult
 
     def loadTrainData(self):

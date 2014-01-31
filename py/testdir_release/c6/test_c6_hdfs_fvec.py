@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common, h2o_jobs as h2j
 
 DO_RANDOM_SAMPLE = True
 DO_RF = False
@@ -9,9 +9,10 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c6_maprfs(self):
-        h2o.beta_features = False
-        print "\nLoad a list of files from maprfs, parse and do 1 RF tree"
+    def test_c6_hdfs_fvec(self):
+        h2o.beta_features = True
+        print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
+        print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
@@ -39,12 +40,23 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "leads.csv",
             "prostate_long_1G.csv",
         ]
+        csvFilenameAll = [
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+        ]
 
         # find_cloud.py won't set these correctly. Let's just set them here
-        h2o.nodes[0].use_maprfs = True
-        h2o.nodes[0].use_hdfs = False
-        h2o.nodes[0].hdfs_version = 'mapr3.0.1',
-        h2o.nodes[0].hdfs_name_node = 'mr-0x1.0xdata.loc:7222'
+        # we have two cdh's though. I guess we're going to use whatever got setup
+        # h2o.nodes[0].use_maprfs = False
+        # h2o.nodes[0].use_hdfs = True
+        # h2o.nodes[0].hdfs_version = 'cdh3'
+        # h2o.nodes[0].hdfs_name_node = '192.168.1.176'
 
         h2o.setup_benchmark_log()
 
@@ -69,41 +81,15 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             timeoutSecs = 1000
             # do an import first, because we want to get the size of the file
-            (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs)
-            succeeded = importResult['succeeded']
-            if len(succeeded) < 1:
-                raise Exception("Should have imported at least 1 key for %s" % csvPathname)
-
-            # just do a search
-            foundIt = None
-            for f in succeeded:
-                if csvPathname in f['key']:
-                    foundIt = f
-                    break
-
-            if not foundIt:
-                raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
-
-            # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
-
-            #  "succeeded": [
-            #    {
-            #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "key": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "value_size_bytes": 1115287100
-            #    },
-
-            print "Loading", csvFilename, 'from maprfs'
+            print "Loading", csvFilename, 'from hdfs'
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs, pollTimeoutSecs=360,
+            parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs,
                 doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start
-            fileMBS = (totalBytes/1e6)/elapsed
             l = '{!s} jvms, {!s}GB heap, {:s} {:s} for {:.2f} secs'.format(
                 len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, elapsed)
             print "\n"+l
@@ -113,7 +99,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "\n" + csvFilename
                 start = time.time()
                 kwargs = {
-                    'ntree': 1
+                    'ntrees': 1
                     }
                 paramsString = json.dumps(kwargs)
                 RFview = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=2000,
@@ -128,8 +114,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print l
                 h2o.cloudPerfH2O.message(l)
 
-            print "Deleting all keys, to make sure our parse times don't include spills"
-            h2i.delete_keys_at_all_nodes()
+            if 1==0:
+                print "Deleting all keys, to make sure our parse times don't include spills"
+                h2i.delete_keys_at_all_nodes()
+
             trial += 1
 
 if __name__ == '__main__':
