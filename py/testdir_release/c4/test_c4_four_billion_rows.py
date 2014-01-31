@@ -8,7 +8,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_four_billion_rows(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         timeoutSecs = 1500
 
         importFolderPath = "billions"
