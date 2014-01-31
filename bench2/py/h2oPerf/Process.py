@@ -161,7 +161,7 @@ class RProc(Process):
         self.pid = self.child.pid
 
     def scrape_phase(self):
-        scraper = Scraper(self.rtype, self.test_dir, self.test_short_dir, self.output_dir, self.output_file_name)
+        scraper = Scraper(self.rtype[0], self.test_dir, self.test_short_dir, self.output_dir, self.output_file_name)
         return scraper.scrape()
 
     def block(self):
