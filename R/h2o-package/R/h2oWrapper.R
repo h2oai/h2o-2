@@ -12,14 +12,14 @@ setMethod("show", "H2OClient", function(object) {
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
-h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, Xmx = "2g") {
+h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, Xmx = "1g") {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
   if(!is.logical(silentUpgrade)) stop("silentUpgrade must be of class logical")
   if(!is.logical(promptUpgrade)) stop("promptUpgrade must be of class logical")
   if(!is.character(Xmx)) stop("Xmx must be of class character")
-  if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 2g or 1024m")
+  if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
@@ -218,7 +218,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
-h2o.startJar <- function(memory = "2g") {
+h2o.startJar <- function(memory = "1g") {
   command <- Sys.which("java")
   #
   # TODO: tmp files should be user-independent

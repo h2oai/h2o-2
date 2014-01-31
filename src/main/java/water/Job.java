@@ -398,13 +398,15 @@ public class Job extends Request2 {
       }
     }.invoke(LIST);
   }
-
+  
   protected void onCancelled() {
   }
-  public boolean cancelled() { return end_time == CANCELLED_END_TIME; }
-  public static boolean cancelled(Key key) {
-    return DKV.get(key) == null;
-  }
+  // This querys the *current object* for its status.
+  // Only valid if you have a Job object that is being updated by somebody.
+  public boolean isCancelled() { return end_time == CANCELLED_END_TIME; }
+
+  // Check the K/V store to see the Job is still running
+  public static boolean isRunning(Key key) { return DKV.get(key) != null; }
 
   public void remove() {
     end_time = System.currentTimeMillis();
@@ -563,7 +565,7 @@ public class Job extends Request2 {
         done = true;
       }
 
-      if (jobs[i].cancelled()) {
+      if (jobs[i].isCancelled()) {
         done = true;
       }
 
@@ -663,7 +665,7 @@ public class Job extends Request2 {
     }
 
     public void updateProgress(final int c) { // c == number of processed chunks
-      if( !cancelled() ) {
+      if( isRunning(self()) ) {
         new TAtomic<ChunkProgress>() {
           @Override public ChunkProgress atomic(ChunkProgress old) {
             if( old == null ) return null;

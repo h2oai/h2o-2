@@ -184,7 +184,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       // Idea: launch more DRF at once.
       ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
       Log.info(Sys.DRF__, (tid+1) + ". tree was built.");
-      if( cancelled() ) break; // If canceled during building, do not bulkscore
+      if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
       tstats.updateBy(ktrees);
@@ -313,7 +313,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Adds a layer to the trees each pass.
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
-      if( cancelled() ) return null;
+      if( !Job.isRunning(self()) ) return null;
 
       hcs = buildLayer(fr, ktrees, leafs, hcs, true, build_tree_per_node);
 

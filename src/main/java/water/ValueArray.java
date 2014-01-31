@@ -399,7 +399,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
         off+=sz;
       szl += off;
       if( off<CHUNK_SZ ) break;
-      if( job != null && job.cancelled() ) break;
+      if( job != null && !Job.isRunning(job.self()) ) break;
       final Key ckey = getChunkKey(cidx++,key);
       final Value val = new Value(ckey,buf);
       // Do the 'DKV.put' in a F/J task.  For multi-JVM setups, this step often
@@ -420,7 +420,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       dkv_fs.add(subtask);
       f_last = subtask;
     }
-    assert is.read(new byte[1]) == -1 || job.cancelled();
+    assert is.read(new byte[1]) == -1 || !Job.isRunning(job.self());
 
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     if( cidx > 0 ) {
@@ -706,7 +706,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
 
     // Make the VA header
     final ValueArray va = new ValueArray(vaKey, rows, off, cols );
-    UKV.put(vaKey,va);
+    va.delete_and_lock(null);
 
     // Now fill in the data chunks
     final int rowsize = off;
@@ -731,6 +731,7 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       }
       @Override public void closeLocal() { _fs.blockForPending(); }
     }.doAll(fr);
+    va.unlock(null);
 
     return va;
   }

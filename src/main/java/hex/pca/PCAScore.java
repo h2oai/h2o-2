@@ -34,6 +34,7 @@ public class PCAScore extends FrameJob {
   @Override protected Status exec() {
     // Note: Source data MUST contain all features (matched by name) used to build PCA model!
     // If additional columns exist in source, they are automatically ignored in scoring
+    new Frame(destination_key, new String[0], new Vec[0]).delete_and_lock(self());
     Frame fr = model.adapt(source, true)[0];
     int nfeat = model._names.length;
     DataInfo dinfo = new DataInfo(fr,0, model.normSub,model.normMul);
@@ -45,7 +46,7 @@ public class PCAScore extends FrameJob {
       names[i] = "PC" + i;
       domains[i] = null;
     }
-    DKV.put(destination_key, tsk.outputFrame(names, domains));
+    tsk.outputFrame(destination_key, names, domains).unlock(self());
     return Status.Done;
   }
 
