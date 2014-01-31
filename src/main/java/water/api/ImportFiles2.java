@@ -22,7 +22,6 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.internal.Streams;
 
 public class ImportFiles2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -76,12 +75,7 @@ public class ImportFiles2 extends Request2 {
       }
       return Response.done(this);
     } catch( Exception e ) {
-      StringBuilder sb = new StringBuilder();
-      PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));
-      e.printStackTrace(pw);
-      Log.err(e);
-      String message = "Got exception: " + e.getMessage(); //+ "\n" + e.toString() + "\n" + pw.toString();
-      return Response.error(message);
+      return Response.error(e);
     }
   }
 

@@ -59,7 +59,11 @@ endif
 	# cp -p PACKAGES.gz ../lib/resources/R/src/contrib/PACKAGES.gz
 
 	# Build binary for each OS
+ifeq ($(shell uname), Linux)
+	R CMD INSTALL -l $(TMP) --build h2oRClient-package
+else
 	R CMD INSTALL --build h2oRClient-package
+endif
 
 ifneq ($(OS),Windows_NT)
 	tar zxvf h2oRClient_$(PROJECT_VERSION).tgz

@@ -201,7 +201,8 @@ myR ../../R/tests/Utils/runnerSetupPackage 300
 
 # sleep 3600
 
-for test in $(find ../../R/tests/ | grep -v Utils | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
+# have to ignore the Rsandbox dirs that got created in the tests directory
+for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
 do
     if [ -d $test ];
     then

@@ -35,7 +35,7 @@ H\ :sub:`2`\ O Troubleshooting
 
 
 Common Question: Why is “Upload” is no longer working?
-“”””””””””””””””””””””””””””””””””””””””””””””””””””””
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 This can occur when a user’s local disk is full or almost full. 
 Free up space on your local disk, and the behavior should resolve. 
@@ -96,6 +96,36 @@ Troubleshooting R
   directory that H2O is running from, the path relative to R and
   relative to H2O will be the same. 
   
+
+
+I Updated To Maverics; pull and make from Git has errors
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Development users who use Mac OS and have recently upgraded their
+laptops or operating systems and are using Maverics may recieve 
+a failure indicaticating that **gnutar** is required but not found,
+and as a result the R package cannot compile. 
+
+The use of gnutar is required by R for the cran repository to work,
+and is beyond the control of any one package developer. In order to
+obtain gnutar. 
+
+Macports users will need to uninstall Macports and reinstall Macports
+for Maverics available here:
+https://distfiles.macports.org/MacPorts/MacPorts-2.2.1-10.9-Mavericks.pkg.
+
+and then
+
+::
+
+  sudo port install gnutar
+
+Homebrew users: 
+
+::
+  
+  brew install gnu-tar
+  cd /usr/bin
+  sudo ln -s /usr/local/opt/gnu-tar/libexec/gnubin/tar gnutar
 
 
 

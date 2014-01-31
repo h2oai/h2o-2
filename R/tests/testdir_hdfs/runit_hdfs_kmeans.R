@@ -28,6 +28,8 @@ if (running_inside_hexdata) {
     hdfs_name_node = "192.168.1.161"    
     hdfs_iris_file = "/datasets/runit/iris_wheader.csv"
     hdfs_covtype_file = "/datasets/covtype.data"
+    # Huge covtype for kmeans scaling test.
+    # hdfs_covtype_file = "/datasets/covtype.169x.data"
 } else {
     stop("Not running on 0xdata internal network.  No access to HDFS.")
 }

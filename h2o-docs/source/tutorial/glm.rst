@@ -5,8 +5,7 @@ The purpose of this tutorial is to walk the new user through
 a GLM analysis beginning to end. The objective is to  learn how to
 specify, run, and interpret a GLM model using  H\ :sub:`2`\ O.  
 
-Those who have never used H\ :sub:`2`\ O before should see the quick
-start guide for additional instructions on how to run H\ :sub:`2`\ O.
+Those who have never used H\ :sub:`2`\ O before should see see :ref:`GettingStartedFromaZipFile` for additional instructions on how to run H\ :sub:`2`\ O.
 
 
 When to Use GLM
@@ -37,7 +36,7 @@ This tutorial uses a publicly available data set that can be found at:
 http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/ 
 
 The original data are the Abalone data set made available by UCI
-Machine Learning repository. They are composed of 4177 observations of
+Machine Learning Repository. They are composed of 4177 observations of
 9 attributes. All attributes are real valued continuous,
 except for Sex and Rings, found in columns 0 and 8 respectively. 
 Sex is categorical with 3 levels (male, female, and infant), and Rings
@@ -65,7 +64,7 @@ Before modeling, parse data into H\ :sub:`2`\ O as follows:
 Building a Model
 """"""""""""""""
 
-#. Once  data are parsed a horizontal menu will appear at the top
+#. Once  data are parsed, a horizontal menu will appear at the top
    of the screen reading "Build model using ... ". Select 
    GLM here, or go to the drop down menu **Model** and
    select GLM. 
@@ -88,8 +87,7 @@ Building a Model
 
 #. Set lambda and alpha to 0. These parameters determine
    regularization of GLM models. To find detailed information on the
-   specification of tuning parameters see the data science
-   documentation on GLM.
+   specification of tuning parameters see :ref:`GLMmath`.
 
 
 #. Leave n-folds at 10. This will produce 10 cross-validation models.

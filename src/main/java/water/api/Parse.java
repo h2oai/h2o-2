@@ -317,10 +317,8 @@ public class Parse extends Request {
       Response r = Progress.redirect(response, job.self(), dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch (IllegalArgumentException e) {
-      return Response.error(e.getMessage());
     } catch (Error e) {
-      return Response.error(e.getMessage());
+      return Response.error(e);
     }
   }
   private class Separator extends InputSelect<Byte> {

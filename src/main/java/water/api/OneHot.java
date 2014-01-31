@@ -29,14 +29,13 @@ public class OneHot extends Request2 {
 
     @Override protected Response serve() {
         try {
-            Frame fr = new Frame(source._names.clone(),source.vecs().clone());
-            fr.remove(ignored_cols);
-            Frame oneHotFrame = hex.OneHot.expandDataset(fr);
-            for (int i : ignored_cols) oneHotFrame.add(source._names[i], source.vecs()[i]);
-            UKV.put(destination_key, oneHotFrame);
+          Frame fr = new Frame(destination_key,source._names.clone(),source.vecs().clone()).delete_and_lock(null);
+          fr.remove(ignored_cols);
+          Frame oneHotFrame = hex.OneHot.expandDataset(fr,destination_key);
+          for (int i : ignored_cols) oneHotFrame.add(source._names[i], source.vecs()[i]);
+          oneHotFrame.unlock(null);
         } catch(Throwable t) {
-            Log.err(t);
-            Response.error(t.getMessage());
+          return Response.error(t.getMessage());
         }
         return Inspect2.redirect(this, destination_key.toString());
     }
