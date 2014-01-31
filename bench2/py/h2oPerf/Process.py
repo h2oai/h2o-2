@@ -16,7 +16,7 @@ class Process:
 
         self.canceled = False
         self.terminated = False
-        self.returncode = RProc.__did_complete__()
+        self.returncode = self.__did_complete__()
         self.ip = None
         self.pid = -1
         self.port = None
@@ -153,7 +153,7 @@ class RProc(Process):
         """
         self.ip = ip
         self.port = port
-    
+
         cmd = ["R", "-f", self.rfile, "--args", self.ip + ":" + str(self.port)]
         short_dir = re.sub(r'[\\/]', "_", self.test_short_dir)
         self.output_file_name = os.path.join(self.output_dir,
@@ -166,8 +166,16 @@ class RProc(Process):
         self.pid = self.child.pid
 
     def scrape_phase(self):
-        scraper = Scraper()
+        scraper = Scraper(self.rtype, self.test_dir, self.test_short_dir, self.output_dir, self.output_file_name)
         return scraper.scrape()
+
+    def block(self):
+        while(True):
+            if self.terminated:
+                return None
+            if self.poll():
+                break
+            time.sleep(1)
 
     def __get_type__(self):
         """ 
