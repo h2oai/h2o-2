@@ -153,18 +153,30 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
               // Train the Reference
               ref.train((int)p.epochs, p.rate, loss);
+              final double trainAcc = ref._nn.Accuracy(ref._trainData);
+              final double testAcc = ref._nn.Accuracy(ref._testData);
 
               // Train H2O
               p.trainModel(false);
               mymodel = UKV.get(p.dest()); //get the trained model
+              final double myTrainAcc = mymodel.classificationError(_train, "Final training error:", true);
+              final double myTestAcc  = mymodel.classificationError(_test,  "Final testing error:",  true);
+
+//              double abseps = 1e-15;
+//              double releps = 1e-12;
+
+              /**
+               * Compare classification errors
+               */
+              final boolean hogwild_error = (trainAcc != myTrainAcc || testAcc != myTestAcc);
+              hogwild_errors += hogwild_error == true ? 1 : 0;
+              hogwild_runs++;
+
+              /**
+               * Compare weights
+               */
               neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info); //link the weights to the neurons, for easy access
-
-              // tiny absolute and relative tolerances for single threaded mode
-              double abseps = 1e-15;
-              double releps = 1e-12; // relative error check only triggers if abs(a-b) > abseps
               double weight_mse = 0;
-
-              // Make sure weights are equal
               l = neurons[1];
               for( int o = 0; o < l._a.length; o++ ) {
                 for( int i = 0; i < l._previous._a.length; i++ ) {
@@ -175,28 +187,20 @@ public class NeuralNetIrisTest2 extends TestUtil {
               }
               weight_mse /= l._a.length * l._previous._a.length;
 
-              // H2O
-              final double myTrainAcc = mymodel.classificationError(_train, "Final training error:", true);
-              final double myTestAcc  = mymodel.classificationError(_test,  "Final testing error:",  true);
-
-              // Reference
-              final double trainAcc = ref._nn.Accuracy(ref._trainData);
-              final double testAcc = ref._nn.Accuracy(ref._testData);
-
-              final boolean hogwild_error = (trainAcc != myTrainAcc || testAcc != myTestAcc);
+              /**
+               * Report accuracy
+               */
               Log.info("DONE. " + (hogwild_error ? "Multithreading resulted in errors due to race conditions (Hogwild!)." : ""));
               Log.info("MSE of H2O weights: " + weight_mse + ".");
-              hogwild_errors += hogwild_error == true ? 1 : 0;
               Log.info("H2O  training error : " + myTrainAcc*100 + "%, test error: " + myTestAcc*100 + "%" +
                       (trainAcc != myTrainAcc|| testAcc != myTestAcc? " HOGWILD! " : ""));
               Log.info("REF  training error : " + trainAcc*100 + "%, test error: " + testAcc*100 + "%");
 
+              // cleanup
               mymodel.delete();
               _train.delete();
               _test.delete();
               fr.delete();
-
-              hogwild_runs++;
             }
           }
         }
