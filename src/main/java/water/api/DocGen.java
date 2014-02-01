@@ -29,7 +29,7 @@ public abstract class DocGen {
       BufferedWriter out = new BufferedWriter(fstream);
       out.write(content);
       out.close();
-    } catch (Exception e) {
+    } catch( Throwable e ) {
       System.err.println("Error: " + e.getMessage());
     }
   }

@@ -276,7 +276,6 @@ public final class ParseDataset extends Job {
     int j = 0;
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse!
-    new ValueArray(job.dest(),0).delete_and_lock(job.self());
     Key [] nonEmptyKeys = new Key[keys.length];
     for (int i = 0; i < keys.length; ++i) {
       Value v = DKV.get(keys[i]);
@@ -296,7 +295,7 @@ public final class ParseDataset extends Job {
           DParseTask p2 = p1.createPassTwo();
           p2.passTwo();
           p2.createValueArrayHeader();
-          Lockable.delete(keys[0]);
+          Lockable.delete(keys[0],job.self());
           job.remove();
           return;
         } else
@@ -338,9 +337,7 @@ public final class ParseDataset extends Job {
       }
       // Delete source files after pass 2
       FileInfo finfo = fileInfo.get(keys[i]);
-      Value val = DKV.get(finfo._okey);
-      if( val.isArray() ) ((ValueArray)val.get()).delete();
-      else DKV.remove(finfo._okey);
+      Lockable.delete(finfo._okey,job.self());
     }
     phaseTwo.normalizeSigma();
     phaseTwo._colNames = setup._columnNames;
@@ -390,7 +387,9 @@ public final class ParseDataset extends Job {
       throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
 
     ParseDataset job = new ParseDataset(dest, keys);
-    ParserFJTask fjt = new ParserFJTask(job, keys, setup);
+    new ValueArray(job.dest(),0).delete_and_lock(job.self()); // Lock BEFORE returning
+    for( Key k : keys ) Lockable.read_lock(k,job.self());
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup);    // Fire off background parse
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;
@@ -455,7 +454,7 @@ public final class ParseDataset extends Job {
       public void compute2() {
         final Key key = _keys[_idx];
         Value v = DKV.get(key);
-        assert v != null;
+        assert v != null : "Did not find "+key;
         ParserSetup localSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(v), _parserSetup,false)._setup;
         if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
@@ -508,7 +507,8 @@ public final class ParseDataset extends Job {
             }
             _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");
             ValueArray.readPut(_fileInfo[_idx]._okey, is,_job);
-            Lockable.delete(_fileInfo[_idx]._ikey); // Delete zip after unzipping
+            Lockable.read_lock(_fileInfo[_idx]._okey,_job.self());
+            Lockable.delete(_fileInfo[_idx]._ikey,_job.self()); // Delete zip after unzipping
             v = DKV.get(_fileInfo[_idx]._okey);
             onProgressSizeChange(2*(v.length() - csz), _job); // the 2 passes will go over larger file!
             assert v != null;

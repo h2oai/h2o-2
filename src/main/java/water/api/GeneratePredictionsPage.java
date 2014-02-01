@@ -40,7 +40,7 @@ public class GeneratePredictionsPage extends Request {
       OldModel m = (OldModel)_modelKey.value();
       Key dest = _dest.value();
       return Inspect.redirect(res, ScoreTask.score(m, ary, dest));
-    } catch (Throwable t) {
+    } catch( Throwable t ) {
       return Response.error(t);
     }
   }

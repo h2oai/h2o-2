@@ -14,7 +14,7 @@ public class RemoveAll extends JSONOnlyRequest {
       Log.info("Removing all keys for the cluster");
       RemoveAllKeysTask collector = new RemoveAllKeysTask();
       collector.invokeOnAllNodes();
-    } catch( Exception e ) {
+    } catch( Throwable e ) {
       return Response.error(e);
     }
 

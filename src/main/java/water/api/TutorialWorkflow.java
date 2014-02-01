@@ -156,7 +156,7 @@ abstract public class TutorialWorkflow extends HTMLOnlyRequest {
         String line = null;
         while( (line = reader.readLine())!=null) sb.append(line).append('\n');
 
-      } catch (IOException e){ /* Silently ignoring */
+      } catch( IOException e ) { /* Silently ignoring */
         Log.err(e);
       } finally {
         if (reader!=null) try { reader.close(); } catch( IOException e ) { throw new RuntimeException(Log.err("IOException during reader close.",e)); }

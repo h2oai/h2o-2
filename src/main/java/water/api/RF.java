@@ -148,7 +148,7 @@ public class RF extends Request {
       Response r = RFView.redirect(response, drfJob.self(), drfJob.dest(), dataKey, ntree, classCol, _weights.originalValue(), _oobee.value(), _iterativeCM.value());
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch (IllegalArgumentException e) {
+    } catch( IllegalArgumentException e ) {
       return Response.error("Incorrect input data: "+e.getMessage());
     }
   }

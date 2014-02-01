@@ -45,7 +45,7 @@ public class Parse2 extends Parse {
       if (_blocking.value())
         Job.waitUntilJobEnded(job_key);
       return Progress2.redirect(this,job_key,destination_key);
-    } catch (Error e) {
+    } catch( Throwable e) {
       return Response.error(e);
     }
   }

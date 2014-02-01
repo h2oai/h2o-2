@@ -75,7 +75,7 @@ public class TypeaheadFileRequest extends TypeaheadRequest {
           array.add(new JsonPrimitive(b.getName()));
         if( array.size() == limit) break;
       }
-    } catch(IllegalArgumentException _ ) { }
+    } catch( IllegalArgumentException _ ) { }
     return array;
   }
 
