@@ -48,11 +48,12 @@ for (i in 1:length(files)) {
     }
 }
 
-if (is.null(h2o_r_package_file)) {
-    stop(paste("H2O package not found in", dir_to_search))
-}
+# if (is.null(h2o_r_package_file)) {
+#    stop(paste("H2O package not found in", dir_to_search))
+# }
 
-install.packages(paste(dir_to_search, h2o_r_package_file, sep="/"), repos = NULL, type = "source")
+# install.packages(paste(dir_to_search, h2o_r_package_file, sep="/"), repos = NULL, type = "source")
+install.packages("h2o", repos = c(H2O = paste("file://", dir_to_search, sep=""), getOption("repos")))
 library(h2o)
 h2o.init(ip            = ipPort[[1]], 
          port          = ipPort[[2]], 

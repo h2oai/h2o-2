@@ -106,7 +106,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
 #       warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
 #     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
 #     file.remove(paste(getwd(), myFile, sep="/"))
-    install.packages("h2oRClient", repos = paste(myURL, "R", sep = "/"))
+    install.packages("h2oRClient", repos = c(H2O = paste(myURL, "R", sep = "/"), getOption("repos")))
   }
 }
 
@@ -147,11 +147,11 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
   # TODO: Not sure how to check for libcurl in Windows
   
   # Install and load H2O R package dependencies
-  require(tools)
-  myPackages = rownames(installed.packages())
-  myReqPkgs = c("bitops", "RCurl", "rjson", "statmod")
-  temp = lapply(myReqPkgs, function(x) { if(!x %in% myPackages) { cat("Installing package dependency", x, "\n"); install.packages(x, repos = "http://cran.rstudio.com/") }
-                                         if(!require(x, character.only = TRUE)) stop("The required package ", x, " is not installed. Please type install.packages(\"", x, "\") to install the dependency from CRAN.") })
+#  require(tools)
+#   myPackages = rownames(installed.packages())
+#   myReqPkgs = c("bitops", "RCurl", "rjson", "statmod")
+#   temp = lapply(myReqPkgs, function(x) { if(!x %in% myPackages) { cat("Installing package dependency", x, "\n"); install.packages(x, repos = "http://cran.rstudio.com/") }
+#                                          if(!require(x, character.only = TRUE)) stop("The required package ", x, " is not installed. Please type install.packages(\"", x, "\") to install the dependency from CRAN.") })
 }
 
 .onAttach <- function(libname, pkgname) {
