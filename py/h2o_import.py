@@ -393,8 +393,15 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
     # this is really the count that we attempted. Some could have failed.
     return deletedCnt
 
+# if pattern is used, don't use the heavy h2o method
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
+    # TEMP: change this to remove_all_keys which ignores locking and removes keys?
+    # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]
+    if not pattern:
+        node.remove_all_keys()
+        return 0 # don't have a count of keys?
+
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
     # this will be interesting if the others don't have a complete set
