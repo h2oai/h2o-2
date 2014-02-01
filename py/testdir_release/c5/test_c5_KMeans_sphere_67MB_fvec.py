@@ -11,7 +11,7 @@ DO_KMEANS = True
 FROM_HDFS = 'CDH3'
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c5_KMeans_sphere_67MB(self):
+    def test_c5_KMeans_sphere_67MB_fvec(self):
         h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
