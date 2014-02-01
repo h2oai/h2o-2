@@ -244,7 +244,7 @@ public class NN extends Job.ValidatedJob {
       boolean training = true;
       // train for one epoch, starting with weights/biases from modelinfo
       NNTask nntask = new NNTask(this, _dinfo, this, modelinfo, training).doAll(_dinfo._adaptedFrame);
-      modelinfo = nntask._minfo;
+      modelinfo = nntask._output;
       if (diagnostics) modelinfo.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
       final String label =  (validation == null ? "Training" : "Validation")
               + " error after training for " + epoch

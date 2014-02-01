@@ -1,7 +1,6 @@
 package hex.nn;
 
 import hex.FrameTask;
-import water.H2O;
 import water.H2O.H2OCountedCompleter;
 import water.Job;
 
@@ -12,7 +11,7 @@ public class NNTask extends FrameTask<NNTask> {
   final protected NN _params;
   boolean _training;
 
-  public NNModel.NNModelInfo _minfo;
+  public NNModel.NNModelInfo _input, _output;
 
   transient Neurons[] _neurons;
 
@@ -21,37 +20,51 @@ public class NNTask extends FrameTask<NNTask> {
     super(job,dinfo,cmp);
     _params=params;
     _training=training;
-    _minfo=input;
+    _input=input;
   }
 
   // initialize node-local shared data (weights and biases)
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    if (_minfo == null) {
-      _minfo = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
-      _minfo.initializeMembers();
+    if (_input == null) {
+      _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
+      _input.initializeMembers();
     }
+
+    _output = _input.clone();
+    _output.processed = 0;
+    _input = null;
   }
 
   // create local workspace (neurons)
   // and link them to shared weights
-  @Override protected void chunkInit(){
-    _neurons = makeNeurons(_dinfo, _minfo);
+  @Override protected void chunkInit(int nrows){
+    _neurons = makeNeurons(_dinfo, _output);
+    _output.chunk_node_count = (nrows > 0 ? 1 : 0);
+    System.out.println("Working on " + nrows + " rows.");
   }
 
   @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
     ((Neurons.Input)_neurons[0]).setInput(nums, numcats, cats);
-    step(_neurons, _minfo, _training, responses);
+    step(_neurons, _output, _training, responses);
   }
 
-  @Override protected void chunkDone(){ }
+  @Override protected void chunkDone(){
+    System.out.println("ChunkDone: w[0][0] = " + _output.weights[0][0]);
+    System.out.println("Processed: " + _output.chunk_processed_rows + " rows.");
+  }
 
   @Override public void reduce(NNTask other){
-    _minfo.add(other._minfo);
+    System.out.println("Before Reduce: w[0][0] = " + _output.weights[0][0]);
+    _output.add(other._output);
+    System.out.println("After Reduce: w[0][0] = " + _output.weights[0][0]);
   }
 
   @Override protected void postGlobal(){
-    _minfo.div(H2O.CLOUD.size());
+    System.out.println("Div: " + _output.chunk_node_count);
+    System.out.println("w[0][0] = " + _output.weights[0][0]);
+    _output.div(_output.chunk_node_count);
+    _output.processed += _output.chunk_processed_rows;
   }
 
   // Helper
@@ -121,9 +134,9 @@ public class NNTask extends FrameTask<NNTask> {
     if (training) {
       for (int i=neurons.length-2; i>0; --i)
         neurons[i].bprop();
-      minfo.processed++;
-      if (minfo.processed % 10000 == 0)
-        System.out.println("Processed: " + minfo.processed);
+      minfo.chunk_processed_rows++;
+      if (minfo.chunk_processed_rows % 10000 == 0)
+        System.out.println("Processed: " + minfo.chunk_processed_rows);
     }
   }
 

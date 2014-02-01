@@ -67,6 +67,9 @@ public class NNModel extends Model {
     public long processed;
     public long processed() { return processed; }
 
+    public int chunk_node_count;
+    public long chunk_processed_rows;
+
     // disregard for now: momenta
 //  public float[] _wm;
 //  public double[] _bm;
@@ -102,19 +105,29 @@ public class NNModel extends Model {
 
     }
     public NNModelInfo clone() {
-      NNModelInfo n = new NNModelInfo(parameters, units[0], units[units.length-1]);
-      n.processed = processed;
+      NNModelInfo n = new NNModelInfo();
+      n.units = units.clone();
       n.weights = weights.clone();
       n.biases = biases.clone();
-      for (int i=0; i<weights.length; ++i) n.weights[i] = weights[i].clone();
-      for (int i=0; i<biases.length; ++i) n.biases[i] = biases[i].clone();
+      n.parameters = parameters;
+      n.processed = processed;
+      n.chunk_node_count = chunk_node_count;
+      n.chunk_processed_rows = chunk_processed_rows;
+//      n.mean_bias = mean_bias.clone();
+//      n.rms_bias = rms_bias.clone();
+//      n.mean_weight = mean_weight.clone();
+//      n.rms_weight = rms_weight.clone();
+      n.unstable = unstable;
       return n;
     }
     public void add(NNModelInfo other) {
       if (other == this) return;
-      Utils.add(weights, other.weights);
-      Utils.add(biases,  other.biases);
-      processed += other.processed;
+      if (other.chunk_node_count != 0) {
+        Utils.add(weights, other.weights);
+        Utils.add(biases,  other.biases);
+        chunk_processed_rows += other.chunk_processed_rows;
+        chunk_node_count += other.chunk_node_count;
+      }
     }
     // use to average weights and biases
     public void div(double N) {
