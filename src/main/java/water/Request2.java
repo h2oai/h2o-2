@@ -386,9 +386,6 @@ public abstract class Request2 extends Request {
     if( !gridSearch )
       return superServeGrid(server, parms, type);
 
-    Lockable source = null;
-    if(_parms.containsKey("source"))
-      source = DKV.get(Key.make((String)_parms.get("source"))).get();
     // Ignore destination key so that each job gets its own
     _parms.remove("destination_key");
     for( int i = 0; i < _arguments.size(); i++ )
@@ -415,7 +412,7 @@ public abstract class Request2 extends Request {
       if( !increment(counters, values) )
         break;
     }
-    GridSearch grid = new GridSearch(source);
+    GridSearch grid = new GridSearch();
     grid.jobs = jobs.toArray(new Job[jobs.size()]);
     return grid.superServeGrid(server, parms, type);
   }
