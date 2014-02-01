@@ -197,7 +197,7 @@ public class Summary extends Iced {
       // update the histogram
       int binIdx = (_binsz == 1)
           ?Math.min((int)(val-_start),_bins.length-1)
-          :Math.min(_bins.length-1,(int)((val - _start) * _binszInv));
+          :Math.max(0,Math.min(_bins.length-1,(int)((val - _start) * _binszInv)));
       ++_bins[binIdx];
       ++_n;
     }
