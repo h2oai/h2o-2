@@ -368,16 +368,25 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     deletedCnt = 0
+    triedKeys = []
     while True:
         storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
         # we get 20 at a time with default storeView
         keys = storeViewResult['keys']
         if not keys:
             break
+
+        # look for keys we already sent a remove on. Maybe those are locked.
+        # give up on those
         for k in keys:
-            node.remove_key(k['key'], timeoutSecs=timeoutSecs)
-        deletedCnt += len(keys)
+            if k in triedKeys:
+                print "Already tried to delete %s. Must have failed. Not trying again" % k
+            else:
+                node.remove_key(k['key'], timeoutSecs=timeoutSecs)
+                deletedCnt += 1
+            triedKeys.append(k)
         # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
+    # this is really the count that we attempted. Some could have failed.
     return deletedCnt
 
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
