@@ -7,7 +7,7 @@ paramsTrainRF = {
     'ntree': 5, 
     'depth': 15,
     'bin_limit': 100,
-    'use_non_local_data': False, # doesn't fit in single jvm
+    'use_non_local_data': 0, # doesn't fit in single jvm
     'ignore': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
     'timeoutSecs': 14800,
     'response_variable': 'IsDepDelayed'
