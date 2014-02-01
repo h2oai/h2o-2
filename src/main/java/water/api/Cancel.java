@@ -22,7 +22,7 @@ public class Cancel extends Request {
     String key = _key.value();
     try {
       Job.findJob(Key.make(key)).cancel();
-    } catch( Exception e ) {
+    } catch( Throwable e ) {
       return Response.error(e);
     }
     JsonObject response = new JsonObject();

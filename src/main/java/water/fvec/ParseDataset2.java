@@ -55,7 +55,9 @@ public final class ParseDataset2 extends Job {
       throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
 
     ParseDataset2 job = new ParseDataset2(dest, keys);
-    ParserFJTask fjt = new ParserFJTask(job, keys, setup, delete_on_done);
+    new Frame(job.dest(),new String[0],new Vec[0]).delete_and_lock(job.self()); // Lock BEFORE returning
+    for( Key k : keys ) Lockable.read_lock(k,job.self()); // Lock BEFORE returning
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup, delete_on_done); // Fire off background parse
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;
@@ -282,7 +284,6 @@ public final class ParseDataset2 extends Job {
     }
     // Remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
-    Frame fr = new Frame(job.dest(),new String[0],new Vec[0]).delete_and_lock(job.self());
     Vec v = getVec(fkeys[0]);
     MultiFileParseTask uzpt = new MultiFileParseTask(v.group(),setup,job._progress).invoke(fkeys);
     EnumUpdateTask eut = null;
@@ -301,8 +302,7 @@ public final class ParseDataset2 extends Job {
       for(int i:ecols)uzpt._dout._vecs[i]._domain = ValueString.toString(ds[j++] = enums[i].computeColumnDomain());
       eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
     }
-    Frame tmp = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
-    fr.add(tmp,tmp._names);
+    Frame fr = new Frame(job.dest(),setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
     // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
     SVFTask t = new SVFTask(fr);
     t.invokeOnAllNodes();
@@ -314,7 +314,7 @@ public final class ParseDataset2 extends Job {
     // Release the frame for overwriting
     fr.unlock(job.self());
     // Remove CSV files from H2O memory
-    if( delete_on_done ) for( Key k : fkeys ) Lockable.delete(k);
+    if( delete_on_done ) for( Key k : fkeys ) Lockable.delete(k,job.self());
     job.remove();
   }
 

@@ -48,7 +48,7 @@ public class KMeansApply extends Request {
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, _dest.value().toString());
       return Progress.redirect(response, job.job_key, _dest.value());
-    } catch( Error e ) {
+    } catch( Throwable e ) {
       return Response.error(e);
     }
   }

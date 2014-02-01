@@ -130,7 +130,7 @@ function() {
 function() {
   r <- list(binomial_result = 
                 list(auc = auc,
-                     precision = precision[[1]],
+                     precision_ = precision[[1]],
                      recall = recall[[1]],
                      error_rate = error_rate[[1]],
                      minority_error_rate = minority_error_rate[[1]]))

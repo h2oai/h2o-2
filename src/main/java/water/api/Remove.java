@@ -14,14 +14,8 @@ public class Remove extends Request {
 
   @Override
   protected Response serve() {
-    Value v = _key.value();
-
-    try {
-      if( v.isLockable() ) Lockable.delete(v._key);
-      else UKV.remove(v._key);  // Standard blocking remove
-    } catch( Exception e ) {
-      return Response.error(e);
-    }
+    try { Lockable.delete(_key.value()._key); } 
+    catch( Throwable e ) { return Response.error(e); }
 
     JsonObject response = new JsonObject();
     response.addProperty(KEY, _key.toString());

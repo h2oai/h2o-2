@@ -40,7 +40,7 @@ public class ImportModel extends Request2 {
         try {
           Class c = Class.forName(((JsonObject) json).get("type").getAsString());
           return context.deserialize(json, c);
-        } catch( Exception e ) {
+        } catch( Throwable e ) {
           throw new RuntimeException(e);
         }
       }

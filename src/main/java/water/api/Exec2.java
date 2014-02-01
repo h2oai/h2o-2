@@ -29,7 +29,7 @@ public class Exec2 extends Request2 {
 
   @Override protected Response serve() {
     if( str == null ) return RequestServer._http404.serve();
-    Exception e;
+    Throwable e;
     try {
       Env env = water.exec.Exec2.exec(str);
       StringBuilder sb = env._sb;
@@ -64,8 +64,8 @@ public class Exec2 extends Request2 {
       return Response.done(this);
     }
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's
-    catch( Exception e2 ) { Log.err(e=e2); }
-    return Response.error(e.getMessage());
+    catch( Throwable e2 ) { Log.err(e=e2); }
+    return Response.error(e);
   }
   @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
     return superServeGrid(server, parms, type);

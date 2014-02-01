@@ -898,7 +898,7 @@ public class RequestBuilders extends RequestQueries {
       try {
         String k = URLEncoder.encode(content, "UTF-8");
         return super.build("<a href='Inspect.html?key="+k+"'>"+content+"</a>", name);
-      } catch (UnsupportedEncodingException e) {
+      } catch( UnsupportedEncodingException e ) {
         throw Log.errRTExcept(e);
       }
     }
@@ -918,7 +918,7 @@ public class RequestBuilders extends RequestQueries {
         String key = element.getAsString();
         String k = URLEncoder.encode(key, "UTF-8");
         return "<a href='Inspect.html?key="+k+"'>"+key+"</a>";
-      } catch (UnsupportedEncodingException e) {
+      } catch( UnsupportedEncodingException e ) {
         throw Log.errRTExcept(e);
       }
     }
@@ -1115,7 +1115,7 @@ public class RequestBuilders extends RequestQueries {
         String key = URLEncoder.encode(str,"UTF-8");
         String delete = "<a href='RemoveAck.html?"+KEY+"="+key+"'><button class='btn btn-danger btn-mini'>X</button></a>";
         return delete + "&nbsp;&nbsp;<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
-      } catch (UnsupportedEncodingException e) {
+      } catch( UnsupportedEncodingException e ) {
         throw  Log.errRTExcept(e);
       }
     }

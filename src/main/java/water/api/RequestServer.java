@@ -232,7 +232,7 @@ public class RequestServer extends NanoHTTPD {
               // Try to get the NanoHTTP daemon started
               SERVER = new RequestServer(H2O._apiSocket);
               break;
-            } catch ( Exception ioe ) {
+            } catch( Exception ioe ) {
               Log.err(Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
               try { Thread.sleep(1000); } catch( InterruptedException e ) { } // prevent denial-of-service
             }
@@ -312,7 +312,7 @@ public class RequestServer extends NanoHTTPD {
       request = request.create(parms);
       // call the request
       return request.serve(this,parms,type);
-    } catch (Exception e) {
+    } catch( Exception e ) {
       if(!(e instanceof ExpectedExceptionForDebug))
         e.printStackTrace();
       // make sure that no Exception is ever thrown out from the request

@@ -437,12 +437,11 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       Key ckey = getChunkKey(cidx,key);
       DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
     }
-    // Unlock & set new copy of self
-    new ValueArray(key,szl).unlock(job_key);
-
     // Block for all pending DKV puts, which will in turn add blocking requests
     // to the passed-in Future list 'fs'.
     dkv_fs.blockForPending();
+    // Unlock & set new copy of self
+    new ValueArray(key,szl).unlock(job_key);
 
     return fs;
   }

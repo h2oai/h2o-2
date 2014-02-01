@@ -56,10 +56,16 @@ class PerfDB:
         """
         Takes a TableRow object and writes to the db.
         """
+        #print "CURRENT TABLE ROW'S ROW:"
+        #print table_row.row
+        #print "------------------------"
 
         sql = "INSERT INTO {} ({}) VALUES ({});".format(table_row.table_name, 
                    ','.join([str(t) for t in table_row.row.keys()]), 
                    ','.join(['"' + str(t) + '"' for t in table_row.row.values()]))
+        #print "CURRENT TABLE ROW'S INSERT SQL:"
+        #print sql
+        #print "------------------------"
         self.cursor.execute(sql)
         self.db.commit()
 
@@ -93,7 +99,7 @@ class TableRow:
         else:
             self.pk = self.perfdb_connection.get_table_pk(table_name)
             self.row['test_run_id'] = self.perfdb_connection.this_test_run_id
-            self.row[table_name + "_id"] = self.pk + 1
+            self.row[table_name + "_id"] = int(self.pk) + 1
 
     def update(self):
         """
