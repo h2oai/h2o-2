@@ -10,4 +10,5 @@ License: Apache-2
 Depends: R (>= 2.13.0), RCurl, rjson, statmod
 Collate: Internal.R Classes.R ParseImport.R Algorithms.R
 NeedsCompilation: no
+SystemRequirements: java
 URL: http://www.0xdata.com

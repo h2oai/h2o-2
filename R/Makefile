@@ -42,9 +42,16 @@ endif
 	mkdir -p h2o-package/inst/java/
 	cp -f ../target/h2o.jar h2o-package/inst/java/h2o.jar
 	R CMD build h2o-package
-	mkdir -p ../target/R
+
+	# Create file with description of all packages
+	cp -p h2o-package/DESCRIPTION PACKAGES
+	gzip -c PACKAGES > PACKAGES.gz
+
+	# Add to repo in target directory
+	mkdir -p ../target/R/src/contrib
 	cp -p README.txt ../target/R
-	mv $(H2O_WRAPPER_SOURCE_FILE) ../target/R
+	mv $(H2O_WRAPPER_SOURCE_FILE) ../target/R/src/contrib
+	cp -p PACKAGES PACKAGES.gz ../target/R/src/contrib
 
 	# Build binary for each OS
 	rm -rf $(TMP_BUILD_DIR)
@@ -52,15 +59,31 @@ endif
 	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2o-package
 
 ifneq ($(OS),Windows_NT)
-	rm -fr h2o
+	rm -rf h2o
 	tar zxvf $(H2O_WRAPPER_PKG_FILE)
 	zip -r $(H2O_WRAPPER_WINDOWS_FILE) h2o
-	mkdir -p ../target/R/macosx
-	mv $(H2O_WRAPPER_PKG_FILE) ../target/R/macosx/$(H2O_WRAPPER_MAC_FILE)
+
+	# Create repo subdirectory for MacOSX
+	mkdir -p ../target/R/$(REPO_PATH_MAC)
+	mv $(H2O_WRAPPER_PKG_FILE) ../target/R/$(REPO_PATH_MAC)/$(H2O_WRAPPER_MAC_FILE)
+	cp -p PACKAGES PACKAGES.gz ../target/R/$(REPO_PATH_MAC)
+
+	rm -rf ../target/R/bin/macosx/contrib/2.15 ../target/R/bin/macosx/contrib/2.14 ../target/R/bin/macosx/contrib/2.13
+	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/contrib/2.15
+	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/contrib/2.14 
+	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/contrib/2.13
 endif
 
-	mkdir -p ../target/R/windows
-	mv $(H2O_WRAPPER_WINDOWS_FILE) ../target/R/windows
+	# Create repo subdirectory for Windows
+	mkdir -p ../target/R/$(REPO_PATH_WIN)
+	mv $(H2O_WRAPPER_WINDOWS_FILE) ../target/R/$(REPO_PATH_WIN)
+	mv PACKAGES PACKAGES.gz ../target/R/$(REPO_PATH_WIN)
+
+	rm -rf ../target/R/bin/windows/contrib/2.15 ../target/R/bin/windows/contrib/2.14 ../target/R/bin/windows/contrib/2.13
+	cp -r ../target/R/$(REPO_PATH_WIN) ../target/R/bin/windows/contrib/2.15
+	cp -r ../target/R/$(REPO_PATH_WIN) ../target/R/bin/windows/contrib/2.14 
+	cp -r ../target/R/$(REPO_PATH_WIN) ../target/R/bin/windows/contrib/2.13
+
 	R CMD REMOVE -l $(TMP_BUILD_DIR) h2o
 	rm -rf $(TMP_BUILD_DIR)
 
@@ -96,7 +119,7 @@ endif
 	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
 
 ifneq ($(OS),Windows_NT)
-	rm -fr h2oRClient
+	rm -rf h2oRClient
 	tar zxvf $(H2O_RCLIENT_PKG_FILE)
 	zip -r $(H2O_RCLIENT_WINDOWS_FILE) h2oRClient
 
@@ -108,8 +131,8 @@ endif
 
 	# Create repo subdirectory for Windows
 	mkdir -p ../lib/resources/R/$(REPO_PATH_WIN)
-	mv $(H2O_RCLIENT_WINDOWS_FILE) PACKAGES ../lib/resources/R/$(REPO_PATH_WIN)
-	mv PACKAGES.gz ../lib/resources/R/$(REPO_PATH_WIN)
+	mv $(H2O_RCLIENT_WINDOWS_FILE) ../lib/resources/R/$(REPO_PATH_WIN)
+	mv PACKAGES PACKAGES.gz ../lib/resources/R/$(REPO_PATH_WIN)
 
 	# Create temporary directory for jarring later
 	mkdir -p ../r_pack_tmp/resources
