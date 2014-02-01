@@ -114,7 +114,7 @@ public abstract class CustomParser extends Iced {
           }
         }
         if(!conflictingNames.isEmpty())
-          throw new ParseSetupGuessException("Invalid header. Got conflicting column names. " + conflictingNames.toString(),null,null);
+          throw new ParseSetupGuessException("Column labels must be unique but these labels are repeated:" + conflictingNames.toString(),null,null);
       }
     }
     public ParserSetup clone(){
