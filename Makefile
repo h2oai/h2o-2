@@ -119,10 +119,6 @@ endif
 	@echo "PHASE: Building zip package..."
 	@echo
 	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION)
-	@echo
-	@echo "PHASE: Building Mac and Windows installer packages..."
-	@echo
-	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
 BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 BUILD_HASH=$(shell git log -1 --format="%H")
@@ -168,12 +164,6 @@ build_package:
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci
 	cp -rp ci target
-
-# Most people won't have the BitRock InstallBuilder software
-# installed, which is OK.  It will harmlessly do nothing for that
-# case.
-build_installer:
-	$(MAKE) -C installer build PROJECT_VERSION=$(PROJECT_VERSION)
 
 test:
 	./build.sh
