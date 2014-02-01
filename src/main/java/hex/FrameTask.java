@@ -212,7 +212,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   /**
    * Override this to initialize at the beginning of chunk processing.
    */
-  protected void chunkInit(){}
+  protected void chunkInit(int nrows){}
   /**
    * Override this to do post-chunk processing work.
    */
@@ -225,8 +225,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
     if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
-    chunkInit();
     final int nrows = chunks[0]._len;
+    chunkInit(nrows);
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);

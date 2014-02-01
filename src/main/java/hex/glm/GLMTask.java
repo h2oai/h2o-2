@@ -88,7 +88,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _n = dinfo.fullN();
       _alpha = alpha;
     }
-    @Override public void chunkInit(){
+    @Override public void chunkInit(int ignored){
       _z = MemoryManager.malloc8d(_n);
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
@@ -169,7 +169,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _xy[numStart + _dinfo._nums] += wz;
       _gram.addRow(nums, ncats, cats, w);
     }
-    @Override protected void chunkInit(){
+    @Override protected void chunkInit(int ignored){
       _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
       _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
       int rank = 0;
