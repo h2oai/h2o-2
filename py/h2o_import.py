@@ -378,14 +378,18 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
 
         # look for keys we already sent a remove on. Maybe those are locked.
         # give up on those
+        deletedThisTime = 0
         for k in keys:
             if k in triedKeys:
                 print "Already tried to delete %s. Must have failed. Not trying again" % k
             else:
                 node.remove_key(k['key'], timeoutSecs=timeoutSecs)
                 deletedCnt += 1
+                deletedThisTime += 1
             triedKeys.append(k)
         # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
+        if deletedThisTime==0:
+            break
     # this is really the count that we attempted. Some could have failed.
     return deletedCnt
 
