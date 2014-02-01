@@ -150,6 +150,9 @@ build_package:
 	echo $(PROJECT_VERSION) > target/project_version
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)
+	mkdir target/h2o-$(PROJECT_VERSION)/R
+	cp -p target/R/src/contrib/h2o_$(PROJECT_VERSION).tar.gz target/h2o-$(PROJECT_VERSION)/R
+	cp -p R/README.txt target/h2o-$(PROJECT_VERSION)/R
 	cp -rp target/hadoop target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)

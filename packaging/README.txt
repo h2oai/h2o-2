@@ -7,6 +7,11 @@ This package contains:
     h2o.jar                  The H2O engine.
     h2o-sources.jar          Source code to compile h2o.jar.
 
+    R/                       Directory containing H2O package for R.
+    R/README.txt             Read this if you are interested in writing R
+                             programs that interact with H2O.
+    R/h2o*.tar.gz            The R package for you to install.
+
     hadoop/                  Directory containing hadoop integration for H2O.
     hadoop/README.txt        Read this if you want to run H2O on a hadoop
                              cluster.
