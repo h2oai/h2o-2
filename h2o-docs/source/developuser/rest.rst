@@ -23,4 +23,3 @@ Algorithms
    DocGen/GBM
    DocGen/GLM2
    DocGen/KMeans2
-   DocGen/Summary2
