@@ -548,7 +548,7 @@ public class RequestArguments extends RequestStatics {
 
           if(callInstance instanceof Request2)
             ((Request2) callInstance).set(this, input, record._value);
-        } catch (IllegalArgumentException e) {
+        } catch( IllegalArgumentException e) {
           //record._value = defaultValue();
           throw e;
         }
@@ -1137,7 +1137,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected NumberSequence parse(String input) throws IllegalArgumentException {
       try {
         return NumberSequence.parse(input, _multiplicative, _defaultStep);
-      } catch (NumberFormatException e) {
+      } catch( NumberFormatException e) {
         throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
       }
     }
@@ -1194,7 +1194,7 @@ public class RequestArguments extends RequestStatics {
         if ((i< _min) || (i > _max))
           throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
-      } catch (NumberFormatException e) {
+      } catch( NumberFormatException e ) {
         throw new IllegalArgumentException("Value "+input+" is not a valid integer.");
       }
     }
@@ -1236,7 +1236,7 @@ public class RequestArguments extends RequestStatics {
       long i;
       try {
         i = Long.parseLong(input);
-      } catch (NumberFormatException e) {
+      } catch( NumberFormatException e ) {
         double d = Double.parseDouble(input);
         i = (long)d;
         if( i!=d ) throw new IllegalArgumentException(_name+"Value "+input+" is not a valid long integer.");
@@ -1302,7 +1302,7 @@ public class RequestArguments extends RequestStatics {
         if ((i< _min) || (i > _max))
          throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
-      } catch (NumberFormatException e) {
+      } catch( NumberFormatException e ) {
         throw new IllegalArgumentException("Value "+input+" is not a valid real number.");
       }
     }
@@ -2192,7 +2192,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] textNames() {
       try {
         return determineColumnClassNames(1024);
-      } catch (IllegalArgumentException e) {
+      } catch( IllegalArgumentException e ) {
         return new String[0];
       }
     }
@@ -2238,7 +2238,7 @@ public class RequestArguments extends RequestStatics {
             classWeight = Double.parseDouble(input.substring(start,end));
             start = end + 1;
           }
-        } catch (NumberFormatException e) {
+        } catch( NumberFormatException e ) {
           throw new IllegalArgumentException("Invalid double format for weight value");
         }
 
@@ -2302,7 +2302,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] textNames() {
       try {
         return determineColumnClassNames(1024);
-      } catch (IllegalArgumentException e) {
+      } catch( IllegalArgumentException e ) {
         return new String[0];
       }
     }
@@ -2346,7 +2346,7 @@ public class RequestArguments extends RequestStatics {
             classWeight = Integer.parseInt(input.substring(start,end));
             start = end + 1;
           }
-        } catch (NumberFormatException e) {
+        } catch( NumberFormatException e ) {
           throw new IllegalArgumentException("Invalid integer format for strata value");
         }
         if (!classNames.containsKey(className))
@@ -2363,7 +2363,7 @@ public class RequestArguments extends RequestStatics {
         for (int i = 0; i < result.length; ++i)
           result[i] = _defaultValue;
         return result;
-      } catch (IllegalArgumentException e) {
+      } catch( IllegalArgumentException e ) {
         return new int[0];
       }
     }
@@ -2446,7 +2446,7 @@ public class RequestArguments extends RequestStatics {
       if (cidx == -1) {
         try {
           cidx = Integer.parseInt(input);
-        } catch (NumberFormatException e) { cidx = -1; }
+        } catch( NumberFormatException e ) { cidx = -1; }
         if (cidx < 0 || cidx >= fr().numCols() )
           throw new IllegalArgumentException(input+" not a name of column, or a column index");
       }

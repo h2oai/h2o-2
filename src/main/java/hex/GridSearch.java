@@ -16,6 +16,9 @@ import java.util.Comparator;
 public class GridSearch extends Job {
   public Job[] jobs;
 
+  public GridSearch(){
+
+  }
   @Override protected Status exec() {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();

@@ -145,16 +145,8 @@ class PerfRunner:
         parse_file = testDir + "_Parse.R"
         model_file = testDir + "_Model.R"
         predict_file = testDir + "_Predict.R"
-        #ip = self.cloud.get_ip()
-        #port = self.cloud.get_port()
         test_dir = os.path.join(self.test_root_dir, testDir)
         test_short_dir = testDir
-        print "ALLOOHAA"
-        #print ip
-        #print port
-        print test_dir
-        print test_short_dir
-        print "ALLLOOHAAA"
 
         test = Test(-1, -1, test_dir, test_short_dir, 
                     self.output_dir, parse_file, model_file, predict_file)
@@ -208,9 +200,7 @@ class PerfRunner:
 
         ip = self.cloud.get_ip()
         port = self.cloud.get_port()
-        print "MMMOOOOAOAOAOAOA"
-        print ip
-        print port
+        
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
             test = self.tests_not_started.pop(0)

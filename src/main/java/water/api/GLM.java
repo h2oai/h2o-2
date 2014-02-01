@@ -263,7 +263,7 @@ public class GLM extends Request {
       Response r = GLMProgressPage.redirect(j, job.self(), job.dest(),job.progressKey());
       r.setBuilder(Constants.DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch (Throwable t) {
+    } catch( Throwable t ) {
       return Response.error(t);
     }
   }
