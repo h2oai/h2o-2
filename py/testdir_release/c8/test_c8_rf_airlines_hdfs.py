@@ -4,17 +4,18 @@ import h2o, h2o_hosts, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
-    'ntrees': 5, 
-    'max_depth': 15,
-    'nbins': 100,
-    'ignored_cols_by_name': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
+    'ntree': 5, 
+    'depth': 15,
+    'bin_limit': 100,
+    'use_non_local_data': 0, # doesn't fit in single jvm
+    'ignore': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
     'timeoutSecs': 14800,
-    'response': 'IsDepDelayed'
+    'response_variable': 'IsDepDelayed'
     }
 
 # RF test parameters
 paramsScoreRF = {
-    'vactual': 'IsDepDelayed',
+    # 'vactual': 'IsDepDelayed',
     'timeoutSecs': 14800,
     }
 
@@ -51,9 +52,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         elapsed = time.time() - start
         print "Inspect:", parseResult['destination_key'], "took", elapsed, "seconds"
         h2o_cmd.infoFromInspect(inspect, csvPathname)
-        numRows = inspect['numRows']
-        numCols = inspect['numCols']
-        print "numRows:", numRows, "numCols", numCols
+        num_rows = inspect['num_rows']
+        num_cols = inspect['num_cols']
+        print "num_rows:", num_rows, "num_cols", num_cols
         return parseResult
 
     def loadTrainData(self):
@@ -67,7 +68,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         return scoreParseResult 
 
     def test_c8_rf_airlines_hdfs(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         trainParseResult = self.loadTrainData()
         kwargs   = paramsTrainRF.copy()
         trainResult = h2o_rf.trainRF(trainParseResult, **kwargs)

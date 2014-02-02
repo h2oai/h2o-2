@@ -68,7 +68,7 @@ public class RequestQueries extends RequestArguments {
         try {
           arg.check(RequestQueries.this, args.getProperty(arg._name,""));
           queryArgumentValueSet(arg, args);
-        } catch (IllegalArgumentException e) {
+        } catch( IllegalArgumentException e ) {
           if (type == RequestType.json)
             return jsonError("Argument '"+arg._name+"' error: "+e.getMessage()).toString();
           else
@@ -144,7 +144,7 @@ public class RequestQueries extends RequestArguments {
       try {
         arg.check(RequestQueries.this, parms.getProperty(arg._name,""));
         queryArgumentValueSet(arg, parms);
-      } catch (IllegalArgumentException e) {
+      } catch( IllegalArgumentException e ) {
         // in query mode only display error for arguments present
         if ((type != RequestType.query) || !parms.getProperty(arg._name,"").isEmpty())
           query.append("<div class='alert alert-error'>"+e.getMessage()+"</div>");

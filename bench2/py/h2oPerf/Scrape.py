@@ -1,11 +1,6 @@
 from Table import *
-import json
-
-#This contains a way of capturing the stdout/stderr from R.
-#There are multiple R subprocesses to scrape:
-#R import/parse
-#R model
-#R predict/score (further specifics for different types of math results)
+import json, os, re, subprocess, time
+import MySQLdb
 
 class Scraper:
     """
@@ -28,25 +23,25 @@ class Scraper:
         self.output_dir = output_dir
         self.output_file_name = output_file_name
         self.contamination = os.path.join(self.output_dir, "contamination_message")
-        self.contaminated = os.exists(self.contamination)
+        self.contaminated = 1 if os.path.exists(self.contamination) else 0
         self.contamination_message = ""
         if self.contaminated:
             with open(self.contamination, "r") as f:
                 self.contamination_message = f.readlines()
 
     def scrape(self):
-    """
-    Switches out to the phase scraper for scraping R output.
-    The subclass object is then invoked and an object with
-    table information is percolated back to the caller.
-    """
+        """
+        Switches out to the phase scraper for scraping R output.
+        The subclass object is then invoked and an object with
+        table information is percolated back to the caller.
+        """
         phase_scraper = self.__switch__()
         return phase_scraper.invoke()
 
     def __switch__(self):
-    """
-    Switch to scraper for the appropriate phase.
-    """
+        """
+        Switch to scraper for the appropriate phase.
+        """
         return {
             'parse': ParseScraper(self), 
             'model': ModelScraper(self), 
@@ -66,13 +61,16 @@ class Scraper:
                     flag = True
         return phase_r['phase_result']
 
-    def insert_phase_result(self):
-        with open(self.output_file_name, "r") as f:
-            self.test_run_phase_result.row['stdouterr'] = f.readlines()
-        self.test_run_phase_result.row['contaminated'] = self.contaminated
-        self.test_run_phase_result.row['contamination_message'] = self.contamination_message
-        self.test_run_phase_result.row.update(self.__scrape_phase_result__())
-        self.test_run_phase_result.update()
+    @staticmethod
+    def insert_phase_result(object):
+        object.test_run_phase_result = TableRow("test_run_phase_result")
+        time.sleep(1)
+        with open(object.output_file_name, "r") as f:
+            object.test_run_phase_result.row['stdouterr'] = MySQLdb.escape_string(f.read().replace('\n', ''))
+        object.test_run_phase_result.row['contaminated'] = object.contaminated
+        object.test_run_phase_result.row['contamination_message'] = object.contamination_message
+        object.test_run_phase_result.row.update(object.__scrape_phase_result__())
+        object.test_run_phase_result.update()
 
 class ParseScraper(Scraper):
     """
@@ -98,8 +96,7 @@ class ParseScraper(Scraper):
                          'train_dataset_url': '',
                          'test_dataset_url': ''}
 
-        self.test_run_phase_result = TableRow("test_run_phase_result")
-        self.insert_phase_result()
+        Scraper.insert_phase_result(self)
 
     def invoke(self):
         """
@@ -145,11 +142,11 @@ class ModelScraper(Scraper):
         self.output_file_name = object.output_file_name
         self.test_run_clustering_result = ""
         self.contaminated = object.contaminated
-        self.contamination_message = \ 
+        self.contamination_message = \
             "No contamination." if not self.contaminated else object.contamination_message
         self.test_run_model_result = TableRow("test_run_model_result")
         self.test_run_phase_result = TableRow("test_run_phase_result")
-        self.insert_phase_result()
+        Scraper.insert_phase_result(self)
 
     def invoke(self):
         """
@@ -157,10 +154,16 @@ class ModelScraper(Scraper):
         Additionally handles the KMeans clustering results table.
         @return: None
         """
-        #check for KMeans
-        #scrape & insert kmeans results
-        #scrape & insert model results
-       
+        kmeans_result = self.__scrape_kmeans_result__()
+        if kmeans_result:
+            self.test_run_clustering_result = TableRow("test_run_clustering_result")
+            self.test_run_clustering_result.row.update(kmeans_result)
+            self.test_run_clustering_result.update()
+
+        self.test_run_model_result.row['model_json'] = \
+                          MySQLdb.escape_string(str(self.__scrape_model_result__()))
+        self.test_run_model_result.update()
+
     def __scrape_kmeans_result__(self):
         kmeans_r = ""
         with open(self.output_file_name, "r") as f:
@@ -172,8 +175,8 @@ class ModelScraper(Scraper):
                     break
                 if "KMEANS RESULT" in line and "print" not in line:
                     flag = True
-        return kmeans_r["kmeans_result"]
-  
+        return None if kmeans_r["kmeans_result"]["k"] == "None" else kmeans_r["kmeans_result"]
+
     def __scrape_model_result__(self):
         model_r = ""
         with open(self.output_file_name, "r") as f:
@@ -185,7 +188,7 @@ class ModelScraper(Scraper):
                     break
                 if "MODEL RESULT" in line and "print" not in line:
                     flag = True
-        return model_r["model_result"]
+        return model_r["model_result"]["model_json"]
 
 class PredictScraper(Scraper):
     """
@@ -213,19 +216,22 @@ class PredictScraper(Scraper):
         self.test_short_dir = object.test_short_dir
         self.output_dir = object.output_dir
         self.output_file_name = object.output_file_name
+        self.contaminated = object.contaminated
+        self.contamination_message = \
+            "No contamination." if not self.contaminated else object.contamination_message
 
-        self.test_run_binomial_classification_result = \
-            TableRow("test_run_binomial_classification_result")
-        self.test_run_cm_result = TableRow("test_run_cm_result")
-        self.test_run_phase_result = TableRow("test_run_phase_result")
-        self.test_run_regression_result = TableRow("test_run_regression_result")
+        self.test_run_binomial_classification_result = "" #\
+            #TableRow("test_run_binomial_classification_result")
+        self.test_run_cm_result = "" #TableRow("test_run_cm_result")
+        self.test_run_phase_result = "" #TableRow("test_run_phase_result")
+        self.test_run_regression_result = "" #TableRow("test_run_regression_result")
 
         self.test_run_multinomial_classification_result = "" #This is "" for now since we are using a dense format.
                                                              #That is 1 row for each class in the response.
-        self.insert_phase_result()
+        Scraper.insert_phase_result(self)
 
     def invoke(self):
-    """
+        """
     Scrapes the stdouterr from the R phase. 
     This invoke method will pass off control to the appropriate result scraper
     using the __switch__ override.
@@ -233,24 +239,100 @@ class PredictScraper(Scraper):
     Some preliminary scraping will be done here to obtain the correct result type.
     @return: None
     """
+        predict_type = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    predict_type = self.__get_predict_type__(line.strip())[0]
+                    flag = False
+                    break
+                if "PREDICT TYPE" in line and "print" not in line:
+                    flag = True
+        self.result_type = predict_type
+        self.__switch__()
         
-    
+    def __get_predict_type__(self, type_candidate):
+        """ 
+        Returns the type: 'parse', 'model', 'predict'
+        """
+        types = ['binomial', 'regression', 'multinomial', 'cm']
+        rf = type_candidate.lower()
+        return [t for t in types if t in rf] 
 
     def __switch__(self):
-    """
-    Overrides the __switch__ method of the parent class.
+        """
+        Overrides the __switch__ method of the parent class.
 
-    This switch method handles the different types of math
-    results: regression, multionomial classification, CM result,
-             binomial classification
+        This switch method handles the different types of math
+        results: regression, multionomial classification, CM result,
+                 binomial classification
 
-    Multinomial classification is the only case where there will
-    be multiple rows inserted, all other results constitute a single row
-    in their respective tables. 
-    """
+        Multinomial classification is the only case where there will
+        be multiple rows inserted, all other results constitute a single row
+        in their respective tables.
+
+        One important note is that the scrapers in this case handle the
+        database insertions.
+        """
         return {'regression' : self.__scrape_regression_result__(),
                 'cm'         : self.__scrape_cm_result__(),
                 'binomial'   : self.__scrape_binomial_result__(),
                 'multinomial': self.__scrape_multinomial_result__(),
                 }[self.result_type]
+
+    def __scrape_regression_result__(self):
+        regression_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    regression_r = json.loads(line)
+                    flag = False
+                    break
+                if "REGRESSION" in line and "print" not in line:
+                    flag = True
+        #do the insert
+
+    def __scrape_cm_result__(self):
+        cm_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    cm_r = json.loads(line)
+                    flag = False
+                    break
+                if "CM" in line and "print" not in line:
+                    flag = True
+        #do the insert
+
+    def __scrape_binomial_result__(self):
+        binomial_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    binomial_r = json.loads(line)
+                    flag = False
+                    break
+                if "BINOMIAL" in line and "print" not in line:
+                    flag = True
+        self.test_run_binomial_classification_result = TableRow("test_run_binomial_classification_result")
+        self.test_run_binomial_classification_result.row.update(binomial_r['binomial_result'])
+        self.test_run_binomial_classification_result.update()
+        return None
+
+    def __scrape_multinomial_result__(self):
+        multinomial_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    multinomial_r = json.loads(line)
+                    flag = False
+                    break
+                if "MULTINOMIAL" in line and "print" not in line:
+                    flag = True
+        #do the insert
 

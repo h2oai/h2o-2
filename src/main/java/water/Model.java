@@ -114,18 +114,19 @@ public abstract class Model extends Lockable<Model> {
     }
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        double tmp[] = new double[_names.length];
-        float preds[] = new float[nclasses()];
+        double tmp [] = new double[_names.length];
+        float preds[] = new float [nclasses()];
+        int   ties [] = new int   [nclasses()];
         Chunk p = chks[_names.length-1];
-        for( int i=0; i<p._len; i++ ) {
-          float[] out = score0(chks,i,tmp,preds);
+        for( int row=0; row<p._len; row++ ) {
+          float[] out = score0(chks,row,tmp,preds);
           if( nclasses() > 1 ) {
-            if( Float.isNaN(out[0]) ) p.setNA0(i);
-            else p.set0(i, Utils.maxIndex(out));
+            if( Float.isNaN(out[0]) ) p.setNA0(row);
+            else p.set0(row, Model.getPrediction(out, ties, row));
             for( int c=0; c<nclasses(); c++ )
-              chks[_names.length+c].set0(i,out[c]);
+              chks[_names.length+c].set0(row,out[c]);
           } else {
-            p.set0(i,out[0]);
+            p.set0(row,out[0]);
           }
         }
       }
@@ -285,6 +286,45 @@ public abstract class Model extends Lockable<Model> {
   // Version where the user has just ponied-up an array of data to be scored.
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
+
+  /**
+   * Utility function to get a best prediction from an array of class prediction distribution if you know the row number.
+   * It returns index of max value if predicted values are unique.
+   * In the case of tie, the implementation solve it in sudo-random way based on number of row in chunk.
+   *
+   * @param preds an array of prediction distribution. Length of arrays is equal to a number of classes.
+   * @param ties a pre-allocated array to hold class numbers participating in tie
+   * @return the best prediction (index of class)
+   */
+  public static final int getPrediction(float[] preds, int[] ties, int rowInChunk) {
+    assert preds.length == ties.length;
+    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
+    for (int c=1; c<preds.length; c++) {
+      if (preds[best] < preds[c]) {
+        best = c; // take the max index
+        ties[tieCnt=0] = c;
+      } else if (preds[best] == preds[c]) {
+        ties[++tieCnt] = c;
+      }
+    }
+    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
+    return best;
+  }
+  // Argh Java needs templates for primitive types
+  public static final int getPrediction(double[] preds, int[] ties, int rowInChunk) {
+    assert preds.length == ties.length;
+    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
+    for (int c=1; c<preds.length; c++) {
+      if (preds[best] < preds[c]) {
+        best = c; // take the max index
+        ties[tieCnt=0] = c;
+      } else if (preds[best] == preds[c]) {
+        ties[++tieCnt] = c;
+      }
+    }
+    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
+    return best;
+  }
 
 
   /** Return a String which is a valid Java program representing a class that

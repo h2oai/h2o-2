@@ -594,8 +594,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       Frame adapValidation = frs[0]; // adapted validation dataset
       // All columns including response of validation frame are already adapted to model
       if (_nclass>1) { // Classification
-        for( int i=0; i<_nclass; i++ )
+        for( int i=0; i<_nclass; i++ ) // Distribution of response classes
           adapValidation.add("ClassDist"+i,res.vecs()[i+1]);
+        adapValidation.add("Prediction",res.vecs()[0]); // Predicted values
       } else { // Regression
         adapValidation.add("Prediction",res.vecs()[0]);
       }
@@ -619,9 +620,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         double sum;
         if( _validation ) {     // Passed in a class distribution from scoring
           for( int i=0; i<_nclass; i++ )
-            ds[i] = chks[i+_ncols+1].at0(row);  // Get the class distros
-          if (_nclass > 1 ) sum = 1.0;          // Sum of a distribution is 1.0 for classification
-          else sum = ds[0];                     // Sum is the same as prediction for regression.
+            ds[i] = chks[i+_ncols+1].at0(row); // Get the class distros
+          if (_nclass > 1 ) sum = 1.0;           // Sum of a distribution is 1.0 for classification
+          else sum = ds[0];                      // Sum is the same as prediction for regression.
         } else {                // Passed in the model-specific columns
           sum = score0(chks,ds,row);
         }
@@ -645,13 +646,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         _sum += err*err;               // Squared error
         assert !Double.isNaN(_sum);
         // Pick highest prob for our prediction.  Count all ties for best.
-        int best=0, tie_cnt=0;  ties[tie_cnt] = 0;
-        for( int c=1; c<_nclass; c++ )
-          if( ds[best] < ds[c] ) { best=c; ties[  tie_cnt=0]=c; }
-          else if( ds[best] == ds[c] ) {   ties[++tie_cnt  ]=c; }
-        // Break ties psuedo-randomly: (row# mod #ties).
-        if( tie_cnt >= 1 ) { best = ties[row%(tie_cnt+1)]; }
-        _cm[ycls][best]++;      // Bump Confusion Matrix also
+        if (_nclass > 1) { // fill CM only for classification
+          int best = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : Model.getPrediction(ds, ties, row);
+          _cm[ycls][best]++;      // Bump Confusion Matrix also
+        }
         _snrows++;
       }
     }

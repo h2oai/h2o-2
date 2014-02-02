@@ -121,7 +121,8 @@ function(ipPort) {
     if (!file.exists(wrapPath))
       stop(paste("h2o package does not exist at", wrapPath));
     print(paste("Installing h2o package from", wrapPath))
-    install.packages(wrapPath, repos = NULL, type = "source")
+    # install.packages(wrapPath, repos = NULL, type = "source")
+	install.packages("h2o", repos = c(H2O = paste("file://", wrapDir, sep=""), getOption("repos")))
   }
 
   Log.info("Check that H2O R package matches version on server\n")
@@ -153,7 +154,7 @@ function() {
 }
 
 Log.info("============== Setting up R-Unit environment... ================")
-defaultPath <- "../../target/R"
+defaultPath <- normalizePath("../../target/R")
 ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 checkNLoadWrapper(ipPort)
 checkNLoadPackages()

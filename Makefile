@@ -119,10 +119,6 @@ endif
 	@echo "PHASE: Building zip package..."
 	@echo
 	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION)
-	@echo
-	@echo "PHASE: Building Mac and Windows installer packages..."
-	@echo
-	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
 
 BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 BUILD_HASH=$(shell git log -1 --format="%H")
@@ -154,7 +150,9 @@ build_package:
 	echo $(PROJECT_VERSION) > target/project_version
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)
-	cp -rp target/R target/h2o-$(PROJECT_VERSION)
+	mkdir target/h2o-$(PROJECT_VERSION)/R
+	cp -p target/R/src/contrib/h2o_$(PROJECT_VERSION).tar.gz target/h2o-$(PROJECT_VERSION)/R
+	cp -p R/README.txt target/h2o-$(PROJECT_VERSION)/R
 	cp -rp target/hadoop target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)
@@ -168,12 +166,6 @@ build_package:
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci
 	cp -rp ci target
-
-# Most people won't have the BitRock InstallBuilder software
-# installed, which is OK.  It will harmlessly do nothing for that
-# case.
-build_installer:
-	$(MAKE) -C installer build PROJECT_VERSION=$(PROJECT_VERSION)
 
 test:
 	./build.sh

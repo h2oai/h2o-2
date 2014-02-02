@@ -58,7 +58,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         # x = range(inspect['num_cols'])
         # del x[response]
-        ntrees = 100
+        ntrees = 10
         # fails with 40
         params = {
             'learn_rate': .2,

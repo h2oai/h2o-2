@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_common, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_common
 import socket
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -11,13 +11,13 @@ DO_KMEANS = True
 FROM_HDFS = 'CDH3'
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c5_KMeans_sphere_67MB(self):
+    def test_c5_KMeans_sphere_26GB_fvec(self):
         h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
-        csvFilename = 'syn_sphere_gen_h1m_no_na.csv'
-        totalBytes = 67306997
+        csvFilename = 'syn_sphere_gen.csv'
+        totalBytes = 183538602156
         if FROM_HDFS:
             importFolderPath = "datasets/kmeans_big"
             csvPathname = importFolderPath + '/' + csvFilename
@@ -76,16 +76,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 
-            # clear out all NAs (walk across cols)..clear to 0
-            # temp
-            ## execExpr = '%s=apply(%s,2,function(x){ifelse(is.na(x),0,x)})' % (hex_key, hex_key)
-            ## h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
-
-            inspect = h2o_cmd.runInspect(key=hex_key, timeoutSecs=500)
-            h2o_cmd.infoFromInspect(inspect, csvPathname)
-            summary = h2o_cmd.runSummary(key=hex_key, timeoutSecs=500)
-            h2o_cmd.infoFromSummary(summary)
-
             # KMeans ****************************************
             if not DO_KMEANS:
                 continue
@@ -97,9 +87,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'normalize': 1,
                 'initialization': 'Furthest',
                 'destination_key': 'junk.hex', 
+                # we get NaNs if whole col is NA
+                'ignored_cols': 'C0',
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
-                # 'ignored_cols': 'C0', # get NaNs if col with all NAs is left in. the exec2 clear doesn't seem to work
                 }
 
             if (trial%3)==0:

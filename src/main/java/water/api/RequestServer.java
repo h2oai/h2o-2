@@ -37,6 +37,8 @@ import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
@@ -234,13 +236,39 @@ public class RequestServer extends NanoHTTPD {
               // Try to get the NanoHTTP daemon started
               SERVER = new RequestServer(H2O._apiSocket);
               break;
-            } catch ( Exception ioe ) {
+            } catch( Exception ioe ) {
               Log.err(Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
               try { Thread.sleep(1000); } catch( InterruptedException e ) { } // prevent denial-of-service
             }
           }
         }
       }, "Request Server launcher").start();
+  }
+
+  public static String maybeTransformRequest (String uri) {
+    if (uri.isEmpty() || uri.equals("/")) {
+      return "/Tutorials.html";
+    }
+
+    Pattern p = Pattern.compile("/R/bin/([^/]+)/contrib/([^/]+)(.*)");
+    Matcher m = p.matcher(uri);
+    boolean b = m.matches();
+    if (b) {
+      // On Jenkins, this command sticks his own R version's number
+      // into the package that gets built.
+      //
+      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
+      //
+      String versionOfRThatJenkinsUsed = "3.0";
+
+      String platform = m.group(1);
+      String version = m.group(2);
+      String therest = m.group(3);
+      String s = "/R/bin/" + platform + "/contrib/" + versionOfRThatJenkinsUsed + therest;
+      return s;
+    }
+
+    return uri;
   }
 
   // uri serve -----------------------------------------------------------------
@@ -271,7 +299,7 @@ public class RequestServer extends NanoHTTPD {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
     // update arguments and determine control variables
-    if( uri.isEmpty() || uri.equals("/") ) uri = "/Tutorials.html";
+    uri = maybeTransformRequest(uri);
     // determine the request type
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
@@ -288,7 +316,7 @@ public class RequestServer extends NanoHTTPD {
       request = request.create(parms);
       // call the request
       return request.serve(this,parms,type);
-    } catch (Exception e) {
+    } catch( Exception e ) {
       if(!(e instanceof ExpectedExceptionForDebug))
         e.printStackTrace();
       // make sure that no Exception is ever thrown out from the request

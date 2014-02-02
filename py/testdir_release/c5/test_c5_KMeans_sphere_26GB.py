@@ -12,7 +12,7 @@ FROM_HDFS = 'CDH3'
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c5_KMeans_sphere_26GB(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         # a kludge
         h2o.setup_benchmark_log()
 
@@ -88,7 +88,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'initialization': 'Furthest',
                 'destination_key': 'junk.hex', 
                 # we get NaNs if whole col is NA
-                'ignored_cols': 'C0',
+                'cols': 'C1, C2, C3, C4, C5, C6, C7',
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
                 }

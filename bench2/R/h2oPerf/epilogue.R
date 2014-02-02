@@ -7,8 +7,10 @@
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
 end_time <<- round(System$currentTimeMillis())[[1]]
-correct_pass <<- TRUE
-time_pass <<- TRUE
+correct_pass <<- 1
+time_pass <<- 1
+passed <<- ifelse(correct_pass && time_pass, 1, 0)
+
 
 #"Private" Methods
 .dataSources<-
@@ -76,7 +78,7 @@ function() {
                      end_epoch_ms = end_time,
                      timing_passed = time_pass,
                      correctness_passed = correct_pass,
-                     passed = time_pass && correct_pass))
+                     passed = passed))
   .coda("PHASE", r)
 }
 
@@ -126,9 +128,9 @@ function() {
 
 .emitBinomResults<-
 function() {
-  r <- list(binom_result = 
+  r <- list(binomial_result = 
                 list(auc = auc,
-                     precision = precision[[1]],
+                     precision_ = precision[[1]],
                      recall = recall[[1]],
                      error_rate = error_rate[[1]],
                      minority_error_rate = minority_error_rate[[1]]))
@@ -157,8 +159,8 @@ function() {
 
 .emitMultinomResults<-
 function() {
-  r <- list(multinom_result = .confusionMatrix())
-  .coda("MULTINOM", r)
+  r <- list(multinomial_result = .confusionMatrix())
+  .coda("MULTINOMIAL", r)
 }
 
 .emitPredictResults<-
