@@ -148,13 +148,14 @@ class Basic(unittest.TestCase):
         print "\nScore2\n=========="
         h2o_rf.simpleCheckRFScore(node=None, rfv=scoreResult2, noPrint=False, **kwargs)
 
-        print "\nTraining: JsonDiff sorted data results, to non-sorted results (json responses)"
-        df = h2o_util.JsonDiff(trainResult1, trainResult2, with_values=True)
-        print "df.difference:", h2o.dump_json(df.difference)
+        if 1==0:
+            print "\nTraining: JsonDiff sorted data results, to non-sorted results (json responses)"
+            df = h2o_util.JsonDiff(trainResult1, trainResult2, with_values=True)
+            print "df.difference:", h2o.dump_json(df.difference)
 
-        print "\nScoring: JsonDiff sorted data results, to non-sorted results (json responses)"
-        df = h2o_util.JsonDiff(scoreResult1, scoreResult2, with_values=True)
-        print "df.difference:", h2o.dump_json(df.difference)
+            print "\nScoring: JsonDiff sorted data results, to non-sorted results (json responses)"
+            df = h2o_util.JsonDiff(scoreResult1, scoreResult2, with_values=True)
+            print "df.difference:", h2o.dump_json(df.difference)
 
 if __name__ == '__main__':
     h2o.unit_main()
