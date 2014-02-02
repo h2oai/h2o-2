@@ -311,7 +311,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    benchmarkLogging=None, noPoll=False, doSummary=True, **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, **kwargs):
 
     ## if h2o.beta_features:
     ##     print "HACK: temporarily disabling Summary always in v2 import_parse"
@@ -336,7 +336,7 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     if doSummary and not noPoll:
         # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
         h2o.check_sandbox_for_errors()
-        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs)
+        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs, noPrint=noPrint)
         # for now, don't worry about error isolating summary 
     else:
         # isolate a parse from the next thing

@@ -223,7 +223,7 @@ class Basic(unittest.TestCase):
                         str(sepCase) + \
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
-                    parseResult = h2i.import_parse(path=csvPathname, schema='put')
+                    parseResult = h2i.import_parse(path=csvPathname, schema='put', noPrint=not h2o.verbose)
                     h2o_cmd.runRF(parseResult=parseResult, trees=1,
                         timeoutSecs=10, retryDelaySecs=0.1, noPrint=True, print_params=False)
                     h2o.verboseprint("Set", set)
