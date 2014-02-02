@@ -23,15 +23,15 @@ public class NNTask extends FrameTask<NNTask> {
     _input=input;
   }
 
-  // initialize node-local shared data (weights and biases)
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
     if (_input == null) {
+       // first call: initialize weights/biases
       _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
       _input.initializeMembers();
     }
 
-    _output = _input.clone();
+    _output = new NNModel.NNModelInfo(_input);
     _output.processed = 0;
     _input = null;
   }
@@ -50,19 +50,14 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override protected void chunkDone(){
-    System.out.println("ChunkDone: w[0][0] = " + _output.weights[0][0]);
     System.out.println("Processed: " + _output.chunk_processed_rows + " rows.");
   }
 
   @Override public void reduce(NNTask other){
-    System.out.println("Before Reduce: w[0][0] = " + _output.weights[0][0]);
     _output.add(other._output);
-    System.out.println("After Reduce: w[0][0] = " + _output.weights[0][0]);
   }
 
   @Override protected void postGlobal(){
-    System.out.println("Div: " + _output.chunk_node_count);
-    System.out.println("w[0][0] = " + _output.weights[0][0]);
     _output.div(_output.chunk_node_count);
     _output.processed += _output.chunk_processed_rows;
   }

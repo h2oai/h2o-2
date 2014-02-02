@@ -20,7 +20,7 @@ public class NN extends Job.ValidatedJob {
   public static final String DOC_GET = "Neural Network";
 
   public DataInfo _dinfo;
-  boolean _gen_enum;
+  private boolean _gen_enum;
 
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
@@ -160,35 +160,40 @@ public class NN extends Job.ValidatedJob {
   @Override public Key defaultDestKey(){return null;}
   @Override public Key defaultJobKey() {return null;}
 
+  @Override public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("description: " + description);
+    sb.append("\nActivation function: " + activation.toString());
+    sb.append("\nInput layer dropout ratio: " + input_dropout_ratio);
+    String h = "" + hidden[0];
+    for (int i=1; i<hidden.length; ++i) h += ", " + hidden[i];
+    sb.append("\nHidden layer sizes: " + h);
+    sb.append("\nLearning rate: " + rate);
+    sb.append("\nLearning rate annealing: " + rate_annealing);
+    sb.append("\nL1 regularization: " + l1);
+    sb.append("\nL2 regularization: " + l2);
+    sb.append("\nInitial momentum at the beginning of training: " + momentum_start);
+    sb.append("\nNumber of training samples for which momentum increases: " + momentum_ramp);
+    sb.append("\nFinal momentum after the ramp is over: " + momentum_stable);
+    sb.append("\nNumber of epochs: " + epochs);
+    sb.append("\nSeed for random numbers: " + seed);
+//    sb.append("\nEnable expert mode: ", expert_mode);
+    sb.append("\nInitial weight distribution: " + initial_weight_distribution);
+    sb.append("\nInitial weight scale: " + initial_weight_scale);
+    sb.append("\nLoss function: " + loss.toString());
+    sb.append("\nLearning rate decay factor: " + rate_decay);
+    sb.append("\nConstraint for squared sum of incoming weights per unit: " + max_w2);
+    sb.append("\nNumber of training set samples for scoring: " + score_training);
+    sb.append("\nNumber of validation set samples for scoring: " + score_validation);
+//    sb.append("\nMinimum interval (in seconds) between scoring: " + score_interval);
+//    sb.append("\nEnable diagnostics for hidden layers: " + diagnostics);
+    return sb.toString();
+  }
+
   @Override protected void logStart() {
     Log.info("Starting Neural Net model build...");
     super.logStart();
-    Log.info("    description: " + description);
-
-    Log.info("Activation function: " + activation.toString());
-    Log.info("Input layer dropout ratio: " + input_dropout_ratio);
-    String h = "" + hidden[0];
-    for (int i=1; i<hidden.length; ++i) h += ", " + hidden[i];
-    Log.info("Hidden layer sizes: " + h);
-    Log.info("Learning rate: " + rate);
-    Log.info("Learning rate annealing: " + rate_annealing);
-    Log.info("L1 regularization: " + l1);
-    Log.info("L2 regularization: " + l2);
-    Log.info("Initial momentum at the beginning of training: " + momentum_start);
-    Log.info("Number of training samples for which momentum increases: " + momentum_ramp);
-    Log.info("Final momentum after the ramp is over: " + momentum_stable);
-    Log.info("Number of epochs: " + epochs);
-    Log.info("Seed for random numbers: " + seed);
-//    Log.info("Enable expert mode: ", expert_mode);
-    Log.info("Initial weight distribution: " + initial_weight_distribution);
-    Log.info("Initial weight scale: " + initial_weight_scale);
-    Log.info("Loss function: " + loss.toString());
-    Log.info("Learning rate decay factor: " + rate_decay);
-    Log.info("Constraint for squared sum of incoming weights per unit: " + max_w2);
-    Log.info("Number of training set samples for scoring: " + score_training);
-    Log.info("Number of validation set samples for scoring: " + score_validation);
-//    Log.info("Minimum interval (in seconds) between scoring: " + score_interval);
-//    Log.info("Enable diagnostics for hidden layers: " + diagnostics);
+    for (String s : this.toString().split("\n")) Log.info(s);
   }
 
   /** Return the query link to this page */
@@ -213,8 +218,7 @@ public class NN extends Job.ValidatedJob {
   @Override public float progress(){
     if(DKV.get(dest()) == null)return 0;
     NNModel m = DKV.get(dest()).get();
-    float progress = (float)(m.epoch_counter / m.model_info.parameters.epochs);
-    return progress;
+    return (float)(m.epoch_counter / m.model_info.parameters.epochs);
   }
 
   @Override protected Status exec() {
@@ -238,14 +242,16 @@ public class NN extends Job.ValidatedJob {
 
   public void trainModel(boolean scorewhiletraining){
     NNModel model = UKV.get(dest());
-    NNModel.NNModelInfo modelinfo = model.model_info;
+    NNModel.NNModelInfo input = model.model_info;
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     for (int epoch = 1; epoch <= epochs; ++epoch) {
       boolean training = true;
       // train for one epoch, starting with weights/biases from modelinfo
-      NNTask nntask = new NNTask(this, _dinfo, this, modelinfo, training).doAll(_dinfo._adaptedFrame);
-      modelinfo = nntask._output;
-      if (diagnostics) modelinfo.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
+      NNTask nntask = new NNTask(this, _dinfo, this, input, training).doAll(_dinfo._adaptedFrame);
+      // take the result, update the model and use as input for next epoch
+      model.model_info = nntask._output;
+      input = model.model_info;
+      if (diagnostics) input.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
       final String label =  (validation == null ? "Training" : "Validation")
               + " error after training for " + epoch
               + " epochs (" + model.model_info.processed + " samples):";
@@ -260,7 +266,7 @@ public class NN extends Job.ValidatedJob {
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected void doScoring(NNModel model, Frame ftest, String label, boolean force) {
+  void doScoring(NNModel model, Frame ftest, String label, boolean force) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
