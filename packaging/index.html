@@ -10,6 +10,11 @@ margin-left:auto;
 margin-right:auto;
 display:block;
 }
+
+.mycomment {
+background-color:#EEEEEE;
+color:#009900;
+}
   </style>
 
   <script>
@@ -110,21 +115,22 @@ Downloads
 <br>
 
 <h2 align="center">
-Installation of the H2O package for R from a package repository
+Installation of H2O directly from an R package repository
 </h2>
 
 <table border="5" cellpadding="5" align="center">
 <tr>
 <th>Platform</th>
-<th>Instructions</th>
+<th>Cut and paste these commands into R (one line at a time)</th>
 </tr>
 <tr>
 <td align="center">Any</td>
 <td align="left">
-
-# Detach and remove any previously installed H2O packages.  These might give error output if
+<span class="mycomment"># The following four commands remove any previously installed H2O packages for R.</span>
 <br>
-# H2O is not loaded or was not previously installed.  You can safely ignore these errors.
+<span class="mycomment"># These might give error output if H2O is not currently loaded or was not previously installed.</span>
+<br>
+<span class="mycomment"># You can safely ignore any such errors.</span>
 <br>
 detach("package:h2o", unload=TRUE)
 <br>
@@ -135,16 +141,16 @@ remove.packages("h2o")
 remove.packages("h2oRClient")
 <br>
 <br>
-# Download, install and initialize the H2O package directly from inside R.
+<span class="mycomment"># Next, we download, install and initialize the H2O package for R.</span>
 <br>
 install.packages("h2o", repos=(c("<script type="text/javascript">var url = location.href; var url2 = url.substring(0, url.lastIndexOf("/")); document.write(url2);</script>/R", getOption("repos"))))
 <br>
 library(h2o)
 <br>
-localH2O = h2o.init()
+localH2O = h2o.init(silentUpgrade=TRUE)
 <br>
 <br>
-# Run a demo.
+<span class="mycomment"># Finally, run a demo to see H2O work.</span>
 <br>
 demo(h2o.glm)
 </td>
