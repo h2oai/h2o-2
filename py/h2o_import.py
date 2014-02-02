@@ -198,6 +198,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
             h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
 
+        
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
