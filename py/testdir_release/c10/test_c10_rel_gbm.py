@@ -89,6 +89,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         errsLast = gbmTrainView['gbm_model']['errs'][-1]
         print "GBM 'errsLast'", errsLast
 
+        if 'cm' not in gbmTrainView['gbm_model']:
+            raise Exception("Where is 'cm' in this gbmTrainView?: %s" % h2o.dump_json(gbmTrainView))
+
         cm = gbmTrainView['gbm_model']['cm']
         pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
         print "Last line of this cm might be NAs, not CM"
