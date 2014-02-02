@@ -7,10 +7,9 @@ def define_params(SEED):
         'k': [2, 5], # seems two slow tih 12 clusters if all cols
         'initialization': ['None', 'PlusPlus', 'Furthest'],
         'ignored_cols': [None, "0", "3", "0,1,2,3,4"],
-        'max_iter': [1, 5, 10],
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
-        'max_iter': [None, 10,20,50],
+        'max_iter': [10,20,50],
         # 'destination_key:': "junk",
         
         }
