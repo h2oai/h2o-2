@@ -26,11 +26,11 @@ public class NNTask extends FrameTask<NNTask> {
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
     if (_input == null) {
-       // first call: initialize weights/biases
+      System.out.println("setupLocal: Initializing data structures.");
       _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
       _input.initializeMembers();
     }
-
+    System.out.println("setupLocal: Transferring ownership to local modelinfo.");
     _output = new NNModel.NNModelInfo(_input);
     _output.processed = 0;
     _input = null;
@@ -41,7 +41,8 @@ public class NNTask extends FrameTask<NNTask> {
   @Override protected void chunkInit(int nrows){
     _neurons = makeNeurons(_dinfo, _output);
     _output.chunk_node_count = (nrows > 0 ? 1 : 0);
-    System.out.println("Working on " + nrows + " rows.");
+    _output.chunk_processed_rows = 0;
+    System.out.println("chunkInit: Working on " + nrows + " rows.");
   }
 
   @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
@@ -50,7 +51,7 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override protected void chunkDone(){
-    System.out.println("Processed: " + _output.chunk_processed_rows + " rows.");
+    System.out.println("chunkDone: Finished working on " + _output.chunk_processed_rows + " rows.");
   }
 
   @Override public void reduce(NNTask other){
@@ -60,6 +61,7 @@ public class NNTask extends FrameTask<NNTask> {
   @Override protected void postGlobal(){
     _output.div(_output.chunk_node_count);
     _output.processed += _output.chunk_processed_rows;
+    System.out.println("postGlobal: Processed " + _output.processed + " rows.");
   }
 
   // Helper
@@ -90,7 +92,7 @@ public class NNTask extends FrameTask<NNTask> {
       }
     }
     // output
-    if( params.classification )
+    if(params.classification)
       neurons[neurons.length - 1] = new Neurons.Softmax(dinfo._adaptedFrame.lastVec().domain().length, params.loss);
     else
       neurons[neurons.length - 1] = new Neurons.Linear(1);
@@ -113,8 +115,8 @@ public class NNTask extends FrameTask<NNTask> {
         for( int i = 1; i < neurons.length - 1; i++ )
           Arrays.fill(neurons[i]._e, 0);
         assert((double)(int)responses[0] == responses[0]);
-        final int target = (int)responses[0];
-        ((Neurons.Softmax)neurons[neurons.length-1]).bprop(target);
+        final int target_label = (int)responses[0];
+        ((Neurons.Softmax)neurons[neurons.length-1]).bprop(target_label);
       }
     }
     else {
@@ -122,16 +124,14 @@ public class NNTask extends FrameTask<NNTask> {
       if (training) {
         for( int i = 1; i < neurons.length - 1; i++ )
           Arrays.fill(neurons[i]._e, 0);
-        final double target = responses[0];
-        ((Neurons.Linear)neurons[neurons.length-1]).bprop(target);
+        final double target_value = responses[0];
+        ((Neurons.Linear)neurons[neurons.length-1]).bprop(target_value);
       }
     }
     if (training) {
       for (int i=neurons.length-2; i>0; --i)
         neurons[i].bprop();
       minfo.chunk_processed_rows++;
-      if (minfo.chunk_processed_rows % 10000 == 0)
-        System.out.println("Processed: " + minfo.chunk_processed_rows);
     }
   }
 

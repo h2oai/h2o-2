@@ -43,6 +43,8 @@ public class NNModel extends Model {
 
     public float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
     public double[][] biases; //one 1D bias array per layer
+//  public float[][] _wm;
+//  public double[][] _bm;
     private int[] units; //number of neurons per layer, extracted from parameters and from datainfo
 
     @API(help = "Model parameters", json = true)
@@ -70,11 +72,6 @@ public class NNModel extends Model {
     public int chunk_node_count;
     public long chunk_processed_rows;
 
-    // disregard for now: momenta
-//  public float[] _wm;
-//  public double[] _bm;
-
-//    public float[] incoming_weights(int layer) { return weights[layer-1]; }
     public NNModelInfo() {}
 
     public NNModelInfo(NN params, int num_input, int num_output) {
@@ -92,6 +89,11 @@ public class NNModel extends Model {
       // biases (only for hidden layers and output layer)
       biases = new double[layers+2][];
       for (int i=0; i<=layers+1; ++i) biases[i] = new double[units[i]];
+      // for diagnostics
+      mean_bias = new double[units.length];
+      rms_bias = new double[units.length];
+      mean_weight = new double[units.length];
+      rms_weight = new double[units.length];
     }
 
     @Override public String toString() {
@@ -122,33 +124,32 @@ public class NNModel extends Model {
         weights[i] = other.weights[i].clone();
       for (int i=0; i<other.biases.length; ++i)
         biases[i] = other.biases[i].clone();
-
-      // Use Arrays.copyOf
-//      mean_bias =
-//      rms_bias =
-//      mean_weight =
-//      rms_weight =
+      mean_bias = other.mean_bias.clone();
+      rms_bias = other.rms_bias.clone();
+      mean_weight = other.mean_weight.clone();
+      rms_weight = other.rms_weight.clone();
       unstable = other.unstable;
     }
     public void add(NNModelInfo other) {
-      if (other == this) return;
+      if (other == this) {
+        System.out.println("reduce: locally shared matrix, already have added weights and biases.");
+        return;
+      }
       if (other.chunk_node_count != 0) {
+        System.out.println("reduce: adding remote weights and biases.");
         Utils.add(weights, other.weights);
         Utils.add(biases,  other.biases);
         chunk_processed_rows += other.chunk_processed_rows;
         chunk_node_count += other.chunk_node_count;
       }
     }
-    // use to average weights and biases
-    public void div(double N) {
+    protected void div(double N) {
       for (float[] weight : weights) Utils.div(weight, (float) N);
       for (double[] biase : biases) Utils.div(biase, N);
     }
-
-    private double uniformDist(Random rand, double min, double max) {
+    double uniformDist(Random rand, double min, double max) {
       return min + rand.nextFloat() * (max - min);
     }
-
     void randomizeWeights() {
       for (int i=0; i<weights.length; ++i) {
         final Random rng = getRNG(); //Use a newly seeded generator for each layer for backward compatibility (for now)
@@ -183,10 +184,6 @@ public class NNModel extends Model {
 
     void computeDiagnostics() {
       // compute stats on all nodes
-      mean_bias = new double[units.length];
-      rms_bias = new double[units.length];
-      mean_weight = new double[units.length];
-      rms_weight = new double[units.length];
       for( int y = 1; y < units.length; y++ ) {
         mean_bias[y] = rms_bias[y] = 0;
         mean_weight[y] = rms_weight[y] = 0;
@@ -248,15 +245,8 @@ public class NNModel extends Model {
     model_info = new NNModelInfo(other.model_info);
   }
 
-//  @Override public NNModel clone(){
-//    NNModel m = (NNModel)super.clone();
-//    m.model_info = new NNModelInfo(model_info);
-//    return m;
-//  }
-
   public NNModel(Key selfKey, Key jobKey, DataInfo dinfo, NN params) {
     super(selfKey,null,dinfo._adaptedFrame);
-
     job_key = jobKey;
     data_info = dinfo;
     run_time = 0;
