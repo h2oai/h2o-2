@@ -2,7 +2,6 @@ package hex.nn;
 
 import hex.FrameTask;
 import water.H2O.H2OCountedCompleter;
-import water.Job;
 
 import java.util.Arrays;
 
@@ -11,14 +10,15 @@ public class NNTask extends FrameTask<NNTask> {
   final protected NN _params;
   boolean _training;
 
-  public NNModel.NNModelInfo _input, _output;
+  private NNModel.NNModelInfo _input, _output;
+  public NNModel.NNModelInfo model_info() { return _output; }
 
   transient Neurons[] _neurons;
 
-  public NNTask(Job job, DataInfo dinfo, NN params, NNModel.NNModelInfo input, boolean training){this(job,dinfo,params,input,training,null);}
-  public NNTask(Job job, DataInfo dinfo, NN params, NNModel.NNModelInfo input, boolean training, H2OCountedCompleter cmp){
+  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training){this(job,dinfo,input,training,null);}
+  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, H2OCountedCompleter cmp){
     super(job,dinfo,cmp);
-    _params=params;
+    _params=job;
     _training=training;
     _input=input;
   }

@@ -218,7 +218,7 @@ public class NN extends Job.ValidatedJob {
   @Override public float progress(){
     if(DKV.get(dest()) == null)return 0;
     NNModel m = DKV.get(dest()).get();
-    return (float)(m.epoch_counter / m.model_info.get_params().epochs);
+    return (float)(m.epoch_counter / m.model_info().get_params().epochs);
   }
 
   @Override protected Status exec() {
@@ -241,24 +241,19 @@ public class NN extends Job.ValidatedJob {
   }
 
   public void trainModel(boolean scorewhiletraining){
-    NNModel model = UKV.get(dest());
-    NNModel.NNModelInfo input = model.model_info;
+    final NNModel model = UKV.get(dest());
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     for (int epoch = 1; epoch <= epochs; ++epoch) {
-      boolean training = true;
-      // train for one epoch, starting with weights/biases from modelinfo
-      NNTask nntask = new NNTask(this, _dinfo, this, input, training).doAll(_dinfo._adaptedFrame);
-      // take the result, update the model and use as input for next epoch
-      model.model_info = nntask._output;
-      input = model.model_info;
-      if (diagnostics) input.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
-      final String label =  (validation == null ? "Training" : "Validation")
-              + " error after training for " + epoch
-              + " epochs (" + model.model_info.processed() + " samples):";
-      if (scorewhiletraining)
-        doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
+      final NNTask nntask = new NNTask(this, _dinfo, model.model_info(), true).doAll(_dinfo._adaptedFrame);
+      model.set_model_info(nntask.model_info());
+      if (diagnostics) model.computeDiagnostics();
       model.epoch_counter = epoch;
-      model.run_time = (System.currentTimeMillis()-model.start_time);
+      if (scorewhiletraining) {
+        final String label = (validation == null ? "Training" : "Validation")
+                + " error after training for " + epoch
+                + " epochs (" + model.model_info().processed() + " samples):";
+        doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
+      }
 //      System.out.println(model);
       model.update(self());
     }

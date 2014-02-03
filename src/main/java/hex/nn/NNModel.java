@@ -25,13 +25,15 @@ public class NNModel extends Model {
   final private DataInfo data_info;
 
   @API(help="model info", json = true)
-  public NNModelInfo model_info;
+  private NNModelInfo model_info;
+  void set_model_info(NNModelInfo mi) { model_info = mi; }
+  final public NNModelInfo model_info() { return model_info; }
 
   @API(help="Overall run time", json = true)
-  public long run_time;
+  private long run_time;
 
   @API(help="computation started at", json = true)
-  public long start_time;
+  private long start_time;
 
   public double epoch_counter;
 
@@ -208,7 +210,7 @@ public class NNModel extends Model {
 //          }
 //        }
 
-    void computeDiagnostics() {
+    public void computeDiagnostics() {
       // compute stats on all nodes
       for( int y = 1; y < units.length; y++ ) {
         mean_bias[y] = rms_bias[y] = 0;
@@ -249,6 +251,11 @@ public class NNModel extends Model {
       }
     }
 
+  }
+
+  public void computeDiagnostics() {
+    run_time = (System.currentTimeMillis()-start_time);
+    model_info.computeDiagnostics();
   }
 
 //  @API(help = "Errors on the training set")
