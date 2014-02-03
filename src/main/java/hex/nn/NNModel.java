@@ -22,16 +22,16 @@ public class NNModel extends Model {
   private final Key job_key;
 
   @API(help="Input data info")
-  private DataInfo data_info;
+  final private DataInfo data_info;
 
   @API(help="model info", json = true)
   public NNModelInfo model_info;
 
   @API(help="Overall run time", json = true)
-  private long run_time;
+  public long run_time;
 
   @API(help="computation started at", json = true)
-  private long start_time;
+  public long start_time;
 
   public double epoch_counter;
 
@@ -41,40 +41,52 @@ public class NNModel extends Model {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    public float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
-    public double[][] biases; //one 1D bias array per layer
-//  public float[][] _wm;
-//  public double[][] _bm;
-    private int[] units; //number of neurons per layer, extracted from parameters and from datainfo
+    // model is described by parameters and the following 4 arrays
+    private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
+    private double[][] biases; //one 1D bias array per layer
+    private float[][] weights_momenta;
+    private double[][] biases_momenta;
+
+    // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
+    public final float[] get_weights(int i) { return weights[i]; }
+    public final double[] get_biases(int i) { return biases[i]; }
+    public final float[] get_weights_momenta(int i) { return weights_momenta[i]; }
+    public final double[] get_biases_momenta(int i) { return biases_momenta[i]; }
 
     @API(help = "Model parameters", json = true)
-    public NN parameters;
+    private NN parameters;
+    public final NN get_params() { return parameters; }
 
     @API(help = "Mean bias", json = true)
-    public double[] mean_bias;
+    private double[] mean_bias;
 
     @API(help = "RMS bias", json = true)
-    public double[] rms_bias;
+    private double[] rms_bias;
 
     @API(help = "Mean weight", json = true)
-    public double[] mean_weight;
+    private double[] mean_weight;
 
     @API(help = "RMS weight", json = true)
-    public double[] rms_weight;
+    private double[] rms_weight;
 
     @API(help = "Unstable", json = true)
-    public boolean unstable = false;
+    private boolean unstable = false;
 
     @API(help = "Processed samples", json = true)
-    public long processed;
+    private long processed;
     public long processed() { return processed; }
+    public void reset_processed() { processed = 0; }
+    public void add_processed(long p) { processed += p; }
 
-    public int chunk_node_count;
-    public long chunk_processed_rows;
-
-    public NNModelInfo() {}
+    // package local helpers
+    int[] units; //number of neurons per layer, extracted from parameters and from datainfo
+    int chunk_node_count;
+    long chunk_processed_rows;
 
     public NNModelInfo(NN params, int num_input, int num_output) {
+      assert(num_input > 0);
+      assert(num_output > 0);
+      //TODO: validateParams(params);
       parameters = params;
       final int layers=parameters.hidden.length;
       if (!parameters.classification) assert(num_output == 1); else assert(num_output > 1);
@@ -85,35 +97,19 @@ public class NNModel extends Model {
       units[layers+1] = num_output;
       // weights (to connect layers)
       weights = new float[layers+1][];
+      weights_momenta = new float[layers+1][];
       for (int i=0; i<=layers; ++i) weights[i] = new float[units[i]*units[i+1]];
+      for (int i=0; i<=layers; ++i) weights_momenta[i] = new float[units[i]*units[i+1]];
       // biases (only for hidden layers and output layer)
-      biases = new double[layers+2][];
-      for (int i=0; i<=layers+1; ++i) biases[i] = new double[units[i]];
+      biases = new double[layers+1][];
+      biases_momenta = new double[layers+1][];
+      for (int i=0; i<=layers; ++i) biases[i] = new double[units[i+1]];
+      for (int i=0; i<=layers; ++i) biases_momenta[i] = new double[units[i+1]];
       // for diagnostics
       mean_bias = new double[units.length];
       rms_bias = new double[units.length];
       mean_weight = new double[units.length];
       rms_weight = new double[units.length];
-    }
-
-    @Override public String toString() {
-      StringBuilder sb = new StringBuilder();
-      for (int i=0; i<weights.length; ++i)
-        sb.append("weights["+i+"][]="+Arrays.toString(weights[i]));
-      for (int i=0; i<biases.length; ++i)
-      sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
-      sb.append("\nunits[]="+Arrays.toString(units));
-      return sb.toString();
-    }
-    void initializeMembers() {
-      randomizeWeights();
-      for (int i=0; i<=parameters.hidden.length+1; ++i) {
-        if (parameters.activation == NN.Activation.Rectifier
-                || parameters.activation == NN.Activation.Maxout) {
-          Arrays.fill(biases[i], 1.);
-        }
-      }
-
     }
     public NNModelInfo(NNModelInfo other) {
       this(other.parameters, other.units[0], other.units[other.units.length-1]);
@@ -122,13 +118,40 @@ public class NNModel extends Model {
       chunk_processed_rows = other.chunk_processed_rows;
       for (int i=0; i<other.weights.length; ++i)
         weights[i] = other.weights[i].clone();
+      for (int i=0; i<other.weights_momenta.length; ++i)
+        weights_momenta[i] = other.weights_momenta[i].clone();
       for (int i=0; i<other.biases.length; ++i)
         biases[i] = other.biases[i].clone();
+      for (int i=0; i<other.biases_momenta.length; ++i)
+        biases_momenta[i] = other.biases_momenta[i].clone();
       mean_bias = other.mean_bias.clone();
       rms_bias = other.rms_bias.clone();
       mean_weight = other.mean_weight.clone();
       rms_weight = other.rms_weight.clone();
       unstable = other.unstable;
+    }
+    @Override public String toString() {
+      StringBuilder sb = new StringBuilder();
+      for (int i=0; i<weights.length; ++i)
+        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i]));
+      for (int i=0; i<weights_momenta.length; ++i)
+        sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i]));
+      for (int i=0; i<biases.length; ++i)
+        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
+      for (int i=0; i<biases_momenta.length; ++i)
+        sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
+      sb.append("\nunits[]="+Arrays.toString(units));
+      return sb.toString();
+    }
+    void initializeMembers() {
+      randomizeWeights();
+      for (int i=0; i<=parameters.hidden.length; ++i) {
+        if (parameters.activation == NN.Activation.Rectifier
+                || parameters.activation == NN.Activation.Maxout) {
+          Arrays.fill(biases[i], 1.);
+        }
+      }
+
     }
     public void add(NNModelInfo other) {
       if (other == this) {
@@ -138,14 +161,18 @@ public class NNModel extends Model {
       if (other.chunk_node_count != 0) {
         System.out.println("reduce: adding remote weights and biases.");
         Utils.add(weights, other.weights);
+        Utils.add(weights_momenta, other.weights_momenta);
         Utils.add(biases,  other.biases);
+        Utils.add(biases_momenta,  other.biases_momenta);
         chunk_processed_rows += other.chunk_processed_rows;
         chunk_node_count += other.chunk_node_count;
       }
     }
     protected void div(double N) {
       for (float[] weight : weights) Utils.div(weight, (float) N);
-      for (double[] biase : biases) Utils.div(biase, N);
+      for (float[] weight_momenta : weights_momenta) Utils.div(weight_momenta, (float) N);
+      for (double[] bias : biases) Utils.div(bias, N);
+      for (double[] bias_momenta : biases_momenta) Utils.div(bias_momenta, N);
     }
     double uniformDist(Random rand, double min, double max) {
       return min + rand.nextFloat() * (max - min);
@@ -181,30 +208,29 @@ public class NNModel extends Model {
 //          }
 //        }
 
-
     void computeDiagnostics() {
       // compute stats on all nodes
       for( int y = 1; y < units.length; y++ ) {
         mean_bias[y] = rms_bias[y] = 0;
         mean_weight[y] = rms_weight[y] = 0;
-        for(int u = 0; u < biases[y].length; u++) {
-          mean_bias[y] += biases[y][u];
+        for(int u = 0; u < biases[y-1].length; u++) {
+          mean_bias[y] += biases[y-1][u];
         }
         for(int u = 0; u < weights[y-1].length; u++) {
           mean_weight[y] += weights[y-1][u];
         }
-        mean_bias[y] /= biases[y].length;
+        mean_bias[y] /= biases[y-1].length;
         mean_weight[y] /= weights[y-1].length;
 
-        for(int u = 0; u < biases[y].length; u++) {
-          final double db = biases[y][u] - mean_bias[y];
+        for(int u = 0; u < biases[y-1].length; u++) {
+          final double db = biases[y-1][u] - mean_bias[y];
           rms_bias[y] += db * db;
         }
         for(int u = 0; u < weights[y-1].length; u++) {
           final double dw = weights[y-1][u] - mean_weight[y];
           rms_weight[y] += dw * dw;
         }
-        rms_bias[y] = Math.sqrt(rms_bias[y]/biases[y].length);
+        rms_bias[y] = Math.sqrt(rms_bias[y]/biases[y-1].length);
         rms_weight[y] = Math.sqrt(rms_weight[y]/weights[y-1].length);
 
         unstable |= Double.isNaN(mean_bias[y])  || Double.isNaN(rms_bias[y])
@@ -235,15 +261,15 @@ public class NNModel extends Model {
 //  public long[][] confusion_matrix;
 //
 
-  public NNModel(NNModel other) {
-    super(other._key,null,other.data_info._adaptedFrame);
-
-    job_key = other.job_key;
-    data_info = other.data_info;
-    run_time = 0;
-    start_time = System.currentTimeMillis();
-    model_info = new NNModelInfo(other.model_info);
-  }
+//  public NNModel(NNModel other) {
+//    super(other._key,null,other.data_info._adaptedFrame);
+//
+//    job_key = other.job_key;
+//    data_info = other.data_info;
+//    run_time = 0;
+//    start_time = System.currentTimeMillis();
+//    model_info = new NNModelInfo(other.model_info);
+//  }
 
   public NNModel(Key selfKey, Key jobKey, DataInfo dinfo, NN params) {
     super(selfKey,null,dinfo._adaptedFrame);
@@ -257,7 +283,7 @@ public class NNModel extends Model {
 
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    super.toString();
+    sb.append(super.toString());
     sb.append("\n"+data_info.toString());
     sb.append("\n"+model_info.toString());
     sb.append("\nrun time: " + run_time);

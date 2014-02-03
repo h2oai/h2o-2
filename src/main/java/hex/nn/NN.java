@@ -218,7 +218,7 @@ public class NN extends Job.ValidatedJob {
   @Override public float progress(){
     if(DKV.get(dest()) == null)return 0;
     NNModel m = DKV.get(dest()).get();
-    return (float)(m.epoch_counter / m.model_info.parameters.epochs);
+    return (float)(m.epoch_counter / m.model_info.get_params().epochs);
   }
 
   @Override protected Status exec() {
@@ -254,10 +254,12 @@ public class NN extends Job.ValidatedJob {
       if (diagnostics) input.computeDiagnostics(); //compute diagnostics on modelinfo here after global reduction (all have the same data)
       final String label =  (validation == null ? "Training" : "Validation")
               + " error after training for " + epoch
-              + " epochs (" + model.model_info.processed + " samples):";
+              + " epochs (" + model.model_info.processed() + " samples):";
       if (scorewhiletraining)
         doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
       model.epoch_counter = epoch;
+      model.run_time = (System.currentTimeMillis()-model.start_time);
+//      System.out.println(model);
       model.update(self());
     }
     if (adapted != null) adapted[1].delete();

@@ -25,14 +25,10 @@ public class NNTask extends FrameTask<NNTask> {
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    if (_input == null) {
-      System.out.println("setupLocal: Initializing data structures.");
-      _input = new NNModel.NNModelInfo(_params, _dinfo.fullN(), _dinfo._adaptedFrame.lastVec().domain().length);
-      _input.initializeMembers();
-    }
+    assert(_input != null);
     System.out.println("setupLocal: Transferring ownership to local modelinfo.");
     _output = new NNModel.NNModelInfo(_input);
-    _output.processed = 0;
+    _output.reset_processed();
     _input = null;
   }
 
@@ -59,14 +55,17 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override protected void postGlobal(){
+    System.out.println("postGlobal: Dividing by " + _output.chunk_node_count);
     _output.div(_output.chunk_node_count);
-    _output.processed += _output.chunk_processed_rows;
-    System.out.println("postGlobal: Processed " + _output.processed + " rows.");
+    System.out.println("postGlobal: Adding sum of processed rows " + _output.chunk_processed_rows
+            + " to existing number of samples " + _output.processed());
+    _output.add_processed(_output.chunk_processed_rows);
+    System.out.println("postGlobal: Processed " + _output.processed() + " rows.");
   }
 
   // Helper
   public static Neurons[] makeNeurons(DataInfo dinfo, NNModel.NNModelInfo minfo) {
-    final NN params = minfo.parameters;
+    final NN params = minfo.get_params();
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output
     // input
@@ -109,7 +108,7 @@ public class NNTask extends FrameTask<NNTask> {
   static void step(Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
     for (int i=1; i<neurons.length-1; ++i)
       neurons[i].fprop(training);
-    if (minfo.parameters.classification) {
+    if (minfo.get_params().classification) {
       ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
       if (training) {
         for( int i = 1; i < neurons.length - 1; i++ )

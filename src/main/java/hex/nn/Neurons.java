@@ -87,25 +87,26 @@ public abstract class Neurons extends Iced {
     max_w2 = p.max_w2;
   }
 
-  // Layer state
-  // activity, error
+  /**
+   * Layer state (one per neuron): activity, error
+   */
   public transient double[] _a, _e;
 
-  // Previous and input layers
-  public transient Neurons _previous;
-
-  // Shared model info (once per node)
+  /**
+   * References for feed-forward connectivity
+   */
+  public transient Neurons _previous; // previous layer of neurons
   protected transient NNModel.NNModelInfo _minfo; //reference to shared model info
-  public transient float[] _w; //reference to _minfo._w[layer] for convenience
-  public transient double[] _b; //reference to _minfo._b[layer] for convenience
+  public transient float[] _w; //reference to _minfo.weights[layer] for convenience
+  public transient float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
+  public transient double[] _b; //reference to _minfo.biases[layer] for convenience
+  public transient double[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
 
   // Dropout (for input + hidden layers)
   transient Dropout dropout;
-
   Dropout createDropout(int units) {
     return new Dropout(units);
   }
-
   Neurons(int units) {
     this.units  = units;
   }
@@ -162,8 +163,10 @@ public abstract class Neurons extends Iced {
     if (!isInput()) {
       _previous = neurons[index-1]; //incoming neurons
       _minfo = minfo;
-      _w = minfo.weights[index-1]; //incoming weights
-      _b = minfo.biases[index]; //bias for this layer
+      _w = minfo.get_weights(index-1); //incoming weights
+      _b = minfo.get_biases(index-1); //bias for this layer (starting at hidden layer)
+      _wm = minfo.get_weights_momenta(index-1); //incoming weights
+      _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
     }
   }
 
@@ -202,12 +205,11 @@ public abstract class Neurons extends Iced {
 //          _wp[w] = sign ? mult : -mult;
 //        }
 
-      // momenta are disabled for now
-//      if( _wm != null ) {
-//        _wm[w] *= m;
-//        _wm[w] += d;
-//        d = _wm[w];
-//      }
+      if( _wm != null ) {
+        _wm[w] *= m;
+        _wm[w] += d;
+        d = _wm[w];
+      }
       _w[w] += r * d;
       if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
     }
@@ -216,11 +218,11 @@ public abstract class Neurons extends Iced {
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
     double d = g;
-//    if( _bm != null ) {
-//      _bm[u] *= m;
-//      _bm[u] += d;
-//      d = _bm[u];
-//    }
+    if( _bm != null ) {
+      _bm[u] *= m;
+      _bm[u] += d;
+      d = _bm[u];
+    }
     _b[u] += r * d;
   }
 
