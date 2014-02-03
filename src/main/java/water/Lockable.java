@@ -68,6 +68,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     return (T)this;
   }
 
+
   // Obtain the write-lock on _key, which may already exist, using the current 'this'.
   private class PriorWriteLock extends TAtomic<Lockable> {
     final Key _job_key;         // Job doing the locking

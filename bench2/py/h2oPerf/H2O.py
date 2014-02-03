@@ -9,6 +9,7 @@ import random
 import getpass
 import re
 import subprocess
+import atexit
 
 class H2OUseCloudNode:
     """  
@@ -40,7 +41,7 @@ class H2OUseCloudNode:
 
 class H2OUseCloud:
     """  
-    A class representing an H2O clouds which was specified by the user.
+    A class representing an H2O cloud which was specified by the user.
     Don't try to build or tear down this kind of cloud.
     """
 
@@ -153,6 +154,13 @@ class H2OCloudNode:
                                       stdout=f,
                                       stderr=subprocess.STDOUT,
                                       cwd=self.output_dir)
+        @atexit.register
+        def kill_process():
+            try:
+                self.terminate()
+                self.child.terminate() #paranoid
+            except OSError:  #_very_ paranoid
+                pass
         self.pid = self.child.pid
         print("+ CMD: " + ' '.join(cmd))
 
@@ -225,6 +233,10 @@ class H2OCloudNode:
     def get_ip(self):
         """ Return the ip address this node is really listening on. """
         return self.ip
+
+    def get_output_file_name(self):
+        """ Return the directory to the output file name. """
+        return self.output_file_name    
 
     def get_port(self):
         """ Return the port this node is really listening on. """
@@ -339,4 +351,3 @@ class H2OCloud:
         for node in self.nodes:
             s += str(node)
         return s
-
