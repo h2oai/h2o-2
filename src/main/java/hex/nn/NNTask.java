@@ -1,6 +1,7 @@
 package hex.nn;
 
 import hex.FrameTask;
+import water.H2O;
 import water.H2O.H2OCountedCompleter;
 
 import java.util.Arrays;
@@ -15,6 +16,11 @@ public class NNTask extends FrameTask<NNTask> {
 
   transient Neurons[] _neurons;
 
+  // book-keeping
+  int _chunk_node_count; //how many nodes are contributing with chunks?
+  long _nrows_before; //number of training rows initially
+  int _nrows; //number of additionally processed training rows
+
   public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training){this(job,dinfo,input,training,null);}
   public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, H2OCountedCompleter cmp){
     super(job,dinfo,cmp);
@@ -25,20 +31,18 @@ public class NNTask extends FrameTask<NNTask> {
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    assert(_input != null);
-    System.out.println("setupLocal: Transferring ownership to local modelinfo.");
+    _nrows_before = _input.get_processed();
     _output = new NNModel.NNModelInfo(_input);
-    _output.reset_processed();
     _input = null;
   }
 
   // create local workspace (neurons)
   // and link them to shared weights
   @Override protected void chunkInit(int nrows){
+    _nrows = nrows;
     _neurons = makeNeurons(_dinfo, _output);
-    _output.chunk_node_count = (nrows > 0 ? 1 : 0);
-    _output.chunk_processed_rows = 0;
-    System.out.println("chunkInit: Working on " + nrows + " rows.");
+    _chunk_node_count = _nrows > 0 ? 1 : 0;
+    System.out.println("chunkInit: Working on " + _nrows + " rows.");
   }
 
   @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
@@ -46,21 +50,21 @@ public class NNTask extends FrameTask<NNTask> {
     step(_neurons, _output, _training, responses);
   }
 
-  @Override protected void chunkDone(){
-    System.out.println("chunkDone: Finished working on " + _output.chunk_processed_rows + " rows.");
-  }
+  @Override protected void chunkDone(){ }
 
   @Override public void reduce(NNTask other){
-    _output.add(other._output);
+    if (other._chunk_node_count > 0) {
+      _output.add(other._output);
+      _chunk_node_count += other._chunk_node_count;
+      _nrows += other._nrows;
+    }
   }
 
   @Override protected void postGlobal(){
-    System.out.println("postGlobal: Dividing by " + _output.chunk_node_count);
-    _output.div(_output.chunk_node_count);
-    System.out.println("postGlobal: Adding sum of processed rows " + _output.chunk_processed_rows
-            + " to existing number of samples " + _output.processed());
-    _output.add_processed(_output.chunk_processed_rows);
-    System.out.println("postGlobal: Processed " + _output.processed() + " rows.");
+    System.out.println("postGlobal: Dividing by " + _chunk_node_count);
+    _output.div(_chunk_node_count);
+    System.out.println("postGlobal: Adding " + _nrows + " rows");
+    _output.set_processed(_nrows_before + _nrows);
   }
 
   // Helper
@@ -130,7 +134,18 @@ public class NNTask extends FrameTask<NNTask> {
     if (training) {
       for (int i=neurons.length-2; i>0; --i)
         neurons[i].bprop();
-      minfo.chunk_processed_rows++;
+
+      /**
+       * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
+       */
+      //Note: in multi-vm operation, all vms sync their number of processed rows after every reduce() call.
+      //That means that the number of processed rows will jump regularly, and then continue to increase in steps of 1.
+      //This is equivalent to saying that each vms thinks that its rows come first in every epoch.
+//      minfo.add_processed(1);
+
+      //Alternative: we could increase the number here by #vms instead of 1 (i.e., vms do round robyn).
+      //This shouldn't make a difference in unsorted datasets
+      minfo.add_processed(H2O.CLOUD.size());
     }
   }
 

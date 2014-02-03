@@ -18,23 +18,22 @@ public class NNModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="job key assigned to the job building this model")
+  @API(help="Key assigned to the job building this model")
   private final Key job_key;
 
   @API(help="Input data info")
   final private DataInfo data_info;
 
-  @API(help="model info", json = true)
-  private NNModelInfo model_info;
+  @API(help="Model info", json = true)
+  private volatile NNModelInfo model_info;
   void set_model_info(NNModelInfo mi) { model_info = mi; }
   final public NNModelInfo model_info() { return model_info; }
 
-  @API(help="Overall run time", json = true)
+  @API(help="Time to build the model", json = true)
   private long run_time;
-
-  @API(help="computation started at", json = true)
   private long start_time;
 
+  @API(help="Number of training epochs", json = true)
   public double epoch_counter;
 
   // This describes the model, together with the parameters
@@ -44,6 +43,7 @@ public class NNModel extends Model {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
     // model is described by parameters and the following 4 arrays
+    //TODO: check impact of making these volatile
     private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private double[][] biases; //one 1D bias array per layer
     private float[][] weights_momenta;
@@ -76,14 +76,12 @@ public class NNModel extends Model {
 
     @API(help = "Processed samples", json = true)
     private long processed;
-    public long processed() { return processed; }
-    public void reset_processed() { processed = 0; }
-    public void add_processed(long p) { processed += p; }
+    public synchronized long get_processed() { return processed; }
+    public synchronized void set_processed(long p) { processed = p; }
+    public synchronized void add_processed(long p) { processed += p; }
 
     // package local helpers
     int[] units; //number of neurons per layer, extracted from parameters and from datainfo
-    int chunk_node_count;
-    long chunk_processed_rows;
 
     public NNModelInfo(NN params, int num_input, int num_output) {
       assert(num_input > 0);
@@ -115,9 +113,7 @@ public class NNModel extends Model {
     }
     public NNModelInfo(NNModelInfo other) {
       this(other.parameters, other.units[0], other.units[other.units.length-1]);
-      processed = other.processed;
-      chunk_node_count = other.chunk_node_count;
-      chunk_processed_rows = other.chunk_processed_rows;
+      set_processed(other.get_processed());
       for (int i=0; i<other.weights.length; ++i)
         weights[i] = other.weights[i].clone();
       for (int i=0; i<other.weights_momenta.length; ++i)
@@ -143,6 +139,7 @@ public class NNModel extends Model {
       for (int i=0; i<biases_momenta.length; ++i)
         sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
       sb.append("\nunits[]="+Arrays.toString(units));
+      sb.append("\nprocessed: "+get_processed());
       return sb.toString();
     }
     void initializeMembers() {
@@ -156,18 +153,12 @@ public class NNModel extends Model {
 
     }
     public void add(NNModelInfo other) {
-      if (other == this) {
-        System.out.println("reduce: locally shared matrix, already have added weights and biases.");
-        return;
-      }
-      if (other.chunk_node_count != 0) {
+      if (other != this) {
         System.out.println("reduce: adding remote weights and biases.");
         Utils.add(weights, other.weights);
         Utils.add(weights_momenta, other.weights_momenta);
         Utils.add(biases,  other.biases);
         Utils.add(biases_momenta,  other.biases_momenta);
-        chunk_processed_rows += other.chunk_processed_rows;
-        chunk_node_count += other.chunk_node_count;
       }
     }
     protected void div(double N) {

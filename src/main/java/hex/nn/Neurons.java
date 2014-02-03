@@ -1,7 +1,6 @@
 package hex.nn;
 
 import hex.FrameTask;
-import hex.ParamsSearch;
 import water.AutoBuffer;
 import water.Iced;
 import water.MemoryManager;
@@ -20,14 +19,12 @@ public abstract class Neurons extends Iced {
   public static DocGen.FieldDoc[] DOC_FIELDS;
 
   @API(help = "Number of neurons")
-  @ParamsSearch.Ignore
   public int units;
 
   @API(help = "Initial Weight Distribution")
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
-  @ParamsSearch.Info(origin = 0.01)
   public double initial_weight_scale;
 
   @API(help = "Learning rate")
@@ -46,14 +43,12 @@ public abstract class Neurons extends Iced {
   public double l2;
 
   @API(help = "Initial momentum value")
-  @ParamsSearch.Info(origin = 1)
   public double momentum_start;
 
   @API(help = "Number of samples during which momentum value varies")
   public long momentum_ramp;
 
   @API(help = "Momentum value once ramp is over")
-  @ParamsSearch.Info(origin = 1)
   public double momentum_stable;
 
   @API(help = "Constraint for squared sum of incoming weights per unit")
@@ -330,7 +325,7 @@ public abstract class Neurons extends Iced {
       }
     }
     @Override protected void bprop() {
-      long processed = _minfo.processed();
+      long processed = _minfo.get_processed();
       double m = momentum(processed);
       double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
@@ -382,7 +377,7 @@ public abstract class Neurons extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _minfo.processed();
+      long processed = _minfo.get_processed();
       double m = momentum(processed);
       double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
@@ -424,7 +419,7 @@ public abstract class Neurons extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _minfo.processed();
+      long processed = _minfo.get_processed();
       final double m = momentum(processed);
       final double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
@@ -485,7 +480,7 @@ public abstract class Neurons extends Iced {
         _a[o] /= scale;
     }
     protected void bprop(int target) {
-      long processed = _minfo.processed();
+      long processed = _minfo.get_processed();
       double m = momentum(processed);
       double r = rate(processed) * (1 - m);
       if (target == missing_int_value) return; //ignore missing response values
@@ -514,7 +509,7 @@ public abstract class Neurons extends Iced {
       _a[o] += _b[o];
     }
     protected void bprop(double target) {
-      long processed = _minfo.processed();
+      long processed = _minfo.get_processed();
       double m = momentum(processed);
       double r = rate(processed) * (1 - m);
       assert(loss == Loss.MeanSquare);

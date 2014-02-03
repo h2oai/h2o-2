@@ -251,7 +251,7 @@ public class NN extends Job.ValidatedJob {
       if (scorewhiletraining) {
         final String label = (validation == null ? "Training" : "Validation")
                 + " error after training for " + epoch
-                + " epochs (" + model.model_info().processed() + " samples):";
+                + " epochs (" + model.model_info().get_processed() + " samples):";
         doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
       }
 //      System.out.println(model);
