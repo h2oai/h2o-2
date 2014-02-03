@@ -4,8 +4,10 @@ class PerfDB:
     """
     A class that represents a MySQL connection to the PerfDB
     database. Connection information is contained in a config file.
-    
+
     All communication with the db is handled with this object.
+    Only a single perfdb connection is maintained per run of runner.py
+    and hence this object begins and commits/rolls back transactions.
     """
     def __init__(self):
         self.db = MySQLdb.connect(host = "localhost",#PerfDBHost,
@@ -23,7 +25,7 @@ class PerfDB:
         Create a new, empty row (to be filled in) for each table.
         Return a dict of TableRow objects with keys being the table name.
         """
-        table_rows = [TableRow(table_name) for table_name in self.table_names]
+        table_rows = [TableRow(table_name, self) for table_name in self.table_names]
         return dict((name, table) for (name, table) in zip(self.table_names, table_rows))
 
     def get_table_pk(self, table_name):
@@ -52,7 +54,7 @@ class PerfDB:
         column_names = [name[0] for name in table_desc]
         return column_names
 
-    def insert(self, table_row):
+    def insert(self, table_row, commit = False):
         """
         Takes a TableRow object and writes to the db.
         """
@@ -67,7 +69,8 @@ class PerfDB:
         #print sql
         #print "------------------------"
         self.cursor.execute(sql)
-        self.db.commit()
+        if commit:
+            self.db.commit()
 
     def __get_table_names__(self):
         """
@@ -88,8 +91,8 @@ class TableRow:
     The dictionary structure is used to represent a row in the
     table (whose name is passed in).
     """
-    def __init__(self, table_name):
-        self.perfdb_connection = PerfDB()
+    def __init__(self, table_name, perfdb):
+        self.perfdb_connection = perfdb
         self.table_name = table_name
         self.column_names = self.perfdb_connection.colnames(table_name)
         self.row = dict((el,"") for el in self.column_names)
@@ -101,14 +104,14 @@ class TableRow:
             self.row['test_run_id'] = self.perfdb_connection.this_test_run_id
             self.row[table_name + "_id"] = int(self.pk) + 1
 
-    def update(self):
+    def update(self, commit = False):
         """
         A function that will write the row to the database.
         Passes self to the PerfDB object for processing.
         Follows the schema rules (i.e. no nulls)
         """
         if self.__is_complete__():
-            self.perfdb_connection.insert(self)
+            self.perfdb_connection.insert(self, commit)
         else:
             self.__test_fail__()
 
@@ -121,11 +124,12 @@ class TableRow:
         The row is then filled in with defaults
         corresponding to a failed test.
         """
-        message = "ERROR: Could not write row to table {}.".format(self.table_name)
-        py_table = TableRow("python_message")
+        self.perfdb_connection.db.rollback()
+        message = MySQLdb.escape_string("ERROR: Could not write row to table {}.".format(self.table_name))
+        py_table = TableRow("python_message", self.perfdb)
         py_table.row['message'] = message
-        py_table.row['row'] = str(self.row)
-        py_table.update()
+        py_table.row['row'] = MySQLdb.escape_string(str(self.row))
+        py_table.update(True)
         print message
 
     def __is_complete__(self):
@@ -134,4 +138,3 @@ class TableRow:
         before attempting to write to the db.
         """
         return '' not in self.row.values()
-

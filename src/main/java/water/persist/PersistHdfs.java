@@ -356,11 +356,10 @@ public final class PersistHdfs extends Persist {
             val = new Value(k, new ValueArray(k, size), Value.HDFS); // ValueArray byte wrapper over a large file
           } else {
             val = new Value(k, (int) size, Value.HDFS); // Plain Value
+            val.setdsk();
           }
-          val.setdsk();
           DKV.put(k, val);
           Log.info("PersistHdfs: DKV.put(" + k + ")");
-
           JsonObject o = new JsonObject();
           o.addProperty(Constants.KEY, k.toString());
           o.addProperty(Constants.FILE, pfs.toString());

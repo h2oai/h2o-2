@@ -17,7 +17,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   // Keys to be worked over
   protected Key[] _keys;
   // One-time flips from false to true
-  transient protected boolean _is_local;
+  transient protected boolean _is_local, _top_level;
   // Other RPCs we are waiting on
   transient private RPC<T> _lo, _hi;
   // Local work we are waiting on
@@ -53,7 +53,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   }
 
   // Invoked with a set of keys
-  public T dfork ( Key... keys ) { keys(keys); compute2(); return self(); }
+  public T dfork ( Key... keys ) { keys(keys); _top_level=true; compute2(); return self(); }
   public void keys( Key... keys ) { _keys = flatten(keys); }
   public T invoke( Key... keys ) {
     try { 
@@ -160,7 +160,10 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     if(_local != null && _local._fs != null )
       _local._fs.blockForPending(); // Block on all other pending tasks, also
     _keys = null;                   // Do not return _keys over wire
+    if( _top_level ) postGlobal();
   };
+  // Override to do work after all the forks have returned
+  protected void postGlobal(){}
 
   // 'Reduce' left and right answers.  Gather exceptions
   private void reduce2( T drt ) {
