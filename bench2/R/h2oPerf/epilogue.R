@@ -11,7 +11,6 @@ correct_pass <<- 1
 time_pass <<- 1
 passed <<- ifelse(correct_pass && time_pass, 1, 0)
 
-
 #"Private" Methods
 .dataSources<-
 function() {
@@ -42,7 +41,7 @@ function(r) {
 
 .saveRData<-
 function() {
-  save(response, predict_type, trainData, testData, model, h, confusion_matrix, IP, PORT, file = ".RData")
+  save(data_center, response, predict_type, trainData, testData, model, h, confusion_matrix, IP, PORT, file = ".RData")
   q("no")
 }
 
@@ -88,6 +87,7 @@ function() {
                 list(dataset_name = data_name,
                      dataset_source = data_source,
                      train_dataset_url = train_data_url,
+                     datacenter = data_center,
                      test_dataset_url = test_data_url))
   .coda("PARSE", r)
 }
