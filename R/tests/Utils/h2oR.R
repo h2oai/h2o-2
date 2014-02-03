@@ -257,8 +257,8 @@ function() {
 
   Log.info("Loading RUnit and testthat and R.utils\n")
   require(RUnit)
-  require(testthat)
   require(R.utils)
+  require(testthat)
 }
 
 #
