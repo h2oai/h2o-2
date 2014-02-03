@@ -41,6 +41,7 @@ test.binop2.ampersand <- function(conn) {
 
   Log.info("Selecting a column")
   col <- sample(colnames[colTypes != "enum"], 1)
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
   col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
   Log.info(paste("Using column: ", col))
  

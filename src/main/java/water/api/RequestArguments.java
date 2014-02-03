@@ -1666,7 +1666,7 @@ public class RequestArguments extends RequestStatics {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
-      if (v.isFrame())  throw new IllegalArgumentException("Key "+input+" represents fluid vector frame! Please use manual transformation to switch frame to value array."); //return ValueArray.frameAsVA(k);
+      if( v.isFrame() ) return ValueArray.frameAsVA(k);
       if (!v.isArray()) throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
       return v.get();
     }

@@ -72,7 +72,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'case': 1
             }
             # one coefficient is checked a little more
-            colX = 0
+            colX = 1
 
             # L2 
             timeoutSecs = 900

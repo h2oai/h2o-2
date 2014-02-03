@@ -74,17 +74,18 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = range(542) # don't include the output column
                     # remove the output too! (378)
                     ignore_x = []
-                    for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541,378]:
+                    for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
                         x.remove(i)
                         ignore_x.append(i)
+                    x.remove(378) # output
 
                     # have to the zero-based offset by 1 (h2o is one-based now)
                     x = ",".join(map(lambda x: "C" + str(x+1), x))
-                    ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
+                    ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 
                     GLMkwargs = {
                         'x': x,
-                        'y': 'C378', 
+                        'y': 'C379', 
                         'case': 15, 
                         'case_mode': '>',
                         'max_iter': 4, 
