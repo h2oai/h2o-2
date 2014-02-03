@@ -19,7 +19,8 @@ paramsScoreRF = {
     }
 
 trainDS = {
-    'csvFilename' : 'airlines_all.csv',
+    # 'csvFilename' : 'airlines_all.csv',
+    'csvFilename' : '2008.csv',
     'timeoutSecs' : 14800,
     'header'      : 1
     }
