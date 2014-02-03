@@ -37,6 +37,7 @@ test.minus <- function(conn) {
 
   Log.info("Try adding scalar to a numeric column: 5 - hex[,col]")
   col <- sample(colnames[colTypes != "enum"], 1)
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
   col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
   Log.info(paste("Using column: ", col))
  

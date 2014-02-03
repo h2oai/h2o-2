@@ -19,17 +19,11 @@ public class ParserTest2 extends TestUtil {
   private final char[] SEPARATORS = new char[] {',', ' '};
 
   public static boolean compareDoubles(double a, double b, double threshold){
-    int e1 = 0;
-    int e2 = 0;
-    while(a > 1){
-      a /= 10;
-      ++e1;
-    }
-    while(b > 1){
-       b /= 10;
-       ++e2;
-    }
-    return ((e1 == e2) && Math.abs(a - b) < threshold);
+    if( a==b ) return true;
+    if( ( Double.isNaN(a) && !Double.isNaN(b)) ||
+        (!Double.isNaN(a) &&  Double.isNaN(b)) ) return false;
+    if( Double.isInfinite(a) || Double.isInfinite(b) ) return false;
+    return Math.abs(a-b)/Math.max(Math.abs(a),Math.abs(b)) < threshold;
   }
   public static void testParsed(Key k, double[][] expected, Key inputkey) {
     testParsed(k,expected,inputkey,expected.length);
@@ -605,6 +599,53 @@ public class ParserTest2 extends TestUtil {
       r1 = Key.make("r1");
       ParseDataset2.parse(r1, new Key[]{k});
       testParsed(r1,exp,k);
+    }
+  }
+
+  // Mix of NA's, very large & very small, ^A Hive-style seperator, comments, labels
+  @Test public void testParseMix() {
+    double[][] exp = new double[][] {
+      d( 0      ,  0.5    ,  1      , 0),
+      d( 3      ,  NaN    ,  4      , 1),
+      d( 6      ,  NaN    ,  8      , 0),
+      d( 0.6    ,  0.7    ,  0.8    , 1),
+      d(+0.6    , +0.7    , +0.8    , 0),
+      d(-0.6    , -0.7    , -0.8    , 1),
+      d(  .6    ,   .7    ,   .8    , 0),
+      d(+ .6    ,  +.7    ,  +.8    , 1),
+      d(- .6    ,  -.7    ,  -.8    , 0),
+      d(+0.6e0  , +0.7e0  , +0.8e0  , 1),
+      d(-0.6e0  , -0.7e0  , -0.8e0  , 0),
+      d(  .6e0  ,   .7e0  ,   .8e0  , 1),
+      d(+ .6e0  ,  +.7e0  ,  +.8e0  , 0),
+      d( -.6e0  ,  -.7e0  ,  -.8e0  , 1),
+      d(+0.6e00 , +0.7e00 , +0.8e00 , 0),
+      d(-0.6e00 , -0.7e00 , -0.8e00 , 1),
+      d(  .6e00 ,   .7e00 ,   .8e00 , 0),
+      d( +.6e00 ,  +.7e00 ,  +.8e00 , 1),
+      d( -.6e00 ,  -.7e00 ,  -.8e00 , 0),
+      d(+0.6e-01, +0.7e-01, +0.8e-01, 1),
+      d(-0.6e-01, -0.7e-01, -0.8e-01, 0),
+      d(  .6e-01,   .7e-01,   .8e-01, 1),
+      d( +.6e-01,  +.7e-01,  +.8e-01, 0),
+      d( -.6e-01,  -.7e-01,  -.8e-01, 1),
+      d(+0.6e+01, +0.7e+01, +0.8e+01, 0),
+      d(-0.6e+01, -0.7e+01, -0.8e+01, 1),
+      d(  .6e+01,   .7e+01,   .8e+01, 0),
+      d( +.6e+01,  +.7e+01,  +.8e+01, 1),
+      d( -.6e+01,  -.7e+01,  -.8e+01, 0),
+      d(+0.6e102, +0.7e102, +0.8e102, 1),
+      d(-0.6e102, -0.7e102, -0.8e102, 0),
+      d(  .6e102,   .7e102,   .8e102, 1),
+      d( +.6e102,  +.7e102,  +.8e102, 0),
+      d( -.6e102,  -.7e102,  -.8e102, 1)
+    };
+    Key k = Key.make("q.hex");
+    try {
+      TestUtil.parseFrame(k,"smalldata/test/test_parse_mix.csv");
+      testParsed(k, exp, null);
+    } finally { 
+      Lockable.delete(k); 
     }
   }
 

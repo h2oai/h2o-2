@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
         h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
-    def test_parse_covtype20x_loop_s3n_hdfs(self):
+    def test_parse_covtype20x_loop_s3(self):
         bucket = 'home-0xdiag-datasets'
         importFolderPath = "standard"
         csvFilename = "covtype20x.data"
@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
             for trial in range(trialMax):
                 hex_key = csvFilename + ".hex"
                 start = time.time()
-                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3n', hex_key=hex_key,
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
                 print "parse result:", parseResult['destination_key']
