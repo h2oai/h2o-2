@@ -160,8 +160,10 @@ public abstract class Neurons extends Iced {
       _minfo = minfo;
       _w = minfo.get_weights(index-1); //incoming weights
       _b = minfo.get_biases(index-1); //bias for this layer (starting at hidden layer)
-      _wm = minfo.get_weights_momenta(index-1); //incoming weights
-      _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
+      if (minfo.has_momenta()) {
+        _wm = minfo.get_weights_momenta(index-1); //incoming weights
+        _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
+      }
     }
   }
 
