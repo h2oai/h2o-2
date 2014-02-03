@@ -179,7 +179,7 @@ public class ImportFiles2 extends Request2 {
 
     if( fails.length > 0 )
       DocGen.HTML.array(DocGen.HTML.title(sb,"fails"),fails);
-    if( dels.length > 0 )
+    if( dels != null && dels.length > 0 )
       DocGen.HTML.array(DocGen.HTML.title(sb,"Keys deleted before importing"),dels);
     return true;
   }

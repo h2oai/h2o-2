@@ -68,17 +68,9 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     return (T)this;
   }
 
-  private abstract static class Lock extends TAtomic<Lockable> {
-    @Override public Value atomic(Value val) {
-      Lockable old = val == null ? null : (Lockable)(val.get().clone());
-      Lockable nnn = atomic(old);
-      if(nnn == null)return null;
-      return  val == null ? new Value(_key,nnn):new Value(_key,nnn,val._persist);
-    }
-  }
 
   // Obtain the write-lock on _key, which may already exist, using the current 'this'.
-  private class PriorWriteLock extends Lock {
+  private class PriorWriteLock extends TAtomic<Lockable> {
     final Key _job_key;         // Job doing the locking
     Lockable _old;              // Return the old thing, for deleting later
     PriorWriteLock( Key job_key ) { _job_key = job_key; }
@@ -140,7 +132,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   }
 
   // Obtain read-lock
-  static private class ReadLock extends Lock {
+  static private class ReadLock extends TAtomic<Lockable> {
     final Key _job_key;         // Job doing the unlocking
     ReadLock( Key job_key ) { _job_key = job_key; }
     @Override public Lockable atomic(Lockable old) {
