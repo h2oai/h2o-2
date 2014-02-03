@@ -92,8 +92,8 @@ public final class PersistS3 extends Persist {
       val = new Value(k, new ValueArray(k, size), Value.S3);
     } else {
       val = new Value(k, (int) size, Value.S3); // Plain Value
+      val.setdsk();
     }
-    val.setdsk();
     DKV.put(k, val);
     return k;
   }
