@@ -85,23 +85,16 @@ class Basic(unittest.TestCase):
 
                 # lets look at the response column now
                 s = h2o_cmd.runSummary(key="c.hex", cols=response, max_ncols=1)
-                x = range(542)
+                # x = range(542)
                 # remove the output too! (378)
                 xIgnore = []
                 # BUG if you add unsorted 378 to end. remove for now
                 for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, response]:
-                    if i not in x:
-                        print "x:", x
-                        print 'missing?', i
-                    x.remove(i)
-                    xIgnore.append(i)
-
-                x = ",".join(map(str,x))
-                def colIt(x): return "C" + str(x)
-                xIgnore = ",".join(map(colIt, xIgnore))
+                    # have to add 1 for col start with 1, now. plus the C
+                    xIgnore.append("C" + str(i+1))
             else:
                 # leave one col ignored, just to see?
-                xIgnore = 0
+                xIgnore = 'C1'
 
             modelKey = "GBMGood"
             params = {
@@ -111,7 +104,7 @@ class Basic(unittest.TestCase):
                 'ntrees': 2,
                 'max_depth': 8,
                 'min_rows': 1,
-                'response': "C" + str(response),
+                'response': "C" + str(response+1),
                 'classification': 1 if DO_CLASSIFICATION else 0,
                 'grid_parallelism': 4,
                 }

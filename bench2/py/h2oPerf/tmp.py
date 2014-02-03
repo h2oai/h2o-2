@@ -1,83 +1,3 @@
-from H2O import *
-from Process import *
-import re, os, time
-
-class Test:
-    """
-    A Test object is a wrapper of the directory of R files
-    "under test." There are at most 3 R files per test:
-        1. Parsing
-        2. Modeling
-        3. Predicting
-
-    Each file represents a phase of the test.
-    """
-    def __init__(self, ip, port, test_dir, test_short_dir, output_dir, parse_file, model_file, predict_file):
-        self.ip = ip
-        self.port = port
-        self.test_dir = test_dir
-        self.test_short_dir = test_short_dir
-        self.output_dir = output_dir
-        self.parse_file = parse_file
-        self.model_file = model_file
-        self.predict_file = predict_file
-
-        self.test_is_complete = False
-        self.test_cancelled = False
-        self.test_terminated = False
-        self.start_seconds = -1
-
-        self.parse_process = RProc(self.test_dir, self.test_short_dir, self.output_dir, self.parse_file)
-        self.model_process = RProc(self.test_dir, self.test_short_dir, self.output_dir, self.model_file)
-        self.predict_process = RProc(self.test_dir, self.test_short_dir, self.output_dir, self.predict_file)
-
-    def do_test(self):
-        """
-        This call is blocking.
-
-        Perform the test. Each phase is started by passing the ip and port.
-        We block until a phase completes.
-
-        Once a phase is complete, the stdouterr is scraped and the database
-        tables are updated.
-        """
-        self.start_seconds = time.time()
-        self.parse_process.start(self.ip, self.port)
-        self.parse_process.block()
-        self.parse_process.scrape_phase()
-
-        self.model_process.start(self.ip, self.port)
-        self.model_process.block()
-        self.model_process.scrape_phase()
-
-        if self.predict_file:
-            self.predict_process.start(self.ip, self.port)
-            self.predict_process.block()
-            self.predict_process.scrape_phase()
-
-        self.test_is_complete = True
-
-    def cancel(self):
-        self.test_cancelled = True
-        self.parse_process.canceled = True
-        self.model_process.canceled = True
-        self.predict_process.canceled = True
-
-    def terminate(self):
-        self.test_is_terminated = True
-        try:
-          self.parse_process.terminate()
-          self.model_process.terminate()
-          self.predict_process.terminate()
-        except OSError:
-          pass
-
-    def get_passed(self):
-        return self.parse_process.get_passed() and self.model_process.get_passed() and self.predict_process.get_passed()
-
-    def get_completed(self):
-        return self.parse_process.get_completed() and self.model_process.get_completed() and self.predict_process.get_completed()
-
 class PerfRunner:
     """
     A class for running the perfomrance tests.
@@ -110,8 +30,9 @@ class PerfRunner:
         self.base_port = base_port
         self.h2o_jar = h2o_jar
         self.start_seconds = time.time()
+        self.jvm_output_file = ""
 
-        self.start_epoch_ms = time.time()
+        #self.start_epoch_ms = time.time()
         self.terminated = False
         self.cloud = ""
         self.tests = []
@@ -133,7 +54,6 @@ class PerfRunner:
         if self.terminated:
             return
 
-        print self.test_root_dir
         for root, dirs, files in os.walk(self.test_root_dir):
             for d in dirs:
                 self.add_test(d)
@@ -179,6 +99,7 @@ class PerfRunner:
         if (self.terminated):
             return
         self.cloud.wait_for_cloud_to_be_up()
+        self.jvm_output_file = self.cloud.nodes[0].get_output_file_name()
 
     def run_tests(self):
         """
@@ -198,15 +119,67 @@ class PerfRunner:
             self.__log__("Starting {} tests on {} total H2O nodes...".format(num_tests, num_nodes))
         self.__log__("")
 
-        ip = self.cloud.get_ip()
-        port = self.cloud.get_port()
-        
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
+            self.start_cloud()
             test = self.tests_not_started.pop(0)
-            test.ip = ip
-            test.port = port
+            test.ip = self.cloud.get_ip()
+            test.port = self.cloud.get_port()
+            test.test_run = TableRow("test_run")
+            test.test_run.row.update(self.__scrape_h2o_sys_info__())
             test.do_test()
+            test.test_run.row['start_epoch_ms'] = test.start_ms
+            test.test_run.row['end_epoch_ms'] = test.end_ms
+            test.test_run.row['total_hosts'] = self.__get_num_hosts__()
+            test.test_run.row['total_nodes'] = self.__get_num_nodes__()
+            test.test_run.row['test_name'] = test.test_name
+            test.test_run.row['instance_type'] = self.__get_instance_type__()
+            test.test_run.update(True)
+            self.stop_cloud()
+
+    def __get_instance_type__(self):
+        return "localhost"
+
+    def __get_num_hosts__(self):
+        num_hosts = 0
+        for node in self.cloud.nodes:
+            num_hosts += 1 #len(node)
+        return num_hosts
+
+    def __get_num_nodes__(self):
+        return len(self.cloud.nodes)
+
+    def __scrape_h2o_sys_info__(self):
+        """
+        Scrapes the following information from the jvm_output_file:
+            user_name, build_version, build_branch, build_sha, build_date,
+            cpus_per_host, heap_bytes_per_node
+        """
+        test_run_dict = {}
+        test_run_dict['product_name'] = "h2o"
+        test_run_dict['component_name'] = "None"
+        with open(self.jvm_output_file, "r") as f:
+            for line in f:
+              line = line.replace('\n', '')
+              if "Built by" in line:
+                  test_run_dict['user_name'] = line.split(': ')[-1]
+              if "Build git branch" in line:
+                  test_run_dict['build_branch'] = line.split(': ')[-1]
+              if "Build git hash" in line:
+                  test_run_dict['build_sha'] = line.split(': ')[-1]
+              if "Build project version" in line:
+                  test_run_dict['build_version'] = line.split(': ')[-1]
+              if "Built on" in line:
+                  test_run_dict['build_date'] = line.split(': ')[-1]
+              if "Java availableProcessors" in line:
+                  test_run_dict['cpus_per_host'] = line.split(': ')[-1]
+              if "Java heap maxMemory" in line:
+                  test_run_dict['heap_bytes_per_node'] = str(float(line.split(': ')[-1].split(' ')[0]) * 1024 * 1024)
+              if "error" in line.lower():
+                  test_run_dict['error_message'] = line
+              else:
+                  test_run_dict['error_message'] = "No error"
+        return test_run_dict
 
     def __log__(self, s):
         f = self._get_summary_filehandle_for_appending()

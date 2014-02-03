@@ -1473,6 +1473,7 @@ public final class H2O {
           Object p = val.rawPOJO();
           if( m == null && p == null ) continue; // Nothing to throw out
 
+          if(val.isLockable())continue; // we do not want to throw out Lockables.
           // ValueArrays covering large files in global filesystems such as NFS
           // or HDFS are only made on import (right now), and not reconstructed
           // by inspection of the Key or filesystem.... so we cannot toss them

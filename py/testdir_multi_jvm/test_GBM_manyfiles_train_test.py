@@ -91,7 +91,8 @@ class Basic(unittest.TestCase):
             # GBM (train iterate)****************************************
             # if not response:
             #     response = numCols - 1
-            response = 378
+            # response = 378
+            response = 'C379'
 
             # randomly ignore a bunch of cols, just to make it go faster
             x = range(numCols)

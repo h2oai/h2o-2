@@ -47,7 +47,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         else:
             cms = rfv['drf_model']['cms']
             print "number of cms:", len(cms)
-            print "cms[0]:", cms[0]
+            print "cms[0]:", cms[-1]
             cm = cms[-1] # take the last one
         scoresList = cm
 

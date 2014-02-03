@@ -103,9 +103,13 @@ class Basic(unittest.TestCase):
 
         allowedLetters = 'abcdeABCDE01234[]'
         headerChoices = []
-        for n in range(20):
-            l = random.randint(1,64) # random length headers
-            headerName = ''.join([random.choice(allowedLetters) for _ in range(l)])
+        for n in range(500): # max # of cols below is 500
+            done = False
+            while not done:
+                l = random.randint(1,64) # random length headers
+                headerName = ''.join([random.choice(allowedLetters) for _ in range(l)])
+                # we keep trying if we already have that header name. Has to be unique.
+                done = headerName not in headerChoices
             headerChoices.append(headerName)
 
         tryList = [
@@ -187,7 +191,8 @@ class Basic(unittest.TestCase):
             print 'GZIP_HEADER:', GZIP_HEADER 
 
             # they need to both use the same separator (h2o rule)
-            hfhList = [random.choice(headerChoices) for h in range(colCount)] + ["output"]
+# can't have duplicates
+            hfhList = random.sample(headerChoices, colCount) + ["output"]
             # UPDATE: always use comma or space for header separator?? it should work no matter what 
             # separator the data uses?
 

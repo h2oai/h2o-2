@@ -102,10 +102,12 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
           new Frame(k,new String[] { "0" }, new Vec[] { nfs }).delete_and_lock(null).unlock(null);
         } else {
           long size = f.length();
-          Value val = (size < 2*ValueArray.CHUNK_SZ)
-            ? new Value(k,(int)size,Value.NFS)
-            : new Value(k,new ValueArray(k,size),Value.NFS);
-          val.setdsk();
+          Value val;
+          if(size < 2*ValueArray.CHUNK_SZ){
+            val = new Value(k,(int)size,Value.NFS);
+            val.setdsk();
+          }else
+            val = new Value(k,new ValueArray(k,size),Value.NFS);
           DKV.put(k, val, fs);
         }
       }

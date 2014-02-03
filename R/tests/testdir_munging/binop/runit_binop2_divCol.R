@@ -10,7 +10,8 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../../findNSourceUtils.R')
 
-setupRandomSeed(857122247)
+setupRandomSeed(767640980)
+#setupRandomSeed(857122247)
 
 doSelect<-
 function() {
@@ -21,9 +22,17 @@ function() {
     doSelect()
 }
 
+dataSet <- doSelect()
+dataName <- names(dataSet)
+print(dataName)
+print(dataSet)
+q()
+
+
 test.slice.div <- function(conn) {
   dataSet <- doSelect()
   dataName <- names(dataSet)
+  print(dataName)
   dd <- dataSet[[1]]$ATTRS
   colnames <- dd$NAMES
   numCols  <- as.numeric(dd$NUMCOLS)
@@ -37,7 +46,8 @@ test.slice.div <- function(conn) {
 
   Log.info("Try /ing a scalar to a numeric column: 5 / hex[,col]")
   col <- sample(colnames[colTypes != "enum"], 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", sep = "", collapse = ""))
   Log.info(paste("Using column: ", col))
  
   sliced <- hex[,col]

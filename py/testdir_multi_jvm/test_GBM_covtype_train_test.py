@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
         files = [
-                ('standard', 'covtype.shuffled.90pct.data', 'covtype.train.hex', 1800, 54, 'covtype.shuffled.10pct.data', 'covtype.test.hex')
+                ('standard', 'covtype.shuffled.90pct.data', 'covtype.train.hex', 1800, 'C55', 'covtype.shuffled.10pct.data', 'covtype.test.hex')
                 ]
 
         # h2b.browseTheCloud()
@@ -72,8 +72,6 @@ class Basic(unittest.TestCase):
 
             # GBM (train iterate)****************************************
             inspect = h2o_cmd.runInspect(key=parseTestResult['destination_key'])
-            x = range(inspect['num_cols'])
-            del x[response]
             ntrees = 2
             # fails with 40
             for max_depth in [40, 5]:

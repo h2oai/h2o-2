@@ -1,6 +1,10 @@
 from Scrape import *
 from Table import *
-import re, os, subprocess, time
+import re
+import os
+import subprocess
+import time
+import atexit
 
 class Process:
     """
@@ -124,7 +128,8 @@ class RProc(Process):
     @param rfile: This is the name of the R file that is 
                   to be subproccessed. Example: gbm_test1_Parse.R
     """
-    def __init__(self, test_dir, test_short_dir, output_dir, rfile):
+    def __init__(self, test_dir, test_short_dir, output_dir, rfile, perfdb):
+        self.perfdb = perfdb
         self.rfile = rfile
         self.rtype = self.__get_type__()
         self.test_dir = test_dir
@@ -132,10 +137,14 @@ class RProc(Process):
         self.output_dir = output_dir
         self.test_name = self.rfile
         self.output_file_name = ""
+        self.did_time_pass = 0
+        self.did_correct_pass = 0
+        self.contaminated = 0
+        self.contamination_message = ""
 
         self.canceled = False
         self.terminated = False
-        self.returncode = None #self.__did_complete__()
+        self.returncode = None
         self.ip = None
         self.pid = -1
         self.port = None
@@ -158,11 +167,22 @@ class RProc(Process):
                                       stdout = f,  
                                       stderr = subprocess.STDOUT,
                                       cwd = self.test_dir)
+        @atexit.register
+        def kill_process():
+            try:
+                self.child.terminate()
+            except OSError:
+                pass
         self.pid = self.child.pid
 
     def scrape_phase(self):
-        scraper = Scraper(self.rtype[0], self.test_dir, self.test_short_dir, self.output_dir, self.output_file_name)
-        return scraper.scrape()
+        scraper = Scraper(self.perfdb, self.rtype[0], self.test_dir, self.test_short_dir, self.output_dir, self.output_file_name)
+        res = scraper.scrape()
+        self.contaminated = scraper.contaminated
+        self.contamination_message = scraper.contamination_message
+        self.did_time_pass = scraper.did_time_pass
+        self.did_correct_pass = scraper.did_correct_pass
+        return res
 
     def block(self):
         while(True):
@@ -179,4 +199,3 @@ class RProc(Process):
         types = ['parse', 'model', 'predict']
         rf = self.rfile.lower()
         return [t for t in types if t in rf]
-

@@ -457,6 +457,11 @@ def infoFromSummary(summaryResult, noPrint=False):
                     print "mean:", mean
                     print "sigma:", sigma
 
+                if not smin:
+                    raise Exception ("Why is min[] empty for a %s col (%s) ? %s" % (smin, stype, N))
+                if not smax:
+                    raise Exception ("Why is max[] empty for a %s col? (%s) ? %s" % (smin, stype, N))
+
                 # sometimes we don't get percentiles? (if 0 or 1 bins?)
                 if len(bins) >= 2:
                     percentiles = columns['percentiles']

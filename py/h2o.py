@@ -2276,7 +2276,7 @@ class H2O(object):
 
     def GLM(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_python_0_default_0',**kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, destination_key=None, **kwargs):
         parentName = "2/GLM2" if beta_features else "GLM"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
