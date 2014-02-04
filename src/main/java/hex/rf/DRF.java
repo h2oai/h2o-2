@@ -169,6 +169,10 @@ public abstract class DRF {
       if (_job!=null) _job.cancel(ex);
       return super.onExceptionalCompletion(ex, caller);
     }
+    @Override protected void postGlobal(){
+      RFModel rf = UKV.get(_rfmodel._key);
+      rf.unlock(_job.self());
+    }
 
     /** Write number of split features computed on this node to a model */
     static void updateRFModel(Key modelKey, final int numSplitFeatures, final Key[] rkeys) {

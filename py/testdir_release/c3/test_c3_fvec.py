@@ -80,6 +80,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
                         x.remove(i)
                         ignore_x.append(i)
+                    x.remove(378)
 
                     # add one since we are no longer 0 based offset
                     x = ",".join(map(lambda x: "C" + str(x+1), x))
