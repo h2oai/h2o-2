@@ -47,9 +47,8 @@ public class ASTFunc extends ASTOp {
     }
     int argcnt = vars.size();   // Record current size, as body may extend
     // Parse the body
-    E.xpeek('{',(x=E._x),null);
     E._env.push(vars);
-    AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
+    AST body = E.peek('{') ? E.xpeek('}',E._x,ASTStatement.parse(E)) : parseCXExpr(E);
     if( body == null ) E.throwErr("Missing function body",x);
     E._env.pop();
 
