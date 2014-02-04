@@ -19,7 +19,7 @@ public class NeuralNetMLPReference2 {
   double[][] _testData;
   NeuralNetwork _nn;
 
-  void init(NN.Activation activation, Random rand, double holdout_ratio) {
+  void init(NN.Activation activation, Random rand, double holdout_ratio, int numHidden) {
     double[][] ds = new double[150][];
     int r = 0;
     ds[r++] = new double[] { 5.1, 3.5, 1.4, 0.2, 0, 0, 1 };
@@ -213,14 +213,13 @@ public class NeuralNetMLPReference2 {
     }
 
     int numInput = 4;
-    int numHidden = 7;
     int numOutput = 3;
     _nn = new NeuralNetwork(activation, numInput, numHidden, numOutput);
     _nn.InitializeWeights();
   }
 
-  void train(int maxEpochs, double learnRate, NN.Loss loss) {
-    _nn.Train(_trainData, maxEpochs, learnRate, 0, loss);
+  void train(int maxEpochs, double learnRate, double momentum, NN.Loss loss) {
+    _nn.Train(_trainData, maxEpochs, learnRate, momentum, loss);
   }
 
   void MakeTrainTest(double[][] allData, double[][] trainData, double[][] testData, Random rand) {
@@ -305,9 +304,9 @@ public class NeuralNetMLPReference2 {
     double[] hGrads; // hidden gradients for back-propagation
 
     // back-prop momentum specific arrays (these could be local to method Train)
-    double[][] ihPrevWeightsDelta;  // for momentum with back-propagation
+    float[][] ihPrevWeightsDelta;  // for momentum with back-propagation
     double[] hPrevBiasesDelta;
-    double[][] hoPrevWeightsDelta;
+    float[][] hoPrevWeightsDelta;
     double[] oPrevBiasesDelta;
 
     public NeuralNetwork(NN.Activation activationType, int numInput, int numHidden, int numOutput) {
@@ -331,9 +330,9 @@ public class NeuralNetMLPReference2 {
       this.hGrads = new double[numHidden];
       this.oGrads = new double[numOutput];
 
-      this.ihPrevWeightsDelta = MakeMatrix(numInput, numHidden);
+      this.ihPrevWeightsDelta = MakeMatrixFloat(numInput, numHidden);
       this.hPrevBiasesDelta = new double[numHidden];
-      this.hoPrevWeightsDelta = MakeMatrix(numHidden, numOutput);
+      this.hoPrevWeightsDelta = MakeMatrixFloat(numHidden, numOutput);
       this.oPrevBiasesDelta = new double[numOutput];
     } // ctor
 
@@ -627,7 +626,7 @@ public class NeuralNetMLPReference2 {
           // add momentum using previous delta. on first pass old value will be 0.0 but that's OK.
           ihWeights[i][j] += momentum * ihPrevWeightsDelta[i][j];
           // weight decay would go here
-          ihPrevWeightsDelta[i][j] = delta; // don't forget to save the delta for momentum
+          ihPrevWeightsDelta[i][j] = (float)delta; // don't forget to save the delta for momentum
         }
       }
 
@@ -649,7 +648,7 @@ public class NeuralNetMLPReference2 {
           hoWeights[i][j] += delta;
           hoWeights[i][j] += momentum * hoPrevWeightsDelta[i][j]; // momentum
           // weight decay here
-          hoPrevWeightsDelta[i][j] = delta; // save
+          hoPrevWeightsDelta[i][j] = (float)delta; // save
         }
       }
 
