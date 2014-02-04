@@ -5,7 +5,6 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
 # don't allow None on ntree..causes 50 tree default!
-print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     'response_variable': [None, 16],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
@@ -63,7 +62,8 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15))
 
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
+            # hack to NA the header (duplicate header names)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', header=0)
             start = time.time()
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start
