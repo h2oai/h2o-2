@@ -3,19 +3,15 @@
 #TODO: Finish main in this runner.py (lines below)
 #TODO: Debug & Examples
 
+from h2oPerf.Table import *
 from h2oPerf import PerfUtils
-#h2oPerf imports 
+from h2oPerf.Runner import *
 
 import sys
 import os
 import argparse
-import shutil
 import signal
 import time
-import random
-import getpass
-import re
-import subprocess
 
 def parse_args():
     try:
@@ -54,18 +50,19 @@ def main(argv):
     #parse cmdline arguments
     args = parse_args()
     if args['wipe']:
-        PerfUtils.wipe_output_dir()
+        PerfUtils.wipe_output_dir(output_dir)
 
     #new perfdb connection
-    #new runner
-    #build_test list
+    perfdb = PerfDB()
+    
+    perf_runner = PerfRunner(test_root_dir, output_dir, h2o_jar, perfdb)
+    perf_runner.build_test_list()
     
     signal.signal(signal.SIGINT, PerfUtils.signal_handler)
     signal.signal(signal.SIGTERM, PerfUtils.signal_handler)
 
-    while True:
-        time.sleep(4)
     #run tests
+    perf_runner.run_tests()
     #report summary
 
 if __name__ == "__main__":

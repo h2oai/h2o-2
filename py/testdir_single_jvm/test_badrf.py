@@ -38,6 +38,22 @@ datalines = """
 -.6e+01 -.7e+01 -.8e+01 0
 """
 
+datalines2 = """ FirstName , Middle Initials , LastName , Date of Birth   
+0,0.5,1,0
+3,0,4,1
+6,,8,0
+6,,8,0
+6,,8,0
+6,,8,0
+6,,8,0
+6,,8,0
+6,,8,0
+0.6,0.7,0.8,1
++0.6,+0,7,+0.8,0
+-0.6,-0.7,-0.8,1
+"""
+
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()

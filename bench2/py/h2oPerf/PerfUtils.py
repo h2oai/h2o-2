@@ -1,4 +1,7 @@
 import sys
+import os
+import shutil
+
 sig = False
 dash_line = "\n-------------------------------------------------------------------------------------\n"
 
@@ -40,8 +43,8 @@ def start_cloud(object):
     if (object.terminated):
         return
 
-    if (object.use_cloud):
-        return
+#    if (object.use_cloud):
+#        return
 
     print("")
     print("Starting cloud...")
@@ -49,7 +52,7 @@ def start_cloud(object):
 
     if (object.terminated):
         return
-    object.cloud.start()
+    object.cloud[0].start()  #single cloud test (no parallel cloud build & test)
 
     print("")
     print("Waiting for H2O nodes to come up...")
@@ -57,8 +60,8 @@ def start_cloud(object):
 
     if (object.terminated):
         return
-    object.cloud.wait_for_cloud_to_be_up()
-    object.jvm_output_file = object.cloud.nodes[0].get_output_file_name()
+    object.cloud[0].wait_for_cloud_to_be_up()
+    object.jvm_output_file = object.cloud[0].nodes[0].get_output_file_name()
 
 def stop_cloud(object):
     """
@@ -67,16 +70,16 @@ def stop_cloud(object):
     if object.terminated:
         return
 
-    if object.use_cloud:
-        print("")
-        print("All tests completed...")
-        print("")
-        return
+#    if object.use_cloud:
+#        print("")
+#        print("All tests completed...")
+#        print("")
+#        return
 
     print("")
     print("All tets completed; tearing down clouds...")
     print("")
-    object.cloud.stop()
+    object.cloud[0].stop()
 
 def __scrape_h2o_sys_info__(object):
     """

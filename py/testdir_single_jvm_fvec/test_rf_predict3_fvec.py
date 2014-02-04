@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
             translate = {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7}
         else:
             y = 0 # first col
-            response = 'C0'
+            response = 'C1'
             skipSrcOutputHeader = 1
             skipPredictHeader = 1
             trees = 6
@@ -173,6 +173,7 @@ class Basic(unittest.TestCase):
             # I looked at what h2o can do for modelling with binomial and it should get better than 25% error?
             if pctWrong > 2.0:
                 raise Exception("pctWrong too high. Expect < 2% error because it's reusing training data")
+            return pctWrong
 
         #*****************************************************************************
 
@@ -187,7 +188,13 @@ class Basic(unittest.TestCase):
         print "don't you need one less column (the last is output?)"
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         print "y=", y
-        predict_and_compare_csvs(model_key='rf_model', hex_key=hexKey, translate=translate, y=y)
+        pctWrong = predict_and_compare_csvs(model_key='rf_model', hex_key=hexKey, translate=translate, y=y)
+        
+        # we are predicting using training data...so error is really low
+        # self.assertAlmostEqual(pctWrong, classification_error, delta = 0.2, 
+        #     msg="predicted pctWrong: %s should be close to training classification error %s" % (pctWrong, classification_error))
+        self.assertAlmostEqual(pctWrong, 0.7, delta = 0.2, 
+            msg="predicted pctWrong: %s should be small because we're predicting with training data" % pctWrong)
 
 
 if __name__ == '__main__':

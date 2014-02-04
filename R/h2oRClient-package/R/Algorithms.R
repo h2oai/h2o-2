@@ -196,6 +196,8 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsi
 # Pretty formatting of H2O GLM results
 h2o.__getGLMResults <- function(res, params) {
   result = list()
+  params$lambda = res$LSMParams$lambda
+  params$alpha = res$LSMParams$alpha
   result$params = params
   
   result$coefficients = unlist(res$coefficients)
@@ -340,6 +342,8 @@ h2o.__getGLM2Results <- function(model, params) {
   valid = submod$validation
 
   result = list()
+  params$alpha = model$alpha
+  params$lambda = model$lambdas[[model$best_lambda_idx+1]]
   result$params = params
   if(model$glm$family == "tweedie")
     result$params$family = h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
@@ -843,7 +847,18 @@ h2o.predict <- function(object, newdata) {
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
 
-# Helper Functions
+h2o.confusionMatrix <- function(data, reference) {
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+  if(!class(reference) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("reference must be an H2O parsed dataset")
+  if(ncol(data) != 1) stop("Must specify exactly one column for data")
+  if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
+  
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_CONFUSION, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0)
+  cm = lapply(res$cm[-length(res$cm)], function(x) { x[-length(x)] })
+  build_cm(cm, res$response_domain, res$predicted_domain, transpose = FALSE)
+}
+
+# ------------------------------- Helper Functions ---------------------------------------- #
 # Used to verify data, x, y and turn into the appropriate things
 verify_dataxy <- function(data, x, y) {
   if( missing(data) ) stop('Must specify data')
@@ -914,10 +929,11 @@ h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, par
   new(grid_obj, key=dest_key, data=data, model=result, sumtable=myModelSum)
 }
 
-build_cm <- function(cm, cf_names = NULL) {
+build_cm <- function(cm, actual_names = NULL, predict_names = actual_names, transpose = TRUE) {
   #browser()
   categories = length(cm)
-  cf_matrix = t(matrix(unlist(cm), nrow=categories))
+  cf_matrix = matrix(unlist(cm), nrow=categories)
+  if(transpose) cf_matrix = t(cf_matrix)
 
   cf_total = apply(cf_matrix, 2, sum)
   # cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
@@ -925,8 +941,8 @@ build_cm <- function(cm, cf_names = NULL) {
   cf_matrix = rbind(cf_matrix, cf_total)
   cf_matrix = cbind(cf_matrix, round(cf_error, 3))
 
-  if(!is.null(cf_names))
-    dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
+  if(!is.null(actual_names))
+    dimnames(cf_matrix) = list(Actual = c(actual_names, "Totals"), Predicted = c(predict_names, "Error"))
   return(cf_matrix)
 }
 

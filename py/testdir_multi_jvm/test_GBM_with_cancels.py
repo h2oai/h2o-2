@@ -24,10 +24,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_with_cancels(self):
-
-        print "Sets h2o.beta_features like -bf at command line"
-        print "this will redirect import and parse to the 2 variants"
-        h2o.beta_features = True
+        print "do import/parse with VA"
+        h2o.beta_features = False
 
         importFolderPath = 'standard'
         timeoutSecs = 500

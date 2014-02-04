@@ -2,6 +2,7 @@ import unittest, re, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
+print "the last line with the blank field (NA) seems to be causing the problem"
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -52,33 +53,33 @@ class Basic(unittest.TestCase):
         # "3|NaN|4|1",
         "3|0|4|1",
         # "6||8|0",
-        "6|0|8|0",
         "0.6|0.7|0.8|1",
         "+0.6|+0.7|+0.8|0",
         "-0.6|-0.7|-0.8|1",
-        ".6|.7|.8|0",
-        "+.6|+.7|+.8|1",
-        "-.6|-.7|-.8|0",
-        "+0.6e0|+0.7e0|+0.8e0|1",
-        "-0.6e0|-0.7e0|-0.8e0|0",
-        ".6e0|.7e0|.8e0|1",
-        "+.6e0|+.7e0|+.8e0|0",
-        "-.6e0|-.7e0|-.8e0|1",
-        "+0.6e00|+0.7e00|+0.8e00|0",
-        "-0.6e00|-0.7e00|-0.8e00|1",
-        ".6e00|.7e00|.8e00|0",
-        "+.6e00|+.7e00|+.8e00|1",
-        "-.6e00|-.7e00|-.8e00|0",
-        "+0.6e-01|+0.7e-01|+0.8e-01|1",
-        "-0.6e-01|-0.7e-01|-0.8e-01|0",
-        ".6e-01|.7e-01|.8e-01|1",
-        "+.6e-01|+.7e-01|+.8e-01|0",
-        "-.6e-01|-.7e-01|-.8e-01|1",
-        "+0.6e+01|+0.7e+01|+0.8e+01|0",
-        "-0.6e+01|-0.7e+01|-0.8e+01|1",
-        ".6e+01|.7e+01|.8e+01|0",
-        "+.6e+01|+.7e+01|+.8e+01|1",
-        "-.6e+01|-.7e+01|-.8e+01|0",
+         ".6|.7|.8|0",
+         "+.6|+.7|+.8|1",
+         "-.6|-.7|-.8|0",
+         "+0.6e0|+0.7e0|+0.8e0|1",
+         "-0.6e0|-0.7e0|-0.8e0|0",
+         ".6e0|.7e0|.8e0|1",
+         "+.6e0|+.7e0|+.8e0|0",
+         "-.6e0|-.7e0|-.8e0|1",
+         "+0.6e00|+0.7e00|+0.8e00|0",
+         "-0.6e00|-0.7e00|-0.8e00|1",
+         ".6e00|.7e00|.8e00|0",
+         "+.6e00|+.7e00|+.8e00|1",
+         "-.6e00|-.7e00|-.8e00|0",
+         "+0.6e-01|+0.7e-01|+0.8e-01|1",
+         "-0.6e-01|-0.7e-01|-0.8e-01|0",
+         ".6e-01|.7e-01|.8e-01|1",
+         "+.6e-01|+.7e-01|+.8e-01|0",
+         "-.6e-01|-.7e-01|-.8e-01|1",
+         "+0.6e+01|+0.7e+01|+0.8e+01|0",
+         "-0.6e+01|-0.7e+01|-0.8e+01|1",
+         ".6e+01|.7e+01|.8e+01|0",
+         "+.6e+01|+.7e+01|+.8e+01|1",
+         "-.6e+01|-.7e+01|-.8e+01|0",
+         "6||8|0",
         ]
         return rows
     
@@ -221,8 +222,17 @@ class Basic(unittest.TestCase):
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
                     parseResult = h2i.import_parse(path=csvPathname, schema='local', noPrint=not h2o.verbose)
+                    inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
+                    print "\n" + csvPathname, \
+                        "    num_rows:", "{:,}".format(inspect['num_rows']), \
+                        "    num_cols:", "{:,}".format(inspect['num_cols'])
+                    num_rows = inspect['num_rows']
+                    num_cols = inspect['num_cols']
+                    self.assertEqual(num_cols, 4, "Parsed wrong number of cols: %s" % num_cols)
+                    self.assertEqual(num_rows, 29, "Parsed wrong number of rows: %s" % num_rows)
+
                     h2o_cmd.runRF(parseResult=parseResult, trees=1, 
-                        timeoutSecs=10, retryDelaySecs=1.0, noPrint=True, print_params=True)
+                        timeoutSecs=10, retryDelaySecs=1.0, noPrint=True, print_params=False)
                     h2o.verboseprint("Set", set)
                     h2o.check_sandbox_for_errors()
                     sys.stdout.write('.')

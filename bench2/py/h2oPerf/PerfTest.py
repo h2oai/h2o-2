@@ -5,6 +5,7 @@ from Table import *
 import re
 import os
 import time
+import ConfigParser
 
 class Test:
     """
@@ -28,7 +29,7 @@ class Test:
 
         self.cfg = cfg
         self.__parse_config__()
-        self.perfdb
+        self.perfdb = perfdb
         self.test_dir = test_dir
         self.test_short_dir = test_short_dir
         self.output_dir = output_dir
@@ -51,7 +52,7 @@ class Test:
         cfg = ConfigParser.RawConfigParser()
         cfg.read(self.cfg)
         self.aws = cfg.getboolean("H2OBuildInformation", "aws")
-        self.heap_bytes_per_node = cfg.getint("H2OBuildInformation", "heap_bytes_per_node")
+        self.heap_bytes_per_node = cfg.get("H2OBuildInformation", "heap_bytes_per_node")
         self.total_hosts = cfg.getint("H2OBuildInformation", "total_hosts")
         self.total_nodes = cfg.getint("H2OBuildInformation", "total_nodes")
         self.nodes_per_host = cfg.getint("H2OBuildInformation", "nodes_per_host")
@@ -61,7 +62,9 @@ class Test:
         if not self.aws:
             self.ip = cfg.get("Host1", "ip")
             for host in cfg.sections():
-                if host == "H2OBuildInformation": pass
+                print host
+                if host == 'H2OBuildInformation': 
+                    continue
                 h = {}
                 h['host_name'] = host
                 h['ip'] = cfg.get(host, "ip")
@@ -114,9 +117,9 @@ class Test:
         self.test_run.row['passed'] = self.did_pass()
         self.test_run.row['contaminated'] = self.contaminated()
         self.test_run.row['contamination_message'] = self.contamination_message()
-        test.test_run.row['total_hosts'] = self.total_hosts
-        test.test_run.row['total_nodes'] = self.total_nodes
-        test.test_run.row['instance_type'] = self.instance_type
+        self.test_run.row['total_hosts'] = self.total_hosts
+        self.test_run.row['total_nodes'] = self.total_nodes
+        self.test_run.row['instance_type'] = self.instance_type
 
         self.test_is_complete = True
 
@@ -124,7 +127,7 @@ class Test:
         message = "Contamination in phase {}. "
         parse_m = message.format("parse") if self.parse_process.contaminated else ""
         model_m = message.format("model") if self.model_process.contaminated else ""
-        contam = "No contamination" if (parse_m == "" and model_m = "") else parse_m + model_m
+        contam = "No contamination" if (parse_m == "" and model_m == "") else parse_m + model_m
         if self.predict_file:
             predict_m = message.format("predict") if self.predict_process.contaminated else ""
             contam += predict_m
