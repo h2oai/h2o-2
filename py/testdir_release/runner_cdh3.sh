@@ -25,6 +25,7 @@ CDH3_HEAP=20g
 CDH3_JAR=h2odriver_cdh3.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
+H2O_BUILT=../../target
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
 H2O_JAR=h2o.jar
 HDFS_OUTPUT=hdfsOutputDirName
@@ -40,7 +41,9 @@ REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 echo "scp some jars"
 $REMOTE_SCP $H2O_HADOOP/$CDH3_JAR  $REMOTE_USER:$REMOTE_HOME
-$REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
+# $REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
+# either what build.sh created, or what setup downloaded and copied to target/h2o.jar
+$REMOTE_SCP $H2O_BUILT/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
 source ./kill_hadoop_jobs.sh
 
