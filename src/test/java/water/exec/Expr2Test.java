@@ -176,9 +176,8 @@ public class Expr2Test extends TestUtil {
       checkStr("a=c(1,2,3);a[a[,1]>10,1]");
       checkStr("apply(h.hex,2,sum)"); // ERROR BROKEN: the ENUM cols should fold to NA
       checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
-      //checkStr("z=5;apply(h.hex,2,function(x){x[]+z})");
-      checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
-      checkStr("apply(h.hex,2,function(x){h.hex})");
+      checkStr("apply(h.hex,2,function(x){x=1;h.hex})","Arg 'fcn' typed as ary(ary) but passed ary(dbl)\napply(h.hex,2,function(x){x=1;h.hex})\n     ^-------------------------------^\n");
+      checkStr("apply(h.hex,2,function(x){h.hex})","apply requires that ary fun(ary x) return 1 column");
       checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
 
@@ -241,7 +240,6 @@ public class Expr2Test extends TestUtil {
   }
 
   void checkStr( String s ) {
-    System.out.println(s);
     Env env=null;
     try { 
       System.out.println(s);
@@ -261,7 +259,6 @@ public class Expr2Test extends TestUtil {
   }
 
   void checkStr( String s, double d ) {
-    System.out.println(s);
     Env env = Exec2.exec(s);
     assertFalse( env.isAry() );
     assertFalse( env.isFcn() );
@@ -272,7 +269,6 @@ public class Expr2Test extends TestUtil {
   }
 
   void checkStr( String s, String err ) {
-    System.out.println(s);
     Env env = null;
     try {
       env = Exec2.exec(s);
