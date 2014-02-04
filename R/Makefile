@@ -13,12 +13,12 @@ else
 endif
 
 H2O_WRAPPER_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
-H2O_WRAPPER_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_x86_64-pc-linux-gnu.tar.gz
+H2O_WRAPPER_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(UNAME_P)-pc-linux-gnu.tar.gz
 H2O_WRAPPER_MAC_FILE = h2o_$(PROJECT_VERSION).tgz
 H2O_WRAPPER_WINDOWS_FILE = h2o_$(PROJECT_VERSION).zip
 
 H2O_RCLIENT_SOURCE_FILE = h2oRClient_$(PROJECT_VERSION).tar.gz
-H2O_RCLIENT_LINUX_FILE = h2oRClient_$(PROJECT_VERSION)_R_x86_64-pc-linux-gnu.tar.gz
+H2O_RCLIENT_LINUX_FILE = h2oRClient_$(PROJECT_VERSION)_R_$(UNAME_P)-pc-linux-gnu.tar.gz
 H2O_RCLIENT_MAC_FILE = h2oRClient_$(PROJECT_VERSION).tgz
 H2O_RCLIENT_WINDOWS_FILE = h2oRClient_$(PROJECT_VERSION).zip
 
@@ -69,9 +69,10 @@ endif
 	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2o-package
 
 ifneq ($(OS),Windows_NT)
-	rm -rf h2o
+	# rm -rf h2o
 	tar zxvf $(H2O_WRAPPER_PKG_FILE)
 	zip -r $(H2O_WRAPPER_WINDOWS_FILE) h2o
+	rm -rf h2o
 
 	# Create repo subdirectory for MacOSX
 	mkdir -p ../target/R/$(REPO_PATH_MAC)
@@ -129,9 +130,10 @@ endif
 	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
 
 ifneq ($(OS),Windows_NT)
-	rm -rf h2oRClient
+	# rm -rf h2oRClient
 	tar zxvf $(H2O_RCLIENT_PKG_FILE)
 	zip -r $(H2O_RCLIENT_WINDOWS_FILE) h2oRClient
+	rm -rf h2oRClient
 
 	# Create repo subdirectory for MacOSX
 	mkdir -p ../lib/resources/R/$(REPO_PATH_MAC)
@@ -166,3 +168,5 @@ clean:
 	rm -f h2o_*.tgz
 	rm -f h2o_*.zip
 	rm -rf ../lib/resources/R
+	rm -rf h2o
+	rm -rf h2oRClient
