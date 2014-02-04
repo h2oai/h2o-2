@@ -29,16 +29,31 @@ class Basic(unittest.TestCase):
 
         # terminate node 1
         h2o.nodes[1].terminate_self_only()
+        # remember which is [1] so we can check cloud state correctly
+        badPort = "/" + str(h2o.nodes[1].http_addr) + ":" + str(h2o.nodes[1].port)
+
         nodeList = h2o.nodes[:] # copy
         del nodeList[1] # 1 is dead now
         print "We probably need some status to interrogate to understand a node is in red state?"
         print "And I probably need to wait 60 secs to get to red state"
         time.sleep(120)
-        h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
-        time.sleep(5)
-        h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
-        time.sleep(5)
-        h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
+        # h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
+        # time.sleep(5)
+        # h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
+        # time.sleep(5)
+        # h2o.verify_cloud_size(nodeList, verbose=True, ignoreHealth=True)
+
+        # just check that node_healthy' goes 'false' on that node
+        # and 'cloud_healthy' goes false
+        
+        # everyone should see the same stuff (0 and 2, 1 won't respond)
+        for n in (0,2):
+            c = h2o.nodes[n].get_cloud()
+            self.assertEqual(c['cloud_healthy'], False)
+            # the node order doesn't match our node order
+            for i in range(3):
+                expected = c['nodes'][i]['name']!=badPort
+                self.assertEqual(c['nodes'][i]['node_healthy'], expected)
 
 if __name__ == '__main__':
     h2o.unit_main()
