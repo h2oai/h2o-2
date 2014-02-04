@@ -120,6 +120,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTReduce());
     putPrefix(new ASTIfElse());
     putPrefix(new ASTRApply());
+    putPrefix(new ASTSApply());
     putPrefix(new ASTRunif ());
     putPrefix(new ASTCut   ());
     putPrefix(new ASTPrint ());
@@ -1199,6 +1200,7 @@ class ASTRApply extends ASTOp {
                        OPF_PREFIX,
                        OPP_PREFIX,
                        OPA_RIGHT); }
+  protected ASTRApply( String vars[], Type ts[], int form, int prec, int asso) { super(vars,ts,form,prec,asso); }
   @Override String opStr(){ return "apply";}
   @Override ASTOp make() {return new ASTRApply();}
   @Override void apply(Env env, int argcnt) {
@@ -1278,6 +1280,30 @@ class ASTRApply extends ASTOp {
     throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
   }
 }
+
+// Same as "apply" but defaults to columns.  
+class ASTSApply extends ASTRApply {
+  static final String VARS[] = new String[]{ "", "ary", "fcn"};
+  ASTSApply( ) { super(VARS,
+                       new Type[]{ Type.ARY, Type.ARY, Type.fcn(new Type[]{Type.dblary(),Type.ARY}) },
+                       OPF_PREFIX,
+                       OPP_PREFIX,
+                       OPA_RIGHT); }
+  @Override String opStr(){ return "sapply";}
+  @Override ASTOp make() {return new ASTSApply();}
+  @Override void apply(Env env, int argcnt) {
+    // Stack: SApply, ary, fcn
+    //   -->: RApply, ary, 2, fcn
+    assert env.isFcn(-3);
+    env._fcn[env._sp-3] = new ASTRApply();
+    ASTOp fcn = env.popFcn();   // Pop, no ref-cnt
+    env.push(2.0);
+    env.push(1);
+    env._fcn[env._sp-1] = fcn;  // Push, no ref-cnt
+    super.apply(env,argcnt+1);
+  }
+}
+
 
 class ASTCut extends ASTOp {
   ASTCut() { super(new String[]{"cut", "ary", "dbls"},
