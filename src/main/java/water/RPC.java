@@ -1,16 +1,18 @@
 package water;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
 import water.util.Log;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A remotely executed FutureTask.  Flow is:
@@ -299,7 +301,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( dt == null )
         Log.info("Cancelled remote task#"+_tsknum+" "+origDt.getClass()+" to "+_client + " has been cancelled by remote");
       else if( (dt instanceof DRemoteTask || dt instanceof MRTask2) && dt.logVerbose() )
-        Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
+        Log.debug("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
     // exception occured when processing this task locally, set exception and send it back to the caller
@@ -387,7 +389,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       RPCCall rpc2 = ab._h2o.record_task(rpc);
       if( rpc2==null ) {        // Atomically insert (to avoid double-work)
         if( (rpc._dt instanceof DRemoteTask || rpc._dt instanceof MRTask2) && rpc._dt.logVerbose() )
-          Log.info("Start remote task#"+task+" "+rpc._dt.getClass()+" from "+ab._h2o);
+          Log.debug("Start remote task#"+task+" "+rpc._dt.getClass()+" from "+ab._h2o);
         H2O.submitTask(rpc);    // And execute!
       } else {                  // Else lost the task-insertion race
         if(ab.hasTCP())TimeLine.printMyTimeLine();
