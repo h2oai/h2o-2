@@ -1,7 +1,6 @@
 package hex.nn;
 
 import hex.FrameTask;
-import water.H2O;
 import water.H2O.H2OCountedCompleter;
 
 import java.util.Arrays;
@@ -140,12 +139,12 @@ public class NNTask extends FrameTask<NNTask> {
        */
       //Note: in multi-vm operation, all vms sync their number of processed rows after every reduce() call.
       //That means that the number of processed rows will jump regularly, and then continue to increase in steps of 1.
-      //This is equivalent to saying that each vms thinks that its rows come first in every epoch.
-//      minfo.add_processed(1);
+      //This is equivalent to saying that each vms thinks that its rows come first in every epoch, which is probably
+      //the closest thing to do when trying to match the single-node behavior.
+      minfo.add_processed(1);
 
       //Alternative: we could increase the number here by #vms instead of 1 (i.e., vms do round robyn).
-      //This shouldn't make a difference in unsorted datasets
-      minfo.add_processed(H2O.CLOUD.size());
+//      minfo.add_processed(H2O.CLOUD.size());
     }
   }
 
