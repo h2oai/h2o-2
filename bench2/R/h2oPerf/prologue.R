@@ -353,7 +353,7 @@ function() {
   }
   print("PREDICT TYPE:")
   if (grep("GLM", h2o.ls(h))) {
-    if(model@model$family[[1]] != "binomial") {
+    if(model@model$params$family[[1]] != "binomial") {
       cat("regression")
       predict_type <<- "regression"
       return(0)
