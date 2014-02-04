@@ -23,7 +23,8 @@ class Basic(unittest.TestCase):
         # each overwrites
         for h in h2o.nodes:
             h.log_view()
-            h.log_download(timeoutSecs=5)
+            # checkH2OLogs will download
+            # h.log_download(timeoutSecs=5)
 
         # this gets them all thru node 0
         (logNameList, lineCountList) = h2o_log.checkH2OLogs()
