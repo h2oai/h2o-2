@@ -24,15 +24,16 @@ class Basic(unittest.TestCase):
     def test_GBM_mnist_fvec(self):
         h2o.beta_features = True
         importFolderPath = "mnist"
-        csvFilename = "train.csv.gz"
+        csvFilename = "mnist_training.csv.gz"
         timeoutSecs=1800
         trialStart = time.time()
 
         # PARSE train****************************************
         trainKey = csvFilename + "_" + ".hex"
         start = time.time()
-        parseResult = h2i.import_parse(bucket='smalldata', path=importFolderPath + "/" + csvFilename, schema='put',
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets',  path=importFolderPath + "/" + csvFilename, schema='put',
             hex_key=trainKey, timeoutSecs=timeoutSecs)
+
         elapsed = time.time() - start
         print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
             "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -47,12 +48,11 @@ class Basic(unittest.TestCase):
             'ntrees': 3,
             'max_depth': 8,
             'min_rows': 1,
-            'response': 'C784', # this dataset has the response in the last col (0-9 to check)
+            'response': 0, # this dataset has the response in the last col (0-9 to check)
             # 'ignored_cols_by_name': range(200,784) # only use the first 200 for speed?
             }
 
         kwargs = params.copy()
-        h2o.beta_features = True
         timeoutSecs = 1800
         #noPoll -> False when GBM finished
         start = time.time()

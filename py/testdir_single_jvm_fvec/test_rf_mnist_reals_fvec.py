@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
             ntrees = 10
             params = {
-                'response': 'C0',
+                'response': 0,
                 'ignored_cols_by_name': ignore_x, 
                 'ntrees': ntrees,
                 'mtries': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
