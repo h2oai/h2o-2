@@ -31,23 +31,27 @@ computing resource or server.
 Grid Search Models
 -------------------
 
-GLM, K-Means, and GBM all offer Grid Search Models. Each Grid Search
-modeling option allows users to generate multiple models
+GLM, and GBM both offer Grid Search Models. In order to access this
+option in GLM uses should select GLM Grid Search from the **Model**
+drop down menu. 
+
+Each grid search modeling option allows users to generate multiple models
 simultaneously, and compare model criteria directly, rather than
 separately building models one at a time. Users can specify multiple
 model configurations by entering different values of tuning parameters
-separated by coma (for example: 2, 4, 8). For example, to specify three
-different values of K in a K-means grid search in the K field enter
-5,7,9 which will produce models for K=5, K=7, and K=9
-respectively. When multiple levels are specified for many tuning
+separated by coma. For example, to specify three different values of
+lambda, a regularization parameter in GLM Grid search users might
+enter: .001, .05, .1. 
+
+When multiple values are specified for many tuning
 parameters grid search returns one model for each unique
-combination. For example, in K-Means grid search specifying 3 values
-of K, and 4 values of Max Iterations, a total of 12 models will be
-returned one for each combination of K and Max Iterations.
+combination. For example, in GBM, if users specify Ntrees as 50, 100,
+200, and also specify learning rates of 0.01, and 0.05, six models
+will be returned. 
 
 Grid search results return a table showing the combination of tuning
 parameters used for each model and basic model evaluation information,
 as well as a link to each model. Users can access the details of each
-model by clicking on the links in the table.
+model by clicking on the model links in the table.
 
 
