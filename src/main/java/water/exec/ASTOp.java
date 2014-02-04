@@ -859,14 +859,10 @@ class ASTQtile extends ASTOp {
   }
   @Override ASTQtile make() { return new ASTQtile(); }
   @Override void apply(Env env, int argcnt) {
-    Frame x, probs;
-    double   p[];
-    if ((probs = env.ary(-1)).vecs().length > 1)
-      throw new IllegalArgumentException("Argument #2 in Quantile contains more than 1 column.");
-    if ((x = env.ary(-2)).vecs().length > 1)
-      throw new IllegalArgumentException("Argument #1 in Quantile contains more than 1 column.");
-    Vec pv = probs.anyVec();
-    p = new double[(int)pv.length()];
+    Frame x = env.ary(-2);
+    Vec xv  = x          .theVec("Argument #1 in Quantile contains more than 1 column.");
+    Vec pv  = env.ary(-1).theVec("Argument #2 in Quantile contains more than 1 column.");
+    double p[] = new double[(int)pv.length()];
     for (int i = 0; i < pv.length(); i++)
       if ((p[i]=pv.at((long)i)) < 0 || p[i] > 1)
         throw new  IllegalArgumentException("Quantile: probs must be in the range of [0, 1].");
@@ -879,8 +875,8 @@ class ASTQtile extends ASTOp {
     for (double prob : p) {
       double value;
       int ix = (int)(samples.length * prob);
-      if (ix >= samples.length) value = x.anyVec().max();
-      else if (prob == 0) value = x.anyVec().min();
+      if (ix >= samples.length) value = xv.max();
+      else if (prob == 0) value = xv.min();
       else value = samples[ix];
       nc.addNum(value);
     }
@@ -1206,7 +1202,6 @@ class ASTRApply extends ASTOp {
   @Override String opStr(){ return "apply";}
   @Override ASTOp make() {return new ASTRApply();}
   @Override void apply(Env env, int argcnt) {
-    int oldsp = env._sp;
     // Peek everything from the stack
     final ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
     double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
@@ -1214,42 +1209,35 @@ class ASTRApply extends ASTOp {
     if( d==2 || d== -1 ) {     // Work on columns?
       int ncols = fr.numCols();
 
-      // If results are doubles, make vectors-of-length-1 for them all
-      Key keys[] = null;
-      if( op._t.ret().isDbl() ) {
-        keys = Vec.VectorGroup.VG_LEN1.addVecs(ncols);
-      } else assert op._t.ret().isAry();
+      double ds[][] = null; // If results are doubles, gather in small array
+      Frame fr2 = null;     // If the results are Vecs, gather them in this Frame
+      String err = "apply requires that "+op+" return 1 column";
+      if( op._t.ret().isDbl() ) ds = new double[ncols][1];
+      else                     fr2 = new Frame(new String[0],new Vec[0]);
 
       // Apply the function across columns
-      Frame fr2 = new Frame(new String[0],new Vec[0]);
-      Vec vecs[] = fr.vecs();
-      for( int i=0; i<ncols; i++ ) {
-        env.push(op);
-        env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
-        env.fcn(-2).apply(env, 2);
-        Vec v;
-        if( keys != null ) {    // Doubles or Frame results?
-          // Jam the double into a Vec of its own
-          AppendableVec av = new AppendableVec(keys[i]);
-          NewChunk nc = new NewChunk(av,0);
-          nc.addNum(env.popDbl());
-          nc.close(0, null);
-          env.push(new Frame(v = av.close(null)));
-        } else {                      // Frame results
-          if( env.ary(-1).numCols() != 1 )
-            throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
-          // Leave the ary on stack
-          //v = env.popAry().anyVec();// Remove without lowering refcnt
+      try {
+        Vec vecs[] = fr.vecs();
+        for( int i=0; i<ncols; i++ ) {
+          env.push(op);
+          env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
+          env.fcn(-2).apply(env, 2);
+          if( ds != null ) {    // Doubles or Frame results?
+            ds[i][0] = env.popDbl();
+          } else {                // Frame results
+            if( env.ary(-1).numCols() != 1 )
+              throw new IllegalArgumentException(err);
+            fr2.add(fr._names[i], env.popAry().theVec(err));
+          }
         }
-        //fr2.add(fr._names[i],v); // Add, with refcnt already +1
+      } catch( IllegalArgumentException iae ) { 
+        env.subRef(fr2,null); 
+        throw iae; 
       }
-      for( int i=0; i<ncols; i++ )
-        fr2.add(fr._names[i], env.ary(-ncols+i).anyVec());
-
-      int narg = env._sp - oldsp + 4;
-      env.poppush(narg, fr2, null);
+      env.pop(4);
+      if( ds != null ) env.push(TestUtil.frame(new String[]{"C1"},ds));
+      else { env.push(1);  env._ary[env._sp-1] = fr2;  }
       assert env.isAry();
-      assert env._sp == oldsp-4+1;
       return;
     }
     if( d==1 || d==-2) {      // Work on rows

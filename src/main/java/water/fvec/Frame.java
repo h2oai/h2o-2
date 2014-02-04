@@ -9,8 +9,6 @@ import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
 import water.fvec.Vec.VectorGroup;
 
-import com.google.common.base.Throwables;
-
 /**
  * A collection of named Vecs.  Essentially an R-like data-frame.  Multiple
  * Frames can reference the same Vecs.  A Frame is a lightweight object, it is
@@ -300,27 +298,29 @@ public class Frame extends Lockable<Frame> {
         return (_col0 = v);
     return null;
   }
+  /* Returns the only Vector, or tosses IAE */
+  public final Vec theVec(String err) {
+    if( _keys.length != 1 ) throw new IllegalArgumentException(err);
+    if( _vecs == null ) _vecs = new Vec[]{_col0 = DKV.get(_keys[0]).get() };
+    return _vecs[0];
+  }
 
   /** Check that the vectors are all compatible.  All Vecs have their content
    *  sharded using same number of rows per chunk.  */
   public void checkCompatible( ) {
-    try{
-      Vec v0 = anyVec();
-      int nchunks = v0.nChunks();
-      for( Vec vec : vecs() ) {
-        if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
-        if( vec.nChunks() != nchunks )
-          throw new IllegalArgumentException("Vectors different numbers of chunks, "+nchunks+" and "+vec.nChunks());
-      }
-      // Also check each chunk has same rows
-      for( int i=0; i<nchunks; i++ ) {
-        long es = v0.chunk2StartElem(i);
-        for( Vec vec : vecs() )
-          if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
-            throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
-      }
-    }catch(Throwable ex){
-      Throwables.propagate(ex);
+    Vec v0 = anyVec();
+    int nchunks = v0.nChunks();
+    for( Vec vec : vecs() ) {
+      if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
+      if( vec.nChunks() != nchunks )
+        throw new IllegalArgumentException("Vectors different numbers of chunks, "+nchunks+" and "+vec.nChunks());
+    }
+    // Also check each chunk has same rows
+    for( int i=0; i<nchunks; i++ ) {
+      long es = v0.chunk2StartElem(i);
+      for( Vec vec : vecs() )
+        if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
+          throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
     }
   }
 
