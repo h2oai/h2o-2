@@ -1202,7 +1202,6 @@ class ASTRApply extends ASTOp {
   @Override String opStr(){ return "apply";}
   @Override ASTOp make() {return new ASTRApply();}
   @Override void apply(Env env, int argcnt) {
-    int oldsp = env._sp;
     // Peek everything from the stack
     final ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
     double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
@@ -1217,23 +1216,28 @@ class ASTRApply extends ASTOp {
       else                     fr2 = new Frame(new String[0],new Vec[0]);
 
       // Apply the function across columns
-      Vec vecs[] = fr.vecs();
-      for( int i=0; i<ncols; i++ ) {
-        env.push(op);
-        env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
-        env.fcn(-2).apply(env, 2);
-        if( ds != null ) {    // Doubles or Frame results?
-          ds[i][0] = env.popDbl();
-        } else {                // Frame results
-          fr2.add(fr._names[i], env.popAry().theVec(err));
+      try {
+        Vec vecs[] = fr.vecs();
+        for( int i=0; i<ncols; i++ ) {
+          env.push(op);
+          env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
+          env.fcn(-2).apply(env, 2);
+          if( ds != null ) {    // Doubles or Frame results?
+            ds[i][0] = env.popDbl();
+          } else {                // Frame results
+            if( env.ary(-1).numCols() != 1 )
+              throw new IllegalArgumentException(err);
+            fr2.add(fr._names[i], env.popAry().theVec(err));
+          }
         }
+      } catch( IllegalArgumentException iae ) { 
+        env.subRef(fr2,null); 
+        throw iae; 
       }
-      if( ds != null ) fr2 = TestUtil.frame(new String[]{"C1"},ds);
-
-      int narg = env._sp - oldsp + 4;
-      env.poppush(narg, fr2, null);
+      env.pop(4);
+      if( ds != null ) env.push(TestUtil.frame(new String[]{"C1"},ds));
+      else { env.push(1);  env._ary[env._sp-1] = fr2;  }
       assert env.isAry();
-      assert env._sp == oldsp-4+1;
       return;
     }
     if( d==1 || d==-2) {      // Work on rows
