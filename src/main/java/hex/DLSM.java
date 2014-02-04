@@ -8,6 +8,7 @@ import hex.DGLM.Gram;
 import java.util.Arrays;
 
 import water.Iced;
+import water.Key;
 import water.MemoryManager;
 
 import com.google.gson.JsonObject;
@@ -28,16 +29,14 @@ public class DLSM {
   public static abstract class LSMSolver extends Iced {
     public double _lambda;
     public double _alpha;
+    public Key _jobKey;
 
     public LSMSolver(double lambda, double alpha){
       _lambda = lambda;
       _alpha  = alpha;
     }
     /**
-     *  @param xx - gram matrix. gaussian: X'X, binomial:(1/4)X'X
-     *  @param xy - guassian: -X'y binomial: -(1/4)X'(XB + (y-p)/(p*1-p))
-     *  @param yy - <y,y>/2
-     *  @param beta - previous vector of coefficients, will be modified/destroyed
+     *  @param gram Matrix - weighted gram matrix (X'*X) computed over the data
      *  @param newBeta - resulting vector of coefficients
      *  @return true if converged
      *
@@ -131,14 +130,14 @@ public class DLSM {
       Arrays.fill(z, 0);
       if(_lambda>0)gram.addDiag(_lambda*(1-_alpha)*0.5 + _rho);
       int attempts = 0;
-      Cholesky chol = gram.cholesky(null);
+      Cholesky chol = gram.cholesky(null,_jobKey);
       double rhoAdd = 0;
       if(!chol._isSPD && _autoHandleNonSPDMatrix)
         while(!chol._isSPD && attempts < 10){
           double rhoIncrement = _rho*(1<< ++attempts);
           gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
           rhoAdd += rhoIncrement;
-          gram.cholesky(chol);
+          gram.cholesky(chol,_jobKey);
         }
       if(!chol._isSPD) throw new NonSPDMatrixException();
       if(_lambda == 0){
@@ -312,10 +311,7 @@ public class DLSM {
 
 
     /**
-     * @param xx: gram matrix. gaussian: X'X, binomial:(1/4)X'X
-     * @param xy: -X'y (LSM) l or -(1/4)X'(XB + (y-p)/(p*1-p))(IRLSM
-     * @param yy: 0.5*y'*y gaussian, 0.25*z'*z IRLSM
-     * @param beta: previous vector of coefficients, will be modified/destroyed
+     * @param gram: Matrix - weighted gram matrix (X'*X) computed over the data
      * @param newBeta: resulting vector of coefficients
      * @return true if converged
      */

@@ -3,8 +3,14 @@ PROJECT_VERSION ?= 99.70
 R_VERSION = 3.0
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
 REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
-TMP_BUILD_DIR = $(CURDIR)/tmp_build
+TMP_BUILD_DIR = tmp_build
+ifneq ($(OS),Windows_NT)
 OS := $(shell uname)
+else
+# For windows NT the shell is odd.  Cygwin 'shell uname' returns CYGWIN_NT-6.1-WOW64
+# which is not really what we want.  The normal CMD shell does something else.
+# So don't ask for 'uname' if we already got Windows_NT
+endif
 
 H2O_WRAPPER_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
 H2O_WRAPPER_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_x86_64-pc-linux-gnu.tar.gz
@@ -23,6 +29,10 @@ endif
 ifeq ($(OS),Darwin)
 H2O_RCLIENT_PKG_FILE = $(H2O_RCLIENT_MAC_FILE)
 H2O_WRAPPER_PKG_FILE = $(H2O_WRAPPER_MAC_FILE)
+endif
+ifeq ($(OS),Windows_NT)
+H2O_RCLIENT_PKG_FILE = $(H2O_RCLIENT_WINDOWS_FILE)
+H2O_WRAPPER_PKG_FILE = $(H2O_WRAPPER_WINDOWS_FILE)
 endif
 
 # Do a best-effort attempt to see if the R user has pdflatex installed

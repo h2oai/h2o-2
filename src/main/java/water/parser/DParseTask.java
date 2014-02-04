@@ -941,7 +941,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         if(d < _min[colIdx])_min[colIdx] = d;
         if(d > _max[colIdx])_max[colIdx] = d;
         _mean[colIdx] += d;
-        if(exp < 0) {
+        if(exp != 0) {
           if(exp < _scale[colIdx])_scale[colIdx] = exp;
           if(_colTypes[colIdx] != DCOL){
             if(Math.abs(number) > MAX_FLOAT_MANTISSA || exp < -35 || exp > 35)
