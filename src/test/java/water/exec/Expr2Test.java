@@ -152,6 +152,9 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x){y=x*2; y+1}(2)",5);
       checkStr("function(x){y=1+2}(2)",3);
       checkStr("function(x){y=1+2;y=c(1,2)}"); // Not allowed to change types in inner scopes
+      checkStr("a=function(x) x+1; 7",7); // Function def w/out curly-braces; return 7
+      checkStr("a=function(x) {x+1}; 7",7); // Function def w/ curly-braces; return 7
+      checkStr("a=function(x) {x+1; 7}"); // Function def of 7
       checkStr("c(1,c(2,3))");
       checkStr("a=c(1,Inf);c(2,a)");
       // Test sum flattening all args
