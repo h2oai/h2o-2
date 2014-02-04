@@ -44,7 +44,7 @@ Defining a PCA Model
 
    Allows users to specify whether data should be transformed so that
    each column has a mean of 0 and a standard deviation of 1 prior to
-   carrying out PCA. 
+   carrying out PCA. Standardizing is strongly reccomended. 
 
 
 Interpreting Results
@@ -93,6 +93,16 @@ behaviors for further modeling.
 .. Image:: pca.png
    :width: 40%
 
+**Scree and Variance Plots**
+
+  The scree and variance plots are visual tools that indicate the
+  marginal contributions of each next principal component vector. The
+  scree plot show the amount of variance accounted for by the first
+  component, and then the additional variance accounted for by each of
+  the next components, and approaches a minimum of zero contribution . 
+  The variance plot shows the cumulative variance accounted for by
+  each of the components, and approaches a maximum value of 1. 
+
 Notes on the application of PCA
 """""""""""""""""""""""""""""""
 
@@ -102,23 +112,27 @@ related, but not equivalent. Specifically, the correlation between two
 variables is their normalized covariance. For this reason, it's
 recommended that users standardize data before running a PCA analysis. 
 
-Additionally, modeling is driven by the simple assumption that set of derived variables can be appropriately characterized by a linear combination. PCA generates a set of
-new variables composed of combinations of the original variables. The
-variance explained by PCA is the covariance observed in the whole set
-of variables. If the objective of a PCA analysis is to use the new
-variables generated to predict an outcome of interest, that outcome
-must not be included in the PCA analysis. Otherwise, when the new
-variables are used to generate a model, the dependent variable will
-occur on both sides of the predictive equation. 
+Additionally, modeling is driven by the simple assumption that set of
+derived variables can be appropriately characterized by a linear
+combination. PCA generates a set of new variables composed of
+combinations of the original variables. The variance explained by PCA
+is the covariance observed in the whole set of variables. If the
+objective of a PCA analysis is to use the new variables generated to
+predict an outcome of interest, that outcome must not be included in
+the PCA analysis. Otherwise, when the new variables are used to
+generate a model, the dependent variable will occur on both sides of
+the predictive equation. 
 
 PCA Algorithm
 ---------------
 
 Let :math:`X` be an :math:`M\times N` matrix where
  
-1. Each row corresponds to the set of all measurements on a particular attribute, and 
+1. Each row corresponds to the set of all measurements on a particular 
+   attribute, and 
 
-2. Each column corresponds to a set of measurements from a given observation or trial
+2. Each column corresponds to a set of measurements from a given
+   observation or trial
 
 The covariance matrix :math:`C_{x}` is
 

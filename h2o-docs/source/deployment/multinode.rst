@@ -8,7 +8,7 @@ an H\ :sub:`2`\ O multi-node cluster. Begin by locating a set of hosts to make u
 **STEP 1**
 
 To download H\ :sub:`2`\ O, including the .jar, go to
-`the H\ :sub: `2` O downloads page <http://0xdata.com/downloadtable/>`_ and choose the version that is right for your environment. 
+the H\ :sub:`2`\ O `downloads page <http://0xdata.com/downloadtable/>`_ and choose the version that is right for your environment. 
 
 
 **STEP 2**
@@ -52,8 +52,8 @@ memory.
 For best performance, we recommend you size your cluster to be about
 four times the size of your data (but to avoid swapping, Xmx must not
 be larger than physical memory on any given node).  Giving all nodes
-the same amount of memory is strongly recommended (H\ :sub:`2`\ O works best with
-symmetric nodes).
+the same amount of memory is strongly recommended (H\ :sub:`2`\ O
+works best withsymmetric nodes).
 
 Note the optional -ip (not shown in the example below) and -port
 options tell this H\ :sub:`2`\ O node what IP address and ports (port and port+1
@@ -62,7 +62,7 @@ that have multiple network interfaces.
 
 ::
 
-  $ java -Xmx20g -jar h2o.jar -flatfile flatfile.txt -port 54321 -name MyClusterName
+  $ java -Xmx20g -jar h2o.jar -flatfile flatfile.txt -port 54321
 
 You will see output similar to the following:
 
@@ -80,7 +80,9 @@ You will see output similar to the following:
   08:35:33.559 main      INFO WATER: Java heap maxMemory: 17.78 gb
   08:35:33.559 main      INFO WATER: ICE root: '/tmp/h2o-tomk'
   08:35:33.580 main      INFO WATER: Internal communication uses port: 54322
-  +                                  Listening for HTTP and REST traffic on  http://192.168.1.163:54321/
+  +                                  Listening for HTTP and REST
+				     traffic 
+                                     on  http://192.168.1.163:54321/
   08:35:33.613 main      INFO WATER: H2O cloud name: 'MyClusterName'
   08:35:33.613 main      INFO WATER: (v1.7.0.520) 'MyClusterName' on /192.168.1.163:54321, static configuration based on -flatfile flatfile.txt
   08:35:33.615 main      INFO WATER: Cloud of size 1 formed [/192.168.1.163:54321]
