@@ -40,7 +40,7 @@ public final class ParseDataset2 extends Job {
   }
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
-    setup.checkColumnNames();
+    setup.checkDupColumnNames();
     // Some quick sanity checks: no overwriting your input key, and a resource check.
     long sum=0;
     for( Key k : keys ) {
