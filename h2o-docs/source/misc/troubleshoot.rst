@@ -1,16 +1,3 @@
-H\ :sub:`2`\ O Troubleshooting
-------------------------------
-
-
-**How to Send Logs:** Reporting Errors in H\ :sub:`2`\ O
----------------------------------------------------------
-
-**Errors in Browser Based GUI**
-
-  When you encounter an error while working in the web based GUI for
-  H\ :sub:`2`\ O, following the instructions below will assist H\ :sub:`2`\ O developers in
-  giving you the best possible solution. 
-
 **Step 1** 
 
   Through the drop down menu **Admin** go to **Log View**. 
@@ -194,15 +181,3 @@ on 192.168.1.173:55599
 
 .. Image:: Clusterstattunnel.png
    :width: 70%
-
-
-
-
-
-
-
-
-
-
-  
- 
