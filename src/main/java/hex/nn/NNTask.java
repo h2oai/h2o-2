@@ -41,7 +41,7 @@ public class NNTask extends FrameTask<NNTask> {
     _nrows = nrows;
     _neurons = makeNeurons(_dinfo, _output);
     _chunk_node_count = _nrows > 0 ? 1 : 0;
-    System.out.println("chunkInit: Working on " + _nrows + " rows.");
+//    System.out.println("chunkInit: Working on " + _nrows + " rows.");
   }
 
   @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
@@ -60,9 +60,9 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override protected void postGlobal(){
-    System.out.println("postGlobal: Dividing by " + _chunk_node_count);
+//    System.out.println("postGlobal: Dividing by " + _chunk_node_count);
     _output.div(_chunk_node_count);
-    System.out.println("postGlobal: Adding " + _nrows + " rows");
+//    System.out.println("postGlobal: Adding " + _nrows + " rows");
     _output.set_processed(_nrows_before + _nrows);
   }
 
