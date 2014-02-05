@@ -1,17 +1,26 @@
 package water;
 
-import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
-
-import java.util.*;
-
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.TransfVec;
+import water.fvec.Vec;
+import water.util.JCodeGen;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+
+import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -290,7 +299,7 @@ public abstract class Model extends Lockable<Model> {
   /**
    * Utility function to get a best prediction from an array of class prediction distribution if you know the row number.
    * It returns index of max value if predicted values are unique.
-   * In the case of tie, the implementation solve it in sudo-random way based on number of row in chunk.
+   * In the case of tie, the implementation solve it in pseudo-random way based on number of row in chunk.
    *
    * @param preds an array of prediction distribution. Length of arrays is equal to a number of classes.
    * @param ties a pre-allocated array to hold class numbers participating in tie
