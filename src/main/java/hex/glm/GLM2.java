@@ -83,7 +83,7 @@ public class GLM2 extends ModelJob {
   @Override
   protected JsonObject toJSON() {
     JsonObject jo = super.toJSON();
-    if (lambda == null) jo.addProperty("lambda", "automatic");
+    if (lambda == null) jo.addProperty("lambda", "automatic"); //better than not printing anything if lambda=null
     return jo;
   }
 

@@ -81,8 +81,11 @@ public class Job extends Request2 {
     @API(help = "Source frame", required = true, filter = Default.class, json = true)
     public Frame source;
 
-    @Override
-    protected JsonObject toJSON() {
+    /**
+     * Annotate the number of columns and rows of the training data set in the job parameter JSON
+     * @return JsonObject annotated with num_cols and num_rows of the training data set
+     */
+    @Override protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (source != null) {
         jo.getAsJsonObject("source").addProperty("num_cols", source.numCols());
@@ -108,8 +111,15 @@ public class Job extends Request2 {
     public int[] ignored_cols_by_name = EMPTY;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
 
-    @Override
-    protected JsonObject toJSON() {
+    /**
+     * Annotate the used and ignored columns in the job parameter JSON
+     * For both the used and the ignored columns, the following rules apply:
+     * If the number of columns is less or equal than 100, a dense list of used columns is reported.
+     * If the number of columns is greater than 100, the number of columns is reported.
+     * If the number of columns is 0, a "N/A" is reported.
+     * @return JsonObject annotated with used/ignored columns
+     */
+    @Override protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       HashMap<String, int[]> map = new HashMap<String, int[]>();
       map.put("used_cols", cols); map.put("ignored_cols", ignored_cols);
@@ -200,8 +210,11 @@ public class Job extends Request2 {
       ((FrameKeyMultiVec) c).setResponse((FrameClassVec) r);
     }
 
-    @Override
-    protected JsonObject toJSON() {
+    /**
+     * Annotate the name of the response column in the job parameter JSON
+     * @return JsonObject annotated with the name of the response column
+     */
+    @Override protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       int idx = source.find(response);
       if( idx == -1 ) {
@@ -240,8 +253,11 @@ public class Job extends Request2 {
     @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
 
-    @Override
-    protected JsonObject toJSON() {
+    /**
+     * Annotate the number of columns and rows of the validation data set in the job parameter JSON
+     * @return JsonObject annotated with num_cols and num_rows of the validation data set
+     */
+    @Override protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (validation != null) {
         jo.getAsJsonObject("validation").addProperty("num_cols", validation.numCols());
