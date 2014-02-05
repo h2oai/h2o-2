@@ -4,9 +4,11 @@ import hex.FrameTask.DataInfo;
 import water.Iced;
 import water.Key;
 import water.Model;
+import water.PrettyPrint;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Frame;
+import water.util.D3Plot;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -35,6 +37,51 @@ public class NNModel extends Model {
 
   @API(help="Number of training epochs", json = true)
   public double epoch_counter;
+
+  @API(help = "Scoring during model building")
+  public Errors[] errors;
+
+  public static class Errors extends Iced {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help = "How many rows the algorithm has processed")
+    public long training_samples;
+    @API(help = "How long the algorithm ran in ms")
+    public long training_time_ms;
+    @API(help = "Classification error on training data")
+    public double train_err = 1;
+    @API(help = "Whether a validation set was provided")
+    boolean validation;
+    @API(help = "Classification error on validation data")
+    public double valid_err = 1;
+
+    @API(help = "Training MSE")
+    public double train_mse = Double.POSITIVE_INFINITY;
+    @API(help = "Validation MSE")
+    public double valid_mse = Double.POSITIVE_INFINITY;
+    @API(help = "Training MCE")
+    public double train_mce = Double.POSITIVE_INFINITY;
+    @API(help = "Validation MCE")
+    public double valid_mce = Double.POSITIVE_INFINITY;
+
+//    @API(help = "Number of training set samples for scoring")
+//    public long score_training;
+//    @API(help = "Number of validation set samples for scoring")
+//    public long score_validation;
+
+    @API(help = "Confusion Matrix")
+    public water.api.ConfusionMatrix confusion_matrix;
+
+    @Override public String toString() {
+      return   "Training error: " + String.format("%.2f", (100 * train_err)) + "%"
+           + ", validation error: " + String.format("%.2f", (100 * valid_err)) + "%"
+//              + " (MSE:" + String.format("%.2e", mean_square)
+//              + ", MCE:" + String.format("%.2e", cross_entropy)
+//              + ")"
+      ;
+    }
+  }
 
   // This describes the model, together with the parameters
   // This will be shared: one per node
@@ -265,16 +312,6 @@ public class NNModel extends Model {
     model_info.computeDiagnostics();
   }
 
-//  @API(help = "Errors on the training set")
-//  public Errors[] training_errors;
-//
-//  @API(help = "Errors on the validation set")
-//  public Errors[] validation_errors;
-//
-//  @API(help = "Confusion matrix")
-//  public long[][] confusion_matrix;
-//
-
 //  public NNModel(NNModel other) {
 //    super(other._key,null,other.data_info._adaptedFrame);
 //
@@ -285,12 +322,17 @@ public class NNModel extends Model {
 //    model_info = new NNModelInfo(other.model_info);
 //  }
 
-  public NNModel(Key selfKey, Key jobKey, DataInfo dinfo, NN params) {
-    super(selfKey,null,dinfo._adaptedFrame);
+  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
+    super(selfKey, dataKey, dinfo._adaptedFrame);
     job_key = jobKey;
     data_info = dinfo;
     run_time = 0;
     start_time = System.currentTimeMillis();
+    errors = new Errors[(int)params.epochs];
+    for (int i=0; i<errors.length; ++i) {
+      errors[i] = new Errors();
+    }
+
     model_info = new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
     model_info.initializeMembers();
   }
@@ -333,10 +375,163 @@ public class NNModel extends Model {
   }
 
   public boolean generateHTML(String title, StringBuilder sb) {
-    DocGen.HTML.title(sb, title);
+    if (_key == null) {
+      DocGen.HTML.title(sb, "No model yet");
+      return true;
+    }
+
+    final String mse_format = "%2.6f";
+    final String cross_entropy_format = "%2.6f";
+
+    DocGen.HTML.title(sb,title);
+    DocGen.HTML.paragraph(sb, "Model Key: " + _key);
+    model_info.parameters.toHTML(sb);
+    sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", " +
+            NN.link(_dataKey, "Compute new model") + "</div>");
     DocGen.HTML.title(sb, "Epochs: " + epoch_counter);
+
+    // stats for training and validation
+    final Errors error = errors[errors.length - 1];
+
+    if (isClassifier()) {
+      // Plot training error
+      float[] err = new float[errors.length];
+      float[] samples = new float[errors.length];
+      for (int i=0; i<err.length; ++i) {
+        err[i] = (float)errors[i].train_err;
+        samples[i] = errors[i].training_samples;
+      }
+      new D3Plot(samples, err, "training samples", "classification error",
+              "Classification Error on Training Set").generate(sb);
+
+      // Plot validation error
+      if (model_info.parameters.validation != null) {
+        for (int i=0; i<err.length; ++i) {
+          err[i] = (float)errors[i].valid_err;
+        }
+        new D3Plot(samples, err, "training samples", "classification error",
+                "Classification Error on Validation Set").generate(sb);
+      }
+    }
+
+    if (isClassifier()) {
+      DocGen.HTML.section(sb, "Training classification error: " + formatPct(error.train_err));
+    }
+    DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, error.train_mse));
+    if (isClassifier()) {
+      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
+      if(error.validation) {
+        DocGen.HTML.section(sb, "Validation classification error: " + formatPct(error.valid_err));
+      }
+    }
+    if(error.validation) {
+      DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, error.valid_mse));
+      if (isClassifier()) {
+        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
+      }
+      if (error.training_time_ms > 0)
+        DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
+    }
+    else {
+      if (error.training_time_ms > 0)
+        DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
+    }
+    if (model_info.parameters != null && model_info.parameters.diagnostics) {
+      DocGen.HTML.section(sb, "Status of Hidden and Output Layers");
+      sb.append("<table class='table table-striped table-bordered table-condensed'>");
+      sb.append("<tr>");
+      sb.append("<th>").append("#").append("</th>");
+      sb.append("<th>").append("Units").append("</th>");
+      sb.append("<th>").append("Activation").append("</th>");
+      sb.append("<th>").append("Rate").append("</th>");
+      sb.append("<th>").append("L1").append("</th>");
+      sb.append("<th>").append("L2").append("</th>");
+      sb.append("<th>").append("Momentum").append("</th>");
+      sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
+      sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
+      sb.append("</tr>");
+      Neurons[] neurons = NNTask.makeNeurons(model_info.parameters._dinfo, model_info()); //link the weights to the neurons, for easy access
+      for (int i=1; i<neurons.length; ++i) {
+        sb.append("<tr>");
+        sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
+        sb.append("<td>").append("<b>").append(neurons[i].units).append("</b>").append("</td>");
+        sb.append("<td>").append(neurons[i].getClass().getSimpleName().replace("Vec","").replace("Chunk", "")).append("</td>");
+        sb.append("<td>").append(String.format("%.5g", neurons[i].rate(error.training_samples))).append("</td>");
+       sb.append("<td>").append(neurons[i].l1).append("</td>");
+        sb.append("<td>").append(neurons[i].l2).append("</td>");
+        final String format = "%g";
+        sb.append("<td>").append(neurons[i].momentum(error.training_samples)).append("</td>");
+        sb.append("<td>(").append(String.format(format, model_info.mean_weight[i])).
+                append(", ").append(String.format(format, model_info.rms_weight[i])).append(")</td>");
+        sb.append("<td>(").append(String.format(format, model_info.mean_bias[i])).
+                append(", ").append(String.format(format, model_info.rms_bias[i])).append(")</td>");
+        sb.append("</tr>");
+      }
+      sb.append("</table>");
+    }
+    if (model_info.unstable()) {
+      final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
+              + " Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+      DocGen.HTML.section(sb, "=======================================================================================");
+      DocGen.HTML.section(sb, msg);
+      DocGen.HTML.section(sb, "=======================================================================================");
+    }
+    final String cmTitle = "Confusion Matrix on " + (error.validation ? " Validation Data" : " Training Data");
+    DocGen.HTML.section(sb, cmTitle);
+    if (error.confusion_matrix != null)
+      error.confusion_matrix.toHTML(sb);
+
+    sb.append("<h3>" + "Progress" + "</h3>");
+//    String training = "Number of training set samples for scoring: " + error.score_training;
+    if (error.validation) {
+//      String validation = "Number of validation set samples for scoring: " + error.score_validation;
+    }
+    sb.append("<table class='table table-striped table-bordered table-condensed'>");
+    sb.append("<tr>");
+    sb.append("<th>Training Time</th>");
+    sb.append("<th>Training Samples</th>");
+    sb.append("<th>Training MSE</th>");
+    if (isClassifier()) {
+      sb.append("<th>Training MCE</th>");
+      sb.append("<th>Training Classification Error</th>");
+    }
+    sb.append("<th>Validation MSE</th>");
+    if (isClassifier()) {
+      sb.append("<th>Validation MCE</th>");
+      sb.append("<th>Validation Classification Error</th>");
+    }
+    sb.append("</tr>");
+    for( int i = errors.length - 1; i >= 0; i-- ) {
+      final Errors e = errors[i];
+      sb.append("<tr>");
+      sb.append("<td>" + PrettyPrint.msecs(e.training_time_ms, true) + "</td>");
+      sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
+      sb.append("<td>" + String.format(mse_format, e.train_mse) + "</td>");
+      if (isClassifier()) {
+        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
+        sb.append("<td>" + formatPct(e.train_err) + "</td>");
+      }
+      if(e.validation) {
+        sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
+        if (isClassifier()) {
+          sb.append("<td>" + String.format(cross_entropy_format, e.valid_mce) + "</td>");
+          sb.append("<td>" + formatPct(e.valid_err) + "</td>");
+        }
+      } else
+        sb.append("<td></td><td></td><td></td>");
+      sb.append("</tr>");
+    }
+    sb.append("</table>");
     return true;
   }
+
+  private static String formatPct(double pct) {
+    String s = "N/A";
+    if( !Double.isNaN(pct) )
+      s = String.format("%5.2f %%", 100 * pct);
+    return s;
+  }
+
   public boolean toJavaHtml(StringBuilder sb) { return false; }
   @Override public String toJava() { return "Not yet implemented."; }
 }

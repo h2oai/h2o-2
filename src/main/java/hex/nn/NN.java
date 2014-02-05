@@ -1,5 +1,7 @@
 package hex.nn;
 
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import hex.FrameTask.DataInfo;
 import water.*;
 import water.api.DocGen;
@@ -190,6 +192,27 @@ public class NN extends Job.ValidatedJob {
     return sb.toString();
   }
 
+
+  @Override public boolean toHTML(StringBuilder sb) {
+    JsonObject jo = getJsonObject();
+
+    // remove unwanted fields
+    jo.remove("Request2");
+    jo.remove("response_info");
+    jo.remove("job_key");
+    jo.remove("destination_key");
+    jo.remove("description");
+    jo.remove("start_time");
+    jo.remove("end_time");
+
+    sb.append("<div class='pull-right'><a href='#' onclick='$(\"#parameters_box\").toggleClass(\"hide\");'"
+            + " class='btn btn-inverse btn-mini'>Model Parameters</a></div>"
+            + "<div class='hide' id='parameters_box'><pre><code class=\"language-json\">");
+    sb.append(new GsonBuilder().setPrettyPrinting().create().toJson(jo));
+    sb.append("</code></pre></div>");
+    return true;
+  }
+
   @Override protected void logStart() {
     Log.info("Starting Neural Net model build...");
     super.logStart();
@@ -236,7 +259,7 @@ public class NN extends Job.ValidatedJob {
   public void initModel() {
     logStart();
     NN.RNG.seed.set(seed);
-    NNModel model = new NNModel(dest(), self(), _dinfo, this);
+    NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.delete_and_lock(self());
   }
 
