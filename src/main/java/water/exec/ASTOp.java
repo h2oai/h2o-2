@@ -121,6 +121,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTIfElse());
     putPrefix(new ASTRApply());
     putPrefix(new ASTSApply());
+    putPrefix(new ASTddply ());
     putPrefix(new ASTRunif ());
     putPrefix(new ASTCut   ());
     putPrefix(new ASTPrint ());

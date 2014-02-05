@@ -88,7 +88,7 @@ public class ASTFunc extends ASTOp {
     NewChunk nc = new NewChunk(av,0);
     for (double v : in) nc.addNum(v);
     nc.close(0,null);
-    Frame fr = new Frame(av.close(null));
+    Frame fr = new Frame(new String[]{"row"},new Vec[]{av.close(null)});
     env.push(this);
     env.push(fr);
     this.apply(env,2);
