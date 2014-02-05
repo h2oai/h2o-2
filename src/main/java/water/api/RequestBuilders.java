@@ -160,7 +160,7 @@ public class RequestBuilders extends RequestQueries {
     switch (response._status) {
       case error:
         result.replace("BUTTON","<button class='btn btn-danger disabled'>"+response._status.toString()+"</button>");
-        result.replace("TEXT","An error has occured during the creation of the response. Details follow:");
+        result.replace("TEXT","An error has occurred during the creation of the response. Details follow:");
         break;
       case done:
         //result.replace("BUTTON","<button class='btn btn-success disabled'>"+response._status.toString()+"</button>");
