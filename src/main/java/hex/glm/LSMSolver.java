@@ -6,7 +6,9 @@ import hex.gram.Gram.Cholesky;
 import java.util.Arrays;
 
 import water.Iced;
+import water.Key;
 import water.MemoryManager;
+import water.util.Log;
 import water.util.Utils;
 
 import com.google.gson.JsonObject;
@@ -27,6 +29,8 @@ public abstract class LSMSolver extends Iced{
 
   public double _lambda;
   public final double _alpha;
+  public Key _jobKey;
+  public String _id;
 
   public LSMSolver(double lambda, double alpha){
     _lambda = lambda;
@@ -103,6 +107,7 @@ public abstract class LSMSolver extends Iced{
     public double _rho = 1e-5;
     public double [] _wgiven;
     public double _proximalPenalty;
+
 
     public boolean normalize() {return _lambda != 0;}
 
@@ -187,7 +192,10 @@ public abstract class LSMSolver extends Iced{
           xy[i] += _proximalPenalty*_wgiven[i];
       }
       int attempts = 0;
-      Cholesky chol = gram.cholesky(null);
+      long t1 = System.currentTimeMillis();
+      Cholesky chol = gram.cholesky(null,true,_id);
+      long t2 = System.currentTimeMillis();
+      Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");
       while(!chol.isSPD() && attempts < 10){
         if(_rho == 0)_rho = 1e-5;
         else _rho *= 10;
