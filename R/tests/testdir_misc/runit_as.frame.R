@@ -2,7 +2,7 @@
 # Testing number of rows in as.data.frame 
 ##
 
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 # setupRandomSeed(1994831827)

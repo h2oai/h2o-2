@@ -100,7 +100,7 @@ function() {
 select<-
 function() {
     a <- select.help()
-    if ( a[[1]]$ATTRS$NUMROWS != "0" && a[[1]]$ATTRS$NUMCOLS != "0" && file_test("-f", locate(a[[1]]$PATHS[1]))) {
+    if ( a[[1]]$ATTRS$NUMROWS != "0" && a[[1]]$ATTRS$NUMCOLS != "0" && file_test("f", locate(a[[1]]$PATHS[1]))) {
         return(a)
     } else {
         return(select())
@@ -170,7 +170,7 @@ h2o.__logIt("[SEED] :", SEED, "Command")
 
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "")
-h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), paste("STARTING TEST: ", R.utils::commandArgs(asValues=TRUE)$"-f"))
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), paste("STARTING TEST: ", R.utils::commandArgs(asValues=TRUE)$"f"))
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "")
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
 h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))

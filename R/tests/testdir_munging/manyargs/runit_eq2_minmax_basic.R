@@ -3,7 +3,7 @@
 # Description: Select a dataset, select some columns, compute their min and max
 ##
 
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 #setupRandomSeed(1689636624)
