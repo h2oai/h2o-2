@@ -383,4 +383,9 @@ public class TestUtil {
     for ( Key k : H2O.localKeySet()) System.err.println(" * " + k);
     System.err.println("----------------------");
   }
+
+  public static String[] ar(String ...a) { return a; }
+  public static int   [] ar(int    ...a) { return a; }
+  public static long  [] ar(long   ...a) { return a; }
+  public static long[][] ar(long[] ...a) { return a; }
 }
