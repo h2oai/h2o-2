@@ -160,7 +160,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
       return;
 
     if (_firstRow) {
-      _columnNames.add(curStr == null ? "" : curStr.toString());
+      _columnNames.add(curStr == null ? ("C" + (curCol+1)) : curStr.toString());
     } else {
       if (curStr == null)
         if (Double.isNaN(curNum))
