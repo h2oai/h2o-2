@@ -75,6 +75,7 @@ public class NNModel extends Model {
 
     @API(help = "Unstable", json = true)
     private boolean unstable = false;
+    public boolean unstable() { return unstable; }
 
     @API(help = "Processed samples", json = true)
     private long processed;
@@ -245,8 +246,10 @@ public class NNModel extends Model {
         // Abort the run if weights or biases are unreasonably large (Note that all input values are normalized upfront)
         // This can happen with Rectifier units when L1/L2/max_w2 are all set to 0, especially when using more than 1 hidden layer.
         final double thresh = 1e10;
-        unstable |= mean_bias[y] > thresh   || rms_bias[y] > thresh
-                || mean_weight[y] > thresh  || rms_weight[y] > thresh;
+        unstable |= mean_bias[y] > thresh  || Double.isNaN(mean_bias[y])
+                || rms_bias[y] > thresh    || Double.isNaN(rms_bias[y])
+                || mean_weight[y] > thresh || Double.isNaN(mean_weight[y])
+                || rms_weight[y] > thresh  || Double.isNaN(rms_weight[y]);
 
         System.out.println("Layer " + y + " mean weight: " + mean_weight[y]);
         System.out.println("Layer " + y + " rms  weight: " + rms_weight[y]);

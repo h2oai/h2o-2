@@ -256,6 +256,10 @@ public class NN extends Job.ValidatedJob {
       }
 //      System.out.println(model);
       model.update(self());
+      if (model.model_info().unstable()) {
+        Log.info("Model is unstable (Exponential growth). Aborting. Try using L1/L2/max_w2 regularization or a different activation function.");
+        break;
+      }
     }
     if (adapted != null) adapted[1].delete();
     model.unlock(self());
