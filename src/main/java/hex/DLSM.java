@@ -198,7 +198,7 @@ public class DLSM {
         eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
         eps_dual = ABSTOL + _rho * RELTOL * Math.sqrt(u_norm);
         if( r_norm < eps_pri && s_norm < eps_dual ){
-          Log.info("GLM(" + _jobKey + ")" + " ADMM solve took " + i + "iterations and " + (System.currentTimeMillis() - t) + "ms");
+          Log.info("GLM(" + _jobKey + ")" + " ADMM solve took " + i + " iterations and " + (System.currentTimeMillis() - t) + "ms");
           return _converged = true;
         }
       }
