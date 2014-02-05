@@ -124,3 +124,55 @@ class ASTSApply extends ASTRApply {
     super.apply(env,argcnt+1);
   }
 }
+
+// --------------------------------------------------------------------------
+// PLYR's DDPLY.  GroupBy by any other name.  Type signature:
+//   #RxN  ddply(RxC,subC, 1xN function( subRxC ) { ... } ) 
+//   R - Rows in original frame
+//   C - Cols in original frame
+//   subC - Subset of C; either a single column entry, or a 1 Vec frame with a list of columns.
+//   subR - Subset of R, where all subC values are the same.
+//   N - Return column(s).
+//  #R - # of unique combos in the original "subC" set
+
+class ASTddply extends ASTOp {
+  static final String VARS[] = new String[]{ "#RxN", "RxC", "subC", "fcn_subRxC"};
+  ASTddply( ) { super(VARS,
+                      new Type[]{ Type.ARY, Type.ARY, Type.dblary(), Type.fcn(new Type[]{Type.dblary(),Type.ARY}) },
+                      OPF_PREFIX,
+                      OPP_PREFIX,
+                      OPA_RIGHT); }
+  @Override String opStr(){ return "ddply";}
+  @Override ASTOp make() {return new ASTddply();}
+  @Override void apply(Env env, int argcnt) {
+    // Peek everything from the stack
+    // Function to execute on the groups
+    final ASTOp op = env.fcn(-1); // ary->dblary: subRxC -> 1xN
+    
+    Frame fr = env.ary(-3);    // The Frame to work on
+    final int ncols = fr.numCols();
+
+    // Either a single column, or a collection of columns to group on.
+    int cols[];
+    if( !env.isAry(-2) )        // Single column?
+      cols = new int[]{(int)env.dbl(-2)};
+    else {                      // Else a collection of columns?
+      Frame cs = env.ary(-2);
+      if( cs.numCols() != 1 ) throw new IllegalArgumentException("Only one column-of-columns for column selection");
+      if( cs.numRows() > 1000 ) throw new IllegalArgumentException("Too many columns selected");
+      cols = new int[(int)cs.numRows()];
+      Vec vec = cs.vecs()[0];
+      for( int i=0; i<cols.length; i++ ) 
+        if( vec.isNA(i) ) throw new IllegalArgumentException("NA not a valid column");
+        else cols[i] = (int)vec.at8(i);
+    }
+    // Another check for sane columns
+    for( int c : cols ) 
+      if( c < 1 || c > fr.numCols() )
+        throw new IllegalArgumentException("Column "+c+" out of range for frame columns "+fr.numCols());
+    
+    env.pop(4);
+    // Push empty frame for debuggging
+    env.push(new Frame(new String[0],new Vec[0]));
+  }
+}

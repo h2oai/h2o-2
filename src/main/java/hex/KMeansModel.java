@@ -78,7 +78,7 @@ public class KMeansModel extends OldModel implements Progress {
    * NaN. Returns the cluster-number, which is mostly an internal value. Last data element refers to
    * the response variable, which is not used for k-means.
    */
-  protected double score0(double[] data) {
+  @Override protected double score0(double[] data) {
     for( int i = 0; i < data.length - 1; i++ ) { // Normalize the data before scoring
       ValueArray.Column C = _va._cols[i];
       double d = data[i];
@@ -94,12 +94,12 @@ public class KMeansModel extends OldModel implements Progress {
   }
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, int row) {
+  @Override protected double score0(ValueArray data, int row) {
     throw H2O.unimpl();
   }
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
+  @Override protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
     throw H2O.unimpl();
   }
 

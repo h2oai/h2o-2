@@ -45,7 +45,7 @@ h2o.__changeLog <- function(path, type) {
   assign(myVar, cmd, envir = pkg.env)
 }
 
-h2o.__logIt <- function(m, tmp, commandOrErr) {
+h2o.__logIt <- function(m, tmp, commandOrErr, isPost = TRUE) {
   # m is a url if commandOrErr == "Command"
   if(is.null(tmp) || is.null(get("tmp"))) s <- m
   else {
@@ -57,10 +57,13 @@ h2o.__logIt <- function(m, tmp, commandOrErr) {
     for(i in seq_along(tmp)){
       s[i] <- paste(nams[i], ": ", tmp[[i]], sep="", collapse = " ")
     }
-    s <- paste(m, ' \t', paste(s, collapse=", "))
+    s <- paste(m, "\n", paste(s, collapse = ", "), ifelse(nchar(s) > 0, "\n", ""))
   }
   # if(commandOrErr != "Command") s <- paste(s, '\n')
-  s <- paste(s, '\n')
+  h <- format(Sys.time(), format = "%a %b %d %X %Y %Z", tz = "GMT")
+  if(commandOrErr == "Command")
+    h <- paste(h, ifelse(isPost, "POST", "GET"), sep = "\n")
+  s <- paste(h, "\n", s)
   write(s, file = ifelse(commandOrErr == "Command", pkg.env$h2o.__LOG_COMMAND, pkg.env$h2o.__LOG_ERROR), append = TRUE)
 }
 
@@ -152,7 +155,7 @@ h2o.__remoteSend <- function(client, page, ...) {
     
     # Log HTTP response from H2O
     hh <- hg$value()
-    s <- paste(hh["Date"], "\nHTTP status code: ", hh["status"], "\n", temp, sep = "")
+    s <- paste(hh["Date"], "\nHTTP status code: ", hh["status"], "\n ", temp, sep = "")
     s <- paste(s, "\n\n------------------------------------------------------------------\n")
     write(s, file = pkg.env$h2o.__LOG_COMMAND, append = TRUE)
   } else
