@@ -2,7 +2,6 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
