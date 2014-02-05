@@ -1,18 +1,21 @@
 package hex;
 
 import hex.KMeans.Initialization;
-
-import java.util.*;
-
 import water.*;
 import water.Job.ColumnsJob;
-import water.api.*;
+import water.api.DocGen;
+import water.api.Progress2;
+import water.api.Request;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
 import water.util.RString;
 import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Scalable K-Means++ (KMeans||)<br>
@@ -24,19 +27,19 @@ public class KMeans2 extends ColumnsJob {
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
 
-  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses intial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class)
+  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses initial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class, json=true)
   public Initialization initialization = Initialization.None;
 
-  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 1, lmax = 100000)
+  @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int k = 2;
 
-  @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
+  @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int max_iter = 100;
 
-  @API(help = "Whether data should be normalized", filter = Default.class)
+  @API(help = "Whether data should be normalized", filter = Default.class, json=true)
   public boolean normalize;
 
-  @API(help = "Seed for the random number generator", filter = Default.class)
+  @API(help = "Seed for the random number generator", filter = Default.class, json=true)
   public long seed = new Random().nextLong();
 
   public KMeans2() {
@@ -44,6 +47,7 @@ public class KMeans2 extends ColumnsJob {
   }
 
   @Override protected Status exec() {
+    logStart();
     source.read_lock(self());
     String sourceArg = input("source");
     Key sourceKey = null;
