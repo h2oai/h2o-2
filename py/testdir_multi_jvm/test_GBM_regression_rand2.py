@@ -82,6 +82,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 # GBM train****************************************
+                h2o.beta_features = True
                 trainStart = time.time()
                 gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
                     timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
