@@ -111,12 +111,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return rs.toString();
   }
 
-//  @Override protected void logStart() {
-//    Log.info("Starting GBM model build...");
-//    super.logStart();
-//    Log.info("    learn_rate: " + learn_rate);
-//  }
-
   @Override protected Status exec() {
     logStart();
     buildModel();

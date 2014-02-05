@@ -49,13 +49,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // Overall prediction Mean Squared Error as I add trees
   transient protected double _errs[];
 
-  @API(help = "Active feature columns")
+//  @API(help = "Active feature columns")
   protected int _ncols;
 
-  @API(help = "Rows in training dataset")
+//  @API(help = "Rows in training dataset")
   protected long _nrows;
 
-  @API(help = "Number of classes")
+//  @API(help = "Number of classes")
   protected int _nclass;
 
   @API(help = "Class distribution")
@@ -76,15 +76,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
     return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
   }
-
-//  @Override protected void logStart() {
-//    for (String s : this.toString().split("\n")) Log.info(s);
-////    super.logStart();
-////    Log.info("    ntrees: " + ntrees);
-////    Log.info("    max_depth: " + max_depth);
-////    Log.info("    min_rows: " + min_rows);
-////    Log.info("    nbins: " + nbins);
-//  }
 
   // Verify input parameters
   @Override protected void init() {
