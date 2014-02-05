@@ -1,5 +1,7 @@
 package water;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.api.Constants;
@@ -16,6 +18,7 @@ import water.util.Utils.ExpectedExceptionForDebug;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import static water.util.Utils.difference;
 import static water.util.Utils.isEmpty;
@@ -67,10 +70,6 @@ public class Job extends Request2 {
   public Key self() { return job_key; }
   public Key dest() { return destination_key; }
 
-  protected void logStart() {
-    Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
-  }
-
   public int gridParallelism() {
     return 1;
   }
@@ -79,18 +78,17 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Source frame", required = true, filter = Default.class)
+    @API(help = "Source frame", required = true, filter = Default.class, json = true)
     public Frame source;
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (source == null) {
-        Log.info("    source: null");
+    @Override
+    protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (source != null) {
+        jo.getAsJsonObject("source").add("num_cols", new JsonPrimitive(source.numCols()));
+        jo.getAsJsonObject("source").add("num_rows", new JsonPrimitive(source.numRows()));
       }
-      else {
-        Log.info("    source.numCols(): " + source.numCols());
-        Log.info("    source.numRows(): " + source.numRows());
-      }
+      return jo;
     }
   }
 
@@ -110,19 +108,23 @@ public class Job extends Request2 {
     public int[] ignored_cols_by_name = EMPTY;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (cols == null) {
-        Log.info("    cols: null");
-      } else {
-        Log.info("    cols: " + cols.length + " columns selected");
+    @Override
+    protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      HashMap<String, int[]> map = new HashMap<String, int[]>();
+      map.put("cols", cols); map.put("ignored_cols", ignored_cols);
+      for (String key : map.keySet()) {
+        int[] val = map.get(key);
+        if (val != null)
+          if(val.length>100) jo.getAsJsonObject("source").add("selected_" + key, new JsonPrimitive(val.length));
+          else if(val.length>0) {
+            StringBuilder sb = new StringBuilder();
+            for (int c : val) sb.append(c + ",");
+            jo.getAsJsonObject("source").add(key, new JsonPrimitive(sb.toString().substring(0, sb.length()-1)));
+          }
+        else jo.getAsJsonObject("source").add(key, new JsonPrimitive("N/A"));
       }
-
-      if (ignored_cols == null) {
-        Log.info("    ignored_cols: null");
-      } else {
-        Log.info("    ignored_cols: " + ignored_cols.length + " columns ignored");
-      }
+      return jo;
     }
 
     @Override protected void init() {
@@ -179,11 +181,11 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help="Column to use as class", required=true, filter=responseFilter.class)
+    @API(help="Column to use as class", required=true, filter=responseFilter.class, json = true)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
-    @API(help="Do Classification or regression", filter=myClassFilter.class)
+    @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
@@ -198,15 +200,16 @@ public class Job extends Request2 {
       ((FrameKeyMultiVec) c).setResponse((FrameClassVec) r);
     }
 
-    @Override protected void logStart() {
-      super.logStart();
+    @Override
+    protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
       int idx = source.find(response);
-      if( idx == -1 ) { 
+      if( idx == -1 ) {
         Vec vm = response.masterVec();
         if( vm != null ) idx = source.find(vm);
       }
-      Log.info("    response: "+(idx==-1?"null":source._names[idx]));
-      Log.info("    "+(classification ? "classification" : "regression"));
+      jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
+      return jo;
     }
 
     @Override protected void init() {
@@ -234,17 +237,17 @@ public class Job extends Request2 {
     protected transient String[] _names;
     protected transient String _responseName;
 
-    @API(help = "Validation frame", filter = Default.class, mustExist = true)
+    @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (validation == null) {
-        Log.info("    validation: null");
-      } else {
-        Log.info("    validation.numCols(): " + validation.numCols());
-        Log.info("    validation.numRows(): " + validation.numRows());
+    @Override
+    protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (validation != null) {
+        jo.getAsJsonObject("validation").add("num_cols", new JsonPrimitive(validation.numCols()));
+        jo.getAsJsonObject("validation").add("num_rows", new JsonPrimitive(validation.numRows()));
       }
+      return jo;
     }
 
     @Override protected void init() {

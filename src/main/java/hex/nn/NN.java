@@ -1,6 +1,5 @@
 package hex.nn;
 
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import hex.FrameTask.DataInfo;
 import water.*;
@@ -129,7 +128,6 @@ public class NN extends Job.ValidatedJob {
       classification = true;
       arg.disable("Regression is not currently supported.");
     }
-    if (arg._name.equals("ignored_cols")) arg.disable("Not currently supported.");
     if (arg._name.equals("input_dropout_ratio") &&
             (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
             ) {
@@ -162,61 +160,16 @@ public class NN extends Job.ValidatedJob {
   @Override public Key defaultDestKey(){return null;}
   @Override public Key defaultJobKey() {return null;}
 
-  @Override public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("description: " + description);
-    sb.append("\nActivation function: " + activation.toString());
-    sb.append("\nInput layer dropout ratio: " + input_dropout_ratio);
-    String h = "" + hidden[0];
-    for (int i=1; i<hidden.length; ++i) h += ", " + hidden[i];
-    sb.append("\nHidden layer sizes: " + h);
-    sb.append("\nLearning rate: " + rate);
-    sb.append("\nLearning rate annealing: " + rate_annealing);
-    sb.append("\nL1 regularization: " + l1);
-    sb.append("\nL2 regularization: " + l2);
-    sb.append("\nInitial momentum at the beginning of training: " + momentum_start);
-    sb.append("\nNumber of training samples for which momentum increases: " + momentum_ramp);
-    sb.append("\nFinal momentum after the ramp is over: " + momentum_stable);
-    sb.append("\nNumber of epochs: " + epochs);
-    sb.append("\nSeed for random numbers: " + seed);
-//    sb.append("\nEnable expert mode: ", expert_mode);
-    sb.append("\nInitial weight distribution: " + initial_weight_distribution);
-    sb.append("\nInitial weight scale: " + initial_weight_scale);
-    sb.append("\nLoss function: " + loss.toString());
-    sb.append("\nLearning rate decay factor: " + rate_decay);
-    sb.append("\nConstraint for squared sum of incoming weights per unit: " + max_w2);
-    sb.append("\nNumber of training set samples for scoring: " + score_training);
-    sb.append("\nNumber of validation set samples for scoring: " + score_validation);
-//    sb.append("\nMinimum interval (in seconds) between scoring: " + score_interval);
-//    sb.append("\nEnable diagnostics for hidden layers: " + diagnostics);
-    return sb.toString();
-  }
-
-
-  @Override public boolean toHTML(StringBuilder sb) {
-    JsonObject jo = getJsonObject();
-
-    // remove unwanted fields
+  @Override
+  protected JsonObject toJSON() {
+    JsonObject jo = super.toJSON();
     jo.remove("Request2");
     jo.remove("response_info");
-    jo.remove("job_key");
-    jo.remove("destination_key");
-    jo.remove("description");
-    jo.remove("start_time");
-    jo.remove("end_time");
-
-    sb.append("<div class='pull-right'><a href='#' onclick='$(\"#parameters_box\").toggleClass(\"hide\");'"
-            + " class='btn btn-inverse btn-mini'>Model Parameters</a></div>"
-            + "<div class='hide' id='parameters_box'><pre><code class=\"language-json\">");
-    sb.append(new GsonBuilder().setPrettyPrinting().create().toJson(jo));
-    sb.append("</code></pre></div>");
-    return true;
+    return jo;
   }
 
-  @Override protected void logStart() {
-    Log.info("Starting Neural Net model build...");
-    super.logStart();
-    for (String s : this.toString().split("\n")) Log.info(s);
+  @Override public boolean toHTML(StringBuilder sb) {
+    return makeJsonBox(sb);
   }
 
   /** Return the query link to this page */

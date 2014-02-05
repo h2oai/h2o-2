@@ -8,6 +8,7 @@ import water.api.Request;
 import water.api.RequestArguments;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
+import water.util.Log;
 import water.util.Utils;
 
 import java.lang.annotation.Annotation;
@@ -533,8 +534,27 @@ public abstract class Request2 extends Request {
     this.response_info = response.extractInfo();
   }
 
-  protected JsonObject getJsonObject() {
+  protected JsonObject toJSON() {
     final String json = new String(writeJSON(new AutoBuffer()).buf());
     return (JsonObject) new JsonParser().parse(json);
+  }
+
+  @Override
+  public String toString() {
+    return GSON_BUILDER.toJson(toJSON());
+  }
+
+  protected void logStart() {
+    Log.info("Starting " + this.getClass().getSimpleName() + " model build.");
+    for (String s : this.toString().split("\n")) Log.info(s);
+  }
+
+  protected boolean makeJsonBox(StringBuilder sb) {
+    sb.append("<div class='pull-left'><a href='#' onclick='$(\"#params\").toggleClass(\"hide\");'"
+            + " class='btn btn-inverse btn-mini'>Model Parameters</a></div><div class='hide' id='params'>"
+            + "<pre><code class=\"language-json\">");
+    sb.append(toString());
+    sb.append("</code></pre></div>");
+    return true;
   }
 }

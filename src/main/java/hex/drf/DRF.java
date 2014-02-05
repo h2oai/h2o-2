@@ -1,24 +1,33 @@
 package hex.drf;
 
-import static water.util.Utils.*;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import hex.ShuffleTask;
-import hex.gbm.*;
+import hex.gbm.DHistogram;
+import hex.gbm.DTree;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-import java.util.Random;
-
+import hex.gbm.SharedTreeModelBuilder;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static water.util.Utils.*;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
@@ -56,8 +65,11 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    @API(help="", json=true)
     final int _mtries;
+    @API(help="", json=true)
     final float _sample_rate;
+    @API(help="", json=true)
     final long _seed;
     public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
       super(key,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins);
@@ -126,14 +138,22 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-  @Override protected void logStart() {
-    Log.info("Starting DRF model build...");
-    super.logStart();
-    Log.info("    mtry defined: " + mtries);
-    Log.info("    mtry computed: " + _mtry);
-    Log.info("    sample_rate: " + sample_rate);
-    Log.info("    seed: " + _seed);
+
+  @Override
+  protected JsonObject toJSON() {
+    JsonObject jo = super.toJSON();
+    jo.add("mtry_computed", new JsonPrimitive(_mtry));
+    return jo;
   }
+
+//  @Override protected void logStart() {
+//    Log.info("Starting DRF model build...");
+//    super.logStart();
+//    Log.info("    mtry defined: " + mtries);
+//    Log.info("    mtry computed: " + _mtry);
+//    Log.info("    sample_rate: " + sample_rate);
+//    Log.info("    seed: " + _seed);
+//  }
 
   @Override protected Status exec() {
     logStart();

@@ -1,5 +1,7 @@
 package hex.glm;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import hex.FrameTask.DataInfo;
 import hex.GridSearch.GridSearchProgress;
 import hex.glm.GLMModel.GLMValidationTask;
@@ -19,7 +21,6 @@ import water.H2O.JobCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
 import water.fvec.Frame;
-import water.util.Log;
 import water.util.RString;
 import water.util.Utils;
 
@@ -29,46 +30,64 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GLM2 extends ModelJob {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  public static DocGen.FieldDoc[] DOC_FIELDS;
+  public static final String DOC_GET = "GLM2";
 //  private transient GLM2 [] _subjobs;
 //  private Key _parentjob;
-  @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000)
+  @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true)
   int max_iter = 50;
-  @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class)
+  @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class, json=true)
   boolean standardize = true;
 
-  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100)
+  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true)
   int n_folds;
 
-  @API(help = "Family.", filter = Default.class)
+  @API(help = "Family.", filter = Default.class, json=true)
   Family family = Family.gaussian;
 
   private DataInfo _dinfo;
   private GLMParams _glm;
+  @API(help = "", json=true)
   private double [] _wgiven;
+  @API(help = "", json=true)
   private double _proximalPenalty;
+  @API(help = "", json=true)
   private double [] _beta;
 
+  @API(help = "", json=true)
   private boolean _runAllLambdas = true;
 
 //  @API(help = "Link.", filter = Default.class)
+  @API(help = "", json=true)
   Link link = Link.identity;
 
-  @API(help = "CaseMode", filter = Default.class)
+  @API(help = "CaseMode", filter = Default.class, json=true)
   CaseMode case_mode = CaseMode.none;
-  @API(help = "CaseMode", filter = Default.class)
+  @API(help = "CaseMode", filter = Default.class, json=true)
   double case_val = 0;
-  @API(help = "Tweedie variance power", filter = Default.class)
+  @API(help = "Tweedie variance power", filter = Default.class, json=true)
   double tweedie_variance_power;
+  @API(help = "Tweedie link power", json=true)
   double tweedie_link_power;
-  @API(help = "alpha", filter = Default.class)
+  @API(help = "alpha", filter = Default.class, json=true)
   double [] alpha = new double[]{0.5};
 //  @API(help = "lambda", filter = RSeq2.class)
-  @API(help = "lambda", filter = Default.class)
+  @API(help = "lambda", filter = Default.class, json=true)
   double [] lambda;// = new double[]{1e-5};
-  public static final double DEFAULT_BETA_EPS = 1e-4;
-  @API(help = "beta_eps", filter = Default.class)
+  @API(help = "beta_eps", filter = Default.class, json=true)
   double beta_epsilon = DEFAULT_BETA_EPS;
   int _lambdaIdx = 0;
+  public static final double DEFAULT_BETA_EPS = 1e-4;
+
+  @Override
+  protected JsonObject toJSON() {
+    JsonObject jo = super.toJSON();
+    if (lambda == null) {
+      jo.add("lambda", new JsonPrimitive("automatic"));
+    }
+    return jo;
+  }
 
   @Override public Key defaultDestKey(){
     return null;
@@ -96,7 +115,7 @@ public class GLM2 extends ModelJob {
     job_key = jobKey;
     description = desc;
     destination_key = dest;
-    this.beta_epsilon = betaEpsilon;
+    beta_epsilon = betaEpsilon;
     _beta = beta;
     _dinfo = dinfo;
     _glm = glm;
@@ -105,7 +124,7 @@ public class GLM2 extends ModelJob {
     if((_proximalPenalty = proximalPenalty) != 0)
       _wgiven = beta;
     this.alpha= new double[]{alpha};
-    this.n_folds = nfolds;
+    n_folds = nfolds;
     source = dinfo._adaptedFrame;
     response = dinfo._adaptedFrame.lastVec();
   }
@@ -123,27 +142,6 @@ public class GLM2 extends ModelJob {
       sb.append(arr[i]);
     }
     return sb.toString();
-  }
-
-  @Override protected void logStart() {
-    Log.info("Starting GLM2 model build...");
-    super.logStart();
-    Log.info("    max_iter: ", max_iter);
-    Log.info("    standardize: ", standardize);
-    Log.info("    n_folds: ", n_folds);
-    Log.info("    family: ", family);
-    Log.info("    wgiven: " + arrayToString(_wgiven));
-    Log.info("    proximalPenalty: " + _proximalPenalty);
-    Log.info("    runAllLambdas: " + _runAllLambdas);
-    Log.info("    link: " + link);
-    Log.info("    case_mode: " + case_mode);
-    Log.info("    case_val: " + case_val);
-    Log.info("    tweedie_variance_power: " + tweedie_variance_power);
-    Log.info("    tweedie_link_power: " + tweedie_link_power);
-    Log.info("    alpha: " + arrayToString(alpha));
-    Log.info("    lambda: " + arrayToString(lambda));
-    Log.info("    beta_epsilon: " + beta_epsilon);
-    Log.info("    description: " + description);
   }
 
   public GLM2 setCase(CaseMode cm, double cv){
