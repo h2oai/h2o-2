@@ -6,11 +6,11 @@ import water.H2O.H2OCountedCompleter;
 import java.util.Arrays;
 
 public class NNTask extends FrameTask<NNTask> {
+  final private NN _params;
+  final private boolean _training;
+  final private NNModel.NNModelInfo _input;
 
-  final protected NN _params;
-  boolean _training;
-
-  private NNModel.NNModelInfo _input, _output;
+  private NNModel.NNModelInfo _output;
   public NNModel.NNModelInfo model_info() { return _output; }
 
   transient Neurons[] _neurons;
@@ -23,6 +23,7 @@ public class NNTask extends FrameTask<NNTask> {
   public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training){this(job,dinfo,input,training,null);}
   public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, H2OCountedCompleter cmp){
     super(job,dinfo,cmp);
+    //don't initialize anything that will be worked on later
     _params=job;
     _training=training;
     _input=input;
@@ -32,7 +33,6 @@ public class NNTask extends FrameTask<NNTask> {
   @Override protected void setupLocal(){
     _nrows_before = _input.get_processed();
     _output = new NNModel.NNModelInfo(_input);
-    _input = null;
   }
 
   // create local workspace (neurons)
