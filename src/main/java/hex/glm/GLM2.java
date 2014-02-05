@@ -1,7 +1,6 @@
 package hex.glm;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import hex.FrameTask.DataInfo;
 import hex.GridSearch.GridSearchProgress;
 import hex.glm.GLMModel.GLMValidationTask;
@@ -84,9 +83,7 @@ public class GLM2 extends ModelJob {
   @Override
   protected JsonObject toJSON() {
     JsonObject jo = super.toJSON();
-    if (lambda == null) {
-      jo.add("lambda", new JsonPrimitive("automatic"));
-    }
+    if (lambda == null) jo.addProperty("lambda", "automatic");
     return jo;
   }
 
