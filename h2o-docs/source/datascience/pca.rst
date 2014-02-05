@@ -82,7 +82,7 @@ behaviors for further modeling.
    Prop Var** field of the PC1 column. 
 
  **Variable Rows**
-
+   
    In the PCA results table the factors included in the composition of
    principal components are listed, and their contribution to the
    component is given (called factor loadings). Note that if the
@@ -90,10 +90,8 @@ behaviors for further modeling.
    of the factor loadings sum to the total variance of the principal 
    component. 
 
-.. Image:: pca.png
-   :width: 40%
 
-**Scree and Variance Plots**
+ **Scree and Variance Plots**
 
   The scree and variance plots are visual tools that indicate the
   marginal contributions of each next principal component vector. The
@@ -102,6 +100,9 @@ behaviors for further modeling.
   the next components, and approaches a minimum of zero contribution . 
   The variance plot shows the cumulative variance accounted for by
   each of the components, and approaches a maximum value of 1. 
+
+.. Image:: plots.png
+   :width: 50%
 
 Notes on the application of PCA
 """""""""""""""""""""""""""""""

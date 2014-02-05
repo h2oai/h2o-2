@@ -2,12 +2,12 @@ package water.api;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.io.File;
 
 import water.*;
 import water.parser.*;
-import water.parser.ParseDataset.ParseSetupGuessException;
 import water.util.RString;
 
 import com.google.gson.JsonObject;
@@ -102,8 +102,14 @@ public class Parse extends Request {
       }
       boolean checkHeader = !_header.specified();
       boolean hasHeader = _header.value();
-      try{
-        CustomParser.PSetupGuess setup = ParseDataset.guessSetup(keys, hKey, new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader),checkHeader);
+      CustomParser.ParserSetup userSetup =  new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader);
+      CustomParser.PSetupGuess setup = null;
+      try {
+       setup = ParseDataset.guessSetup(keys, hKey, userSetup,checkHeader);
+      }catch(ParseDataset.ParseSetupGuessException e){
+        throw new IllegalArgumentException(e.getMessage());
+      }
+      if(setup._isValid){
         if(setup._hdrFromFile != null)
           _hdrFrom.setValue(DKV.get(setup._hdrFromFile));
         if(!_header.specified())
@@ -116,13 +122,12 @@ public class Parse extends Request {
         _parserType.setValue(setup._setup._pType);
         _separator.setValue(setup._setup._separator);
         _hdrFrom._hideInQuery = _header._hideInQuery = _separator._hideInQuery = setup._setup._pType != CustomParser.ParserType.CSV;
-        setup.checkColumnNames();
+        Set<String> dups = setup.checkDupColumnNames();
+        if(!dups.isEmpty())
+          throw new IllegalArgumentException("Column labels must be unique but these labels are repeated: "  + dups.toString());
         return res;
-      } catch( ParseSetupGuessException e ) {
-        if(e._gSetup != null)
-          record()._value = new PSetup(keys, e._failed,e._gSetup);
-        throw new IllegalArgumentException(e.getMessage());
-      }
+      } else
+        throw new IllegalArgumentException("Invalid parser setup. " + setup.toString());
     }
 
     private final String keyRow(Key k){
@@ -244,7 +249,7 @@ public class Parse extends Request {
       }
       String [] err = psetup._setup._errors;
       boolean hasErrors = err != null && err.length > 0;
-      boolean parsedOk = psetup._setup.valid();
+      boolean parsedOk = psetup._setup._isValid;
       String parseMsgType = hasErrors?parsedOk?"warning":"error":"success";
       sb.append("<div class='alert alert-" + parseMsgType + "'><b>" + psetup._setup.toString() + "</b>");
       if(hasErrors)
@@ -299,7 +304,7 @@ public class Parse extends Request {
 
   @Override protected Response serve() {
     PSetup p = _source.value();
-    if(!p._setup.valid())
+    if(!p._setup._isValid)
       return Response.error("Given parser setup is not valid, I can not parse this file.");
     CustomParser.ParserSetup setup = p._setup._setup;
     setup._singleQuotes = _sQuotes.value();
