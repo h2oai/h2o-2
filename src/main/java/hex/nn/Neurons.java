@@ -1,7 +1,6 @@
 package hex.nn;
 
 import hex.FrameTask;
-import water.AutoBuffer;
 import water.Iced;
 import water.MemoryManager;
 import water.api.DocGen;
@@ -542,15 +541,6 @@ public abstract class Neurons extends Iced {
     Neurons l = (Neurons) super.clone();
     if (dropout != null) l.dropout = new Dropout(units);
     return l;
-  }
-
-  @Override public AutoBuffer writeJSON(AutoBuffer bb) {
-    bb.put1('{');
-    bb.putJSONStr("type").put1(':').putJSONStr(getClass().getName());
-    bb.put1(',');
-    writeJSONFields(bb);
-    bb.put1('}');
-    return bb;
   }
 
 }
