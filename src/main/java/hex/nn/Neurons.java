@@ -184,6 +184,7 @@ public abstract class Neurons extends Iced {
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
       double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+      final double delta = r * d;
 
       // TODO finish per-weight acceleration, doesn't help for now
 //        if( _wp != null && d != 0 ) {
@@ -203,24 +204,27 @@ public abstract class Neurons extends Iced {
 //        }
 
       if( _wm != null ) {
-        _wm[w] *= m;
-        _wm[w] += d;
-        d = _wm[w];
+        _w[w] += delta;
+        _w[w] += m * _wm[w];
+        _wm[w] = (float)(delta); //atomic update
+      } else {
+        _w[w] += delta;
       }
-      _w[w] += r * d;
       if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
     }
     if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
       final double scale = Math.sqrt(max_w2 / r2);
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
-    double d = g;
+    final double delta = r * g * 1;
     if( _bm != null ) {
-      _bm[u] *= m;
-      _bm[u] += d;
-      d = _bm[u];
+      _b[u] += delta;
+      _b[u] += m * _bm[u];
+      _bm[u] = delta; //atomic update
     }
-    _b[u] += r * d;
+    else {
+      _b[u] += delta;
+    }
   }
 
   public double rate(long n) {
@@ -329,7 +333,7 @@ public abstract class Neurons extends Iced {
     @Override protected void bprop() {
       long processed = _minfo.get_processed();
       double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      double r = rate(processed); // * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
         double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-x^2
@@ -363,7 +367,7 @@ public abstract class Neurons extends Iced {
         _a[o] = 0;
         if( !training || dropout.unit_active(o) ) {
           final int off = o * _previous._a.length;
-          _a[o] = Float.NEGATIVE_INFINITY;
+          _a[o] = Double.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] = Math.max(_a[o], _w[off+i] * _previous._a[i]);
           _a[o] += _b[o];
@@ -381,7 +385,7 @@ public abstract class Neurons extends Iced {
     @Override protected void bprop() {
       long processed = _minfo.get_processed();
       double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      double r = rate(processed); // * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         double g = _e[u];
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
@@ -423,14 +427,25 @@ public abstract class Neurons extends Iced {
     @Override protected void bprop() {
       long processed = _minfo.get_processed();
       final double m = momentum(processed);
-      final double r = rate(processed) * (1 - m);
+      final double r = rate(processed); // * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-        if( _a[u] > 0 ) { // don't use >=
-          final double g = _e[u]; // * 1.0 (from derivative of rectifier)
+
+        // short-cut: set gradient to 0
+        // AND
+        // no need to update the weights since there's no momenta, no l1 and no l2
+        if (_wm == null && l1 == 0.0 && l2 == 0.0) {
+          if( _a[u] > 0 ) { // don't use >= (faster this way: lots of zeros)
+            final double g = _e[u]; // * 1.0 (from derivative of rectifier)
+            bprop(u, g, r, m);
+          }
+          // otherwise g = _e[u] * 0.0 = 0 and we don't allow other contributions by (and to) weights and momenta
+        }
+        // TODO: might always want to use this version (faster)
+        else {
+          final double g = _a[u] > 0 ? _e[u] : 0; // * 1.0 (from derivative of rectifier)
           bprop(u, g, r, m);
         }
-        // otherwise g = _e[u] * 0.0 = 0 and we don't allow other contributions by (and to) weights and momenta
       }
     }
   }
@@ -463,7 +478,7 @@ public abstract class Neurons extends Iced {
     }
 
     @Override protected void fprop() {
-      double max = Float.NEGATIVE_INFINITY;
+      double max = Double.NEGATIVE_INFINITY;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
@@ -484,7 +499,7 @@ public abstract class Neurons extends Iced {
     protected void bprop(int target) {
       long processed = _minfo.get_processed();
       double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      double r = rate(processed); // * (1 - m);
       if (target == missing_int_value) return; //ignore missing response values
       for( int u = 0; u < _a.length; u++ ) {
         final double targetval = (u == target ? 1 : 0);
@@ -513,7 +528,7 @@ public abstract class Neurons extends Iced {
     protected void bprop(double target) {
       long processed = _minfo.get_processed();
       double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      double r = rate(processed); // * (1 - m);
       assert(loss == Loss.MeanSquare);
       int u = 0;
       if (target == missing_double_value) return;

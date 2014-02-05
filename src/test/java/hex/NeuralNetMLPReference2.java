@@ -498,7 +498,7 @@ public class NeuralNetMLPReference2 {
 
     // ----------------------------------------------------------------------------------------
 
-    private double[] ComputeOutputs(double[] xValues) {
+    public double[] ComputeOutputs(double[] xValues) {
       if( xValues.length != numInput )
         throw new RuntimeException("Bad xValues array length");
 
@@ -712,7 +712,12 @@ public class NeuralNetMLPReference2 {
 // t-values
         System.arraycopy(testData[i], numInput, tValues, 0, numOutput);
         yValues = this.ComputeOutputs(xValues);
-        int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
+        //int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
+
+        // convert to float and do the same tie-breaking as H2O
+        float[] yValues_float = new float[yValues.length];
+        for (int j=0; j<yValues.length; ++j) yValues_float[j] = (float)yValues[j];
+        int maxIndex = MaxIndexWithTieBreaking(yValues_float, i);
 
         if( tValues[maxIndex] == 1.0 ) // ugly. consider AreEqual(double x, double y)
           ++numCorrect;
@@ -734,6 +739,24 @@ public class NeuralNetMLPReference2 {
         }
       }
       return bigIndex;
+    }
+
+    private static int MaxIndexWithTieBreaking(float[] preds, int row) // helper for Accuracy()
+    {
+      int[] ties = new int[preds.length];
+      int best=0; int tieCnt = 0; ties[tieCnt] = 0;
+      for (int c=1; c<preds.length; c++) {
+        if (preds[best] < preds[c]) {
+          best = c; // take the max index
+          ties[tieCnt=0] = c;
+        } else if (preds[best] == preds[c]) {
+          ties[++tieCnt] = c;
+        }
+      }
+      if (tieCnt >= 1) {
+        best = ties[row % (tieCnt+1)]; // override max decision
+      }
+      return best;
     }
   }
 }

@@ -41,174 +41,259 @@ public class NeuralNetIrisTest2 extends TestUtil {
       return;
     }
     // fail
-    else Assert.failNotEquals("Not equal: ", new Double(a), new Double(b));
+    else Assert.failNotEquals("Not equal: ", a, b);
   }
 
   @Test public void compare() throws Exception {
 
-    // Testing different things
-    // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
-    // Note: Initial weight distributions are copied, but what is tested is the stability behavior.
-    NN.Activation[] activations = { NN.Activation.Tanh, NN.Activation.Rectifier };
-    NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
-    NN.InitialWeightDistribution[] dists = {
-            NN.InitialWeightDistribution.Normal,
-            //NN.InitialWeightDistribution.Uniform,
-            NN.InitialWeightDistribution.UniformAdaptive
-            };
-    double[] initial_weight_scales = { 0.0258 };
-    double[] holdout_ratios = { 0.8 };
+    for (int repeat = 0; repeat < 1; ++repeat) {
+      // Testing different things
+      // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
+      // Note: Initial weight distributions are copied, but what is tested is the stability behavior.
+
+      NN.Activation[] activations = { NN.Activation.Tanh, NN.Activation.Rectifier };
+      NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
+      NN.InitialWeightDistribution[] dists = {
+              NN.InitialWeightDistribution.Normal,
+              NN.InitialWeightDistribution.Uniform,
+              NN.InitialWeightDistribution.UniformAdaptive
+      };
+      double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
+      double[] holdout_ratios = { 0.1 + new Random().nextDouble() * 0.8 };
+      double[] momenta = { 0, new Random().nextDouble() * 0.99 };
+      int[] hiddens = { 1, new Random().nextInt(50) };
+      int[] epochs = { 1, new Random().nextInt(50) };
+
+//      NN.Activation[] activations = { NN.Activation.Tanh };
+//      NN.Loss[] losses = { NN.Loss.MeanSquare };
+//      NN.InitialWeightDistribution[] dists = {
+//              NN.InitialWeightDistribution.Uniform,
+//      };
+//      double[] initial_weight_scales = { 1e-1 };
+//      double[] holdout_ratios = { 0.98 };
+//      double[] momenta = { 0.1 };
+//      int[] hiddens = { 1 };
+//      int[] epochs = { 1 };
+
+      int num_runs = 0;
+      for (NN.Activation activation : activations) {
+        for (NN.Loss loss : losses) {
+          for (NN.InitialWeightDistribution dist : dists) {
+            for (double scale : initial_weight_scales) {
+              for (double holdout_ratio : holdout_ratios) {
+                for (double momentum : momenta) {
+                  for (int hidden : hiddens) {
+                    for (int epoch : epochs) {
+                      Log.info("");
+                      Log.info("STARTING.");
+                      Log.info("Running with " + activation.name() + " activation function and " + loss.name() + " loss function.");
+                      Log.info("Initialization with " + dist.name() + " distribution and " + scale + " scale, holdout ratio " + holdout_ratio);
+                      Log.info("Using " + hidden + " hidden layers and momentum: " + momentum);
+
+                      Key file = NFSFileVec.make(find_test_file(PATH));
+                      Frame frame = ParseDataset2.parse(Key.make("iris_nn2"), new Key[] { file });
+
+                      Frame fr = null;
+                      Frame fr_test = null;
+                      FrameTask.DataInfo dinfo_test = null;
+                      NN p;
+                      Random rand;
+
+                      long seed;
+                      int trial = 0;
+                      do {
+                        Log.info("Trial #" + ++trial);
+                        if (_train != null) _train.delete();
+                        if (_test != null) _test.delete();
+                        if (fr != null) fr.delete();
+                        if (fr_test != null) fr_test.delete();
+
+                        // try a seed
+                        seed = new Random().nextLong();
+                        rand = Utils.getDeterRNG(seed);
+
+                        double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
+                        String[] names = new String[frame.numCols()];
+                        for( int c = 0; c < frame.numCols(); c++ ) {
+                          names[c] = "ColumnName" + c;
+                          for( int r = 0; r < frame.numRows(); r++ )
+                            rows[r][c] = frame.vecs()[c].at(r);
+                        }
+
+                        for( int i = rows.length - 1; i >= 0; i-- ) {
+                          int shuffle = rand.nextInt(i + 1);
+                          double[] row = rows[shuffle];
+                          rows[shuffle] = rows[i];
+                          rows[i] = row;
+                        }
+
+                        int limit = (int) (frame.numRows() * holdout_ratio);
+                        _train = frame(names, Utils.subarray(rows, 0, limit));
+                        _test = frame(names, Utils.subarray(rows, limit, (int) frame.numRows() - limit));
+
+                        p = new NN();
+                        p.source = _train;
+                        p.response = _train.lastVec();
+                        p.ignored_cols = null;
+                        fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true);
+                        p._dinfo = new FrameTask.DataInfo(fr, 1, true);
+                        // same for test data -> just for validation of split
+                        fr_test = FrameTask.DataInfo.prepareFrame(_test, _test.lastVec(), p.ignored_cols, true);
+                        dinfo_test = new FrameTask.DataInfo(fr_test, 1, true);
+                      }
+                      // must have all output classes in training and in testing data
+                      // (since that's what the reference implementation has hardcoded)
+                      while (p._dinfo._adaptedFrame.lastVec().domain().length < 3
+                              || dinfo_test._adaptedFrame.lastVec().domain().length < 3);
+
+                      Log.info("Using seed " + seed);
+
+                      // use the same seed for the reference implementation
+                      NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
+                      ref.init(activation, Utils.getDeterRNG(seed), holdout_ratio, hidden);
+
+                      p.seed = seed;
+                      p.hidden = new int[]{hidden};
+                      p.rate = 0.01;
+                      p.activation = activation;
+                      p.max_w2 = Double.MAX_VALUE;
+                      p.rate = 0.01;
+                      p.epochs = epoch;
+                      p.activation = activation;
+                      p.input_dropout_ratio = 0;
+                      p.rate_annealing = 0; //do not change - not implemented in reference
+                      p.l1 = 0;
+                      p.loss = loss;
+                      p.l2 = 0;
+                      p.momentum_stable = momentum; //reference only supports constant momentum
+                      p.momentum_start = p.momentum_stable; //do not change - not implemented in reference
+                      p.momentum_ramp = 0; //do not change - not implemented in reference
+                      p.initial_weight_distribution = dist;
+                      p.initial_weight_scale = scale;
+                      p.classification = true;
+                      p.diagnostics = false;
+                      p.validation = null;
+                      p.destination_key = Key.make("iris_test.model");
+
+                      p.initModel(); //randomize weights, but don't start training yet
+
+                      NNModel mymodel = UKV.get(p.dest());
+                      Neurons[] neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info());
+
+                      // use the same random weights for the reference implementation
+                      Neurons l = neurons[1];
+                      for( int o = 0; o < l._a.length; o++ ) {
+                        for( int i = 0; i < l._previous._a.length; i++ )
+                          ref._nn.ihWeights[i][o] = l._w[o * l._previous._a.length + i];
+                        ref._nn.hBiases[o] = l._b[o];
+                      }
+                      l = neurons[2];
+                      for( int o = 0; o < l._a.length; o++ ) {
+                        for( int i = 0; i < l._previous._a.length; i++ )
+                          ref._nn.hoWeights[i][o] = l._w[o * l._previous._a.length + i];
+                        ref._nn.oBiases[o] = l._b[o];
+                      }
+
+                      // Train the Reference
+                      ref.train((int)p.epochs, p.rate, p.momentum_stable, loss);
+
+                      // Train H2O
+                      p.trainModel(false);
+                      mymodel = UKV.get(p.dest()); //get the trained model
 
 
-    int hogwild_runs = 0;
-    int hogwild_errors = 0;
-    for (NN.Activation activation : activations) {
-      for (NN.Loss loss : losses) {
-        for (NN.InitialWeightDistribution dist : dists) {
-          for (double scale : initial_weight_scales) {
-            for (double holdout_ratio : holdout_ratios) {
+                      /**
+                       * Tolerances (super tight -> expect the same double/float precision math inside both algos)
+                       */
+                      final double abseps = 1e-13;
+                      final double releps = 1e-13;
 
-              Log.info("");
-              Log.info("STARTING.");
-              Log.info("Running with " + activation.name() + " activation function and " + loss.name() + " loss function.");
-              Log.info("Initialization with " + dist.name() + " distribution and " + scale + " scale, holdout ratio " + holdout_ratio);
+                      /**
+                       * Compare weights and biases in hidden layer
+                       */
+                      neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info()); //link the weights to the neurons, for easy access
+                      l = neurons[1];
+                      for( int o = 0; o < l._a.length; o++ ) {
+                        for( int i = 0; i < l._previous._a.length; i++ ) {
+                          double a = ref._nn.ihWeights[i][o];
+                          double b = l._w[o * l._previous._a.length + i];
+                          compareVal(a, b, abseps, releps);
+                        }
+                        double ba = ref._nn.hBiases[o];
+                        double bb = l._b[o];
+                        compareVal(ba, bb, abseps, releps);
+                      }
+                      Log.info("Weights and biases for hidden layer: PASS");
 
-              NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
+                      /**
+                       * Compare weights and biases for output layer
+                       */
+                      l = neurons[2];
+                      for( int o = 0; o < l._a.length; o++ ) {
+                        for( int i = 0; i < l._previous._a.length; i++ ) {
+                          double a = ref._nn.hoWeights[i][o];
+                          double b = l._w[o * l._previous._a.length + i];
+                          compareVal(a, b, abseps, releps);
+                        }
+                        double ba = ref._nn.oBiases[o];
+                        double bb = l._b[o];
+                        compareVal(ba, bb, abseps, releps);
+                      }
+                      Log.info("Weights and biases for output layer: PASS");
 
-              final long seed = new Random().nextLong(); //Actually change the seed every time!
-              Log.info("Using seed " + seed);
-              ref.init(activation, Utils.getDeterRNG(seed), holdout_ratio);
+                      /**
+                       * Compare predictions
+                       * Note: Reference and H2O each do their internal data normalization,
+                       * so we must use their "own" test data, which is assumed to be created correctly.
+                       */
+                      // H2O predictions
+                      Frame fpreds;
+                      fpreds = mymodel.score(_test); //[0] is label, [1]...[4] are the probabilities
 
-              // Parse Iris and shuffle the same way as ref
-              Key file = NFSFileVec.make(find_test_file(PATH));
-              Frame frame = ParseDataset2.parse(Key.make("iris_nn2"), new Key[] { file });
+                      for (int i=0; i<_test.numRows(); ++i) {
+                        // Reference predictions
+                        double[] xValues = new double[neurons[0]._a.length];
+                        System.arraycopy(ref._testData[i], 0, xValues, 0, xValues.length);
+                        double[] ref_preds = ref._nn.ComputeOutputs(xValues);
 
-              double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
-              String[] names = new String[frame.numCols()];
-              for( int c = 0; c < frame.numCols(); c++ ) {
-                names[c] = "ColumnName" + c;
-                for( int r = 0; r < frame.numRows(); r++ )
-                  rows[r][c] = frame.vecs()[c].at(r);
-              }
+                        for (int j=0; j<ref_preds.length; ++j) {
+                          compareVal((float)(ref_preds[j]), fpreds.vecs()[1+j].at(i), abseps, releps);
+                        }
+                      }
+                      fpreds.delete();
+                      Log.info("Predicted values: PASS");
 
-              Random rand = Utils.getDeterRNG(seed);
-              for( int i = rows.length - 1; i >= 0; i-- ) {
-                int shuffle = rand.nextInt(i + 1);
-                double[] row = rows[shuffle];
-                rows[shuffle] = rows[i];
-                rows[i] = row;
-              }
+                      /**
+                       * Compare (self-reported) scoring
+                       */
+                      final double trainErr = ref._nn.Accuracy(ref._trainData);
+                      final double testErr = ref._nn.Accuracy(ref._testData);
+                      final double myTrainErr = mymodel.classificationError(_train, "Final training error:", true);
+                      final double myTestErr = mymodel.classificationError(_test,  "Final testing error:",  true);
+                      Log.info("H2O  training error : " + myTrainErr*100 + "%, test error: " + myTestErr*100 + "%");
+                      Log.info("REF  training error : " + trainErr*100 + "%, test error: " + testErr*100 + "%");
+                      compareVal(trainErr, myTrainErr, abseps, releps);
+                      compareVal(testErr,  myTestErr,  abseps, releps);
+                      Log.info("Scoring: PASS");
 
-              int limit = (int) (frame.numRows() * holdout_ratio);
-              _train = frame(names, Utils.subarray(rows, 0, limit));
-              _test = frame(names, Utils.subarray(rows, limit, (int) frame.numRows() - limit));
-              frame.delete();
+                      // cleanup
+                      mymodel.delete();
+                      _train.delete();
+                      _test.delete();
+                      frame.delete();
+                      fr.delete();
+                      fr_test.delete();
 
-              NN p = new NN();
-              p.seed = seed;
-              p.hidden = new int[]{7};
-              p.rate = 0.01;
-              p.activation = activation;
-              p.max_w2 = Double.MAX_VALUE;
-              p.rate = 0.01;
-              p.epochs = 13*17;
-              p.activation = activation;
-              p.input_dropout_ratio = 0;
-              p.rate_annealing = 0;
-              p.l1 = 0;
-              p.loss = loss;
-              p.l2 = 0;
-              p.momentum_start = 0;
-              p.momentum_ramp = 0;
-              p.momentum_stable = 0;
-              p.initial_weight_distribution = dist;
-              p.initial_weight_scale = scale;
-              p.classification = true;
-              p.source = _train;
-              p.validation = null;
-              p.response = _train.lastVec();
-              p.destination_key = Key.make("iris_test.model");
-              p.ignored_cols = null;
-
-              Frame fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true);
-              p._dinfo = new FrameTask.DataInfo(fr, 1, true);
-              p.initModel(); //randomize weights, but don't start training yet
-
-              NNModel mymodel = UKV.get(p.dest()); //get the model
-              Neurons[] neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info());
-
-              // use the same random weights for the reference implementation
-              Neurons l = neurons[1];
-              for( int o = 0; o < l._a.length; o++ ) {
-                for( int i = 0; i < l._previous._a.length; i++ )
-                  ref._nn.ihWeights[i][o] = l._w[o * l._previous._a.length + i];
-                ref._nn.hBiases[o] = l._b[o];
-              }
-              l = neurons[2];
-              for( int o = 0; o < l._a.length; o++ ) {
-                for( int i = 0; i < l._previous._a.length; i++ )
-                  ref._nn.hoWeights[i][o] = l._w[o * l._previous._a.length + i];
-                ref._nn.oBiases[o] = l._b[o];
-              }
-
-              // Train the Reference
-              ref.train((int)p.epochs, p.rate, loss);
-              final double trainAcc = ref._nn.Accuracy(ref._trainData);
-              final double testAcc = ref._nn.Accuracy(ref._testData);
-
-              // Train H2O
-              p.trainModel(false);
-              mymodel = UKV.get(p.dest()); //get the trained model
-              final double myTrainAcc = mymodel.classificationError(_train, "Final training error:", true);
-              final double myTestAcc  = mymodel.classificationError(_test,  "Final testing error:",  true);
-
-//              double abseps = 1e-15;
-//              double releps = 1e-12;
-
-              /**
-               * Compare classification errors
-               */
-              final boolean hogwild_error = (trainAcc != myTrainAcc || testAcc != myTestAcc);
-              hogwild_errors += hogwild_error == true ? 1 : 0;
-              hogwild_runs++;
-
-              /**
-               * Compare weights
-               */
-              neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info()); //link the weights to the neurons, for easy access
-              double weight_mse = 0;
-              l = neurons[1];
-              for( int o = 0; o < l._a.length; o++ ) {
-                for( int i = 0; i < l._previous._a.length; i++ ) {
-                  double a = ref._nn.ihWeights[i][o];
-                  double b = l._w[o * l._previous._a.length + i];
-                  weight_mse += (a-b) * (a-b);
+                      num_runs++;
+                      Log.info("Parameters combination " + num_runs + ": PASS");
+                    }
+                  }
                 }
               }
-              weight_mse /= l._a.length * l._previous._a.length;
-
-              /**
-               * Report accuracy
-               */
-              Log.info("DONE. " + (hogwild_error ? "Multithreading resulted in errors due to race conditions (Hogwild!)." : ""));
-              Log.info("MSE of H2O weights: " + weight_mse + ".");
-              Log.info("H2O  training error : " + myTrainAcc*100 + "%, test error: " + myTestAcc*100 + "%" +
-                      (trainAcc != myTrainAcc|| testAcc != myTestAcc? " HOGWILD! " : ""));
-              Log.info("REF  training error : " + trainAcc*100 + "%, test error: " + testAcc*100 + "%");
-
-              // cleanup
-              mymodel.delete();
-              _train.delete();
-              _test.delete();
-              fr.delete();
             }
           }
         }
       }
     }
-
-    Log.info("===============================================================");
-    Log.info("Number of differences due to Hogwild: " + hogwild_errors + " (out of " + hogwild_runs + " runs).");
-    Log.info("===============================================================");
   }
 }

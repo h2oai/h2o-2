@@ -303,18 +303,14 @@ public class NNModel extends Model {
     return sb.toString();
   }
 
-  @Override protected float[] score0(double[] data, float[] preds) {
+  @Override public float[] score0(double[] data, float[] preds) {
     Neurons[] neurons = NNTask.makeNeurons(data_info, model_info);
-
     ((Neurons.Input)neurons[0]).setInput(data);
     NNTask.step(neurons, model_info, false, null);
-
     double[] out = neurons[neurons.length - 1]._a;
     assert out.length == preds.length;
-    // convert to float
-    float[] out2 = new float[out.length];
-    for (int i=0; i<out.length; ++i) out2[i] = (float)out[i];
-    return out2;
+    for (int i=0; i<out.length; ++i) preds[i] = (float)out[i];
+    return preds;
   }
 
   public double classificationError(Frame ftest, String label, boolean printCM) {

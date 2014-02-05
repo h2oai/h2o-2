@@ -43,14 +43,14 @@ public class NN extends Job.ValidatedJob {
   @API(help = "L2 regularization, can add stability", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double l2 = 0.0;
 
-  @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_start = .5;
 
   @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 0, json = true)
   public long momentum_ramp = 1000000;
 
-  @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, json = true)
-  public double momentum_stable = 1.0;
+  @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
+  public double momentum_stable = 0.99;
 
   @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
   public double epochs = 10;
@@ -259,7 +259,7 @@ public class NN extends Job.ValidatedJob {
     }
     if (adapted != null) adapted[1].delete();
     model.unlock(self());
-    System.out.println("Job finished.\n\n");
+    Log.info("NN training finished.");
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
