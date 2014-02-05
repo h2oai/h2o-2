@@ -174,6 +174,7 @@ public class Expr2Test extends TestUtil {
       // Filter/selection
       checkStr("h.hex[h.hex[,4]>30,]");
       checkStr("a=c(1,2,3);a[a[,1]>10,1]");
+      checkStr("sapply(a,sum)[1,1]",6);
       checkStr("apply(h.hex,2,sum)"); // ERROR BROKEN: the ENUM cols should fold to NA
       checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})","Arg 'fcn' typed as ary(ary) but passed ary(dbl)\napply(h.hex,2,function(x){x=1;h.hex})\n     ^-------------------------------^\n");
@@ -260,7 +261,7 @@ public class Expr2Test extends TestUtil {
 
   void checkStr( String s, double d ) {
     Env env = Exec2.exec(s);
-    assertFalse( env.isAry() );
+    assertFalse("Should be scalar result not Frame: "+s,env.isAry() );
     assertFalse( env.isFcn() );
     double res = env.popDbl();
     assertEquals(d, res, d / 1e8);

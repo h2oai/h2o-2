@@ -10,6 +10,7 @@ import water.Futures;
 import water.Iced;
 import water.Job;
 import water.MemoryManager;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -134,7 +135,7 @@ public final class Gram extends Iced {
   }
 
   public Cholesky cholesky(Cholesky chol) {
-    return cholesky(chol,1);
+    return cholesky(chol,true,"");
   }
   /**
    * Compute the cholesky decomposition.
@@ -154,7 +155,7 @@ public final class Gram extends Iced {
    * @param chol
    * @return
    */
-  public Cholesky cholesky(Cholesky chol, int parallelize) {
+  public Cholesky cholesky(Cholesky chol, boolean parallelize,String id) {
     long start = System.currentTimeMillis();
     if( chol == null ) {
       double[][] xx = _xx.clone();
@@ -221,15 +222,15 @@ public final class Gram extends Iced {
     for( int i = 0; i < arr.length; ++i )
       arr[i] = Arrays.copyOfRange(fchol._xx[i], sparseN, sparseN + denseN);
 
-    //Log.info ("CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis()-start));
+    Log.info(id + ": CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis() - start));
     start = System.currentTimeMillis();
     // parallelize cholesky
-    if (parallelize == 1) {
+    if (parallelize) {
       int p = Runtime.getRuntime().availableProcessors();
       InPlaceCholesky d = InPlaceCholesky.decompose_2(arr, 10, p);
       fchol.setSPD(d.isSPD());
       arr = d.getL();
-      //Log.info ("H2O CHOLESKY DECOMPOSE ON DENSEN*DENSEN TAKES: " + (System.currentTimeMillis()-start));
+      Log.info (id + ": H2O CHOLESKY DECOMP TAKES: " + (System.currentTimeMillis()-start));
     } else {
       // make it symmetric
       for( int i = 0; i < arr.length; ++i )

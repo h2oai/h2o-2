@@ -42,10 +42,10 @@ class Scraper:
         """
         phase_scraper = self.__switch__()
         res = phase_scraper.invoke()
-        self.did_time_pass = res.did_time_pass
-        self.did_correct_pass = res.did_correct_pass
-        self.contaminated = res.contaminated
-        self.contamination_message = res.contamination_message
+        self.did_time_pass = phase_scraper.did_time_pass
+        self.did_correct_pass = phase_scraper.did_correct_pass
+        self.contaminated = phase_scraper.contaminated
+        self.contamination_message = phase_scraper.contamination_message
         return res
 
     def __switch__(self):
@@ -77,7 +77,7 @@ class ParseScraper(Scraper):
         self.output_file_name = object.output_file_name
         self.contamination = os.path.join(self.output_dir, "contamination_message")
         self.contaminated = 1 if os.path.exists(self.contamination) else 0
-        self.contamination_message = ""
+        self.contamination_message = "No contamination."
         if self.contaminated:
             with open(self.contamination, "r") as f:
                 self.contamination_message = MySQLdb.escape_string(f.read().replace('\n', ''))
@@ -122,8 +122,8 @@ class ParseScraper(Scraper):
                     break
                 if "PHASE RESULT" in line and "print" not in line:
                     flag = True
-        self.did_correct_pass = phase_r['phase_result']['correctness_passed']
-        self.did_time_pass = phase_r['phase_result']['timing_passed']
+        self.did_correct_pass = int(phase_r['phase_result']['correctness_passed'])
+        self.did_time_pass = int(phase_r['phase_result']['timing_passed'])
         return phase_r['phase_result']
         
     def __scrape_parse_result__(self):
@@ -160,7 +160,7 @@ class ModelScraper(Scraper):
         self.output_file_name = object.output_file_name
         self.contamination = os.path.join(self.output_dir, "contamination_message")
         self.contaminated = 1 if os.path.exists(self.contamination) else 0
-        self.contamination_message = ""
+        self.contamination_message = "No contamination."
         if self.contaminated:
             with open(self.contamination, "r") as f:
                 self.contamination_message = MySQLdb.escape_string(f.read().replace('\n', ''))
@@ -207,8 +207,8 @@ class ModelScraper(Scraper):
                     break
                 if "PHASE RESULT" in line and "print" not in line:
                     flag = True
-        self.did_correct_pass = phase_r['phase_result']['correctness_passed']
-        self.did_time_pass = phase_r['phase_result']['timing_passed']
+        self.did_correct_pass = int(phase_r['phase_result']['correctness_passed'])
+        self.did_time_pass = int(phase_r['phase_result']['timing_passed'])
         return phase_r['phase_result']
 
     def __scrape_kmeans_result__(self):
@@ -266,7 +266,7 @@ class PredictScraper(Scraper):
         self.output_file_name = object.output_file_name
         self.contamination = os.path.join(self.output_dir, "contamination_message")
         self.contaminated = 1 if os.path.exists(self.contamination) else 0
-        self.contamination_message = ""
+        self.contamination_message = "No contamination."
         if self.contaminated:
             with open(self.contamination, "r") as f:
                 self.contamination_message = MySQLdb.escape_string(f.read().replace('\n', ''))
@@ -324,8 +324,8 @@ class PredictScraper(Scraper):
                     break
                 if "PHASE RESULT" in line and "print" not in line:
                     flag = True
-        self.did_correct_pass = phase_r['phase_result']['correctness_passed']
-        self.did_time_pass = phase_r['phase_result']['timing_passed']
+        self.did_correct_pass = int(phase_r['phase_result']['correctness_passed'])
+        self.did_time_pass = int(phase_r['phase_result']['timing_passed'])
         return phase_r['phase_result']
         
     def __get_predict_type__(self, type_candidate):

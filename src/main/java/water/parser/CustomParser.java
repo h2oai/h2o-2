@@ -7,7 +7,6 @@ import java.util.*;
 
 import water.*;
 import water.fvec.ParseDataset2.ParseProgressMonitor;
-import water.parser.ParseDataset.ParseSetupGuessException;
 
 
 public abstract class CustomParser extends Iced {
@@ -37,26 +36,26 @@ public abstract class CustomParser extends Iced {
     public Key _setupFromFile;
     public Key _hdrFromFile;
     public String [][] _data;
-    public PSetupGuess(ParserSetup ps, int vlines, int ilines, String [][] data, String [] errors){
+    public final boolean _isValid;
+    public PSetupGuess(ParserSetup ps, int vlines, int ilines, String [][] data, boolean isValid, String [] errors){
       _setup = ps;
       _invalidLines = ilines;
       _validLines = vlines;
       _errors = errors;
       _data = data;
+      _isValid = isValid;
     }
 
-    public void checkColumnNames(){
-      _setup.checkColumnNames();
+    public Set<String> checkDupColumnNames(){
+      return _setup.checkDupColumnNames();
     }
 
-    public final boolean valid(){
-      return _setup._ncols > 0 && _validLines > 0 && _invalidLines < _validLines;
-    }
     public final boolean hasErrors(){
       return _errors != null && _errors.length > 0;
     }
+
     public String toString(){
-      if(!valid())
+      if(!_isValid)
         return "Parser setup appears to be broken, got " + _setup.toString();
       else if(hasErrors())
         return "Parser setup appears to work with some errors, got " + _setup.toString();
@@ -102,10 +101,13 @@ public abstract class CustomParser extends Iced {
       _columnNames = columnNames;
       _singleQuotes = singleQuotes;
     }
-    public void checkColumnNames(){
+    public boolean isSpecified(){
+      return _pType != ParserType.AUTO && _separator != CsvParser.AUTO_SEP && (_header || _ncols > 0);
+    }
+    public Set<String> checkDupColumnNames(){
+      HashSet<String> uniqueNames = new HashSet<String>();
+      HashSet<String> conflictingNames = new HashSet<String>();
       if(_header){
-        HashSet<String> uniqueNames = new HashSet<String>();
-        HashSet<String> conflictingNames = new HashSet<String>();
         for(String n:_columnNames){
           if(!uniqueNames.contains(n)){
             uniqueNames.add(n);
@@ -113,9 +115,8 @@ public abstract class CustomParser extends Iced {
             conflictingNames.add(n);
           }
         }
-        if(!conflictingNames.isEmpty())
-          throw new ParseSetupGuessException("Column labels must be unique but these labels are repeated:" + conflictingNames.toString(),null,null);
       }
+      return conflictingNames;
     }
     public ParserSetup clone(){
       return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes);

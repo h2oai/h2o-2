@@ -65,29 +65,26 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    @API(help="", json=true)
-    final int _mtries;
-    @API(help="", json=true)
-    final float _sample_rate;
-    @API(help="", json=true)
-    final long _seed;
+    @API(help = "Number of columns picked at each split", json=true) final int mtries;
+    @API(help = "Sample rate", json=true) final float sample_rate;
+    @API(help = "Seed", json=true) final long seed;
     public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
       super(key,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins);
-      _mtries = mtries;
-      _sample_rate = sample_rate;
-      _seed = seed;
+      this.mtries = mtries;
+      this.sample_rate = sample_rate;
+      this.seed = seed;
     }
     public DRFModel(DRFModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
-      _mtries = prior._mtries;
-      _sample_rate = prior._sample_rate;
-      _seed = prior._seed;
+      this.mtries = prior.mtries;
+      this.sample_rate = prior.sample_rate;
+      this.seed = prior.seed;
     }
     public DRFModel(DRFModel prior, double err, long [][] cm) {
       super(prior, err, cm);
-      _mtries = prior._mtries;
-      _sample_rate = prior._sample_rate;
-      _seed = prior._seed;
+      this.mtries = prior.mtries;
+      this.sample_rate = prior.sample_rate;
+      this.seed = prior.seed;
     }
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
@@ -100,7 +97,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       return p;
     }
     @Override protected void generateModelDescription(StringBuilder sb) {
-      DocGen.HTML.paragraph(sb,"mtries: "+_mtries+", Sample rate: "+_sample_rate+", Seed: "+_seed);
+      DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
     }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
       if (isClassifier()) {
@@ -145,15 +142,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     jo.add("mtry_computed", new JsonPrimitive(_mtry));
     return jo;
   }
-
-//  @Override protected void logStart() {
-//    Log.info("Starting DRF model build...");
-//    super.logStart();
-//    Log.info("    mtry defined: " + mtries);
-//    Log.info("    mtry computed: " + _mtry);
-//    Log.info("    sample_rate: " + sample_rate);
-//    Log.info("    seed: " + _seed);
-//  }
 
   @Override protected Status exec() {
     logStart();

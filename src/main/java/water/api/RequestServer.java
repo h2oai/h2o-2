@@ -284,6 +284,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.startsWith("/Cloud.json")) return;
       if (uri.endsWith("LogAndEcho.json")) return;
       if (uri.contains("Progress")) return;
+      if (uri.startsWith("/Jobs.json")) return;
     }
 
     String log = String.format("%-4s %s", method, uri);

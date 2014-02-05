@@ -28,7 +28,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
   params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins)
   
-  if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1) {
+  if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1 && length(n.bins) == 1) {
     h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!h2o.__isDone(data@h2o, "GBM", res)) { Sys.sleep(1) }
     res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=res$destination_key)
@@ -59,6 +59,11 @@ h2o.__getGBMSummary <- function(res, params) {
 
 h2o.__getGBMResults <- function(res, params) {
   result = list()
+  params$n.trees = res$N
+  params$interaction.depth = res$max_depth
+  params$n.minobsinnode = res$min_rows
+  params$shrinkage = res$learn_rate
+  params$n.bins = res$nbins
   result$params = params
   
   if(result$params$distribution == "multinomial") {
@@ -196,6 +201,8 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsi
 # Pretty formatting of H2O GLM results
 h2o.__getGLMResults <- function(res, params) {
   result = list()
+  params$lambda = res$LSMParams$lambda
+  params$alpha = res$LSMParams$alpha
   result$params = params
   
   result$coefficients = unlist(res$coefficients)
@@ -340,6 +347,8 @@ h2o.__getGLM2Results <- function(model, params) {
   valid = submod$validation
 
   result = list()
+  params$alpha = model$alpha
+  params$lambda = model$lambdas[[model$best_lambda_idx+1]]
   result$params = params
   if(model$glm$family == "tweedie")
     result$params$family = h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
@@ -393,7 +402,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   
-  if(missing(centers) ) stop('must specify centers')
+  if(missing(centers)) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be numeric')
   if( any(centers < 1) ) stop("centers must be an integer greater than 0")
   if(!is.numeric(iter.max)) stop('iter.max must be numeric')
@@ -409,14 +418,15 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
       if(any(!(cols %in% cc))) stop(paste(paste(cols[!(cols %in% cc)], collapse=','), 'is not a valid column name'))
       cols_ind <- match(cols, cc)
     } else {
-      if(any( cols < 1 | cols > length(cc) )) stop(paste('Out of range explanatory variable', paste(cols[cols < 1 | cols > length(cc)], collapse=',')))
+      if(any( cols < 1 | cols > length(cc))) stop(paste('Out of range explanatory variable', paste(cols[cols < 1 | cols > length(cc)], collapse=',')))
       cols_ind <- cols
     }
   }
   cols_ind <- cols_ind - 1
   
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = cols_ind)
-  job_key = res$response$redirect_request_args$job; destKey = res$destination_key
+  job_key = res$response$redirect_request_args$job
+  destKey = res$destination_key
 
   h2o.__waitOnJob(data@h2o, job_key)
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, job = job_key, key = destKey)
@@ -428,7 +438,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if(length(res2$clusters[[1]]) < length(feat))
     stop("Cannot run k-means on non-numeric columns!")
   
-  result$params = list(centers=centers, cols=feat, iter.max=iter.max, normalize=normalize)
+  result$params = list(cols=feat, centers=centers, iter.max=iter.max, normalize=normalize)
   result$centers = matrix(unlist(res2$clusters), ncol = length(feat))
   dimnames(result$centers) = list(seq(1, centers), feat)
   result$tot.withinss = res2$error
@@ -492,13 +502,16 @@ h2o.__getKM2Summary <- function(res) {
 }
 
 h2o.__getKM2Results <- function(res, data, params) {
-  #rand_pred_key = h2o.__uniqID("KMeansClusters")
-  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_key', data=data@key, prediction=rand_pred_key)
-  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
+  # rand_pred_key = h2o.__uniqID("KMeansClusters")
+  # res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_key', data=data@key, prediction=rand_pred_key)
+  # res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
   clusters_key <- paste(res$'_clustersKey', sep = "")
   
   result = list()
+  params$centers = res$k
+  params$iter.max = res$max_iter
   result$params = params
+  
   result$cluster = new("H2OParsedData", h2o=data@h2o, key=clusters_key)
   feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
   result$centers = t(matrix(unlist(res$centers), ncol = res$k))
@@ -580,6 +593,11 @@ h2o.__getNNSummary <- function(res) {
 
 h2o.__getNNResults <- function(res, params) {
   result = list()
+  params$rate = res$parameters$rate
+  params$l1_reg = res$parameters$l1
+  params$l2_reg = res$parameters$l2
+  params$epoch = res$parameters$epochs
+  
   result$params = params
   class_names = tail(res$'_domains', 1)[[1]]
   result$confusion = build_cm(res$confusion_matrix, class_names)
@@ -791,6 +809,11 @@ h2o.__getDRFSummary <- function(res) {
 
 h2o.__getDRFResults <- function(res, params) {
   result = list()
+  params$ntree = res$N
+  params$depth = res$max_depth
+  params$nbins = res$nbins
+  params$sample.rate = res$sample_rate
+  
   result$params = params
   treeStats = unlist(res$treeStats)
   rf_matrix = rbind(treeStats[1:3], treeStats[4:6])
@@ -843,7 +866,18 @@ h2o.predict <- function(object, newdata) {
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
 
-# Helper Functions
+h2o.confusionMatrix <- function(data, reference) {
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+  if(!class(reference) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("reference must be an H2O parsed dataset")
+  if(ncol(data) != 1) stop("Must specify exactly one column for data")
+  if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
+  
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_CONFUSION, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0)
+  cm = lapply(res$cm[-length(res$cm)], function(x) { x[-length(x)] })
+  build_cm(cm, res$response_domain, res$predicted_domain, transpose = FALSE)
+}
+
+# ------------------------------- Helper Functions ---------------------------------------- #
 # Used to verify data, x, y and turn into the appropriate things
 verify_dataxy <- function(data, x, y) {
   if( missing(data) ) stop('Must specify data')
@@ -914,10 +948,11 @@ h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, par
   new(grid_obj, key=dest_key, data=data, model=result, sumtable=myModelSum)
 }
 
-build_cm <- function(cm, cf_names = NULL) {
+build_cm <- function(cm, actual_names = NULL, predict_names = actual_names, transpose = TRUE) {
   #browser()
   categories = length(cm)
-  cf_matrix = t(matrix(unlist(cm), nrow=categories))
+  cf_matrix = matrix(unlist(cm), nrow=categories)
+  if(transpose) cf_matrix = t(cf_matrix)
 
   cf_total = apply(cf_matrix, 2, sum)
   # cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
@@ -925,8 +960,8 @@ build_cm <- function(cm, cf_names = NULL) {
   cf_matrix = rbind(cf_matrix, cf_total)
   cf_matrix = cbind(cf_matrix, round(cf_error, 3))
 
-  if(!is.null(cf_names))
-    dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
+  if(!is.null(actual_names))
+    dimnames(cf_matrix) = list(Actual = c(actual_names, "Totals"), Predicted = c(predict_names, "Error"))
   return(cf_matrix)
 }
 

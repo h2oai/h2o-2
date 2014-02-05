@@ -719,6 +719,7 @@ public abstract class DGLM {
      * @return
      */
     public Cholesky cholesky(Cholesky chol, final Key jobKey) {
+      long t = System.currentTimeMillis();
       if( chol == null ) {
         double[][] xx = _xx.clone();
         for( int i = 0; i < xx.length; ++i )
@@ -751,6 +752,7 @@ public abstract class DGLM {
         };
       }
       ForkJoinTask.invokeAll(ras);
+      Log.info("GLM(" + jobKey + "): CHOL PRECOMPUTE TOOK " + (System.currentTimeMillis() - t) + "ms");
       if(jobKey != null && !Job.isRunning(jobKey))
         throw new JobCancelledException();
       // compute the choesky of dense*dense-outer_product(diagonal*dense)
@@ -1391,6 +1393,8 @@ public abstract class DGLM {
     int _tid;
     double[] _thresholds;
     long _time;
+    public double[] _tprs;
+    public double[] _fprs;
 
     public final long computationTime() {
       return _time;
@@ -1573,6 +1577,8 @@ public abstract class DGLM {
      */
     protected void computeAUC() {
       if( _cm == null ) return;
+      _tprs = new double[_cm.length];
+      _fprs = new double[_cm.length];
       double auc = 0;           // Area-under-ROC
       double TPR_pre = 1;
       double FPR_pre = 1;
@@ -1582,6 +1588,8 @@ public abstract class DGLM {
         auc += trapeziod_area(FPR_pre, FPR, TPR_pre, TPR);
         TPR_pre = TPR;
         FPR_pre = FPR;
+        _tprs[t] = TPR;
+        _fprs[t] = FPR;
       }
       auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
       _auc = auc;

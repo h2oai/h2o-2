@@ -153,6 +153,7 @@ public final class AutoBuffer {
   public AutoBuffer( byte[] buf ) { this(buf,0); }
   /** Read from a fixed byte[]; should not be closed. */
   public AutoBuffer( byte[] buf, int off ) {
+    assert buf != null : "null fed to ByteBuffer.wrap";
     _bb = ByteBuffer.wrap(buf).order(ByteOrder.nativeOrder());
     _bb.position(off);
     _chan = null;

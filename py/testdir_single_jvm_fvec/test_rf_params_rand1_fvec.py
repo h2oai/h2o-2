@@ -8,7 +8,7 @@ paramDict = {
     'destination_key': ['model_keyA', '012345', '__hello'],
     'max_depth': [None, 1,10,20,100],
     'nbins': [None,4,5,10,100,1000],
-    'ignored_cols_by_name': [None, None, None, None, 'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
+    'ignored_cols_by_name': [None, None, None, None, 'C1','C2','C3','C4','C5','C6','C7','C8','C9'],
     # undecided node assertion if input cols don't change
     # 'cols': [None, None, None, None, None, '0,1,2,3,4,','C1,C2,C3,C4'],
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
