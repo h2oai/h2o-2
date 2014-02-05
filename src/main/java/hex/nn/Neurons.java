@@ -430,19 +430,17 @@ public abstract class Neurons extends Iced {
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
 
-        // short-cut: set gradient to 0
-        // AND
-        // no need to update the weights since there's no momenta, no l1 and no l2
+        // no need to update the weights if there are no momenta and l1=0 and l2=0
         if (_wm == null && l1 == 0.0 && l2 == 0.0) {
           if( _a[u] > 0 ) { // don't use >= (faster this way: lots of zeros)
             final double g = _e[u]; // * 1.0 (from derivative of rectifier)
             bprop(u, g, r, m);
           }
-          // otherwise g = _e[u] * 0.0 = 0 and we don't allow other contributions by (and to) weights and momenta
         }
-        // TODO: might always want to use this version (faster)
+        // if we have momenta or l1 or l2, then EVEN for g=0, there will be contributions to the weight updates
+        // Note: this is slower than always doing the shortcut above, and might not affect the accuracy much
         else {
-          final double g = _a[u] > 0 ? _e[u] : 0; // * 1.0 (from derivative of rectifier)
+          final double g = _a[u] > 0 ? _e[u] : 0;
           bprop(u, g, r, m);
         }
       }

@@ -1,8 +1,5 @@
 package hex;
 
-import java.util.ArrayList;
-import java.util.concurrent.*;
-
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -14,11 +11,21 @@ import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToolBar;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import javax.swing.SwingUtilities;
+import javax.swing.*;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Histograms extends LineChart {
   private static final int SLICES = 64;
@@ -106,6 +113,22 @@ public class Histograms extends LineChart {
   public Histograms(String title, float[] data) {
     super(new NumberAxis(), new NumberAxis());
     _data = data;
+
+    ObservableList<Series<Float, Float>> series = FXCollections.observableArrayList();
+    for( int i = 0; i < SLICES; i++ )
+      _list.add(new Data<Float, Float>(0f, 0f));
+    series.add(new LineChart.Series<Float, Float>(title, _list));
+    setData(series);
+    setPrefWidth(600);
+    setPrefHeight(250);
+
+    _instances.add(this);
+  }
+
+  public Histograms(String title, double[] data) {
+    super(new NumberAxis(), new NumberAxis());
+    _data = new float[data.length];
+    for (int i=0; i<data.length; ++i) _data[i] = (float)data[i];
 
     ObservableList<Series<Float, Float>> series = FXCollections.observableArrayList();
     for( int i = 0; i < SLICES; i++ )

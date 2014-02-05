@@ -49,7 +49,7 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
     preTrain(ls);
 
     //_trainer = new Trainer.Direct(ls, 0, self());
-    _trainer = new Trainer.Threaded(ls, 0, self());
+    _trainer = new Trainer.Threaded(ls, 0, self(), -1);
     //_trainer = new Trainer.MapReduce(ls, 0, self());
 
     _trainer.start();
