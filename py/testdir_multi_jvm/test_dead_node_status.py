@@ -49,11 +49,12 @@ class Basic(unittest.TestCase):
         # everyone should see the same stuff (0 and 2, 1 won't respond)
         for n in (0,2):
             c = h2o.nodes[n].get_cloud()
-            self.assertEqual(c['cloud_healthy'], False)
             # the node order doesn't match our node order
             for i in range(3):
                 expected = c['nodes'][i]['name']!=badPort
                 self.assertEqual(c['nodes'][i]['node_healthy'], expected)
+
+            self.assertEqual(c['cloud_healthy'], False, msg="node %s shouldn't think the cloud is healthy: %s" % (n, c['cloud_healthy']))
 
 if __name__ == '__main__':
     h2o.unit_main()

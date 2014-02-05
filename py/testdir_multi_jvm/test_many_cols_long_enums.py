@@ -96,10 +96,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # time.sleep(3600)
         h2o.tear_down_cloud()
 
-
-    def test_many_cols_with_syn(self):
+    def test_many_cols_enums(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (5, 100, 'cA', 5),
@@ -112,7 +112,7 @@ class Basic(unittest.TestCase):
             (5, 100, 'cA', 5),
             ]
 
-        ### h2b.browseTheCloud()
+        h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         cnum = 0
@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
 
             SEPARATOR = ord(',')
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, 
-                separator=SEPARATOR, header=1)
+                separator=SEPARATOR)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
