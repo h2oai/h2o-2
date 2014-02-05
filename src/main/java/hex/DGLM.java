@@ -719,6 +719,7 @@ public abstract class DGLM {
      * @return
      */
     public Cholesky cholesky(Cholesky chol, final Key jobKey) {
+      long t = System.currentTimeMillis();
       if( chol == null ) {
         double[][] xx = _xx.clone();
         for( int i = 0; i < xx.length; ++i )
@@ -751,6 +752,7 @@ public abstract class DGLM {
         };
       }
       ForkJoinTask.invokeAll(ras);
+      Log.info("GLM(" + jobKey + "): CHOL PRECOMPUTE TOOK " + (System.currentTimeMillis() - t) + "ms");
       if(jobKey != null && !Job.isRunning(jobKey))
         throw new JobCancelledException();
       // compute the choesky of dense*dense-outer_product(diagonal*dense)
