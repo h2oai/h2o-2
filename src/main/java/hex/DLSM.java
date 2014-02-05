@@ -12,6 +12,7 @@ import water.Key;
 import water.MemoryManager;
 
 import com.google.gson.JsonObject;
+import water.util.Log;
 
 /**
  * Distributed least squares solvers
@@ -130,15 +131,20 @@ public class DLSM {
       Arrays.fill(z, 0);
       if(_lambda>0)gram.addDiag(_lambda*(1-_alpha)*0.5 + _rho);
       int attempts = 0;
+      long t = System.currentTimeMillis();
       Cholesky chol = gram.cholesky(null,_jobKey);
+      Log.info("GLM(" + _jobKey + ")" + " cholesky decomp took " + (System.currentTimeMillis() - t) + "ms");
       double rhoAdd = 0;
-      if(!chol._isSPD && _autoHandleNonSPDMatrix)
+      if(!chol._isSPD && _autoHandleNonSPDMatrix){
+        Log.info("GLM(" + _jobKey + ")"  + " got non-spd matrix");
         while(!chol._isSPD && attempts < 10){
           double rhoIncrement = _rho*(1<< ++attempts);
           gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
           rhoAdd += rhoIncrement;
           gram.cholesky(chol,_jobKey);
         }
+        Log.info("GLM(" + _jobKey + ")" + " cholesky decomp after nonSPD took " + (System.currentTimeMillis() - t) + "ms");
+      }
       if(!chol._isSPD) throw new NonSPDMatrixException();
       if(_lambda == 0){
         _alpha = 0;
@@ -155,7 +161,9 @@ public class DLSM {
       double[] u = MemoryManager.malloc8d(N);
       double [] xyPrime = gram._xy.clone();
       double kappa = _lambda*_alpha / _rho;
-      for( int i = 0; i < 1000; ++i ) {
+
+      t = System.currentTimeMillis();
+      for(int i = 0; i < 1000; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
         for( int j = 0; j < N-1; ++j )xyPrime[j] = gram._xy[j] + _rho * (z[j] - u[j]);
@@ -189,9 +197,12 @@ public class DLSM {
         s_norm = _rho * Math.sqrt(s_norm);
         eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
         eps_dual = ABSTOL + _rho * RELTOL * Math.sqrt(u_norm);
-        if( r_norm < eps_pri && s_norm < eps_dual )
+        if( r_norm < eps_pri && s_norm < eps_dual ){
+          Log.info("GLM(" + _jobKey + ")" + " ADMM solve took " + i + "iterations and " + (System.currentTimeMillis() - t) + "ms");
           return _converged = true;
+        }
       }
+      Log.info("GLM(" + _jobKey + ")" + " ADMM solve DID NOT CONVERGE after 1000 iterations and " + (System.currentTimeMillis() - t) + "ms");
       return false;
     }
 
