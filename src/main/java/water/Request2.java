@@ -1,15 +1,20 @@
 package water;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import hex.GridSearch;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
-import java.util.*;
-
-import water.api.*;
+import water.api.DocGen;
+import water.api.Request;
+import water.api.RequestArguments;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.Utils;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 public abstract class Request2 extends Request {
   static final int API_WEAVER = 1;
@@ -526,5 +531,10 @@ public abstract class Request2 extends Request {
 
   public void fillResponseInfo(Response response) {
     this.response_info = response.extractInfo();
+  }
+
+  protected JsonObject getJsonObject() {
+    final String json = new String(writeJSON(new AutoBuffer()).buf());
+    return (JsonObject) new JsonParser().parse(json);
   }
 }
