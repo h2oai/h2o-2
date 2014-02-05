@@ -446,7 +446,7 @@ table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", 
     stop("Can't mix H2O parsed data objects with R objects in table")
   else if(any(idx)) {
     myData = c(...)
-    if(length(myData) > 1 || ncol(myData[[1]]) > 2) stop("Unimplemented")
+    if(length(myData) > 2 || ncol(myData[[1]]) > 2) stop("Unimplemented")
     h2o.__unop2("table", myData[[1]]) 
   } else {
     list.names <- function(...) {
