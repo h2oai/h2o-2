@@ -258,7 +258,6 @@ public class GLMProgressPage extends Request {
 
 
     static void validationHTML(GLMModel m, GLMValidation val, StringBuilder sb){
-
       RString valHeader = new RString("<div class='alert'>Validation on dataset <a href='/Inspect.html?"+KEY+"=%dataKey'>%dataKey</a></div>");
       RString xvalHeader = new RString("<div class='alert'>%valName</div>");
 
@@ -295,6 +294,7 @@ public class GLMProgressPage extends Request {
         R.replace("CM",R2);
       }
       sb.append(R);
+      ROCplot(val, sb);
       confusionHTML(val.bestCM(),sb);
       if(val.fold() > 1){
         int nclasses = 2;
@@ -371,6 +371,171 @@ public class GLMProgressPage extends Request {
       cmRow(sb,"Err ",err2,err3,cm.err());
       sb.append("</table>");
     }
+
+
+      public static void ROCplot(GLMValidation xval, StringBuilder sb ) {
+          sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
+          sb.append("<div id=\"ROC\">");
+          sb.append("<style type=\"text/css\">");
+          sb.append(".axis path," +
+                  ".axis line {\n" +
+                  "fill: none;\n" +
+                  "stroke: black;\n" +
+                  "shape-rendering: crispEdges;\n" +
+                  "}\n" +
+
+                  ".axis text {\n" +
+                  "font-family: sans-serif;\n" +
+                  "font-size: 11px;\n" +
+                  "}\n");
+
+          sb.append("</style>");
+          sb.append("<div id=\"rocCurve\" style=\"display:inline;\">");
+          sb.append("<script type=\"text/javascript\">");
+
+          sb.append("//Width and height\n");
+          sb.append("var w = 500;\n"+
+                  "var h = 300;\n"+
+                  "var padding = 40;\n"
+          );
+          sb.append("var dataset = [");
+
+          for(int c = 0; c < xval._cm.length; c++) {
+              if (c == 0) {
+                  sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+              }
+              sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+          }
+          for(int c = 0; c < 2*xval._cm.length; c++) {
+              sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
+          }
+          sb.append("];\n");
+
+          sb.append(
+                  "//Create scale functions\n"+
+                          "var xScale = d3.scale.linear()\n"+
+                          ".domain([0, d3.max(dataset, function(d) { return d[0]; })])\n"+
+                          ".range([padding, w - padding * 2]);\n"+
+
+                          "var yScale = d3.scale.linear()"+
+                          ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
+                          ".range([h - padding, padding]);\n"+
+
+                          "var rScale = d3.scale.linear()"+
+                          ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
+                          ".range([2, 5]);\n"+
+
+                          "//Define X axis\n"+
+                          "var xAxis = d3.svg.axis()\n"+
+                          ".scale(xScale)\n"+
+                          ".orient(\"bottom\")\n"+
+                          ".ticks(5);\n"+
+
+                          "//Define Y axis\n"+
+                          "var yAxis = d3.svg.axis()\n"+
+                          ".scale(yScale)\n"+
+                          ".orient(\"left\")\n"+
+                          ".ticks(5);\n"+
+
+                          "//Create SVG element\n"+
+                          "var svg = d3.select(\"#rocCurve\")\n"+
+                          ".append(\"svg\")\n"+
+                          ".attr(\"width\", w)\n"+
+                          ".attr(\"height\", h);\n"+
+
+                          "//Create circles\n"+
+                          "svg.selectAll(\"circle\")\n"+
+                          ".data(dataset)\n"+
+                          ".enter()\n"+
+                          ".append(\"circle\")\n"+
+                          ".attr(\"cx\", function(d) {\n"+
+                          "return xScale(d[0]);\n"+
+                          "})\n"+
+                          ".attr(\"cy\", function(d) {\n"+
+                          "return yScale(d[1]);\n"+
+                          "})\n"+
+                          ".attr(\"fill\", function(d) {\n"+
+                          "  if (d[0] == d[1]) {\n"+
+                          "    return \"red\"\n"+
+                          "  } else {\n"+
+                          "  return \"blue\"\n"+
+                          "  }\n"+
+                          "})\n"+
+                          ".attr(\"r\", function(d) {\n"+
+                          "  if (d[0] == d[1]) {\n"+
+                          "    return 1\n"+
+                          "  } else {\n"+
+                          "  return 2\n"+
+                          "  }\n"+
+                          "})\n" +
+                          ".on(\"mouseover\", function(d,i){\n" +
+                          "   if(i <= 100) {" +
+                          "     document.getElementById(\"select\").selectedIndex = 100 - i\n" +
+                          "     show_cm(i)\n" +
+                          "   }\n" +
+                          "});\n"+
+
+                          "/*"+
+                          "//Create labels\n"+
+                          "svg.selectAll(\"text\")"+
+                          ".data(dataset)"+
+                          ".enter()"+
+                          ".append(\"text\")"+
+                          ".text(function(d) {"+
+                          "return d[0] + \",\" + d[1];"+
+                          "})"+
+                          ".attr(\"x\", function(d) {"+
+                          "return xScale(d[0]);"+
+                          "})"+
+                          ".attr(\"y\", function(d) {"+
+                          "return yScale(d[1]);"+
+                          "})"+
+                          ".attr(\"font-family\", \"sans-serif\")"+
+                          ".attr(\"font-size\", \"11px\")"+
+                          ".attr(\"fill\", \"red\");"+
+                          "*/\n"+
+
+                          "//Create X axis\n"+
+                          "svg.append(\"g\")"+
+                          ".attr(\"class\", \"axis\")"+
+                          ".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
+                          ".call(xAxis);\n"+
+
+                          "//X axis label\n"+
+                          "d3.select('#rocCurve svg')"+
+                          ".append(\"text\")"+
+                          ".attr(\"x\",w/2)"+
+                          ".attr(\"y\",h - 5)"+
+                          ".attr(\"text-anchor\", \"middle\")"+
+                          ".text(\"False Positive Rate\");\n"+
+
+                          "//Create Y axis\n"+
+                          "svg.append(\"g\")"+
+                          ".attr(\"class\", \"axis\")"+
+                          ".attr(\"transform\", \"translate(\" + padding + \",0)\")"+
+                          ".call(yAxis);\n"+
+
+                          "//Y axis label\n"+
+                          "d3.select('#rocCurve svg')"+
+                          ".append(\"text\")"+
+                          ".attr(\"x\",150)"+
+                          ".attr(\"y\",-5)"+
+                          ".attr(\"transform\", \"rotate(90)\")"+
+                          //".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
+                          ".attr(\"text-anchor\", \"middle\")"+
+                          ".text(\"True Positive Rate\");\n"+
+
+                          "//Title\n"+
+                          "d3.select('#rocCurve svg')"+
+                          ".append(\"text\")"+
+                          ".attr(\"x\",w/2)"+
+                          ".attr(\"y\",padding - 20)"+
+                          ".attr(\"text-anchor\", \"middle\")"+
+                          ".text(\"ROC\");\n");
+
+          sb.append("</script>");
+          sb.append("</div>");
+      }
   }
 
 }

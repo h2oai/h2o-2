@@ -213,7 +213,6 @@ public class GLM2 extends ModelJob {
     if(DKV.get(dest()) == null)return 0;
     GLMModel m = DKV.get(dest()).get();
     float progress =  (float)m.iteration()/(float)max_iter; // TODO, do something smarter here
-    System.out.println("glm progress = " + progress);
     return progress;
   }
 

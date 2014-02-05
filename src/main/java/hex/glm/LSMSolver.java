@@ -212,6 +212,7 @@ public abstract class LSMSolver extends Iced{
         chol.solve(z);
         return _converged = true;
       }
+      long t = System.currentTimeMillis();
       final double ABSTOL = Math.sqrt(N) * 1e-4;
       final double RELTOL = 1e-2;
       double[] u = MemoryManager.malloc8d(N);
@@ -252,13 +253,15 @@ public abstract class LSMSolver extends Iced{
         eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
         eps_dual = ABSTOL + _rho * RELTOL * Math.sqrt(u_norm);
         if( r_norm < eps_pri && s_norm < eps_dual ){
-           gram.addDiag(-gram._diagAdded + d);
-           assert gram._diagAdded == d;
-           return _converged = true;
+          gram.addDiag(-gram._diagAdded + d);
+          assert gram._diagAdded == d;
+          Log.info("ADMM solver done after " + i + " iterations " + " in " + (System.currentTimeMillis() - t) + "ms");
+          return _converged = true;
         }
       }
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
+      Log.info("ADMM solver DID NOT CONVERGE after " + 1000 + " iterations. Done " + " in " + (System.currentTimeMillis() - t) + "ms");
       return false;
     }
     @Override
