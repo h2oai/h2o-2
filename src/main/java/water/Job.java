@@ -85,8 +85,8 @@ public class Job extends Request2 {
     protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (source != null) {
-        jo.getAsJsonObject("source").add("num_cols", new JsonPrimitive(source.numCols()));
-        jo.getAsJsonObject("source").add("num_rows", new JsonPrimitive(source.numRows()));
+        jo.getAsJsonObject("source").addProperty("num_cols", source.numCols());
+        jo.getAsJsonObject("source").addProperty("num_rows", source.numRows());
       }
       return jo;
     }
@@ -116,13 +116,13 @@ public class Job extends Request2 {
       for (String key : map.keySet()) {
         int[] val = map.get(key);
         if (val != null)
-          if(val.length>100) jo.getAsJsonObject("source").add("num_" + key, new JsonPrimitive(val.length));
+          if(val.length>100) jo.getAsJsonObject("source").addProperty("num_" + key, val.length);
           else if(val.length>0) {
             StringBuilder sb = new StringBuilder();
             for (int c : val) sb.append(c + ",");
-            jo.getAsJsonObject("source").add(key, new JsonPrimitive(sb.toString().substring(0, sb.length()-1)));
+            jo.getAsJsonObject("source").addProperty(key, sb.toString().substring(0, sb.length()-1));
           }
-        else jo.getAsJsonObject("source").add(key, new JsonPrimitive("N/A"));
+        else jo.getAsJsonObject("source").addProperty(key, "N/A");
       }
       return jo;
     }
@@ -244,8 +244,8 @@ public class Job extends Request2 {
     protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (validation != null) {
-        jo.getAsJsonObject("validation").add("num_cols", new JsonPrimitive(validation.numCols()));
-        jo.getAsJsonObject("validation").add("num_rows", new JsonPrimitive(validation.numRows()));
+        jo.getAsJsonObject("validation").addProperty("num_cols", validation.numCols());
+        jo.getAsJsonObject("validation").addProperty("num_rows", validation.numRows());
       }
       return jo;
     }

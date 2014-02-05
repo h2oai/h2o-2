@@ -1,7 +1,6 @@
 package hex.drf;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import hex.ShuffleTask;
 import hex.gbm.DHistogram;
 import hex.gbm.DTree;
@@ -139,7 +138,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override
   protected JsonObject toJSON() {
     JsonObject jo = super.toJSON();
-    jo.add("mtry_computed", new JsonPrimitive(_mtry));
+    jo.addProperty("mtry_computed", _mtry);
     return jo;
   }
 
