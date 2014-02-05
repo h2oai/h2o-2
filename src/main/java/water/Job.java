@@ -112,11 +112,11 @@ public class Job extends Request2 {
     protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       HashMap<String, int[]> map = new HashMap<String, int[]>();
-      map.put("cols", cols); map.put("ignored_cols", ignored_cols);
+      map.put("used_cols", cols); map.put("ignored_cols", ignored_cols);
       for (String key : map.keySet()) {
         int[] val = map.get(key);
         if (val != null)
-          if(val.length>100) jo.getAsJsonObject("source").add("selected_" + key, new JsonPrimitive(val.length));
+          if(val.length>100) jo.getAsJsonObject("source").add("num_" + key, new JsonPrimitive(val.length));
           else if(val.length>0) {
             StringBuilder sb = new StringBuilder();
             for (int c : val) sb.append(c + ",");

@@ -1,6 +1,5 @@
 package hex;
 
-import com.google.gson.JsonObject;
 import hex.Layer.*;
 import jsr166y.CountedCompleter;
 import water.*;
