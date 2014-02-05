@@ -209,7 +209,7 @@ public class ConfusionTask extends MRTask {
   /**A classic Map/Reduce style incremental computation of the confusion
    * matrix on a chunk of data.
    * */
-  public void map(Key chunkKey) {
+  @Override public void map(Key chunkKey) {
     AutoBuffer cdata      = _data.getChunk(chunkKey);
     final int nchk       = (int) ValueArray.getChunkIndex(chunkKey);
     final int rows       = _data.rpc(nchk);

@@ -28,6 +28,7 @@ import water.fvec.Vec;
 import water.util.*;
 
 public class GLM2 extends ModelJob {
+  public final String _jobName;
 //  private transient GLM2 [] _subjobs;
 //  private Key _parentjob;
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000)
@@ -74,7 +75,7 @@ public class GLM2 extends ModelJob {
   }
   @Override public Key defaultJobKey() {return null;}
 
-  public GLM2() {}
+  public GLM2() {_jobName = "";}
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda){
     this(desc,jobKey,dest,dinfo,glm,lambda,0.5,0);
   }
@@ -107,6 +108,7 @@ public class GLM2 extends ModelJob {
     this.n_folds = nfolds;
     source = dinfo._adaptedFrame;
     response = dinfo._adaptedFrame.lastVec();
+    _jobName = dest.toString() + ((nfolds > 1)?("[" + dinfo._foldId + "]"):"");
   }
 
   static String arrayToString (double[] arr) {
@@ -211,7 +213,6 @@ public class GLM2 extends ModelJob {
     if(DKV.get(dest()) == null)return 0;
     GLMModel m = DKV.get(dest()).get();
     float progress =  (float)m.iteration()/(float)max_iter; // TODO, do something smarter here
-    System.out.println("glm progress = " + progress);
     return progress;
   }
 
@@ -264,6 +265,8 @@ public class GLM2 extends ModelJob {
               if(!diverged && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
                 _model.update(self());
                 _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
+                _solver._jobKey = self();
+                _solver._id = _jobName;
                 glmt._val = null;
                 Iteration.this.callback(glmt);
               } else {   // nope, we're done
@@ -337,6 +340,8 @@ public class GLM2 extends ModelJob {
             final ADMMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
             solver._proximalPenalty = _proximalPenalty;
             solver._wgiven = _wgiven;
+            solver._jobKey = self();
+            solver._id = _jobName;
             GLMModel model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             model.delete_and_lock(self());
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,GLM2.this._fjtask));
