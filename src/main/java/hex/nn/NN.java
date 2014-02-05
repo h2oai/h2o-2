@@ -160,13 +160,6 @@ public class NN extends Job.ValidatedJob {
   @Override public Key defaultDestKey(){return null;}
   @Override public Key defaultJobKey() {return null;}
 
-  @Override protected JsonObject toJSON() {
-    JsonObject jo = super.toJSON();
-    jo.remove("Request2");
-    jo.remove("response_info");
-    return jo;
-  }
-
   @Override public boolean toHTML(StringBuilder sb) {
     return makeJsonBox(sb);
   }
