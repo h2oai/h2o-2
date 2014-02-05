@@ -51,7 +51,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
     XlsParser p = new XlsParser();
     CustomInspectDataOut dout = new CustomInspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){}
-    return new PSetupGuess(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._ncols, dout._header,dout._header?dout.data()[0]:null,false),dout._nlines,dout._invalidLines,dout.data(),null);
+    return new PSetupGuess(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._ncols, dout._header,dout._header?dout.data()[0]:null,false),dout._nlines,dout._invalidLines,dout.data(),dout._nlines > dout._invalidLines,null);
   }
 
   transient ArrayList<String> _columnNames = new ArrayList();
@@ -160,7 +160,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
       return;
 
     if (_firstRow) {
-      _columnNames.add(curStr == null ? "" : curStr.toString());
+      _columnNames.add(curStr == null ? ("C" + (curCol+1)) : curStr.toString());
     } else {
       if (curStr == null)
         if (Double.isNaN(curNum))

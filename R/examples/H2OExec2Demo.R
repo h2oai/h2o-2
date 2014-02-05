@@ -16,7 +16,7 @@ prostate.hex$RACE = as.factor(prostate.hex$RACE)
 summary(prostate.hex)
 
 # Display count of a column's levels
-age.count = h2o.table(prostate.hex$AGE)    # Note: Currently only works on a single integer/factor column
+age.count = table(prostate.hex$AGE)    # Note: Currently only works on a single integer/factor column
 # head(age.count)
 as.data.frame(age.count)
 
