@@ -536,7 +536,10 @@ public abstract class Request2 extends Request {
 
   protected JsonObject toJSON() {
     final String json = new String(writeJSON(new AutoBuffer()).buf());
-    return (JsonObject) new JsonParser().parse(json);
+    JsonObject jo = (JsonObject)new JsonParser().parse(json);
+    jo.remove("Request2");
+    jo.remove("response_info");
+    return jo;
   }
 
   @Override
@@ -545,7 +548,7 @@ public abstract class Request2 extends Request {
   }
 
   protected void logStart() {
-    Log.info("Starting " + this.getClass().getSimpleName() + " model build.");
+    Log.info("Building " + this.getClass().getSimpleName() + " model with these parameters:");
     for (String s : this.toString().split("\n")) Log.info(s);
   }
 

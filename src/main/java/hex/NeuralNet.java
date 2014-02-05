@@ -104,13 +104,6 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
   public boolean diagnostics = true;
 
-  @Override protected JsonObject toJSON() {
-    JsonObject jo = super.toJSON();
-    jo.remove("Request2");
-    jo.remove("response_info");
-    return jo;
-  }
-
   @Override public boolean toHTML(StringBuilder sb) {
     return makeJsonBox(sb);
   }
