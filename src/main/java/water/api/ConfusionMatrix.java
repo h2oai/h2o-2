@@ -1,11 +1,16 @@
 package water.api;
 
-import java.util.Arrays;
-
-import water.*;
-import water.fvec.*;
-import water.util.Log;
+import water.MRTask2;
+import water.Model;
+import water.Request2;
+import water.UKV;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.TransfVec;
+import water.fvec.Vec;
 import water.util.Utils;
+
+import java.util.Arrays;
 
 /**
  *  Compare two categorical columns, reporting a grid of co-occurrences.
@@ -169,7 +174,8 @@ public class ConfusionMatrix extends Request2 {
   }
 
   public double toASCII( StringBuilder sb ) {
-    assert(cm != null);
+    if( cm == null ) return 1.0;
+    // Sum up predicted & actuals
     long acts [] = new long[cm   .length];
     long preds[] = new long[cm[0].length];
     for( int a=0; a<cm.length; a++ ) {
@@ -177,27 +183,9 @@ public class ConfusionMatrix extends Request2 {
       for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
       acts[a] = sum;
     }
-    Vec vaE = null, vpE = null, avp = null;
-    String adomain[] = null;
-    String pdomain[] = null;
-    try {
-      vaE = vactual.toEnum();
-      vpE = vpredict.toEnum();
-      // The vectors are from different groups => align them, but properly delete it after computation
-      if (!vaE.group().equals(vpE.group())) {
-        avp = vpE;
-        vpE = vaE.align(vpE);
-      }
-      adomain = ConfusionMatrix.show(acts ,vaE.domain());
-      pdomain = ConfusionMatrix.show(preds,vpE.domain());
-    } catch (Throwable t) {
-      Log.err(t);
-      return Double.NaN;
-    } finally {
-      if (vaE!=null)  UKV.remove(vaE._key);
-      if (vpE!=null)  UKV.remove(vpE._key);
-      if (avp!=null)  UKV.remove(avp._key);
-    }
+
+    String adomain[] = show(acts , domain);
+    String pdomain[] = show(preds, domain);
 
     // determine max length of each space-padded field
     int maxlen = 0;
@@ -222,7 +210,8 @@ public class ConfusionMatrix extends Request2 {
       long correct=0;
       for( int p=0; p<pdomain.length; p++ ) {
         if( pdomain[p] == null ) continue;
-        if( adomain[a].equals(pdomain[p]) ) correct = cm[a][p];
+        boolean onDiag = adomain[a].equals(pdomain[p]);
+        if( onDiag ) correct = cm[a][p];
         sb.append(String.format(fmt,cm[a][p]));
       }
       long err = acts[a]-correct;
