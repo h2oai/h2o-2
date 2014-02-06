@@ -163,9 +163,12 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
 
         checkScalarResult(execResultInspect, None)
 
-        # assume keyX is the lhs, and do a VA inspect of keyX
         if keyX:
-            vaInspect = h2o.nodes[0].inspect(key=keyX, useVA=True)
+            inspect = h2o_cmd.runInspect(key=keyX)
+            print "\ns.hex" \
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+
         # print "va Inspect:", h2o.dump_json(vaInspect)
         # checkScalarResult(vaInspect, keyX)
 
