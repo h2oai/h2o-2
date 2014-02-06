@@ -14,27 +14,26 @@ import water.util.Log;
 public class NeuralNetMnist2 extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist2.class;
-    samples.launchers.CloudLocal.launch(job, 2);
+//    samples.launchers.CloudLocal.launch(job, 2);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
-//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
+    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161");
-    //samples.launchers.CloudRemote.launchEC2(job, 4);
+//    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
   @Override protected Status exec() {
-    final long seed = 0xC0FFEE;
-
     Log.info("Parsing data.");
-//    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train10x.csv.gz");
-    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
-    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
+//    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train10x.csv");
+    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv");
+    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv");
     Log.info("Done.");
 
     NN p = new NN();
     // Hinton parameters -> should lead to ~1 % test error after ~ 10M training points
-    p.seed = seed;
+    p.seed = 0xC0FFEE;
     //p.hidden = new int[]{1024,1024,2048};
     p.hidden = new int[]{128,128,256};
     p.rate = 0.003;
@@ -58,12 +57,8 @@ public class NeuralNetMnist2 extends Job {
     p.response = trainf.lastVec();
     p.ignored_cols = null;
     p.destination_key = Key.make("mnist.model");
-
-    Frame fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true);
-    p._dinfo = new FrameTask.DataInfo(fr, 1, true);
-
-    p.initModel();
-    p.trainModel(true);
-    return Status.Running;
+    p._dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(
+            p.source, p.response, p.ignored_cols, true), 1, true);
+    return p.exec();
   }
 }
