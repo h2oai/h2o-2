@@ -183,8 +183,7 @@ public class NN extends Job.ValidatedJob {
     return (float)(m.epoch_counter / m.model_info().get_params().epochs);
   }
 
-  @Override
-  public Status exec() {
+  @Override public Status exec() {
     initModel();
     trainModel(true);
     if( _gen_enum ) UKV.remove(response._key);

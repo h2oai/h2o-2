@@ -202,27 +202,23 @@ public abstract class Neurons extends Iced {
 //          _wp[w] = sign ? mult : -mult;
 //        }
 
+      _w[w] += delta;
       if( _wm != null ) {
-        _w[w] += delta;
         _w[w] += m * _wm[w];
-        _wm[w] = (float)(delta); //atomic update
-      } else {
-        _w[w] += delta;
+        _wm[w] = (float)(delta);
       }
-      if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
+      if (max_w2 != Double.POSITIVE_INFINITY)
+        r2 += _w[w] * _w[w];
     }
     if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
       final double scale = Math.sqrt(max_w2 / r2);
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
-    final double delta = r * g * 1;
+    final double delta = r * g;
+    _b[u] += delta;
     if( _bm != null ) {
-      _b[u] += delta;
       _b[u] += m * _bm[u];
-      _bm[u] = delta; //atomic update
-    }
-    else {
-      _b[u] += delta;
+      _bm[u] = delta;
     }
   }
 
