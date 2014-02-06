@@ -55,7 +55,6 @@ public class RequestServer extends NanoHTTPD {
     _http404 = registerRequest(new HTTP404());
     _http500 = registerRequest(new HTTP500());
 
-    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data");
     Request.addToNavbar(registerRequest(new Inspect()),     "Inspect",                    "Data");
     Request.addToNavbar(registerRequest(new StoreView()),   "View All",                   "Data");
     Request.addToNavbar(registerRequest(new Parse()),       "Parse",                      "Data");
