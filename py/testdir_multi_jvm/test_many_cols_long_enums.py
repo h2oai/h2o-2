@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
 
             SEPARATOR = ord(',')
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, 
-                separator=SEPARATOR)
+                header=1, separator=SEPARATOR)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 

@@ -24,7 +24,7 @@ def rand_rowData():
         rowData = rowData + "," + str(random.uniform(-1e59,1e59))
     return rowData
 
-class parse_rand_schmoo(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
