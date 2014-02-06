@@ -47,7 +47,7 @@ public class Cloud extends Request {
     response.addProperty(CLOUD_NAME, H2O.NAME);
     response.addProperty(NODE_NAME, self.toString());
     response.addProperty(CLOUD_SIZE, cloud._memary.length);
-    response.addProperty(CLOUD_HEALTH, H2O.isHealthy());
+    boolean cloudHealthy = true;
     JsonArray nodes = new JsonArray();
     for (H2ONode h2o : cloud._memary) {
       HeartBeat hb = h2o._heartbeat;
@@ -67,7 +67,9 @@ public class Cloud extends Request {
       node.addProperty(ELAPSED, elapsed);
       h2o._node_healthy = elapsed > HeartBeatThread.TIMEOUT ? false : true;
       node.addProperty(NODE_HEALTH, h2o._node_healthy);
-
+      if (! h2o._node_healthy) {
+        cloudHealthy = false;
+      }
 
       JsonArray fjt = new JsonArray();
       JsonArray fjq = new JsonArray();
@@ -122,6 +124,9 @@ public class Cloud extends Request {
       node.addProperty(LAST_CONTACT, h2o._last_heard_from);
       nodes.add(node);
     }
+
+    response.addProperty(CLOUD_HEALTH, cloudHealthy);
+
     response.add(NODES,nodes);
     response.addProperty(CONSENSUS, Paxos._commonKnowledge); // Cloud is globally accepted
     response.addProperty(LOCKED, Paxos._cloudLocked); // Cloud is locked against changes
