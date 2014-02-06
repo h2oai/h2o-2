@@ -97,6 +97,12 @@ def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs
     data_key = parseResult['destination_key']
     return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
 
+def runNNet2(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
+    if not parseResult: raise Exception('No parseResult for NN2')
+    if not node: node = h2o.nodes[0]
+    data_key = parseResult['destination_key']
+    return node.neural_net2(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+
 def runGBM(node=None, parseResult=None, timeoutSecs=500, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]

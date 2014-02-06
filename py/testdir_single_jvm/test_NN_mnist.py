@@ -22,18 +22,20 @@ class Basic(unittest.TestCase):
     def test_NN_mnist(self):
         #h2b.browseTheCloud()
         h2o.beta_features = True
-        csvPathname_train = 'mnist/train.csv.gz'
-        csvPathname_test  = 'mnist/test.csv.gz'
+        csvPathname_train = 'mnist/mnist_training.csv.gz'
+        csvPathname_test  = 'mnist/mnist_testing.csv.gz'
         hex_key = 'mnist_train.hex'
         validation_key = 'mnist_test.hex'
         timeoutSecs = 30
-        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
-        parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
+        parseResult  = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
+        parseResultV = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
+
         inspect = h2o_cmd.runInspect(None, hex_key)
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
-        response = inspect['numCols'] - 1
+        #response = inspect['numCols'] - 1
+        response = 0;
 
         modes = [
             'SingleThread', 
@@ -72,7 +74,7 @@ class Basic(unittest.TestCase):
                 'destination_key'              : model_key,
                 'validation'                   : validation_key,
             }
-            expectedErr = 0.0655 ## expected validation error for the above model
+            expectedErr = 0.0642 ## expected validation error for the above model
 
             timeoutSecs = 600
             start = time.time()
@@ -80,7 +82,7 @@ class Basic(unittest.TestCase):
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
             #### Look at model progress, and check the last reported validation error
-            relTol = 0.03 if mode == 'SingleThread' else 0.10 ### 5% relative error is acceptable for Hogwild
+            relTol = 0.03 if mode == 'SingleThread' else 0.15
             h2o_nn.checkLastValidationError(self, nn['neuralnet_model'], inspect['numRows'], expectedErr, relTol, **kwargs)
 
             #### Now score using the model, and check the validation error
