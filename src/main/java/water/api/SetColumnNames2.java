@@ -1,7 +1,5 @@
 package water.api;
 
-import com.google.gson.JsonObject;
-
 import water.*;
 import water.fvec.Frame;
 import water.util.RString;
@@ -17,6 +15,10 @@ public class SetColumnNames2 extends Request2 {
   @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
   Frame source;
 
+  class colsFilter1 extends MultiVecSelect { public colsFilter1() { super("source");} }
+  @API(help = "Select columns", filter=colsFilter1.class)
+  int[] cols;
+
   @API(help="Column names as a parsed frame.", filter=Default.class)
   Frame copy_from;
 
@@ -30,18 +32,24 @@ public class SetColumnNames2 extends Request2 {
   }
 
   @Override protected Response serve() {
-    if(source == null) return RequestServer._http404.serve();
+    if( source == null ) return RequestServer._http404.serve();
+    // select all columns by default
+    if( cols == null ) {
+      cols = new int[source.vecs().length];
+      for(int i = 0; i < cols.length; i++) cols[i] = i;
+    }
+
     if(comma_separated_list == null && copy_from == null)
       throw new IllegalArgumentException("No column names given");
-    if(comma_separated_list != null && copy_from != null)
+    else if(comma_separated_list != null && copy_from != null)
       throw new IllegalArgumentException("Cannot specify column names as both frame and list.");
 
     String[] names_str = comma_separated_list == null ? copy_from.names() : comma_separated_list.split(",");
-    if(source.vecs().length != names_str.length)
+    if(cols.length != names_str.length)
       throw new IllegalArgumentException("number of columns don't match!");
 
-    for(int i = 0; i < source.vecs().length; i++)
-      source._names[i] = names_str[i];
+    for(int i = 0; i < cols.length; i++)
+      source._names[cols[i]] = names_str[i];
     Futures fs = new Futures();
     DKV.put(source._key, source, fs);
     fs.blockForPending();

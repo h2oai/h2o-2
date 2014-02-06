@@ -136,6 +136,11 @@ public class ValueArray extends Lockable<ValueArray> implements Cloneable {
       _cols[i]._name = names[i];
   }
 
+  public final void setColumnNames(String[] names, int[] colIdx) {
+    for(int i = 0; i < Math.min(_cols.length, colIdx.length); ++i)
+      _cols[colIdx[i]]._name = names[i];
+  }
+
   public String[][] domains() {
     String domains[][] = new String[_cols.length][];
     for( int i=0; i<_cols.length; i++ )
