@@ -29,7 +29,7 @@ function(exdir) {
 
 sandbox<-
 function() {
-  test_name <- R.utils::commandArgs(asValues=TRUE)$"-f"
+  test_name <- R.utils::commandArgs(asValues=TRUE)$"f"
   # test_name can be a path..just what the basename
   Rsandbox <- paste("./Rsandbox_", basename(test_name), sep = "")
   dir.create(Rsandbox, showWarnings = FALSE)
@@ -40,8 +40,8 @@ function() {
   write.table(SEED, paste(Rsandbox, "/seed", sep = ""), row.names = F, col.names = F)
   h2o.__LOG_COMMAND <- paste(Rsandbox, "/", sep = "") 
   h2o.__LOG_ERROR   <- paste(Rsandbox, "/", sep = "") 
-  h2o.__changeCommandLog(normalizePath(h2o.__LOG_COMMAND))
-  h2o.__changeErrorLog(normalizePath(h2o.__LOG_ERROR))
+  h2o.__changeLog(normalizePath(h2o.__LOG_COMMAND), "Command")
+  h2o.__changeLog(normalizePath(h2o.__LOG_ERROR), "Error")
   h2o.__startLogging()
   
   
@@ -159,7 +159,7 @@ get_args<-
 function(args) {
   fileName <- commandArgs()[grep('*\\.R',unlist(commandArgs()))]
   if (length(args) > 1) {
-    m <- paste("Usage: R -f ", paste(fileName, " --args H2OServer:Port",sep=""),sep="")
+    m <- paste("Usage: R f ", paste(fileName, " --args H2OServer:Port",sep=""),sep="")
     stop(m);
   }
 

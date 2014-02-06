@@ -8,7 +8,7 @@ K-Means falls in the general category of clustering algorithms.
 When to use K-Means
 """""""""""""""""""
 
-Data are a set of attributes on which the members of this population
+Data are a set of attributes on which the members of the population
 likely differ. The objective is classification.
 Here are some examples:
 
@@ -76,7 +76,7 @@ Defining a K-Means model
 **Normalize:** 
 
    Specifies that each attribute be transformed such that it has a mean
-   of 0 and standard deviation, and that this transformation be
+   of 0 and standard deviation of 1, and that this transformation be
    carried out before the algorithm is applied.
 
 

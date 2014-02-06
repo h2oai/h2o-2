@@ -334,17 +334,17 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
 })
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
+  numCol = ncol(x)
   myNames = colnames(x)
   idx = match(name, myNames)
-  if(is.na(idx)) {
-    stop("Unimplemented: undefined column name specified")
-    lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
-    # TODO: Set column name of ncol(x) + 1 to name
-  } else
-    lhs = paste(x@key, "[,", idx, "]", sep="")
+  
+  lhs = paste(x@key, "[", ifelse(is.na(idx), numCol+1, idx), "]", sep = "")
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
+  
+  if(is.na(idx))
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, cols=numCol, comma_separated_list=name)
   return(x)
 })
 
@@ -446,7 +446,7 @@ table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", 
     stop("Can't mix H2O parsed data objects with R objects in table")
   else if(any(idx)) {
     myData = c(...)
-    if(length(myData) > 1 || ncol(myData[[1]]) > 2) stop("Unimplemented")
+    if(length(myData) > 2 || ncol(myData[[1]]) > 2) stop("Unimplemented")
     h2o.__unop2("table", myData[[1]]) 
   } else {
     list.names <- function(...) {

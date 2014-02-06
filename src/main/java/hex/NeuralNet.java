@@ -62,7 +62,7 @@ public class NeuralNet extends ValidatedJob {
   public long momentum_ramp = 1000000;
 
   @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, json = true)
-  public double momentum_stable = 1.0;
+  public double momentum_stable = 0.99;
 
   @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
   public double epochs = 10;

@@ -65,7 +65,7 @@ public final class ParseDataset extends Job {
       _conflicts = new IcedArrayList<Key>();
       byte [] bits = Utils.getFirstUnzipedBytes(key);
       _gSetup = ParseDataset.guessSetup(bits, _userSetup, _checkHeader);
-      if(_gSetup == null || !_gSetup.valid())
+      if(_gSetup == null || !_gSetup._isValid)
         _failedSetup.add(key);
       else {
         _gSetup._setupFromFile = key;
@@ -75,11 +75,11 @@ public final class ParseDataset extends Job {
     }
 
     @Override public void reduce(GuessSetupTsk drt) {
-      if(_gSetup == null || !_gSetup.valid()){
+      if(_gSetup == null || !_gSetup._isValid){
         _gSetup = drt._gSetup;
         _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
         _gSetup._setupFromFile = drt._gSetup._setupFromFile;
-      } else if(drt._gSetup.valid() && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
+      } else if(drt._gSetup._isValid && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
         if(_conflicts.contains(_gSetup._setupFromFile) && !drt._conflicts.contains(drt._gSetup._setupFromFile)){
           _gSetup = drt._gSetup; // setups are not compatible, select random setup to send up (thus, the most common setup should make it to the top)
           _gSetup._setupFromFile = drt._gSetup._setupFromFile;
@@ -88,7 +88,7 @@ public final class ParseDataset extends Job {
           _conflicts.add(_gSetup._setupFromFile);
           _conflicts.add(drt._gSetup._setupFromFile);
         }
-      } else if(drt._gSetup.valid()){ // merge the two setups
+      } else if(drt._gSetup._isValid){ // merge the two setups
         if(!_gSetup._setup._header && drt._gSetup._setup._header){
           _gSetup._setup._header = true;
           _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
@@ -118,8 +118,13 @@ public final class ParseDataset extends Job {
     public final PSetupGuess _gSetup;
     public final Key [] _failed;
 
-    public ParseSetupGuessException(String msg, PSetupGuess gSetup, Key [] failed){
-      super(msg);
+    public ParseSetupGuessException(String msg,PSetupGuess gSetup, Key [] failed){
+      super(msg + (gSetup != null?", found setup: " + gSetup.toString():""));
+      _gSetup = gSetup;
+      _failed = failed;
+    }
+    public ParseSetupGuessException(PSetupGuess gSetup, Key [] failed){
+      super(gSetup != null?gSetup.toString():"Failed to guess parser setup.");
       _gSetup = gSetup;
       _failed = failed;
     }
@@ -142,7 +147,7 @@ public final class ParseDataset extends Job {
       t.invoke(ks);
       gSetup = t._gSetup;
 
-      if(gSetup.valid() && (!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
+      if(gSetup._isValid && (!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
         // run guess setup once more, this time knowing the global setup to get rid of conflicts (turns them into failures) and bogus failures (i.e. single line files with unexpected separator)
         GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, !gSetup._setup._header);
         HashSet<Key> keySet = new HashSet<Key>(t._conflicts);
@@ -164,8 +169,9 @@ public final class ParseDataset extends Job {
       }
     } else if(!keys.isEmpty())
       gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys.get(0)),setup,checkHeader);
-    if( gSetup == null || !gSetup.valid())
-      throw new ParseSetupGuessException("",gSetup,null);
+    if( gSetup == null || !gSetup._isValid){
+      throw new ParseSetupGuessException(gSetup,null);
+    }
     if(headerKey != null){ // separate headerKey
       Value v = DKV.get(headerKey);
       if(!v.isRawData()){ // either ValueArray or a Frame, just extract the headers
@@ -181,12 +187,12 @@ public final class ParseDataset extends Job {
         CustomParser.ParserSetup lSetup = gSetup._setup.clone();
         lSetup._header = true;
         PSetupGuess hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),lSetup,false);
-        if(hSetup == null || !hSetup.valid()) { // no match with global setup, try once more with general setup (e.g. header file can have different separator than the rest)
+        if(hSetup == null || !hSetup._isValid) { // no match with global setup, try once more with general setup (e.g. header file can have different separator than the rest)
           ParserSetup stp = new ParserSetup();
           stp._header = true;
           hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),stp,false);
         }
-        if(!hSetup.valid() || hSetup._setup._columnNames == null)
+        if(!hSetup._isValid || hSetup._setup._columnNames == null)
           throw new ParseSetupGuessException("Invalid header file. I did not find any column names.",gSetup,null);
         if(hSetup._setup._ncols != gSetup._setup._ncols)
           throw new ParseSetupGuessException("Header file has different number of columns than the rest!, expected " + gSetup._setup._ncols + " columns, got " + hSetup._setup._ncols + ", header: " + Arrays.toString(hSetup._setup._columnNames),gSetup,null);
@@ -215,7 +221,7 @@ public final class ParseDataset extends Job {
 
 
   public static PSetupGuess guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
-    if(bits == null)return new PSetupGuess(new ParserSetup(), 0, 0, null, null);
+    if(bits == null)return new PSetupGuess(new ParserSetup(), 0, 0, null,false, null);
     ArrayList<PSetupGuess> guesses = new ArrayList<CustomParser.PSetupGuess>();
     PSetupGuess res = null;
     if(setup == null)setup = new ParserSetup();
@@ -228,21 +234,21 @@ public final class ParseDataset extends Job {
         return XlsParser.guessSetup(bits);
       case AUTO:
         try{
-          if((res = XlsParser.guessSetup(bits)) != null && res.valid())
+          if((res = XlsParser.guessSetup(bits)) != null && res._isValid)
             if(!res.hasErrors())return res;
             else guesses.add(res);
         }catch(Exception e){}
         try{
-          if((res = SVMLightParser.guessSetup(bits)) != null && res.valid())
+          if((res = SVMLightParser.guessSetup(bits)) != null && res._isValid)
             if(!res.hasErrors())return res;
             else guesses.add(res);
         }catch(Exception e){}
         try{
-          if((res = CsvParser.guessSetup(bits,setup,checkHeader)) != null && res.valid())
+          if((res = CsvParser.guessSetup(bits,setup,checkHeader)) != null && res._isValid)
             if(!res.hasErrors())return res;
             else guesses.add(res);
         }catch(Exception e){e.printStackTrace();}
-        if(res == null || !res.valid() && !guesses.isEmpty()){
+        if(res == null || !res._isValid && !guesses.isEmpty()){
           for(PSetupGuess pg:guesses)
             if(res == null || pg._validLines > res._validLines)
               res = pg;
@@ -269,10 +275,10 @@ public final class ParseDataset extends Job {
       ArrayList<Key> ks = new ArrayList<Key>(keys.length);
       for (Key k:keys)ks.add(k);
       PSetupGuess guess = guessSetup(ks, null, new ParserSetup(), true);
-      if(!guess.valid())throw new RuntimeException("can not parse this dataset, did not find working setup");
+      if(!guess._isValid)throw new RuntimeException("can not parse this dataset, did not find working setup");
       setup = guess._setup;
     }
-    setup.checkColumnNames();
+    setup.checkDupColumnNames();
     int j = 0;
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse!

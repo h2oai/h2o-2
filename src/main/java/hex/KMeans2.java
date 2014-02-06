@@ -61,7 +61,7 @@ public class KMeans2 extends ColumnsJob {
     String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
     model.delete_and_lock(self());
-    model.k = k; model.normalized = normalize;
+    model.k = k; model.normalized = normalize; model.max_iter = max_iter;
 
     // TODO remove when stats are propagated with vecs?
     double[] means = new double[vecs.length];
@@ -363,7 +363,7 @@ public class KMeans2 extends ColumnsJob {
     }
 
     /** Remove any Model internal Keys */
-    @Override public Futures delete_impl(Futures fs) { 
+    @Override public Futures delete_impl(Futures fs) {
       Lockable.delete(_clustersKey);
       return fs;
     }

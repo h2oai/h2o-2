@@ -1,4 +1,4 @@
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.Rbasicfunctions_Apply.golden <- function(H2Oserver) {

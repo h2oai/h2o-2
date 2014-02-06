@@ -1,5 +1,5 @@
 import MySQLdb
-
+from pprint import pprint
 class PerfDB:
     """
     A class that represents a MySQL connection to the PerfDB
@@ -110,6 +110,7 @@ class TableRow:
         Passes self to the PerfDB object for processing.
         Follows the schema rules (i.e. no nulls)
         """
+        pprint(self.row)
         if self.__is_complete__():
             self.perfdb_connection.insert(self, commit)
         else:
@@ -126,7 +127,7 @@ class TableRow:
         """
         self.perfdb_connection.db.rollback()
         message = MySQLdb.escape_string("ERROR: Could not write row to table {}.".format(self.table_name))
-        py_table = TableRow("python_message", self.perfdb)
+        py_table = TableRow("python_message", self.perfdb_connection)
         py_table.row['message'] = message
         py_table.row['row'] = MySQLdb.escape_string(str(self.row))
         py_table.update(True)

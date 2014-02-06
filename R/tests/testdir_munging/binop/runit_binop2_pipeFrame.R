@@ -7,7 +7,7 @@
 #    e1 H2OParsedData & e2 Numeric
 ##
 
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 #setupRandomSeed(339601269)

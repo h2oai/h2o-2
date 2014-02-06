@@ -47,9 +47,8 @@ public class ASTFunc extends ASTOp {
     }
     int argcnt = vars.size();   // Record current size, as body may extend
     // Parse the body
-    E.xpeek('{',(x=E._x),null);
     E._env.push(vars);
-    AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
+    AST body = E.peek('{') ? E.xpeek('}',E._x,ASTStatement.parse(E)) : parseCXExpr(E);
     if( body == null ) E.throwErr("Missing function body",x);
     E._env.pop();
 
@@ -89,7 +88,7 @@ public class ASTFunc extends ASTOp {
     NewChunk nc = new NewChunk(av,0);
     for (double v : in) nc.addNum(v);
     nc.close(0,null);
-    Frame fr = new Frame(av.close(null));
+    Frame fr = new Frame(new String[]{"row"},new Vec[]{av.close(null)});
     env.push(this);
     env.push(fr);
     this.apply(env,2);

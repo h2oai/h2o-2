@@ -65,15 +65,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # GLM*********************************
             print "\n" + csvFilename
             kwargs = {
-                'y': 'C' + str(1), 
+                'y': 'C2',
                 'n_folds': 0, 
                 'family': 'binomial',
                 'case_mode': '=', 
                 'case': 1
             }
-            # one coefficient is checked a little more
-            colX = 0
-
             # L2 
             timeoutSecs = 900
             kwargs.update({'alpha': 0, 'lambda': 0})
@@ -81,7 +78,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            h2o_glm.simpleCheckGLM(self, glm, "C" + str(colX), **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C1', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

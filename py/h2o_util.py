@@ -54,6 +54,8 @@ def flat_unzip(my_zip, my_dir):
             with source, target:
                 shutil.copyfileobj(source, target)
                 resultList.append(target)
+            source.close()
+            target.close()
     return resultList
 
 # gunzip gzfile to outfile

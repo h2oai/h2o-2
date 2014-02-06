@@ -24,7 +24,6 @@ public class GLMProgress extends Progress2 {
   @Override
   protected Response jobInProgress(final Job job, final Key dst) {
     progress = job.progress();
-    System.out.println("progress = " + progress);
     return Response.poll(this, (int) (100 * progress), 100, "job_key", job_key.toString(), "destination_key",
         destination_key.toString());
   }

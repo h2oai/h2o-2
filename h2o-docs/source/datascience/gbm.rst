@@ -23,15 +23,17 @@ Defining a GBM Model
 
 **Ignored Columns**
 
-  By default all of the information submitted in a data frame will be
+  By default all of the information submitted in a data set will be
   used in building the GBM model. Users specify those attributes
-  that should be omitted from analysis. 
+  that should be omitted from analysis by highlighting them. 
 
 **Classification**
 
   A tic-box option that, when checked, treats the outcome variable as
   categorical, and when unchecked treats the outcome variable as
-  continuous and normally distributed. 
+  continuous. If a continuious real variable has been defined for the
+  Response, H\ :sub:`2`\ O will return an error if a classificaiton model is
+  requested. 
 
 **Validation** 
 
@@ -40,12 +42,21 @@ Defining a GBM Model
 
 **NTrees**
 
-  The number of trees to be built. 
+  The number of trees to be built. Models with different total numbers
+  of trees can be specified by entering the different values as a
+  comma separated list. For example,to specify diffrent models with
+  200, 100 and 50 trees respectivly enter "200, 100, 50".
+
+**Validation**
+
+  A holdout data set against which the generated
+  model (or models) will be tested.  
 
 **Max Depth** 
 
   The maximum number of edges to be generated between the first node
-  and the terminal node. 
+  and the terminal node. To test different depths, values can be
+  specified in a comma separated list.  
 
 **Min Rows** 
 
@@ -53,17 +64,37 @@ Defining a GBM Model
   leaf. If any classification must consist of no fewer than five
   elements, min rows should be set to five. 
 
-**N Bins**
+**NBins**
 
   The number of bins data are partitioned into before the best split
   point is determined. A high number of bins relative to a low number
-  of observations will have a small number of observations in each bin. 
+  of observations will have a small number of observations in each
+  bin. As the number of bins approaches the number of unique values in
+  a column, the analysis approaches evaluation of all possible split
+  points 
+
+**Score Each Iteration** 
+
+  An option that returns error rate information after each tree in the
+  requested set is built. This option allows users to evaluate the
+  marginal gain in fit from building that tree, allowing for
+  interruption of the model when the gain for building the next tree isn't
+  substantial enough to continue building. Users should be aware that
+  this option can slow the model building process, depending on the
+  size and shape of both the training data and the testing data. 
 
 **Learn Rate**
 
   A number between 0 and 1 that specifies the rate at which the
   algorithm should converge. Learning rate is inversely related to the
   number of iterations taken for the algorithm to complete. 
+
+**Grid Parallelism** 
+
+  When multiple models are called for through the grid search options
+  such as specification of multiple learning rates, selecting this
+  option will build the set of models in paralell rather than
+  sequentially.
 
 **Treatment of Factors**
 

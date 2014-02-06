@@ -38,7 +38,7 @@ drf2ParamDict = {
     'response': [None, 'C54'],
     'max_depth': [None, 10,20,100],
     'nbins': [None,5,10,100,1000],
-    'ignored_cols_by_name': [None,'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
+    'ignored_cols_by_name': [None,'C1','C2','C3','C4','C5','C6','C7','C8','C9'],
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
     'seed': [None,'0','1','11111','19823134','1231231'],
     'mtries': [None,1,3,5,7,9,11,13,17,19,23,37,51],

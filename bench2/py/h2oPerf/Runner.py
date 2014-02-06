@@ -1,6 +1,7 @@
 from H2O import *
 from Process import *
 from Table import *
+from PerfTest import *
 import PerfUtils
 
 import re
@@ -15,18 +16,12 @@ class PerfRunner:
     The tests_not_started is a queue.
     Each test blocks until it completes.
     """
-    def __init__(self, test_root_dir, output_dir, nodes_in_cloud,
-                 xmx, h2o_jar, use_cloud = False, use_ip = "", use_port = "", base_port = 40000, perfdb):
+    def __init__(self, test_root_dir, output_dir, h2o_jar, perfdb):
         self.test_root_dir = test_root_dir
         self.output_dir = output_dir
-        self.nodes_in_cloud = nodes_in_cloud
-        self.xmx = xmx
-        self.use_cloud = use_cloud
-        self.use_ip = use_ip
-        self.use_port = use_port
-        self.base_port = base_port
         self.h2o_jar = h2o_jar
         self.start_seconds = time.time()
+        
         self.jvm_output_file = ""
         self.perfdb = perfdb
 
@@ -37,13 +32,6 @@ class PerfRunner:
         self.tests_not_started = []
         self.tests_running = []
         self.__create_output_dir__()
-
-        if use_cloud:
-            cloud = H2OUseCloud(0, use_ip, use_port)
-            self.cloud = cloud
-        else:
-            cloud = H2OCloud(1, self.nodes_in_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
-            self.cloud.append(cloud)
 
     def build_test_list(self):
         """
@@ -60,7 +48,7 @@ class PerfRunner:
         """
         Create a Test object and push it onto the queue.
         """
-        config_file = testDir + ".cfg"
+        config_file = os.path.abspath(os.path.join(self.test_root_dir,testDir,testDir + ".cfg"))
         parse_file = testDir + "_Parse.R"
         model_file = testDir + "_Model.R"
         predict_file = None
@@ -84,22 +72,32 @@ class PerfRunner:
         """
         if (self.terminated):
             return
-
+        
         num_tests = len(self.tests)
-        num_nodes = self.nodes_in_cloud
         self.__log__("")
-        if (self.use_cloud):
-            self.__log__("Starting {} tests...".format(num_tests))
-        else:
-            self.__log__("Starting {} tests on {} total H2O nodes...".format(num_tests, num_nodes))
+        self.__log__("Starting {} tests...".format(num_tests))
         self.__log__("")
 
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
-            PerfUtils.start_cloud(self)
             test = self.tests_not_started.pop(0)
-            test.ip = self.cloud.get_ip()
-            test.port = self.cloud.get_port()
+
+            self.use_aws = test.aws
+            self.xmx = test.heap_bytes_per_node
+            self.ip = test.ip
+            self.base_port = test.port
+            self.nodes_in_cloud = test.total_nodes
+            self.hosts_in_cloud = test.hosts  #this will be used to support multi-machine / aws
+            #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
+
+            if self.use_aws:
+                raise Exception("Unimplemented: AWS support under construction...")
+
+            cloud = H2OCloud(1, self.nodes_in_cloud, self.h2o_jar, self.base_port, self.xmx, self.output_dir)
+            self.cloud.append(cloud)
+            PerfUtils.start_cloud(self)
+            test.port = self.cloud[0].get_port()
+
             test.test_run = TableRow("test_run", self.perfdb)
             test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
             test.do_test()

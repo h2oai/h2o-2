@@ -3,16 +3,23 @@ PROJECT_VERSION ?= 99.70
 R_VERSION = 3.0
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
 REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
-TMP_BUILD_DIR = $(CURDIR)/tmp_build
+TMP_BUILD_DIR = tmp_build
+ifneq ($(OS),Windows_NT)
 OS := $(shell uname)
+UNAME_P := $(shell uname -p)
+else
+# For windows NT the shell is odd.  Cygwin 'shell uname' returns CYGWIN_NT-6.1-WOW64
+# which is not really what we want.  The normal CMD shell does something else.
+# So don't ask for 'uname' if we already got Windows_NT
+endif
 
 H2O_WRAPPER_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
-H2O_WRAPPER_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_x86_64-pc-linux-gnu.tar.gz
+H2O_WRAPPER_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(UNAME_P)-pc-linux-gnu.tar.gz
 H2O_WRAPPER_MAC_FILE = h2o_$(PROJECT_VERSION).tgz
 H2O_WRAPPER_WINDOWS_FILE = h2o_$(PROJECT_VERSION).zip
 
 H2O_RCLIENT_SOURCE_FILE = h2oRClient_$(PROJECT_VERSION).tar.gz
-H2O_RCLIENT_LINUX_FILE = h2oRClient_$(PROJECT_VERSION)_R_x86_64-pc-linux-gnu.tar.gz
+H2O_RCLIENT_LINUX_FILE = h2oRClient_$(PROJECT_VERSION)_R_$(UNAME_P)-pc-linux-gnu.tar.gz
 H2O_RCLIENT_MAC_FILE = h2oRClient_$(PROJECT_VERSION).tgz
 H2O_RCLIENT_WINDOWS_FILE = h2oRClient_$(PROJECT_VERSION).zip
 
@@ -23,6 +30,10 @@ endif
 ifeq ($(OS),Darwin)
 H2O_RCLIENT_PKG_FILE = $(H2O_RCLIENT_MAC_FILE)
 H2O_WRAPPER_PKG_FILE = $(H2O_WRAPPER_MAC_FILE)
+endif
+ifeq ($(OS),Windows_NT)
+H2O_RCLIENT_PKG_FILE = $(H2O_RCLIENT_WINDOWS_FILE)
+H2O_WRAPPER_PKG_FILE = $(H2O_WRAPPER_WINDOWS_FILE)
 endif
 
 # Do a best-effort attempt to see if the R user has pdflatex installed
@@ -59,9 +70,10 @@ endif
 	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2o-package
 
 ifneq ($(OS),Windows_NT)
-	rm -rf h2o
+	# rm -rf h2o
 	tar zxvf $(H2O_WRAPPER_PKG_FILE)
 	zip -r $(H2O_WRAPPER_WINDOWS_FILE) h2o
+	rm -rf h2o
 
 	# Create repo subdirectory for MacOSX
 	mkdir -p ../target/R/$(REPO_PATH_MAC)
@@ -119,9 +131,10 @@ endif
 	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
 
 ifneq ($(OS),Windows_NT)
-	rm -rf h2oRClient
+	# rm -rf h2oRClient
 	tar zxvf $(H2O_RCLIENT_PKG_FILE)
 	zip -r $(H2O_RCLIENT_WINDOWS_FILE) h2oRClient
+	rm -rf h2oRClient
 
 	# Create repo subdirectory for MacOSX
 	mkdir -p ../lib/resources/R/$(REPO_PATH_MAC)
@@ -156,3 +169,5 @@ clean:
 	rm -f h2o_*.tgz
 	rm -f h2o_*.zip
 	rm -rf ../lib/resources/R
+	rm -rf h2o
+	rm -rf h2oRClient
