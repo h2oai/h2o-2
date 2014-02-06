@@ -1,13 +1,17 @@
 package water.api;
 
 
-import java.util.Random;
-
-import water.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import water.DKV;
+import water.Key;
+import water.MRTask2;
+import water.Request2;
 import water.fvec.*;
 import water.util.Log;
 
-import com.google.gson.*;
+import java.util.Random;
 
 public class FrameSplit extends Request2 {
 
@@ -159,10 +163,7 @@ public class FrameSplit extends Request2 {
       _splits = splits;
       _seed = seed;
 
-      // elh: don't ask why this is necessary but it is
-      for(int i=0; i < _num_columns; i++)
-        frame.vecs()[i].isInt();
-
+      for(Vec v : frame.vecs()) v.rollupStats();
       Vec[] v = new Vec[_num_columns * (1 + _splits.length)];
       for( int i = 0; i < _num_columns; i++ )
         v[i] = frame.vecs()[i];
