@@ -109,6 +109,78 @@ public class ConfusionMatrixTest extends TestUtil {
          false);
   }
 
+  @Test
+  public void testSimpleNumericVectors() {
+    simpleCMTest(
+        "smalldata/test/cm/v1n.csv",
+        "smalldata/test/cm/v1n.csv",
+        ar("0", "1", "2"),
+        ar("0", "1", "2"),
+        ar("0", "1", "2"),
+        ar( ar(2L, 0L, 0L, 0L),
+            ar(0L, 2L, 0L, 0L),
+            ar(0L, 0L, 1L, 0L),
+            ar(0L, 0L, 0L, 0L)
+            ),
+        false);
+
+    simpleCMTest(
+        "smalldata/test/cm/v1n.csv",
+        "smalldata/test/cm/v2n.csv",
+        ar("0", "1", "2"),
+        ar("0", "1", "2"),
+        ar("0", "1", "2"),
+        ar( ar(1L, 1L, 0L, 0L),
+            ar(0L, 1L, 1L, 0L),
+            ar(0L, 0L, 1L, 0L),
+            ar(0L, 0L, 0L, 0L)
+            ),
+        false);
+  }
+
+  @Test
+  public void testDifferentDomainsNumericVectors() {
+
+    simpleCMTest(
+        "smalldata/test/cm/v1n.csv",
+        "smalldata/test/cm/v4n.csv",
+        ar("0", "1", "2"),
+        ar("1", "2"),
+        ar("0", "1", "2"),
+        ar( ar(0L, 2L, 0L, 0L),
+            ar(0L, 0L, 2L, 0L),
+            ar(0L, 0L, 1L, 0L),
+            ar(0L, 0L, 0L, 0L)
+            ),
+         false);
+
+    simpleCMTest(
+        "smalldata/test/cm/v4n.csv",
+        "smalldata/test/cm/v1n.csv",
+        ar("1", "2"),
+        ar("0", "1", "2"),
+        ar("0", "1", "2"),
+        ar( ar(0L, 0L, 0L, 0L),
+            ar(2L, 0L, 0L, 0L),
+            ar(0L, 2L, 1L, 0L),
+            ar(0L, 0L, 0L, 0L)
+            ),
+         false);
+
+    simpleCMTest(
+        "smalldata/test/cm/v2n.csv",
+        "smalldata/test/cm/v4n.csv",
+        ar("0", "1", "2"),
+        ar("1", "2"),
+        ar("0", "1", "2"),
+        ar( ar(0L, 1L, 0L, 0L),
+            ar(0L, 1L, 1L, 0L),
+            ar(0L, 0L, 2L, 0L),
+            ar(0L, 0L, 0L, 0L)
+            ),
+         false);
+  }
+
 
   private void simpleCMTest(String f1, String f2, String[] expectedActualDomain, String[] expectedPredictDomain, String[] expectedDomain, long[][] expectedCM, boolean debug) {
     Frame v1 = null, v2 = null;

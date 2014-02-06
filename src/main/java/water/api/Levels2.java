@@ -33,7 +33,6 @@ public class Levels2 extends Request2 {
   }
 
   @Override protected Response serve() {
-    if( source == null ) return RequestServer._http404.serve();
     // select all columns by default
     if( cols == null ) {
       cols = new int[Math.min(source.vecs().length,max_ncols)];

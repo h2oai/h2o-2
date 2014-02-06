@@ -310,6 +310,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
       myNames = colnames(x)
       if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
       cind = match(j, myNames)
+      # cind = match(j[j %in% myNames], myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
     lhs = paste(x@key, "[,", cind, "]", sep = "")
@@ -321,6 +322,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
       myNames = colnames(x)
       if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
       cind = match(j, myNames)
+      # cind = match(j[j %in% myNames], myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
     rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
@@ -334,17 +336,20 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
 })
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
-  numCol = ncol(x)
-  myNames = colnames(x)
+  if(missing(name) || !is.character(name) || nchar(name) == 0)
+    stop("name must be a non-empty string")
+  if(!inherits(value, "H2OParsedData") && !is.numeric(value))
+    stop("value can only be numeric or a H2OParsedData object")
+  numCols = ncol(x); myNames = colnames(x)
   idx = match(name, myNames)
-  
-  lhs = paste(x@key, "[", ifelse(is.na(idx), numCol+1, idx), "]", sep = "")
+ 
+  lhs = paste(x@key, "[,", ifelse(is.na(idx), numCols+1, idx), "]", sep = "")
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   
   if(is.na(idx))
-    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, cols=numCol, comma_separated_list=name)
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, cols=numCols, comma_separated_list=name)
   return(x)
 })
 
