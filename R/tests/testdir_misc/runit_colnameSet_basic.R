@@ -3,7 +3,7 @@
 # Description: Select a dataset, display column names, assign new colum names
 ##
 
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.basic.colname.assignment <- function(conn) {

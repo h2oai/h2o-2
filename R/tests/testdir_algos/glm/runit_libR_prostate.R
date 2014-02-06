@@ -1,4 +1,4 @@
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 Log.info("Loading LiblineaR and ROCR packages\n")
@@ -14,7 +14,7 @@ test.LiblineaR <- function(conn) {
     Log.info("   type =    0: Logistic Regression L2-Regularized\n")
     Log.info("   cost =  100: Cost of connstraints parameter\n")
     Log.info("epsilon = 1E-2: Tolerance of termination criterion\n")
-    Log.info("  cross =    0: No k-fold cross-validation\n")
+    Log.info("  cross =    0: No kfold cross-validation\n")
     LibR.m      <- LiblineaR(train, trainLabels,type=0, epsilon=1E-2, cost=100) #cost= 1../ (34 * 7))
     LibRpreds   <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
     LibRCM      <- table(testLabels, LibRpreds$predictions)
@@ -29,7 +29,7 @@ test.LiblineaR <- function(conn) {
     Log.info(" lambda =      1/700: Shrinkage Parameter\n")
     Log.info("  alpha =        0.0: Elastic Net Parameter\n")
     Log.info("epsilon =      1E-02: Tolerance of termination criterion\n")
-    Log.info(" nfolds =          1: No k-fold cross-validation\n")
+    Log.info(" nfolds =          1: No kfold cross-validation\n")
     h2o.m <- h2o.glm(x            = c("GLEASON","DPROS","PSA","DCAPS","AGE","RACE","VOL"), 
                      y            = "CAPSULE",
                      data         = trainhex,
@@ -70,7 +70,7 @@ test.LiblineaR <- function(conn) {
     Log.info("   type =                      0: Logistic Regression L2-Regularized\n")
     Log.info("   cost =                     10: Cost of connstraints parameter\n")
     Log.info("epsilon =                   1E-2: Tolerance of termination criterion\n")
-    Log.info("  cross =                      0: No k-fold cross-validation\n")
+    Log.info("  cross =                      0: No kfold cross-validation\n")
     LibR.m      <- LiblineaR(train, trainLabels, type=0, epsilon=1E-2,cost=10)
     LibRpreds  <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
     LibRCM <- table(testLabels, LibRpreds$predictions)
@@ -85,7 +85,7 @@ test.LiblineaR <- function(conn) {
     Log.info(" lambda =      1E-03: Shrinkage Parameter\n")
     Log.info("  alpha =        0.0: Elastic Net Parameter\n")
     Log.info("epsilon =      1E-02: Tolerance of termination criterion\n")
-    Log.info(" nfolds =          1: No k-fold cross-validation")
+    Log.info(" nfolds =          1: No kfold cross-validation")
     h2o.m <- h2o.glm(x            = c("GLEASON","DPROS","PSA","DCAPS","AGE","RACE","VOL"), 
                      y            = "CAPSULE", 
                      data         = trainhex, 

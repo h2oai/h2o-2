@@ -3,7 +3,7 @@
             # gitHash: 2581a0dfa12a51892283830529a5126ea49f0cb9
             # SEED: 2481425483200553751
             ##
-            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
             source('../findNSourceUtils.R')
             complexFilterTest_bestbuy_train_10k_36 <- function(conn) {
                 Log.info("A munge-task R unit test on data <bestbuy_train_10k> testing the functional unit <['', '<=']> ")

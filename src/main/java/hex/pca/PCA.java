@@ -85,8 +85,7 @@ public class PCA extends ColumnsJob {
 
   @Override protected void init() {
     super.init();
-    // if(source.vecs().length > MAX_COL)
-    if(source.numExpCols() > MAX_COL)
+    if(selectFrame(source).numExpCols() > MAX_COL)
       throw new IllegalArgumentException("Cannot process more than " + MAX_COL + " columns, taking into account expanded categoricals");
   }
 

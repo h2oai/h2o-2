@@ -2,6 +2,7 @@
 options(echo=FALSE)
 local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
 if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
+library(R.utils)
 ##
 # Utilities for relative paths in R
 ##
@@ -169,7 +170,7 @@ h2o.__logIt("[SEED] :", SEED, "Command")
 
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "")
-h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), paste("STARTING TEST: ", R.utils::commandArgs(asValues=TRUE)$"-f"))
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), paste("STARTING TEST: ", R.utils::commandArgs(asValues=TRUE)$"f"))
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "")
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
 h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))

@@ -1,4 +1,4 @@
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 #import multimodal data set; parse as FV
