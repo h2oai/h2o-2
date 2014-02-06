@@ -70,7 +70,7 @@
 				</ul>
 			</menu><!-- /end 'Header options' menu -->
 
-			<div class="wrap">
+			<div class="wrap" adjust-height>
                 <spinneroverlay options="{alignment:'center top', size:'30px', edgeMargin: '70px', color:'black', topOffset:'175px'}"
                                 ng-show="ErrorAndStatusService.isLoading('ParsePreviewService')">
                 </spinneroverlay>
@@ -296,11 +296,16 @@
 					$('body main header h1').text('Data options');
 
 					$('#menu-Edit_menu').fadeTo('slow', 0, function() {
+						$('.virtualtable.wrapper').animate({
+							'top' : '50px'
+						}, 500);
 						$('#widget-Data_manipulation table thead .data.separators').animate({height: "50px"}, 500, "swing",
 							function() {
 							$('#widget-Data_manipulation table thead .data.separators').addClass('open');
 						});
 						$('#widget-Data_manipulation table thead .data.separators .wrap').animate({height: "50px"}, 500, "swing");
+					}).css({
+						'visibility' : 'hidden'
 					});
 
 				});
@@ -313,6 +318,9 @@
 
 					$('#widget-Data_manipulation menu').fadeOut('slow', function() {
 						$(this).siblings('#menu-Header_file_select').fadeIn('slow', function() {
+							$('.virtualtable.wrapper').animate({
+								'top' : '50px'
+							}, 500);
 							$('#widget-Data_manipulation table > thead .header').animate({height: "50px"}, 500, "swing",
 								function() {
 								$('#widget-Data_manipulation table > thead .header').addClass('open');
@@ -330,6 +338,9 @@
 
 					$('#widget-Data_manipulation table > thead .header .wrap').animate({height: "0px"}, 500, "swing");
 					$('#widget-Data_manipulation table > thead .header').removeClass('open');
+					$('.virtualtable.wrapper').animate({
+						'top' : '0px'
+					}, 500);
 					$('#widget-Data_manipulation table > thead .header').animate({height: "0px"}, 500, "swing", function() {
 						$('#menu-Header_file_select').fadeOut('slow', function() {
 							$('#menu-Edit_menu').fadeIn('slow');
@@ -344,8 +355,13 @@
 
 					$('#widget-Data_manipulation table > thead .data.separators .wrap').animate({height: "0px"}, 500, "swing");
 					$('#widget-Data_manipulation table > thead .data.separators').removeClass('open');
+					$('.virtualtable.wrapper').animate({
+						'top' : '0px'
+					}, 500);
 					$('#widget-Data_manipulation table > thead .data.separators').animate({height: "0px"}, 500, "swing", function() {
-						$('#menu-Edit_menu').fadeTo('slow', 1);
+						$('#menu-Edit_menu').css({
+							'visibility' : 'visible'
+						}).fadeTo('slow', 1);
 					});
 				}
 

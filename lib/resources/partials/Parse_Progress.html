@@ -24,11 +24,9 @@
 				<h1>Parse in progress</h1>
 				<span class="timeleft"><i class="icon-clock"></i> {{ ParseJobStatusDataService.jobStatus.progressPercent() }}% </span>
 
-				<progress max="100" value="{{ ParseJobStatusDataService.jobStatus.progressPercent() }}">
 					<div class="progress-bar">
 						<span ng-style="{width : ParseJobStatusDataService.jobStatus.progressPercent() + '%' }"></span>
 					</div>
-				</progress>
 			</div><!-- /end Progress Bar -->
 
 		</div>

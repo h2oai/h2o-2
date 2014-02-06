@@ -23,8 +23,8 @@
 
 <body ng-controller="InspectAppController" ng-cloak>
     <div class="header ensure-min-width">
-        <div class="menu yellow" ng-mouseenter="MenuService.open('h2oMenu')" ng-mouseleave="MenuService.close('h2oMenu')" ng-class='{"open":MenuService.isOpen("h2oMenu")}'><a class="logo"><span>H<sub>2</sub>O</span><i class="arrow-down icon-angle-down"></i></a></div>
-        <div class="menu data-key" ng-class="{open:hover}" ng-mouseenter="hover=true" ng-mouseleave="hover=false">{{ InspectDataService.meta.key }} <i class="arrow-down icon-angle-down"></i>
+        <div class="menu yellow" ng-mouseenter="MenuService.open('h2oMenu')" ng-mouseleave="MenuService.close('h2oMenu')" ng-class='{"open":MenuService.isOpen("h2oMenu")}'><h1 class="logo"><a href="#" title="H2O"><i class="icon-logo"></i>H<sub>2</sub>O<i class="arrow-down icon-angle_down"></i></a></h1></div>
+        <div class="menu data-key" ng-class="{open:hover}" ng-mouseenter="hover=true" ng-mouseleave="hover=false">{{ InspectDataService.meta.key }} <i ng-show="InspectDataService.meta.key" class="arrow-down icon-angle_down"></i>
             <div class="data-key-info">
                 <ul class="options-menu">
                     <li><a href="SetColumnNames.query?target={{ InspectDataService.meta.key }}">Set Column Names</a></li>
@@ -44,13 +44,13 @@
                 </ul>
             </div>
         </div>
-        <div class="menu lighter right" ng-class='{"open":MenuService.isOpen("inspect.modelMenu")}' ng-click="MenuService.toggleOpen('inspect.modelMenu')">Build models <i class="arrow-down icon-angle-down"></i> </div>
-        <div class="menu light right" ng-class='{"open":MenuService.isOpen("inspect.columnMenu")}' ng-click="MenuService.toggleOpen('inspect.columnMenu')">Columns <i class="arrow-down icon-angle-down"></i> </div>
+        <div class="menu lighter right" ng-class='{"open":MenuService.isOpen("inspect.modelMenu")}' ng-click="MenuService.toggleOpen('inspect.modelMenu')">Build models <i class="arrow-down icon-angle_down"></i> </div>
+        <div class="menu light right" ng-class='{"open":MenuService.isOpen("inspect.columnMenu")}' ng-click="MenuService.toggleOpen('inspect.columnMenu')">Columns <i class="arrow-down icon-angle_down"></i> </div>
     </div>
 
     <div id="h2o-menu-container" ng-mouseenter="MenuService.open('h2oMenu')" ng-mouseleave="MenuService.close('h2oMenu')" class="slided-in-menu left" ng-class='{"open":MenuService.isOpen("h2oMenu")}'>
         <ul class="main-menu">
-            <li ng-class='{"open":MenuService.isOpen("mainMenu.data")}' ng-click="MenuService.toggleOpen('mainMenu.data')">Data<i class="icon-angle-right"></i>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.data")}' ng-click="MenuService.toggleOpen('mainMenu.data')">Data<i class="icon-angle_down"></i>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.data")}'>
                 <li><a href="/Inspect.html">Inspect</a></li><li><a href="/StoreView.html">View All</a></li>
                 <li><a href="/Parse.html">Parse</a></li>
@@ -64,7 +64,7 @@
                 <li><a href="/Get.html">Download</a></li>
                 <li><a href="/SummaryPage.html">Summary</a></li>
             </ul></li>
-            <li ng-class='{"open":MenuService.isOpen("mainMenu.model")}' ng-click="MenuService.toggleOpen('mainMenu.model')">Model<i class="icon-angle-right"></i>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.model")}' ng-click="MenuService.toggleOpen('mainMenu.model')">Model<i class="icon-angle_down"></i>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.model")}'>
                 <li><a href="/RF.html">Random Forest</a></li>
                 <li><a href="/GLM.html">GLM</a></li>
@@ -76,7 +76,7 @@
                 <li><a href="/2/GLM2.html">GLM2 (Beta)</a></li>
                 <li><a href="/2/NeuralNet.html">Neural Network (Beta)</a></li>
             </ul></li>
-            <li ng-class='{"open":MenuService.isOpen("mainMenu.score")}' ng-click="MenuService.toggleOpen('mainMenu.score')">Score<i class="icon-angle-right"></i>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.score")}' ng-click="MenuService.toggleOpen('mainMenu.score')">Score<i class="icon-angle_down"></i>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.score")}'>
                 <li><a href="/RFScore.html">Random Forest</a></li>
                 <li><a href="/GLMScore.html">GLM</a></li>
@@ -89,7 +89,7 @@
                 <li><a href="/Score.html">Apply Model</a></li>
                 <li><a href="/2/ConfusionMatrix.html">Confusion Matrix</a></li>
             </ul></li>
-            <li ng-class='{"open":MenuService.isOpen("mainMenu.admin")}' ng-click="MenuService.toggleOpen('mainMenu.admin')">Admin<i class="icon-angle-right"></i>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.admin")}' ng-click="MenuService.toggleOpen('mainMenu.admin')">Admin<i class="icon-angle_down"></i>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.admin")}'>
                 <li><a href="/Jobs.html">Jobs</a></li>
                 <li><a href="/Cloud.html">Cluster Status</a></li>
@@ -101,7 +101,7 @@
                 <li><a href="script.txt">Get Script</a></li>
                 <li><a href="/Shutdown.html">Shutdown</a></li>
             </ul></li>
-            <li ng-class='{"open":MenuService.isOpen("mainMenu.help")}' ng-click="MenuService.toggleOpen('mainMenu.help')">Help<i class="icon-angle-right"></i>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.help")}' ng-click="MenuService.toggleOpen('mainMenu.help')">Help<i class="icon-angle_down"></i>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.help")}'>
                 <li><a href="/Documentation.html">H2O Documentation</a></li>
                     <li><a href="/Tutorials.html">Tutorials Home</a></li>
@@ -136,13 +136,13 @@
     </div>
 
     <div id="model-menu-container" class="slided-in-menu right" ng-class='{"open":MenuService.isOpen("inspect.modelMenu")}'>
-        <ul class="main-menu">
-            <li ng-class='{"open":MenuService.isOpen("modelsMenu.data")}' ng-click="MenuService.toggleOpen('modelsMenu.data')">Score Data<i class="icon-angle-right"></i>
+        <ul ng-show="InspectDataService.meta.key" class="main-menu">
+            <li ng-class='{"open":MenuService.isOpen("modelsMenu.data")}' ng-click="MenuService.toggleOpen('modelsMenu.data')">Score Data<i class="icon-angle_down"></i>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("modelsMenu.data")}'>
                 <li><a href="RFScore.query?data_key={{ InspectDataService.meta.key }}">Random Forest</a></li>
                 <li><a href="GLMScore.query?key={{ InspectDataService.meta.key }}&amp;thresholds=0.0">GLM</a></li>
             </ul></li>
-            <li ng-class='{"open":MenuService.isOpen("modelsMenu.model")}' ng-click="MenuService.toggleOpen('modelsMenu.model')">Build Models<i class="icon-angle-right"></i>
+            <li ng-class='{"open":MenuService.isOpen("modelsMenu.model")}' ng-click="MenuService.toggleOpen('modelsMenu.model')">Build Models<i class="icon-angle_down"></i>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("modelsMenu.model")}'>
                 <li><a href="/2/PCA.query?source={{ InspectDataService.meta.key }}">PCA</a></li>
                 <li><a href="RF.query?data_key={{ InspectDataService.meta.key }}">Random Forest</a></li>
@@ -151,6 +151,7 @@
                 <li><a href="KMeans.query?source_key={{ InspectDataService.meta.key }}">KMeans</a></li>
                 <li><a href="/2/NeuralNet.query?source={{ InspectDataService.meta.key }}">Neural Network (Beta)</a></li>
             </ul></li>
+        </ul>
     </div>
 
     <div class="content" ng-controller="InspectTableController" ng-show="isKeySetInURI()">
@@ -181,13 +182,13 @@
 	<div class="footer ensure-min-width">
 		<div class="pagination-box" ng-controller="InspectPaginationController">
             <div class="slider-box">
-                <button class="gray left" ng-disabled="!canGoToPrevPage" ng-click="prevPage()"><i class="icon-angle-left"></i></button>
+                <button class="gray left" ng-disabled="!canGoToPrevPage" ng-click="prevPage()"><i class="icon-angle_left"></i></button>
                 <div class="divider-slider"></div>
                 <div class="slider-wrapper">
                     <slider disabled="isLoading" from="firstPage" to="lastPage" offset="pageOffset" rs-change="fetch" tooltip-value="pageSliderTooltipValue"></slider>
                 </div>
                 <div class="divider-slider"></div>
-                <button class="gray right" ng-disabled="!canGoToNextPage" ng-click="nextPage()"><i class="icon-angle-right"></i></button>
+                <button class="gray right" ng-disabled="!canGoToNextPage" ng-click="nextPage()"><i class="icon-angle_right"></i></button>
             </div>
 		</div>
 	</div>
