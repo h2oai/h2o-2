@@ -1,6 +1,5 @@
 package samples;
 
-import hex.FrameTask;
 import hex.nn.NN;
 import water.Job;
 import water.Key;
@@ -69,8 +68,6 @@ public class NeuralNetMnist2 extends Job {
     p.response = trainf.lastVec();
     p.ignored_cols = null;
     p.destination_key = Key.make("mnist.model");
-    p._dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(
-            p.source, p.response, p.ignored_cols, true), 1, true);
     return p.exec();
   }
 }

@@ -1,5 +1,6 @@
 package hex.nn;
 
+import hex.FrameTask;
 import hex.FrameTask.DataInfo;
 import water.*;
 import water.api.*;
@@ -198,6 +199,8 @@ public class NN extends Job.ValidatedJob {
   public void initModel() {
     logStart();
     NN.RNG.seed.set(seed);
+    if (_dinfo == null)
+      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true), 1, true);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.delete_and_lock(self());
   }

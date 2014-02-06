@@ -1,6 +1,7 @@
 package hex.nn;
 
 import hex.FrameTask;
+import water.H2O;
 import water.H2O.H2OCountedCompleter;
 
 import java.util.Arrays;
@@ -142,6 +143,8 @@ public class NNTask extends FrameTask<NNTask> {
       //This is equivalent to saying that each vms thinks that its rows come first in every epoch, which is probably
       //the closest thing to do when trying to match the single-node behavior.
       minfo.add_processed(1);
+      if (minfo.get_processed() % 10000 == 0)
+        System.out.println(H2O.CLOUD.SELF + " processed: " + minfo.get_processed());
 
       //Alternative: we could increase the number here by #vms instead of 1 (i.e., vms do round robyn).
 //      minfo.add_processed(H2O.CLOUD.size());
