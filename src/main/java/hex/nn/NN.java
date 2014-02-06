@@ -1,12 +1,8 @@
 package hex.nn;
 
-import com.google.gson.JsonObject;
 import hex.FrameTask.DataInfo;
 import water.*;
-import water.api.DocGen;
-import water.api.NNModelView;
-import water.api.NNProgressPage;
-import water.api.RequestServer;
+import water.api.*;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
@@ -59,7 +55,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
-  @API(help = "Enable expert mode", filter = Default.class, json = false)
+  @API(help = "Enable expert mode", filter = Default.class, json = true)
   public boolean expert_mode = false;
 
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
@@ -77,19 +73,16 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class, json = true)
   public double max_w2 = Double.POSITIVE_INFINITY;
 
-//  @API(help = "Number of samples to train with for improved stability", filter = Default.class, lmin = 0, json = true)
-//  public long warmup_samples = 0l;
-
-  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
+  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
   public long score_training = 1000l;
 
-  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
+  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
   public long score_validation = 0l;
 
-  @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = false)
+  @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 2;
 
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
 
   public enum InitialWeightDistribution {
@@ -189,7 +182,8 @@ public class NN extends Job.ValidatedJob {
     return (float)(m.epoch_counter / m.model_info().get_params().epochs);
   }
 
-  @Override protected Status exec() {
+  @Override
+  public Status exec() {
     initModel();
     trainModel(true);
     if( _gen_enum ) UKV.remove(response._key);
@@ -211,31 +205,54 @@ public class NN extends Job.ValidatedJob {
   public void trainModel(boolean scorewhiletraining){
     final NNModel model = UKV.get(dest());
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
+
+    // Optionally downsample data for scoring
+    final FrameSplit split = new FrameSplit();
+    Frame trainScoreFrame = _dinfo._adaptedFrame;
+    double fraction = score_training > 0 ? (double)score_training / trainScoreFrame.numRows() : 1.0;
+    fraction = Math.max(Math.min(fraction, 1), 0);
+    if (fraction < 1 && fraction > 0) {
+      trainScoreFrame = split.splitFrame(trainScoreFrame, new double[]{fraction, 1-fraction}, seed)[0];
+      if (trainScoreFrame.numRows() == 0) trainScoreFrame = _dinfo._adaptedFrame;
+    }
+    Log.info("Scoring on " + trainScoreFrame.numRows() + " rows of training data.");
+    Frame validScoreFrame = validation == null ? null : adapted[0];
+    if (validScoreFrame != null) {
+      fraction = score_validation > 0 ? (double)score_validation / validScoreFrame.numRows() : 1.0;
+      fraction = Math.max(Math.min(fraction, 1), 0);
+      if (fraction < 1 && fraction > 0) {
+        validScoreFrame = split.splitFrame(validScoreFrame, new double[]{fraction, 1-fraction}, seed)[0];
+      }
+      if (validScoreFrame.numRows() == 0) validScoreFrame = adapted[0];
+      Log.info("Scoring on " + validScoreFrame.numRows() + " rows of validation data.");
+    }
+
     for (int epoch = 1; epoch <= epochs; ++epoch) {
       final NNTask nntask = new NNTask(this, _dinfo, model.model_info(), true).doAll(_dinfo._adaptedFrame);
       model.set_model_info(nntask.model_info());
       if (diagnostics) model.computeDiagnostics();
       model.epoch_counter = epoch;
       if (scorewhiletraining) {
-        final String label = (validation == null ? "Training" : "Validation")
-                + " error after training for " + epoch
-                + " epochs (" + model.model_info().get_processed() + " samples):";
-        doScoring(model, validation == null ? _dinfo._adaptedFrame : adapted[0], label, epoch==epochs);
+        final String label = "Classification error after training for " + epoch
+                + " epochs (" + model.model_info().get_processed() + " samples)";
+        doScoring(model, trainScoreFrame, validScoreFrame, label, epoch==epochs, score_interval);
       }
 //      System.out.println(model);
       model.update(self());
       if (model.model_info().unstable()) {
-        Log.info("Model is unstable (Exponential growth). Aborting. Try using L1/L2/max_w2 regularization or a different activation function.");
+        Log.info("Model is unstable (Exponential growth). Aborting." +
+                " Try using L1/L2/max_w2 regularization or a different activation function.");
         break;
       }
     }
     if (adapted != null) adapted[1].delete();
     model.unlock(self());
+    if (validScoreFrame != null) validScoreFrame.delete();
     Log.info("NN training finished.");
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  void doScoring(NNModel model, Frame ftest, String label, boolean force) {
+  void doScoring(NNModel model, Frame ftrain, Frame ftest, String label, boolean force, double score_interval) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
@@ -243,10 +260,12 @@ public class NN extends Job.ValidatedJob {
     if( force ||
             (now-_firstScore < 4000) || // Score every time for 4 secs
             // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
-            (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
+            (sinceLastScore > score_interval*1000 && // Limit scoring updates
             (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
-      double error = model.classificationError(ftest, label, true);
+      model.classificationError(ftrain, label + "\nOn training data:", true);
+      if (ftest != null)
+        model.classificationError(ftest, label + "\nOn validation data:", true);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
   }
