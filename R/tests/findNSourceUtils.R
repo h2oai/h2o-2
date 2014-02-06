@@ -100,7 +100,7 @@ function() {
 select<-
 function() {
     a <- select.help()
-    if ( a[[1]]$ATTRS$NUMROWS != "0" && a[[1]]$ATTRS$NUMCOLS != "0" && file_test("f", locate(a[[1]]$PATHS[1]))) {
+    if ( a[[1]]$ATTRS$NUMROWS != "0" && a[[1]]$ATTRS$NUMCOLS != "0" && file_test("-f", locate(a[[1]]$PATHS[1]))) {
         return(a)
     } else {
         return(select())
