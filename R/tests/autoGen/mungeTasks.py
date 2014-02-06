@@ -28,7 +28,7 @@ def writeSimpleSliceTestTask(FU, data, dataPath, FUParams):
             # SEED: {6}
   
             ##
-            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
             source('../findNSourceUtils.R')
 
             {3} <- function(conn) {{
@@ -163,7 +163,7 @@ def writeSimpleNumericFilterTestTask(FU, data, dataPath, FUParams):
             # gitHash: {5}
             # SEED: {6}
             ##
-            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
             source('../findNSourceUtils.R') 
 
             {3} <- function(conn) {{
@@ -267,7 +267,7 @@ def writeCompoundFilterTestTask(FU, data, dataPath, FUParams):
             # SEED: {6}
            
             ##
-            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
             source('../findNSourceUtils.R')
 
             {3} <- function(conn) {{
