@@ -81,7 +81,7 @@ public class Data implements Iterable<Row> {
       } else { // make a random choice about non
         putToLeft = _rng.nextBoolean();
       }
-      
+
       if (putToLeft) {
         ls.addQ(row);
         ++l;
@@ -146,6 +146,7 @@ public class Data implements Iterable<Row> {
           int val = bins[permIdx];      // Bin-for-row
           if( val == DataAdapter.BAD ) continue; // ignore bad rows
           int cls = classs[permIdx];    // Class-for-row
+          if( cls == DataAdapter.BAD ) continue; // ignore rows with NA in response column
           cdsf[val][cls]++;             // Bump histogram
         }
 
@@ -165,7 +166,7 @@ public class Data implements Iterable<Row> {
     int[] permutation = getPermutationArray();
     int cidx = node._column;
     int l =  _dapt.hasAnyInvalid(cidx) || _dapt.hasAnyInvalid(_dapt.columns()-1)
-      ? filterInv(node,permutation,ls,rs) 
+      ? filterInv(node,permutation,ls,rs)
       : filterVal(node,permutation,ls,rs);
     ls.applyClassWeights();     // Weight the distributions
     rs.applyClassWeights();     // Weight the distributions

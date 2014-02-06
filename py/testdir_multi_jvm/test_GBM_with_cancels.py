@@ -4,7 +4,7 @@ import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, 
 
 DELETE_KEYS = True
 # FIX need to get exec workin
-DO_CLASSIFICATION = True
+DO_CLASSIFICATION = False
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -24,15 +24,14 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_with_cancels(self):
-
-        print "Sets h2o.beta_features like -bf at command line"
-        print "this will redirect import and parse to the 2 variants"
-        h2o.beta_features = True
+        print "do import/parse with VA"
+        h2o.beta_features = False
 
         importFolderPath = 'standard'
         timeoutSecs = 500
         csvFilenameAll = [
             # have to use col name for response?
+            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
             ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
             # ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
             # ("standard", "covtype.data", 54),
@@ -84,6 +83,7 @@ class Basic(unittest.TestCase):
                     resultExec = h2o_cmd.runExec(**kwargs)
 
                 # lets look at the response column now
+                h2o.beta_features = True
                 s = h2o_cmd.runSummary(key="c.hex", cols=response, max_ncols=1)
                 # x = range(542)
                 # remove the output too! (378)
@@ -120,7 +120,8 @@ class Basic(unittest.TestCase):
                 # now issue a couple background GBM jobs that we'll kill
                 jobids = []     
                 for j in range(5):
-                    kwargs['destination_key'] = 'GBMBad' + str(j)
+                    # FIX! apparently we can't reuse a model key after a cancel
+                    kwargs['destination_key'] = 'GBMBad' + str(i) + str(j)
                     GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
                     jobids.append(GBMFirstResult['job_key'])
 

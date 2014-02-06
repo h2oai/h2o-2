@@ -12,34 +12,41 @@ LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
 if(Sys.info()["sysname"] == "Windows")
   myPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
+
 pkg.env$h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
 pkg.env$h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
-h2o.__getCommandLog <- function() { return(pkg.env$h2o.__LOG_COMMAND)}
-h2o.__getErrorLog <- function() { return(pkg.env$h2o.__LOG_ERROR)}
-h2o.__changeCommandLog <- function(path) { 
-    cmd <- paste(path, 'commands.log', sep='/') 
-    assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
-    }
-h2o.__changeErrorLog <- function(path) { 
-    cmd <- paste(path, 'errors.log', sep='/')
-    assign("h2o.__LOG_ERROR", cmd, envir = pkg.env)
-    }
+
 h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
 h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
-h2o.__clearLogs        <- function() { unlink(pkg.env$h2o.__LOG_COMMAND); unlink(pkg.env$h2o.__LOG_ERROR) }
-h2o.__openCmdLog       <- function() {
-  myOS = Sys.info()["sysname"]
-  if(myOS == "Windows") shell.exec(paste("open '", pkg.env$h2o.__LOG_COMMAND, "'", sep="")) 
-  else system(paste("open '", pkg.env$h2o.__LOG_COMMAND, "'", sep=""))
-}
-h2o.__openErrLog <- function() {
-  myOS = Sys.info()["sysname"]
-  if(myOS == "Windows") shell.exec(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep="")) 
-  else system(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep=""))
+h2o.__clearLogs        <- function() { unlink(pkg.env$h2o.__LOG_COMMAND)
+                                       unlink(pkg.env$h2o.__LOG_ERROR) }
+h2o.__getLog <- function(type) {
+  if(missing(type) || !type %in% c("Command", "Error"))
+    stop("type must be either 'Command' or 'Error'")
+  switch(type, Command = pkg.env$h2o.__LOG_COMMAND, Error = pkg.env$h2o.__LOG_ERROR)
 }
 
-h2o.__logIt <- function(m, tmp, commandOrErr) {
-  #m is a url if commandOrErr == "Command"
+h2o.__openLog <- function(type) {
+  if(missing(type) || !type %in% c("Command", "Error"))
+    stop("type must be either 'Command' or 'Error'")
+  myFile = switch(type, Command = pkg.env$h2o.__LOG_COMMAND, Error = pkg.env$h2o.__LOG_ERROR)
+  
+  myOS = Sys.info()["sysname"]
+  if(myOS == "Windows") shell.exec(paste("open '", myFile, "'", sep="")) 
+  else system(paste("open '", myFile, "'", sep=""))
+}
+
+h2o.__changeLog <- function(path, type) {
+  if(missing(type) || !type %in% c("Command", "Error"))
+    stop("type must be either 'Command' or 'Error'")
+  myVar = switch(type, Command = "h2o.__LOG_COMMAND", Error = "h2o.__LOG_ERROR")
+  myFile = switch(type, Command = "commands.log", Error = "errors.log")
+  cmd <- paste(path, myFile, sep = "/")
+  assign(myVar, cmd, envir = pkg.env)
+}
+
+h2o.__logIt <- function(m, tmp, commandOrErr, isPost = TRUE) {
+  # m is a url if commandOrErr == "Command"
   if(is.null(tmp) || is.null(get("tmp"))) s <- m
   else {
     tmp <- get("tmp"); nams = names(tmp)
@@ -50,9 +57,13 @@ h2o.__logIt <- function(m, tmp, commandOrErr) {
     for(i in seq_along(tmp)){
       s[i] <- paste(nams[i], ": ", tmp[[i]], sep="", collapse = " ")
     }
-    s <- paste(m, ' \t', paste(s, collapse=", "))
+    s <- paste(m, "\n", paste(s, collapse = ", "), ifelse(nchar(s) > 0, "\n", ""))
   }
-  if (commandOrErr != "Command") s <- paste(s, '\n')
+  # if(commandOrErr != "Command") s <- paste(s, '\n')
+  h <- format(Sys.time(), format = "%a %b %d %X %Y %Z", tz = "GMT")
+  if(commandOrErr == "Command")
+    h <- paste(h, ifelse(isPost, "POST", "GET"), sep = "\n")
+  s <- paste(h, "\n", s)
   write(s, file = ifelse(commandOrErr == "Command", pkg.env$h2o.__LOG_COMMAND, pkg.env$h2o.__LOG_ERROR), append = TRUE)
 }
 
@@ -97,6 +108,7 @@ h2o.__HACK_LEVELS = "Levels.json"
 h2o.__HACK_LEVELS2 = "2/Levels2.json"
 h2o.__HACK_SETCOLNAMES = "SetColumnNames.json"
 h2o.__HACK_SETCOLNAMES2 = "2/SetColumnNames2.json"
+h2o.__PAGE_CONFUSION = "2/ConfusionMatrix.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
@@ -127,17 +139,27 @@ h2o.__remoteSend <- function(client, page, ...) {
   port = client@port
   myURL = paste("http://", ip, ":", port, "/", page, sep="")
 
-  # Log list of parameters sent to H2O
-  if(pkg.env$IS_LOGGING) {
-    h2o.__logIt(myURL, list(...), "Command")
-  }
-  
   # Sends the given arguments as URL arguments to the given page on the specified server
   #
   # Re-enable POST since we found the bug in NanoHTTPD which was causing POST
   # payloads to be dropped.
   #
-  temp = postForm(myURL, style = "POST", ...)
+  if(pkg.env$IS_LOGGING) {
+    # Log list of parameters sent to H2O
+    h2o.__logIt(myURL, list(...), "Command")
+    
+    hg = basicHeaderGatherer()
+    tg = basicTextGatherer()
+    postForm(myURL, style = "POST", .opts = curlOptions(headerfunction = hg$update, writefunc = tg[[1]]), ...)
+    temp = tg$value()
+    
+    # Log HTTP response from H2O
+    hh <- hg$value()
+    s <- paste(hh["Date"], "\nHTTP status code: ", hh["status"], "\n ", temp, sep = "")
+    s <- paste(s, "\n\n------------------------------------------------------------------\n")
+    write(s, file = pkg.env$h2o.__LOG_COMMAND, append = TRUE)
+  } else
+    temp = postForm(myURL, style = "POST", ...)
   
   # The GET code that we used temporarily while NanoHTTPD POST was known to be busted.
   #

@@ -6,8 +6,8 @@ Generalized Linear Model (GLM)
 
 GLM includes several flexible algorithms. Each serves a 
 different purpose, and is used under different assumptions.
-Depending on function choice, it can be used either for 
-prediction or classification.
+Depending on distribution and link function choice, it can be 
+used either for prediction or classification.
  
 
 **The GLM suite includes**
@@ -68,8 +68,14 @@ Defining a GLM Model
 
      Please note that H\ :sub:`2`\ O does not currently return a warning when
      users predict on data outside of the range on which the model was
-     originally specified. It is the user's responsibility to ensure
-     that out of data prediction is undertaken with caution.  
+     originally specified. For example, H\ :sub:`2`\ O allows a model
+     to be  trained on data with X between (-1, 10), and then applied
+     to precicting  on data where the range of X is (-10, 10) without
+     warning. This is also true in the analgous case for predicting and
+     training on factors. It is the user's responsibility to ensure
+     that out of data prediction is undertaken with caution, as the
+     veracity of the original results are often constrained to the
+     data range used in the original model.   
   
 
 **Family and Link:**  
@@ -136,15 +142,16 @@ Defining a GLM Model
       to 0.5 by default, but the parameter can take any value between
       0 and 1, inclusive. It functions such that there is an added
       penalty taken against the estimated fit of the model as the
-      number of parameters increases. An alpha of 1 is the lasso
+      number of parameters increases. An Alpha of 1 is the lasso
       penalty, and an alpha of 0 is the ridge penalty.
  
 **Weight:**
 
-      Allows the user to specify consideration given to
-      observations based on the observed Y value. Weight=1 is
-      neutral. Weight = 0.5 treats negative examples as twice more
-      important than positive ones. Weight = 2.0 does the opposite.
+      In binomial regression, weight allows the user to specify
+      consideration given to observations based on the observed Y
+      value. Weight=1 is neutral. Weight = 0.5 treats negative
+      examples as twice more important than positive ones. Weight =
+      2.0 does the opposite.
 
 **Case and Casemode:**
 
@@ -198,6 +205,11 @@ Expert Settings
      below than Beta epsilon
 
 
+**Max iter**
+
+  The maximum number of iterations to be performed for training the
+  model via gradient descent. 
+
 Interpreting a Model
 """"""""""""""""""""
 
@@ -213,7 +225,7 @@ Interpreting a Model
     Defined as  (n-1)-p. This is the null degrees of freedom less the 
     number of parameters being estimated in the model. 
 
-**Deviance:**
+**Residual Deviance:**
 
      The difference between the predicted value and the observed value 
      for each example or observation in the data. Deviance is

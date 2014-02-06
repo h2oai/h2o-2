@@ -12,6 +12,7 @@ import java.text.DecimalFormat;
 import java.util.*;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -717,7 +718,8 @@ public abstract class DGLM {
      * @param chol
      * @return
      */
-    public Cholesky cholesky(Cholesky chol) {
+    public Cholesky cholesky(Cholesky chol, final Key jobKey) {
+      long t = System.currentTimeMillis();
       if( chol == null ) {
         double[][] xx = _xx.clone();
         for( int i = 0; i < xx.length; ++i )
@@ -733,22 +735,26 @@ public abstract class DGLM {
         for( int j = 0; j < denseN; ++j )
           chol._xx[j][i] = d*_xx[j][i];
       }
-      Futures fs = new Futures();
+      RecursiveAction [] ras = new RecursiveAction[denseN];
       // compute the outer product of diagonal*dense
       for( int i = 0; i < denseN; ++i ) {
         final int fi = i;
-        fs.add(new RecursiveAction() {
+        ras[i] = new RecursiveAction() {
           @Override protected void compute() {
             for( int j = 0; j <= fi; ++j ) {
+              if(((j & 15) == 0) && jobKey != null && !Job.isRunning(jobKey))return;
               double s = 0;
               for( int k = 0; k < sparseN; ++k )
                 s += fchol._xx[fi][k] * fchol._xx[j][k];
               fchol._xx[fi][j + sparseN] = _xx[fi][j + sparseN] - s;
             }
           }
-        }.fork());
+        };
       }
-      fs.blockForPending();
+      ForkJoinTask.invokeAll(ras);
+      Log.info("GLM(" + jobKey + "): CHOL PRECOMPUTE TOOK " + (System.currentTimeMillis() - t) + "ms");
+      if(jobKey != null && !Job.isRunning(jobKey))
+        throw new JobCancelledException();
       // compute the choesky of dense*dense-outer_product(diagonal*dense)
       // TODO we still use Jama, which requires (among other things) copy and expansion of the matrix. Do it here without copy and faster.
       double[][] arr = new double[denseN][];
@@ -1387,6 +1393,8 @@ public abstract class DGLM {
     int _tid;
     double[] _thresholds;
     long _time;
+    public double[] _tprs;
+    public double[] _fprs;
 
     public final long computationTime() {
       return _time;
@@ -1569,6 +1577,8 @@ public abstract class DGLM {
      */
     protected void computeAUC() {
       if( _cm == null ) return;
+      _tprs = new double[_cm.length];
+      _fprs = new double[_cm.length];
       double auc = 0;           // Area-under-ROC
       double TPR_pre = 1;
       double FPR_pre = 1;
@@ -1578,6 +1588,8 @@ public abstract class DGLM {
         auc += trapeziod_area(FPR_pre, FPR, TPR_pre, TPR);
         TPR_pre = TPR;
         FPR_pre = FPR;
+        _tprs[t] = TPR;
+        _fprs[t] = FPR;
       }
       auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
       _auc = auc;
@@ -1902,6 +1914,7 @@ public abstract class DGLM {
       final double[] betaStart, final int xval, final boolean parallel) {
     if( dest == null ) dest = GLMModel.makeKey(true);
     final GLMJob job = new GLMJob(data._ary, dest, xval, params);
+    lsm._jobKey = job.self();
     final double[] beta;
     final double[] denormalizedBeta;
     if( betaStart != null ) {
@@ -1953,7 +1966,7 @@ public abstract class DGLM {
   }
   private static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
                                     double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
-    Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
+    Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals. Largest categorical has " + data.largestCatSz() + " levels");
     ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
     // make sure we have a valid response variable for the current family

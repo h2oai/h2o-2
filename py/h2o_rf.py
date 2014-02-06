@@ -270,6 +270,9 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwar
         rfModelKey  = trainResult['model_key']
         start = time.time()
         # NOTE: response_variable is required, and passed from kwargs here
+        # out_of_bag_error_estimate=0 is required for scoring. H2O will assert if 1 and different data set
+        # compared to training
+        kwargs['out_of_bag_error_estimate'] = 0
         scoreResult = h2o_cmd.runRFView(None, parseKey, rfModelKey, ntree=ntree, **kwargs)
 
     rftime      = time.time()-start 

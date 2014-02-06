@@ -193,7 +193,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     return false;
   }
   private boolean is_wlocked() { return _lockers!=null && _lockers.length==1; }
-  private boolean is_wlocked(Key job_key) { return is_wlocked() && _lockers[0].equals(job_key); }
+  private boolean is_wlocked(Key job_key) { return is_wlocked() && (_lockers[0] == job_key || _lockers[0] != null && _lockers[0].equals(job_key)); }
   private boolean is_unlocked() { return _lockers== null; }
   private void set_write_lock( Key job_key ) { 
     _lockers=new Key[]{job_key}; 
@@ -219,8 +219,9 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
       _lockers = Arrays.copyOf(lks,lks.length-1);
       int j=1;                  // Skip the initial null slot
       for( int i=1; i<lks.length; i++ )
-        if( !job_key.equals(lks[i]) ) 
-          _lockers[j++] = lks[i];
+        if(job_key != null && !job_key.equals(lks[i]) || (job_key == null && lks[i] != null)){
+            _lockers[j++] = lks[i];
+        }
       assert j==lks.length-1;   // Was locked exactly once
     }
     assert !is_locked(job_key);

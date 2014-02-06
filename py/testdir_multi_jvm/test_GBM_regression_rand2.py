@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_regression_rand2(self):
-        h2o.beta_features = True
+        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
         files = [
@@ -82,6 +82,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 # GBM train****************************************
+                h2o.beta_features = True
                 trainStart = time.time()
                 gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
                     timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)

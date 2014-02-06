@@ -4,7 +4,7 @@
 # Then, it runs data munging operations such as slice, quantile, and column creation
 ##
 
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.exec2.demo <- function(conn) {

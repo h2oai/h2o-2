@@ -120,6 +120,8 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTReduce());
     putPrefix(new ASTIfElse());
     putPrefix(new ASTRApply());
+    putPrefix(new ASTSApply());
+    putPrefix(new ASTddply ());
     putPrefix(new ASTRunif ());
     putPrefix(new ASTCut   ());
     putPrefix(new ASTPrint ());
@@ -859,14 +861,10 @@ class ASTQtile extends ASTOp {
   }
   @Override ASTQtile make() { return new ASTQtile(); }
   @Override void apply(Env env, int argcnt) {
-    Frame x, probs;
-    double   p[];
-    if ((probs = env.ary(-1)).vecs().length > 1)
-      throw new IllegalArgumentException("Argument #2 in Quantile contains more than 1 column.");
-    if ((x = env.ary(-2)).vecs().length > 1)
-      throw new IllegalArgumentException("Argument #1 in Quantile contains more than 1 column.");
-    Vec pv = probs.anyVec();
-    p = new double[(int)pv.length()];
+    Frame x = env.ary(-2);
+    Vec xv  = x          .theVec("Argument #1 in Quantile contains more than 1 column.");
+    Vec pv  = env.ary(-1).theVec("Argument #2 in Quantile contains more than 1 column.");
+    double p[] = new double[(int)pv.length()];
     for (int i = 0; i < pv.length(); i++)
       if ((p[i]=pv.at((long)i)) < 0 || p[i] > 1)
         throw new  IllegalArgumentException("Quantile: probs must be in the range of [0, 1].");
@@ -879,8 +877,8 @@ class ASTQtile extends ASTOp {
     for (double prob : p) {
       double value;
       int ix = (int)(samples.length * prob);
-      if (ix >= samples.length) value = x.anyVec().max();
-      else if (prob == 0) value = x.anyVec().min();
+      if (ix >= samples.length) value = xv.max();
+      else if (prob == 0) value = xv.min();
       else value = samples[ix];
       nc.addNum(value);
     }
@@ -1190,104 +1188,6 @@ class ASTIfElse extends ASTOp {
     if( frfal != null ) env.subRef(frfal,kf);
     env.pop();
     env.push(fr2);
-  }
-}
-
-// --------------------------------------------------------------------------
-// R's Apply.  Function is limited to taking a single column and returning
-// a single column.  Double is limited to 1 or 2, statically determined.
-class ASTRApply extends ASTOp {
-  static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fcn"};
-  ASTRApply( ) { super(VARS,
-                       new Type[]{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(new Type[]{Type.dblary(),Type.ARY}) },
-                       OPF_PREFIX,
-                       OPP_PREFIX,
-                       OPA_RIGHT); }
-  @Override String opStr(){ return "apply";}
-  @Override ASTOp make() {return new ASTRApply();}
-  @Override void apply(Env env, int argcnt) {
-    int oldsp = env._sp;
-    // Peek everything from the stack
-    final ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
-    double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
-    Frame fr = env.ary(-3);    // The Frame to work on
-    if( d==2 || d== -1 ) {     // Work on columns?
-      int ncols = fr.numCols();
-
-      // If results are doubles, make vectors-of-length-1 for them all
-      Key keys[] = null;
-      if( op._t.ret().isDbl() ) {
-        keys = Vec.VectorGroup.VG_LEN1.addVecs(ncols);
-      } else assert op._t.ret().isAry();
-
-      // Apply the function across columns
-      Frame fr2 = new Frame(new String[0],new Vec[0]);
-      Vec vecs[] = fr.vecs();
-      for( int i=0; i<ncols; i++ ) {
-        env.push(op);
-        env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
-        env.fcn(-2).apply(env, 2);
-        Vec v;
-        if( keys != null ) {    // Doubles or Frame results?
-          // Jam the double into a Vec of its own
-          AppendableVec av = new AppendableVec(keys[i]);
-          NewChunk nc = new NewChunk(av,0);
-          nc.addNum(env.popDbl());
-          nc.close(0, null);
-          env.push(new Frame(v = av.close(null)));
-        } else {                      // Frame results
-          if( env.ary(-1).numCols() != 1 )
-            throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
-          // Leave the ary on stack
-          //v = env.popAry().anyVec();// Remove without lowering refcnt
-        }
-        //fr2.add(fr._names[i],v); // Add, with refcnt already +1
-      }
-      for( int i=0; i<ncols; i++ )
-        fr2.add(fr._names[i], env.ary(-ncols+i).anyVec());
-
-      int narg = env._sp - oldsp + 4;
-      env.poppush(narg, fr2, null);
-      assert env.isAry();
-      assert env._sp == oldsp-4+1;
-      return;
-    }
-    if( d==1 || d==-2) {      // Work on rows
-      // apply on rows is essentially a map function
-      Type ts[] = new Type[2];
-      ts[0] = Type.unbound();
-      ts[1] = Type.ARY;
-      Type ft1 = Type.fcn(ts);
-      Type ft2 = op._t.find();  // Should be a function type
-      if( !ft1.union(ft2) ) {
-        if( ft2._ts.length != 2 )
-          throw new IllegalArgumentException("FCN " + op.toString() + " cannot accept one argument.");
-        if( !ft2._ts[1].union(ts[1]) )
-          throw new IllegalArgumentException("Arg " + op._vars[1] + " typed " + ft2._ts[1].find() + " but passed as " + ts[1]);
-        assert false;
-      }
-      // find out return type
-      final double[] rowin = new double[fr.vecs().length];
-      for (int c = 0; c < rowin.length; c++) rowin[c] = fr.vecs()[c].at(0);
-      final double[] rowout = op.map(env,rowin,null);
-      final Env env0 = env;
-      MRTask2 mrt = new MRTask2() {
-        @Override
-        public void map(Chunk[] cs, NewChunk[] ncs) {
-          for (int i = 0; i < cs[0]._len; i++) {
-            for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
-            op.map(env0, rowin, rowout);
-            for (int c = 0; c < ncs.length; c++) ncs[c].addNum(rowout[c]);
-          }
-        }
-      };
-      String[] names = new String[rowout.length];
-      for (int i = 0; i < names.length; i++) names[i] = "C"+(i+1);
-      Frame res = mrt.doAll(rowout.length,fr).outputFrame(names, null);
-      env.poppush(4,res,null);
-      return;
-    }
-    throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
   }
 }
 

@@ -4,7 +4,7 @@
 # Then, it runs h2o.gbm on a subset of the dataset
 ##
 
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.h2o.gbm <- function(conn) {

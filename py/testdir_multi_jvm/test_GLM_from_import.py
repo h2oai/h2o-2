@@ -62,7 +62,6 @@ class Basic(unittest.TestCase):
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             h2o.verboseprint("\nglm:", glm)
-            h2b.browseJsonHistoryAsUrlLastMatch("GLM")
 
             GLMModel = glm['GLMModel']
             coefficients = GLMModel['coefficients']
@@ -76,7 +75,7 @@ class Basic(unittest.TestCase):
                 validations1 = copy.deepcopy(validations)
 
             if coefficients1:
-                h2o_glm.compareToFirstGlm(self, '0', coefficients, coefficients1)
+                h2o_glm.compareToFirstGlm(self, 'C1', coefficients, coefficients1)
             else:
                 coefficients1 = copy.deepcopy(coefficients)
 

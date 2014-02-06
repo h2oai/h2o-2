@@ -1327,10 +1327,12 @@ def main(argv):
         sys.exit(1)
 
     # Run.
-    g_runner.start_clouds()
-    g_runner.run_tests()
-    g_runner.stop_clouds()
-    g_runner.report_summary()
+    try:
+        g_runner.start_clouds()
+        g_runner.run_tests()
+    finally:
+        g_runner.stop_clouds()
+        g_runner.report_summary()
 
 
 if __name__ == "__main__":
