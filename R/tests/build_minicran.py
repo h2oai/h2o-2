@@ -6,6 +6,7 @@ import urllib2
 import tempfile
 import atexit
 import shutil
+import re
 
 
 def download_file(url, download_path):
@@ -34,6 +35,119 @@ def download_file(url, download_path):
     print "Download complete."
 
 
+class CranPackage:
+    def __init__(self, package_name):
+        self.package_name = package_name
+        self.package_dependencies = []
+        self.package_version = None
+
+    def set_version(self, package_version):
+        self.package_version = package_version
+
+    def add_dependencies(self, dependencies):
+        stripped = dependencies.strip()
+        arr = stripped.split(',')
+        for dep in arr:
+            stripped_dep = dep.strip()
+            if (len(stripped_dep) == 0):
+                continue
+            m = re.match(r'\(.*', stripped_dep)
+            if (m is not None):
+                continue
+            m = re.match(r'([a-zA-Z0-9\.]*)[ (]?.*', stripped_dep)
+            if (m is None):
+                print("")
+                print("ERROR: Match failed for " + self.package_name + " (" + stripped_dep + ")")
+                print("")
+                sys.exit(1)
+            dependency_name = m.group(1)
+            self.package_dependencies.append(dependency_name)
+
+    def get_name(self):
+        return self.package_name
+
+    def get_version(self):
+        return self.package_version
+
+    def emit(self):
+        print("PACKAGE: " + self.package_name)
+        for dep in self.package_dependencies:
+            print("    " + dep)
+
+
+class CranDirectory:
+    def __init__(self, packages_file):
+        self.packages_file = packages_file
+        self.packages_map = {}
+        self._parse()
+
+    def has_package(self, package_name):
+        if (package_name not in self.packages_map):
+            return False
+        return True
+
+    def get_dependencies_for_package(self, package_name):
+        if (not self.has_package(package_name)):
+            raise Exception
+        p = self.packages_map[package_name]
+        return p.package_dependencies
+
+    def get_package(self, package_name):
+        if (not self.has_package(package_name)):
+            raise Exception
+        p = self.packages_map[package_name]
+        return p
+
+    def emit(self):
+        package_names = self.packages_map.keys()
+        for package_name in package_names:
+            p = self.get_package(package_name)
+            p.emit()
+
+    def _parse(self):
+        f = open(self.packages_file, "r")
+        STATE_NONE = 1
+        STATE_IN_DEP = 2
+
+        state = STATE_NONE
+        p = None
+        for line in f:
+            if (len(line) == 0):
+                f.close()
+                return
+            line = line.rstrip('\r\n')
+            m = re.match(r'Package: (\S+)', line)
+            if (m is not None):
+                package_name = m.group(1)
+                p = CranPackage(package_name)
+                self._add_package(p)
+                state = STATE_NONE
+                continue
+            m = re.match(r'Version: (\S+)', line)
+            if (m is not None):
+                package_version = m.group(1)
+                p.set_version(package_version)
+                state = STATE_NONE
+                continue
+            m = re.match(r'Depends: (.*)', line)
+            if (m is not None):
+                s = m.group(1)
+                p.add_dependencies(s)
+                state = STATE_IN_DEP
+                continue
+            if (':' in line):
+                state = STATE_NONE
+                continue
+            if (state == STATE_IN_DEP):
+                if (p is not None):
+                    p.add_dependencies(line)
+
+        f.close()
+
+    def _add_package(self, package):
+        self.packages_map[package.get_name()] = package
+
+
 class MinicranBuilder:
     def __init__(self, print_only, output_dir, tmp_dir, platform, rversion, branch, buildnum):
         self.print_only = print_only
@@ -48,6 +162,9 @@ class MinicranBuilder:
         self.repo_subdir = None
         self.extension = None
         self.project_version = None
+
+        self.h2o_cran = None
+        self.full_cran = None
 
     def create_output_dir(self):
         if (os.path.exists(self.output_dir)):
@@ -108,6 +225,9 @@ class MinicranBuilder:
         desc_url = self.s3_url_prefix + self.branch + "/" + str(self.buildnum) + "/R/src/contrib/" + desc_file_name
         desc_path = os.path.join(self.tmp_dir, desc_file_name)
         download_file(desc_url, desc_path)
+
+        self.h2o_cran = CranDirectory(desc_path)
+        self.h2o_cran.emit()
 
         # r_source_file_name = "h2o_" + self.project_version + ".tar.gz"
         # r_source_url = self.s3_url_prefix + self.branch + "/" + str(self.buildnum) + "/R/src/contrib/" + r_source_file_name
@@ -305,5 +425,10 @@ def main(argv):
         pass
 
 
+# if __name__ == "__main__":
+#     main(sys.argv)
+
+
 if __name__ == "__main__":
-    main(sys.argv)
+    b = CranDirectory("PACKAGES")
+    b.emit()

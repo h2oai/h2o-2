@@ -174,6 +174,10 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
 
     return patternKeys
 
+def showAllJobs():
+    print "Showing all jobs"
+    a = h2o.nodes[0].jobs_admin(timeoutSecs=10)
+    print h2o.dump_json(a)
 
 #*******************************************************************************************
 def cancelAllJobs(timeoutSecs=10, **kwargs): # I guess you could pass pattern
