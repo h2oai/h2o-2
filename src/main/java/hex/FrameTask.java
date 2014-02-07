@@ -1,8 +1,11 @@
 package hex;
 
 import water.H2O.H2OCountedCompleter;
-import water.*;
+import water.Iced;
+import water.Job;
 import water.Job.JobCancelledException;
+import water.MRTask2;
+import water.MemoryManager;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -10,12 +13,15 @@ import water.fvec.Vec;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
   final Job _job;
   double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
+
+  protected float _useFraction;
 
   public FrameTask(Job job, DataInfo dinfo) {
     this(job,dinfo,null);
@@ -24,10 +30,12 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     super(cmp);
     _job = job;
     _dinfo = dinfo;
+    _useFraction=1.0f;
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
     _job = ft._job;
+    _useFraction=ft._useFraction;
   }
   public double [] normMul(){return _dinfo._normMul;}
   public double [] normSub(){return _dinfo._normSub;}
@@ -230,10 +238,15 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);
+    Random _random = null;
+    if (_useFraction < 1.0) {
+      _random = water.util.Utils.getDeterRNG(new Random().nextLong());
+    }
 
     OUTER:
     for(int r = 0; r < nrows; ++r){
-      if(_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)continue;
+      if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+              || (_random != null && _random.nextFloat() > _useFraction))continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){

@@ -326,7 +326,7 @@ public abstract class Neurons extends Iced {
       }
     }
     @Override protected void bprop() {
-      long processed = _minfo.get_processed();
+      long processed = _minfo.get_processed_total();
       double m = momentum(processed);
       double r = rate(processed); // * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
@@ -378,7 +378,7 @@ public abstract class Neurons extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _minfo.get_processed();
+      long processed = _minfo.get_processed_total();
       double m = momentum(processed);
       double r = rate(processed); // * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
@@ -420,7 +420,7 @@ public abstract class Neurons extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _minfo.get_processed();
+      long processed = _minfo.get_processed_total();
       final double m = momentum(processed);
       final double r = rate(processed); // * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
@@ -490,7 +490,7 @@ public abstract class Neurons extends Iced {
         _a[o] /= scale;
     }
     protected void bprop(int target) {
-      long processed = _minfo.get_processed();
+      long processed = _minfo.get_processed_total();
       double m = momentum(processed);
       double r = rate(processed); // * (1 - m);
       if (target == missing_int_value) return; //ignore missing response values
@@ -519,7 +519,7 @@ public abstract class Neurons extends Iced {
       _a[o] += _b[o];
     }
     protected void bprop(double target) {
-      long processed = _minfo.get_processed();
+      long processed = _minfo.get_processed_total();
       double m = momentum(processed);
       double r = rate(processed); // * (1 - m);
       assert(loss == Loss.MeanSquare);

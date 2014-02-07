@@ -9,6 +9,7 @@ import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Frame;
 import water.util.D3Plot;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -74,6 +75,7 @@ public class NNModel extends Model {
     public water.api.ConfusionMatrix confusion_matrix;
 
     @Override public String toString() {
+
       return   "Training error: " + String.format("%.2f", (100 * train_err)) + "%"
            + ", validation error: " + String.format("%.2f", (100 * valid_err)) + "%"
 //              + " (MSE:" + String.format("%.2e", mean_square)
@@ -125,10 +127,17 @@ public class NNModel extends Model {
     public boolean unstable() { return unstable; }
 
     @API(help = "Processed samples", json = true)
-    private long processed;
-    public synchronized long get_processed() { return processed; }
-    public synchronized void set_processed(long p) { processed = p; }
-    public synchronized void add_processed(long p) { processed += p; }
+    private long processed_global;
+    public synchronized void set_processed_global(long p) { processed_global = p; }
+    public synchronized long get_processed_global() { return processed_global; }
+    public synchronized void add_processed_global(long p) { processed_global += p; }
+
+    private long processed_local;
+    public synchronized long get_processed_local() { return processed_local; }
+    public synchronized void set_processed_local(long p) { processed_local = p; }
+    public synchronized void add_processed_local(long p) { processed_local += p; }
+
+    public synchronized long get_processed_total() { return processed_global + processed_local; }
 
     // package local helpers
     int[] units; //number of neurons per layer, extracted from parameters and from datainfo
@@ -166,7 +175,8 @@ public class NNModel extends Model {
     }
     public NNModelInfo(NNModelInfo other) {
       this(other.parameters, other.units[0], other.units[other.units.length-1]);
-      set_processed(other.get_processed());
+      set_processed_local(other.get_processed_local());
+      set_processed_global(other.get_processed_global());
       for (int i=0; i<other.weights.length; ++i)
         weights[i] = other.weights[i].clone();
       for (int i=0; i<other.biases.length; ++i)
@@ -198,7 +208,9 @@ public class NNModel extends Model {
           sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
       }
       sb.append("\nunits[]="+Arrays.toString(units));
-      sb.append("\nprocessed: "+get_processed());
+      sb.append("\nprocessed global: "+get_processed_global());
+      sb.append("\nprocessed local:  "+get_processed_local());
+      sb.append("\nprocessed total:  " + get_processed_total());
       return sb.toString();
     }
     void initializeMembers() {
@@ -219,6 +231,7 @@ public class NNModel extends Model {
         Utils.add(weights_momenta, other.weights_momenta);
         Utils.add(biases_momenta,  other.biases_momenta);
       }
+      add_processed_local(other.get_processed_local());
     }
     protected void div(double N) {
       for (float[] weight : weights) Utils.div(weight, (float) N);
@@ -369,7 +382,10 @@ public class NNModel extends Model {
     CM.serve();
     StringBuilder sb = new StringBuilder();
     final double error = CM.toASCII(sb);
-    if (printCM) System.out.println(label + "\n" + sb);
+    if (printCM) {
+      Log.info(label);
+      for (String s : sb.toString().split("\n")) Log.info(s);
+    }
     fpreds.delete();
     return error;
   }

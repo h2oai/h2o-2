@@ -117,7 +117,7 @@ public class ConfusionMatrixTest extends TestUtil {
       v2 = parseFrame(Key.make("v2.hex"), find_test_file(f2));
       ConfusionMatrix cm = computeCM(v1, v2);
       // -- DEBUG --
-      if (debug) {
+      if (true) {
         System.err.println(Arrays.toString(cm.actual_domain));
         System.err.println(Arrays.toString(cm.predicted_domain));
         for (int i=0; i<cm.cm.length; i++)

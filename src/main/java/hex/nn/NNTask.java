@@ -1,7 +1,6 @@
 package hex.nn;
 
 import hex.FrameTask;
-import water.H2O;
 import water.H2O.H2OCountedCompleter;
 
 import java.util.Arrays;
@@ -18,31 +17,28 @@ public class NNTask extends FrameTask<NNTask> {
 
   // book-keeping
   int _chunk_node_count; //how many nodes are contributing with chunks?
-  long _nrows_before; //number of training rows initially
-  int _nrows; //number of additionally processed training rows
 
-  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training){this(job,dinfo,input,training,null);}
-  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, H2OCountedCompleter cmp){
+  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(job,dinfo,input,training,fraction, null);}
+  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
     super(job,dinfo,cmp);
-    //don't initialize anything that will be worked on later
     _params=job;
     _training=training;
     _input=input;
+    _useFraction=fraction;
   }
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    _nrows_before = _input.get_processed();
     _output = new NNModel.NNModelInfo(_input);
+    _output.set_processed_local(0l);
   }
 
   // create local workspace (neurons)
   // and link them to shared weights
   @Override protected void chunkInit(int nrows){
-    _nrows = nrows;
     _neurons = makeNeurons(_dinfo, _output);
-    _chunk_node_count = _nrows > 0 ? 1 : 0;
-//    System.out.println("chunkInit: Working on " + _nrows + " rows.");
+    _chunk_node_count = nrows > 0 ? 1 : 0;
+//    Log.info("chunkInit: " + nrows + " rows (used: ~" + (nrows * _useFraction) + ")");
   }
 
   @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
@@ -50,21 +46,24 @@ public class NNTask extends FrameTask<NNTask> {
     step(_neurons, _output, _training, responses);
   }
 
-  @Override protected void chunkDone(){ }
-
   @Override public void reduce(NNTask other){
-    if (other._chunk_node_count > 0) {
+    if (other._chunk_node_count > 0 //other NNTask was active (its model_info should be used for averaging)
+            && other._output != _output) //other NNTask worked on a different model_info
+    {
+//      Log.info("before reduce: " + _output.get_processed_local() + " processed.");
       _output.add(other._output);
+//      Log.info("after reduce: " + _output.get_processed_local() + " processed.");
       _chunk_node_count += other._chunk_node_count;
-      _nrows += other._nrows;
     }
   }
 
   @Override protected void postGlobal(){
-//    System.out.println("postGlobal: Dividing by " + _chunk_node_count);
+//    Log.info("postGlobal: dividing by " + _chunk_node_count + ".");
     _output.div(_chunk_node_count);
-//    System.out.println("postGlobal: Adding " + _nrows + " rows");
-    _output.set_processed(_nrows_before + _nrows);
+//    Log.info("postGlobal: before global " + _output.get_processed_global() + ".");
+    _output.add_processed_global(_output.get_processed_local());
+    _output.set_processed_local(0l);
+//    Log.info("postGlobal: after global " + _output.get_processed_global() + ".");
   }
 
   // Helper
@@ -142,12 +141,12 @@ public class NNTask extends FrameTask<NNTask> {
       //That means that the number of processed rows will jump regularly, and then continue to increase in steps of 1.
       //This is equivalent to saying that each vms thinks that its rows come first in every epoch, which is probably
       //the closest thing to do when trying to match the single-node behavior.
-      minfo.add_processed(1);
-      if (minfo.get_processed() % 10000 == 0)
-        System.out.println(H2O.CLOUD.SELF + " processed: " + minfo.get_processed());
-
-      //Alternative: we could increase the number here by #vms instead of 1 (i.e., vms do round robyn).
-//      minfo.add_processed(H2O.CLOUD.size());
+      minfo.add_processed_local(1);
+//      if (minfo.get_processed_local() % 1000 == 0) {
+//        Log.info("processed global: " + minfo.get_processed_global());
+//        Log.info("processed local : " + minfo.get_processed_local());
+//        Log.info("processed total : " + minfo.get_processed_total());
+//      }
     }
   }
 

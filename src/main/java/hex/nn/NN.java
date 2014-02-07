@@ -75,13 +75,16 @@ public class NN extends Job.ValidatedJob {
   public double max_w2 = Double.POSITIVE_INFINITY;
 
   @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_training = 1000l;
+  public long score_training_samples = 10000l;
 
   @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_validation = 0l;
+  public long score_validation_samples = 0l;
 
-  @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Shortest interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 2;
+
+  @API(help = "Synchronization period in training samples (after which scoring can happen).", filter = Default.class, lmin = 1, json = true)
+  public long sync_samples = 1000l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
@@ -136,14 +139,17 @@ public class NN extends Job.ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
-    if (arg._name.equals("score_validation") && validation == null) {
+    if (arg._name.equals("score_validation_samples") && validation == null) {
       arg.disable("Only if a validation set is specified.");
     }
+    if (arg._name.equals("sync_samples") && H2O.CLOUD.size() == 1) {
+      arg.disable("Only for multi-node operation.");
+    }
     if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
-            || arg._name.equals("score_training") || arg._name.equals("score_validation")
+            || arg._name.equals("score_training_samples") || arg._name.equals("score_validation_samples")
             || arg._name.equals("initial_weight_distribution") || arg._name.equals("initial_weight_scale")
             || arg._name.equals("score_interval") || arg._name.equals("diagnostics")
-            || arg._name.equals("rate_decay")
+            || arg._name.equals("rate_decay") || arg._name.equals("sync_samples")
             ) {
       if (!expert_mode)  arg.disable("Only in expert mode.");
     }
@@ -184,8 +190,8 @@ public class NN extends Job.ValidatedJob {
   }
 
   @Override public Status exec() {
-    initModel();
-    trainModel(true);
+    init();
+    trainModel();
     if( _gen_enum ) UKV.remove(response._key);
     remove();
     return Status.Done;
@@ -195,80 +201,92 @@ public class NN extends Job.ValidatedJob {
     return NNProgressPage.redirect(this, self(), dest());
   }
 
-  public void initModel() {
+  public void init() {
     logStart();
     NN.RNG.seed.set(seed);
     if (_dinfo == null)
       _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true), 1, true);
-    NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
-    model.delete_and_lock(self());
+    new NNModel(dest(), self(), source._key, _dinfo, this).delete_and_lock(self());
   }
 
-  public void trainModel(boolean scorewhiletraining){
+  // Helper to downsample a Frame (without stratification)
+  public static Frame sampleFrame(final Frame input, long rows, long seed) {
+    if (input == null) return null;
+    double fraction = rows > 0 ? (double)rows / input.numRows() : 1.0;
+    fraction = Math.max(Math.min(fraction, 1), 0);
+    if (fraction==0 || fraction==1.0) return input;
+    final FrameSplit split = new FrameSplit();
+    Frame output = split.splitFrame(input, new double[]{fraction, 1-fraction}, seed)[0];
+    if (output.numRows() == 0) {
+      Log.err("Sampled frame has no rows, falling back to original frame with " + input.numRows() + " rows.");
+      output = input;
+    }
+    return output;
+  }
+
+  public NNModel trainModel(){
     final NNModel model = UKV.get(dest());
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
+    Frame train = _dinfo._adaptedFrame;
+    Frame valid = validation == null ? null : adapted[0];
 
     // Optionally downsample data for scoring
-    final FrameSplit split = new FrameSplit();
-    Frame trainScoreFrame = _dinfo._adaptedFrame;
-    double fraction = score_training > 0 ? (double)score_training / trainScoreFrame.numRows() : 1.0;
-    fraction = Math.max(Math.min(fraction, 1), 0);
-    if (fraction < 1 && fraction > 0) {
-      trainScoreFrame = split.splitFrame(trainScoreFrame, new double[]{fraction, 1-fraction}, seed)[0];
-      if (trainScoreFrame.numRows() == 0) trainScoreFrame = _dinfo._adaptedFrame;
-    }
-    Log.info("Scoring on " + trainScoreFrame.numRows() + " rows of training data.");
-    Frame validScoreFrame = validation == null ? null : adapted[0];
-    if (validScoreFrame != null) {
-      fraction = score_validation > 0 ? (double)score_validation / validScoreFrame.numRows() : 1.0;
-      fraction = Math.max(Math.min(fraction, 1), 0);
-      if (fraction < 1 && fraction > 0) {
-        validScoreFrame = split.splitFrame(validScoreFrame, new double[]{fraction, 1-fraction}, seed)[0];
-      }
-      if (validScoreFrame.numRows() == 0) validScoreFrame = adapted[0];
-      Log.info("Scoring on " + validScoreFrame.numRows() + " rows of validation data.");
-    }
+    Frame trainScoreFrame = sampleFrame(train, score_training_samples, seed);
+    Frame validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
 
-    for (int epoch = 1; epoch <= epochs; ++epoch) {
-      final NNTask nntask = new NNTask(this, _dinfo, model.model_info(), true).doAll(_dinfo._adaptedFrame);
-      model.set_model_info(nntask.model_info());
-      if (diagnostics) model.computeDiagnostics();
-      model.epoch_counter = epoch;
-      if (scorewhiletraining) {
-        final String label = "Classification error after training for " + epoch
-                + " epochs (" + model.model_info().get_processed() + " samples)";
-        doScoring(model, trainScoreFrame, validScoreFrame, label, epoch==epochs, score_interval);
+    final float sync_fraction = sync_samples == 0l ? 1.0f : (float)sync_samples / train.numRows();
+
+    //Main loop
+    long timeStart = System.currentTimeMillis();
+    long lastPrint = System.currentTimeMillis();
+    do {
+      // NNTask trains an internal deep copy of model_info
+      final NNTask nntask = new NNTask(this, _dinfo, model.model_info(), true, sync_fraction).doAll(train);
+      model.set_model_info(nntask.model_info()); // update the model we keep in this loop, for next iteration input
+      model.epoch_counter = (float)nntask.model_info().get_processed_total()/train.numRows();
+
+      long now = System.currentTimeMillis();
+      long sinceLastScore = now-lastPrint;
+      if( (sinceLastScore > 2000) ) {
+        final long samples = model.model_info().get_processed_total();
+        Log.info("Trained on " + samples
+                + " samples (" + String.format("%.3f", model.epoch_counter)
+                + " epochs). Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000)) + " samples/sec.");
+        lastPrint = now;
       }
-//      System.out.println(model);
+
+      doDiagnostics(model, trainScoreFrame, validScoreFrame, model.epoch_counter >= epochs, score_interval, diagnostics);
       model.update(self());
+
+//      System.out.println(model);
       if (model.model_info().unstable()) {
-        Log.info("Model is unstable (Exponential growth). Aborting." +
-                " Try using L1/L2/max_w2 regularization or a different activation function.");
+        Log.err("Canceling job since the model is unstable (exponential growth observed).");
+        Log.err("Try using L1/L2/max_w2 regularization, a different activation function, or more synchronization in multi-node operation.");
         break;
       }
-    }
+    } while (model.epoch_counter < epochs);
+
+    //cleanup
     if (adapted != null) adapted[1].delete();
     model.unlock(self());
-    if (validScoreFrame != null) validScoreFrame.delete();
+    if (validScoreFrame != null && validScoreFrame != adapted[0]) validScoreFrame.delete();
+    if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
     Log.info("NN training finished.");
+    return model;
   }
 
-  transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  void doScoring(NNModel model, Frame ftrain, Frame ftest, String label, boolean force, double score_interval) {
+  transient long _timeLastScoreStart;
+  void doDiagnostics(NNModel model, Frame ftrain, Frame ftest, boolean force, double score_interval, boolean diagnostics) {
     long now = System.currentTimeMillis();
-    if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
 //    Score sc = null;
-    if( force ||
-            (now-_firstScore < 4000) || // Score every time for 4 secs
-            // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
-            (sinceLastScore > score_interval*1000 && // Limit scoring updates
-            (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
+
+    if( force || (sinceLastScore > score_interval*1000) ) {
+      if (diagnostics) model.computeDiagnostics();
       _timeLastScoreStart = now;
-      model.classificationError(ftrain, label + "\nOn training data:", true);
+      model.classificationError(ftrain, "Classification error on training data:", true);
       if (ftest != null)
-        model.classificationError(ftest, label + "\nOn validation data:", true);
-      _timeLastScoreEnd = System.currentTimeMillis();
+        model.classificationError(ftest, "Classification error on validation data:", true);
     }
   }
 
