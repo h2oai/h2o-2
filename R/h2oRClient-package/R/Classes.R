@@ -1030,7 +1030,8 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   if(n > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
   
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=n)
-  temp = lapply(res$rows, function(y) { y$row = NULL; as.data.frame(y) })
+  blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
+  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
 
@@ -1051,7 +1052,8 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   
   idx = seq.int(to = nrx, length.out = n)
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=idx[1], view=length(idx))
-  temp = lapply(res$rows, function(y) { y$row = NULL; as.data.frame(y) })
+  blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
+  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
