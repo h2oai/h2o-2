@@ -249,9 +249,10 @@ public class NN extends Job.ValidatedJob {
       long sinceLastScore = now-lastPrint;
       if( (sinceLastScore > 2000) ) {
         final long samples = model.model_info().get_processed_total();
-        Log.info("Trained on " + samples
-                + " samples (" + String.format("%.3f", model.epoch_counter)
-                + " epochs). Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000)) + " samples/sec.");
+        Log.info("Training time: " + PrettyPrint.msecs(now - timeStart, true)
+                + " processed " + samples + " samples"
+                + " (" + String.format("%.3f", model.epoch_counter) + " epochs)."
+                + " Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000)) + " samples/sec.");
         lastPrint = now;
       }
 
