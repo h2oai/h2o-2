@@ -170,6 +170,28 @@ class ASTddply extends ASTOp {
     for( int c : cols ) 
       if( c < 1 || c > fr.numCols() )
         throw new IllegalArgumentException("Column "+c+" out of range for frame columns "+fr.numCols());
+
+    // Random implementation hacks/notes...
+    // - ddply inner fcn is side-effect-free.
+    // - ddply inner fcn runs once per group (apparently).  
+    // - ddply inner fcn can make multple refs to the whole group-frame, requiring (apparently) multiple passes
+    // 
+    // GroupIDs' can vary from 1 group to 1-per-row.  Are formed by the cross-
+    // product of the selection cols.  Will be hashed to find Group - NBHML
+    // mapping row-contents to group.  Index is a sample row.  NBHML per-node,
+    // plus roll-ups.  Result/Value is Group structure pointing to NewChunks
+    // holding row indices.  
+
+    // Hack-Pass-1: Get a Vec-per-group holding row#s in that group.  Chunks
+    // are node-local and hold node-local rows.  Vecs are made lazily via
+    // hash-table mapping.  After the first roll-up we'll know which groups
+    // exist.  Can compress the row#'s into Chunks also.
+
+    // Hack-Pass-2: ForAllGroups, launch parallel ddply execution tasks with a
+    // bogus Frame, with magical Vecs that use the Group(s) to define their
+    // rows.  All the usual Chunk.at0 or Vec.at calls work, except the Chunk
+    // does a row-indirection to find the actual Chunk data.
+
     
     env.pop(4);
     // Push empty frame for debuggging

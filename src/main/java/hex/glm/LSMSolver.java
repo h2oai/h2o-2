@@ -107,12 +107,21 @@ public abstract class LSMSolver extends Iced{
     public double _rho = 1e-5;
     public double [] _wgiven;
     public double _proximalPenalty;
-
+    private static final double GLM1_RHO = 1.0e-3;
 
     public boolean normalize() {return _lambda != 0;}
 
     public ADMMSolver (double lambda, double alpha) {
-      this(lambda,alpha,lambda*alpha*0.1);
+      this(lambda,
+           alpha,
+           /*
+            * Rho:
+            *
+            * Adaptive calculation of Rho is:  lambda*alpha*0.1
+            * Temporarily hardcode to same value as GLM1 for testing purposes.
+            */
+           GLM1_RHO
+      );
     }
     public ADMMSolver (double lambda, double alpha, double rho) {
       super(lambda,alpha);
