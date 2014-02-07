@@ -109,11 +109,11 @@ else
 endif
 	R CMD build h2oRClient-package
 	echo h2oRClient_$(PROJECT_VERSION).tar.gz > info.txt
-ifeq ($(OS),Windows_NT)
-	md5deep h2oRClient_$(PROJECT_VERSION).tar.gz | cut -d' ' -f1 >> info.txt
-else
-	openssl md5 h2oRClient_$(PROJECT_VERSION).tar.gz | sed 's/.*= //' >> info.txt
-endif
+# ifeq ($(OS),Windows_NT)
+#	md5deep h2oRClient_$(PROJECT_VERSION).tar.gz | cut -d' ' -f1 >> info.txt
+# else
+#	openssl md5 h2oRClient_$(PROJECT_VERSION).tar.gz | sed 's/.*= //' >> info.txt
+# endif
 
 	# Create file with description of all packages
 	cp -p h2oRClient-package/DESCRIPTION PACKAGES

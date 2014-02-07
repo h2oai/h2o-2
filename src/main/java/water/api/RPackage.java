@@ -15,11 +15,13 @@ public class RPackage extends Request {
     result.addProperty(VERSION, H2O.VERSION);
 
     String info = Boot._init.loadContent("/R/info.txt");
-    String info_split[] = info.split("\\r?\\n");
+    info = info.split("\\r?\\n")[0];
+    /* String info_split[] = info.split("\\r?\\n");
     if(info_split == null || info_split.length != 2)
       throw new RuntimeException("md5 checksum file not found or written incorrectly");
     result.addProperty("filename", info_split[0]);
-    result.addProperty("md5_hash", info_split[1]);
+    result.addProperty("md5_hash", info_split[1]); */
+    result.addProperty("filename", info);
 
     Response response = Response.done(result);
     response.addHeader("<a class='btn btn-primary' href='RDownload.html'>Download h2oRClient</a>");
@@ -28,8 +30,10 @@ public class RPackage extends Request {
 
   static class RDownload extends Request {
     @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
-      String info = Boot._init.loadContent("/R/info.txt");
-      String fname = info.split("\\r?\\n")[0];
+      /* String info = Boot._init.loadContent("/R/info.txt");
+      String fname = info.split("\\r?\\n")[0]; */
+      String fname = Boot._init.loadContent("/R/info.txt");
+      fname = fname.split("\\r?\\n")[0];
       InputStream is = Boot._init.getResource2("/R/src/contrib/" + fname);
       byte[] result = null;
       try {
