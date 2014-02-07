@@ -4,6 +4,7 @@ import static water.util.Utils.div;
 
 import java.util.Arrays;
 
+import hex.ConfusionMatrix;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
@@ -37,7 +38,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       super(key,dataKey,testKey,names,domains,ntrees,max_depth,min_rows,nbins);
       this.learn_rate = learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+    public GBMModel(DTree.TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
       super(prior, trees, err, cm, tstats);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
@@ -45,7 +46,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       super(prior, trees, tstats);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, double err, long [][] cm) {
+    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm) {
       super(prior, err, cm);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
@@ -92,7 +93,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
-  @Override protected GBMModel makeModel( GBMModel model, double err, long cm[][]) {
+  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm) {
     return new GBMModel(model, err, cm);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {

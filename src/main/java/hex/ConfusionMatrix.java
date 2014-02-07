@@ -12,10 +12,12 @@ import com.google.gson.JsonPrimitive;
 public final class ConfusionMatrix extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-  @API(help="")
+  @API(help="Confusion matrix (Actual/Predicted)")
   public long[][] _arr; // [actual][predicted]
+  @API(help = "Prediction error")
+  public final double _perr;
 
-  public ConfusionMatrix clone() {
+  @Override public ConfusionMatrix clone() {
     ConfusionMatrix res = new ConfusionMatrix(0);
     res._arr = _arr.clone();
     for( int i = 0; i < _arr.length; ++i )
@@ -53,10 +55,12 @@ public final class ConfusionMatrix extends Iced {
 
   public ConfusionMatrix(int n) {
     _arr = new long[n][n];
+    _perr = err();
   }
 
   public ConfusionMatrix(long[][] value) {
     _arr = value;
+    _perr = err();
   }
 
   public void add(int i, int j) {
