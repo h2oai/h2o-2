@@ -741,7 +741,7 @@ public class NeuralNetMLPReference2 {
       return bigIndex;
     }
 
-    private static int MaxIndexWithTieBreaking(float[] preds, int row) // helper for Accuracy()
+    static int MaxIndexWithTieBreaking(float[] preds, int row) // helper for Accuracy()
     {
       int[] ties = new int[preds.length];
       int best=0; int tieCnt = 0; ties[tieCnt] = 0;

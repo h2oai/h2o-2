@@ -18,40 +18,43 @@ public abstract class Neurons extends Iced {
   public static DocGen.FieldDoc[] DOC_FIELDS;
 
   @API(help = "Number of neurons")
-  public int units;
+  protected int units;
 
   @API(help = "Initial Weight Distribution")
-  public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
+  protected InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
-  public double initial_weight_scale;
+  protected double initial_weight_scale;
 
   @API(help = "Learning rate")
-  public double rate;
+  protected double rate;
 
   @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))")
-  public double rate_decay;
+  protected double rate_decay;
 
   @API(help = "Learning rate annealing")
-  public double rate_annealing;
+  protected double rate_annealing;
 
   @API(help = "L1 regularisation")
-  public double l1;
+  protected double l1;
 
   @API(help = "L2 regularisation")
-  public double l2;
+  protected double l2;
 
   @API(help = "Initial momentum value")
-  public double momentum_start;
+  protected double momentum_start;
 
   @API(help = "Number of samples during which momentum value varies")
-  public long momentum_ramp;
+  protected long momentum_ramp;
 
   @API(help = "Momentum value once ramp is over")
-  public double momentum_stable;
+  protected double momentum_stable;
 
   @API(help = "Constraint for squared sum of incoming weights per unit")
-  public double max_w2;
+  protected double max_w2;
+
+  @API(help = "Enable fast mode (minor approximation in backpropagation)")
+  protected boolean fast_mode;
 
   public void transferParams(NN p) {
     initial_weight_distribution = p.initial_weight_distribution;
@@ -65,6 +68,7 @@ public abstract class Neurons extends Iced {
     momentum_ramp = p.momentum_ramp;
     momentum_stable = p.momentum_stable;
     max_w2 = p.max_w2;
+    fast_mode = p.fast_mode;
   }
 
   public void transferParams(Neurons p) {
@@ -427,7 +431,7 @@ public abstract class Neurons extends Iced {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
 
         // no need to update the weights if there are no momenta and l1=0 and l2=0
-        if (_wm == null && l1 == 0.0 && l2 == 0.0) {
+        if (fast_mode || (_wm == null && l1 == 0.0 && l2 == 0.0)) { //correct
           if( _a[u] > 0 ) { // don't use >= (faster this way: lots of zeros)
             final double g = _e[u]; // * 1.0 (from derivative of rectifier)
             bprop(u, g, r, m);

@@ -89,6 +89,9 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
 
+  @API(help = "Enable fast mode (minor approximation in backpropagation)", filter = Default.class, json = true)
+  public boolean fast_mode = true;
+
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
   }
@@ -150,6 +153,7 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("initial_weight_distribution") || arg._name.equals("initial_weight_scale")
             || arg._name.equals("score_interval") || arg._name.equals("diagnostics")
             || arg._name.equals("rate_decay") || arg._name.equals("sync_samples")
+            || arg._name.equals("fast_mode")
             ) {
       if (!expert_mode)  arg.disable("Only in expert mode.");
     }
