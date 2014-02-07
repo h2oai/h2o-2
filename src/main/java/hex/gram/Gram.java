@@ -320,9 +320,11 @@ public final class Gram extends Iced {
      *
      * @param y
      */
-    public final void solve(double[] y) {
+    public final void   solve(double[] y) {
+      long t = System.currentTimeMillis();
       if( !isSPD() ) throw new NonSPDMatrixException();
       assert _xx.length + _diag.length == y.length:"" + _xx.length + " + " + _diag.length + " != " + y.length;
+
       // diagonal
       for( int k = 0; k < _diag.length; ++k )
         y[k] /= _diag[k];
@@ -336,16 +338,13 @@ public final class Gram extends Iced {
       }
       // Solve L'*X = Y;
       for( int k = n - 1; k >= _diag.length; --k ) {
-        for( int i = k + 1; i < n; ++i )
-          y[k] -= y[i] * _xx[i - _diag.length][k];
         y[k] /= _xx[k - _diag.length][k];
+        for( int i = 0; i < k; ++i )
+          y[i] -= y[k] * _xx[k - _diag.length][i];
       }
       // diagonal
-      for( int k = _diag.length - 1; k >= 0; --k ) {
-        for( int i = _diag.length; i < n; ++i )
-          y[k] -= y[i] * _xx[i - _diag.length][k];
+      for( int k = _diag.length - 1; k >= 0; --k )
         y[k] /= _diag[k];
-      }
     }
     public final boolean isSPD() {return _isSPD;}
     public final void setSPD(boolean b) {_isSPD = b;}
