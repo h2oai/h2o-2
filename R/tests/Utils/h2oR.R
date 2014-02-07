@@ -30,6 +30,9 @@ function(exdir) {
 sandbox<-
 function() {
   test_name <- R.utils::commandArgs(asValues=TRUE)$"f"
+  if (is.null(test_name)) {
+      test_name <- paste(getwd(), "r_command_line", sep="/")
+  }
   # test_name can be a path..just what the basename
   Rsandbox <- paste("./Rsandbox_", basename(test_name), sep = "")
   dir.create(Rsandbox, showWarnings = FALSE)
@@ -42,9 +45,7 @@ function() {
   h2o.__LOG_ERROR   <- paste(Rsandbox, "/", sep = "") 
   h2o.__changeLog(normalizePath(h2o.__LOG_COMMAND), "Command")
   h2o.__changeLog(normalizePath(h2o.__LOG_ERROR), "Error")
-  h2o.__startLogging()
-  
-  
+  h2o.__startLogging()  
 }
 
 Log.info<-
