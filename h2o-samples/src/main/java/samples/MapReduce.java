@@ -4,25 +4,30 @@ import java.io.File;
 
 import org.junit.Assert;
 
-import water.*;
-import water.fvec.*;
+import water.Job;
+import water.MRTask2;
+import water.deploy.VM;
+import water.fvec.Chunk;
+import water.fvec.Frame;
 
 /**
  * Demonstration of H2O's map-reduce API. This task sums the elements of a column.
  */
 public class MapReduce extends Job {
   public static void main(String[] args) throws Exception {
-    samples.launchers.CloudLocal.launch(1, MapReduce.class);
-    // samples.launchers.CloudProcess.launch(2, MapReduce.class);
-    // samples.launchers.CloudConnect.launch("localhost:54321", MapReduce.class);
-    // samples.launchers.CloudRemote.launchIPs(MapReduce.class);
+    Class job = MapReduce.class;
+    samples.launchers.CloudLocal.launch(job, 1);
+    //samples.launchers.CloudProcess.launch(job, 2);
+    //samples.launchers.CloudConnect.launch(job, "localhost:54321");
+    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162");
+    //samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
-  @Override protected void exec() {
+  @Override
+  protected Status exec() {
     // Parse a dataset into a Frame, H2O's distributed table-like data structure
-    File file = new File(TestUtil.smalldata, "/iris/iris.csv");
-    Key fkey = NFSFileVec.make(file);
-    Frame frame = ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
+    File file = new File(VM.h2oFolder(), "smalldata/iris/iris.csv");
+    Frame frame = Frames.parse(file);
 
     // Create an instance of our custom map-reduce class.
     Sum sum = new Sum();
@@ -39,6 +44,7 @@ public class MapReduce extends Job {
     // At this point, all task instances have been merged by their 'reduce' method. We
     // are back to a state where only one instance exist, and it contains the overall sum.
     System.out.println("Sum is " + sum.value);
+    return Status.Done;
   }
 
   static class Sum extends MRTask2<Sum> {
@@ -57,7 +63,8 @@ public class MapReduce extends Job {
     /**
      * This method is invoked on each chunk of the distributed data structure.
      */
-    @Override public void map(Chunk chunk) {
+    @Override
+    public void map(Chunk chunk) {
       Assert.assertEquals("blah", myInput);
 
       for( int row = 0; row < chunk._len; row++ )
@@ -71,7 +78,8 @@ public class MapReduce extends Job {
     /**
      * This operation will be invoked for each MRTask, to add together sums for each chunk.
      */
-    @Override public void reduce(Sum other) {
+    @Override
+    public void reduce(Sum other) {
       value += other.value;
     }
   }

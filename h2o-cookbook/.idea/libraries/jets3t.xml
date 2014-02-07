@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="jets3t">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/../lib/jets3t" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../lib/jets3t" />
+    </SOURCES>
+    <jarDirectory url="file://$PROJECT_DIR$/../lib/jets3t" recursive="false" />
+    <jarDirectory url="file://$PROJECT_DIR$/../lib/jets3t" recursive="false" type="SOURCES" />
+  </library>
+</component>

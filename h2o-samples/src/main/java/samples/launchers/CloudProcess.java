@@ -12,10 +12,10 @@ public class CloudProcess {
    * breakpoints etc.
    */
   public static void main(String[] args) throws Exception {
-    launch(3, null);
+    launch(null, 3);
   }
 
-  public static void launch(int nodes, Class<? extends Job> job) throws Exception {
+  public static void launch(Class<? extends Job> job, int nodes) throws Exception {
     // Additional logging info
     System.setProperty("h2o.debug", "true");
     String ip = "127.0.0.1";
@@ -42,8 +42,8 @@ public class CloudProcess {
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
       H2O.main(args);
-      int nodes = Integer.parseInt(args[6]);
-      String job = args[7];
+      int nodes = Integer.parseInt(args[7]);
+      String job = args[8];
       TestUtil.stall_till_cloudsize(nodes);
       System.out.println("Cloud is up");
       System.out.println("Go to http://127.0.0.1:54321");

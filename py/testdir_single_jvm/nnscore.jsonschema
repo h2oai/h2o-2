@@ -1,0 +1,28 @@
+{
+    "type": "object",
+    "properties":{
+        "Request2": { "type": "number" },
+        "classification_error": { "type": "number" },
+        "confusion_matrix": {
+            "type": "array", "items": {
+                "type": "array",
+             }
+        },
+        "description": { "type": "string" },
+        "destination_key": { "type": "string" },
+        "end_time": { "type": "number" },
+        "exception": { "type": "null" },
+        "job_key": { "type": "string" },
+        "mean_square_error": { "type": "number" },
+        "response_info": { "type": "object", "properties":{
+            "h2o": { "type": "string" },
+            "node": { "type": "string" },
+            "redirect_url": { "type": "null" },
+            "status": { "type": "string" },
+            "time": { "type": "number" }
+        }
+        },
+        "start_time": { "type": "number" }
+    }
+}
+

@@ -3,11 +3,9 @@ package water;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-import org.apache.commons.lang.ArrayUtils;
-
 import javassist.*;
 import water.api.Request.API;
-import water.util.*;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 public class Weaver {
@@ -17,7 +15,6 @@ public class Weaver {
   private final CtClass _fielddoc;
   private final CtClass _arg;
   public static Class _typeMap;
-  public static java.lang.reflect.Method _onLoad;
   public static volatile String[] _packages = new String[] { "water", "hex", "org.junit" };
 
   Weaver() {
@@ -38,7 +35,7 @@ public class Weaver {
   public static void registerPackage(String name) {
     synchronized( Weaver.class ) {
       String[] a = _packages;
-      if(ArrayUtils.indexOf(a, name) < 0) {
+      if(Arrays.asList(a).indexOf(name) < 0) {
         String[] t = Arrays.copyOf(a, a.length + 1);
         t[t.length-1] = name;
         _packages = t;
@@ -58,7 +55,7 @@ public class Weaver {
 
   // See if javaassist can find this class; if so then check to see if it is a
   // subclass of water.DTask, and if so - alter the class before returning it.
-  public synchronized CtClass javassistLoadClass(String name) {
+  private synchronized CtClass javassistLoadClass(String name) {
     try {
       if( name.equals("water.Boot") ) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
@@ -68,6 +65,7 @@ public class Weaver {
       for( CtClass base : _serBases )
         if( cc.subclassOf(base) )
           return javassistLoadClass(cc);
+
       return cc;
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
@@ -85,7 +83,7 @@ public class Weaver {
     return false;
   }
 
-  public synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
+  private synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
     if( cc.isFrozen() ) return cc;
     // serialize parent
     javassistLoadClass(cc.getSuperclass());
@@ -159,18 +157,6 @@ public class Weaver {
     }
   }
 
-  // The Weaver is called from the SystemLoader, and if it directly calls
-  // TypeMap we end up calling a version of TypeMap loaded through the
-  // SystemLoader - this is a separate version of TypeMap loaded *through* the
-  // weaver... and may have different type mappings.  So we avoid the issue by
-  // forcing a call to the pre-woven TypeMap.
-  public Weaver initTypeMap( ClassLoader boot ) {
-    _typeMap = weaveAndLoad("water.TypeMap",boot);
-    try { _onLoad = _typeMap.getMethod("onLoad",String.class); }
-    catch( NoSuchMethodException nsme ) { throw new RuntimeException(nsme); }
-    return this;
-  }
-
   // Serialized types support a unique dense integer per-class, so we can do
   // simple array lookups to get class info.  The integer is cluster-wide
   // unique and determined lazily.
@@ -178,23 +164,11 @@ public class Weaver {
     CtMethod ccms[] = cc.getDeclaredMethods();
     if( !javassist.Modifier.isAbstract(cc.getModifiers()) &&
         !hasExisting("frozenType", "()I", ccms) ) {
-      // Horrible Reflective Call
-      // Make a horrible reflective call to TypeMap.onLoad because....
-      // The Weaver is called from the SystemLoader, and if it directly calls
-      // TypeMap we end up calling a version of TypeMap loaded through the
-      // SystemLoader - this is a separate version of TypeMap loaded *through*
-      // the weaver... and may have different type mappings.  So we avoid the
-      // issue by forcing a call to the pre-woven TypeMap.
-      if( _onLoad == null )
-        throw new RuntimeException("Weaver not booted, loading class "+cc.getName()+", add to the BOOTSTRAP_CLASSES list");
-      Integer I;
-      try { I = (Integer)_onLoad.invoke(null,cc.getName()); }
-      catch( IllegalAccessException iae ) { throw new RuntimeException( iae); }
-      catch( InvocationTargetException ite) { throw new RuntimeException(ite.getTargetException()); }
-      // Build a simple method returning the type token
+      // Build a simple field & method returning the type token
+      cc.addField(new CtField(CtClass.intType, "_frozen$type", cc));
       cc.addMethod(CtNewMethod.make("public int frozenType() {" +
-                                    "  return " + I + ";" +
-                                    "}", cc));
+                                    "  return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(\""+cc.getName()+"\")) : _frozen$type;" +
+                                    "}",cc));
     }
   }
 

@@ -32,3 +32,9 @@ src/main/java/water/BuildVersion.java
 hadoop/build.log
 .DS_Store
 /.idea
+.Rproj.user
+lib/resources/R
+R/.RData
+R/.Rhistory
+R/tests/Rsandbox/
+Rsandbox

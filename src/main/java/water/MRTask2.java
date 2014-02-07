@@ -1,6 +1,8 @@
 package water;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinPool;
+import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
 
@@ -24,29 +26,38 @@ import water.fvec.Vec.VectorGroup;
  * NewChunks.  MRTask2 will automatically close the new Appendable vecs and
  * produce an output frame with newly created Vecs.
  */
-public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
+public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable, ForkJoinPool.ManagedBlocker {
+  public MRTask2(){}
+  public MRTask2(H2OCountedCompleter completer){super(completer);}
 
   /** The Vectors to work on. */
   public Frame _fr;
   // appendables are treated separately (roll-ups computed in map/reduce style, can not be passed via K/V store).
-  protected AppendableVec [] _appendables; 
+  protected AppendableVec [] _appendables;
   private int _vid;
   private int _noutputs;
+  // If TRUE, run entirely local - which will pull all the data locally.
+  private boolean _run_local;
 
-  public Frame outputFrame(String [] names, String [][] domains){
+  public Frame outputFrame(String [] names, String [][] domains){ return outputFrame(null,names,domains); }
+  public Frame outputFrame(Key key, String [] names, String [][] domains){
     Futures fs = new Futures();
-    Frame res = outputFrame(names, domains, fs);
+    Frame res = outputFrame(key, names, domains, fs);
     fs.blockForPending();
     return res;
   }
-  public Frame outputFrame(String [] names, String [][] domains, Futures fs){
+  public Frame outputFrame(Key key, String [] names, String [][] domains, Futures fs){
     if(_noutputs == 0)return null;
     Vec [] vecs = new Vec[_noutputs];
-    for(int i = 0; i < _noutputs; ++i){
-      _appendables[i]._domain = domains[i];
-      vecs[i] = _appendables[i].close(fs);
+    for(int i = 0; i < _noutputs; ++i) {
+      if( _appendables==null )  // Zero rows?
+        vecs[i] = _fr.anyVec().makeZero();
+      else {
+        _appendables[i]._domain = domains==null ? null : domains[i];
+        vecs[i] = _appendables[i].close(fs);
+      }
     }
-    return new Frame(names,vecs);
+    return new Frame(key,names,vecs);
   }
 
   /** Override with your map implementation.  This overload is given a single
@@ -142,7 +153,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       }
       if( size_rez !=0 )        // Record i/o result size
         if( _size_rez0 == 0 ) {      _size_rez0=size_rez; }
-        else { assert _size_rez1==0; _size_rez1=size_rez; }
+        else { /*assert _size_rez1==0;*/ _size_rez1=size_rez; }
       assert _last._onCdone >= _done1st;
     }
 
@@ -186,15 +197,15 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Invokes the map/reduce computation over the given Vecs.  This call is
    *  blocking. */
   public final T doAll( Vec... vecs ) { return doAll(0,vecs); }
-  public final T doAll(int outputs, Vec... vecs ) { return doAll(outputs,new Frame(null,vecs)); }
+  public final T doAll(int outputs, Vec... vecs ) { return doAll(outputs,new Frame(null,vecs), false); }
 
   /** Invokes the map/reduce computation over the given Frame.  This call is
    *  blocking.  */
-  public final T doAll( Frame fr) {
-    return doAll(0,fr);
-  }
-  public final T doAll( int outputs, Frame fr) {
-    dfork(outputs,fr);
+  public final T doAll( Frame fr, boolean run_local) { return doAll(0,fr, run_local); }
+  public final T doAll( Frame fr ) { return doAll(0,fr, false); }
+  public final T doAll( int outputs, Frame fr) {return doAll(outputs,fr,false);}
+  public final T doAll( int outputs, Frame fr, boolean run_local) {
+    dfork(outputs,fr, run_local);
     return getResult();
   }
 
@@ -202,16 +213,17 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
   public final T dfork( Vec...vecs ) {return dfork(0,vecs);}
-  public final T dfork( Frame fr ) {return dfork(0,fr);}
+  public T dfork( Frame fr ) {return dfork(0,fr,false);}
   public final T dfork( int outputs, Vec... vecs) {
-    return dfork(outputs,new Frame(vecs));
+    return dfork(outputs,new Frame(vecs),false);
   }
-  public final T dfork( int outputs, Frame fr) {
+  public final T dfork( int outputs, Frame fr, boolean run_local) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
     if((_noutputs = outputs) > 0)_vid = fr.anyVec().group().reserveKeys(outputs);
     _fr = fr;                   // Record vectors to work on
     _nodes = (1L<<H2O.CLOUD.size())-1; // Do Whole Cloud
+    _run_local = run_local;     // Run locally by copying data, or run globally?
     setupLocal0();              // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
     return self();
@@ -220,12 +232,22 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Block for & get any final results from a dfork'd MRTask2.
    *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
-    join();
+    try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
     // Do any post-writing work (zap rollup fields, etc)
     _fr.reloadVecs();
     for( int i=0; i<_fr.numCols(); i++ )
       _fr.vecs()[i].postWrite();
     return self();
+  }
+
+  // Return true if blocking is unnecessary, which is true if the Task isDone.
+  public boolean isReleasable() {  return isDone();  }
+  // Possibly blocks the current thread.  Returns true if isReleasable would
+  // return true.  Used by the FJ Pool management to spawn threads to prevent
+  // deadlock is otherwise all threads would block on waits.
+  public boolean block() {
+    while( !isDone() ) join();
+    return true;
   }
 
   /** Called once on remote at top level, probably with a subset of the cloud.
@@ -240,14 +262,15 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // chunks; call user's init.
   private final void setupLocal0() {
     assert _profile==null;
+    _fs = new Futures();
     _profile = new MRProfile(this);
     _profile._localstart = System.currentTimeMillis();
     _topLocal = true;
     // Check for global vs local work
     int selfidx = H2O.SELF.index();
     _nodes &= ~(1L<<selfidx);   // Remove self from work set
-    if( _nodes != 0 ) { // Have global work?
-      int bc = Long.bitCount(_nodes); // How many nodes to hand out work to
+    if( !_run_local && _nodes != 0 ) { // Have global work?
+      int bc = Long.bitCount(_nodes);  // How many nodes to hand out work to
       long xs=_nodes;
       for( int i=0; i<bc>>1; i++ ) xs &= (xs-1); // Remove 1/2 the bits
       long ys = _nodes & ~xs;   // Complement sets
@@ -260,8 +283,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
     // block on.
-    if( _appendables != null && _appendables.length > 0 )
-      _fs = new Futures();
     // get the Vecs from the K/V store, to avoid racing fetches from the map calls
     _fr.vecs();
     setupLocal();                     // Setup any user's shared local structures
@@ -303,7 +324,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Zero or 1 chunks, and further chunk might not be homed here
     if( _hi > _lo ) {           // Single chunk?
       Vec v0 = _fr.anyVec();
-      if( v0.chunkKey(_lo).home() ) { // And chunk is homed here?
+      if( _run_local || v0.chunkKey(_lo).home() ) { // And chunk is homed here?
 
         // Make decompression chunk headers for these chunks
         Vec vecs[] = _fr.vecs();
@@ -311,7 +332,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         NewChunk [] appendableChunks = null;
         for( int i=0; i<vecs.length; i++ )
           if( vecs[i] != null ) {
-            assert vecs[i].chunkKey(_lo).home()
+            assert _run_local || vecs[i].chunkKey(_lo).home()
               : "Chunk="+_lo+" v0="+v0+", k="+v0.chunkKey(_lo)+"   v["+i+"]="+vecs[i]+", k="+vecs[i].chunkKey(_lo);
             bvs[i] = vecs[i].elem2BV(_lo);
           }
@@ -376,8 +397,8 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _profile.gather(mrt._profile,0);
     if( _res == null ) _res = mrt._res;
     else if( mrt._res != null ) _res.reduce4(mrt._res);
-    if( _fs == null ) _fs = mrt._fs;
-    else _fs.add(mrt._fs);
+    // Futures are shared on local node and transient (so no remote updates)
+    assert _fs == mrt._fs;
   }
 
   protected void postGlobal(){}
@@ -389,8 +410,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     reduce3(_nleft);            // Reduce global results from neighbors.
     reduce3(_nrite);
     _profile._remoteBlkDone = System.currentTimeMillis();
-    if( _fs != null )           // Block on all other pending tasks, also
-      _fs.blockForPending();
+    _fs.blockForPending();
     _profile._localBlkDone = System.currentTimeMillis();
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
@@ -409,7 +429,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   private void reduce3( RPC<T> rpc ) {
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
-    assert mrt._fs == null;     // No blockable results from remote
+    // Note: because _fs is transient it is not set or cleared by the RPC.
+    // Because the MRT object is a clone of 'self' it's likely to contain a ptr
+    // to the self _fs which will be not-null and still have local pending
+    // blocks.  Not much can be asserted there.
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( mrt._nodes != -1L )     // Any results at all?
@@ -446,7 +469,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     x._topLocal = false;  // Not a top job
     x._nleft = x._nrite = null;
     x. _left = x. _rite = null;
-    x._fs = null;         // Clone does not depend on extent futures
+    x._fs = _fs;
     x._profile = null;    // Clone needs its own profile
     x.setPendingCount(0); // Volatile write for completer field; reset pending count also
     return x;

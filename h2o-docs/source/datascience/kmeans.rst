@@ -1,3 +1,4 @@
+.. _KMmath:
 
 K-Means
 -------
@@ -7,7 +8,7 @@ K-Means falls in the general category of clustering algorithms.
 When to use K-Means
 """""""""""""""""""
 
-Data are a set of attributes on which the members of this population
+Data are a set of attributes on which the members of the population
 likely differ. The objective is classification.
 Here are some examples:
 
@@ -49,7 +50,7 @@ Defining a K-Means model
   centroids that are not the optimal cluster centers purely by chance
   in the choice of starting points. To mitigate this risk, Plus Plus
   initialization assigns K initial centers by choosing just one center
-  at random, computing the Euclidian norm between that point and all
+  at random, computing the Euclidean norm between that point and all
   other points in the data set, and using the results to define a
   weighted probability distribution from which the next center is
   chosen at random. The process repeats until all centers have been
@@ -75,7 +76,7 @@ Defining a K-Means model
 **Normalize:** 
 
    Specifies that each attribute be transformed such that it has a mean
-   of 0 and standard deviation, and that this transformation be
+   of 0 and standard deviation of 1, and that this transformation be
    carried out before the algorithm is applied.
 
 
@@ -158,7 +159,7 @@ Repeat until :math:`K` centers have been chosen.
 
 2. Once :math:`K` initial centers have been chosen calculate the difference
    between each observation :math:`x_{i}` and each of the centers
-   :math:`m_{1},...,m_{K}`, where difference is the squared Euclidian
+   :math:`m_{1},...,m_{K}`, where difference is the squared Euclidean
    distance taken over :math:`p` parameters.  
   
    :math:`d(x_{i}, m_{k})=`

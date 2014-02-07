@@ -105,7 +105,7 @@ public class RReader {
       }
 
       RFModel model = new RFModel(dest, headers, classes, keys, 1, 100.0f);
-      UKV.put(dest, model);
+      model.delete_and_lock(null).unlock(null);
     } catch( Exception ex ) {
       Log.err(ex);
       UKV.put(dest, new Job.Fail(ex.toString()));

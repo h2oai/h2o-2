@@ -15,11 +15,13 @@ print "via the cloned cloud mechanism (h2o-nodes.json)"
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_A_c1_rel_short(self):
+    def test_A_c1_rel(self):
+        h2o.beta_features = False
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
-    def test_B_c1_rel_short(self):
+    def test_B_c1_rel(self):
+        h2o.beta_features = False
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"

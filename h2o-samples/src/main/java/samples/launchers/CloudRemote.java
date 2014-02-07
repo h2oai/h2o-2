@@ -1,5 +1,7 @@
 package samples.launchers;
 
+import java.util.Arrays;
+
 import water.Job;
 import water.deploy.*;
 import water.util.Log;
@@ -12,16 +14,15 @@ import water.util.Log;
  */
 public class CloudRemote {
   public static void main(String[] args) throws Exception {
-    // launchEC2(null);
-    launchIPs(null);
+    launchEC2(null, 4);
   }
 
   /**
    * Starts EC2 machines and builds a cluster.
    */
-  public static void launchEC2(Class<? extends Job> job) throws Exception {
+  public static void launchEC2(Class<? extends Job> job, int boxes) throws Exception {
     EC2 ec2 = new EC2();
-    ec2.boxes = 4;
+    ec2.boxes = boxes;
     Cloud c = ec2.resize();
     launch(c, job);
   }
@@ -30,12 +31,9 @@ public class CloudRemote {
    * The current user is assumed to have ssh access (key-pair, no password) to the remote machines.
    * H2O will be deployed to '~/h2o_rsync/'.
    */
-  public static void launchIPs(Class<? extends Job> job) throws Exception {
+  public static void launchIPs(Class<? extends Job> job, String... ips) throws Exception {
     Cloud cloud = new Cloud();
-    cloud.publicIPs.add("192.168.1.161");
-    cloud.publicIPs.add("192.168.1.162");
-    cloud.publicIPs.add("192.168.1.163");
-    cloud.publicIPs.add("192.168.1.164");
+    cloud.publicIPs.addAll(Arrays.asList(ips));
     launch(cloud, job);
   }
 
@@ -45,6 +43,13 @@ public class CloudRemote {
     cloud.clientRSyncIncludes.add(h2o + "/h2o-samples/target");
     cloud.clientRSyncIncludes.add(h2o + "/lib");
     cloud.clientRSyncIncludes.add(h2o + "/smalldata");
+
+    // If run from other project
+    cloud.clientRSyncIncludes.add("target");
+
+    // Needed if using AWS API, e.g. importing from S3
+    cloud.clientRSyncIncludes.add(h2o + "/AwsCredentials.properties");
+    cloud.fannedRSyncIncludes.add("AwsCredentials.properties");
 
     // The fanned rsync (between master and slaves) will have the two 'target' merged
     cloud.fannedRSyncIncludes.add("target");
@@ -56,13 +61,13 @@ public class CloudRemote {
     cloud.clientRSyncExcludes.add("lib/javassist");
     cloud.clientRSyncExcludes.add("**/*-sources.jar");
 
-    String java = "-ea -Xmx8G -Dh2o.debug";
-    String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null);
+    String java = "-ea -Xmx60G -Dh2o.debug";
+    String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null) + " -beta";
     cloud.start(java.split(" "), node.split(" "));
   }
 
   public static class UserCode {
-    public static void userMain(String[] args) throws Exception {
+    @SuppressWarnings("unchecked") public static void userMain(String[] args) throws Exception {
       Log.info("Java location: " + System.getProperty("java.home"));
 
       String job = args[0].equals("null") ? null : args[0];

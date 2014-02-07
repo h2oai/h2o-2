@@ -8,6 +8,7 @@ import java.text.DecimalFormat;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.api.RequestBuilders;
 
 /**
  * Class for GLMValidation.
@@ -49,30 +50,21 @@ public class GLMValidation extends Iced {
   @API(help="")
   final private int _rank;
 
-  private static final DecimalFormat DFORMAT = new DecimalFormat("##.##");
-
   public static class GLMXValidation extends GLMValidation {
-    Key [] _xvalModels;
-    public GLMXValidation(GLMModel mainModel, Key [] xvalModels) {
-      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank());
-      for(Key k:_xvalModels = xvalModels){
-        GLMModel xm = DKV.get(k).get();
-        add(xm.validation());
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+    @API(help="n-fold models built for cross-validation")
+    Key [] xval_models;
+    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx, long nobs) {
+      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambdaIdx));
+      xval_models = new Key[xvalModels.length];
+      for(int i = 0; i < xvalModels.length; ++i){
+        add(xvalModels[i].validation());
+        xval_models[i] = xvalModels[i]._key;
       }
+      this.nobs = nobs;
       finalize_AIC_AUC();
-    }
-    @Override public void generateHTML(String title, StringBuilder sb) {
-      super.generateHTML(_xvalModels.length + "-fold Cross Validation", sb);
-      // add links to the xval models
-      sb.append("<h4>Cross Validation Models</h4>");
-      sb.append("<table class='table table-bordered table-condensed'>");
-      int i = 0;
-      for(Key k:_xvalModels){
-        sb.append("<tr>");
-        sb.append("<td>" + "<a href='Inspect.html?key="+k+"'>" + "Model " + ++i + "</a></td>");
-        sb.append("</tr>");
-      }
-      sb.append("</table>");
     }
   }
   public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank){
@@ -86,10 +78,7 @@ public class GLMValidation extends Iced {
     }
     this.dataKey = dataKey;
   }
-  protected void regularize(double reg){
-    avg_err = Math.sqrt(avg_err)*reg;
-  }
-
+  protected void regularize(double reg){avg_err = avg_err*reg;}
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
   public void add(double yreal, double ymodel){
     null_deviance += _glm.deviance(yreal, _ymu);
@@ -112,7 +101,7 @@ public class GLMValidation extends Iced {
   public void add(GLMValidation v){
     residual_deviance  += v.residual_deviance;
     null_deviance += v.null_deviance;
-    avg_err += v.avg_err;
+    avg_err = (double)nobs/(nobs+v.nobs)*avg_err +  (double)v.nobs/(nobs+v.nobs)*v.avg_err;
     nobs += v.nobs;
     _aic2 += v._aic2;
     if(_cms == null)_cms = v._cms;
@@ -161,8 +150,12 @@ public class GLMValidation extends Iced {
    *
    * @return estimate of the area under ROC curve of this classifier.
    */
+  double[] tprs;
+  double[] fprs;
   protected void computeAUC() {
     if( _cms == null ) return;
+    tprs = new double[_cms.length];
+    fprs = new double[_cms.length];
     double auc = 0;           // Area-under-ROC
     double TPR_pre = 1;
     double FPR_pre = 1;
@@ -172,9 +165,11 @@ public class GLMValidation extends Iced {
       auc += trapeziod_area(FPR_pre, FPR, TPR_pre, TPR);
       TPR_pre = TPR;
       FPR_pre = FPR;
+      tprs[t] = TPR;
+      fprs[t] = FPR;
     }
     auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
-    this.auc = auc;
+    this.auc = Math.round(1000*auc)*0.001;
     if(_glm.family == Family.binomial){
       int best = 0;
       for(int i = 1; i < _cms.length; ++i){
@@ -191,55 +186,17 @@ public class GLMValidation extends Iced {
     return base * havg;
   }
 
-  public void generateHTML(String title, StringBuilder sb) {
-    sb.append("<h4>" + title + "</h4>");
-    sb.append("<table class='table table-striped table-bordered table-condensed'>");
-    final long null_dof = nobs-1, res_dof = Math.max(0,nobs-_rank-1);
-    sb.append("<tr><th>Degrees of freedom:</th><td>" + null_dof + " total (i.e. Null); " + res_dof + " Residual</td></tr>");
-    sb.append("<tr><th>Null Deviance</th><td>" + null_deviance + "</td></tr>");
-    sb.append("<tr><th>Residual Deviance</th><td>" + residual_deviance + "</td></tr>");
-    sb.append("<tr><th>AIC</th><td>" + aic() + "</td></tr>");
-    sb.append("<tr><th>Training Error Rate Avg</th><td>" + avg_err + "</td></tr>");
-    if(_glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + auc() + "</td></tr>");
-    sb.append("</table>");
 
-    if(_glm.family == Family.binomial){
-      int best = (int)(100*best_threshold);
-      sb.append("<span><b>Confusion Matrix at decision threshold:</b></span><span>" + DEFAULT_THRESHOLDS[best] + "</span>");
-      confusionHTML(_cms[best], sb);
-    }
-  }
 
-  private static void cmRow( StringBuilder sb, String hd, double c0, double c1, double cerr ) {
-    sb.append("<tr><th>").append(hd).append("</th><td>");
-    if( !Double.isNaN(c0)) sb.append(DFORMAT.format(c0));
-    sb.append("</td><td>");
-    if( !Double.isNaN(c1)) sb.append(DFORMAT.format(c1));
-    sb.append("</td><td>");
-    if( !Double.isNaN(cerr)) sb.append(DFORMAT.format(cerr));
-    sb.append("</td></tr>");
-  }
 
-  private static void confusionHTML( hex.ConfusionMatrix cm, StringBuilder sb) {
-    if( cm == null ) return;
-    sb.append("<table class='table table-bordered table-condensed'>");
-    sb.append("<tr><th>Actual / Predicted</th><th>false</th><th>true</th><th>Err</th></tr>");
-    double err0 = cm._arr[0][1]/(double)(cm._arr[0][0]+cm._arr[0][1]);
-    cmRow(sb,"false",cm._arr[0][0],cm._arr[0][1],err0);
-    double err1 = cm._arr[1][0]/(double)(cm._arr[1][0]+cm._arr[1][1]);
-    cmRow(sb,"true ",cm._arr[1][0],cm._arr[1][1],err1);
-    double err2 = cm._arr[1][0]/(double)(cm._arr[0][0]+cm._arr[1][0]);
-    double err3 = cm._arr[0][1]/(double)(cm._arr[0][1]+cm._arr[1][1]);
-    cmRow(sb,"Err ",err2,err3,cm.err());
-    sb.append("</table>");
-  }
 
-  static double[] DEFAULT_THRESHOLDS = new double[] { 0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10,
+
+  public static double[] DEFAULT_THRESHOLDS = new double[] { 0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10,
     0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29,
     0.30, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.40, 0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48,
     0.49, 0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.60, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67,
     0.68, 0.69, 0.70, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.80, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86,
     0.87, 0.88, 0.89, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.00 };
+
+
 }
-
-

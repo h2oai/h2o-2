@@ -1,30 +1,25 @@
 package hex;
 
-import hex.Layer.ChunkLinear;
-import hex.Layer.ChunkSoftmax;
-import hex.Layer.ChunksInput;
-import hex.Layer.Input;
-import hex.Layer.VecLinear;
-import hex.Layer.VecSoftmax;
-import hex.Layer.VecsInput;
-
-import java.io.IOException;
-import java.nio.FloatBuffer;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicIntegerArray;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.jogamp.opencl.*;
+import com.jogamp.opencl.CLMemory.Mem;
+import hex.Layer.*;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Log;
 import water.util.Utils;
 
-import com.jogamp.opencl.*;
-import com.jogamp.opencl.CLMemory.Mem;
+import java.io.IOException;
+import java.nio.FloatBuffer;
+import java.util.Arrays;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Trains a neural network.
@@ -32,7 +27,7 @@ import com.jogamp.opencl.CLMemory.Mem;
  * @author cypof
  */
 public abstract class Trainer {
-  public Trainer() {
+  Trainer() {
   }
 
   public abstract Layer[] layers();
@@ -41,7 +36,7 @@ public abstract class Trainer {
 
   public abstract void join();
 
-  public long items() {
+  public long processed() {
     throw new UnsupportedOperationException();
   }
 
@@ -71,16 +66,8 @@ public abstract class Trainer {
       bprop();
     }
 
-    final void adjust(long n) {
-      for( int i = 1; i < _ls.length; i++ ) {
-        _ls[i].anneal(n);
-        _ls[i].momentum(n);
-      }
-    }
-
     final void fprop() {
-      for( int i = 0; i < _ls.length; i++ )
-        _ls[i].fprop();
+      for (Layer _l : _ls) _l.fprop(true);
     }
 
     final void bprop() {
@@ -93,11 +80,14 @@ public abstract class Trainer {
    * Trains NN on current thread.
    */
   public static class Direct extends Base {
-    public int samples;
+    long _processed, _limit;
     Thread _thread;
+    Key _job;
 
-    public Direct(Layer[] ls) {
+    public Direct(Layer[] ls, double epochs, Key job) {
       super(ls);
+      _limit = (long) Math.ceil(epochs * ((Input) ls[0])._len);
+      _job = job;
     }
 
     @Override public Layer[] layers() {
@@ -105,16 +95,24 @@ public abstract class Trainer {
     }
 
     public void run() {
+      Training training = new Training() {
+        @Override long processed() {
+          return _processed;
+        }
+      };
+      for (Layer _l : _ls) _l._training = training;
+
       Input input = (Input) _ls[0];
-      for( long i = 0; samples == 0 || i < samples; i++ ) {
+      for( ; _limit == 0 || _processed < _limit; _processed++ ) {
         step();
         input.move();
+        if( _job != null && (!Job.isRunning(_job) || !NeuralNet.running ) )
+          break;
       }
     }
 
-    @Override public long items() {
-      Input input = (Input) _ls[0];
-      return input._pos;
+    @Override public long processed() {
+      return _processed;
     }
 
     @Override public void start() {
@@ -137,106 +135,82 @@ public abstract class Trainer {
 
   /**
    * Runs several trainers in parallel on the same weights, using threads. Only works on one node.
-   * There is no synchronization, so some updates are lost. Works well in practice.
    */
   public static class Threaded extends Trainer {
     final Base[] _trainers;
     final Thread[] _threads;
-    final int _stepsPerThread;
-    static final CyclicBarrier DONE = new CyclicBarrier(1);
-    volatile CyclicBarrier _suspend;
-    final CyclicBarrier _resume;
-    final AtomicLong _items = new AtomicLong();
+    final long _stepsPerThread;
+    final AtomicLong _processed = new AtomicLong();
 
-    public Threaded(Layer[] ls) {
-      this(ls, 0, Runtime.getRuntime().availableProcessors());
-    }
+    public Threaded(Layer[] ls, double epochs, final Key job, int threads) {
+      int num_threads = threads > 0 ? threads : Runtime.getRuntime().availableProcessors();
+      _trainers = new Base[num_threads];
+      _threads = new Thread[num_threads];
+      _stepsPerThread = (long) (epochs * ((Input) ls[0])._len / num_threads);
 
-    public Threaded(Layer[] ls, int steps, int cores) {
-      _trainers = new Base[cores];
-      _threads = new Thread[_trainers.length];
-      _stepsPerThread = steps / _threads.length;
-      _resume = new CyclicBarrier(_threads.length + 1);
-
-      for( int t = 0; t < _trainers.length; t++ ) {
+      Log.info("Starting " + num_threads + " threads.");
+      for( int t = 0; t < num_threads; t++ ) {
         Layer[] clones = new Layer[ls.length];
         for( int y = 0; y < clones.length; y++ )
           clones[y] = ls[y].clone();
-        for( int y = 0; y < clones.length; y++ )
-          clones[y].init(clones, y, false, 0);
+        for( int y = 0; y < clones.length; y++ ) {
+          clones[y].init(clones, y, false);
+          clones[y]._training = new Training() {
+            @Override long processed() {
+              return _processed.get();
+            }
+          };
+        }
         final Input input = (Input) clones[0];
-        input._pos = input._len * t / _trainers.length;
+        input._pos = input._len * t / num_threads;
         _trainers[t] = new Base(clones);
         final Base trainer = _trainers[t];
 
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
-            for( int i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
-              CyclicBarrier b = _suspend;
-              if( b == DONE )
+            for( long i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
+              if( job != null && (!Job.isRunning(job) || !NeuralNet.running ) )
                 break;
-              if( b != null ) {
-                try {
-                  b.await();
-                  _resume.await();
-                } catch( Exception e ) {
-                  throw new RuntimeException(e);
-                }
+              try {
+                trainer.step();
+                input.move();
+                _processed.incrementAndGet();
+              } catch (Exception e) {
+                e.getStackTrace();
               }
-              trainer.step();
-              input.move();
-              _items.incrementAndGet();
             }
           }
         };
       }
-      Log.info("Started " + _trainers.length + " neural network trainers");
     }
 
     @Override public Layer[] layers() {
       return _trainers[0].layers();
     }
 
-    @Override public long items() {
-      return _items.get();
+    @Override public long processed() {
+      return _processed.get();
     }
 
     @Override public void start() {
-      for( int t = 0; t < _threads.length; t++ )
-        _threads[t].start();
+      for (Thread _thread : _threads) _thread.start();
     }
 
     @Override public void join() {
-      for( int i = 0; i < _threads.length; i++ ) {
+      for (Thread _thread : _threads) {
         try {
-          _threads[i].join();
-        } catch( InterruptedException e ) {
+          _thread.join();
+        } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
       }
     }
 
-    public void cancel() {
-      _suspend = DONE;
+    public void run() {
+      start();
+      join();
     }
 
-    void suspend() {
-      try {
-        _suspend = new CyclicBarrier(_threads.length + 1);
-        _suspend.await();
-        _suspend = null;
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    void resume() {
-      try {
-        _resume.await();
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
-      }
-    }
   }
 
   /**
@@ -248,24 +222,24 @@ public abstract class Trainer {
     static final ConcurrentHashMap<Key, MapReduce> _instances = new ConcurrentHashMap<Key, MapReduce>();
 
     Layer[] _ls;
-    int _epochs;
+    double _epochs;
     Key _job;
     AtomicIntegerArray _counts;
     transient Key _key;
     transient Descent _task;
 
-    public MapReduce(Layer[] ls, int epochs, Key job) {
+    public MapReduce(Layer[] ls, double epochs, Key job) {
       _ls = ls;
       _epochs = epochs;
       _job = job;
 
-      _key = Key.make(UUID.randomUUID().toString(), (byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
+      _key = Key.make((byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
       _instances.put(_key, this);
       DKV.put(_key, new Value(_key, new byte[0]));
 
       Vec[] vecs = ((VecsInput) ls[0]).vecs;
       assert ls[0]._a.length == VecsInput.expand(vecs);
-      assert vecs[0].nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
+      //assert vecs[0].nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
       _counts = new AtomicIntegerArray(vecs[0].nChunks());
     }
 
@@ -273,7 +247,7 @@ public abstract class Trainer {
       return _ls;
     }
 
-    @Override public long items() {
+    @Override public long processed() {
       Vec[] vecs = ((VecsInput) _ls[0]).vecs;
       long n = 0;
       for( int i = 0; i < _counts.length(); i++ )
@@ -292,7 +266,7 @@ public abstract class Trainer {
       _task._key = _key;
       _task._epochs = _epochs;
       _task._ws = new float[_ls.length][];
-      _task._bs = new float[_ls.length][];
+      _task._bs = new double[_ls.length][];
       for( int y = 1; y < _ls.length; y++ ) {
         _task._ws[y] = _ls[y]._w;
         _task._bs[y] = _ls[y]._b;
@@ -307,25 +281,41 @@ public abstract class Trainer {
       _task.join();
     }
 
+    public void run() {
+      start();
+      join();
+      while (NeuralNet.running) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+
     void done() {
+      NeuralNet.running = false;
       _instances.remove(_key);
       UKV.remove(_key);
       if( _job != null ) {
         Job job = Job.findJob(_job);
-        if( job != null )
+        if( job != null ) {
+          H2OCountedCompleter task = job._fjtask;
+          if( task != null )
+            task.tryComplete();
           job.remove();
+        }
       }
     }
   }
 
   static class Descent extends MRTask2<Descent> {
-    static final int BATCH = 16;
-
     Key _job;
     Layer[] _ls;
-    float[][] _ws, _bs;
+    float[][] _ws;
+    double[][] _bs;
     Key _key;
-    int _epochs;
+    double _epochs;
     transient NodeDescent _node;
     transient volatile boolean _done;
 
@@ -336,11 +326,11 @@ public abstract class Trainer {
       final boolean home = _key.home();
       Thread thread = new Thread() {
         @Override public void run() {
-          while( _job == null || !Job.cancelled(_job) ) {
+          while( _job == null || Job.isRunning(_job) ) {
             if( !home )
               _node.sync();
             else {
-              _node._total = _node._trainer.items();
+              _node._total = _node._trainer.processed();
               try {
                 Thread.sleep(1);
               } catch( InterruptedException ex ) {
@@ -358,19 +348,16 @@ public abstract class Trainer {
       // between chunks diverge quickly
       DescentEpoch epoch = new DescentEpoch();
       epoch._node = _node;
-      epoch._count = _epochs == 0 ? -1 : _epochs;
+      epoch._count = _epochs == 0. ? -1 : (int)Math.ceil(_epochs);
       H2O.submitTask(epoch);
       _ls = null;
-      _ws = _bs = null;
+      _ws = null;
+      _bs = null;
       _key = null;
     }
 
     @Override public void map(Chunk[] cs) {
       _node._chunks.add(cs);
-    }
-
-    @Override public boolean logVerbose() {
-      return false;
     }
   }
 
@@ -381,7 +368,7 @@ public abstract class Trainer {
       String error = Utils.getStackAsString(ex);
       Log.info(error);
       if( _node._job != null )
-        Job.cancel(_node._job, error);
+        Job.findJob(_node._job).cancel(error);
       return super.onExceptionalCompletion(ex, caller);
     }
   }
@@ -390,7 +377,7 @@ public abstract class Trainer {
     int _count;
 
     @Override public void compute2() {
-      if( (_count < 0 || --_count > 0) && (_node._job == null || !Job.cancelled(_node._job)) ) {
+      if( (_count < 0 || --_count >= 0) && (_node._job == null || Job.isRunning(_node._job)) ) {
         for( Chunk[] cs : _node._chunks ) {
           DescentChunk task = new DescentChunk();
           task._node = _node;
@@ -410,7 +397,7 @@ public abstract class Trainer {
     Chunk[] _cs;
 
     @Override public void compute2() {
-      if( _node._job == null || !Job.cancelled(_node._job) ) {
+      if( _node._job == null || (Job.isRunning(_node._job) && NeuralNet.running)) {
         Layer[] clones = new Layer[_node._ls.length];
         ChunksInput input = new ChunksInput(Utils.remove(_cs, _cs.length - 1), (VecsInput) _node._ls[0]);
         clones[0] = input;
@@ -421,10 +408,19 @@ public abstract class Trainer {
           clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1], (VecSoftmax) output);
         else
           clones[clones.length - 1] = new ChunkLinear(_cs[_cs.length - 1], (VecLinear) output);
+
+        // create new _a and _e, but link to weights/bias from _node (Hogwild)
         for( int y = 0; y < clones.length; y++ ) {
-          clones[y].init(clones, y, false, _node._total);
+          clones[y].init(clones, y, false);
           clones[y]._w = _node._ws[y];
           clones[y]._b = _node._bs[y];
+          clones[y]._wm = _node._wm[y];
+          clones[y]._bm = _node._bm[y];
+          clones[y]._training = new Training() {
+            @Override long processed() {
+              return _node._total;
+            }
+          };
         }
         Base base = new Base(clones);
         for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
@@ -440,24 +436,34 @@ public abstract class Trainer {
     ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
     Key _job;
     Layer[] _ls;
-    float[][] _ws, _bs;
-    float[][] _wi, _bi;
+    float[][] _ws; // Current weights
+    double[][] _bs; // Current bias
+    float[][] _wi; // Initial weights, for synchronization
+    double[][] _bi; // Initial biases, for synchronization
+    float[][] _wm; // Momentums
+    double[][] _bm; // Momentums
     Key _key;
     ConcurrentHashMap<Integer, Integer> _counters;
     MapReduce _trainer;
     long _total;
 
-    NodeDescent(Key job, Layer[] ls, float[][] ws, float[][] bs, Key key) {
+    NodeDescent(Key job, Layer[] ls, float[][] ws, double[][] bs, Key key) {
       _job = job;
       _ls = ls;
       _key = key;
       _ws = ws;
       _bs = bs;
       _wi = new float[ws.length][];
-      _bi = new float[bs.length][];
+      _bi = new double[bs.length][];
+      _wm = new float[ws.length][];
+      _bm = new double[bs.length][];
       for( int y = 1; y < _ws.length; y++ ) {
         _wi[y] = ws[y].clone();
         _bi[y] = bs[y].clone();
+        if( ls[y].momentum_start != 0 || ls[y].momentum_stable != 0 ) {
+          _wm[y] = new float[ws[y].length];
+          _bm[y] = new double[bs[y].length];
+        }
       }
       _trainer = MapReduce._instances.get(_key);
       assert (_trainer != null) == _key.home();
@@ -504,14 +510,14 @@ public abstract class Trainer {
       if( n > 0 ) {
         Shuttle s = new Shuttle();
         s._w = new float[_ws.length][];
-        s._b = new float[_bs.length][];
+        s._b = new double[_bs.length][];
         for( int y = 1; y < _ws.length; y++ ) {
           s._w[y] = new float[_ws[y].length];
           for( int i = 0; i < _ws[y].length; i++ ) {
             s._w[y][i] = _ws[y][i] - _wi[y][i];
             _wi[y][i] = _ws[y][i];
           }
-          s._b[y] = new float[_bs[y].length];
+          s._b[y] = new double[_bs[y].length];
           for( int i = 0; i < _bs[y].length; i++ ) {
             s._b[y][i] = _bs[y][i] - _bi[y][i];
             _bi[y][i] = _bs[y][i];
@@ -519,7 +525,7 @@ public abstract class Trainer {
         }
         s._counts = counts;
         s.invoke(_key);
-        _total = s._total;
+        _total = s._processed;
         for( int y = 1; y < _ws.length; y++ ) {
           for( int i = 0; i < _ws[y].length; i++ ) {
             float d = _ws[y][i] - _wi[y][i];
@@ -527,7 +533,7 @@ public abstract class Trainer {
             _ws[y][i] = s._w[y][i] + d;
           }
           for( int i = 0; i < _bs[y].length; i++ ) {
-            float d = _bs[y][i] - _bi[y][i];
+            double d = _bs[y][i] - _bi[y][i];
             _bi[y][i] = s._b[y][i];
             _bs[y][i] = s._b[y][i] + d;
           }
@@ -538,9 +544,10 @@ public abstract class Trainer {
     }
 
     static class Shuttle extends Atomic {
-      float[][] _w, _b; // Deltas in, values out
+      float[][] _w; // Deltas in, values out
+      double[][] _b; // Deltas in, values out
       int[] _counts;
-      long _total;
+      long _processed;
 
       @Override public Value atomic(Value value) {
         assert _key.home();
@@ -559,7 +566,7 @@ public abstract class Trainer {
           for( int i = 0; i < _counts.length; i += 2 )
             trainer._counts.addAndGet(_counts[i], _counts[i + 1]);
           _counts = null;
-          _total = trainer.items();
+          _processed = trainer.processed();
         }
         return null;
       }
@@ -613,7 +620,7 @@ public abstract class Trainer {
             bprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_bprop");
             bprops[y].putArg(_ls[y - 1]._a.length);
             bprops[y].putArgs(a[y - 1], w[y], b[y], a[y], e[y]);
-            bprops[y].putArg(_ls[y]._r);
+//            bprops[y].putArg(_ls[y]._r);
             if( e[y - 1] != null )
               bprops[y].putArg(e[y - 1]);
 
@@ -623,10 +630,10 @@ public abstract class Trainer {
         }
         int group = device.getMaxWorkGroupSize();
         Input input = (Input) _ls[0];
-        for( ;; ) {
-          input.fprop();
+        while (true) {
+          input.fprop(true);
           for( int i = 0; i < input._a.length; i++ )
-            a[0].getBuffer().put(i, input._a[i]);
+            a[0].getBuffer().put(i, (float)input._a[i]);
           queue.putWriteBuffer(a[0], false);
           for( int y = 1; y < fprops.length; y++ )
             queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);

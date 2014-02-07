@@ -1,6 +1,7 @@
 package water.api;
 
 import java.io.*;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,6 +11,7 @@ import org.apache.hadoop.fs.Path;
 import water.*;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.S3FileVec;
+import water.fvec.UploadFileVec;
 import water.persist.PersistHdfs;
 import water.persist.PersistS3;
 import water.util.FileIntegrityChecker;
@@ -20,7 +22,6 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.internal.Streams;
 
 public class ImportFiles2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -38,7 +39,7 @@ public class ImportFiles2 extends Request2 {
   @Override
   public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
 
-  @API(help="Path to file/folder on either local disk/hdfs/s3",required=true,filter=GeneralFile.class)
+  @API(help="Path to file/folder on either local disk/hdfs/s3",required=true,filter=GeneralFile.class,gridable=false)
   String path;
 
 
@@ -51,6 +52,9 @@ public class ImportFiles2 extends Request2 {
   @API(help="files that failed to load")
   String [] fails;
 
+  @API(help="Prior Keys that matched a prefix of the imported path, and were removed prior to (re)importing")
+  String[] dels;
+
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
    */
@@ -61,17 +65,17 @@ public class ImportFiles2 extends Request2 {
     try{
       if(path != null){
         String p2 = path.toLowerCase();
-        if(p2.startsWith("hdfs://") || p2.startsWith("s3n://"))serveHdfs();
-        else if(p2.startsWith("s3://")) serveS3();
+        if( false ) ;
+        else if( p2.startsWith("hdfs://" ) ) serveHdfs();
+        else if( p2.startsWith("s3n://"  ) ) serveHdfs();
+        else if( p2.startsWith("s3://"   ) ) serveS3();
+        else if( p2.startsWith("http://" ) ) serveHttp();
+        else if( p2.startsWith("https://") ) serveHttp();
         else serveLocalDisk();
       }
-      return new Response(Response.Status.done, this, -1, -1, null);
-    } catch( IOException e ) {
-      StringBuilder sb = new StringBuilder();
-      PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));
-      e.printStackTrace(pw);
-      Log.err(e);
-      return Response.error("Got exception " + pw.toString());
+      return Response.done(this);
+    } catch( Throwable e ) {
+      return Response.error(e);
     }
   }
 
@@ -106,7 +110,7 @@ public class ImportFiles2 extends Request2 {
       for(S3ObjectSummary obj:currentList.getObjectSummaries())
         try {
           succ.add(S3FileVec.make(obj,fs).toString());
-        } catch( Exception e ) {
+        } catch( Throwable e ) {
           fail.add(obj.getKey());
           Log.err("Failed to loadfile from S3: path = " + obj.getKey() + ", error = " + e.getClass().getName() + ", msg = " + e.getMessage());
         }
@@ -119,27 +123,43 @@ public class ImportFiles2 extends Request2 {
     files = keys;
     fails = fail.toArray(new String[fail.size()]);
   }
-  protected void serveLocalDisk(){
+
+  private void serveLocalDisk() {
     File f = new File(path);
     if(!f.exists())throw new IllegalArgumentException("File " + path + " does not exist!");
-    FileIntegrityChecker c = FileIntegrityChecker.check(new File(path),true);
-    ArrayList<String> afails = new ArrayList();
     ArrayList<String> afiles = new ArrayList();
     ArrayList<String> akeys  = new ArrayList();
-    Futures fs = new Futures();
-    for( int i = 0; i < c.size(); ++i ) {
-      Key k = c.importFile(i, fs);
-      if( k == null ) {
-        afails.add(c.getFileName(i));
-      } else {
-        afiles.add(c.getFileName(i));
-        akeys .add(k.toString());
-      }
-    }
-    fs.blockForPending();
-    fails = afails.toArray(new String[0]);
+    ArrayList<String> afails = new ArrayList();
+    ArrayList<String> adels  = new ArrayList();
+    FileIntegrityChecker.check(f,true).syncDirectory(afiles,akeys,afails,adels);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
+    fails = afails.toArray(new String[0]);
+    dels  = adels .toArray(new String[0]);
+  }
+
+  protected void serveHttp() {
+    try {
+      java.net.URL url = new URL(path);
+      Key k = Key.make(path);
+      InputStream is = url.openStream();
+      if( is == null ) {
+        Log.err("Unable to open stream to URL " + path);
+      }
+
+      UploadFileVec.readPut(k, is);
+      fails = new String[0];
+      String[] filesArr = { path };
+      files = filesArr;
+      String[] keysArr = { k.toString() };
+      keys = keysArr;
+    }
+    catch( Throwable e) {
+      String[] arr = { path };
+      fails = arr;
+      files = new String[0];
+      keys = new String[0];
+    }
   }
 
   // HTML builder
@@ -159,6 +179,8 @@ public class ImportFiles2 extends Request2 {
 
     if( fails.length > 0 )
       DocGen.HTML.array(DocGen.HTML.title(sb,"fails"),fails);
+    if( dels != null && dels.length > 0 )
+      DocGen.HTML.array(DocGen.HTML.title(sb,"Keys deleted before importing"),dels);
     return true;
   }
 

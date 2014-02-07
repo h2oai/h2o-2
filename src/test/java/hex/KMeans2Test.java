@@ -1,7 +1,6 @@
 package hex;
 
 import hex.KMeans.Initialization;
-
 import hex.KMeans2.KMeans2Model;
 
 import java.util.Random;
@@ -18,7 +17,7 @@ public class KMeans2Test extends TestUtil {
   private static final double SIGMA = 3;
 
   @BeforeClass public static void stall() {
-    stall_till_cloudsize(3);
+    stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
   @Test public void test1Dimension() {
@@ -38,13 +37,12 @@ public class KMeans2Test extends TestUtil {
       algo.seed = SEED;
       algo.invoke();
       KMeans2Model res = UKV.get(algo.destination_key);
-      double[][] clusters = res.clusters;
+      double[][] clusters = res.centers;
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);
+      res.delete();
     } finally {
-      frame.remove();
-      if( algo != null && algo.destination_key != null )
-        UKV.remove(algo.destination_key);
+      frame.delete();
     }
   }
 
@@ -73,7 +71,7 @@ public class KMeans2Test extends TestUtil {
       algo.invoke();
       KMeans2Model res = UKV.get(algo.destination_key);
       Log.debug(Sys.KMEAN, " testGaussian rows:" + rows + ", ms:" + t);
-      double[][] clusters = res.clusters;
+      double[][] clusters = res.centers;
 
       for( double[] goal : goals ) {
         boolean found = false;
@@ -85,10 +83,9 @@ public class KMeans2Test extends TestUtil {
         }
         Assert.assertTrue(found);
       }
+      res.delete();
     } finally {
-      frame.remove();
-      if( algo != null && algo.destination_key != null )
-        UKV.remove(algo.destination_key);
+      frame.delete();
     }
   }
 
@@ -141,10 +138,9 @@ public class KMeans2Test extends TestUtil {
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeans2Model res = UKV.get(algo.destination_key);
-    Assert.assertEquals(algo.k, res.clusters.length);
-    UKV.remove(dest);
-    if( algo != null && algo.destination_key != null )
-      UKV.remove(algo.destination_key);
+    Assert.assertEquals(algo.k, res.centers.length);
+    frame.delete();
+    res.delete();
   }
 
   @Test public void testSphere() {
@@ -160,9 +156,8 @@ public class KMeans2Test extends TestUtil {
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeans2Model res = UKV.get(algo.destination_key);
-    Assert.assertEquals(algo.k, res.clusters.length);
-    UKV.remove(dest);
-    if( algo != null && algo.destination_key != null )
-      UKV.remove(algo.destination_key);
+    Assert.assertEquals(algo.k, res.centers.length);
+    frame.delete();
+    res.delete();
   }
 }

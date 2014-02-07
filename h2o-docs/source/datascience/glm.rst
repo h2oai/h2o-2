@@ -1,11 +1,13 @@
+.. _GLMmath:
+
 
 Generalized Linear Model (GLM)
 ------------------------------
 
 GLM includes several flexible algorithms. Each serves a 
 different purpose, and is used under different assumptions.
-Depending on function choice, it can be used either for 
-prediction or classification.
+Depending on distribution and link function choice, it can be 
+used either for prediction or classification.
  
 
 **The GLM suite includes**
@@ -66,8 +68,14 @@ Defining a GLM Model
 
      Please note that H\ :sub:`2`\ O does not currently return a warning when
      users predict on data outside of the range on which the model was
-     originally specified. It is the user's responsibility to ensure
-     that out of data prediction is undertaken with caution.  
+     originally specified. For example, H\ :sub:`2`\ O allows a model
+     to be  trained on data with X between (-1, 10), and then applied
+     to precicting  on data where the range of X is (-10, 10) without
+     warning. This is also true in the analgous case for predicting and
+     training on factors. It is the user's responsibility to ensure
+     that out of data prediction is undertaken with caution, as the
+     veracity of the original results are often constrained to the
+     data range used in the original model.   
   
 
 **Family and Link:**  
@@ -134,15 +142,16 @@ Defining a GLM Model
       to 0.5 by default, but the parameter can take any value between
       0 and 1, inclusive. It functions such that there is an added
       penalty taken against the estimated fit of the model as the
-      number of parameters increases. An alpha of 1 is the lasso
+      number of parameters increases. An Alpha of 1 is the lasso
       penalty, and an alpha of 0 is the ridge penalty.
  
 **Weight:**
 
-      Allows the user to specify consideration given to
-      observations based on the observed Y value. Weight=1 is
-      neutral. Weight = 0.5 treats negative examples as twice more
-      important than positive ones. Weight = 2.0 does the opposite.
+      In binomial regression, weight allows the user to specify
+      consideration given to observations based on the observed Y
+      value. Weight=1 is neutral. Weight = 0.5 treats negative
+      examples as twice more important than positive ones. Weight =
+      2.0 does the opposite.
 
 **Case and Casemode:**
 
@@ -153,6 +162,13 @@ Defining a GLM Model
       to this value. Used in binomial prediction, where the default
       case is the mean of the Y column. 
 
+**GLMgrid Models**
+ 
+     GLMgrid models can be generated for sets of regularization parameters by 
+     entering the parameters either as a list of comma separated
+     values, or ranges in steps. For example, if users wish to
+     evaluate a model for alpha=(0, .5, 1), entering 0, .5, 1 or
+     0:1:.5 will achieve the desired outcome. 
 
 Expert Settings
 """""""""""""""      
@@ -189,6 +205,11 @@ Expert Settings
      below than Beta epsilon
 
 
+**Max iter**
+
+  The maximum number of iterations to be performed for training the
+  model via gradient descent. 
+
 Interpreting a Model
 """"""""""""""""""""
 
@@ -204,7 +225,7 @@ Interpreting a Model
     Defined as  (n-1)-p. This is the null degrees of freedom less the 
     number of parameters being estimated in the model. 
 
-**Deviance:**
+**Residual Deviance:**
 
      The difference between the predicted value and the observed value 
      for each example or observation in the data. Deviance is
@@ -383,10 +404,10 @@ When :math:`Y` has a pdf from the exponential family:
 Let :math:`g(\mu_{i})=\eta_{i}` be a monotonic, differentiable
 transformation of the expected value of :math:`y_{i}`. The function
 :math:`\eta_{i}` is the link function and follows a linear model.
-:math:`g(\mu_{i})=\eta_{i}=\vec{x_{i}^{\prime}}\beta`
+:math:`g(\mu_{i})=\eta_{i}=\mathbf{x_{i}^{\prime}}\beta`
 
 When inverted: 
-:math:`\mu=g^{-1}(\vec{x_{i}^{\prime}}\beta)`
+:math:`\mu=g^{-1}(\mathbf{x_{i}^{\prime}}\beta)`
 
 
 **Maximum Likelihood Estimation**
@@ -416,9 +437,9 @@ factor :math:`\phi`.
 
 Regress :math:`z_{i}` on the predictors :math:`x_{i}` using the
 weights :math:`w_{i}` to obtain new estimates of :math:`\beta`. 
-:math:`\hat{\beta}=(\vec{X}^{\prime}\vec{W}\vec{X})^{-1}\vec{X}^{\prime}\vec{W}\vec{z}`
-Where :math:`\vec{X}` is the model matrix, :math:`\vec{W}` is a
-diagonal matrix of :math:`w_{i}`, and :math:`\vec{z}` is a vector of
+:math:`\hat{\beta}=(\mathbf{X}^{\prime}\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^{\prime}\mathbf{W}\mathbf{z}`
+Where :math:`\mathbf{X}` is the model matrix, :math:`\mathbf{W}` is a
+diagonal matrix of :math:`w_{i}`, and :math:`\mathbf{z}` is a vector of
 the working response variable :math:`z_{i}`.
 
 This process is repeated until the estimates :math:`\hat{\beta}` change by less than a specified amount. 

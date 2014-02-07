@@ -8,6 +8,7 @@ import java.util.*;
 
 import water.*;
 import water.Job.ChunkProgressJob;
+import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -22,9 +23,6 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
   final Job _job;
   //-----------------------------------------------------
   T _result; // result of the computation is stored here
-
-  public static class JobCancelledException extends Exception {}
-
 
   public static abstract class RowFunc<T extends Iced> extends Iced  {
     protected boolean _expandCats = true;
@@ -45,7 +43,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
     public T apply(Job j, DataFrame data) throws JobCancelledException{
       NewRowVecTask<T> tsk = new NewRowVecTask<T>(j,this, data);
       tsk.invoke(data._ary._key);
-      if(j != null && j.cancelled())throw new JobCancelledException();
+      if(j != null && !Job.isRunning(j.self()))throw new JobCancelledException();
       return tsk._result;
     }
 
@@ -215,7 +213,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
 
   @Override
   public void map(Key key) {
-    if(_job != null && _job.cancelled())return;
+    if(_job != null && !Job.isRunning(_job.self()))return;
     T result = _func.newResult();
     Sampling s = _data.getSampling();
     AutoBuffer bits = _data._ary.getChunk(key);
@@ -276,7 +274,7 @@ ROW:
   }
 
   @Override public void reduce(DRemoteTask drt) {
-    if(_job != null && _job.cancelled()) return;
+    if(_job != null && !Job.isRunning(_job.self())) return;
     NewRowVecTask<T> rv = (NewRowVecTask<T>)drt;
     assert _result != rv._result;
     _result = (_result != null)?_func.reduce(_result, rv._result):rv._result;

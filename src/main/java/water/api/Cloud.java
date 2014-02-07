@@ -3,7 +3,36 @@ package water.api;
 import com.google.gson.*;
 import water.*;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 public class Cloud extends Request {
+  /**
+   * Data structure to store last tick counts from a given node.
+   */
+  private class LastTicksEntry {
+    final public long _system_idle_ticks;
+    final public long _system_total_ticks;
+    final public long _process_total_ticks;
+
+    LastTicksEntry(HeartBeat hb) {
+      _system_idle_ticks = hb._system_idle_ticks;
+      _system_total_ticks = hb._system_total_ticks;
+      _process_total_ticks = hb._process_total_ticks;
+    }
+  }
+
+  /**
+   * Store last tick counts for each node.
+   *
+   * This is local to a node and doesn't need to be Iced, so make it transient.
+   * Access this each time the Cloud status page is called on this node.
+   *
+   * The window of tick aggregation is between calls to this page (which might come from the browser or from REST
+   * API clients).
+   *
+   * Note there is no attempt to distinguish between REST API sessions.  Every call updates the last tick count info.
+   */
+  private static transient ConcurrentHashMap<String,LastTicksEntry> ticksHashMap = new ConcurrentHashMap<String, LastTicksEntry>();
 
   public Cloud() {
     _requestHelp = "Displays the information about the current cloud. For each"
@@ -18,6 +47,7 @@ public class Cloud extends Request {
     response.addProperty(CLOUD_NAME, H2O.NAME);
     response.addProperty(NODE_NAME, self.toString());
     response.addProperty(CLOUD_SIZE, cloud._memary.length);
+    boolean cloudHealthy = true;
     JsonArray nodes = new JsonArray();
     for (H2ONode h2o : cloud._memary) {
       HeartBeat hb = h2o._heartbeat;
@@ -33,6 +63,14 @@ public class Cloud extends Request {
       node.addProperty(NUM_CPUS, (int)hb._num_cpus);
       node.addProperty(SYSTEM_LOAD, hb._system_load_average);
 
+      Long elapsed = System.currentTimeMillis() - h2o._last_heard_from;
+      node.addProperty(ELAPSED, elapsed);
+      h2o._node_healthy = elapsed > HeartBeatThread.TIMEOUT ? false : true;
+      node.addProperty(NODE_HEALTH, h2o._node_healthy);
+      if (! h2o._node_healthy) {
+        cloudHealthy = false;
+      }
+
       JsonArray fjt = new JsonArray();
       JsonArray fjq = new JsonArray();
       if( hb._fjthrds_hi != null ) {
@@ -43,13 +81,52 @@ public class Cloud extends Request {
       }
       node.add(FJ_THREADS_HI, fjt);
       node.add(FJ_QUEUE_HI  , fjq);
-      node.addProperty(FJ_THREADS_LO, (int)hb._fjthrds_lo);
-      node.addProperty(FJ_QUEUE_LO, (int)hb._fjqueue_lo);
-      node.addProperty(RPCS, (int)hb._rpcs);
+      node.addProperty(FJ_THREADS_LO, (int) hb._fjthrds_lo);
+      node.addProperty(FJ_QUEUE_LO, (int) hb._fjqueue_lo);
+      node.addProperty(RPCS, (int) hb._rpcs);
       node.addProperty(TCPS_ACTIVE, (int) hb._tcps_active);
-      node.addProperty(LAST_CONTACT,h2o._last_heard_from);
+      if (hb._process_num_open_fds >= 0) { node.addProperty("open_fds", hb._process_num_open_fds); } else { node.addProperty("open_fds", "N/A"); }
+
+      // Use tick information to calculate CPU usage percentage for the entire system and
+      // for the specific H2O node.
+      //
+      // Note that 100% here means "the entire box".  This is different from 'top' 100%,
+      // which usually means one core.
+      int my_cpu_pct = -1;
+      int sys_cpu_pct = -1;
+      {
+        LastTicksEntry lte = ticksHashMap.get(h2o.toString());
+        if (lte != null) {
+          long system_total_ticks_delta = hb._system_total_ticks - lte._system_total_ticks;
+
+          // Avoid divide by 0 errors.
+          if (system_total_ticks_delta > 0) {
+            long system_idle_ticks_delta = hb._system_idle_ticks - lte._system_idle_ticks;
+            double sys_cpu_frac_double = 1 - ((double)(system_idle_ticks_delta) / (double)system_total_ticks_delta);
+            if (sys_cpu_frac_double < 0) sys_cpu_frac_double = 0;               // Clamp at 0.
+            else if (sys_cpu_frac_double > 1) sys_cpu_frac_double = 1;          // Clamp at 1.
+            sys_cpu_pct = (int)(sys_cpu_frac_double * 100);
+
+            long process_total_ticks_delta = hb._process_total_ticks - lte._process_total_ticks;
+            double process_cpu_frac_double = ((double)(process_total_ticks_delta) / (double)system_total_ticks_delta);
+            // Saturate at 0 and 1.
+            if (process_cpu_frac_double < 0) process_cpu_frac_double = 0;       // Clamp at 0.
+            else if (process_cpu_frac_double > 1) process_cpu_frac_double = 1;  // Clamp at 1.
+            my_cpu_pct = (int)(process_cpu_frac_double * 100);
+          }
+        }
+        LastTicksEntry newLte = new LastTicksEntry(hb);
+        ticksHashMap.put(h2o.toString(), newLte);
+      }
+      if (my_cpu_pct >= 0)  { node.addProperty("my_cpu_%", my_cpu_pct); }   else { node.addProperty("my_cpu_%", "N/A"); }
+      if (sys_cpu_pct >= 0) { node.addProperty("sys_cpu_%", sys_cpu_pct); } else { node.addProperty("sys_cpu_%", "N/A"); }
+
+      node.addProperty(LAST_CONTACT, h2o._last_heard_from);
       nodes.add(node);
     }
+
+    response.addProperty(CLOUD_HEALTH, cloudHealthy);
+
     response.add(NODES,nodes);
     response.addProperty(CONSENSUS, Paxos._commonKnowledge); // Cloud is globally accepted
     response.addProperty(LOCKED, Paxos._cloudLocked); // Cloud is locked against changes

@@ -1,6 +1,6 @@
 import h2o, h2o_cmd, re, os
 import h2o_print as h2p
-import getpass
+import getpass, time
 
 #****************************************************************************************
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
@@ -198,6 +198,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
             h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
 
+        
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
@@ -310,7 +311,11 @@ def parse_only(node=None, pattern=None, hex_key=None,
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    benchmarkLogging=None, noPoll=False, doSummary=True, **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, **kwargs):
+
+    ## if h2o.beta_features:
+    ##     print "HACK: temporarily disabling Summary always in v2 import_parse"
+    ##     doSummary = False
 
     if not node: node = h2o.nodes[0]
 
@@ -327,10 +332,11 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     h2o.verboseprint("parseResult:", h2o.dump_json(parseResult))
 
     # do SummaryPage here too, just to get some coverage
-    if doSummary:
+    # only if not noPoll. otherwise parse isn't done
+    if doSummary and not noPoll:
         # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
         h2o.check_sandbox_for_errors()
-        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs)
+        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs, noPrint=noPrint)
         # for now, don't worry about error isolating summary 
     else:
         # isolate a parse from the next thing
@@ -359,24 +365,44 @@ def find_key(pattern=None):
 # supposed to be the same? In any case
 # pattern can't be regex to h2o?
 # None should be same as no pattern
-def delete_keys(node=None, pattern=None, timeoutSecs=90):
+def delete_keys(node=None, pattern=None, timeoutSecs=120):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     deletedCnt = 0
+    triedKeys = []
     while True:
         storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
         # we get 20 at a time with default storeView
         keys = storeViewResult['keys']
         if not keys:
             break
+
+        # look for keys we already sent a remove on. Maybe those are locked.
+        # give up on those
+        deletedThisTime = 0
         for k in keys:
-            node.remove_key(k['key'])
-        deletedCnt += len(keys)
+            if k in triedKeys:
+                print "Already tried to delete %s. Must have failed. Not trying again" % k
+            else:
+                node.remove_key(k['key'], timeoutSecs=timeoutSecs)
+                deletedCnt += 1
+                deletedThisTime += 1
+            triedKeys.append(k)
         # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
+        if deletedThisTime==0:
+            break
+    # this is really the count that we attempted. Some could have failed.
     return deletedCnt
 
-def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=90):
+# if pattern is used, don't use the heavy h2o method
+def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
+    # TEMP: change this to remove_all_keys which ignores locking and removes keys?
+    # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]
+    if not pattern:
+        node.remove_all_keys()
+        return 0 # don't have a count of keys?
+
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
     # this will be interesting if the others don't have a complete set

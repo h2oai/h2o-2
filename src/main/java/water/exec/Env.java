@@ -1,11 +1,9 @@
 package water.exec;
 
-import java.text.*;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
+
 import water.*;
 import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -29,17 +27,22 @@ public class Env extends Iced {
   // Ref Counts for each vector
   transient final HashMap<Vec,Integer> _refcnt;
 
+  transient final public StringBuilder _sb; // Holder for print results
+
   transient boolean _allow_tmp;           // Deep-copy allowed to tmp
   transient boolean _busy_tmp;            // Assert temp is available for use
   transient Frame  _tmp;                  // The One Big Active Tmp
+  transient final ArrayList<Key> _locked; // The original set of locked frames
 
-  Env() {
+  Env(ArrayList<Key> locked) {
     _key = new String[4]; // Key for Frame
     _ary = new Frame [4]; // Frame (or null if not a frame)
     _d   = new double[4]; // Double (only if frame & func are null)
     _fcn = new ASTOp [4]; // Functions (or null if not a function)
     _display= new int[4];
     _refcnt = new HashMap<Vec,Integer>();
+    _sb = new StringBuilder();
+    _locked = locked;
   }
 
   public int sp() { return _sp; }
@@ -72,7 +75,7 @@ public class Env extends Iced {
       _fcn= Arrays.copyOf(_fcn,len<<=1);
     }
   }
-  void push( Frame fr ) { push(1); _ary[_sp-1] = addRef(fr) ; assert check_refcnt(fr.anyVec()); }
+  void push( Frame fr ) { push(1); _ary[_sp-1] = addRef(fr); assert _ary[0]==null||check_refcnt(_ary[0].anyVec());}
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
   void push( ASTOp fcn) { push(1); _fcn[_sp-1] = addRef(fcn); }
   void push( Frame fr, String key ) { push(fr); _key[_sp-1]=key; }
@@ -85,7 +88,7 @@ public class Env extends Iced {
     _ary[_sp-1] = addRef(_ary[idx]);
     _d  [_sp-1] =        _d  [idx];
     _fcn[_sp-1] = addRef(_fcn[idx]);
-    assert check_refcnt(_ary[0].anyVec());
+    assert _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
   void push_slot( int d, int n, Env global ) {
     assert _refcnt==null;       // Should use a fcn's closure for d>1
@@ -95,21 +98,38 @@ public class Env extends Iced {
     global._ary[gidx] = global.addRef(_ary[idx]);
     global._d  [gidx] =               _d  [idx] ;
     global._fcn[gidx] = global.addRef(_fcn[idx]);
-    assert global.check_refcnt(global._ary[0].anyVec());
+    assert _ary[0]==null || global.check_refcnt(_ary[0].anyVec());
   }
   // Copy from TOS into a slot.  Does NOT pop results.
   void tos_into_slot( int d, int n, String id ) {
     // In a copy-on-modify language, only update the local scope, or return val
     assert d==0 || (d==1 && _display[_tod]==n+1);
     int idx = _display[_tod-d]+n;
+    // Temporary solution to kill a UDF from global name space. Needs to fix in the future.
+    if (_tod == 0) ASTOp.removeUDF(id);
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
-    _ary[idx] = addRef(_ary[_sp-1]);
-    _d  [idx] =       _d   [_sp-1] ;
-    _fcn[idx] = addRef(_fcn[_sp-1]);
-    if( d==0 ) _key[idx] = id;
+    Frame fr =                   _ary[_sp-1];
+    _ary[idx] = fr==null ? null : addRef(new Frame(fr));
+    _d  [idx] =                  _d  [_sp-1] ;
+    _fcn[idx] =           addRef(_fcn[_sp-1]);
+    _key[idx] = d==0 && fr!=null ? id : null;
+    // Temporary solution to add a UDF to global name space. Needs to fix in the future.
+    if (_tod == 0 && _fcn[_sp-1] != null) ASTOp.putUDF(_fcn[_sp-1], id);
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
+  // Copy from TOS into a slot, using absolute index.
+  void tos_into_slot( int idx, String id ) {
+    subRef(_ary[idx], _key[idx]);
+    subRef(_fcn[idx]);
+    Frame fr =                   _ary[_sp-1];
+    _ary[idx] = fr==null ? null : addRef(new Frame(fr));
+    _d  [idx] =                  _d  [_sp-1] ;
+    _fcn[idx] =           addRef(_fcn[_sp-1]);
+    _key[idx] = fr!=null ? id : null;
+    assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
+  }
+
   // Copy from TOS into stack.  Pop's all intermediate.
   // Example: pop_into_stk(-4)  BEFORE: A,B,C,D,TOS  AFTER: A,TOS
   void pop_into_stk( int x ) {
@@ -140,8 +160,16 @@ public class Env extends Iced {
     _ary[_sp]=global.subRef(_ary[_sp],_key[_sp]);
     assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
-  void pop( ) { pop(this); }
-  void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
+  public void popUncheck( ) {
+    _sp--;
+    _fcn[_sp]=subRef(_fcn[_sp]);
+    _ary[_sp]=subRef(_ary[_sp],_key[_sp]);
+  }
+  public void pop( ) { pop(this); }
+  public void pop( int n ) {
+    for( int i=0; i<n; i++ )
+      pop();
+  }
 
   void popScope() {
     assert _tod > 0;            // Something to pop?
@@ -152,11 +180,26 @@ public class Env extends Iced {
 
   // Pop & return a Frame or Fcn; ref-cnt of all things remains unchanged.
   // Caller is responsible for tracking lifetime.
-  public double popDbl() { assert isDbl(); return _d  [--_sp]; }
-  public ASTOp  popFcn() { assert isFcn(); ASTOp op = _fcn[--_sp]; _fcn[_sp]=null; return op; }
-  public Frame  popAry() { assert isAry(); Frame fr = _ary[--_sp]; _ary[_sp]=null; assert allAlive(fr); return fr; }
-  public String key()    { return _key[_sp]; } 
+  public double popDbl()  { assert isDbl(); return _d  [--_sp]; }
+  public ASTOp  popFcn()  { assert isFcn(); ASTOp op = _fcn[--_sp]; _fcn[_sp]=null; return op; }
+  public Frame  popAry()  { assert isAry(); Frame fr = _ary[--_sp]; _ary[_sp]=null; assert allAlive(fr); return fr; }
+  public Frame  peekAry() { assert isAry(); Frame fr = _ary[_sp-1]; assert allAlive(fr); return fr; }
+  public ASTOp  peekFcn() { assert isFcn(); ASTOp op = _fcn[_sp-1]; return op; }
+  public String peekKey() { return _key[_sp-1]; }
+  public String key()     { return _key[_sp]; }
 
+  // Replace a function invocation with it's result
+  public void poppush( int n, Frame ary, String key) {
+    addRef(ary);
+    for( int i=0; i<n; i++ ) {
+      assert _sp > 0;
+      _sp--;
+      _fcn[_sp] = subRef(_fcn[_sp]);
+      _ary[_sp] = subRef(_ary[_sp], _key[_sp]);
+    }
+    push(1); _ary[_sp-1] = ary; _key[_sp-1] = key;
+    assert check_all_refcnts();
+  }
   // Replace a function invocation with it's result
   public void poppush(double d) { pop(); push(d); }
 
@@ -172,6 +215,8 @@ public class Env extends Iced {
     _display = Arrays.copyOf(e._display,_tod+1);
     // All other fields are ignored/zero
     _refcnt = null;
+    _sb = null;
+    _locked = null;
   }
 
 
@@ -182,24 +227,28 @@ public class Env extends Iced {
     return true;
   }
 
+  public Futures subRef( Vec vec, Futures fs ) {
+
+    if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
+    int cnt = _refcnt.get(vec)-1;
+    //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
+    if( cnt > 0 ) _refcnt.put(vec,cnt);
+    else {
+      if( fs == null ) fs = new Futures();
+      UKV.remove(vec._key,fs);
+      _refcnt.remove(vec);
+    }
+    return fs;
+  }
+
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
   // Always return a null.
   public Frame subRef( Frame fr, String key ) {
     if( fr == null ) return null;
     Futures fs = null;
-    for( Vec vec : fr.vecs() ) {
-      int cnt = _refcnt.get(vec)-1;
-      if( cnt > 0 ) _refcnt.put(vec,cnt);
-      else {
-        if( fs == null ) fs = new Futures();
-        UKV.remove(vec._key,fs);
-        _refcnt.remove(vec);
-      }
-    }
-    if( key != null && fs != null ) UKV.remove(Key.make(key),fs);
-    if( fs != null )
-      fs.blockForPending();
+    for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
+    if( fs != null ) fs.blockForPending();
     return null;
   }
   // Lower refcounts on all vecs captured in the inner environment
@@ -215,7 +264,14 @@ public class Env extends Iced {
   Vec addRef( Vec vec ) {
     Integer I = _refcnt.get(vec);
     assert I==null || I>0;
+    assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
     _refcnt.put(vec,I==null?1:I+1);
+    //Log.info(" +++ " + vec._key.toString() + " RC=" + (I==null?1:I+1));
+    //if (I!=null&&I==1)
+    //  for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+    //    System.out.println(ste);
+    //  }
+    if (vec.masterVec()!=null) addRef(vec.masterVec());
     return vec;
   }
   // Add a refcnt to all vecs in this frame
@@ -247,27 +303,37 @@ public class Env extends Iced {
 
 
   // Remove everything
-  public void remove() {
+  public void remove_and_unlock() {
     // Remove all shallow scopes
-    while( _tod > 1 ) popScope();
+    while( _tod > 0 ) popScope();
     // Push changes at the outer scope into the K/V store
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
-        Frame fr = popAry();  // Pop w/out lower refcnt & delete
+        Frame fr = popAry();    // Pop w/o lowering refcnt
         String skey = key();
-        int refcnt = _refcnt.get(fr.anyVec());
-        for( Vec v : fr.vecs() )
-          if( _refcnt.get(v) != refcnt )
-            throw H2O.unimpl();
-        assert refcnt > 0;
-        Frame fr2=fr;
-        if( refcnt > 1 ) {       // Need a deep-copy now
-          fr2 = fr.deepSlice(null,null);
-          subRef(fr,skey);      // Now lower refcnt for good assertions
-        } // But not down to zero (do not delete items in global scope)
-        UKV.put(Key.make(_key[_sp]),fr2);
+        Frame fr2=new Frame(Key.make(skey),fr._names.clone(),fr.vecs().clone());
+        for( int i=0; i<fr.numCols(); i++ ) {
+          Vec v = fr.vecs()[i];
+          int refcnt = _refcnt.get(v);
+          assert refcnt > 0;
+          if( refcnt > 1 ) {    // Need a deep-copy now
+            Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
+            fr2.replace(i,v2);  // Replace with private deep-copy
+            subRef(v,null);     // Now lower refcnt for good assertions
+            addRef(v2);
+          } // But not down to zero (do not delete items in global scope)
+        }
+        if( _locked.contains(fr2._key) ) fr2.write_lock(null);     // Upgrade to write-lock
+        else { fr2.delete_and_lock(null); _locked.add(fr2._key); } // Clear prior & set new data
+        fr2.unlock(null);
+        _locked.remove(fr2._key); // Unlocked already
       } else
-        pop();
+        popUncheck();
+    }
+    // Unlock all things that do not survive, plus also delete them
+    for( Key k : _locked ) {
+      Frame fr = UKV.get(k);
+      fr.unlock(null);  fr.delete(); // Should be atomic really
     }
   }
 
@@ -280,11 +346,18 @@ public class Env extends Iced {
   // Count references the "hard way" - used to check refcnting math.
   int compute_refcnt( Vec vec ) {
     int cnt=0;
+    HashSet<Vec> refs = new HashSet<Vec>();
     for( int i=0; i<_sp; i++ )
-      if( _ary[i] != null && _ary[i].find(vec) != -1 ) cnt++;
+      if( _ary[i] != null) {
+        for (Vec v : _ary[i].vecs()) {
+          Vec vm;
+          if (v.equals(vec)) cnt++;
+          else if ((vm = v.masterVec()) !=null && vm.equals(vec)) cnt++;
+        }
+      }
       else if( _fcn[i] != null && (_fcn[i] instanceof ASTFunc) )
         cnt += ((ASTFunc)_fcn[i])._env.compute_refcnt(vec);
-    return cnt;
+    return cnt + refs.size();
   }
   boolean check_refcnt( Vec vec ) {
     Integer I = _refcnt.get(vec);
@@ -295,6 +368,12 @@ public class Env extends Iced {
     return false;
   }
 
+  boolean check_all_refcnts() {
+    for (Vec v : _refcnt.keySet())
+      if (check_refcnt(v) == false)
+        return false;
+    return true;
+  }
 
   // Pop and return the result as a string
   public String resultString( ) {

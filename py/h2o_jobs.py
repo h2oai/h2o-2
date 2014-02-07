@@ -1,6 +1,96 @@
 import time, sys
 import h2o, h2o_browse as h2b
 
+
+def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
+    busy = True
+    trials = 0
+
+    start = time.time()
+    polls = 0
+    statSum = {}
+    # just init for worst case 32 nodes?
+    lastUsedMemBytes = [1 for i in range(32)]
+    while busy:
+        polls += 1
+        # get utilization and print it
+        # any busy jobs
+        a = h2o.nodes[0].jobs_admin(timeoutSecs=10)
+        busy = False
+        for j in a['jobs']:
+            if j['end_time'] == '':
+                busy = True
+                h2o.verboseprint("Still busy")
+                break
+
+        cloudStatus = h2o.nodes[0].get_cloud(timeoutSecs=timeoutSecs)
+        nodes = cloudStatus['nodes']
+        for i,n in enumerate(nodes):
+
+            # check for drop in tot_mem_bytes, and report as "probably post GC"
+            totMemBytes = n['tot_mem_bytes']
+            maxMemBytes = n['max_mem_bytes']
+            freeMemBytes = n['free_mem_bytes']
+
+            usedMemBytes = totMemBytes - freeMemBytes
+            availMemBytes = maxMemBytes - usedMemBytes
+            print 'Node %s:' % i, \
+                'num_cpus:', n['num_cpus'],\
+                'my_cpu_%:', n['my_cpu_%'],\
+                'sys_cpu_%:', n['sys_cpu_%'],\
+                'system_load:', n['system_load'],\
+                'tot_mem_bytes: {:,}'.format(totMemBytes),\
+                'max_mem_bytes: {:,}'.format(maxMemBytes),\
+                'free_mem_bytes: {:,}'.format(freeMemBytes),\
+                'usedMemBytes: {:,}'.format(usedMemBytes)
+
+            decrease = round((0.0 + lastUsedMemBytes[i] - usedMemBytes) / lastUsedMemBytes[i], 3)
+            if decrease > .05:
+                print
+                print "\nProbably GC at Node {:}: usedMemBytes decreased by {:f} pct.. {:,} {:,}".format(i, 100 * decrease, lastUsedMemBytes[i], usedMemBytes)
+                lastUsedMemBytes[i] = usedMemBytes
+            # don't update lastUsedMemBytes if we're decreasing
+            if usedMemBytes > lastUsedMemBytes[i]:
+                lastUsedMemBytes[i] = usedMemBytes
+            
+            # sum all individual stats
+            for stat in n:
+                if stat in statSum:
+                    try: 
+                        statSum[stat] += n[stat]
+                    except TypeError:
+                        # raise Exception("statSum[stat] should be number %s %s" % (statSum[stat], stat, n[stat]))
+                        print "ERROR: statSum[stat] should be number %s %s %s" % (statSum[stat], stat, n[stat])
+                        # do nothing
+                else:
+                    try: 
+                        statSum[stat] = n[stat] + 0.0
+                    except TypeError:
+                        pass # ignore non-numbers
+
+        trials += 1
+        if trials%5 == 0:
+            h2o.check_sandbox_for_errors()
+
+        time.sleep(retryDelaySecs)
+        if ((time.time() - start) > timeoutSecs):
+            raise Exception("Timeout while polling in pollAnyBusy: %s seconds" % timeoutSecs)
+    
+
+    # now print man 
+    print "Did %s polls" % polls
+    statMean = {}
+    for s in statSum:
+        statMean[s] = round((statSum[s] + 0.0) / polls, 2)
+        print "mean", s + ':', statMean[s]
+
+    return  statMean
+    # statMean['tot_mem_bytes'],
+    # statMean['num_cpus'],
+    # statMean['my_cpu_%'],
+    # statMean['sys_cpu_%'],
+    # statMean['system_load']
+
 # poll the Jobs queue and wait if not all done. 
 # Return matching keys to a pattern for 'destination_key"
 # for a job (model usually)
@@ -10,13 +100,14 @@ import h2o, h2o_browse as h2b
 # 'key' 'description' 'destination_key' could all be interesting things you want to pattern match agains?
 # what the heck, just look for a match in any of the 3 (no regex)
 # if pattern is not None, only stall on jobs that match the pattern (in any of those 3)
+
 def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
     wait = True
     waitTime = 0
     ignoredJobs = set()
     while (wait):
         a = h2o.nodes[0].jobs_admin(timeoutSecs=pollTimeoutSecs)
-        ## print "jobs_admin():", h2o.dump_json(a)
+        h2o.verboseprint("jobs_admin():", h2o.dump_json(a))
         jobs = a['jobs']
         busy = 0
         for j in jobs:
@@ -28,27 +119,24 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
             ### h2o.verboseprint(j)
             if j['end_time'] == '':
                 if not pattern: 
-                    print "description:", j['description'], "end_time:", j['end_time']
+                    # always print progress if busy job (no pattern used
+                    print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key']
+                    h2o.verboseprint("description:", j['description'], "end_time:", j['end_time'])
                     busy +=1
                     h2o.verboseprint("pollWaitJobs: found a busy job, now: %s" % busy)
                 else:
                     if (pattern in j['key']) or (pattern in j['destination_key']) or (pattern in j['description']):
-                        print "description:", j['description'], "end_time:", j['end_time']
+                        ## print "description:", j['description'], "end_time:", j['end_time']
                         busy += 1
                         h2o.verboseprint("pollWaitJobs: found a pattern-matched busy job, now %s" % busy)
+                        # always print progress if pattern is used and matches
+                        print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key'], 
                     # we only want to print the warning message once
                     elif j['key'] not in ignoredJobs:
                         jobMsg = "%s %s %s" % (j['key'], j['description'], j['destination_key'])
-                        print " %s job in progress but we're ignoring it. Doesn't match pattern." % jobMsg
+                        h2o.verboseprint(" %s job in progress but we're ignoring it. Doesn't match pattern." % jobMsg)
                         # I guess "key" is supposed to be unique over all time for a job id?
                         ignoredJobs.add(j['key'])
-
-            elif waitTime: # we've been waiting
-                h2o.verboseprint("waiting", waitTime, "secs, still not done - ",\
-                "destination_key:", j['destination_key'], \
-                "progress:",  j['progress'], \
-                "cancelled:", j['cancelled'],\
-                "end_time:",  j['end_time'])
 
         if stallForNJobs:
             waitFor = stallForNJobs

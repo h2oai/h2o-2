@@ -6,6 +6,7 @@ import java.util.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.exec.Flow;
 import water.fvec.Vec.VectorGroup;
 
 /**
@@ -15,15 +16,18 @@ import water.fvec.Vec.VectorGroup;
  * E.g. to exclude a Vec from a computation on a Frame, create a new Frame that
  * references all the Vecs but this one.
  */
-public class Frame extends Iced {
+public class Frame extends Lockable<Frame> {
   public String[] _names;
   Key[] _keys;          // Keys for the vectors
   transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
-  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
+  public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
-  public Frame( String[] names, Vec[] vecs ) {
+  public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
+  public Frame( Key key, String[] names, Vec[] vecs ) {
+    super(key);
+    // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
@@ -36,26 +40,44 @@ public class Frame extends Iced {
     if( v0 == null ) return;
     VectorGroup grp = v0.group();
     for( int i=0; i<vecs.length; i++ )
-      assert grp.equals(vecs[i].group());
+      assert grp.equals(vecs[i].group()) : "Vector " + vecs[i] + " has different vector group!";
   }
-
+  public Vec vec(String name){
+    Vec [] vecs = vecs();
+    for(int i = 0; i < _names.length; ++i)
+      if(_names[i].equals(name))return vecs[i];
+    return null;
+  }
+  public Frame subframe(String [] names){
+    Vec [] vecs = new Vec[names.length];
+    vecs();                     // Preload the vecs
+    HashMap<String, Integer> map = new HashMap<String, Integer>();
+    for(int i = 0; i < _names.length; ++i)map.put(_names[i], i);
+    for(int i = 0; i < names.length; ++i)
+      if(map.containsKey(names[i])) vecs[i] = _vecs[map.get(names[i])];
+      else throw new IllegalArgumentException("Missing column called "+names[i]);
+    return new Frame(names,vecs);
+  }
   public final Vec[] vecs() {
     if( _vecs != null ) return _vecs;
+    // Load all Vec headers; load them all in parallel by spawning F/J tasks.
     final Vec [] vecs = new Vec[_keys.length];
     Futures fs = new Futures();
-    for( int i=0; i<_keys.length; i++ ){
+    for( int i=0; i<_keys.length; i++ ) {
       final int ii = i;
       final Key k = _keys[i];
-      H2OCountedCompleter t;
-      H2O.submitTask(t = new H2OCountedCompleter(){
-        // we need higher priority here as there is a danger of deadlock in case of many calls from MRTask2 at once
-        // (e.g. frame with many vectors invokes rollup tasks for all vectors in paralell), should probably be done in CPS style in the future
-        @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
-        @Override public void compute2() {
-          vecs[ii] = DKV.get(k).get();
-          tryComplete();
-        }
-      });
+      H2OCountedCompleter t = new H2OCountedCompleter() {
+          // We need higher priority here as there is a danger of deadlock in
+          // case of many calls from MRTask2 at once (e.g. frame with many
+          // vectors invokes rollup tasks for all vectors in parallel).  Should
+          // probably be done in CPS style in the future
+          @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
+          @Override public void compute2() {
+            vecs[ii] = DKV.get(k).get();
+            tryComplete();
+          }
+        };
+      H2O.submitTask(t);
       fs.add(t);
     }
     fs.blockForPending();
@@ -82,6 +104,7 @@ public class Frame extends Iced {
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
     assert _vecs.length == 0 || anyVec().group().equals(vec.group());
+    if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
@@ -92,18 +115,32 @@ public class Frame extends Iced {
   }
 
   /** Appends an entire Frame */
-  public Frame add( Frame fr ) {
-    assert anyVec().group().equals(fr.anyVec().group());
-    final int len0=    _names.length;
-    final int len1= fr._names.length;
+  public Frame add( Frame fr, String names[] ) {
+    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group());
+    for( String name : names )
+      if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
+    final int len0= _names.length;
+    final int len1=  names.length;
     final int len = len0+len1;
     _names = Arrays.copyOf(_names,len);
     _vecs  = Arrays.copyOf(_vecs ,len);
     _keys  = Arrays.copyOf(_keys ,len);
-    System.arraycopy(fr._names,0,_names,len0,len1);
+    System.arraycopy(    names,0,_names,len0,len1);
     System.arraycopy(fr._vecs ,0,_vecs ,len0,len1);
     System.arraycopy(fr._keys ,0,_keys ,len0,len1);
     return this;
+  }
+  public Frame add( Frame fr, boolean rename ) {
+    if( !rename ) return add(fr,fr._names);
+    String names[] = new String[fr._names.length];
+    for( int i=0; i<names.length; i++ ) {
+      String name = fr._names[i];
+      int cnt=0;
+      while( find(name) != -1 )
+        name = fr._names[i]+(cnt++);
+      names[i] = name;
+    }
+    return add(fr,names);
   }
 
   /** Removes the first column with a matching name.  */
@@ -141,7 +178,7 @@ public class Frame extends Iced {
   public Vec remove( int idx ) {
     int len = _names.length;
     if( idx < 0 || idx >= len ) return null;
-    Vec v = _vecs[idx];
+    Vec v = vecs()[idx];
     System.arraycopy(_names,idx+1,_names,idx,len-idx-1);
     System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
     System.arraycopy(_keys ,idx+1,_keys ,idx,len-idx-1);
@@ -184,6 +221,17 @@ public class Frame extends Iced {
     return vec;
   }
 
+  public Vec replace(int col, Vec nv) {
+    assert col < _names.length;
+    Vec rv = vecs()[col];
+    assert rv.group().equals(nv.group());
+    _vecs[col] = nv;
+    _keys[col] = nv._key;
+    if( DKV.get(nv._key)==null )    // If not already in KV, put it there
+      DKV.put(nv._key, nv);
+    return rv;
+  }
+
   public Frame extractFrame(int startIdx, int endIdx) {
     Frame f = subframe(startIdx, endIdx);
     remove(startIdx, endIdx);
@@ -203,7 +251,16 @@ public class Frame extends Iced {
 
   public final String[] names() { return _names; }
   public int  numCols() { return vecs().length; }
-  public long numRows(){ return anyVec().length();}
+  public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
+
+  // Number of columns when categoricals expanded.
+  // Note: One level is dropped in each categorical col.
+  public int numExpCols() {
+    int ncols = 0;
+    for(int i = 0; i < vecs().length; i++)
+      ncols += vecs()[i].domain() == null ? 1 : (vecs()[i].domain().length - 1);
+    return ncols;
+  }
 
   /** All the domains for enum columns; null for non-enum columns.  */
   public String[][] domains() {
@@ -229,6 +286,10 @@ public class Frame extends Iced {
     return res;
   }
 
+  public Vec lastVec() {
+    final Vec [] vecs = vecs();
+    return vecs[vecs.length-1];
+  }
   /** Returns the first readable vector. */
   public Vec anyVec() {
     if( _col0 != null ) return _col0;
@@ -237,13 +298,19 @@ public class Frame extends Iced {
         return (_col0 = v);
     return null;
   }
+  /* Returns the only Vector, or tosses IAE */
+  public final Vec theVec(String err) {
+    if( _keys.length != 1 ) throw new IllegalArgumentException(err);
+    if( _vecs == null ) _vecs = new Vec[]{_col0 = DKV.get(_keys[0]).get() };
+    return _vecs[0];
+  }
 
   /** Check that the vectors are all compatible.  All Vecs have their content
    *  sharded using same number of rows per chunk.  */
   public void checkCompatible( ) {
     Vec v0 = anyVec();
     int nchunks = v0.nChunks();
-    for( Vec vec : _vecs ) {
+    for( Vec vec : vecs() ) {
       if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
       if( vec.nChunks() != nchunks )
         throw new IllegalArgumentException("Vectors different numbers of chunks, "+nchunks+" and "+vec.nChunks());
@@ -251,7 +318,7 @@ public class Frame extends Iced {
     // Also check each chunk has same rows
     for( int i=0; i<nchunks; i++ ) {
       long es = v0.chunk2StartElem(i);
-      for( Vec vec : _vecs )
+      for( Vec vec : vecs() )
         if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
           throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
     }
@@ -270,20 +337,15 @@ public class Frame extends Iced {
     return fs;
   }
 
-  public void remove() {
-    remove(new Futures());
-  }
-
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
-  public void remove(Futures fs){
-    if(vecs().length > 0){
-      for( Vec v : _vecs )
-        UKV.remove(v._key,fs);
-    }
+  @Override public Futures delete_impl(Futures fs) {
+    for( Key k : _keys ) UKV.remove(k,fs);
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];
+    return fs;
   }
+  @Override public String errStr() { return "Dataset"; }
 
   public long byteSize() {
     long sum=0;
@@ -294,11 +356,13 @@ public class Frame extends Iced {
 
   @Override public String toString() {
     // Across
+    Vec vecs[] = vecs();
+    if( vecs.length==0 ) return "{}";
     String s="{"+_names[0];
-    long bs=_vecs[0].byteSize();
-    for( int i=1; i<_names.length; i++ ) {
+    long bs=vecs[0].byteSize();
+    for( int i=1; i<vecs.length; i++ ) {
       s += ","+_names[i];
-      bs+= _vecs[i].byteSize();
+      bs+= vecs[i].byteSize();
     }
     s += "}, "+PrettyPrint.bytes(bs)+"\n";
     // Down
@@ -327,15 +391,23 @@ public class Frame extends Iced {
   public String[] toStringHdr( StringBuilder sb ) {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
-      String n = _names[c];
+      String n = (c < _names.length) ? _names[c] : ("C"+c);
       if( numRows()==0 ) { sb.append(n).append(' '); continue; }
-      Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
-      String f = fs[c] = C.pformat();  // Printable width
       int w=0;
-      for( int x=0; x<f.length(); x++ )// Get printable width from format
-        if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');
-        else if( w>0 ) break;
-      if( f.charAt(1)==' ' ) w++; // Leading blank is not in print-width
+      if( _vecs[c].isEnum() ) {
+        String ss[] = _vecs[c]._domain;
+        for( int i=0; i<ss.length; i++ )
+          w = Math.max(w,ss[i].length());
+        w = Math.min(w,10);
+        fs[c] = "%"+w+"."+w+"s";
+      } else {
+        Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+        String f = fs[c] = C.pformat();  // Printable width
+        for( int x=0; x<f.length(); x++ )// Get printable width from format
+          if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');
+          else if( w>0 ) break;
+        if( f.charAt(1)==' ' ) w++; // Leading blank is not in print-width
+      }
       int len = sb.length();
       if( n.length() <= w ) {          // Short name, big digits
         sb.append(n);
@@ -356,23 +428,32 @@ public class Frame extends Iced {
     return fs;
   }
   public StringBuilder toString( StringBuilder sb, String[] fs, long idx ) {
+    Vec vecs[] = vecs();
     for( int c=0; c<fs.length; c++ ) {
-      if( vecs()[c].isInt() ) {
-        if( _vecs[c].isNA(idx) ) {
-          Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+      Vec vec = vecs[c];
+      if( vec.isEnum() ) {
+        String s = "----------";
+        if( !vec.isNA(idx) ) {
+          int x = (int)vec.at8(idx);
+          if( x >= 0 && x < vec._domain.length ) s = vec._domain[x];
+        }
+        sb.append(String.format(fs[c],s));
+      } else if( vec.isInt() ) {
+        if( vec.isNA(idx) ) {
+          Chunk C = vec.elem2BV(0);   // 1st Chunk
           int len = C.pformat_len0();  // Printable width
           for( int i=0; i<len; i++ ) sb.append('-');
         } else {
           try {
-            sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+            sb.append(String.format(fs[c],vec.at8(idx)));
           } catch( IllegalFormatException ife ) {
             System.out.println("Format: "+fs[c]+" col="+c+" not for ints");
             ife.printStackTrace();
           }
         }
       } else {
-        sb.append(String.format(fs[c],_vecs[c].at (idx)));
-        if( _vecs[c].isNA(idx) ) sb.append(' ');
+        sb.append(String.format(fs[c],vec.at (idx)));
+        if( vec.isNA(idx) ) sb.append(' ');
       }
       sb.append(' ');           // Column seperator
     }
@@ -458,10 +539,39 @@ public class Frame extends Iced {
   //   a sorted list of negative numbers (no dups) - all BUT these
   //   an unordered list of positive - just these, allowing dups
   // The numbering is 1-based; zero's are not allowed in the lists, nor are out-of-range.
+  final int MAX_EQ2_COLS = 100000;      // FIXME.  Put this in a better spot.
   public Frame deepSlice( Object orows, Object ocols ) {
     // ocols is either a long[] or a Frame-of-1-Vec
-    if( ocols != null && !(ocols instanceof long[]) ) throw H2O.unimpl();
-    long[] cols = (long[])ocols;
+    long[] cols;
+    if( ocols == null ) {
+      cols = (long[])ocols;
+      assert cols == null;
+    }
+    else {
+      if (ocols instanceof long[]) {
+        cols = (long[])ocols;
+      }
+      else if (ocols instanceof Frame) {
+        Frame fr = (Frame) ocols;
+        if (fr.numCols() != 1) {
+          throw new IllegalArgumentException("Columns Frame must have only one column (actually has " + fr.numCols() + " columns)");
+        }
+
+        long n = fr.anyVec().length();
+        if (n > MAX_EQ2_COLS) {
+          throw new IllegalArgumentException("Too many requested columns (requested " + n +", max " + MAX_EQ2_COLS + ")");
+        }
+
+        cols = new long[(int)n];
+        Vec v = fr._vecs[0];
+        for (long i = 0; i < v.length(); i++) {
+          cols[(int)i] = v.at8(i);
+        }
+      }
+      else {
+        throw new IllegalArgumentException("Columns is specified by an unsupported data type (" + ocols.getClass().getName() + ")");
+      }
+    }
 
     // Since cols is probably short convert to a positive list.
     int c2[] = null;
@@ -482,11 +592,41 @@ public class Frame extends Iced {
         else j++;
       }
     }
+    for( int i=0; i<c2.length; i++ )
+      if( c2[i] >= numCols() )
+        throw new IllegalArgumentException("Trying to select column "+(c2[i]+1)+" but only "+numCols()+" present.");
+    if( c2.length==0 )
+      throw new IllegalArgumentException("No columns selected (did you try to select column 0 instead of column 1?)");
 
     // Do Da Slice
     // orows is either a long[] or a Vec
-    if( orows == null || orows instanceof long[] )  
+    if (orows == null)
       return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    else if (orows instanceof long[]) {
+      final long CHK_ROWS=1000000;
+      long[] rows = (long[])orows;
+      if( rows.length==0 || rows[0] < 0 )
+        return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+      // Vec'ize the index array
+      Futures fs = new Futures();
+      AppendableVec av = new AppendableVec("rownames");
+      int r = 0;
+      int c = 0;
+      while (r < rows.length) {
+        NewChunk nc = new NewChunk(av, c);
+        long end = Math.min(r+CHK_ROWS, rows.length);
+        for (; r < end; r++) {
+          nc.addNum(rows[r]);
+        }
+        nc.close(c++, fs);
+      }
+      Vec c0 = av.close(fs);   // c0 is the row index vec
+      fs.blockForPending();
+      Frame fr2 = new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
+              .outputFrame(names(c2), domains(c2));
+      UKV.remove(c0._key);      // Remove hidden vector
+      return fr2;
+    }
     Frame frows = (Frame)orows;
     Vec vrows = frows.anyVec();
     // It's a compatible Vec; use it as boolean selector.
@@ -502,24 +642,82 @@ public class Frame extends Iced {
     return new DeepSelect().doAll(c2.length,new Frame(names,vecs)).outputFrame(names(c2),domains(c2));
   }
 
+  // Slice and return in the form of new chunks.
+  private static class Slice extends MRTask2<Slice> {
+    final Frame  _base;   // the base frame to slice from
+    final int[]  _cols;
+    Slice(int[] cols, Frame base) { _cols = cols; _base = base; }
+    @Override public void map(Chunk[] ix, NewChunk[] ncs) {
+      final Vec[] vecs = new Vec[_cols.length];
+      final Vec   anyv = _base.anyVec();
+      final long  nrow = anyv.length();
+            long  r    = ix[0].at80(0);
+      int   last_ci = anyv.elem2ChunkIdx(r<nrow?r:0); // memoize the last chunk index
+      long  last_c0 = anyv._espc[last_ci];            // ...         last chunk start
+      long  last_c1 = anyv._espc[last_ci + 1];        // ...         last chunk end
+      Chunk[] last_cs = new Chunk[vecs.length];       // ...         last chunks
+      for (int c = 0; c < _cols.length; c++) {
+        vecs[c] = _base.vecs()[_cols[c]];
+        last_cs[c] = vecs[c].elem2BV(last_ci);
+      }
+      for (int i = 0; i < ix[0]._len; i++) {
+        // select one row
+        r = ix[0].at80(i) - 1;   // next row to select
+        if (r < 0) continue;
+        if (r >= nrow) {
+          for (int c = 0; c < vecs.length; c++) ncs[c].addNum(Double.NaN);
+        } else {
+          if (r < last_c0 || r >= last_c1) {
+            last_ci = anyv.elem2ChunkIdx(r);
+            last_c0 = anyv._espc[last_ci];
+            last_c1 = anyv._espc[last_ci + 1];
+            for (int c = 0; c < vecs.length; c++)
+              last_cs[c] = vecs[c].elem2BV(last_ci);
+          }
+          for (int c = 0; c < vecs.length; c++)
+            ncs[c].addNum(last_cs[c].at(r));
+        }
+      }
+    }
+  }
+
   // Bulk (expensive) copy from 2nd cols into 1st cols.
   // Sliced by the given cols & rows
   private static class DeepSlice extends MRTask2<DeepSlice> {
     final int  _cols[];
     final long _rows[];
-    DeepSlice( long rows[], int cols[] ) { _cols=cols; _rows=rows; }
+    boolean _ex = true;
+    DeepSlice( long rows[], int cols[]) { _cols=cols; _rows=rows;}
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       long rstart = chks[0]._start;
       int rlen = chks[0]._len;  // Total row count
       int rx = 0;               // Which row to in/ex-clude
       int rlo = 0;              // Lo/Hi for this block of rows
       int rhi = rlen;
-      while( rlo < rlen ) {     // Still got rows to include?
+      while( true ) {           // Still got rows to include?
         if( _rows != null ) {   // Got a row selector?
           if( rx >= _rows.length ) break; // All done with row selections
           long r = _rows[rx++]-1;// Next row selector
-          if( r < 0 ) {          // Row exclusion?
-            throw H2O.unimpl();
+          if( r < 0 ) {          // Row exclusion
+            if(rx > 0 && _rows[rx - 1] < _rows[rx]) throw H2O.unimpl();
+            long er = Math.abs(r) - 2;
+            if ( er < rstart) continue;
+            //scoop up all of the rows before the first exclusion
+            if (rx == 1 && ( (int)(er + 1 - rstart)) > 0 && _ex) {
+              rlo = (int)rstart;
+              rhi = (int)(er - rstart);
+              _ex = false;
+              rx--;
+            } else {
+              rlo = (int)(er + 1 - rstart);
+              //TODO: handle jumbled row indices ( e.g. -c(1,5,3) )
+              while(rx < _rows.length && (_rows[rx] + 1 == _rows[rx - 1] && rlo < rlen)) {
+                if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
+                rx++; rlo++;    //Exclude consecutive rows
+              }
+              rhi = rx >= _rows.length ? rlen : (int)Math.abs(_rows[rx] - 1) - 2;
+              if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
+            }
           } else {              // Positive row list?
             if( r < rstart ) continue;
             rlo = (int)(r-rstart);
@@ -531,19 +729,20 @@ public class Frame extends Iced {
         }
         // Process this next set of rows
         // For all cols in the new set
-        for( int i=0; i<_cols.length; i++ ) {
-          Chunk    oc =  chks[_cols[i]];
-          NewChunk nc = nchks[      i ];
-          if( oc._vec.isInt() ) { // Slice on integer columns
-            for( int j=rlo; j<rhi; j++ )
-              if( oc.isNA0(j) ) nc.addNA();
-              else              nc.addNum(oc.at80(j),0);
-          } else {                // Slice on double columns
-            for( int j=rlo; j<rhi; j++ )
-              nc.addNum(oc.at0(j));
+          for( int i=0; i<_cols.length; i++ ) {
+              Chunk    oc =  chks[_cols[i]];
+              NewChunk nc = nchks[      i ];
+              if( oc._vec.isInt() ) { // Slice on integer columns
+                  for( int j=rlo; j<rhi; j++ )
+                      if( oc.isNA0(j) ) nc.addNA();
+                      else              nc.addNum(oc.at80(j),0);
+              } else {                // Slice on double columns
+                  for( int j=rlo; j<rhi; j++ )
+                      nc.addNum(oc.at0(j));
+              }
           }
-        }
         rlo=rhi;
+        if( _rows==null ) break;
       }
     }
   }
@@ -552,10 +751,29 @@ public class Frame extends Iced {
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       Chunk pred = chks[chks.length-1];
       for(int i = 0; i < pred._len; ++i){
-        if(pred.at0(i) != 0) 
+        if(pred.at0(i) != 0)
           for(int j = 0; j < chks.length-1; ++j)
             nchks[j].addNum(chks[j].at0(i));
       }
     }
+  }
+
+  // ------------------------------------------------------------------------------
+
+  public
+  <Y extends Flow.PerRow<Y>>      // Type parameter
+  Flow.FlowPerRow<Y>              // Return type of with()
+  with                            // The method name
+  ( Flow.PerRow<Y> pr )           // Arguments for with()
+  {
+    return new Flow.FlowPerRow<Y>(pr,new Flow.FlowFrame(this));
+  }
+
+  public Flow.FlowFilter with( Flow.Filter fr ) {
+    return new Flow.FlowFilter(fr,new Flow.FlowFrame(this));
+  }
+
+  public Flow.FlowGroupBy with( Flow.GroupBy fr ) {
+    return new Flow.FlowGroupBy(fr,new Flow.FlowFrame(this));
   }
 }

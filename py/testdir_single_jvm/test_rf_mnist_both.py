@@ -77,12 +77,13 @@ class Basic(unittest.TestCase):
             print "parse result:", parseResult['destination_key']
 
             # RF+RFView (train)****************************************
-            print "This is the 'ignore=' we'll use"
+            # print "This is the 'ignore=' we'll use"
+            # no longer use. depend on h2o to get it right.
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
-            ntree = 10
+            ntree = 25
             params = {
                 'response_variable': 0,
-                'ignore': ignore_x, 
+                # 'ignore': ignore_x, 
                 'ntree': ntree,
                 'iterative_cm': 1,
                 'out_of_bag_error_estimate': 1,
@@ -97,9 +98,8 @@ class Basic(unittest.TestCase):
                 'model_key': 'RF_model',
                 'bin_limit': 1024,
                 # 'seed': 784834182943470027,
-                'parallel': 1,
-                'use_non_local_data': 0,
-                'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
+                'use_non_local_data': 1,
+               #  'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
                 }
 
             if rfSeed is None:
@@ -141,7 +141,7 @@ class Basic(unittest.TestCase):
             for l in leaves:
                 # self.assertAlmostEqual(leaves[l], leavesExpected[l], delta=10, msg="leaves %s %s %s differs too much" % (l, leaves[l], leavesExpected[l]))
                 delta = ((leaves[l] - leavesExpected[l])/leaves[l]) * 100
-                d = "seed: %s leaves %s %s %s pct. different %s" % (params['seed'], l, leaves[l], leavesExpected[l], delta)
+                d = "seed: %s %s leaves: %s expected: %s pct. different %s" % (params['seed'], l, leaves[l], leavesExpected[l], delta)
                 print d
                 allDelta.append(d)
 
@@ -150,7 +150,7 @@ class Basic(unittest.TestCase):
             for l in depth:
                 # self.assertAlmostEqual(depth[l], depthExpected[l], delta=1, msg="depth %s %s %s differs too much" % (l, depth[l], depthExpected[l]))
                 delta = ((depth[l] - depthExpected[l])/leaves[l]) * 100
-                d = "seed: %s depth %s %s %s pct. different %s" % (params['seed'], l, depth[l], depthExpected[l], delta)
+                d = "seed: %s %s depth: %s expected: %s pct. different %s" % (params['seed'], l, depth[l], depthExpected[l], delta)
                 print d
                 allDelta.append(d)
 

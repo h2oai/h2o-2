@@ -8,16 +8,16 @@ import hex.rf.RFModel;
 import java.util.Arrays;
 
 import water.*;
-import water.fvec.Frame;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 
 public class TypeaheadKeysRequest extends TypeaheadRequest {
-  final int _typeid;            // Also filter for Keys of this type
+  final String _cname;
+  int _typeid;                  // Also filter for Keys of this type
   public TypeaheadKeysRequest(String msg, String filter, Class C) {
     super(msg, filter);
-    _typeid = C==null ? 0 : TypeMap.onLoad(C.getName());
+    _cname = C == null ? null : C.getName();
   }
 
   @Override
@@ -26,7 +26,7 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
     Key[] keys = new Key[limit];
     int len = 0;
     // Gather some keys that pass all filters
-    for( Key key : H2O.keySet() ) {
+    for( Key key : H2O.globalKeySet(null) ) {
       if( filter != null &&     // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue;               // Ignore this filtered-out key
@@ -46,6 +46,9 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
   }
 
   protected boolean matchesType(Value val) {
+    // One-shot monotonic racey update from 0 to the known fixed typeid.
+    // Since all writers write the same typeid, there is no race.
+    if( _typeid == 0 && _cname != null ) _typeid = TypeMap.onIce(_cname);
     return _typeid == 0 || val.type() == _typeid;
   }
 
@@ -95,9 +98,6 @@ class TypeaheadPCAModelKeyRequest extends TypeaheadKeysRequest {
 }
 
 class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
-  final int _frame = TypeMap.onLoad(Frame.class.getName());
-  final int _va = TypeMap.onLoad(ValueArray.class.getName());
-
   public TypeaheadHexKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
           "current node that are ValueArrays at the time of calling.",
@@ -105,8 +105,8 @@ class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
   }
 
   @Override protected boolean matchesType(Value val) {
-    if(val.type() == _va)
+    if( val.type() == TypeMap.VALUE_ARRAY ) 
       return val.isHex();
-    return val.type() == _frame;
+    return val.type() == TypeMap.FRAME;
   }
 }

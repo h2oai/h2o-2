@@ -51,12 +51,7 @@ public class ImportHdfs extends Request {
     try {
       PersistHdfs.addFolder(new Path(pstr), succ, fail);
     } catch( IOException e ) {
-      StringBuilder sb = new StringBuilder();
-      PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));
-      e.printStackTrace(pw);
-      pw.flush();
-      Log.err(e);
-      return Response.error(sb.toString());
+      return Response.error(e);
     }
     DKV.write_barrier();
     JsonObject json = new JsonObject();

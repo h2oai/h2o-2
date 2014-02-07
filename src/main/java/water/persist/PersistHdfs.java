@@ -10,6 +10,8 @@ import java.util.concurrent.Callable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.s3.S3Exception;
+import org.jets3t.service.S3ServiceException;
 
 import water.*;
 import water.Job.ProgressMonitor;
@@ -245,6 +247,13 @@ public final class PersistHdfs extends Persist {
         ignoreAndWait(e, false);
       } catch( SocketTimeoutException e ) {
         ignoreAndWait(e, false);
+      } catch( S3Exception e ) {
+        // Preserve S3Exception before IOException
+        // Since this is tricky code - we are supporting different HDFS version
+        // New version declares S3Exception as IOException
+        // But old versions (0.20.xxx) declares it as RuntimeException
+        // So we have to catch it before IOException !!!
+        ignoreAndWait(e, false);
       } catch( IOException e ) {
         ignoreAndWait(e, true);
       } catch( Exception e ) {
@@ -266,17 +275,29 @@ public final class PersistHdfs extends Persist {
 
   public static void addFolder(Path p, JsonArray succeeded, JsonArray failed) throws IOException {
     FileSystem fs = FileSystem.get(p.toUri(), PersistHdfs.CONF);
+    if(!fs.exists(p)){
+      JsonObject o = new JsonObject();
+      o.addProperty(Constants.FILE, p.toString());
+      o.addProperty(Constants.ERROR, "Path does not exist!");
+      failed.add(o);
+      return;
+    }
     addFolder(fs, p, succeeded, failed);
   }
 
   public static void addFolder2(Path p, ArrayList<String> keys,ArrayList<String> failed) throws IOException {
     FileSystem fs = FileSystem.get(p.toUri(), PersistHdfs.CONF);
+    if(!fs.exists(p)){
+      failed.add("Path does not exist: '" + p.toString() + "'");
+      return;
+    }
     addFolder2(fs, p, keys, failed);
   }
 
   private static void addFolder2(FileSystem fs, Path p, ArrayList<String> keys, ArrayList<String> failed) {
     try {
       if( fs == null ) return;
+
       Futures futures = new Futures();
       for( FileStatus file : fs.listStatus(p) ) {
         Path pfs = file.getPath();
@@ -335,11 +356,10 @@ public final class PersistHdfs extends Persist {
             val = new Value(k, new ValueArray(k, size), Value.HDFS); // ValueArray byte wrapper over a large file
           } else {
             val = new Value(k, (int) size, Value.HDFS); // Plain Value
+            val.setdsk();
           }
-          val.setdsk();
           DKV.put(k, val);
           Log.info("PersistHdfs: DKV.put(" + k + ")");
-
           JsonObject o = new JsonObject();
           o.addProperty(Constants.KEY, k.toString());
           o.addProperty(Constants.FILE, pfs.toString());

@@ -8,6 +8,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_four_billion_rows(self):
+        h2o.beta_features = False
         timeoutSecs = 1500
 
         importFolderPath = "billions"
@@ -22,7 +23,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=180)
             elapsed = time.time() - start
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
@@ -31,22 +31,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             num_cols = inspect['num_cols']
             num_rows = inspect['num_rows']
-            value_size_bytes = inspect['value_size_bytes']
-            row_size = inspect['row_size']
+            # forget about checking the bytesize
             print "\n" + csvFilename, \
                 "    num_rows:", "{:,}".format(num_rows), \
-                "    num_cols:", "{:,}".format(num_cols), \
-                "    value_size_bytes:", "{:,}".format(value_size_bytes), \
-                "    row_size:", "{:,}".format(row_size)
+                "    num_cols:", "{:,}".format(num_cols)
 
             expectedRowSize = num_cols * 1 # plus output
-            expectedValueSize = expectedRowSize * num_rows
-            self.assertEqual(row_size, expectedRowSize,
-                msg='row_size %s is not expected num_cols * 1 byte: %s' % \
-                (row_size, expectedRowSize))
-            self.assertEqual(value_size_bytes, expectedValueSize,
-                msg='value_size_bytes %s is not expected row_size * rows: %s' % \
-                (value_size_bytes, expectedValueSize))
+            # expectedValueSize = expectedRowSize * num_rows
 
             summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], timeoutSecs=timeoutSecs)
             h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
@@ -59,9 +50,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # KMeans*********************************
             kwargs = {
                 'k': 3,
+                'cols': 'C1, C2',
                 'initialization': 'Furthest',
                 'max_iter': 4,
-                'cols': None,
                 'normalize': 0,
                 'destination_key': 'junk.hex',
                 'seed': 265211114317615310,
@@ -73,10 +64,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             # GLM*********************************
             print "\n" + csvFilename
-            kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
-            # one coefficient is checked a little more
-            colX = 0
-
+            kwargs = {
+                'y': 'C2',
+                'n_folds': 0, 
+                'family': 'binomial',
+                'case_mode': '=', 
+                'case': 1
+            }
             # L2 
             timeoutSecs = 900
             kwargs.update({'alpha': 0, 'lambda': 0})
@@ -84,7 +78,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)
+            h2o_glm.simpleCheckGLM(self, glm, 'C1', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

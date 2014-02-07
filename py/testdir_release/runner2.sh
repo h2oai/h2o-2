@@ -7,7 +7,7 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-source ./runner_setup.sh
+source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]
@@ -30,11 +30,12 @@ then
             'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
     done
 
-    python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
+    python ../four_hour_cloud.py -cj pytest_config-jenkins-176-180.json &
 else
     if [[ $USER == "kevin" ]]
     then
-        python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+        # python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+        python ../four_hour_cloud.py -cj pytest_config-jenkins-176-180.json &
     else
         python ../four_hour_cloud.py &
     fi
@@ -79,23 +80,29 @@ myPy() {
     # rm -f sandbox/*log
 }
 
+if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
+then
+    # avoid for now
+    # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
+    myPy c5 test_c5_KMeans_sphere_26GB.py
+    # myPy c5 test_c5_KMeans_sphere_67MB_fvec.py
+    # myPy c1 test_c1_rel.py
+    # myPy c2 test_c2_rel.py
+    # myPy c3 test_c3_rel.py
+    # myPy c4 test_c4_four_billion_rows.py
+    myPy c6 test_c6_hdfs.py
+    # myPy c7 test_c7_rel.py
+    myPy c7 test_c7_fvec.py
 
-# avoid for now
-# myPy c5 test_c5_KMeans_sphere15_180GB.py
-# myPy c1 test_c1_rel.py
-# myPy c2 test_c2_rel.py
-# myPy c3 test_c3_rel.py
-# myPy c4 test_c4_four_billion_rows.py
-myPy c6 test_c6_hdfs.py
-# myPy c7 test_c7_rel.py
-myPy c7 test_c7_fvec.py
+    # myPy c8 test_c8_rf_airlines_hdfs.py
+    myPy c9 test_c9b_GBM_airlines_hdfs.py
 
-# myPy c8 test_c8_rf_airlines_hdfs.py
-myPy c9 test_c9b_GBM_airlines_hdfs.py
-
-# If this one fails, fail this script so the bash dies 
-# We don't want to hang waiting for the cloud to terminate.
-myPy shutdown test_shutdown.py
+    # If this one fails, fail this script so the bash dies 
+    # We don't want to hang waiting for the cloud to terminate.
+    myPy shutdown test_shutdown.py
+else
+    myPy $TESTDIR $TEST
+fi
 
 if ps -p $CLOUD_PID > /dev/null
 then

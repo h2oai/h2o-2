@@ -40,12 +40,8 @@ public class GeneratePredictionsPage extends Request {
       OldModel m = (OldModel)_modelKey.value();
       Key dest = _dest.value();
       return Inspect.redirect(res, ScoreTask.score(m, ary, dest));
-    }catch(GLMException e){
-      Log.err(e);
-      return Response.error(e.getMessage());
-    } catch (Throwable t) {
-      Log.err(t);
-      return Response.error(t.getMessage());
+    } catch( Throwable t ) {
+      return Response.error(t);
     }
   }
 }

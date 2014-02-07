@@ -38,7 +38,7 @@ public class MRThrow extends TestUtil {
         }
       }
     } finally {
-      UKV.remove(h2okey);
+      Lockable.delete(h2okey);
     }
   }
 
@@ -60,7 +60,7 @@ public class MRThrow extends TestUtil {
         }
       }
     } finally {
-      UKV.remove(h2okey);
+      Lockable.delete(h2okey);
     }
   }
 
@@ -91,7 +91,7 @@ public class MRThrow extends TestUtil {
         }
       }
     } finally {
-      UKV.remove(h2okey);
+      Lockable.delete(h2okey);
     }
   }
 

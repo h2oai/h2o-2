@@ -5,6 +5,7 @@ import java.net.URLEncoder;
 import java.util.Date;
 import java.text.ParseException;
 
+import water.DKV;
 import water.Job;
 import water.Key;
 
@@ -32,10 +33,22 @@ public class Jobs extends Request {
       json.addProperty(DEST_KEY, jobs[i].dest() != null ? jobs[i].dest().toString() : "");
       json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].start_time)));
       long end = jobs[i].end_time;
-      boolean cancelled = (end == 0 ? jobs[i].cancelled() : end == Job.CANCELLED_END_TIME);
+      JsonObject jobResult = new JsonObject();
+
+      boolean cancelled;
+      if(cancelled = (end == Job.CANCELLED_END_TIME)){
+        if(jobs[i].exception != null){
+          jobResult.addProperty("exception", "1");
+          jobResult.addProperty("val", jobs[i].exception);
+        } else {
+          jobResult.addProperty("val", "CANCELLED");
+        }
+      } else if(end > 0)
+        jobResult.addProperty("val", "OK");
       json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
       json.addProperty(PROGRESS, end == 0 ? (cancelled ? -2 : jobs[i].progress()) : (cancelled ? -2 : -1));
       json.addProperty(CANCELLED, cancelled);
+      json.add("result",jobResult);
       array.add(json);
     }
     result.add(JOBS, array);
@@ -51,7 +64,7 @@ public class Jobs extends Request {
       @Override
       public String elementToString(JsonElement elm, String contextName) {
         String html;
-        if( Job.cancelled(Key.make(elm.getAsString())) )
+        if( !Job.isRunning(Key.make(elm.getAsString())) )
           html = "<button disabled class='btn btn-mini'>X</button>";
         else {
           String keyParam = KEY + "=" + elm.getAsString();
@@ -68,7 +81,7 @@ public class Jobs extends Request {
         try {
           key = URLEncoder.encode(str,"UTF-8");
         } catch( UnsupportedEncodingException e ) { key = str; }
-        return "".equals(key) ? key : "<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
+        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : "<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
       }
     });
     r.setBuilder(JOBS + "." + START_TIME, new ArrayRowElementBuilder() {
@@ -89,6 +102,36 @@ public class Jobs extends Request {
         return progress(Float.parseFloat(elm.getAsString()));
       }
     });
+    r.setBuilder(JOBS + "." + "result", new ElementBuilder() {
+      @Override
+      public String objectToString(JsonObject obj, String contextName) {
+        if(obj.has("exception")){
+          String rid = Key.make().toString();
+          String ex = obj.get("val").getAsString().replace("'", "");
+          String [] lines = ex.split("\n");
+          StringBuilder sb = new StringBuilder(lines[0]);
+          for(int i = 1; i < lines.length; ++i){
+            sb.append("\\n" + lines[i]);
+          }
+//          ex = ex.substring(0,ex.indexOf('\n'));
+          ex = sb.toString();
+          String res =  "\n<a onClick=\"" +
+              "var showhide=document.getElementById('" + rid + "');" +
+              "if(showhide.innerHTML == '') showhide.innerHTML = '<pre>" + ex + "</pre>';" +
+              "else showhide.innerHTML = '';" +
+              "\">FAILED</a>\n<div id='"+ rid +"'></div>\n";
+          return res;
+        } else if(obj.has("val")){
+          return obj.get("val").getAsString();
+        }
+        return "";
+      }
+      @Override
+      public String build(String elementContents, String elementName) {
+        return "<td>" + elementContents + "</td>";
+      }
+    });
+
     return r;
   }
 

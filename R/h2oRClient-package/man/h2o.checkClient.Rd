@@ -42,7 +42,6 @@ h2o.checkClient(object)
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
 + silentUpgrade = TRUE, promptUpgrade = FALSE)
 h2o.checkClient(localH2O)

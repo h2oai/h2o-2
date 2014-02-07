@@ -1,14 +1,14 @@
 package hex;
 
-import hex.rng.MersenneTwisterRNG;
-
-import java.util.Random;
-
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Vec;
+
+import java.util.Random;
+
+import static hex.NeuralNet.RNG.getRNG;
 
 /**
  * Neural network layer.
@@ -20,157 +20,303 @@ public abstract class Layer extends Iced {
   public static DocGen.FieldDoc[] DOC_FIELDS;
 
   @API(help = "Number of neurons")
+  @ParamsSearch.Ignore
   public int units;
 
+  @API(help = "Initial Weight Distribution")
+  public NeuralNet.InitialWeightDistribution initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
+
+  @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
+  @ParamsSearch.Info(origin = 0.01)
+  public double initial_weight_scale;
+
   @API(help = "Learning rate")
-  public float rate;
+  public double rate;
+
+  @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))")
+  public double rate_decay;
 
   @API(help = "Learning rate annealing")
-  public float rate_annealing;
+  public double rate_annealing;
+
+  @API(help = "L1 regularisation")
+  public double l1;
 
   @API(help = "L2 regularisation")
-  public float l2;
+  public double l2;
 
-  // TODO disabled for now, not enough testing
+  @API(help = "Initial momentum value")
   @ParamsSearch.Info(origin = 1)
-  float _momentum;
-  float _momentumAnnealing;
+  public double momentum_start;
 
-  // TODO
-  float _perWeight;
-  float _perWeightAnnealing;
+  @API(help = "Number of samples during which momentum value varies")
+  public long momentum_ramp;
 
-  // Current rate and momentum
-  transient float _r, _m;
+  @API(help = "Momentum value once ramp is over")
+  @ParamsSearch.Info(origin = 1)
+  public double momentum_stable;
+
+  @API(help = "Constraint for squared sum of incoming weights per unit")
+  public double max_w2;
+
+  public void transferParams(NeuralNet p) {
+    initial_weight_distribution = p.initial_weight_distribution;
+    initial_weight_scale = p.initial_weight_scale;
+    rate = p.rate;
+    rate_decay = p.rate_decay;
+    rate_annealing = p.rate_annealing;
+    l1 = p.l1;
+    l2 = p.l2;
+    momentum_start = p.momentum_start;
+    momentum_ramp = p.momentum_ramp;
+    momentum_stable = p.momentum_stable;
+    max_w2 = p.max_w2;
+  }
+
+  public void transferParams(Layer p) {
+    initial_weight_distribution = p.initial_weight_distribution;
+    initial_weight_scale = p.initial_weight_scale;
+    rate = p.rate;
+    rate_decay = p.rate_decay;
+    rate_annealing = p.rate_annealing;
+    l1 = p.l1;
+    l2 = p.l2;
+    momentum_start = p.momentum_start;
+    momentum_ramp = p.momentum_ramp;
+    momentum_stable = p.momentum_stable;
+    max_w2 = p.max_w2;
+  }
 
   // Weights, biases, activity, error
-  transient float[] _w, _b, _a, _e;
+  // TODO hold transients only for current two layers
+  // TODO extract transients & code in separate one-shot trees to avoid cloning
+  protected transient float[] _w; //use float to save space
+  protected transient double[] _b, _a, _e;
 
-  // Last weights & per-weight rate data
-  transient float[] _wPrev, _wInit, _wMult;
-  transient float[] _bPrev, _bInit, _bMult;
+  // Momentum for weights and biases
+  protected transient float[] _wm;
+  protected transient double[] _bm;
 
-  transient float[] _wSpeed, _bSpeed;
+  // Previous and input layers
+  protected transient Layer _previous;
+  transient Input _input;
 
-  // Previous layer
-  transient Layer _in;
+  // Dropout (for input + hidden layers)
+  transient Dropout dropout;
 
-  // Optional visible units bias, e.g. for pre-training
-  transient float[] _v, _gv;
-
-  public final void init(Layer[] ls, int index) {
-    init(ls, index, true, 0);
+  Dropout createDropout(int units) {
+    return new Dropout(units);
   }
 
-  public void init(Layer[] ls, int index, boolean weights, long step) {
-    _a = new float[units];
-    _e = new float[units];
-    _in = ls[index - 1];
+  /**
+   * Start of refactoring in specification & running data, for layers and trainers.
+   */
+  static abstract class Training {
+    abstract long processed();
+  }
+
+  transient Training _training;
+
+  /**
+   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
+   * For simplicity and performance, we simply use the largest values to encode a missing value.
+   * If we run into exactly one of those values with regular neural net updates, then we're very
+   * likely also running into overflow problems, which will trigger a NaN somewhere, which will be
+   * caught and lead to automatic job cancellation.
+   */
+  public static final int missing_int_value = Integer.MAX_VALUE; //encode missing label or target
+  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
+
+  /**
+   * Helper class for dropout, only to be used from within a Layer
+   */
+  private class Dropout {
+    private transient Random _rand;
+    private transient byte[] _bits;
+
+    private Dropout(int units) {
+      _bits = new byte[(units+7)/8];
+      _rand = getRNG();
+    }
+
+    // for input layer
+    private void clearSomeInput(Layer previous) {
+      if (_rand == null) _rand = getRNG();
+      assert(previous.isInput());
+      final double rate = ((Input)previous)._dropout_rate;
+      for( int i = 0; i < previous._a.length; i++ ) {
+        if (_rand.nextFloat() < rate) previous._a[i] = 0;
+      }
+    }
+
+    // for hidden layers
+    private void fillBytes() {
+      _rand.nextBytes(_bits);
+    }
+
+    private boolean unit_active(int o) {
+      return (_bits[o / 8] & (1 << (o % 8))) != 0;
+    }
+  }
+
+  public final void init(Layer[] ls, int index, NeuralNet p) {
+    transferParams(p);
+    init(ls, index, true);
+  }
+
+  public void init(Layer[] ls, int index, boolean weights) {
+    rate *= Math.pow(rate_decay, index-1);
+    _a = new double[units];
+    if (!(this instanceof Output)) {
+      _e = new double[units];
+    }
+    _previous = ls[index - 1];
+    _input = (Input) ls[0];
 
     if( weights ) {
-      _w = new float[units * _in.units];
-      _b = new float[units];
-
-      // deeplearning.net tutorial (TODO special ones for rectifier & softmax?)
-      // TODO only subset of inputs?
-      Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      float min = (float) -Math.sqrt(6. / (_in.units + units));
-      float max = (float) +Math.sqrt(6. / (_in.units + units));
-      for( int i = 0; i < _w.length; i++ )
-        _w[i] = rand(rand, min, max);
-    }
-
-    if( _momentum != 0 ) {
-      _wPrev = new float[_w.length];
-      _bPrev = new float[_b.length];
-      for( int i = 0; i < _w.length; i++ )
-        _wPrev[i] = _w[i];
-      _wSpeed = new float[_w.length];
-      _bSpeed = new float[_b.length];
-    }
-
-    if( _perWeight != 0 ) {
-      _wInit = new float[_w.length];
-      _wMult = new float[_w.length];
-      for( int i = 0; i < _w.length; i++ ) {
-        _wInit[i] = _w[i];
-        _wMult[i] = 1;
-      }
-      _bInit = new float[_b.length];
-      _bMult = new float[_b.length];
-      for( int i = 0; i < _b.length; i++ ) {
-        _bInit[i] = _b[i];
-        _bMult[i] = 1;
+      _w = new float[units * _previous.units];
+      _b = new double[units];
+      if( momentum_start != 0 || momentum_stable != 0 ) {
+        _wm = new float[_w.length];
+        _bm = new double[_b.length];
       }
     }
-
-    anneal(step);
   }
 
-  abstract void fprop();
+  /**
+   *
+   // helper to initialize weights
+   // adaptive initialization uses prefactor * sqrt(6 / (units_input_layer + units_this_layer))
+   * @param rng random generator to use
+   * @param prefactor prefactor for initialization (typical value: 1.0)
+   */
+  // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
+  void randomize(Random rng, double prefactor) {
+    if (_w == null) return;
 
-  abstract void bprop();
-
-  public final void anneal(long n) {
-    _r = rate(n);
-    _m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
+    if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
+      final double range = prefactor * Math.sqrt(6. / (_previous.units + units));
+      for( int i = 0; i < _w.length; i++ )
+        _w[i] = (float)uniformDist(rng, -range, range);
+    }
+    else {
+      if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
+        for (int i = 0; i < _w.length; i++) {
+          _w[i] = (float)uniformDist(rng, -initial_weight_scale, initial_weight_scale);
+        }
+      } else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
+        for (int i = 0; i < _w.length; i++) {
+          _w[i] = (float) (0 + rng.nextGaussian() * initial_weight_scale);
+        }
+      }
+    }
   }
 
-  public float rate(long n) {
+    // TODO: Add "subset randomize" function
+//        int count = Math.min(15, _previous.units);
+//        double min = -.1f, max = +.1f;
+//        //double min = -1f, max = +1f;
+//        for( int o = 0; o < units; o++ ) {
+//          for( int n = 0; n < count; n++ ) {
+//            int i = rand.nextInt(_previous.units);
+//            int w = o * _previous.units + i;
+//            _w[w] = uniformDist(rand, min, max);
+//          }
+//        }
+
+  public void close() {
+  }
+
+  protected abstract void fprop(boolean training);
+
+  protected abstract void bprop();
+
+  boolean isInput() { return false; }
+
+  /**
+   * Apply gradient g to unit u with rate r and momentum m.
+   */
+  final void bprop(int u, double g, double r, double m) {
+    double r2 = 0;
+    final int off = u * _previous._a.length;
+    for( int i = 0; i < _previous._a.length; i++ ) {
+      int w = off + i;
+      if( _previous._e != null )
+        _previous._e[i] += g * _w[w];
+      double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+
+      // TODO finish per-weight acceleration, doesn't help for now
+//      if( _wp != null && d != 0 ) {
+//        boolean sign = _wp[w] >= 0;
+//        double mult = Math.abs(_wp[w]);
+//        // If the gradient kept its sign, increase
+//        if( (d >= 0) == sign )
+//          mult += .05f;
+//        else {
+//          if( mult > 1 )
+//            mult *= .95f;
+//          else
+//            sign = !sign;
+//        }
+//        d *= mult;
+//        _wp[w] = sign ? mult : -mult;
+//      }
+
+      if( _wm != null ) {
+        _wm[w] *= m;
+        _wm[w] += d;
+        d = _wm[w];
+      }
+      _w[w] += r * d;
+      if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
+    }
+    if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+      final double scale = Math.sqrt(max_w2 / r2);
+      for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
+    }
+    double d = g;
+    if( _bm != null ) {
+      _bm[u] *= m;
+      _bm[u] += d;
+      d = _bm[u];
+    }
+    _b[u] += r * d;
+  }
+
+  public double rate(long n) {
     return rate / (1 + rate_annealing * n);
   }
 
-  public final void momentum(long n) {
-    for( int i = 0; i < _w.length; i++ )
-      adjust(i, _w, _wPrev, _wInit, _wMult);
-
-    for( int i = 0; i < _b.length; i++ )
-      adjust(i, _b, _bPrev, _bInit, _bMult);
-  }
-
-  private final void adjust(int i, float[] w, float[] prev, float[] init, float[] mult) {
-    float coef = 1;
-
-    if( init != null ) {
-      float g = w[i] - init[i];
-      boolean sign = g > 0;
-      boolean last = mult[i] > 0;
-      coef = Math.abs(mult[i]);
-      // If the gradient kept its sign, increase
-      if( sign == last ) {
-        if( coef < 4 )
-          coef += _perWeight;
-      } else
-        coef *= 1 - _perWeight;
-      mult[i] = sign ? coef : -coef;
-      w[i] = init[i] + coef * g;
-    }
-
-    if( prev != null ) {
-      // Nesterov's Accelerated Gradient
-      float v = (w[i] - prev[i]) * _m;
-      prev[i] = w[i];
-      w[i] += coef * v;
-      if( w == _w )
-        _wSpeed[i] = v;
+  public double momentum(long n) {
+    double m = momentum_start;
+    if( momentum_ramp > 0 ) {
+      if( n >= momentum_ramp )
+        m = momentum_stable;
       else
-        _bSpeed[i] = v;
+        m += (momentum_stable - momentum_start) * n / momentum_ramp;
     }
-
-    if( init != null )
-      init[i] = w[i];
+    return m;
   }
 
   public static abstract class Input extends Layer {
-    long _pos, _len;
+    @ParamsSearch.Ignore
+    protected long _pos, _len;
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      _a = new float[units];
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      _a = new double[units];
     }
 
-    @Override void bprop() {
+    @Override protected void bprop() {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    protected boolean isInput() {
+      return true;
+    }
+
+    @API(help = "Dropout rate for the input layer")
+    double _dropout_rate;
 
     public final long move() {
       return _pos = _pos == _len - 1 ? 0 : _pos + 1;
@@ -183,64 +329,88 @@ public abstract class Layer extends Iced {
 
     public Vec[] vecs;
 
-    @API(help = "Categoricals identified on the training set")
-    int[] categoricals;
+    @API(help = "Categorical classes identified on the training set")
+    int[] categoricals_lens;
+
+    @API(help = "Categorical minimums identified on the training set")
+    int[] categoricals_mins;
 
     @API(help = "Normalisation stats used during training")
-    float[] subs, muls;
+    double[] subs, muls;
 
     transient Chunk[] _chunks;
 
     VecsInput() {
     }
 
-    public VecsInput(Vec[] vecs, VecsInput stats) {
-      units = stats != null ? stats.subs.length : expand(vecs);
+    @Override public Layer clone() {
+      VecsInput o = (VecsInput) super.clone();
+      if( o._chunks != null )
+        o._chunks = new Chunk[o._chunks.length];
+      return o;
+    }
+
+    public VecsInput(Vec[] vecs, VecsInput train, double dropout_rate) {
+      _dropout_rate = dropout_rate;
+      Init(vecs, train);
+    }
+
+    public VecsInput(Vec[] vecs, VecsInput train) {
+      Init(vecs, train);
+    }
+
+    public void Init(Vec[] vecs, VecsInput train) {
+      units = train != null ? train.subs.length : expand(vecs);
       this.vecs = vecs;
       _len = vecs[0].length();
 
-      if( stats != null ) {
-        assert stats.categoricals.length == vecs.length;
-        categoricals = stats.categoricals;
-        assert stats.subs.length == units;
-        subs = stats.subs;
-        muls = stats.muls;
+      if( train != null ) {
+        int a = train.categoricals_lens.length;
+        int b = vecs.length;
+        assert a == b;
+        categoricals_lens = train.categoricals_lens;
+        categoricals_mins = train.categoricals_mins;
+        assert train.subs.length == units;
+        subs = train.subs;
+        muls = train.muls;
       } else {
-        categoricals = new int[vecs.length];
-        for( int i = 0; i < vecs.length; i++ )
-          categoricals[i] = categories(vecs[i]);
-        subs = new float[units];
-        muls = new float[units];
+        categoricals_lens = new int[vecs.length];
+        categoricals_mins = new int[vecs.length];
+        for( int i = 0; i < vecs.length; i++ ) {
+          categoricals_lens[i] = categories(vecs[i]);
+          categoricals_mins[i] = (int) vecs[i].min();
+        }
+        subs = new double[units];
+        muls = new double[units];
         stats(vecs);
       }
     }
 
     static int categories(Vec vec) {
-      if( vec.domain() == null )
-        return 1;
-      return (int) (vec.max() - vec.min());
+      String[] dom = vec.domain();
+      return dom == null ? 1 : dom.length - 1;
     }
 
     static int expand(Vec[] vecs) {
       int n = 0;
-      for( int i = 0; i < vecs.length; i++ )
-        n += categories(vecs[i]);
+      for (Vec vec : vecs) n += categories(vec);
       return n;
     }
 
     private void stats(Vec[] vecs) {
       Stats stats = new Stats();
       stats._units = units;
-      stats._categoricals = categoricals;
+      stats._categoricals_lens = categoricals_lens;
+      stats._categoricals_mins = categoricals_mins;
       stats.doAll(vecs);
       for( int i = 0; i < vecs.length; i++ ) {
-        subs[i] = (float) stats._means[i];
+        subs[i] = stats._means[i];
         double sigma = Math.sqrt(stats._sigms[i] / (stats._rows - 1));
-        muls[i] = (float) (sigma > 1e-6 ? 1 / sigma : 1);
+        muls[i] = sigma > 1e-6 ? 1 / sigma : 1;
       }
     }
 
-    @Override void fprop() {
+    @Override protected void fprop(boolean training) {
       if( _chunks == null )
         _chunks = new Chunk[vecs.length];
       for( int i = 0; i < vecs.length; i++ ) {
@@ -248,23 +418,23 @@ public abstract class Layer extends Iced {
         if( c == null || c._vec != vecs[i] || _pos < c._start || _pos >= c._start + c._len )
           _chunks[i] = vecs[i].chunk(_pos);
       }
-      ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), subs, muls, categoricals);
+      ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), subs, muls, categoricals_lens, categoricals_mins);
     }
   }
 
   /**
-   * Stats with expanded categoricals.
+   * Stats with expanded categoricals. Used to normalize the data in the input layer.
    */
   static class Stats extends MRTask2<Stats> {
     int _units;
-    int[] _categoricals;
+    int[] _categoricals_lens, _categoricals_mins;
     double[] _means, _sigms;
     long _rows;
-    transient float[] _subs, _muls;
+    transient double[] _subs, _muls;
 
     @Override protected void setupLocal() {
-      _subs = new float[_units];
-      _muls = new float[_units];
+      _subs = new double[_units];
+      _muls = new double[_units];
       for( int i = 0; i < _muls.length; i++ )
         _muls[i] = 1;
     }
@@ -272,16 +442,16 @@ public abstract class Layer extends Iced {
     @Override public void map(Chunk[] cs) {
       _means = new double[_units];
       _sigms = new double[_units];
-      float[] a = new float[_means.length];
+      double[] a = new double[_means.length];
       for( int r = 0; r < cs[0]._len; r++ ) {
-        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
+        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals_lens, _categoricals_mins);
         for( int c = 0; c < a.length; c++ )
           _means[c] += a[c];
       }
       for( int c = 0; c < a.length; c++ )
         _means[c] /= cs[0]._len;
       for( int r = 0; r < cs[0]._len; r++ ) {
-        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
+        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals_lens, _categoricals_mins);
         for( int c = 0; c < a.length; c++ )
           _sigms[c] += (a[c] - _means[c]) * (a[c] - _means[c]);
       }
@@ -306,39 +476,52 @@ public abstract class Layer extends Iced {
     }
   }
 
+  /**
+   * A ChunksInput layer populates the activation values from a FVec chunk.
+   * Missing values will lead to a 0 activation value in the input layer, which is equivalent to
+   * setting it to the *average* column value before normalizing. In effect, missing column values are ignored.
+   */
   static class ChunksInput extends Input {
     transient Chunk[] _chunks;
-    float[] _subs, _muls;
-    int[] _categoricals;
+    double[] _subs, _muls;
+    int[] _categoricals_lens;
+    int[] _categoricals_mins;
 
     public ChunksInput(Chunk[] chunks, VecsInput stats) {
       units = stats.subs.length;
       _chunks = chunks;
       _subs = stats.subs;
       _muls = stats.muls;
-      _categoricals = stats.categoricals;
+      _categoricals_lens = stats.categoricals_lens;
+      _categoricals_mins = stats.categoricals_mins;
     }
 
-    @Override void fprop() {
-      set(_chunks, _a, (int) _pos, _subs, _muls, _categoricals);
+    /**
+     * forward propagation means filling the activation values with all the row's column values
+     */
+    @Override protected void fprop(boolean ignored) {
+      set(_chunks, _a, (int) _pos, _subs, _muls, _categoricals_lens, _categoricals_mins);
     }
 
-    static void set(Chunk[] chunks, float[] a, int row, float[] subs, float[] muls, int[] categoricals) {
+    static void set(Chunk[] chunks, double[] a, int row, double[] subs, double[] muls, int[] catLens, int[] catMins) {
       int n = 0;
-      for( int i = 0; i < categoricals.length; i++ ) {
+      // loop over all columns
+      for( int i = 0; i < catLens.length; i++ ) {
+        final boolean missing = chunks[i].isNA0(row);
         double d = chunks[i].at0(row);
-        d = Double.isNaN(d) ? 0 : d;
-        if( categoricals[i] == 1 ) {
+        if( catLens[i] == 1 ) {
+          //numerical value: normalize
           d -= subs[n];
           d *= muls[n];
-          a[n++] = (float) d;
+          a[n++] = missing ? 0 : d;
         } else {
-          int cat = categoricals[i];
+          // categorical values: use precomputed stats
+          int cat = catLens[i];
           for( int c = 0; c < cat; c++ )
-            a[n + c] = -subs[n + c];
-          int c = (int) d - (int) chunks[i]._vec.min() - 1;
+            a[n + c] = missing ? 0 : -subs[n + c];
+          int c = (int) d - catMins[i] - 1;
           if( c >= 0 )
-            a[n + c] = (1 - subs[n + c]) * muls[n + c];
+            a[n + c] = missing ? 0 : (1 - subs[n + c]) * muls[n + c];
           n += cat;
         }
       }
@@ -347,163 +530,199 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Output extends Layer {
-    Input _input;
+    static final int API_WEAVER = 1;
+    public static DocGen.FieldDoc[] DOC_FIELDS;
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
-      _input = (Input) ls[0];
+    @API(help = "Loss function")
+    public NeuralNet.Loss loss = NeuralNet.Loss.MeanSquare;
+
+    public final void init(Layer[] ls, int index, NeuralNet p, NeuralNet.Loss l) {
+      super.init(ls, index, p);
+      loss = l;
+    }
+
+    protected final long pos() {
+      return _input._pos;
     }
   }
 
+  /**
+   * Softmax output layer is used for classification
+   * Rows with missing values in the response column will be ignored
+   **/
   public static abstract class Softmax extends Output {
-    abstract int label();
+    protected abstract int target();
 
-    @Override void fprop() {
-      float max = Float.NEGATIVE_INFINITY;
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
+      if( weights ) {
+        randomize(getRNG(), 4.0f);
+      }
+    }
+
+    @Override protected void fprop(boolean training) {
+      double max = Float.NEGATIVE_INFINITY;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
+        for( int i = 0; i < _previous._a.length; i++ )
+          _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
         _a[o] += _b[o];
         if( max < _a[o] )
           max = _a[o];
       }
-      float scale = 0;
+      double scale = 0;
       for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = (float) Math.exp(_a[o] - max);
+        _a[o] = Math.exp(_a[o] - max);
         scale += _a[o];
       }
       for( int o = 0; o < _a.length; o++ )
         _a[o] /= scale;
     }
 
-    @Override void bprop() {
-      int label = label();
-      for( int o = 0; o < _a.length; o++ ) {
-        float t = o == label ? 1 : 0;
-        float e = t - _a[o];
-        // Gradient is error * derivative of Softmax: (1 - x) * x
-        float g = e * (1 - _a[o]) * _a[o];
-        for( int i = 0; i < _in._a.length; i++ ) {
-          int w = o * _in._a.length + i;
-          _in._e[i] += g * _w[w];
-          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
+      int label = target();
+      if (label == missing_int_value) return; //ignore missing response values
+      for( int u = 0; u < _a.length; u++ ) {
+        final double targetval = (u == label ? 1 : 0);
+        double g = targetval - _a[u];
+        if (loss == NeuralNet.Loss.CrossEntropy) {
+          //nothing else needed
+        } else if (loss == NeuralNet.Loss.MeanSquare) {
+          g *= (1 - _a[u]) * _a[u];
         }
-        _b[o] += _r * g;
+        bprop(u, g, r, m);
       }
     }
   }
 
   public static class VecSoftmax extends Softmax {
-    static final int API_WEAVER = 1;
-    public static DocGen.FieldDoc[] DOC_FIELDS;
-
     public Vec vec;
-
-    @API(help = "Min response value on the training set")
-    int min;
+    private Vec _toClose;
 
     VecSoftmax() {
     }
 
-    public VecSoftmax(Vec vec, VecSoftmax stats) {
-      this.units = stats != null ? stats.units : (int) (vec.max() - vec.min() + 1);
+    public VecSoftmax(Vec vec, VecSoftmax stats, NeuralNet.Loss l) {
+// Waiting for Michal stuff, for now enum must start at 0
+//      if( vec.domain() == null ) {
+//        vec = vec.toEnum();
+//        _toClose = vec;
+//      }
+      this.units = stats != null ? stats.units : (int) (vec.max() + 1);
       this.vec = vec;
-      this.min = stats != null ? stats.min : (int) vec.min();
+      loss = l;
+      if (stats != null) transferParams(stats);
     }
 
-    @Override int label() {
-      return (int) vec.at8(_input._pos) - min;
+    @Override protected int target() {
+      if( vec.isNA(_input._pos) )
+        return missing_int_value;
+      return (int) vec.at8(_input._pos);
+    }
+
+    @Override public void close() {
+      super.close();
+      if( _toClose != null )
+        UKV.remove(_toClose._key);
     }
   }
 
   static class ChunkSoftmax extends Softmax {
     transient Chunk _chunk;
-    int _min;
 
     public ChunkSoftmax(Chunk chunk, VecSoftmax stats) {
       units = stats.units;
       _chunk = chunk;
-      _min = stats.min;
-
-      // TODO extract layer info in separate Ice
-      rate = stats.rate;
-      rate_annealing = stats.rate_annealing;
-      _momentum = stats._momentum;
-      _momentumAnnealing = stats._momentumAnnealing;
-      _perWeight = stats._perWeight;
-      _perWeightAnnealing = stats._perWeightAnnealing;
-      l2 = stats.l2;
+      loss = stats.loss;
+      transferParams(stats);
     }
 
-    @Override int label() {
-      return (int) _chunk.at80((int) _input._pos) - _min;
+    @Override protected int target() {
+      if( _chunk.isNA0((int) _input._pos) )
+        return missing_int_value;
+      return (int) _chunk.at80((int) _input._pos);
     }
   }
 
+  /**
+   * Linear output layer is used for regression
+   * Rows with missing values in the response column will be ignored
+   **/
   public static abstract class Linear extends Output {
-    abstract float value();
+    abstract double[] target();
 
-    @Override void fprop() {
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
+      if( weights ) {
+        randomize(getRNG(), 1.0f);
+      }
+    }
+
+    @Override protected void fprop(boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
+        for( int i = 0; i < _previous._a.length; i++ )
+          _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
         _a[o] += _b[o];
       }
     }
 
-    @Override void bprop() {
-      float v = value();
-      for( int o = 0; o < _a.length; o++ ) {
-        float g = v - _a[o];
-        for( int i = 0; i < _in._a.length; i++ ) {
-          int w = o * _in._a.length + i;
-          _in._e[i] += g * _w[w];
-          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
-        }
-        _b[o] += _r * g;
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
+      double[] v = target();
+      assert(loss == NeuralNet.Loss.MeanSquare);
+      for( int u = 0; u < _a.length; u++ ) {
+        if (v[u] == missing_double_value) continue; //ignore missing regression targets
+        double g = v[u] - _a[u];
+        g *= (1 - _a[u]) * _a[u];
+        bprop(u, g, r, m);
       }
     }
   }
 
   public static class VecLinear extends Linear {
     Vec _vec;
-
-    VecLinear() {
-    }
+    transient double[] _values;
 
     public VecLinear(Vec vec, VecLinear stats) {
-      this.units = stats != null ? stats.units : 1;
+      assert(stats == null || stats.units == 1);
+      units = 1; //regression
       _vec = vec;
+      if (stats != null) transferParams(stats);
     }
 
-    @Override float value() {
-      double d = _vec.at(_input._pos);
-      return Double.isNaN(d) ? 0 : (float) d;
+    @Override double[] target() {
+      if( _values == null )
+        _values = new double[units];
+      long pos = _input._pos; //pos is a global index into the vector
+      _values[0] = _vec.isNA(pos) ? missing_double_value : _vec.at(pos);
+      return _values;
     }
   }
 
   static class ChunkLinear extends Linear {
     transient Chunk _chunk;
+    transient double[] _values;
 
     public ChunkLinear(Chunk chunk, VecLinear stats) {
-      units = stats.units;
+      assert(stats == null || stats.units == 1);
+      units = 1;
       _chunk = chunk;
-
-      // TODO extract layer info in separate Ice
-      rate = stats.rate;
-      rate_annealing = stats.rate_annealing;
-      _momentum = stats._momentum;
-      _momentumAnnealing = stats._momentumAnnealing;
-      _perWeight = stats._perWeight;
-      _perWeightAnnealing = stats._perWeightAnnealing;
-      l2 = stats.l2;
+      loss = stats.loss;
+      transferParams(stats);
     }
 
-    @Override float value() {
-      double d = _chunk.at0((int) _input._pos);
-      return Double.isNaN(d) ? 0 : (float) d;
+    @Override double[] target() {
+      if( _values == null )
+        _values = new double[units];
+      int pos = (int)_input._pos; //pos is a local index for this chunk
+      _values[0] = _chunk.isNA0(pos) ? missing_double_value : _chunk.at0(pos);
+      return _values;
     }
   }
 
@@ -515,70 +734,160 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override void fprop() {
-      for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = 0;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
-        _a[o] += _b[o];
-
-        // tanh approx, slightly faster, untested
-        // float a = Math.abs(_a[o]);
-        // float b = 12 + a * (6 + a * (3 + a));
-        // _a[o] = (_a[o] * b) / (a * b + 24);
-
-        _a[o] = (float) Math.tanh(_a[o]);
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
+      if( weights ) {
+        randomize(getRNG(), 1.0f);
       }
     }
 
-    @Override void bprop() {
-      for( int o = 0; o < _a.length; o++ ) {
-        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
-        float g = _e[o] * (1 - _a[o] * _a[o]);
-        for( int i = 0; i < _in._a.length; i++ ) {
-          int w = o * _in._a.length + i;
-          if( _in._e != null )
-            _in._e[i] += g * _w[w];
-          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
-        }
-        _b[o] += _r * g;
+    @Override protected void fprop(boolean training) {
+      if (dropout != null && training) {
+        dropout.fillBytes();
+        if (_previous.isInput())
+          dropout.clearSomeInput(_previous);
       }
+
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        if( !training || dropout == null || dropout.unit_active(o) ) {
+          for( int i = 0; i < _previous._a.length; i++ ) {
+            _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
+          }
+          _a[o] += _b[o];
+
+          // tanh approx, slightly faster, untested
+//          double a = Math.abs(_a[o]);
+//          double b = 12 + a * (6 + a * (3 + a));
+//          _a[o] = (_a[o] * b) / (a * b + 24);
+
+          // use this identity: tanh = 2*sigmoid(2*x) - 1, evaluates faster than tanh(x)
+           _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
+
+//          _a[o] = Math.tanh(_a[o]); //slow
+
+          if( !training && dropout != null ) {
+            _a[o] *= .5f;
+          }
+        }
+      }
+    }
+
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
+      for( int u = 0; u < _a.length; u++ ) {
+        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
+        double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-x^2
+        bprop(u, g, r, m);
+      }
+    }
+  }
+
+  public static class TanhDropout extends Tanh {
+    public TanhDropout(int units) {
+      super(units);
+      dropout = createDropout(units);
     }
   }
 
   /**
    * Apply tanh to the weights' transpose. Used for auto-encoders.
    */
-  public static class TanhPrime extends Layer {
+  public static class TanhPrime extends Tanh {
     TanhPrime() {
     }
 
     public TanhPrime(int units) {
-      this.units = units;
+      super(units);
     }
 
-    @Override void fprop() {
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
+      // Auto encoder has its own bias vector
+      _b = new double[units];
+    }
+
+    @Override protected void fprop(boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] += _w[i * _in._a.length + o] * _in._a[i];
+        for( int i = 0; i < _previous._a.length; i++ )
+          _a[o] += _w[i * _a.length + o] * _previous._a[i];
         _a[o] += _b[o];
-        _a[o] = (float) Math.tanh(_a[o]);
+        _a[o] = Math.tanh(_a[o]);
       }
     }
 
-    @Override void bprop() {
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
       for( int o = 0; o < _a.length; o++ ) {
-        assert _in._in.units == units;
-        float g = _in._in._a[o] - _a[o];
-        // TODO derivative?
-        for( int i = 0; i < _in._a.length; i++ ) {
-          int w = i * _in._a.length + o;
-          if( _in._e != null )
-            _in._e[i] += g * _w[w];
-          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+        assert _previous._previous.units == units;
+        double e = _previous._previous._a[o] - _a[o];
+        double g = e; // * (1 - _a[o]) * _a[o]; // Square error
+        for( int i = 0; i < _previous._a.length; i++ ) {
+          int w = i * _a.length + o;
+          if( _previous._e != null )
+            _previous._e[i] += g * _w[w];
+          _w[w] += r * (g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1);
         }
-        _b[o] += _r * g;
+        _b[o] += r * g;
+      }
+    }
+  }
+
+  public static class Maxout extends Layer {
+    public Maxout(int units) {
+      this.units = units;
+      dropout = createDropout(units);
+    }
+
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
+      if( weights ) {
+        randomize(getRNG(), 1.0f);
+        for( int i = 0; i < _b.length; i++ )
+          _b[i] = 1;
+      }
+    }
+
+    @Override protected void fprop(boolean training) {
+      if (dropout != null && training) {
+        dropout.fillBytes();
+        if (_previous.isInput())
+          dropout.clearSomeInput(_previous);
+      }
+
+      double max = 0;
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        if( !training || dropout.unit_active(o) ) {
+          _a[o] = Float.NEGATIVE_INFINITY;
+          for( int i = 0; i < _previous._a.length; i++ )
+            _a[o] = Math.max(_a[o], _w[o * _previous._a.length + i] * _previous._a[i]);
+          _a[o] += _b[o];
+          if( !training )
+            _a[o] *= .5f;
+          if( max < _a[o] )
+            max = _a[o];
+        }
+      }
+      if( max > 1 )
+        for( int o = 0; o < _a.length; o++ )
+          _a[o] /= max;
+    }
+
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
+      for( int u = 0; u < _a.length; u++ ) {
+        double g = _e[u];
+//                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
+//                    g = 0;
+        bprop(u, g, r, m);
       }
     }
   }
@@ -591,63 +900,122 @@ public abstract class Layer extends Iced {
       this.units = units;
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
-
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
       if( weights ) {
-        Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        int count = Math.min(15, _in.units);
-        float min = -.1f, max = +.1f;
-        for( int o = 0; o < units; o++ ) {
-          for( int n = 0; n < count; n++ ) {
-            int i = rand.nextInt(_in.units);
-            int w = o * _in.units + i;
-            _w[w] = rand(rand, min, max);
-          }
-        }
+        randomize(getRNG(), 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
-        for( int i = 0; _v != null && i < _v.length; i++ )
-          _v[i] = 1;
       }
     }
 
-    @Override void fprop() {
+    @Override protected void fprop(boolean training) {
+      if (dropout != null && training) {
+        dropout.fillBytes();
+        if (_previous.isInput())
+          dropout.clearSomeInput(_previous);
+      }
+
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
+        if( !training || dropout == null || dropout.unit_active(o) ) {
+          for( int i = 0; i < _previous._a.length; i++ )
+            _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
+          _a[o] += _b[o];
+          if( _a[o] < 0 )
+            _a[o] = 0;
+          else if( !training && dropout != null )
+            _a[o] *= .5f;
+        }
+      }
+    }
+
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      final double m = momentum(processed);
+      final double r = rate(processed) * (1 - m);
+      for( int u = 0; u < _a.length; u++ ) {
+        //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
+        if( _a[u] > 0 ) { // don't use >=
+          final double g = _e[u]; // * 1.0 (from derivative of rectifier)
+          bprop(u, g, r, m);
+        }
+        // otherwise g = _e[u] * 0.0 = 0 and we don't allow other contributions by (and to) weights and momenta
+      }
+    }
+  }
+
+  public static class RectifierDropout extends Rectifier {
+    public RectifierDropout(int units) {
+      super(units);
+      this.dropout = createDropout(units);
+    }
+  }
+
+  public static class RectifierPrime extends Rectifier {
+    RectifierPrime() {
+    }
+
+    public RectifierPrime(int units) {
+      super(units);
+    }
+
+    @Override public void init(Layer[] ls, int index, boolean weights) {
+      super.init(ls, index, weights);
+      // Auto encoder has its own bias vector
+      _b = new double[units];
+      for( int i = 0; i < _b.length; i++ )
+        _b[i] = 1;
+    }
+
+    @Override protected void fprop(boolean training) {
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        for( int i = 0; i < _previous._a.length; i++ )
+          _a[o] += _w[i * _a.length + o] * _previous._a[i];
         _a[o] += _b[o];
         if( _a[o] < 0 )
           _a[o] = 0;
       }
     }
 
-    @Override void bprop() {
-      for( int o = 0; o < _a.length; o++ ) {
-        float g = _e[o];
-        if( _a[o] < 0 )
-          g = 0;
-        for( int i = 0; i < _in._a.length; i++ ) {
-          int w = o * _in._a.length + i;
-          if( _in._e != null )
-            _in._e[i] += g * _w[w];
-          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
+      for( int u = 0; u < _a.length; u++ ) {
+        assert _previous._previous.units == units;
+        double e = _previous._previous._a[u] - _a[u];
+        double g = e;//* (1 - _a[o]) * _a[o];
+        //double g = e * (1 - _a[o]) * _a[o]; // Square error
+        double r2 = 0;
+        for( int i = 0; i < _previous._a.length; i++ ) {
+          int w = i * _a.length + u;
+          if( _previous._e != null ) _previous._e[i] += g * _w[w];
+          double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+          _w[w] += r * d;
+          if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
         }
-        _b[o] += _r * g;
+        if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+          final double scale = Math.sqrt(max_w2 / r2);
+          for( int i = 0; i < _previous._a.length; i++ ) _w[i * _a.length + u] *= scale;
+        }
+        _b[u] += r * g;
       }
     }
   }
 
-  //
-
   @Override public Layer clone() {
-    return (Layer) super.clone();
+    Layer l = (Layer) super.clone();
+    if (dropout != null) l.dropout = new Dropout(units);
+    return l;
   }
 
   public static void shareWeights(Layer src, Layer dst) {
     dst._w = src._w;
     dst._b = src._b;
+    dst._wm = src._wm;
+    dst._bm = src._bm;
   }
 
   public static void shareWeights(Layer[] src, Layer[] dst) {
@@ -655,81 +1023,7 @@ public abstract class Layer extends Iced {
       shareWeights(src[y], dst[y]);
   }
 
-  // If layer is a RBM
-
-  /**
-   * TODO inject noise in units <br>
-   * mean 0 and variance 1 / ( 1 + e-x )
-   */
-  void contrastiveDivergence(float[] in) {
-//    float[] v1 = in;
-//    float[] h1 = new float[_b.length];
-//    fprop(v1, h1);
-//    float[] v2 = generate(h1);
-//    float[] h2 = new float[_b.length];
-//    fprop(v2, h2);
-
-//    for( int o = 0; o < _b.length; o++ )
-//      for( int i = 0; i < _v.length; i++ )
-//        _gw[o * _v.length + i] += _rate * ((h1[o] * v1[i]) - (h2[o] * v2[i]));
-//
-//    for( int o = 0; o < _gb.length; o++ )
-//      _gb[o] += _rate * (h1[o] - h2[o]);
-
-//    for( int i = 0; i < _gv.length; i++ )
-//      _gv[i] += _rate * (v1[i] - v2[i]);
-  }
-
-  final void adjustVisible() {
-    if( _gv != null ) {
-      for( int v = 0; v < _gv.length; v++ ) {
-        _v[v] += _gv[v];
-        _gv[v] *= 1 - _momentum;
-      }
-    }
-  }
-
-  float[] generate(float[] hidden) {
-    assert hidden.length == _b.length;
-    float[] visible = new float[_v.length];
-    for( int o = 0; o < hidden.length; o++ )
-      for( int i = 0; i < _in._a.length; i++ )
-        visible[i] += _w[o * _in._a.length + i] * hidden[o];
-    for( int i = 0; i < visible.length; i++ ) {
-      visible[i] += _v[i];
-      if( visible[i] < 0 )
-        visible[i] = 0;
-    }
-    return visible;
-  }
-
-  float error(float[] in1) {
-    float[] out1 = new float[_b.length];
-//    fprop(in1, out1);
-    float[] in2 = generate(out1);
-    float error = 0;
-    for( int i = 0; i < in1.length; i++ ) {
-      float d = in2[i] - in1[i];
-      error += d * d;
-    }
-    return error;
-  }
-
-  float freeEnergy(float[] in) {
-    float energy = 0.0f;
-    for( int i = 0; i < in.length; i++ )
-      energy -= in[i] * _v[i];
-    for( int o = 0; o < _b.length; o++ ) {
-      float out = 0;
-      for( int i = 0; i < in.length; i++ )
-        out += _w[o * in.length + i] * in[i];
-      out += _b[o];
-      energy -= Math.log(1 + Math.exp(out));
-    }
-    return energy;
-  }
-
-  private static float rand(Random rand, float min, float max) {
+  private static double uniformDist(Random rand, double min, double max) {
     return min + rand.nextFloat() * (max - min);
   }
 
@@ -741,4 +1035,5 @@ public abstract class Layer extends Iced {
     bb.put1('}');
     return bb;
   }
+
 }

@@ -56,7 +56,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // NOTE THAT IF YOU MODIFY any fields of a POJO that is part of a Value,
   // - this is NOT the recommended programming style,
-  // - those changes are visible to all on the node,
+  // - those changes are visible to all CPUs on the writing node,
   // - but not to other nodes, and
   // - the POJO might be dropped by the MemoryManager and reconstituted from
   //   disk and/or the byte array back to it's original form, losing your changes.
@@ -81,12 +81,17 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     byte[] mem = _mem;          // Read once!
     if( mem != null ) return mem;
     Freezable pojo = _pojo;     // Read once!
-    if( pojo != null ) return (_mem = pojo.write(new AutoBuffer()).buf());
+    if( pojo != null ) 
+      if( pojo instanceof Chunk ) return (_mem = ((Chunk)pojo).getBytes());
+      else return (_mem = pojo.write(new AutoBuffer()).buf());
     if( _max == 0 ) return (_mem = new byte[0]);
     return (_mem = loadPersist());
   }
+  // Just an empty shell of a Value, no local data but the Value is "real".
+  // Any attempt to look at the Value will require a remote fetch.
+  public final boolean isEmpty() { return _max > 0 && _mem==null && _pojo == null && !isPersisted(); }
   public final byte[] getBytes() {
-    assert _type==TypeMap.PRIM_B && _pojo == null && _max > 0;
+    assert _type==TypeMap.PRIM_B && _pojo == null;
     byte[] mem = _mem;          // Read once!
     return mem != null ? mem : (_mem = loadPersist());
   }
@@ -157,19 +162,19 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   final public void clrdsk() { _persist &= ~ON_dsk; } // note: not atomic
   final public void setdsk() { _persist |=  ON_dsk; } // note: not atomic
   final public boolean isPersisted() { return (_persist&ON_dsk)!=0; }
+  final public byte backend() { return (byte)(_persist&BACKEND_MASK); }
 
   // ---
   // Interface for using the persistence layer(s).
-  public boolean onICE (){ return (_persist & BACKEND_MASK) ==  ICE; }
-  public boolean onHDFS(){ return (_persist & BACKEND_MASK) == HDFS; }
-  public boolean onNFS (){ return (_persist & BACKEND_MASK) ==  NFS; }
-  public boolean onS3  (){ return (_persist & BACKEND_MASK) ==   S3; }
+  public boolean onICE (){ return (backend()) ==  ICE; }
+  public boolean onHDFS(){ return (backend()) == HDFS; }
+  public boolean onNFS (){ return (backend()) ==  NFS; }
+  public boolean onS3  (){ return (backend()) ==   S3; }
 
   /** Store complete Values to disk */
   void storePersist() throws IOException {
     if( isPersisted() ) return;
-    int i = _persist & BACKEND_MASK;
-    Persist.I[i].store(this);
+    Persist.I[backend()].store(this);
   }
 
   /** Remove dead Values from disk */
@@ -178,17 +183,15 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     //  free_mem();
     if( !isPersisted() || !onICE() ) return; // Never hit disk?
     clrdsk();  // Not persisted now
-    int i = _persist & BACKEND_MASK;
-    Persist.I[i].delete(this);
+    Persist.I[backend()].delete(this);
   }
   /** Load some or all of completely persisted Values */
   byte[] loadPersist() {
     assert isPersisted();
-    int i = _persist & BACKEND_MASK;
-    return Persist.I[i].load(this);
+    return Persist.I[backend()].load(this);
   }
 
-  public String nameOfPersist() { return nameOfPersist(_persist&BACKEND_MASK); }
+  public String nameOfPersist() { return nameOfPersist(backend()); }
   public static String nameOfPersist(int x) {
     switch( x ) {
     case ICE : return "ICE";
@@ -230,6 +233,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return sb;
   }
 
+  public boolean isLockable(){ return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Lockable); }
   public boolean isArray()   { return _type == TypeMap.VALUE_ARRAY; }
   public boolean isFrame()   { return _type == TypeMap.FRAME; }
   public boolean isVec()     { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Vec); }
@@ -260,9 +264,16 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // For plain Values, just the length in bytes.
   // For ValueArrays, the length of all chunks.
+  // For Frames, the compressed size of all vecs within the frame.
   public long length() {
-    if(!isArray()) return _max;
-    return ((ValueArray)get()).length();
+    if (isArray()) {
+      return ((ValueArray)get()).length();
+    }
+    else if (isFrame()) {
+      return ((Frame)get()).byteSize();
+    }
+
+    return _max;
   }
 
   public InputStream openStream() throws IOException {
@@ -396,8 +407,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     Value v1 = DKV.get(arykey,Integer.MAX_VALUE,H2O.ARY_KEY_PRIORITY);
     if( v1 == null ) return null;       // Nope; not there
     if( !v1.isArray() ) return null; // Or not a ValueArray
-    int i = v1._persist & BACKEND_MASK;
-    return Persist.I[i].lazyArrayChunk(key);
+    return Persist.I[v1.backend()].lazyArrayChunk(key);
   }
 
   // ---------------------

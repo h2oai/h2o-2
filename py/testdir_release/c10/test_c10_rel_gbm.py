@@ -16,6 +16,7 @@ DO_PREDICT_CM = False
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c10_rel_gbm(self):
+        h2o.beta_features = True
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
@@ -49,9 +50,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         summaryResult = h2o_cmd.runSummary(key=parseTrainResult['destination_key'])
         h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
 
-        # keepList = []
-        # h2o_glm.findXFromColumnInfo(key=parseTrainResult['destination_key'], keepList=keepList)
-        # see README.txt in 0xcustomer-datasets/c3 for the col names to use in keepList above, to get the indices
         # GBM Train***********************************************************
         x = [6,7,8,10,12,31,32,33,34,35,36,37,40,41,42,43,44,45,46,47,49,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]
         # response = 0
@@ -60,21 +58,20 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         # x = range(inspect['num_cols'])
         # del x[response]
-        ntrees = 100
+        ntrees = 10
         # fails with 40
         params = {
             'learn_rate': .2,
             'nbins': 1024,
             'ntrees': ntrees,
-            'max_depth': 5,
-            'min_rows': 10,
+            'max_depth': 20,
+            'min_rows': 2,
             'response': response,
             'cols': x,
             # 'ignored_cols_by_name': None,
         }
         print "Using these parameters for GBM: ", params
         kwargs = params.copy()
-        h2o.beta_features = True
         modelKey = 'GBMModelKey'
 
         timeoutSecs = 900
@@ -83,8 +80,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
             noPoll=True, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
         # hack
-        if h2o.beta_features:
-            h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+        h2j.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
         trainElapsed = time.time() - trainStart
         print "GBM training completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 
@@ -93,7 +89,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         errsLast = gbmTrainView['gbm_model']['errs'][-1]
         print "GBM 'errsLast'", errsLast
 
-        cm = gbmTrainView['gbm_model']['cm']
+        # get the last cm
+        cm = gbmTrainView['gbm_model']['cms'][-1]
         pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
         print "Last line of this cm might be NAs, not CM"
         print "\nTrain\n==========\n"
@@ -108,9 +105,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             model_key=modelKey,
             destination_key=predictKey,
             timeoutSecs=timeoutSecs)
-        
-        if h2o.beta_features:
-            h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
         elapsed = time.time() - start
         print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 

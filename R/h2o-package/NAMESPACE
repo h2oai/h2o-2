@@ -1,4 +1,5 @@
 exportPattern("^[[:alpha:]]+")
-exportMethods(
-    "h2o.init"
+export("h2o.shutdown", "h2o.init")
+exportClasses(
+	"H2OClient"
 )

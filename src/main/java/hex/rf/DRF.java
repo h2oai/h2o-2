@@ -9,6 +9,7 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.ValueArray.Column;
+import water.api.Constants;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
@@ -25,9 +26,9 @@ public abstract class DRF {
       Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
 
     // Create DRF remote task
-    DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
+    DRFJob  drfJob  = new DRFJob(ntrees);
+    DRFTask drfTask = create(drfJob,modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Create DRF user job & start it
-    DRFJob  drfJob  = new DRFJob(drfTask);
     drfJob.destination_key = modelKey;
     drfJob.start(drfTask);
     drfTask._job = drfJob;
@@ -40,7 +41,7 @@ public abstract class DRF {
   /** Create and configure a new DRF remote task.
    *  It does not execute DRF !!! */
   private static DRFTask create(
-    Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
+    Job job, Key modelKey, int[] cols, ValueArray ary, int ntrees, int depth, int binLimit,
     StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
     Sampling.Strategy samplingStrategy, float sample, float[] strataSamples,
     int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
@@ -61,7 +62,7 @@ public abstract class DRF {
     // Start the timer.
     drf._t_main = new Timer();
     // Push the RFModel globally first
-    UKV.put(modelKey, drf._rfmodel);
+    drf._rfmodel.delete_and_lock(job.self());
     DKV.write_barrier();
 
     return drf;
@@ -99,6 +100,43 @@ public abstract class DRF {
         throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params._sample);
       if (_params._numSplitFeatures!=-1 && (_params._numSplitFeatures< 1 || _params._numSplitFeatures>cs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(cs.length-1)+"]");
+      ChunkAllocInfo cai = new ChunkAllocInfo();
+      if (_params._useNonLocalData && !canLoadAll( (ValueArray) UKV.get(_rfmodel._dataKey), cai ))
+        throw new IllegalArgumentException(
+            "Cannot load all data from remote nodes - " +
+            "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
+            "Please provide more memory for JVMs or disable the option '"+Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
+    }
+
+    private boolean canLoadAll(final ValueArray ary, ChunkAllocInfo cai) {
+      long[] localChunks = new long[H2O.CLOUD.size()];
+      // Collect number of local chunks
+      for(int i=0; i<ary.chunks(); i++) {
+        Key k = ary.getChunkKey(i);
+        localChunks[k.home(H2O.CLOUD)]++;
+      }
+      for(int i=0; i<localChunks.length; i++) {
+        long needToLoad = ary.chunks() - localChunks[i]; // number of chunks to load
+        long memoryForChunks = needToLoad * ValueArray.CHUNK_SZ;
+        HeartBeat hb = H2O.CLOUD._memary[i]._heartbeat; // use last heartbeat to estimate free memory
+        long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
+        Log.debug(Sys.RANDF, i + ": computed available mem: " + PrettyPrint.bytes(nodeFreeMemory));
+        Log.debug(Sys.RANDF, i + ": remote chunks require: " + PrettyPrint.bytes(memoryForChunks));
+        if (nodeFreeMemory  - memoryForChunks <= 0) {
+          cai.node = H2O.CLOUD._memary[i];
+          cai.availableMemory = nodeFreeMemory;
+          cai.requiredMemory = memoryForChunks;
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /** Helper POJO to store required chunk allocation. */
+    private static class ChunkAllocInfo {
+      H2ONode node;
+      long availableMemory;
+      long requiredMemory;
     }
 
     /**Inhale the data, build a DataAdapter and kick-off the computation.
@@ -127,6 +165,15 @@ public abstract class DRF {
 
     @Override public final void reduce( DRemoteTask drt ) { }
 
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+      if (_job!=null) _job.cancel(ex);
+      return super.onExceptionalCompletion(ex, caller);
+    }
+    @Override protected void postGlobal(){
+      RFModel rf = UKV.get(_rfmodel._key);
+      rf.unlock(_job.self());
+    }
+
     /** Write number of split features computed on this node to a model */
     static void updateRFModel(Key modelKey, final int numSplitFeatures, final Key[] rkeys) {
       final int idx = H2O.SELF.index();
@@ -143,31 +190,30 @@ public abstract class DRF {
 
     private static final Key[] NO_KEYS = new Key[] {};
 
+    static final float OVERHEAD_MAGIC = 3/8.f; // memory overhead magic
     /** Return a list of chunk keys which can be loaded from other nodes. */
     private Key[] getNonLocalChunks(Key[] localCKeys) {
       Log.info(Sys.RANDF, "Use non-local data: " + _params._useNonLocalData);
       if (_params._useNonLocalData) {
-        final float OVERHEAD_MAGIC = 3/8.f; // magic !
-        long totalmem = Runtime.getRuntime().totalMemory();
-        long localChunks = localCKeys.length * ValueArray.CHUNK_SZ;
-        long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
 
-        if (availMem > 0) {
-          final ValueArray ary = UKV.get(_rfmodel._dataKey);
-          // Try to fill the memory up to ratio 3/8
-          int numkeys = Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
-          Log.info(Sys.RANDF, "Avail. mem: " + PrettyPrint.bytes(availMem));
-          Log.info(Sys.RANDF, "Can load keys: " + numkeys);
-          if (numkeys>0) {
-            Key[] rkeys = new Key[numkeys];
-            int c = 0;
-            for(int i=0; i<ary.chunks(); i++) {
-              Key k = ary.getChunkKey(i);
-              if (!k.home()) rkeys[c++] = k;
-              if (c == numkeys) break;
-            }
-            return rkeys;
+        long totalmem = Runtime.getRuntime().maxMemory()-(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory());
+        long availMem = (long) (OVERHEAD_MAGIC * totalmem); // theoretically available memory with overhead
+
+        final ValueArray ary = UKV.get(_rfmodel._dataKey);
+        // Try to fill the memory up to ratio 3/8 - load all chunks now since the memory condition are checked at beginning
+        int numkeys = (int) (ary.chunks()-localCKeys.length); //Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
+        Log.info(Sys.RANDF, "Computed available mem: " + PrettyPrint.bytes(availMem));
+        Log.info(Sys.RANDF, "Trying to load non-local keys: " + numkeys + " from " + (ary.chunks()-localCKeys.length));
+        assert availMem - numkeys * ValueArray.CHUNK_SZ > 0 : "There is not enough memory to load all remote keys!";
+        if (numkeys>0) {
+          Key[] rkeys = new Key[numkeys];
+          int c = 0;
+          for(int i=0; i<ary.chunks(); i++) {
+            Key k = ary.getChunkKey(i);
+            if (!k.home()) rkeys[c++] = k;
+            if (c == numkeys) break;
           }
+          return rkeys;
         }
       }
       return NO_KEYS;
@@ -282,14 +328,12 @@ public abstract class DRF {
 
   /** DRF job showing progress with reflect to a number of generated trees. */
   public static class DRFJob extends Job {
-    transient DRFTask _drfTask;
 
-    public DRFJob(DRFTask drfTask) {
-      _drfTask = drfTask;
-      description = "RandomForest_" + drfTask._params._ntrees + "trees";
+    public DRFJob(int ntrees) {
+      description = "RandomForest_" + ntrees + "trees";
     }
 
-    @Override public void start(H2OCountedCompleter fjtask) {
+    @Override public Job start(H2OCountedCompleter fjtask) {
       H2OCountedCompleter jobRemoval = new H2O.H2OCountedCompleter() {
         @Override public void compute2() {
           new TAtomic<RFModel>() {
@@ -305,7 +349,7 @@ public abstract class DRF {
         }
       };
       fjtask.setCompleter(jobRemoval);
-      super.start(jobRemoval);
+      return super.start(jobRemoval);
     }
     @Override public float progress() {
       Progress p = (Progress) UKV.get(destination_key);

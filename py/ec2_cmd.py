@@ -61,6 +61,7 @@ MEMORY_MAPPING = {
     'm3.xlarge'  : { 'xmx' : 11 },  # $0.50/hr
     'm3.2xlarge' : { 'xmx' : 24 },  # $1.00/hr
     'c1.xlarge'  : { 'xmx' : 6  },  # $0.58/hr
+    'c3.xlarge'  : { 'xmx' : 5  },  # $0.30/hr
     'hi1.4xlarge'  : { 'xmx' : 56},  # $3.10/hr 60.5GB dram. 8 cores/8 threads. 2TB SSD. 10GE
     'cr1.8xlarge'  : { 'xmx' : 230},  # $4.60/hr 244GB dram. 2 E5-2670. 240GB SSD. 10GE
 }
@@ -364,7 +365,7 @@ def invoke_hosts_action(action, hosts_config, args, ec2_reservation=None):
         try:
             h2o.config_json = args.hosts
             log("Starting H2O cloud...")
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(timeoutSecs=120, retryDelaySecs=5)
             h2o.touch_cloud()
             log("Cloud started. Let's roll!")
             log("You can start for example here \033[93mhttp://{0}:{1}\033[0m".format(hosts_config['ec2_instances'][0]['public_dns_name'],hosts_config['base_port']))

@@ -12,6 +12,6 @@ public class ExportModel extends Request2 {
   public Model model;
 
   @Override protected Response serve() {
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 }

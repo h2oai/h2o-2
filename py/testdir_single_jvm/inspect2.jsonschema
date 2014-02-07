@@ -1,0 +1,28 @@
+
+{
+    "type": "object", "properties": {
+        "Request2": { "type": "number" },
+        "byteSize": { "type": "number" },
+        "cols": { "type": "array", "items": {
+            "type": "object", "properties": {
+                "max": { "type": "number" },
+                "mean": { "type": "number" },
+                "min": { "type": "number" },
+                "naCnt": { "type": "number" },
+                "name": { "type": "string" },
+                "type": { "type": "string" }
+            }
+            }
+        },
+        "numCols": { "type": "number" },
+        "numRows": { "type": "number" },
+        "response_info": { "type": "object", "properties": {
+            "h2o": { "type": "string" },
+            "redirect_url": { "type": "null" },
+            "status": { "type": "string" },
+            "time": { "type": "number" }
+        }
+        }
+    }
+
+}

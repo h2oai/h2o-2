@@ -1,0 +1,31 @@
+{
+    "Request2": { "type": "number" },
+    "summaries": {
+        "type": "array", "items": { 
+            "type": "object", "properties": {
+                "colname": { "type": "string" },
+                "type": {"type": "string"}
+                "nacnt": { "type": "number" },
+                "hstart":{"type": "number"},
+                "hstep":{"type": "number"},
+                "hbrk": { "type": "array", "items": { "type": "string" } },
+                "hcnt": { "type": "array", "items": { "type": "number" } }
+                "stats": {"type": "array", "items": {
+                    "type": "object", "properties": {
+                         "cardinality": {"type": "number"}, # optional?
+                         "type":{"type": "string"},
+                         "mean": {"type": "number"},
+                         "sd":{"type": "number"},
+                         "zeros":{"type": "number"},
+                         "mins": { "type": "array", "items": { "type": "number" } },
+                         "maxs": { "type": "array", "items": { "type": "number" } },
+                         "pct": { "type": "array", "items": { "type": "number" } },
+                         "pctile": { "type": "array", "items": { "type": "number" } }
+                      }
+                      },
+                }
+            }
+        }
+    } 
+}
+

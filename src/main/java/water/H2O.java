@@ -5,11 +5,11 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
+import java.util.concurrent.Future;
 
 import jsr166y.*;
-import water.exec.Function;
+import water.Job.JobCancelledException;
 import water.nbhm.NonBlockingHashMap;
-import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -30,11 +30,11 @@ public final class H2O {
 
   public static String VERSION = "(unknown)";
 
-  // User name for this Cloud
+  // User name for this Cloud (either the username or the argument for the option -name)
   public static String NAME;
 
   // The default port for finding a Cloud
-  public static final int DEFAULT_PORT = 54321;
+  public static int DEFAULT_PORT = 54321;
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
@@ -126,6 +126,12 @@ public final class H2O {
     System.exit(222);
   }
 
+  /** Shutdown itself by sending a shutdown UDP packet. */
+  public void shutdown() {
+    UDPRebooted.T.shutdown.send(H2O.SELF);
+    H2O.exit(0);
+  }
+
   // --------------------------------------------------------------------------
   // The Current Cloud. A list of all the Nodes in the Cloud. Changes if we
   // decide to change Clouds via atomic Cloud update.
@@ -136,6 +142,7 @@ public final class H2O {
   // Node.  No holes.  Cloud size is _members.length.
   public final H2ONode[] _memary;
   public final int _hash;
+  //public boolean _healthy;
 
   // A dense integer identifier that rolls over rarely. Rollover limits the
   // number of simultaneous nested Clouds we are operating on in-parallel.
@@ -151,6 +158,14 @@ public final class H2O {
     assert (0 <= nnn && nnn <= 255);
     assert (0 <= old && old <= 255);
     return ((nnn-old)&0xFF) < 64;
+  }
+
+  static public boolean isHealthy() {
+      H2O cloud = H2O.CLOUD;
+      for (H2ONode h2o : cloud._memary) {
+          if(!h2o._node_healthy) return false;
+      }
+      return true;
   }
 
   // Static list of acceptable Cloud members
@@ -181,7 +196,7 @@ public final class H2O {
       CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
     SELF._heartbeat._cloud_size=(char)CLOUD.size();
-    Paxos.print("Announcing new Cloud Membership: ",_memary);
+    //Paxos.print("Announcing new Cloud Membership: ",_memary);
   }
 
   // Check if the cloud id matches with one of the old clouds
@@ -234,7 +249,7 @@ public final class H2O {
     // go round-robin in 64MB chunks.
     if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
       long cidx = 0;
-      int skip = 1+1+4+4;       // Skip both the vec# and chunk#?
+      int skip = water.fvec.Vec.KEY_PREFIX_LEN; // Skip both the vec# and chunk#?
       if( key._kb[0] == Key.DVEC ) {
         long cSz = 1L << (26 - water.fvec.Vec.LOG_CHK);
         cidx = UDP.get4(key._kb, 1+1+4); // Chunk index
@@ -536,9 +551,38 @@ public final class H2O {
 
   public static Value raw_get( Key key ) { return STORE.get(key); }
   public static Key getk( Key key ) { return STORE.getk(key); }
-  public static Set<Key> keySet( ) { return STORE.keySet(); }
+  public static Set<Key> localKeySet( ) { return STORE.keySet(); }
   public static Collection<Value> values( ) { return STORE.values(); }
   public static int store_size() { return STORE.size(); }
+
+  // Global KeySet.  
+  // Pulls global keys locally, then hands out a local keySet.
+  // Since this can get big, allow some filtering.
+  public static Set<Key> globalKeySet( String clzname ) {
+    new GlobalKeyFilterClass(clzname).invokeOnAllNodes();
+    return localKeySet();
+  }
+  private static class GlobalKeyFilterClass extends DRemoteTask<GlobalKeyFilterClass> {
+    final int _typeid;
+    final H2ONode _self;
+    GlobalKeyFilterClass( String clzname ) { _typeid = clzname==null ? 0 : TypeMap.onIce(clzname); _self = SELF; }
+    @Override public void lcompute() {
+      if( H2O.SELF != _self ) { // No need to send to self!
+        Futures fs = new Futures();
+        for( Key k : localKeySet() ) {
+          Value val = H2O.get(k);
+          if( val != null && k.home() && k.user_allowed() && // Exists, maybe needed at remote
+              !val.isReplicatedTo(_self) &&                  // Already replicated at remote?
+              (_typeid==0 || val.type()==_typeid)  ) // Filter for class
+            fs.add(RPC.call(_self,new TaskSendKey(k,val)));
+        }
+        fs.blockForPending();
+      }
+      tryComplete();
+    }
+    @Override public void reduce( GlobalKeyFilterClass gkfc ) { }
+    @Override public boolean logVerbose() { return false; }
+  }
 
 
   // --------------------------------------------------------------------------
@@ -623,10 +667,11 @@ public final class H2O {
   public static int hiQPoolSize(int i) { return FJPS[i+MIN_HI_PRIORITY].getPoolSize();             }
 
   // Submit to the correct priority queue
-  public static void submitTask( H2OCountedCompleter task ) {
+  public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
     assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
     FJPS[priority].submit(task);
+    return task;
   }
 
   // Simple wrapper over F/J CountedCompleter to support priority queues.  F/J
@@ -636,7 +681,10 @@ public final class H2O {
   // entire node for lack of some small piece of data).  So each attempt to do
   // lower-priority F/J work starts with an attempt to work & drain the
   // higher-priority queues.
-  public static abstract class H2OCountedCompleter extends CountedCompleter {
+  public static abstract class H2OCountedCompleter extends CountedCompleter implements Cloneable {
+    public H2OCountedCompleter(){}
+    public H2OCountedCompleter(H2OCountedCompleter completer){super(completer);}
+
     // Once per F/J task, drain the high priority queue before doing any low
     // priority work.
     @Override public final void compute() {
@@ -665,17 +713,48 @@ public final class H2O {
     }
     // Do the actually intended work
     public abstract void compute2();
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      if(!(ex instanceof JobCancelledException) && this.getCompleter() == null)
+        ex.printStackTrace();
+      return true;
+    }
     // In order to prevent deadlock, threads that block waiting for a reply
     // from a remote node, need the remote task to run at a higher priority
     // than themselves.  This field tracks the required priority.
     public byte priority() { return MIN_PRIORITY; }
-
+    public H2OCountedCompleter clone(){
+      try { return (H2OCountedCompleter)super.clone(); }
+      catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
+    }
   }
+
+
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
+    public H2OCallback(){this(null);}
+    public H2OCallback(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){callback((T)caller);}
+    @Override public void onCompletion(CountedCompleter caller){
+      try {
+        callback((T)caller);
+      } catch(Throwable ex){
+        completeExceptionally(ex);
+      }
+    }
     public abstract void callback(T t);
   }
+
+  public static class JobCompleter extends H2OCountedCompleter{
+    final Job _job;
+    public JobCompleter(Job j){this(j,null);}
+    public JobCompleter(Job j,H2OCountedCompleter cmp){super(cmp); _job = j;}
+    @Override public void compute2(){throw new UnsupportedOperationException();}
+    @Override public void onCompletion(CountedCompleter caller){_job.remove();}
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter c){
+      if(!(ex instanceof JobCancelledException))_job.cancel(ex);
+      return true;
+    }
+  }
+
   public static class H2OEmptyCompleter extends H2OCountedCompleter{
     @Override public void compute2(){throw new UnsupportedOperationException();}
   }
@@ -686,6 +765,7 @@ public final class H2O {
   public static class OptArgs extends Arguments.Opt {
     public String name; // set_cloud_name_and_mcast()
     public String flatfile; // set_cloud_name_and_mcast()
+    public int baseport; // starting number to search for open ports
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String network; // Network specification for acceptable interfaces to bind to.
@@ -701,7 +781,7 @@ public final class H2O {
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
-    public int    nthreads=99; // Max number of F/J threads in the low-priority batch queue
+    public int    nthreads=Math.max(99,10*NUMCPUS); // Max number of F/J threads in the low-priority batch queue
     public String h = null;
     public String help = null;
     public String version = null;
@@ -776,32 +856,35 @@ public final class H2O {
 
   public static boolean IS_SYSTEM_RUNNING = false;
 
+  /** Load a h2o build version or return default unknown version
+   * @return never returns null
+   */
+  public static AbstractBuildVersion getBuildVersion() {
+    try {
+      Class klass = Class.forName("water.BuildVersion");
+      java.lang.reflect.Constructor constructor = klass.getConstructor();
+      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
+      return abv;
+      // it exists on the classpath
+    } catch (Exception e) {
+      return AbstractBuildVersion.UNKNOWN_VERSION;
+    }
+  }
+
   /**
    * If logging has not been setup yet, then Log.info will only print to stdout.
    * This allows for early processing of the '-version' option without unpacking
    * the jar file and other startup stuff.
    */
   public static void printAndLogVersion() {
-    String build_branch = "(unknown)";
-    String build_hash = "(unknown)";
-    String build_describe = "(unknown)";
-    String build_project_version = "(unknown)";
-    String build_by = "(unknown)";
-    String build_on = "(unknown)";
-    try {
-      Class klass = Class.forName("water.BuildVersion");
-      java.lang.reflect.Constructor constructor = klass.getConstructor();
-      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
-      build_branch = abv.branchName();
-      build_hash = abv.lastCommitHash();
-      build_describe = abv.describe();
-      build_project_version = abv.projectVersion();
-      build_by = abv.compiledBy();
-      build_on = abv.compiledOn();
-      // it exists on the classpath
-    } catch (Exception e) {
-      // it does not exist on the classpath
-    }
+    // Try to load a version
+    AbstractBuildVersion abv = getBuildVersion();
+    String build_branch = abv.branchName();
+    String build_hash = abv.lastCommitHash();
+    String build_describe = abv.describe();
+    String build_project_version = abv.projectVersion();
+    String build_by = abv.compiledBy();
+    String build_on = abv.compiledOn();
 
     Log.info ("----- H2O started -----");
     Log.info ("Build git branch: " + build_branch);
@@ -816,6 +899,8 @@ public final class H2O {
     Log.info ("Java availableProcessors: " + runtime.availableProcessors());
     Log.info ("Java heap totalMemory: " + String.format("%.2f gb", runtime.totalMemory() / ONE_GB));
     Log.info ("Java heap maxMemory: " + String.format("%.2f gb", runtime.maxMemory() / ONE_GB));
+    Log.info ("Java version: " + String.format("Java %s (from %s)", System.getProperty("java.version"), System.getProperty("java.vendor")));
+    Log.info ("OS   version: " + String.format("%s %s (%s)", System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")));
   }
 
   public static String getVersion() {
@@ -849,6 +934,10 @@ public final class H2O {
 
     printAndLogVersion();
 
+    if (OPT_ARGS.baseport != 0) {
+      DEFAULT_PORT = OPT_ARGS.baseport;
+    }
+
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();
     if( OPT_ARGS.ice_root != null ) ice = OPT_ARGS.ice_root.replace("\\", "/");
@@ -870,9 +959,6 @@ public final class H2O {
     startLocalNode();
     Log.POST(320,"");
 
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
-    Log.POST(330,"");
-
     String logDir = (Log.getLogDir() != null) ? Log.getLogDir() : "(unknown)";
     Log.info ("Log dir: '" + logDir + "'");
 
@@ -885,15 +971,8 @@ public final class H2O {
     startApiIpPortWatchdog(); // Check if the API port becomes unreachable
     Log.POST(360,"");
 
-    initializeExpressionEvaluation(); // starts the expression evaluation system
-    Log.POST(370,"");
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
-  }
-
-  private static void initializeExpressionEvaluation() {
-    Function.initializeCommonFunctions();
   }
 
   // Default location of the AWS credentials file
@@ -924,6 +1003,12 @@ public final class H2O {
     Log.info("(v"+VERSION+") '"+NAME+"' on " + SELF+(OPT_ARGS.flatfile==null
         ? (", discovery address "+CLOUD_MULTICAST_GROUP+":"+CLOUD_MULTICAST_PORT)
             : ", static configuration based on -flatfile "+OPT_ARGS.flatfile));
+
+    Log.info("If you have trouble connecting, try SSH tunneling from your local machine (e.g., via port 55555):\n" +
+            "  1. Open a terminal and run 'ssh -L 55555:localhost:"
+            + API_PORT + " " + System.getProperty("user.name") + "@" + SELF_ADDRESS.getHostAddress() + "'\n" +
+            "  2. Point your browser to http://localhost:55555");
+
 
     // Create the starter Cloud with 1 member
     SELF._heartbeat._jar_md5 = Boot._init._jarHash;
@@ -1009,7 +1094,7 @@ public final class H2O {
     } catch( NoSuchFieldException nsfe ) { }
 
     // Sleep a bit so all my other threads can 'catch up'
-    try { Thread.sleep(1000); } catch( InterruptedException e ) { }
+    try { Thread.sleep(100); } catch( InterruptedException e ) { }
   }
 
   public static DatagramChannel _udpSocket;
@@ -1098,6 +1183,11 @@ public final class H2O {
   // multicast port (or all the individuals we can find, if multicast is
   // disabled).
   static void multicast( ByteBuffer bb ) {
+    try { multicast2(bb); }
+    catch (Exception _) {}
+  }
+
+  static private void multicast2( ByteBuffer bb ) {
     if( H2O.STATIC_H2OS == null ) {
       byte[] buf = new byte[bb.remaining()];
       bb.get(buf);
@@ -1117,11 +1207,11 @@ public final class H2O {
           // and if not a soft launch (hibernate mode)
           if(H2O.OPT_ARGS.soft == null)
             Log.err("Multicast Error ",e);
-            if( CLOUD_MULTICAST_SOCKET != null )
-              try { CLOUD_MULTICAST_SOCKET.close(); }
-              catch( Exception e2 ) { Log.err("Got",e2); }
-              finally { CLOUD_MULTICAST_SOCKET = null; }
-          }
+          if( CLOUD_MULTICAST_SOCKET != null )
+            try { CLOUD_MULTICAST_SOCKET.close(); }
+            catch( Exception e2 ) { Log.err("Got",e2); }
+            finally { CLOUD_MULTICAST_SOCKET = null; }
+        }
       }
     } else {                    // Multicast Simulation
       // The multicast simulation is little bit tricky. To achieve union of all
@@ -1383,6 +1473,7 @@ public final class H2O {
           Object p = val.rawPOJO();
           if( m == null && p == null ) continue; // Nothing to throw out
 
+          if(val.isLockable())continue; // we do not want to throw out Lockables.
           // ValueArrays covering large files in global filesystems such as NFS
           // or HDFS are only made on import (right now), and not reconstructed
           // by inspection of the Key or filesystem.... so we cannot toss them

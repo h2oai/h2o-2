@@ -1,0 +1,150 @@
+Usage: 
+    python writeFUs.py
+
+
+What it does:
+    1. Create arbitrary munging tasks against available datasets in smalldata
+        An arbitrary munging task may be:
+            -A col/row slicing
+            -A simple filter
+            -A compound filter
+
+        -A simple filter is subsetting rows/cols by a single '<', '>', '=>','<=','!=','=='
+        -A compound filter is an aribtrarily complicated sequence of '!','&','|','<', '>', '=>','<=','!=','=='
+    
+Future:
+    Generate these types of tasks:
+    
+    Algorithms.R    h2o.gbm                
+    Algorithms.R    h2o.glm.FV                  
+    Algorithms.R    h2o.__getGLM2Results                    
+    Algorithms.R    h2o.kmeans                 
+    Algorithms.R    h2o.nn                  
+    Algorithms.R    h2o.prcomp.internal                 
+    Algorithms.R    h2o.prcomp                  
+    Algorithms.R    h2o.pcr                 
+    Algorithms.R    h2o.randomForest                    
+    Algorithms.R    h2o.predict                 
+    Algorithms.R    h2o.glm.internal                    
+    Algorithms.R    h2o.glmgrid.internal                    
+    Algorithms.R    h2o.__getGLMResults                 
+    Algorithms.R    h2o.glm                 
+    Internal.R  h2o.__logIt<-   No direct test              
+    Internal.R  h2o.__remoteSend    No direct test              
+    Internal.R  h2o.__writeToFile   No direct test              
+    Internal.R  h2o.__formatError   No direct test              
+    Internal.R  h2o.__dumpLogs  No direct test              
+    Internal.R  h2o.__poll  No direct test              
+    Internal.R  h2o.__allDone   No direct test              
+    Internal.R  h2o.__pollAll   No direct test              
+    Internal.R  h2o.__uniqID    No direct test              
+    Internal.R  h2o.__version   No direct test              
+    Internal.R  h2o.__getFamily No direct test              
+    Internal.R  h2o.__exec2 No direct test              
+    Internal.R  h2o.__exec2_dest_key    No direct test              
+    Internal.R  h2o.__unop2 No direct test              
+    Internal.R  h2o.__binop2    No direct test              
+    ParseImport.R   h2o.startLauncher   unimpl              
+    ParseImport.R   h2o.importURL                   
+    ParseImport.R   h2o.importHDFS                  
+    Classes.R   initialize  H2ORawData              
+    Classes.R   initialize  H2OParsedData               
+    Classes.R   initialize  H2OModel                
+    Classes.R   show    H2OClient               
+    Classes.R   show    H2ORawData              
+    Classes.R   show    H2OParsedData               
+    Classes.R   show    H2OGLMModel             
+    Classes.R   show    H2OGLMGrid              
+    Classes.R   show    H2OKMeansModel              
+    Classes.R   show    H2ONNModel              
+    Classes.R   show    H2ODRFModel             
+    Classes.R   show    H2OPCAModel             
+    Classes.R   show    H2OGBMModel             
+    Classes.R   show    H2OGBMGrid              
+    Classes.R   summary H2OPCAModel             
+    Classes.R   plot    H2OPCAModel             
+    Classes.R   [   H2OParsedData   
+    Classes.R   $   H2OParsedData               
+    Classes.R   [<- H2OParsedData               
+    Classes.R   $<- H2OParsedData               
+    Classes.R   +   H2OParsedData               
+    Classes.R   -   H2OParsedData               
+    Classes.R   *   H2OParsedData               
+    Classes.R   /   H2OParsedData               
+    Classes.R   %%  H2OParsedData               
+    Classes.R   "=="    H2OParsedData               
+    Classes.R   >   H2OParsedData               
+    Classes.R   <   H2OParsedData               
+    Classes.R   !=  H2OParsedData               
+    Classes.R   >=  H2OParsedData               
+    Classes.R   <=  H2OParsedData               
+    Classes.R   &   H2OParsedData               
+    Classes.R   |   H2OParsedData               
+    Classes.R   +   numeric             
+    Classes.R   -   numeric             
+    Classes.R   *   numeric             
+    Classes.R   /   numeric             
+    Classes.R   %%  numeric             
+    Classes.R   "=="    numeric             
+    Classes.R   >   numeric             
+    Classes.R   <   numeric             
+    Classes.R   !=  numeric             
+    Classes.R   >=  numeric             
+    Classes.R   <=  numeric             
+    Classes.R   &   numeric             
+    Classes.R   |   numeric             
+    Classes.R   +   H2OParsedData               
+    Classes.R   -   H2OParsedData               
+    Classes.R   *   H2OParsedData               
+    Classes.R   /   H2OParsedData               
+    Classes.R   %%  H2OParsedData               
+    Classes.R   "=="    H2OParsedData               
+    Classes.R   >   H2OParsedData               
+    Classes.R   <   H2OParsedData               
+    Classes.R   !=  H2OParsedData               
+    Classes.R   >=  H2OParsedData               
+    Classes.R   <=  H2OParsedData               
+    Classes.R   &   H2OParsedData               
+    Classes.R   |   H2OParsedData               
+    Classes.R   !   H2OParsedData               
+    Classes.R   abs H2OParsedData               ??
+    Classes.R   sign    H2OParsedData               ??
+    Classes.R   sqrt    H2OParsedData               ??
+    Classes.R   ceiling H2OParsedData               ??
+    Classes.R   floor   H2OParsedData               ??
+    Classes.R   log H2OParsedData               ??
+    Classes.R   exp H2OParsedData               ??
+    Classes.R   sum H2OParsedData               ??
+    Classes.R   is.na   H2OParsedData               ??
+    Classes.R   h2o.cut H2OParsedData               vecTask??
+    Classes.R   table   H2OParsedData               multiVecTask??
+    Classes.R   as.factor  H2OParsedData               vecTask (assuming)
+    Classes.R   colnames    H2OParsedData               frameTask
+    Classes.R   names   H2OParsedData               frameTask
+    Classes.R   nrow    H2OParsedData               frameTask
+    Classes.R   ncol    H2OParsedData               frameTask
+    Classes.R   min H2OParsedData               vecTask
+    Classes.R   max H2OParsedData               vecTask
+    Classes.R   range   H2OParsedData               vecTask,frameTask
+    Classes.R   colMeans    H2OParsedData               frameTask
+    Classes.R   dim H2OParsedData               frameTask
+    Classes.R   as.data.frame   H2OParsedData               vecTask,frameTask
+    Classes.R   head    H2OParsedData               vecTask,frameTask
+    Classes.R   tail    H2OParsedData               vecTask,frameTask
+    Classes.R   is.factor   H2OParsedData               ??
+    Classes.R   quantile    H2OParsedData               vecTask
+    Classes.R   histograms  H2OParsedData               ??
+    Classes.R   summary H2OParsedData               vecTask,frameTask
+    Classes.R   apply   H2OParsedData               
+    Classes.R   show    H2ORawDataVA                
+    Classes.R   show    H2OParsedDataVA             
+    Classes.R   show    H2OGLMModelVA               
+    Classes.R   show    H2OGLMGridVA                
+    Classes.R   colnames    H2OParsedDataVA             frameTask
+    Classes.R   names   H2OParsedDataVA             frameTask
+    Classes.R   nrow    H2OParsedDataVA             frameTask
+    Classes.R   ncol    H2OParsedDataVA             frameTask
+    Classes.R   dim H2OParsedDataVA             frameTask
+    Classes.R   head    H2OParsedDataVA             vecTask,frameTask
+    Classes.R   tail    H2OParsedDataVA             vecTask,frameTask
+    Classes.R   summary H2OParsedDataVA             vecTask,frameTask

@@ -1,15 +1,17 @@
 package water;
 
+import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
-import java.util.Arrays;
-import java.util.HashMap;
+import hex.VariableImportance;
+
+import java.util.*;
+
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.Log;
-import water.util.Utils;
 
 /**
  * A Model models reality (hopefully).
@@ -17,13 +19,9 @@ import water.util.Utils;
  * compatible dataset - meaning the row has all the columns with the same names
  * as used to build the mode.
  */
-public abstract class Model extends Iced {
+public abstract class Model extends Lockable<Model> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
-  /** Key associated with this Model, if any.  */
-  @API(help="Key associated with Model")
-  public final Key _selfKey;
 
   /** Dataset key used to *build* the model, for models for which this makes
    *  sense, or null otherwise.  Not all models are built from a dataset (eg
@@ -51,11 +49,11 @@ public abstract class Model extends Iced {
 
   /** Full constructor */
   public Model( Key selfKey, Key dataKey, String names[], String domains[][] ) {
+    super(selfKey);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
     assert names.length > 1;
     assert names[names.length-1] != null; // Have a valid response-column name?
-    _selfKey = selfKey;
     _dataKey = dataKey;
     _names   = names;
     _domains = domains;
@@ -64,8 +62,9 @@ public abstract class Model extends Iced {
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
 
-  /** Called when deleting this model, to cleanup any internal keys */
-  public void delete() { UKV.remove(_selfKey); }
+  /** Remove any Model internal Keys */
+  @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
+  @Override public String errStr() { return "Model"; }
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }
@@ -76,19 +75,26 @@ public abstract class Model extends Iced {
   }
 
   /** For classifiers, confusion matrix on validation set. */
-  public ConfusionMatrix cm() {
-    return null;
-  }
+  public ConfusionMatrix cm() { return null; }
+  /** Returns mse for validation set. */
+  public double mse() { return Double.NaN; }
+  /** Variable importance of individual variables measured by this model. */
+  public VariableImportance varimp() { return null; }
 
   /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
    *  predicted class, the remaining Vecs are the probability distributions.
    *  For Regression (single-class) models, the 1st and only Vec is the
    *  prediction value.  Also passed in a flag describing how hard we try to
    *  adapt the frame.  */
-  public Frame score( Frame fr, boolean exact ) {
+  public Frame score( Frame fr) {
+    int ridx = fr.find(_names[_names.length-1]);
+    if(ridx != -1){ // drop the response for scoring!
+      fr = new Frame(fr);
+      fr.remove(ridx);
+    }
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
-    Frame[] adaptFrms = adapt(fr,exact);
+    Frame[] adaptFrms = adapt(fr,false);
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
     Frame adaptFrm = adaptFrms[0];
@@ -99,22 +105,28 @@ public abstract class Model extends Iced {
     // result vector.
     v._domain = _domains[_domains.length-1];
     adaptFrm.add("predict",v);
-    if( nclasses() > 1 )
+    if( nclasses() > 1 ) {
+      String prefix = "";
+      for( int c=0; c<nclasses(); c++ ) // if any class is the same as column name in frame, then prefix all classnames
+        if (contains(adaptFrm._names, classNames()[c])) { prefix = "class_"; break; }
       for( int c=0; c<nclasses(); c++ )
-        adaptFrm.add(classNames()[c],adaptFrm.anyVec().makeZero());
+        adaptFrm.add(prefix+classNames()[c],adaptFrm.anyVec().makeZero());
+    }
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        double tmp[] = new double[_names.length];
-        float preds[] = new float[nclasses()];
+        double tmp [] = new double[_names.length];
+        float preds[] = new float [nclasses()];
+        int   ties [] = new int   [nclasses()];
         Chunk p = chks[_names.length-1];
-        for( int i=0; i<p._len; i++ ) {
-          float[] out = score0(chks,i,tmp,preds);
+        for( int row=0; row<p._len; row++ ) {
+          float[] out = score0(chks,row,tmp,preds);
           if( nclasses() > 1 ) {
-            p.set0(i,Utils.maxIndex(out));
+            if( Float.isNaN(out[0]) ) p.setNA0(row);
+            else p.set0(row, Model.getPrediction(out, ties, row));
             for( int c=0; c<nclasses(); c++ )
-              chks[_names.length+c].set0(i,out[c]);
+              chks[_names.length+c].set0(row,out[c]);
           } else {
-            p.set0(i,out[0]);
+            p.set0(row,out[0]);
           }
         }
       }
@@ -123,7 +135,7 @@ public abstract class Model extends Iced {
     int x=_names.length-1, y=adaptFrm.numCols();
     Frame output = adaptFrm.extractFrame(x, y);
     // Delete manually only vectors which i created :-/
-    onlyAdaptFrm.remove();
+    onlyAdaptFrm.delete();
     return output;
   }
 
@@ -173,30 +185,14 @@ public abstract class Model extends Iced {
    *    any enums returned by the model that the data does not have a mapping for.
    *  If 'exact' is false, these situations will use or return NA's instead.
    */
-  private int[][] adapt( String names[], String domains[][], boolean exact, boolean dropResponse ) {
-    int maplen = dropResponse ? _names.length : _names.length+1;
+  private int[][] adapt( String names[], String domains[][], boolean exact) {
+    int maplen = names.length;
     int map[][] = new int[maplen][];
-
-    // Build the column mapping: cmap[model_col] == user_col, or -1 if missing.
-    int cmap[] = map[maplen-1] = new int[maplen-1];
-    HashMap<String,Integer> m = new HashMap<String, Integer>();
-    for( int d = 0; d <  names.length  ; ++d) m.put(names[d], d);
-    for( int c = 0; c < maplen-1; ++c) {
-      Integer I = m.get(_names[c]);
-      cmap[c] = I==null ? -1 : I; // Check for data missing model column
-    }
-
     // Make sure all are compatible
-    for( int c=0; c<cmap.length; c++ ) {
-      int d = cmap[c];          // Matching data column
-      if( d == -1 ) {           // Column was missing from data
-        if( exact ) throw new IllegalArgumentException("Model requires a column called "+_names[c]);
-        continue;               // Cannot check domains of missing columns
-      }
-
-      // Now do domain mapping
+    for( int c=0; c<names.length;++c) {
+            // Now do domain mapping
       String ms[] = _domains[c];  // Model enum
-      String ds[] =  domains[d];  // Data  enum
+      String ds[] =  domains[c];  // Data  enum
       if( ms == ds ) { // Domains trivially equal?
       } else if( ms == null && ds != null ) {
         throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) numeric, was passed a categorical");
@@ -206,15 +202,9 @@ public abstract class Model extends Iced {
         throw H2O.unimpl();     // Attempt an asEnum?
       } else if( !Arrays.deepEquals(ms, ds) ) {
         map[c] = getDomainMapping(_names[c], ms, ds, exact);
-      } else {
-        // null mapping is equal to identity mapping
-      }
+      } // null mapping is equal to identity mapping
     }
     return map;
-  }
-
-  private int[][] adapt( String names[], String domains[][], boolean exact ) {
-    return adapt(names, domains, exact, true);
   }
 
   /** Build an adapted Frame from the given Frame. Useful for efficient bulk
@@ -225,36 +215,41 @@ public abstract class Model extends Iced {
    *  frame which contains only vectors which where adapted (the purpose of the
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
-  public Frame[] adapt( Frame fr, boolean exact, boolean dropResponse ) {
-    String frnames[] = fr.names();
-    Vec frvecs[] = fr.vecs();
-    int map[][] = adapt(frnames,fr.domains(),exact,dropResponse);
-    int cmap[] = dropResponse ? map[_names.length-1] : map[_names.length];
-    Vec vecs[] = dropResponse ? new Vec[_names.length-1] : new Vec[_names.length];
-    int avCnt = 0;
-    for( int c=0; c<cmap.length; c++ ) if (map[c] != null) avCnt++;
-    Vec[]    avecs = new Vec[avCnt]; // list of adapted vectors
-    String[] anames = new String[avCnt]; // names of adapted vectors
-    avCnt = 0;
-    for( int c=0; c<cmap.length; c++ ) { // iterate over columns
-      int d = cmap[c];          // Data index
-      if( d == -1 ) throw H2O.unimpl(); // Swap in a new all-NA Vec
-      else if( map[c] == null ) {       // No or identity domain map?
-        vecs[c] = frvecs[d];            // Just use the Vec as-is
-      } else {
-        // Domain mapping - creates a new vector
-        vecs[c] = avecs[avCnt] = frvecs[d].makeTransf(map[c]);
-        anames[avCnt] = frnames[d];
-        avCnt++;
-      }
+  public Frame[] adapt( final Frame fr, boolean exact) {
+    Frame vfr = new Frame(fr); // To avoid modification of original frame fr
+    int ridx = vfr.find(_names[_names.length-1]);
+    if(ridx != -1 && ridx != vfr._names.length-1){ // Unify frame - put response to the end
+      String n = vfr._names[ridx];
+      vfr.add(n,vfr.remove(ridx));
     }
+    int n = ridx == -1?_names.length-1:_names.length;
+    String [] names = Arrays.copyOf(_names, n);
+    vfr = vfr.subframe(names); // select only supported columns, if column is missing Exception is thrown
+    Vec[] frvecs = vfr.vecs();
+    boolean[] toEnum = new boolean[frvecs.length];
+    if(!exact) for(int i = 0; i < n;++i)
+      if(_domains[i] != null && !frvecs[i].isEnum()) {// if model expects domain but input frame does not have domain => switch vector to enum
+        frvecs[i] = frvecs[i].toEnum();
+        toEnum[i] = true;
+      }
+    int map[][] = adapt(names,vfr.domains(),exact);
+    assert map.length == names.length; // Be sure that adapt call above do not skip any column
+    ArrayList<Vec> avecs = new ArrayList<Vec>(); // adapted vectors
+    ArrayList<String> anames = new ArrayList<String>(); // names for adapted vector
 
-    String[] vnames = dropResponse ? Arrays.copyOf(_names,_names.length-1) : _names.clone();
-    return new Frame[] { new Frame(vnames,vecs), new Frame(anames, avecs) };
-  }
-
-  public Frame[] adapt( Frame fr, boolean exact) {
-    return adapt(fr, exact, true);
+    for( int c=0; c<map.length; c++ ) // Iterate over columns
+      if(map[c] != null) { // Column needs adaptation
+        Vec adaptedVec = null;
+        if (toEnum[c]) { // Vector was flipped to column already, compose transformation
+          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], false );
+        } else adaptedVec = frvecs[c].makeTransf(map[c]);
+        avecs.add(frvecs[c] = adaptedVec);
+        anames.add(names[c]); // Collect right names
+      } else if (toEnum[c]) { // Vector was transformed to enum domain, but does not need adaptation we need to record it
+        avecs.add(frvecs[c]);
+        anames.add(names[c]);
+      }
+    return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
   }
 
   /** Returns a mapping between values domains for a given column.  */
@@ -292,6 +287,45 @@ public abstract class Model extends Iced {
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 
+  /**
+   * Utility function to get a best prediction from an array of class prediction distribution if you know the row number.
+   * It returns index of max value if predicted values are unique.
+   * In the case of tie, the implementation solve it in sudo-random way based on number of row in chunk.
+   *
+   * @param preds an array of prediction distribution. Length of arrays is equal to a number of classes.
+   * @param ties a pre-allocated array to hold class numbers participating in tie
+   * @return the best prediction (index of class)
+   */
+  public static final int getPrediction(float[] preds, int[] ties, int rowInChunk) {
+    assert preds.length == ties.length;
+    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
+    for (int c=1; c<preds.length; c++) {
+      if (preds[best] < preds[c]) {
+        best = c; // take the max index
+        ties[tieCnt=0] = c;
+      } else if (preds[best] == preds[c]) {
+        ties[++tieCnt] = c;
+      }
+    }
+    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
+    return best;
+  }
+  // Argh Java needs templates for primitive types
+  public static final int getPrediction(double[] preds, int[] ties, int rowInChunk) {
+    assert preds.length == ties.length;
+    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
+    for (int c=1; c<preds.length; c++) {
+      if (preds[best] < preds[c]) {
+        best = c; // take the max index
+        ties[tieCnt=0] = c;
+      } else if (preds[best] == preds[c]) {
+        ties[++tieCnt] = c;
+      }
+    }
+    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
+    return best;
+  }
+
 
   /** Return a String which is a valid Java program representing a class that
    *  implements the Model.  The Java is of the form:
@@ -314,67 +348,129 @@ public abstract class Model extends Iced {
    *    }
    *  </pre>
    */
-  public String toJava() {
-    SB sb = new SB();
-    sb.p("\n");
-    sb.p("class ").p(_selfKey.toString()).p(" {\n");
+  public String toJava() { return toJava(new SB()).toString(); }
+  public SB toJava( SB sb ) {
+    SB fileContextSB = new SB(); // preserve file context
+    String modelName = JCodeGen.toJavaId(_key.toString());
+    // HEADER
+    sb.p("import java.util.Map;").nl().nl();
+    sb.p("// AUTOGENERATED BY H2O at ").p(new Date().toString()).nl();
+    sb.p("// ").p(H2O.getBuildVersion().toString()).nl();
+    sb.p("//").nl();
+    sb.p("// Standalone prediction code with sample test data for ").p(this.getClass().getSimpleName()).p(" named ").p(modelName).nl();
+    sb.p("//").nl();
+    sb.p("// How to download, compile and execute:").nl();
+    sb.p("//     mkdir tmpdir").nl();
+    sb.p("//     cd tmpdir").nl();
+    sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/h2o-model.jar > h2o-model.jar").nl();
+    sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/2/").p(this.getClass().getSimpleName()).p("View.java?_modelKey=").pobj(_key).p(" > ").p(modelName).p(".java").nl();
+    sb.p("//     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
+    sb.p("//     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").p(modelName).nl();
+    sb.p("//").nl();
+    sb.p("//     (Note:  Try java argument -XX:+PrintCompilation to show runtime JIT compiler behavior.)").nl();
+    sb.nl();
+    sb.p("public class ").p(modelName).p(" extends water.genmodel.GeneratedModel {").nl(); // or extends GenerateModel
+    toJavaInit(sb, fileContextSB).nl();
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
-    toJavaInit(sb);  sb.p("\n");
-    toJavaPredict(sb);
+    toJavaDOMAINS(sb);
+    toJavaSuper(sb); //
+    toJavaPredict(sb, fileContextSB);
     sb.p(TOJAVA_MAP);
     sb.p(TOJAVA_PREDICT_MAP);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
-    sb.p("}\n");
-    return sb.toString();
+    sb.p("}").nl();
+    sb.p(fileContextSB).nl(); // Append file
+    return sb;
   }
   // Same thing as toJava, but as a Javassist CtClass
   private CtClass makeCtClass() throws CannotCompileException {
-    CtClass clz = ClassPool.getDefault().makeClass(_selfKey.toString());
+    CtClass clz = ClassPool.getDefault().makeClass(JCodeGen.toJavaId(_key.toString()));
     clz.addField(CtField.make(toJavaNAMES   (new SB()).toString(),clz));
     clz.addField(CtField.make(toJavaNCLASSES(new SB()).toString(),clz));
     toJavaInit(clz);            // Model-specific top-level goodness
-    clz.addMethod(CtMethod.make(toJavaPredict(new SB()).toString(),clz));
+    clz.addMethod(CtMethod.make(toJavaPredict(new SB(), new SB()).toString(),clz)); // FIX ME
     clz.addMethod(CtMethod.make(TOJAVA_MAP,clz));
     clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP,clz));
     clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP_ALLOC1,clz));
     clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP_ALLOC2,clz));
     return clz;
   }
-
-
+  /** Generate implementation for super class. */
+  protected SB toJavaSuper( SB sb ) {
+    sb.nl();
+    sb.ii(1);
+    sb.i().p("public String[] getNames() { return NAMES; } ").nl();
+    sb.i().p("public String[][] getDomainValues() { return DOMAINS; }").nl();
+    sb.di(1);
+    return sb;
+  }
   private SB toJavaNAMES( SB sb ) {
-    return sb.p("  public static final String []NAMES = new String[] ").p(_names).p(";\n");
+    sb.nl();
+    sb.i(1).p("// Names of columns used by model.").nl();
+    return sb.i(1).p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
   }
   private SB toJavaNCLASSES( SB sb ) {
-    return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
+    sb.nl();
+    sb.i(1).p("// Number of output classes included in training data response column,").nl();
+    return sb.i(1).p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
+  }
+  private SB toJavaDOMAINS( SB sb ) {
+    sb.nl();
+    sb.i(1).p("// Column domains. The last array contains domain of response column.").nl();
+    sb.i(1).p("public static final String[][] DOMAINS = new String[][] {").nl();
+    for (int i=0; i<_domains.length; i++) {
+      String[] dom = _domains[i];
+      sb.i(2).p("/* ").p(_names[i]).p(" */ ");
+      if (dom==null) sb.p("null");
+      else {
+        sb.p("new String[] {");
+        for (int j=0; j<dom.length; j++) {
+          if (j>0) sb.p(',');
+          sb.p('"').pj(dom[j]).p('"');
+        }
+        sb.p("}");
+      }
+      if (i!=_domains.length-1) sb.p(',');
+      sb.nl();
+    }
+    return sb.i(1).p("};").nl();
   }
   // Override in subclasses to provide some top-level model-specific goodness
-  protected void toJavaInit(SB sb) { };
+  protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
-  protected void toJavaPredictBody(SB sb) {
+  // Method returns code which should be appended into generated top level class after
+  // predit method.
+  protected void toJavaPredictBody(SB bodySb, SB classCtxSb, SB fileCtxSb) {
     throw new IllegalArgumentException("This model type does not support conversion to Java");
   }
   // Wrapper around the main predict call, including the signature and return value
-  private SB toJavaPredict(SB sb) {
-    sb.p("  // Pass in data in a double[], pre-aligned to the Model's requirements.\n");
-    sb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
-    sb.p("  // main prediction (class for classifiers or value for regression),\n");
-    sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
-    sb.p("  float[] predict( double data[], float preds[] ) {\n");
-    toJavaPredictBody(sb);
-    sb.p("    return preds;\n");
-    sb.p("  }\n");
-    return sb;
+  private SB toJavaPredict(SB ccsb, SB fileCtxSb) { // ccsb = classContext
+    ccsb.nl();
+    ccsb.p("  // Pass in data in a double[], pre-aligned to the Model's requirements.").nl();
+    ccsb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the").nl();
+    ccsb.p("  // main prediction (class for classifiers or value for regression),").nl();
+    ccsb.p("  // and remaining columns hold a probability distribution for classifiers.").nl();
+    ccsb.p("  public final float[] predict( double[] data, float[] preds) { return predict( data, preds, "+toJavaDefaultMaxIters()+"); }").nl();
+    ccsb.p("  public final float[] predict( double[] data, float[] preds, int maxIters ) {").nl();
+    SB classCtxSb = new SB();
+    toJavaPredictBody(ccsb.ii(2), classCtxSb, fileCtxSb); ccsb.di(1);
+    ccsb.p("    return preds;").nl();
+    ccsb.p("  }").nl();
+    ccsb.p(classCtxSb);
+    return ccsb;
   }
 
+  protected String toJavaDefaultMaxIters() { return "-1"; };
+
   private static final String TOJAVA_MAP =
+    "\n"+
     "  // Takes a HashMap mapping column names to doubles.  Looks up the column\n"+
     "  // names needed by the model, and places the doubles into the data array in\n"+
     "  // the order needed by the model.  Missing columns use NaN.\n"+
-    "  double[] map( java.util.HashMap row, double data[] ) {\n"+
+    "  double[] map( Map<String, Double> row, double data[] ) {\n"+
     "    for( int i=0; i<NAMES.length-1; i++ ) {\n"+
     "      Double d = (Double)row.get(NAMES[i]);\n"+
     "      data[i] = d==null ? Double.NaN : d;\n"+
@@ -382,38 +478,23 @@ public abstract class Model extends Iced {
     "    return data;\n"+
     "  }\n";
   private static final String TOJAVA_PREDICT_MAP =
+    "\n"+
     "  // Does the mapping lookup for every row, no allocation\n"+
-    "  float[] predict( java.util.HashMap row, double data[], float preds[] ) {\n"+
+    "  float[] predict( Map<String, Double> row, double data[], float preds[] ) {\n"+
     "    return predict(map(row,data),preds);\n"+
     "  }\n";
   private static final String TOJAVA_PREDICT_MAP_ALLOC1 =
+    "\n"+
     "  // Allocates a double[] for every row\n"+
-    "  float[] predict( java.util.HashMap row, float preds[] ) {\n"+
+    "  float[] predict( Map<String, Double> row, float preds[] ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),preds);\n"+
     "  }\n";
   private static final String TOJAVA_PREDICT_MAP_ALLOC2 =
+    "\n"+
     "  // Allocates a double[] and a float[] for every row\n"+
-    "  float[] predict( java.util.HashMap row ) {\n"+
+    "  float[] predict( Map<String, Double> row ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
     "  }\n";
-
-  // Can't believe this wasn't done long long ago
-  protected static class SB {
-    public final StringBuilder _sb = new StringBuilder();
-    public SB p( String s ) { _sb.append(s); return this; }
-    public SB p( float  s ) { _sb.append(s); return this; }
-    public SB p( char   s ) { _sb.append(s); return this; }
-    public SB p( int    s ) { _sb.append(s); return this; }
-    public SB indent( int d ) { for( int i=0; i<d; i++ ) p("  "); return this; }
-    // Convert a String[] into a valid Java String initializer
-    SB p( String[] ss ) {
-      p('{');
-      for( int i=0; i<ss.length-1; i++ )  p('"').p(ss[i]).p("\",");
-      if( ss.length > 0 ) p('"').p(ss[ss.length-1]).p('"');
-      return p('}');
-    }
-    @Override public String toString() { return _sb.toString(); }
-  }
 
   // Convenience method for testing: build Java, convert it to a class &
   // execute it: compare the results of the new class's (JIT'd) scoring with
@@ -429,4 +510,5 @@ public abstract class Model extends Iced {
     catch( InstantiationException cce ) { throw new Error(cce); }
     catch( IllegalAccessException cce ) { throw new Error(cce); }
   }
+
 }

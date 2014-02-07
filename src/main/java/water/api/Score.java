@@ -70,7 +70,7 @@ public class Score extends Request {
 
     // Response json
     JsonObject res = new JsonObject();
-    res.addProperty(MODEL_KEY, M._selfKey.toString());
+    res.addProperty(MODEL_KEY, M._key.toString());
 
     // Make a single row in 'rows' in the json
     JsonArray rows = new JsonArray();

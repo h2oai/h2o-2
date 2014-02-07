@@ -2,6 +2,7 @@ package water.api;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.Properties;
 
 import water.*;
@@ -11,6 +12,7 @@ import water.util.Log;
 import hex.drf.DRF;
 import hex.gbm.*;
 import hex.glm.*;
+import hex.glm.GLMParams.Family;
 import hex.KMeans2;
 
 /**
@@ -27,7 +29,7 @@ public abstract class DocGen {
       BufferedWriter out = new BufferedWriter(fstream);
       out.write(content);
       out.close();
-    } catch (Exception e) {
+    } catch( Throwable e ) {
       System.err.println("Error: " + e.getMessage());
     }
   }
@@ -41,6 +43,7 @@ public abstract class DocGen {
     createFile("DRF2.rst", new DRF().ReSTHelp());
     createFile("GLM2.rst", new GLM2().ReSTHelp());
     createFile("KMeans2.rst", new KMeans2().ReSTHelp());
+    // createFile("Summary2.rst", new Summary2().ReSTHelp());
   }
 
   /** The main method launched in the H2O environment and
@@ -293,6 +296,26 @@ public abstract class DocGen {
     @Override public String bold( String s ) { return "<b>"+s+"</b>"; }
 
     public StringBuilder arrayHead( StringBuilder sb ) { return arrayHead(sb,null); }
+
+    public StringBuilder progress(float value, StringBuilder sb){
+      int    pct  = (int) (value * 100);
+      String type = "progress-stripped active";
+      if (pct==-100) { // task is done
+        pct = 100;
+        type = "progress-success";
+      } else if (pct==-200) {
+        pct = 100;
+        type = "progress-warning";
+      }
+      // @formatter:off
+      sb.append
+          ("<div style='margin-bottom:0px;padding-bottom:0xp;margin-top:8px;height:5px;width:180px' class='progress "+type+"'>").append //
+          ("<div class='bar' style='width:" + pct + "%;'>").append //
+          ("</div>").append //
+          ("</div>");
+      // @formatter:on
+      return sb;
+    }
     public StringBuilder arrayHead( StringBuilder sb, String[] headers ) {
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>\n");
@@ -308,6 +331,38 @@ public abstract class DocGen {
       arrayHead(sb);
       for( String s : ss ) sb.append("<tr><td>").append(s).append("</td></tr>");
       return arrayTail(sb);
+    }
+    public StringBuilder toJSArray(StringBuilder sb, float[] nums) {
+      sb.append('[');
+      for (int i=0; i<nums.length; i++) {
+        if (i>0) sb.append(',');
+        sb.append(nums[i]);
+      }
+      sb.append(']');
+      return sb;
+    }
+    public StringBuilder toJSArray(StringBuilder sb, String[] ss) {
+      sb.append('[');
+      for (int i=0; i<ss.length; i++) {
+        if (i>0) sb.append(',');
+        sb.append('"').append(ss[i]).append('"');
+      }
+      sb.append(']');
+      return sb;
+    }
+
+    public StringBuilder graph(StringBuilder sb, String gid, String gname, StringBuilder ...gparams) {
+      sb.append("<style scoped>@import url('/h2o/css/graphs.css')</style>");
+      sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
+      sb.append("<script src='/h2o/js/graphs.js'></script>");
+      sb.append("<div id='").append(gid).append("'>")
+        .append("  <script>")
+        .append(gname).append("('").append(gid).append("'");
+      for (int i=0; i<gparams.length; i++) sb.append(", ").append(gparams[i]);
+      sb.append(");");
+      sb.append("  </script>")
+        .append("</div>");
+      return sb;
     }
   }
 

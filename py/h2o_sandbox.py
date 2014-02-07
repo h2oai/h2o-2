@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys, itertools, os, re
 
-def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is ???',
+def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     cloudShutdownIsError=False, sandboxIgnoreErrors=False):
     # show the parameters
     ### print "check_sandbox_for_errors:", locals()
@@ -60,11 +60,22 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
             printing = 0 # "printing" is per file.
             lines = 0 # count per file! errLines accumulates for multiple files.
             currentLine = 0
+            log_python_test_name = None
             for line in sandFile:
                 currentLine += 1
+
+                m = re.search('(python_test_name:) (.*)', line)
+                if m:
+                    log_python_test_name = m.group(2)
+                    # if log_python_test_name == python_test_name):
+                    #    print "Found log_python_test_name:", log_python_test_name
+
                 # don't check if we've already checked
                 if currentLine <= doneToLine:
                     continue
+
+                # if log_python_test_name and (log_python_test_name != python_test_name):
+                #     print "h2o_sandbox.py: ignoring because wrong test name:", currentLine
 
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
@@ -76,6 +87,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
+                        ('water.DException' in line) or
                         # the manyfiles data has eRRr in a warning about test/train data
                         ('WARN SCORM' in line) or
                         # ignore the long, long lines that the JStack prints as INFO

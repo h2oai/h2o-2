@@ -19,7 +19,6 @@ import com.google.common.io.Closeables;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
-  public static final File smalldata = new File(VM.h2oFolder(), "smalldata");
 
   protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
@@ -45,7 +44,7 @@ public class TestUtil {
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     if( leaked_keys > 0 ) {
-      for( Key k : H2O.keySet() ) {
+      for( Key k : H2O.localKeySet() ) {
         Value value = DKV.get(k);
         Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
         // Ok to leak VectorGroups
@@ -129,10 +128,7 @@ public class TestUtil {
   public static Key loadAndParseFile(String keyName, String path) {
     Key fkey = load_test_file(path);
     Key okey = Key.make(keyName);
-    if( DKV.get(okey) != null )
-      DKV.remove(okey);
     ParseDataset.parse(okey, new Key[] { fkey });
-    UKV.remove(fkey);
     return okey;
   }
 
@@ -141,18 +137,12 @@ public class TestUtil {
     Arrays.sort(keys);
     Key okey = Key.make(keyName);
     ParseDataset.parse(okey, keys);
-    for( Key k : keys )
-      UKV.remove(k);
     return okey;
   }
 
   public static ValueArray parse_test_key(Key fileKey, Key parsedKey) {
     ParseDataset.parse(parsedKey, new Key[] { fileKey });
     return DKV.get(parsedKey).get();
-  }
-
-  public static ValueArray parse_test_key(Key fileKey) {
-    return parse_test_key(fileKey, Key.make());
   }
 
   public static String replaceExtension(String fname, String newExt) {
@@ -176,14 +166,14 @@ public class TestUtil {
   // Build a ValueArray from a collection of normal arrays.
   // The arrays must be all the same length.
   public static ValueArray va_maker(Key key, Object... arys) {
-    UKV.remove(key);
+    new ValueArray(key,0).delete_and_lock(null);
     // Gather basic column info, 1 column per array
     ValueArray.Column cols[] = new ValueArray.Column[arys.length];
     char off = 0;
     int numrows = -1;
     for( int i = 0; i < arys.length; i++ ) {
       ValueArray.Column col = cols[i] = new ValueArray.Column();
-      col._name = Integer.toString(i);
+      col._name = "C" + Integer.toString(i+1);
       col._off = off;
       col._scale = 1;
       col._min = Double.MAX_VALUE;
@@ -216,6 +206,7 @@ public class TestUtil {
         assert numrows == col._n;
     }
 
+    Futures fs = new Futures();
     int rowsize = off;
     ValueArray ary = new ValueArray(key, numrows, rowsize, cols);
     int row = 0;
@@ -261,7 +252,7 @@ public class TestUtil {
       }
 
       Key ckey = ary.getChunkKey(chunk);
-      DKV.put(ckey, new Value(ckey, ab.bufClose()));
+      DKV.put(ckey, new Value(ckey, ab.bufClose()), fs);
     }
 
     // Sum to mean
@@ -290,8 +281,8 @@ public class TestUtil {
       col._sigma = Math.sqrt(col._sigma / (col._n - 1));
 
     // Write out data & keys
-    DKV.put(key, ary);
-    DKV.write_barrier();
+    ary.unlock(null);
+    fs.blockForPending();
     return ary;
   }
 
@@ -346,12 +337,13 @@ public class TestUtil {
 
   // Fluid Vectors
 
-  public static Frame parseFrame(String path) {
-    return parseFrame(new File(path));
+  public static Frame parseFromH2OFolder(String path) {
+    File file = new File(VM.h2oFolder(), path);
+    return parseFrame(null, file);
   }
 
   public static Frame parseFrame(File file) {
-    return parseFrame(Key.make(file.getName()), file);
+    return parseFrame(null, file);
   }
 
   public static Frame parseFrame(Key okey, String path) {
@@ -361,14 +353,15 @@ public class TestUtil {
   public static Frame parseFrame(Key okey, File file) {
     if( !file.exists() )
       throw new RuntimeException("File not found " + file);
+    if(okey == null)
+        okey = Key.make(file.getName());
     Key fkey = NFSFileVec.make(file);
-    Frame fr = ParseDataset2.parse(okey, new Key[] { fkey });
-    UKV.remove(fkey);
-    return fr;
+    return ParseDataset2.parse(okey, new Key[] { fkey });
   }
 
   public static Frame frame(String[] names, double[]... rows) {
     assert names == null || names.length == rows[0].length;
+    Futures fs = new Futures();
     Vec[] vecs = new Vec[rows[0].length];
     Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
     for( int c = 0; c < vecs.length; c++ ) {
@@ -376,9 +369,23 @@ public class TestUtil {
       NewChunk chunk = new NewChunk(vec, 0);
       for( int r = 0; r < rows.length; r++ )
         chunk.addNum(rows[r][c]);
-      chunk.close(0, null);
-      vecs[c] = vec.close(null);
+      chunk.close(0, fs);
+      vecs[c] = vec.close(fs);
     }
+    fs.blockForPending();
     return new Frame(names, vecs);
   }
+
+  public static void dumpKeys(String msg) {
+    System.err.println("-->> Store dump <<--");
+    System.err.println("    " + msg);
+    System.err.println(" Keys: " + H2O.store_size());
+    for ( Key k : H2O.localKeySet()) System.err.println(" * " + k);
+    System.err.println("----------------------");
+  }
+
+  public static String[] ar(String ...a) { return a; }
+  public static int   [] ar(int    ...a) { return a; }
+  public static long  [] ar(long   ...a) { return a; }
+  public static long[][] ar(long[] ...a) { return a; }
 }

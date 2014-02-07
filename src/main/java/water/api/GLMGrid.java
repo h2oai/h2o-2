@@ -35,6 +35,7 @@ public class GLMGrid extends Request {
   public static final String JSON_ROWS = "rows";
   public static final String JSON_TIME = "time";
   public static final String JSON_COEFFICIENTS = "coefficients";
+  public static final String JSON_PARALLELISM = "parallelism";
 
   // Need a HEX key for GLM
   protected final H2OHexKey _key = new H2OHexKey(KEY);
@@ -59,9 +60,11 @@ public class GLMGrid extends Request {
   // Args that ARE Grid Searched
   protected final RSeq _lambda = new RSeq(Constants.LAMBDA, false, new NumberSequence("1e-8:1e3:100",true,10),true);
   protected final RSeq _alpha = new RSeq(Constants.ALPHA, false, new NumberSequence("0,0.25,0.5,0.75,1.0",false,1),false);
+  protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
   protected final RSeq _thresholds = new RSeq(Constants.DTHRESHOLDS, false, new NumberSequence("0:1:0.01",false,0.1),false);
 
   protected final Bool _parallel = new Bool(PARALLEL, true, "Build models in parallel");
+  protected final Int _parallelism = new Int(JSON_PARALLELISM, 1, 1, 256);
 
   public GLMGrid(){
     _requestHelp = "Perform grid search over GLM parameters. Calls glm with all parameter combination from user-defined parameter range. Results are ordered according to AUC. For more details see <a href='GLM.help'>GLM help</a>.";
@@ -127,7 +130,9 @@ public class GLMGrid extends Request {
                         _alpha.value()._arr,  // Grid ranges
                         ts,
                         _xval.value(),
-                        _parallel.value());
+                        _parallel.value(),
+                        _parallelism.value(),
+                        _standardize.value());
     job.start();
 
     // Redirect to the grid-search status page

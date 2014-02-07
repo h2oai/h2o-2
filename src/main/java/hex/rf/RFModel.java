@@ -118,7 +118,7 @@ public class RFModel extends OldModel implements Progress {
   public String name(int atree) {
     if( atree == -1 ) atree = size();
     assert atree <= size();
-    return _selfKey.toString() + "[" + atree + "]";
+    return _key.toString() + "[" + atree + "]";
   }
 
   /** Return the bits for a particular tree */
@@ -130,10 +130,11 @@ public class RFModel extends OldModel implements Progress {
     return ts[tree_id];
   }
 
-  /** Bad name, I know. But free all internal tree keys. */
-  public void deleteKeys() {
+  /** Free all internal tree keys. */
+  @Override public Futures delete_impl(Futures fs) { 
     for( Key k : _tkeys )
-      UKV.remove(k);
+      UKV.remove(k,fs);
+    return fs;
   }
 
   /**
@@ -209,7 +210,7 @@ public class RFModel extends OldModel implements Progress {
   public long getTreeSeed(int i) {  return Tree.seed(tree(i)); }
 
   /** Single row scoring, on properly ordered data */
-  protected double score0(double[] data) {
+  @Override protected double score0(double[] data) {
     int numClasses = classes();
     int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
     for( int i = 0; i < treeCount(); i++ )
@@ -218,10 +219,10 @@ public class RFModel extends OldModel implements Progress {
   }
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0( ValueArray data, int row) { throw H2O.unimpl(); }
+  @Override protected double score0( ValueArray data, int row) { throw H2O.unimpl(); }
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) { throw H2O.unimpl(); }
+  @Override protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) { throw H2O.unimpl(); }
 
   @Override public JsonObject toJson() {
     JsonObject res = new JsonObject();

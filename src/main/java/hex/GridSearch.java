@@ -3,23 +3,27 @@ package hex;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
-import hex.NeuralNet.NeuralNetProgress;
+import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
-
-import java.util.*;
-
 import water.*;
 import water.api.*;
 import water.util.Utils;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+
 public class GridSearch extends Job {
   public Job[] jobs;
 
-  @Override protected void exec() {
+  public GridSearch(){
+
+  }
+  @Override protected Status exec() {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
-    while( head < jobs.length ) {
+    while( head < jobs.length && isRunning(self()) ) {
       if( tail - head < max && tail < jobs.length )
         jobs[tail++].fork();
       else {
@@ -30,6 +34,7 @@ public class GridSearch extends Job {
         }
       }
     }
+    return Status.Done;
   }
 
   @Override protected void onCancelled() {
@@ -40,29 +45,46 @@ public class GridSearch extends Job {
   @Override public float progress() {
     double d = 0.1;
     for( Job job : jobs )
-      d += job.progress();
+      if(job.start_time > 0)
+        d += job.progress();
     return Math.min(1f, (float) (d / jobs.length));
   }
 
   @Override public Response redirect() {
-    String n = GridSearchProgress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, "job_key", job_key, "destination_key", destination_key);
+    String redirectName = new GridSearchProgress().href();
+    return Response.redirect(this, redirectName, "job_key", job_key, "destination_key", destination_key);
   }
 
   public static class GridSearchProgress extends Progress2 {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help = "Jobs")
+    public Job[] jobs;
+
+    @Override protected Response serve() {
+      Response response = super.serve();
+      if( destination_key != null ) {
+        GridSearch grid = UKV.get(destination_key);
+        if( grid != null )
+          jobs = grid.jobs;
+      }
+      return response;
+    }
+
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(destination_key);
-      if( grid != null ) {
+      if( jobs != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
-        ArrayList<Argument> args = grid.jobs[0].arguments();
+        ArrayList<Argument> args = jobs[0].arguments();
         // Filter some keys to simplify UI
         args = (ArrayList<Argument>) args.clone();
-        filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification", "validation");
+        filter(args, "destination_key", "source", "cols", "ignored_cols", "ignored_cols_by_name", //
+            "response", "classification", "validation");
         for( int i = 0; i < args.size(); i++ )
           sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
         sb.append("<td><b>").append("run time").append("</b></td>");
-        String perf = grid.jobs[0].speedDescription();
+        String perf = jobs[0].speedDescription();
         if( perf != null )
           sb.append("<td><b>").append(perf).append("</b></td>");
         sb.append("<td><b>").append("model key").append("</b></td>");
@@ -71,14 +93,18 @@ public class GridSearch extends Job {
         sb.append("</tr>");
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
-        for( Job job : grid.jobs ) {
+        for( Job job : jobs ) {
           JobInfo info = new JobInfo();
           info._job = job;
-          Object value = UKV.get(job.destination_key);
-          info._model = value instanceof Model ? (Model) value : null;
-          if( info._model != null )
-            info._cm = info._model.cm();
-          if( info._cm != null )
+          if(job.destination_key != null){
+            Object value = UKV.get(job.destination_key);
+            info._model = value instanceof Model ? (Model) value : null;
+            if( info._model != null ) {
+              info._cm = info._model.cm();
+              info._error = info._model.mse();
+            }
+          }
+          if( info._cm != null)
             info._error = info._cm.err();
           infos.add(info);
         }
@@ -111,13 +137,15 @@ public class GridSearch extends Job {
           sb.append("<td>").append(runTime).append("</td>");
           if( perf != null )
             sb.append("<td>").append(speed).append("</td>");
-
-          String link = info._job.destination_key.toString();
+          String link = "";
           if( info._job.start_time != 0 && DKV.get(info._job.destination_key) != null ) {
+            link = info._job.destination_key.toString();
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
+            else if( info._model instanceof DRFModel )
+              link = DRFModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )
-              link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
+              link = NeuralNetModelView.link(link, info._job.destination_key);
             if( info._model instanceof KMeans2Model )
               link = KMeans2ModelView.link(link, info._job.destination_key);
             else
@@ -130,7 +158,7 @@ public class GridSearch extends Job {
             pct = String.format("%.2f", 100 * info._error) + "%";
             if( info._cm._arr.length == 2 )
               f1 = String.format("%.2f", info._cm.precisionAndRecall());
-          }
+          } else pct = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");
           sb.append("</tr>");
@@ -155,7 +183,7 @@ public class GridSearch extends Job {
     }
 
     @Override protected Response jobDone(final Job job, final Key dst) {
-      return new Response(Response.Status.done, this, 0, 0, null);
+      return Response.done(this);
     }
   }
 }

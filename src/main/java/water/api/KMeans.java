@@ -53,10 +53,8 @@ public class KMeans extends Request {
       Response r = Progress.redirect(response, job.self(), job.dest());
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch( IllegalArgumentException e ) {
-      return Response.error(e.getMessage());
-    } catch( Error e ) {
-      return Response.error(e.getMessage());
+    } catch( Throwable e ) {
+      return Response.error(e);
     }
   }
 
@@ -104,8 +102,8 @@ public class KMeans extends Request {
     private void modelHTML(KMeansModel m, JsonObject json, StringBuilder sb) {
       JsonArray rows = json.getAsJsonArray(CLUSTERS);
 
-      sb.append("<div class='alert'>Actions: " + KMeansScore.link(m._selfKey, "Score on dataset") + ", "
-          + KMeansApply.link(m._selfKey, "Apply to dataset") + ", " + KMeans.link(m._dataKey, "Compute new model")
+      sb.append("<div class='alert'>Actions: " + KMeansScore.link(m._key, "Score on dataset") + ", "
+          + KMeansApply.link(m._key, "Apply to dataset") + ", " + KMeans.link(m._dataKey, "Compute new model")
           + "</div>");
       DocGen.HTML.section(sb, "Error: " + _m._error);
       sb.append("<span style='display: inline-block;'>");

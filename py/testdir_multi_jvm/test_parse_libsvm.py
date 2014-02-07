@@ -152,9 +152,12 @@ class Basic(unittest.TestCase):
                     # if we're allowed to do size checks. ccompare the full json response!
                     print "Comparing original inspect to the inspect after parsing the downloaded csv"
                     # vice_versa=True
-                    self.assertGreater(len(df.difference), 29,
-                        msg="Want >=30 , not %d differences between the two rfView json responses. %s" % \
-                            (len(df.difference), h2o.dump_json(df.difference)))
+                    
+                    # ignore the variance diffs. reals mismatch when they're not?
+                    filtered = [v for v in df.difference if not 'variance' in v]
+                    self.assertLess(len(filtered), 3,
+                        msg="Want < 3, not %d differences between the two rfView json responses. %s" % \
+                            (len(filtered), h2o.dump_json(filtered)))
 
                     # this fails because h2o writes out zeroes as 0.0000* which gets loaded as fp even if col is all zeroes
                     # only in the case where the libsvm dataset specified vals = 0, which shouldn't happen

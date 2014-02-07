@@ -105,8 +105,8 @@ public class RF extends Request {
 
     Key dataKey = ary._key;
     Key modelKey = _modelKey.value()!=null ? _modelKey.value() : RFModel.makeKey();
-    UKV.remove(modelKey);       // Remove any prior model first
-    for (int i = 0; i < ntree; ++i) {
+    Lockable.delete(modelKey); // Remove any prior model first
+    for (int i = 0; i <= ntree; ++i) {
       UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,true));
       UKV.remove(ConfusionTask.keyForCM(modelKey,i,dataKey,classCol,false));
     }
@@ -148,7 +148,7 @@ public class RF extends Request {
       Response r = RFView.redirect(response, drfJob.self(), drfJob.dest(), dataKey, ntree, classCol, _weights.originalValue(), _oobee.value(), _iterativeCM.value());
       r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch (IllegalArgumentException e) {
+    } catch( IllegalArgumentException e ) {
       return Response.error("Incorrect input data: "+e.getMessage());
     }
   }

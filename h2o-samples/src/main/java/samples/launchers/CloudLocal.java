@@ -9,14 +9,14 @@ public class CloudLocal {
    * Launches a 1 node cluster. You might want to increase the JVM heap, e.g. -Xmx12G.
    */
   public static void main(String[] args) throws Exception {
-    launch(1, null);
+    launch(null, 1);
   }
 
   /**
    * Launches a local multi-nodes cluster by spawning additional JVMs. JVM parameters and classpath
    * are replicated from the current one.
    */
-  public static void launch(int nodes, Class<? extends Job> job) throws Exception {
+  public static void launch(Class<? extends Job> job, int nodes) throws Exception {
     // Additional logging info
     System.setProperty("h2o.debug", "true");
     Boot.main(UserCode.class, new String[] { "" + nodes, job != null ? job.getName() : "null" });
@@ -60,6 +60,6 @@ public class CloudLocal {
   }
 
   static String[] args(String ip, int port, String flatfile) {
-    return new String[] { "-ip", ip, "-port", "" + port, "-flatfile", flatfile };
+    return new String[] { "-ip", ip, "-port", "" + port, "-flatfile", flatfile, "-beta" };
   }
 }

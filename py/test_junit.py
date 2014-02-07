@@ -23,6 +23,7 @@ class TestJUnit(unittest.TestCase):
                     'hex.GLMTest',
                     'hex.KMeansTest',
                     'hex.MinorityClassTest',
+                    'hex.NeuralNetSpiralsTest',
                     'hex.rf.RandomForestTest',
                     'hex.rf.RFPredDomainTest',
                     'water.AtomicTest',
@@ -33,8 +34,6 @@ class TestJUnit(unittest.TestCase):
                     'water.KVTest',
                     #'water.KVSpeedTest',
                     'water.api.RStringTest',
-                    'water.exec.ExprTest',
-                    'water.exec.RBigDataTest',
                     'water.parser.DatasetCornerCasesTest',
                     'water.parser.ParseCompressedAndXLSTest',
                     'water.parser.ParseFolderTest',
@@ -72,8 +71,7 @@ class TestJUnit(unittest.TestCase):
                 '-mainClass', 'org.junit.runner.JUnitCore',
                 # The tests
                 'water.ConcurrentKeyTest',
-                'hex.MinorityClassTest',
-                'water.exec.RBigDataTest'
+                'hex.MinorityClassTest'
                 ])
         # getting UDP receiver stack traces if we shut down quickly after Junit
         # may need to wait a little bit before shutdown?

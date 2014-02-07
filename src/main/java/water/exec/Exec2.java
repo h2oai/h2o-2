@@ -30,8 +30,10 @@ public class Exec2 {
   //           id[] := cxexpr      // Deep-copy, then slice assignment
   //           iexpr ? cxexpr : cxexpr  // exprs must have equal types
   //   iexpr := 
-  //           slice {op2 slice}*  // Infix notation, evals LEFT TO RIGHT
-  //   slice := 
+  //           term {op2 term}*  // Infix notation, evals LEFT TO RIGHT
+  //   term  :=
+  //           op1* slice
+  //   slice :=
   //           expr                // Can be a dbl or fcn or ary
   //           expr[]              // whole ary val
   //           expr[,]             // whole ary val
@@ -43,6 +45,7 @@ public class Exec2 {
   //           val(cxexpr,...)*    // Prefix function application, evals LEFT TO RIGHT
   //   val :=
   //           ( cxexpr )          // Ordering evaluation
+  //           { statements }      // compound statement
   //           id                  // any visible var; will be typed
   //           num                 // Scalars, treated as 1x1
   //           op                  // Built-in functions
@@ -54,29 +57,50 @@ public class Exec2 {
 
   public static Env exec( String str ) throws IllegalArgumentException {
     // Preload the global environment from existing Frames
-    Env env = new Env();
     ArrayList<ASTId> global = new ArrayList<ASTId>();
-    for( Value v : H2O.values() )
-      if( v.type()==TypeMap.FRAME ) { // Add to parser's namespace
-        global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
-        env.push((Frame)v.get(),v._key.toString());
+    ArrayList<Key>   locked = new ArrayList<Key>  ();
+    Env env = new Env(locked);
+    H2O.globalKeySet( "water.fvec.Frame" ); // Bring Frames from all over local
+    H2O.globalKeySet( "water.ValueArray" ); // Bring VA's   from all over local
+    for( Key k : H2O.localKeySet() ) {      // Convert all VAs to Frames
+      Value val = H2O.raw_get(k);
+      if( val != null && val.isArray() ) {
+        Frame frAuto = ValueArray.asFrame(DKV.get(k));
+        // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.  
+        // The VA is lost.
+        Frame fr2 = new Frame(k,frAuto._names,frAuto.vecs());
+        frAuto.remove(0,fr2.numCols());
+        frAuto.delete();
+        fr2.delete_and_lock(null).unlock(null);
       }
+    }
+    for( Key k : H2O.localKeySet() ) { // Add Frames to parser's namespace
+      if( !H2O.raw_get(k).isFrame() ) continue;
+      Frame fr = DKV.get(k).get(); // Fetch whole thing
+      String kstr = k.toString();
+      global.add(new ASTId(Type.ARY,kstr,0,global.size()));
+      env.push(fr,kstr);
+      fr.read_lock(null);
+      locked.add(fr._key);
+    }
 
     // Some global constants
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
     global.add(new ASTId(Type.DBL,"NA",0,global.size()));  env.push(Double.NaN);
+    global.add(new ASTId(Type.DBL,"Inf",0,global.size())); env.push(Double.POSITIVE_INFINITY);
 
     // Parse.  Type-errors get caught here and throw IAE
-    int argcnt = global.size();
-    AST ast = new Exec2(str,global).parse();
-
     try {
+      int argcnt = global.size();
+      Exec2 ex = new Exec2(str, global);
+      AST ast = ex.parse();
+
       env.push(global.size()-argcnt);   // Push space for temps
       ast.exec(env);
       env.postWrite();
     } catch( RuntimeException t ) {
-      env.remove();
+      env.remove_and_unlock();
       throw t;
     }
     return env;
@@ -96,7 +120,8 @@ public class Exec2 {
   int lexical_depth() { return _env.size()-1; }
   
   AST parse() { 
-    AST ast = ASTStatement.parse(this); 
+
+    AST ast = ASTStatement.parse(this);
     skipWS();                   // No trailing crud
     return _x == _buf.length ? ast : throwErr("Junk at end of line",_buf.length-1);
   }
@@ -124,16 +149,15 @@ public class Exec2 {
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
-  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':'; }
+  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
-    if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
-    return isDigit(c) || isLetter(c);
+    return c=='.' || c==':' || c=='\\' || isDigit(c) || isLetter(c);
   }
 
   // Return an ID string, or null if we get weird stuff or numbers.  Valid IDs
   // include all the operators, except parens (function application) and assignment.
-  // Valid IDs: +   ++   <=  > ! [ ] joe123 ABC 
+  // Valid IDs: + - <=  > ! [ ] joe123 ABC
   // Invalid  : +++ 0joe ( = ) 123.45 1e3
   String isID() {
     skipWS();
@@ -154,7 +178,7 @@ public class Exec2 {
     }
 
     // If first char is special, accept 1 or 2 special chars.
-    // i.e. allow ++ != >= == <= but not = alone
+    // i.e. allow != >= == <= but not = alone
     if( _x>=_buf.length ) return _str.substring(_x-1,_x);
     char c2=_buf[_x];
     if( isDigit(c2) || isLetter(c2) || isWS(c2) || isReserved(c2) ) {
@@ -162,6 +186,12 @@ public class Exec2 {
       return _str.substring(_x-1,_x);
     }
     if( c=='<' && c2=='-' ) { _x--; return null; } // The other assignment operator
+    // Must accept as single letters to avoid ambiguity
+    if( c=='+' || c=='-' ) return _str.substring(_x-1,_x);
+    // One letter look ahead to decide on what to accept
+    if( c=='=' || c=='!' || c=='<' || c =='>' )
+      if ( c2 =='=' ) return _str.substring(++_x-2,_x);
+      else return _str.substring(_x-1,_x);
     _x++;                       // Else accept e.g. <= >= ++ != == etc...
     return _str.substring(_x-2,_x);
   }

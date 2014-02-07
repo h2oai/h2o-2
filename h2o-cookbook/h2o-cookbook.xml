@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="h2o-cookbook" default="all">
+  
+  
+  <property file="h2o-cookbook.properties"/>
+  <!-- Uncomment the following property if no tests compilation is needed -->
+  <!-- 
+  <property name="skip.tests" value="true"/>
+   -->
+  
+  <!-- Compiler options -->
+  
+  <property name="compiler.debug" value="on"/>
+  <property name="compiler.generate.no.warnings" value="off"/>
+  <property name="compiler.args" value=""/>
+  <property name="compiler.max.memory" value="128m"/>
+  <patternset id="ignored.files">
+    <exclude name="**/CVS/**"/>
+    <exclude name="**/SCCS/**"/>
+    <exclude name="**/RCS/**"/>
+    <exclude name="**/rcs/**"/>
+    <exclude name="**/.DS_Store/**"/>
+    <exclude name="**/.svn/**"/>
+    <exclude name="**/.pyc/**"/>
+    <exclude name="**/.pyo/**"/>
+    <exclude name="**/*.pyc/**"/>
+    <exclude name="**/*.pyo/**"/>
+    <exclude name="**/.git/**"/>
+    <exclude name="**/*.hprof/**"/>
+    <exclude name="**/_svn/**"/>
+    <exclude name="**/.hg/**"/>
+    <exclude name="**/*.lib/**"/>
+    <exclude name="**/*~/**"/>
+    <exclude name="**/__pycache__/**"/>
+    <exclude name="**/.bundle/**"/>
+    <exclude name="**/*.rbc/**"/>
+    <exclude name="**/vssver.scc/**"/>
+    <exclude name="**/vssver2.scc/**"/>
+  </patternset>
+  <patternset id="library.patterns">
+    <include name="*.war"/>
+    <include name="*.ear"/>
+    <include name="*.apk"/>
+    <include name="*.zip"/>
+    <include name="*.swc"/>
+    <include name="*.ane"/>
+    <include name="*.egg"/>
+    <include name="*.jar"/>
+  </patternset>
+  <patternset id="compiler.resources">
+    <exclude name="**/?*.java"/>
+    <exclude name="**/?*.form"/>
+    <exclude name="**/?*.class"/>
+    <exclude name="**/?*.groovy"/>
+    <exclude name="**/?*.scala"/>
+    <exclude name="**/?*.flex"/>
+    <exclude name="**/?*.kt"/>
+    <exclude name="**/?*.clj"/>
+  </patternset>
+  
+  
+  <!-- Project Libraries -->
+  
+  <path id="library.apache.classpath">
+    <fileset dir="${basedir}/../lib/apache">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.cdh3.classpath">
+    <fileset dir="${basedir}/../lib/hadoop/cdh3">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.gson.classpath">
+    <fileset dir="${basedir}/../lib/gson">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.h2o.classpath">
+    <pathelement location="${basedir}/../target/h2o.jar"/>
+  </path>
+  
+  <path id="library.jama.classpath">
+    <fileset dir="${basedir}/../lib/jama">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.jets3t.classpath">
+    <fileset dir="${basedir}/../lib/jets3t">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.jogamp.classpath">
+    <fileset dir="${basedir}/../lib/jogamp">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.junit.classpath">
+    <fileset dir="${basedir}/../lib/junit">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.lib.classpath">
+    <fileset dir="${basedir}/../lib">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.log4j.classpath">
+    <fileset dir="${basedir}/../lib/log4j">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.mockito.classpath">
+    <fileset dir="${basedir}/../lib/mockito">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.poi.classpath">
+    <fileset dir="${basedir}/../lib/poi">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  <path id="library.s3.classpath">
+    <fileset dir="${basedir}/../lib/s3">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  
+  <!-- Global Libraries -->
+  
+  <!-- Modules -->
+  
+  
+  <!-- Module test -->
+  
+  <dirname property="module.test.basedir" file="${ant.file}"/>
+  
+  
+  
+  <property name="compiler.args.test" value="${compiler.args}"/>
+  
+  <property name="test.output.dir" value="${module.test.basedir}/out/production/test"/>
+  <property name="test.testoutput.dir" value="${module.test.basedir}/out/test/test"/>
+  
+  <path id="test.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="test.module.production.classpath">
+    <path refid="library.h2o.classpath"/>
+    <path refid="library.junit.classpath"/>
+    <path refid="library.apache.classpath"/>
+    <path refid="library.gson.classpath"/>
+    <path refid="library.cdh3.classpath"/>
+    <path refid="library.jama.classpath"/>
+    <path refid="library.jets3t.classpath"/>
+    <path refid="library.jogamp.classpath"/>
+    <path refid="library.log4j.classpath"/>
+    <path refid="library.mockito.classpath"/>
+    <path refid="library.poi.classpath"/>
+    <path refid="library.s3.classpath"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  <path id="test.runtime.production.module.classpath">
+    <pathelement location="${test.output.dir}"/>
+    <path refid="library.h2o.classpath"/>
+    <path refid="library.junit.classpath"/>
+    <path refid="library.apache.classpath"/>
+    <path refid="library.gson.classpath"/>
+    <path refid="library.cdh3.classpath"/>
+    <path refid="library.jama.classpath"/>
+    <path refid="library.jets3t.classpath"/>
+    <path refid="library.jogamp.classpath"/>
+    <path refid="library.log4j.classpath"/>
+    <path refid="library.mockito.classpath"/>
+    <path refid="library.poi.classpath"/>
+    <path refid="library.s3.classpath"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  <path id="test.module.classpath">
+    <pathelement location="${test.output.dir}"/>
+    <path refid="library.h2o.classpath"/>
+    <path refid="library.junit.classpath"/>
+    <path refid="library.apache.classpath"/>
+    <path refid="library.gson.classpath"/>
+    <path refid="library.cdh3.classpath"/>
+    <path refid="library.jama.classpath"/>
+    <path refid="library.jets3t.classpath"/>
+    <path refid="library.jogamp.classpath"/>
+    <path refid="library.log4j.classpath"/>
+    <path refid="library.mockito.classpath"/>
+    <path refid="library.poi.classpath"/>
+    <path refid="library.s3.classpath"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  <path id="test.runtime.module.classpath">
+    <pathelement location="${test.testoutput.dir}"/>
+    <pathelement location="${test.output.dir}"/>
+    <path refid="library.h2o.classpath"/>
+    <path refid="library.junit.classpath"/>
+    <path refid="library.apache.classpath"/>
+    <path refid="library.gson.classpath"/>
+    <path refid="library.cdh3.classpath"/>
+    <path refid="library.jama.classpath"/>
+    <path refid="library.jets3t.classpath"/>
+    <path refid="library.jogamp.classpath"/>
+    <path refid="library.log4j.classpath"/>
+    <path refid="library.mockito.classpath"/>
+    <path refid="library.poi.classpath"/>
+    <path refid="library.s3.classpath"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.test">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.test">
+    <patternset refid="excluded.from.module.test"/>
+  </patternset>
+  
+  <path id="test.module.test.sourcepath">
+    <dirset dir="${module.test.basedir}/src/test">
+      <include name="java"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.test" depends="compile.module.test.production,compile.module.test.tests" description="Compile module test"/>
+  
+  <target name="compile.module.test.production" description="Compile module test; production classes"/>
+  
+  <target name="compile.module.test.tests" depends="compile.module.test.production" description="compile module test; test classes" unless="skip.tests">
+    <mkdir dir="${test.testoutput.dir}"/>
+    <javac destdir="${test.testoutput.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true">
+      <compilerarg line="${compiler.args.test}"/>
+      <bootclasspath refid="test.module.bootclasspath"/>
+      <classpath refid="test.module.classpath"/>
+      <src refid="test.module.test.sourcepath"/>
+      <patternset refid="excluded.from.compilation.test"/>
+    </javac>
+    
+    <copy todir="${test.testoutput.dir}">
+      <fileset dir="${module.test.basedir}/src/test/java">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="clean.module.test" description="cleanup module">
+    <delete dir="${test.output.dir}"/>
+    <delete dir="${test.testoutput.dir}"/>
+  </target>
+  
+  <target name="init" description="Build initialization">
+    <!-- Perform any build initialization in this target -->
+  </target>
+  
+  <target name="clean" depends="clean.module.test" description="cleanup all"/>
+  
+  <target name="build.modules" depends="init, clean, compile.module.test" description="build all modules"/>
+  
+  <target name="all" depends="build.modules" description="build all"/>
+</project>

@@ -24,47 +24,48 @@ public class Exec2 extends Request2 {
   // Pretty-print of result.  For Frames, first 10 rows.  For scalars, just the
   // value.  For functions, the pretty-printed AST.
   @API(help="String result"        ) String result;
- 
+
   @API(help="Array of Column Summaries.") Inspect2.ColSummary cols[];
 
   @Override protected Response serve() {
     if( str == null ) return RequestServer._http404.serve();
-    Exception e;
+    Throwable e;
     try {
       Env env = water.exec.Exec2.exec(str);
+      StringBuilder sb = env._sb;
+      if( sb.length()!=0 ) sb.append("\n");
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
       if( env.sp() == 0 ) {      // Empty stack
-      } else if( env.isAry() ) { 
-        Frame fr = env.popAry();
-        String skey = env.key();
+      } else if( env.isAry() ) {
+        Frame fr = env.peekAry();
+        String skey = env.peekKey();
         num_rows = fr.numRows();
         num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
         for( int i=0; i<num_cols; i++ )
           cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
         // Now the first few rows.
-        StringBuilder sb = new StringBuilder();
         String[] fs = fr.toStringHdr(sb);
         for( int i=0; i<Math.min(6,fr.numRows()); i++ )
           fr.toString(sb,fs,i);
-        result=sb.toString();
         // Nuke the result
-        env.subRef(fr,skey);
+        env.pop();
       } else if( env.isFcn() ) {
-        ASTOp op = env.popFcn();
+        ASTOp op = env.peekFcn();
         funstr = op.toString();
-        result = op.toString(true); // Verbose function
-        env.subRef(op);
+        sb.append(op.toString(true)); // Verbose function
+        env.pop();
       } else {
         scalar = env.popDbl();
-        result = Double.toString(scalar);
+        sb.append(Double.toString(scalar));
       }
-      env.remove();
-      return new Response(Response.Status.done, this, -1, -1, null);
-    } 
+      env.remove_and_unlock();
+      result=sb.toString();
+      return Response.done(this);
+    }
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's
-    catch( Exception e2 ) { Log.err(e=e2); }
-    return Response.error(e.getMessage());
+    catch( Throwable e2 ) { Log.err(e=e2); }
+    return Response.error(e);
   }
   @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
     return superServeGrid(server, parms, type);

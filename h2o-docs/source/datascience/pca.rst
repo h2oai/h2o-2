@@ -1,3 +1,5 @@
+.. _PCAmath:
+
 Principal Components Analysis
 ===========================================
 
@@ -10,20 +12,25 @@ collaboration.
 Defining a PCA Model
 """"""""""""""""""""
 
- **X:**
+ **Ignored Columns:**
 
-   The set of numeric variables that the PCA algorithm is to be
-   applied to. Selections are made by highlighting and selecting from
-   the field, which populates when the data key is specified. PCA does
-   not include categorical variables in analysis. If a variable is a
-   factor, but has been coded as a number (for instance, color has
-   been coded so that Green = 1, Red = 2, and Yellow = 3), users
-   should be sure that these variables are not selected before running
-   PCA. Including these variables can adversely impact results,
-   because PCA will not correctly interpret them. Categorical
-   variables that are alpha or alpha numeric will be omitted by
-   default. These are listed under the field of X variables in a
-   yellow message box. 
+   The set of columns in the specified data set that should me omitted
+   from the PCA.  Selections are made by highlighting and selecting from
+   the field, which populates when the data key is specified. In
+   general PCA does not include categorical variables in
+   analysis. Factors are treated as binomial columns, with an
+   indicator for each factor level, less one reference level. 
+   If a variable is a factor, but has been coded as a number (for
+   instance, color has been coded so that Green = 1, Red = 2, and
+   Yellow = 3), users should be sure that these variables are not
+   selected before running PCA. Including these variables can
+   adversely impact results, because PCA will not correctly interpret
+   them. 
+
+ **Max PC:** 
+
+   An integer value indicating the maximum number of principal
+   components to return. 
 
  **Tolerance:**
 
@@ -37,12 +44,11 @@ Defining a PCA Model
    (2)(.39) = .78 will not be included in the analysis of principal 
    components. 
 
- 
  **Standardize:** 
 
    Allows users to specify whether data should be transformed so that
    each column has a mean of 0 and a standard deviation of 1 prior to
-   carrying out PCA. 
+   carrying out PCA. Standardizing is strongly reccomended. 
 
 
 Interpreting Results
@@ -59,7 +65,7 @@ behaviors for further modeling.
 
    *Standard deviation.* This is the standard deviation of the component
    defined in that column. In the example shown below the standard
-   deviation of component PC0 is given as 2.6244. 
+   deviation of component PC0 is given as 2.5999. 
 
  **Prop Var**
 
@@ -80,7 +86,7 @@ behaviors for further modeling.
    Prop Var** field of the PC1 column. 
 
  **Variable Rows**
-
+   
    In the PCA results table the factors included in the composition of
    principal components are listed, and their contribution to the
    component is given (called factor loadings). Note that if the
@@ -88,8 +94,19 @@ behaviors for further modeling.
    of the factor loadings sum to the total variance of the principal 
    component. 
 
-.. Image:: pca.png
-   :width: 40%
+
+ **Scree and Variance Plots**
+
+  The scree and variance plots are visual tools that indicate the
+  marginal contributions of each next principal component vector. The
+  scree plot show the amount of variance accounted for by the first
+  component, and then the additional variance accounted for by each of
+  the next components, and approaches a minimum of zero contribution . 
+  The variance plot shows the cumulative variance accounted for by
+  each of the components, and approaches a maximum value of 1. 
+
+.. Image:: plots.png
+   :width: 50%
 
 Notes on the application of PCA
 """""""""""""""""""""""""""""""
@@ -100,23 +117,27 @@ related, but not equivalent. Specifically, the correlation between two
 variables is their normalized covariance. For this reason, it's
 recommended that users standardize data before running a PCA analysis. 
 
-Additionally, modeling is driven by the simple assumption that set of derived variables can be appropriately characterized by a linear combination. PCA generates a set of
-new variables composed of combinations of the original variables. The
-variance explained by PCA is the covariance observed in the whole set
-of variables. If the objective of a PCA analysis is to use the new
-variables generated to predict an outcome of interest, that outcome
-must not be included in the PCA analysis. Otherwise, when the new
-variables are used to generate a model, the dependent variable will
-occur on both sides of the predictive equation. 
+Additionally, modeling is driven by the simple assumption that set of
+derived variables can be appropriately characterized by a linear
+combination. PCA generates a set of new variables composed of
+combinations of the original variables. The variance explained by PCA
+is the covariance observed in the whole set of variables. If the
+objective of a PCA analysis is to use the new variables generated to
+predict an outcome of interest, that outcome must not be included in
+the PCA analysis. Otherwise, when the new variables are used to
+generate a model, the dependent variable will occur on both sides of
+the predictive equation. 
 
 PCA Algorithm
 ---------------
 
 Let :math:`X` be an :math:`M\times N` matrix where
  
-1. Each row corresponds to the set of all measurements on a particular attribute, and 
+1. Each row corresponds to the set of all measurements on a particular 
+   attribute, and 
 
-2. Each column corresponds to a set of measurements from a given observation or trial
+2. Each column corresponds to a set of measurements from a given
+   observation or trial
 
 The covariance matrix :math:`C_{x}` is
 

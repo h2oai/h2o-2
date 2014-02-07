@@ -3,10 +3,10 @@ RUNNING H2O NODES IN HADOOP
 ===========================
 
 Note: You may want to do all of this from the machine where you plan
-to launch the hadoop jar job from.  Otherwise you will end up having
+to launch the Hadoop jar job from.  Otherwise you will end up having
 to copy files around.
 
-(If you grabbed a prebuilt h2o-*.zip file, copy it to a hadoop machine
+(If you grabbed a prebuilt h2o-*.zip file, copy it to a Hadoop machine
 and skip to the PREPARE section below.)
 
 
@@ -37,6 +37,7 @@ $ cd h2o-*
 $ cd hadoop
 
 
+
 RUN JOB
 -------
 
@@ -52,6 +53,10 @@ $ hadoop jar h2odriver_cdh4.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -
 
 (Note: Port 8021 is the default jobtracker port for Cloudera.
        Port 9001 is the default jobtracker port for MapR.)
+
+(Note: H2O requires that ports are opened between Hadoop nodes. To
+       ensure correct behavior it’s recommended that the range of 
+       ports 54321-54421 be open for TCP and UDP communication. 
 
 
 MONITOR JOB

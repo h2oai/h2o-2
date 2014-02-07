@@ -40,7 +40,7 @@ public class ImportModel extends Request2 {
         try {
           Class c = Class.forName(((JsonObject) json).get("type").getAsString());
           return context.deserialize(json, c);
-        } catch( Exception e ) {
+        } catch( Throwable e ) {
           throw new RuntimeException(e);
         }
       }
@@ -52,6 +52,6 @@ public class ImportModel extends Request2 {
     else
       throw new UnsupportedOperationException("Import of " + type + " is not yet supported.");
     UKV.put(destination_key, model);
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 }

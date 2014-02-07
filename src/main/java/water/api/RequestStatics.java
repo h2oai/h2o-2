@@ -18,10 +18,10 @@ import com.google.gson.JsonObject;
  * @author peta
  */
 public class RequestStatics extends Constants {
-  public String requestName() {
+  /** Each request name is derived from name of class serving the request. */
+  public final String requestName() {
     return getClass().getSimpleName();
   }
-
 
   /** Request type.
    *
@@ -44,6 +44,7 @@ public class RequestStatics extends Constants {
     query(".query"), ///< Displays the query for the argument in html mode
     png(".png"), ///< image, e.g. plot
     txt(".txt"), ///< text, e.g. a script
+    java(".java"), ///< java program
     ;
     /** Suffix of the request - extension of the URL.
      */
@@ -67,6 +68,8 @@ public class RequestStatics extends Constants {
         return png;
       if (requestUrl.endsWith(txt._suffix))
         return txt;
+      if (requestUrl.endsWith(java._suffix))
+        return java;
       return json;
     }
 
@@ -75,8 +78,6 @@ public class RequestStatics extends Constants {
      */
     public String requestName(String requestUrl) {
       String result = (requestUrl.endsWith(_suffix)) ? requestUrl.substring(0, requestUrl.length()-_suffix.length()) : requestUrl;
-      //if (result.charAt(0) == '/')
-      //  return result.substring(1);
       return result;
     }
   }
@@ -124,12 +125,12 @@ public class RequestStatics extends Constants {
     if( args == null && args2 == null ) return "";
     if( args2 != null ) {
       StringBuilder sb = new StringBuilder();
-      assert (args2.length &1)==0; // Must be field-name / value pairs
+      assert (args2.length &1)==0 : "Number of arguments shoud be power of 2."; // Must be field-name / value pairs
       for( int i=0; i<args2.length; i+=2 ) {
         sb.append(i==0?'?':'&').append(args2[i]).append('=');
         try {
           sb.append(URLEncoder.encode(args2[i+1].toString(),"UTF-8"));
-        } catch (UnsupportedEncodingException ex) {
+        } catch( UnsupportedEncodingException ex ) {
           throw  Log.errRTExcept(ex);
         }
       }
@@ -146,7 +147,7 @@ public class RequestStatics extends Constants {
       sb.append("=");
       try {
         sb.append(URLEncoder.encode(e.getAsString(),"UTF-8"));
-      } catch (UnsupportedEncodingException ex) {
+      } catch( UnsupportedEncodingException ex ) {
         throw  Log.errRTExcept(ex);
       }
     }

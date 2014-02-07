@@ -5,7 +5,6 @@ import hex.DGLM.GLMModel.Status;
 import hex.DLSM.ADMMSolver.NonSPDMatrixException;
 import hex.DLSM.LSMSolver;
 import hex.NewRowVecTask.DataFrame;
-import hex.NewRowVecTask.JobCancelledException;
 import hex.NewRowVecTask.RowFunc;
 import hex.RowVecTask.Sampling;
 
@@ -13,14 +12,16 @@ import java.text.DecimalFormat;
 import java.util.*;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
+import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.api.Constants;
-import water.util.Log;
-import water.util.Utils;
+import water.util.*;
+import water.util.Utils.IcedInt;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
@@ -96,9 +97,8 @@ public abstract class DGLM {
   public static class GLMJob extends ChunkProgressJob {
     public GLMJob(ValueArray data, Key dest, int xval, GLMParams params) {
       // approximate the total number of computed chunks as 25 per normal model computation + 10 iterations per xval model)
-      super((params._family._family == Family.gaussian) ? data.chunks() * (xval + 1) : data.chunks() * (20 + 4 * xval));
+      super((params._family._family == Family.gaussian) ? data.chunks() * (xval + 1) : data.chunks() * (20 + 4 * xval),dest);
       description = "GLM(" + data._key.toString() + ")";
-      destination_key = dest;
     }
 
     public boolean isDone() {
@@ -171,7 +171,11 @@ public abstract class DGLM {
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
-      res.addProperty("family", _family.toString());
+      res.addProperty("family", _family._family.toString());
+      if(_family._family == Family.tweedie){
+        res.addProperty("variance_power", _family._tweedieVariancePower);
+        res.addProperty("link_power", _link._tweedieLinkPower);
+      }
       res.addProperty("link", _link.toString());
       res.addProperty("betaEps", _betaEps);
       res.addProperty("maxIter", _maxIter);
@@ -528,7 +532,6 @@ public abstract class DGLM {
     /**
      * Per family deviance computation.
      *
-     * @param family
      * @param yr
      * @param ym
      * @return
@@ -715,7 +718,8 @@ public abstract class DGLM {
      * @param chol
      * @return
      */
-    public Cholesky cholesky(Cholesky chol) {
+    public Cholesky cholesky(Cholesky chol, final Key jobKey) {
+      long t = System.currentTimeMillis();
       if( chol == null ) {
         double[][] xx = _xx.clone();
         for( int i = 0; i < xx.length; ++i )
@@ -731,22 +735,26 @@ public abstract class DGLM {
         for( int j = 0; j < denseN; ++j )
           chol._xx[j][i] = d*_xx[j][i];
       }
-      Futures fs = new Futures();
+      RecursiveAction [] ras = new RecursiveAction[denseN];
       // compute the outer product of diagonal*dense
       for( int i = 0; i < denseN; ++i ) {
         final int fi = i;
-        fs.add(new RecursiveAction() {
+        ras[i] = new RecursiveAction() {
           @Override protected void compute() {
             for( int j = 0; j <= fi; ++j ) {
+              if(((j & 15) == 0) && jobKey != null && !Job.isRunning(jobKey))return;
               double s = 0;
               for( int k = 0; k < sparseN; ++k )
                 s += fchol._xx[fi][k] * fchol._xx[j][k];
               fchol._xx[fi][j + sparseN] = _xx[fi][j + sparseN] - s;
             }
           }
-        }.fork());
+        };
       }
-      fs.blockForPending();
+      ForkJoinTask.invokeAll(ras);
+      Log.info("GLM(" + jobKey + "): CHOL PRECOMPUTE TOOK " + (System.currentTimeMillis() - t) + "ms");
+      if(jobKey != null && !Job.isRunning(jobKey))
+        throw new JobCancelledException();
       // compute the choesky of dense*dense-outer_product(diagonal*dense)
       // TODO we still use Jama, which requires (among other things) copy and expansion of the matrix. Do it here without copy and faster.
       double[][] arr = new double[denseN][];
@@ -850,14 +858,15 @@ public abstract class DGLM {
       GLMXvalSetup setup = DKV.get(key).get();
       Sampling s = new Sampling(setup._id, _folds, false);
       assert _models[setup._id] == null;
-      _models[setup._id] = GLMModel.makeKey(false);
+      Key mkey = _models[setup._id] = GLMModel.makeKey(false);
+      DataFrame data = getData(_ary, _cols, s, _standardize);
       try {
-        DGLM.buildModel(_job, _models[setup._id], DGLM.getData(_ary, _cols, s, _standardize), _lsm, _glmp,_betaStart.clone(), 0, _parallel);
+        DGLM.buildModel(_job, mkey, data, _lsm, _glmp,_betaStart.clone(), 0, _parallel);
       } catch( JobCancelledException e ) {
-        UKV.remove(_models[setup._id]);
+        Lockable.delete(_models[setup._id]);
       }
       // cleanup before sending back
-      DKV.remove(key);
+      UKV.remove(key);
       _betaStart = null;
       _lsm = null;
       _glmp = null;
@@ -915,10 +924,10 @@ public abstract class DGLM {
     }
 
     public int rank() {
-      if( _beta == null ) return -1;
-      int res = 0; //we do not count intercept so we start from -1
-      for( double b : _beta )
-        if( b != 0 ) ++res;
+      int res = 0;
+      if( _beta == null ) return res;
+      for( int i = 0; i < _beta.length-1; ++i)
+        if(_beta[i] != 0 ) ++res;
       return res;
     }
 
@@ -978,26 +987,6 @@ public abstract class DGLM {
       return sb.toString();
     }
 
-    @Override public void delete() {
-      // nuke sub-models
-      if( _vals != null ) for( GLMValidation v : _vals )
-        UKV.remove(v._key);
-    }
-
-    //public GLMModel() {
-    //  _status = Status.NotStarted;
-    //  _colCatMap = null;
-    //  _beta = null;
-    //  _normBeta = null;
-    //  _glmParams = null;
-    //  _s = null;
-    //  _standardized = false;
-    //  _converged = false;
-    //  _iterations = 0;
-    //  _time = 0;
-    //  _solver = null;
-    //  _dof = _nCols = _nLines = _response = 0;
-    //}
 
     public GLMModel(Status status, float progress, Key k, DataFrame data, double[] beta, double[] normBeta,
         GLMParams glmp, LSMSolver solver, long nLines, long nCols, boolean converged, int iters, long time,
@@ -1012,6 +1001,7 @@ public abstract class DGLM {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
+      assert _va._cols.length == _colCatMap.length-1;
       _beta = beta;
       _normBeta = normBeta;
       _glmParams = glmp;
@@ -1022,56 +1012,224 @@ public abstract class DGLM {
       _time = time;
       _solver = solver;
       _warnings = warnings;
-      _dof = nLines - rank() - 1;
+      _dof = nLines - 1 - rank();
       _nLines = nLines;
       _nCols = nCols;
       _response = response;
-      // permute beta into original order!
     }
 
     public boolean converged() {
       return _converged;
     }
 
-    public void store() {
-      UKV.put(_selfKey, clone());
+    public void store(Key job_key) {
+      clone().update(job_key);
     }
 
     @Override
     public GLMModel clone(){
       GLMModel res = (GLMModel)super.clone();
-      res._beta = res._beta.clone();
-      res._normBeta  = res._normBeta.clone();
+      if( res._beta != null ) res._beta = res._beta.clone();
+      if( res._normBeta != null ) res._normBeta  = res._normBeta.clone();
       res._vals = res._vals == null?null:res._vals.clone();
       return res;
     }
-    public void remove() {
-      UKV.remove(_selfKey);
-      if( _vals != null ) for( GLMValidation val : _vals )
-        if( val._modelKeys != null ) for( Key k : val._modelKeys )
-          UKV.remove(k);
+
+    @Override public Futures delete_impl(Futures fs) { 
+      if( _vals != null ) 
+        for( GLMValidation val : _vals )
+          if( val._modelKeys != null ) 
+            for( Key k : val._modelKeys )
+              ((GLMModel)DKV.get(k).get()).delete();
+      return fs;
     }
 
+    private static class YMUVal extends Iced {
+      private double _val;
+      private long _nobs;
+      public void add(double d){_val += d; ++_nobs;}
+      public double val(){return _nobs == 0?0:_val/_nobs;}
+      public YMUVal add(YMUVal val){
+        _val += val._val;
+        _nobs += val._nobs;
+        return this;
+      }
+    }
+
+    public static class GLMValidationTask extends MRTask<GLMValidationTask>{
+      final GLMModel _m;
+      final OldModel _adaptedModel;
+      final int _response;
+      final double [] _thresholds;
+      final double _ymu;
+      GLMValidation _res;
+      final Sampling _sampling;
+
+      public GLMValidationTask(GLMModel m, ValueArray ary, Sampling s,double [] thresholds){
+        _m = m;
+        _sampling = s;
+        _adaptedModel = m.adapt(ary);
+        _thresholds = thresholds;
+        int response = -1;
+        final String responseName = m.responseName();
+        for(int i = 0; i < ary._cols.length && response == -1; ++i)
+          if(ary._cols[i]._name.equalsIgnoreCase(responseName))
+            response = i;
+        if(response == -1)throw new RuntimeException("Incompatible dataset, missing response '" + responseName + "' in '" + ary._key + "'");
+        _response = response;
+        double ymu = ary._cols[response]._mean;
+        if(Double.isNaN(ymu) || m._glmParams._caseMode != CaseMode.none){
+          final CaseMode caseMode = m._glmParams._caseMode;
+          final double caseVal = m._glmParams._caseVal;
+          ymu = new RowFunc<YMUVal>(){
+            @Override public YMUVal newResult() {return new YMUVal();}
+            @Override public void processRow(YMUVal res, double[] x, int[] indexes) {
+              double y = x[0];
+              if(caseMode != CaseMode.none) y = caseMode.isCase(y,caseVal)?1:0;
+              res.add(y);
+            }
+            @Override public YMUVal reduce(YMUVal x, YMUVal y) {return x.add(y);}
+          }.apply(null, new DataFrame(ary,new int[]{response},null, false, false)).val();
+        }
+        _ymu = ymu;
+      }
+
+      @Override public void map(Key key) {
+        GLMValidation res = new GLMValidation();
+        final OldModel adaptedModel = (OldModel)_adaptedModel.clone();
+        if( _m._glmParams._family._family == Family.binomial ) {
+          res._cm = new ConfusionMatrix[_thresholds.length];
+          for( int i = 0; i < _thresholds.length; ++i )
+            res._cm[i] = new ConfusionMatrix(2);
+        }
+        ValueArray ary = DKV.get(ValueArray.getArrayKey(key)).get();
+        ValueArray.Column response = ary._cols[_response];
+        AutoBuffer bits = ary.getChunk(key);
+        int nrows = bits.remaining()/ary.rowSize();
+        Sampling s = _sampling == null?null:_sampling.clone();
+        for(int rid = 0; rid < nrows; ++rid){
+          if( s != null && s.skip(rid) ) continue;
+          if(ary.isNA(bits, rid, response))continue;
+          double yr = ary.datad(bits, rid, response);
+          double ym = adaptedModel.score(ary, bits, rid);
+          if(Double.isNaN(ym))continue;
+          ++res._n;
+          if(_m._glmParams._caseMode != CaseMode.none)
+            yr = _m._glmParams._caseMode.isCase(yr, _m._glmParams._caseVal)?1:0;
+          res._deviance += _m._glmParams._family.deviance(yr, ym);
+          res._nullDeviance += _m._glmParams._family.deviance(yr, _ymu);
+          if(_m._glmParams._family._family == Family.poisson ) { // aic for poisson
+            res._err += (ym - yr) * (ym - yr);
+            long y = Math.round(yr);
+            double logfactorial = 0;
+            for( long i = 2; i <= y; ++i )
+              logfactorial += Math.log(i);
+            res._aic += (yr * Math.log(ym) - logfactorial - ym);
+          } else if( _m._glmParams._family._family == Family.binomial ) { // cm computation for binomial
+            if( yr < 0 || yr > 1 ) throw new RuntimeException("response variable value out of range: " + yr);
+            int i = 0;
+            for( double t : _thresholds ) {
+              int p = ym >= t ? 1 : 0;
+              res._cm[i++].add((int) yr, p);
+            }
+          } else res._err += (ym - yr) * (ym - yr);
+        }
+        _res = res;
+      }
+      @Override public void reduce(GLMValidationTask drt) {
+        if(_res == null)_res = drt._res;
+        else {
+          _res._n += drt._res._n;
+          _res._nullDeviance += drt._res._nullDeviance;
+          _res._deviance += drt._res._deviance;
+          _res._aic += drt._res._aic;
+          _res._err += drt._res._err;
+          _res._caseCount += drt._res._caseCount;
+          if( _res._cm != null ) {
+            for( int i = 0; i < _res._cm.length; ++i )
+              _res._cm[i].add(drt._res._cm[i]);
+          } else _res._cm = drt._res._cm;
+        }
+      }
+    }
+
+//    // Validate on a dataset.  Columns must match, including the response column.
+//    public GLMValidation validateOn(Job job, ValueArray ary, Sampling s, double[] thresholds)
+//        throws JobCancelledException {
+//      int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
+//      if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
+//        throw new GLMException("incompatible dataset");
+//      DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
+//      double ymu = ary._cols[modelDataMap[modelDataMap.length - 1]]._mean;
+//      if(_glmParams._caseMode != CaseMode.none || Double.isNaN(ymu)){ // we need to compute the mean of the response...
+//        final CaseMode caseMode = _glmParams._caseMode;
+//        final double caseVal = _glmParams._caseVal;
+//        ymu = new RowFunc<YMUVal>(){
+//          @Override public YMUVal newResult() {return new YMUVal();}
+//          @Override public void processRow(YMUVal res, double[] x, int[] indexes) {
+//            for(double d:x)if(Double.isNaN(d))return;
+//            double y = x[x.length-1];
+//            if(caseMode != CaseMode.none) y = caseMode.isCase(y,caseVal)?1:0;
+//            res.add(y);
+//          }
+//          @Override public YMUVal reduce(YMUVal x, YMUVal y) {return x.add(y);}
+//        }.apply(null, data).val();
+//      }
+//      GLMValidationFunc f = new GLMValidationFunc(this, _glmParams, _beta, thresholds,ymu);
+//      GLMValidation val = f.apply(job, data);
+//      val._modelKey = _selfKey;
+//      if( _vals == null ) _vals = new GLMValidation[] { val };
+//      else {
+//        int n = _vals.length;
+//        _vals = Arrays.copyOf(_vals, n + 1);
+//        _vals[n] = val;
+//      }
+//      return val;
+//    }
     // Validate on a dataset.  Columns must match, including the response column.
+
     public GLMValidation validateOn(Job job, ValueArray ary, Sampling s, double[] thresholds)
         throws JobCancelledException {
-      int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
-      if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
-        throw new GLMException("incompatible dataset");
-      DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
-      GLMValidationFunc f = new GLMValidationFunc(this, _glmParams, _beta, thresholds,
-          ary._cols[modelDataMap[modelDataMap.length - 1]]._mean);
-      GLMValidation val = f.apply(job, data);
-      val._modelKey = _selfKey;
-      if( _vals == null ) _vals = new GLMValidation[] { val };
-      else {
-        int n = _vals.length;
-        _vals = Arrays.copyOf(_vals, n + 1);
-        _vals[n] = val;
+      long t1 = System.currentTimeMillis();
+      GLMValidationTask valtsk = new GLMValidationTask(this, ary, s,thresholds);
+      valtsk.invoke(ary._key);
+      GLMValidation res = valtsk._res;
+      res._dataKey = ary._key;
+      res._modelKey = this._key;
+      res._time = System.currentTimeMillis() - t1;
+      if( _glmParams._family._family != Family.binomial ) res._err = Math.sqrt(res._err / res._n);
+      res._dataKey = ary._key;
+      res._thresholds = thresholds;
+      res._s = s;
+      res.computeBestThreshold(ErrMetric.SUMC);
+      res.computeAUC();
+      switch( _glmParams._family._family ) {
+        case gaussian:
+          res._aic = res._n * (Math.log(res._deviance / res._n * 2 * Math.PI) + 1) + 2;
+          break;
+        case binomial:
+          res._aic = res._deviance;
+          break;
+        case poisson:
+          res._aic *= -2;
+          break; // aic is set during the validation task
+        case gamma:
+          res._aic = Double.NaN;
+          break; // aic for gamma is not computed
+        case tweedie:
+          res._aic = Double.NaN;
+          break;
+        default:
+          assert false : "missing implementation for family " + _glmParams._family;
       }
-      return val;
+      res._aic += 2 * (rank()+1);//_glmp._family.aic(res._deviance, res._n, _beta.length);
+      if( _vals == null ) _vals = new GLMValidation[] { res };
+      else {
+        _vals = Arrays.copyOf(_vals, _vals.length + 1);
+        _vals[_vals.length - 1] = res;
+      }
+      return res;
     }
-
     public GLMValidation xvalidate(Job job, ValueArray ary, int folds, double[] thresholds, boolean parallel)
         throws JobCancelledException {
       int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
@@ -1101,9 +1259,8 @@ public abstract class DGLM {
           tsk.reduce(child);
         }
       }
-      if( job.cancelled() ) throw new JobCancelledException();
-      GLMValidation res = new GLMValidation(_selfKey, tsk._models, ErrMetric.SUMC, thresholds,
-          System.currentTimeMillis() - t1);
+      if( !Job.isRunning(job.self()) ) throw new JobCancelledException();
+      GLMValidation res = new GLMValidation(_key, tsk._models, ErrMetric.SUMC, thresholds, System.currentTimeMillis() - t1);
       if( _vals == null ) _vals = new GLMValidation[] { res };
       else {
         _vals = Arrays.copyOf(_vals, _vals.length + 1);
@@ -1122,7 +1279,7 @@ public abstract class DGLM {
       res.addProperty("dof", _dof);
       res.addProperty("nLines", _nLines);
       res.addProperty("nCols", _nCols);
-      res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
+      res.addProperty(Constants.MODEL_KEY, _key.toString());
       if( _warnings != null ) {
         JsonArray warnings = new JsonArray();
         for( String w : _warnings )
@@ -1196,8 +1353,13 @@ public abstract class DGLM {
       }
       p += _beta[_beta.length - 1]; // And the intercept as the last beta
       double pp = _glmParams._link.linkInv(p);
-      if( _glmParams._family._family == Family.binomial ) return pp >= _vals[0].bestThreshold() ? 1.0 : 0.0;
+      //if( _glmParams._family._family == Family.binomial ) return pp >= _vals[0].bestThreshold() ? 1.0 : 0.0;
       return pp;
+    }
+    @Override public double getThreshold() {
+      if( _glmParams._family._family == Family.binomial )
+        return _vals[0].bestThreshold();
+      return Float.NaN;
     }
 
     /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
@@ -1231,6 +1393,8 @@ public abstract class DGLM {
     int _tid;
     double[] _thresholds;
     long _time;
+    public double[] _tprs;
+    public double[] _fprs;
 
     public final long computationTime() {
       return _time;
@@ -1413,6 +1577,8 @@ public abstract class DGLM {
      */
     protected void computeAUC() {
       if( _cm == null ) return;
+      _tprs = new double[_cm.length];
+      _fprs = new double[_cm.length];
       double auc = 0;           // Area-under-ROC
       double TPR_pre = 1;
       double FPR_pre = 1;
@@ -1422,6 +1588,8 @@ public abstract class DGLM {
         auc += trapeziod_area(FPR_pre, FPR, TPR_pre, TPR);
         TPR_pre = TPR;
         FPR_pre = FPR;
+        _tprs[t] = TPR;
+        _fprs[t] = FPR;
       }
       auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
       _auc = auc;
@@ -1600,12 +1768,13 @@ public abstract class DGLM {
   }
 
   public static class GLMValidationFunc extends RowFunc<GLMValidation> {
+    OldModel _adaptedModel;
     final GLMModel _m;
     final GLMParams _glmp;
     final double[] _beta;
     final double[] _thresholds;
     final double _ymu;
-    final int _response;
+    int _response;
 
     public GLMValidationFunc(GLMModel m, GLMParams params, double[] beta, double[] thresholds, double ymu) {
       _m = m;
@@ -1618,9 +1787,13 @@ public abstract class DGLM {
 
     @Override public GLMValidation apply(Job job, DataFrame data) throws JobCancelledException {
       long t1 = System.currentTimeMillis();
+      if(!data._ary._key.equals(_m._dataKey)){
+        _adaptedModel = _m.adapt(data._ary);
+       _response = data._response;
+      }
       NewRowVecTask<GLMValidation> tsk = new NewRowVecTask<GLMValidation>(job, this, data);
       tsk.invoke(data._ary._key);
-      if( job != null && job.cancelled() ) throw new JobCancelledException();
+      if( job != null && !Job.isRunning(job.self()) ) throw new JobCancelledException();
       GLMValidation res = tsk._result;
       res._time = System.currentTimeMillis() - t1;
       if( _glmp._family._family != Family.binomial ) res._err = Math.sqrt(res._err / res._n);
@@ -1669,9 +1842,13 @@ public abstract class DGLM {
       if( _glmp._caseMode != CaseMode.none ) yr = (_glmp._caseMode.isCase(yr, _glmp._caseVal)) ? 1 : 0;
       if( yr == 1 ) ++res._caseCount;
       double ym = 0;
-      for( int i = 0; i < x.length; ++i )
-        ym += _beta[indexes[i]] * x[i];
-      ym = _glmp._link.linkInv(ym);
+      if(_adaptedModel != null){
+        ym = _adaptedModel.score(x);
+      } else {
+        for( int i = 0; i < x.length; ++i )
+          ym += _beta[indexes[i]] * x[i];
+        ym = _glmp._link.linkInv(ym);
+      }
       res._deviance += _glmp._family.deviance(yr, ym);
       res._nullDeviance += _glmp._family.deviance(yr, _ymu);
       if( _glmp._family._family == Family.poisson ) { // aic for poisson
@@ -1720,7 +1897,12 @@ public abstract class DGLM {
   }
 
   public static DataFrame getData(ValueArray ary, int[] colIds, Sampling s, boolean standardize) {
-    return new DataFrame(ary, colIds, s, standardize, true);
+    int [] cols = new int[colIds.length];
+    int j = 0;
+    for(int i = 0; i < colIds.length-1; ++i) if(ary._cols[colIds[i]]._min < ary._cols[colIds[i]]._max)
+      cols[j++] = colIds[i];
+    cols[j++] = colIds[colIds.length-1];
+    return new DataFrame(ary, Arrays.copyOf(cols,j), s, standardize, true);
   }
 
   public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params,
@@ -1732,6 +1914,7 @@ public abstract class DGLM {
       final double[] betaStart, final int xval, final boolean parallel) {
     if( dest == null ) dest = GLMModel.makeKey(true);
     final GLMJob job = new GLMJob(data._ary, dest, xval, params);
+    lsm._jobKey = job.self();
     final double[] beta;
     final double[] denormalizedBeta;
     if( betaStart != null ) {
@@ -1740,16 +1923,17 @@ public abstract class DGLM {
     } else {
       beta = denormalizedBeta = null;
     }
-    UKV.put(job.dest(), new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params,
-        lsm, 0, 0, false, 0, 0, null));
+    data._ary.read_lock(job.self()); // Read-lock the input dataset
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
           buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
-          assert !job.cancelled();
+          assert Job.isRunning(job.self());
           job.remove();
         } catch( JobCancelledException e ) {
-          UKV.remove(job.dest());
+          Lockable.delete(job.dest());
+        } finally {
+          data._ary.unlock(job.self()); // Read-lock the input dataset
         }
         tryComplete();
       }
@@ -1764,10 +1948,25 @@ public abstract class DGLM {
     H2O.submitTask(fjtask);
     return job;
   }
-  public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+
+  private static boolean solve(LSMSolver solver, Gram gram, double [] beta, ArrayList<String> warns){
+    try {
+      return solver.solve(gram, beta);
+    } catch(NonSPDMatrixException ex){
+      DLSM.ADMMSolver admm = (DLSM.ADMMSolver)solver;
+      if(admm._autoHandleNonSPDMatrix)throw ex;
+      admm._autoHandleNonSPDMatrix = true;
+      warns.add("Got Non-SPD Matrix, adding L2-regularization to get solution.");
+      return solver.solve(gram, beta);
+    }
+  }
+  public static GLMModel buildModel(Job job, Key resKey, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams params,
       double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
-    Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
-    GLMModel currentModel = null;
+    return buildModel(job, resKey, getData(ary, cols, null, standardize), lsm, params, oldBeta, xval, parallel);
+  }
+  private static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
+                                    double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
+    Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals. Largest categorical has " + data.largestCatSz() + " levels");
     ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
     // make sure we have a valid response variable for the current family
@@ -1789,16 +1988,18 @@ public abstract class DGLM {
     double[] newBeta = MemoryManager.malloc8d(data.expandedSz());
     boolean converged = true;
     Gram gram = gramF.apply(job, data);
+    final long nobs = gram._nobs;
     int iter = 1;
     long lsmSolveTime = 0;
     long t = System.currentTimeMillis();
-    lsm.solve(gram, newBeta);
+    solve(lsm,gram, newBeta,warns);
     lsmSolveTime += System.currentTimeMillis() - t;
-    currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
+    GLMModel currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
         params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
+    currentModel.delete_and_lock(job.self()); // Lock the new model
     if( params._family._family != Family.gaussian ) do { // IRLSM
       if( oldBeta == null ) oldBeta = MemoryManager.malloc8d(data.expandedSz());
-      if( job.cancelled() ) throw new JobCancelledException();
+      if( !Job.isRunning(job.self()) ) throw new JobCancelledException();
       double[] b = oldBeta;
       oldBeta = (gramF._beta = newBeta);
       newBeta = b;
@@ -1806,7 +2007,7 @@ public abstract class DGLM {
       if( gram.hasNaNsOrInfs() ) // we can't solve this problem any further, user should increase regularization and try again
         break;
       t = System.currentTimeMillis();
-      lsm.solve(gram, newBeta);
+      solve(lsm,gram, newBeta,warns);
       lsmSolveTime += System.currentTimeMillis() - t;
       String[] warnings = new String[warns.size()];
       warns.toArray(warnings);
@@ -1816,18 +2017,21 @@ public abstract class DGLM {
       currentModel = new GLMModel(Status.ComputingModel, progress, resKey, data, data.denormalizeBeta(newBeta),
           newBeta, params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, warnings);
       currentModel._lsmSolveTime = lsmSolveTime;
-      currentModel.store();
+      currentModel.store(job.self());
     } while( ++iter < params._maxIter && !converged );
     currentModel._lsmSolveTime = lsmSolveTime;
     currentModel._status = Status.ComputingValidation;
-    currentModel.store();
+    currentModel.store(job.self());
     if( xval > 1 ) // ... and x-validate
-    currentModel.xvalidate(job, data._ary, xval, DEFAULT_THRESHOLDS, parallel);
+      currentModel.xvalidate(job, data._ary, xval, DEFAULT_THRESHOLDS, parallel);
     else currentModel.validateOn(job, data._ary, data.getSamplingComplement(), DEFAULT_THRESHOLDS); // Full scoring on original dataset
     currentModel._status = Status.Done;
+    if(currentModel.rank() > nobs)
+      warns.add("Not enough data to compute the model (got more predictors than data points), try limit the number of columns (e.g. increase L1 regularization or run PCA first).");
     String[] warnings = new String[warns.size()];
     warns.toArray(warnings);
-    currentModel.store();
+    currentModel._warnings = warnings;
+    currentModel.unlock(job.self());
     DKV.write_barrier();
     return currentModel;
   }

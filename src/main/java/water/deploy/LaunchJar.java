@@ -45,7 +45,7 @@ public class LaunchJar extends Request2 {
       }
 
       // Append UID to class names so allow multiple invocations
-      String uid = UUID.randomUUID().toString().replace("-", "");
+      String uid = Key.rand();
       ClassMap renames = new ClassMap();
       for( JarEntry entry : entries ) {
         if( entry.getName().endsWith(".class") ) {
@@ -54,7 +54,7 @@ public class LaunchJar extends Request2 {
           int index = n.indexOf("$");
           if( index < 0 )
             index = n.length();
-          u = n.substring(0, index) + "_" + uid + n.substring(index);
+          u = n.substring(0, index) + uid + n.substring(index);
           renames.put(n, u);
         }
       }
@@ -74,7 +74,10 @@ public class LaunchJar extends Request2 {
         jar.putNextEntry(new JarEntry(c.getName().replace('.', '/') + ".class"));
         c.toBytecode(bc);
         bc.flush();
-        packages.add(c.getPackageName());
+        String p = c.getPackageName();
+        if( p == null )
+          throw new IllegalArgumentException("Package is null for class " + c);
+        packages.add(p);
       }
       jar.close();
       weavePackages(packages.toArray(new String[0]));
@@ -83,13 +86,13 @@ public class LaunchJar extends Request2 {
       task.invokeOnAllNodes();
 
       // Start job
-      Class c = Class.forName(job_class + "_" + uid);
+      Class c = Class.forName(job_class + uid);
       job = (Job) c.newInstance();
       job.fork();
     } catch( Exception ex ) {
       throw new RuntimeException(ex);
     }
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   public static void weavePackages(String... names) {

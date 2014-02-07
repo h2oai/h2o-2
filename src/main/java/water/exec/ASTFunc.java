@@ -2,6 +2,11 @@ package water.exec;
 
 import java.util.ArrayList;
 import water.H2O;
+import water.Key;
+import water.fvec.AppendableVec;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -12,9 +17,15 @@ public class ASTFunc extends ASTOp {
   final AST _body;
   final int _tmps;
   Env _env;                     // Captured environment at each apply point
-  ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) { super(vars,vtypes); _body = body; _tmps=tmps; }
+  ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) {
+    super(vars,vtypes,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _tmps=tmps;
+  }
+  ASTFunc( String vars[], Type t, AST body, int tmps ){
+    super(vars,t,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); _body = body; _tmps=tmps;
+  }
   @Override String opStr() { return "fun"; }
-  @Override ASTOp make() { throw H2O.fail();} 
+  //@Override ASTOp make() { throw H2O.fail();}
+  @Override ASTOp make() { return new ASTFunc(_vars, _t.copy(), _body, _tmps); }
   static ASTOp parseFcn(Exec2 E ) {
     int x = E._x;
     String var = E.isID();
@@ -36,9 +47,8 @@ public class ASTFunc extends ASTOp {
     }
     int argcnt = vars.size();   // Record current size, as body may extend
     // Parse the body
-    E.xpeek('{',(x=E._x),null);
     E._env.push(vars);
-    AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
+    AST body = E.peek('{') ? E.xpeek('}',E._x,ASTStatement.parse(E)) : parseCXExpr(E);
     if( body == null ) E.throwErr("Missing function body",x);
     E._env.pop();
 
@@ -67,9 +77,39 @@ public class ASTFunc extends ASTOp {
     int res_idx = env.pushScope(argcnt-1);
     env.push(_tmps);
     _body.exec(env);
-    env.tos_into_slot(1,res_idx-1,null);
+    env.tos_into_slot(res_idx-1,null);
     env.popScope();
   }
+
+  @Override double[] map(Env env, double[] in, double[] out) {
+    final int sp = env._sp;
+    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
+    AppendableVec av = new AppendableVec(key);
+    NewChunk nc = new NewChunk(av,0);
+    for (double v : in) nc.addNum(v);
+    nc.close(0,null);
+    Frame fr = new Frame(new String[]{"row"},new Vec[]{av.close(null)});
+    env.push(this);
+    env.push(fr);
+    this.apply(env,2);
+    if (env.isDbl()) {
+      if (out==null || out.length<1) out= new double[1];
+      out[0] = env.popDbl();
+    } else if (env.isAry()) {
+      fr = env.peekAry();
+      if (fr.vecs().length > 1) H2O.unimpl();
+      Vec vec = fr.anyVec();
+      if (vec.length() > 1<<8) H2O.unimpl();
+      if (out==null || out.length<vec.length()) out= new double[(int)vec.length()];
+      for (long i = 0; i < vec.length(); i++) out[(int)i] = vec.at(i);
+      env.pop();
+    } else {
+      H2O.unimpl();
+    }
+    assert sp == env._sp;
+    return out;
+  }
+
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append(") {\n");
     _body.toString(sb,d+1).append("\n");

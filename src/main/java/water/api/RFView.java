@@ -7,7 +7,7 @@ import hex.rf.ConfusionTask.CMJob;
 import java.util.Arrays;
 
 import water.*;
-import water.api.RequestArguments.H2OKey;
+import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 import com.google.gson.*;
@@ -27,7 +27,7 @@ public class RFView extends /* Progress */ Request {
   protected final H2OCategoryWeights _weights  = new H2OCategoryWeights(WEIGHTS, _modelKey, _dataKey, _classCol, 1);
   protected final Bool               _oobee    = new Bool(OOBEE,false,"Out of bag errors");
   protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
-  protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
+  protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, true, "Clear cache of model confusion matrices");
   protected final Bool               _iterativeCM        = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
   protected final Int                _refreshThresholdCM = new Int(JSON_REFRESH_THRESHOLD_CM, DEFAULT_CM_REFRESH_THRESHOLD);
   // Dummy parameters
@@ -105,7 +105,7 @@ public class RFView extends /* Progress */ Request {
     RFModel model = _modelKey.value();
     r.addProperty(  DATA_KEY, _dataKey.originalValue());
     r.addProperty( MODEL_KEY, _modelKey.originalValue());
-    r.addProperty(     CLASS, _classCol.value());
+    r.addProperty(     CLASS, _classCol.specified() ? _classCol.value() : findResponseIdx(model));
     r.addProperty( NUM_TREES, model._totalTrees);
     r.addProperty(      MTRY, model._splitFeatures);
     r.addProperty(MTRY_NODES, Arrays.toString(model._nodesSplitFeatures));
@@ -128,9 +128,17 @@ public class RFView extends /* Progress */ Request {
     double[] weights = _weights.value();
     // Finish refresh after rf model is done and confusion matrix for all trees is computed
     boolean done = false;
+    int classCol = _classCol.specified() ? _classCol.value() : findResponseIdx(model);
 
     tasks    = model._totalTrees;
     finished = model.size();
+
+    // Handle cancelled/aborted jobs
+    if (_job.value()!=null) {
+      Job jjob = Job.findJob(_job.value());
+      if (jjob!=null && jjob.isCancelled())
+        return Response.error(jjob.exception == null ? "Job was cancelled by user!" : jjob.exception);
+    }
 
     JsonObject response = defaultJsonResponse();
     // CM return and possible computation is requested
@@ -140,7 +148,7 @@ public class RFView extends /* Progress */ Request {
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
       // Get the computing the matrix - if no job is computing, then start a new job
-      CMJob cmJob       = ConfusionTask.make(model, modelSize, _dataKey.value()._key, _classCol.value(), weights, _oobee.value());
+      CMJob cmJob       = ConfusionTask.make(model, modelSize, _dataKey.value()._key, classCol, weights, _oobee.value());
       // Here the the job is running - it saved a CM which can be already finished or in invalid state.
       CMFinal confusion = UKV.get(cmJob.dest());
       // if the matrix is valid, report it in the JSON
@@ -193,7 +201,7 @@ public class RFView extends /* Progress */ Request {
     Response r;
     if (done) {
       r = jobDone(response);
-      r.addHeader("<div class='alert'>" + /*RFScore.link(MODEL_KEY, model._selfKey, "Use this model for scoring.") */ GeneratePredictionsPage.link(model._selfKey, "Predict!")+ " </div>");
+      r.addHeader("<div class='alert'>" + /*RFScore.link(MODEL_KEY, model._key, "Use this model for scoring.") */ GeneratePredictionsPage.link(model._key, "Predict!")+ " </div>");
     } else { r = Response.poll(response, finished, tasks);  }
     r.setBuilder(JSON_CM, new ConfusionMatrixBuilder());
     r.setBuilder(TREES, new TreeListBuilder());
@@ -230,7 +238,7 @@ public class RFView extends /* Progress */ Request {
         stats(sb, t.get(TREE_LEAVES)).append(".<br>");
         for( int i = 0; i < n; ++i ) {
           sb.append(RFTreeView.link(_modelKey.value(), i,
-              _dataKey.value(), _classCol.value(),
+              _dataKey.value(),
               Integer.toString(i+1))).append(" ");
         }
       } else {
@@ -302,5 +310,13 @@ public class RFView extends /* Progress */ Request {
       }
       return sb.toString();
     }
+  }
+
+  static final int findResponseIdx(RFModel model) {
+    String nresponse = model.responseName();
+    ValueArray ary = UKV.get(model._dataKey);
+    int idx = 0;
+    for (ValueArray.Column cols : ary._cols) if (nresponse.equals(cols._name)) return idx; else idx++;
+    return -1;
   }
 }

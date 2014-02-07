@@ -4,15 +4,17 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
 import hex.DLSM.ADMMSolver;
-import hex.NewRowVecTask.JobCancelledException;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import water.util.Log;
 
 public class GLMGrid extends Job {
   Key                  _datakey; // Data to work on
@@ -22,10 +24,12 @@ public class GLMGrid extends Job {
   double[]             _ts;     // Thresholds
   double[]             _alphas; // Grid search values
   int                  _xfold;
-  boolean              _parallel;
+  boolean              _standardize;
+  boolean              _parallelFlag;
+  int                  _parallelism;
   GLMParams            _glmp;
 
-  public GLMGrid(Key dest, ValueArray va, GLMParams glmp, int[] xs, double[] ls, double[] as, double[] thresholds, int xfold, boolean parallel) {
+  public GLMGrid(Key dest, ValueArray va, GLMParams glmp, int[] xs, double[] ls, double[] as, double[] thresholds, int xfold, boolean pflag, int par, boolean standardize) {
     destination_key = dest;
     _ary = va; // VA is large, and already in a Key so make it transient
     _datakey = va._key; // ... and use the data key instead when reloading
@@ -36,7 +40,9 @@ public class GLMGrid extends Job {
     _ts = thresholds;
     _alphas = as;
     _xfold = xfold;
-    _parallel = parallel;
+    _standardize = standardize;
+    _parallelFlag = pflag;
+    _parallelism = par;
     _glmp.checkResponseCol(_ary._cols[xs[xs.length-1]], new ArrayList<String>()); // ignore warnings here, they will be shown for each mdoel anyways
   }
 
@@ -51,12 +57,12 @@ public class GLMGrid extends Job {
       boolean done = false;
       @Override
       public GLMModels atomic(GLMModels old) {
-        old._ms[idx] = model._selfKey;
+        old._ms[idx] = model._key;
         done = ++old._count == old._ms.length;
         old._runTime = Math.max(runTime,old._runTime);
         return old;
       }
-      @Override public void onSuccess() {
+      @Override public void onSuccess(Value old) {
         // we're done, notify
         if(done) remove();
       };
@@ -67,11 +73,13 @@ public class GLMGrid extends Job {
     final int _aidx;
     GLMGrid   _job;
     boolean   _parallel;
+    boolean   _standardize;
     Key       _aryKey;
-    GridTask(GLMGrid job, int aidx, boolean parallel) {
+    GridTask(GLMGrid job, int aidx, boolean parallel, boolean standardize) {
       _aidx = aidx;
       _job = job;
       _parallel = parallel;
+      _standardize = standardize;
       _aryKey = _job._ary._key;
       assert _aryKey != null;
     }
@@ -82,17 +90,14 @@ public class GLMGrid extends Job {
       Futures fs = new Futures();
       ValueArray ary = DKV.get(_aryKey).get();
       try{
-        for( int l1 = 1; l1 <= _job._lambdas.length && !_job.cancelled(); l1++ ) {
-          GLMModel m = DGLM.buildModel(_job,GLMModel.makeKey(false),DGLM.getData(ary, _job._xs, null, true), new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
+        for( int l1 = 1; l1 <= _job._lambdas.length && Job.isRunning(_job.self()); l1++ ) {
+          Key mkey = GLMModel.makeKey(false);
+          GLMModel m = DGLM.buildModel(_job,mkey,ary, _job._xs, _standardize, new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
           beta = m._normBeta.clone();
           _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job.start_time,fs);
         }
         fs.blockForPending();
       }catch(JobCancelledException e){/* do not need to do anything here but stop the execution*/}
-    }
-
-    @Override public void dinvoke(H2ONode client){
-      compute2();
       // don't send input data back!
       _job = null;
       _aryKey = null;
@@ -104,26 +109,40 @@ public class GLMGrid extends Job {
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
     H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
-        if(_parallel) {
+        if(_parallelFlag) {
           final int cloudsize = H2O.CLOUD._memary.length;
           int myId = H2O.SELF.index();
-          for( int a = 0; a < _alphas.length; a++ ) {
-            GridTask t = new GridTask(GLMGrid.this, a, _parallel);
-            int nodeId = (myId+a)%cloudsize;
-            if(nodeId == myId)
-              H2O.submitTask(t);
+          int submitted = 0, done = 0;
+          Future[] active = new GridTask[_parallelism];
+          for (int job = 0; job < _alphas.length; job++) {
+            GridTask t = new GridTask(GLMGrid.this, job, true, _standardize);
+            if (submitted - done >= _parallelism) {
+              try {
+                active[done++%_parallelism].get();
+              } catch( InterruptedException e ) {
+                throw  Log.errRTExcept(e);
+              } catch( ExecutionException e ) {
+                throw  Log.errRTExcept(e);
+              }
+            }
+            int nodeId = (myId+job)%cloudsize;
+            active[submitted++%_parallelism] = t;
+            if (nodeId==myId)
+              t.fork();
             else
-              RPC.call(H2O.CLOUD._memary[nodeId],t);
+              new RPC(H2O.CLOUD._memary[nodeId],t).addCompleter(t).call();
           }
         } else {
           for( int a = 0; a < _alphas.length; a++ ) {
-            GridTask t = new GridTask(GLMGrid.this, a, _parallel);
+            GridTask t = new GridTask(GLMGrid.this, a, false, _standardize);
             t.compute2();
           }
           remove();
         }
+        tryComplete();
       }
     };
+
     super.start(fjtask);
     H2O.submitTask(fjtask);
   }

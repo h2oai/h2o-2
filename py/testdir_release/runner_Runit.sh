@@ -19,7 +19,7 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 rm -f test.*xml
 
 # This gets the h2o.jar
-source ./runner_setup.sh
+source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]
@@ -124,7 +124,9 @@ mySetup() {
     echo "Running this cmd:"
     echo $cmd
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    ./sh2junit.py -name $1 -timeout 30 -- $cmd
+    basen=`basename "$1"`
+    echo "basen: $basen"
+    ./sh2junit.py -name $basen -timeout 30 -- $cmd
 }
 
 myR() {
@@ -133,7 +135,7 @@ myR() {
     # CLOUD_PORT=
     # get_s3_jar.sh now downloads it. We need to tell anqi's wrapper where to find it.
     # with an environment variable
-    if [ -z "$2" ] 
+    if [[ -z $2 ]];
     then
         timeout=30 # default to 30
     else
@@ -149,7 +151,7 @@ myR() {
     # this is where we downloaded to. 
     # notice no version number
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
-    export H2OWrapperDir=../../h2o-downloaded/R
+    export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
     echo "H2OWrapperDir should be $H2OWrapperDir"
     ls $H2OWrapperDir/h2o*.tar.gz
 
@@ -163,7 +165,9 @@ myR() {
     # don't fail on errors, since we want to check the logs in case that has more info!
     set +e
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    ./sh2junit.py -name $1 -timeout $timeout -- $cmd || true
+    basen=`basename "$1"`
+    echo "basen: $basen"
+    ./sh2junit.py -name $basen -timeout $timeout -- $cmd || true
 
     # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
     # think of h2o.check_sandbox_for_errors()
@@ -183,24 +187,42 @@ echo "Okay to run h2oWrapper.R every time for now"
 mySetup libPaths
 
 # can be slow if it had to reinstall all packages?
-export H2OWrapperDir=../../h2o-downloaded/R
+export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
 echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
-myR runit_PCA 35
-myR runit_GLM 35
-myR runit_kmeans 60
-myR runit_tail_numeric 60
-myR runit_summary_numeric 60
-myR runit_GBM_ecology 1200
-myR runit_RF 120
-myR runit_libR_prostate 120
-myR runit_sliceColHeadTail_iris 60
-myR runit_sliceColSummary_iris 60
-myR runit_sliceColTypes_iris 60
-# this guy was failing? not sure why
-myR runit_histograms 300
+
+#autoGen RUnits
+#!/bin/bash
+
+myR ../../R/tests/Utils/runnerSetupPackage 300
+
+# myR ../../R/tests/testdir_munging/histograms/runit_histograms 1200
+
+
+# sleep 3600
+
+# have to ignore the Rsandbox dirs that got created in the tests directory
+for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
+do
+    if [ -d $test ];
+    then
+        continue
+    fi  
+    testName=$(basename $test)
+    testDir=$(dirname $test)
+    testDirParent=$(dirname $testDir)
+    if [ $(basename $testDirParent) != "tests" ];
+    then
+        testDirName=$(basename $testDirParent)/$(basename $testDir)
+    else
+        testDirName=$(basename $testDir)
+    fi  
+    myR $testDirName/$testName 300
+    sleep 180
+done
+
 # airlines is failing summary. put it last
-myR runit_libR_airlines 120
+#myR $single/runit_libR_airlines 120
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!

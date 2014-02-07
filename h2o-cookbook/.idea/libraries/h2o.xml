@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="h2o">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../target/h2o.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../target/h2o-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

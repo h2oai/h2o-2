@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common, h2o_jobs as h2j
 
 DO_RANDOM_SAMPLE = True
 DO_RF = False
@@ -10,6 +10,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c6_hdfs(self):
+        h2o.beta_features = False
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -38,6 +39,16 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "hhp_9_14_12.data",
             "leads.csv",
             "prostate_long_1G.csv",
+        ]
+        csvFilenameAll = [
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
         ]
 
         # find_cloud.py won't set these correctly. Let's just set them here
@@ -70,46 +81,17 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             timeoutSecs = 1000
             # do an import first, because we want to get the size of the file
-            (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs)
-            succeeded = importResult['succeeded']
-            if len(succeeded) < 1:
-                raise Exception("Should have imported at least 1 key for %s" % csvPathname)
-
-            # just do a search
-            foundIt = None
-            for f in succeeded:
-                if csvPathname in f['key']:
-                    foundIt = f
-                    break
-
-            if foundIt:
-                value_size_bytes = f['value_size_bytes']
-            else:
-                raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
-
-            # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
-
-            #  "succeeded": [
-            #    {
-            #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "key": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "value_size_bytes": 1115287100
-            #    },
-
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs,
                 doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start
-            fileMBS = (totalBytes/1e6)/elapsed
-            l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f}MB {:6.2f} MB/sec for {:.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, (totalBytes+0.0)/1e6, fileMBS, elapsed)
+            l = '{!s} jvms, {!s}GB heap, {:s} {:s} for {:.2f} secs'.format(
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, elapsed)
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 
@@ -132,8 +114,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print l
                 h2o.cloudPerfH2O.message(l)
 
-            print "Deleting all keys, to make sure our parse times don't include spills"
-            h2i.delete_keys_at_all_nodes()
+            if 1==0:
+                print "Deleting all keys, to make sure our parse times don't include spills"
+                h2i.delete_keys_at_all_nodes()
+
             trial += 1
 
 if __name__ == '__main__':

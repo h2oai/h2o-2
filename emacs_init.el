@@ -2,20 +2,26 @@
 ;;(setq debug-on-error t)
 
 ;; TAGS!!!
-;;rm TAGS; ctags -e --recurse=yes --extra=+q --fields=+fksaiS
+;;rm TAGS; ctags -e --recurse=yes --extra=+q --fields=+fksaiS src
+(setq confirm-kill-emacs 'yes-or-no-p)
+
+;; JavaDoc help on F1
+(require 'javadoc-help)
+(global-set-key [(f1)]          'javadoc-lookup)  ; F1 to lookup
+(global-set-key [(shift f1)]    'javadoc-help)    ; Shift-F1 to bring up menu
 
 ;; JDEE.  For me: mostly the debugger
-(add-to-list 'load-path (expand-file-name "~/Desktop/Dropbox/Programs/Emacs/jdee-2.4.0.1/lisp"))
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/jdee-2.4.0.1/lisp"))
 
 ;; CEDET 
-(add-to-list 'load-path "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/")
-(add-to-list 'load-path "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/common")
-(add-to-list 'load-path "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/eieio")
-(add-to-list 'load-path "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/ede")
-(add-to-list 'load-path "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/speedbar")
-(add-to-list 'load-path "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/semantic")
-(add-to-list 'load-path "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/srecode")
-(load-file "~/Desktop/Dropbox/Programs/Emacs/cedet-1.0.1/common/cedet.el")
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/"))
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/common"))
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/eieio"))
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/ede"))
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/speedbar"))
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/semantic"))
+(add-to-list 'load-path (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/srecode"))
+(load-file (substitute-in-file-name "$DESK/Dropbox/Programs/Emacs/cedet-1.0.1/common/cedet.el"))
 
 ;;(global-ede-mode t) ;; Turn on EDE
 
@@ -79,7 +85,7 @@
  '(jde-javadoc-gen-destination-directory "./doc" t)
  '(jde-jdk-doc-url "c:/Program Files (x86)/Java/jdk1.7.0_03/jdk-6-doc/docs")
  '(jde-jdk-registry (quote (("1.6" . "$JAVA_HOME"))))
- '(jde-run-working-directory "~/Desktop/Dropbox/lock_state")
+ '(jde-run-working-directory "$DESK/Dropbox/lock_state")
  '(jdibug-connect-hosts (quote ("localhost:4444")))
  '(semanticdb-project-roots (quote ("~/Dropbox/lock_state")))
  '(show-paren-mode t)

@@ -1,0 +1,28 @@
+{
+    "type": "object",
+    "properties":{
+        "computation_time": { "type": "string" },
+        "destination_key": { "type": "string" },
+        "models": { "type": "array", "items":
+            { "type": "object", "properties":{
+                    "alpha": { "type": "number" },
+                    "area_under_curve": { "type": "number" },
+                    "best_threshold": { "type": "number" },
+                    "error_0": { "type": "number" },
+                    "error_1": { "type": "number" },
+                    "key": { "type": "string" },
+                    "lambda": { "type": "number" },
+                    "warnings": { "type": "array" }
+                }
+            }
+        },
+        "response": { "type": "object", "properties":{
+                "h2o": { "type": "string" },
+                "node": { "type": "string" },
+                "status": { "type": "string" },
+                "time": { "type": "number" }
+            }
+        }
+    }
+}
+

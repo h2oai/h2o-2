@@ -32,33 +32,24 @@ public class ImportFiles extends Request {
   @API(help="File names that failed the integrity check, can be empty.")
   String[] fails;
 
+  @API(help="Prior Keys that matched a prefix of the imported path, and were removed prior to (re)importing")
+  String[] dels;
+
+
   @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
-  FileIntegrityChecker load(String path) {
-    return FileIntegrityChecker.check(new File(path),false);
-  }
-
   @Override protected Response serve() {
-    FileIntegrityChecker c = load(path.value());
-    ArrayList<String> afails = new ArrayList();
     ArrayList<String> afiles = new ArrayList();
     ArrayList<String> akeys  = new ArrayList();
-    Futures fs = new Futures();
-    for( int i = 0; i < c.size(); ++i ) {
-      Key k = c.importFile(i, fs);
-      if( k == null ) {
-        afails.add(c.getFileName(i));
-      } else {
-        afiles.add(c.getFileName(i));
-        akeys .add(k.toString());
-      }
-    }
-    fs.blockForPending();
-    fails = afails.toArray(new String[0]);
+    ArrayList<String> afails = new ArrayList();
+    ArrayList<String> adels  = new ArrayList();
+    FileIntegrityChecker.check(new File(path.value()),false).syncDirectory(afiles,akeys,afails,adels);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
-    return new Response(Response.Status.done, this, -1, -1, null);
+    fails = afails.toArray(new String[0]);
+    dels  = adels .toArray(new String[0]);
+    return Response.done(this);
   }
 
   protected String parseLink(String k, String txt) { return Parse.link(k, txt); }
@@ -82,7 +73,8 @@ public class ImportFiles extends Request {
 
     if( fails.length > 0 )
       DocGen.HTML.array(DocGen.HTML.title(sb,"fails"),fails);
-
+    if( dels.length > 0 )
+      DocGen.HTML.array(DocGen.HTML.title(sb,"Keys deleted before importing"),dels);
     return true;
   }
 }

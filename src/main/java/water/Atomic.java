@@ -1,6 +1,7 @@
 package water;
 
 import water.DTask;
+import water.H2O.H2OCountedCompleter;
 
 /**
  * Atomic update of a Key
@@ -12,19 +13,21 @@ import water.DTask;
 public abstract class Atomic<T extends Atomic> extends DTask {
   public Key _key;              // Transaction key
 
+  public Atomic(){}
+  public Atomic(H2OCountedCompleter completer){super(completer);}
   // User's function to be run atomically.  The Key's Value is fetched from the
   // home STORE and passed in.  The returned Value is atomically installed as
   // the new Value (and the function is retried until it runs atomically).  The
   // original Value is supposed to be read-only.  If the original Key misses
   // (no Value), one is created with 0 length and wrong Value._type to allow
-  // the Key to passed in (as part of the Value) 
+  // the Key to passed in (as part of the Value)
   abstract public Value atomic( Value val );
 
   /** Executed on the transaction key's <em>home</em> node after any successful
    *  atomic update.  Override this if you need to perform some action after
    *  the update succeeds (eg cleanup).
    */
-  public void onSuccess(){}
+  public void onSuccess( Value old ){}
 
   /** Block until it completes, even if run remotely */
   public final T invoke( Key key ) {
@@ -57,7 +60,7 @@ public abstract class Atomic<T extends Atomic> extends DTask {
       // Attempt atomic update
       Value res = DKV.DputIfMatch(_key,val2,val1,fs);
       if( res == val1 ) {       // Success?
-        onSuccess();            // Call user's post-XTN function
+        onSuccess(val1);        // Call user's post-XTN function
         fs.blockForPending();   // Block for any pending invalidates on the atomic update
         break;
       }

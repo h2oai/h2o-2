@@ -92,7 +92,7 @@ public class GLMProgressPage extends Request {
     private void modelHTML( GLMModel m, JsonObject json, StringBuilder sb ) {
       switch(m.status()){
       case Done:
-        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._selfKey,m._vals[0].bestThreshold(), "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
+        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._key,m._vals[0].bestThreshold(), "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
         break;
       case ComputingModel:
       case ComputingValidation:
@@ -122,7 +122,7 @@ public class GLMProgressPage extends Request {
       if( m._warnings != null && m._warnings.length > 0) {
         StringBuilder wsb = new StringBuilder();
         for( String s : m._warnings )
-          wsb.append(s).append("<br>");
+          wsb.append("<br>").append("<b>Warning:</b>" + s);
         R.replace("warnings",wsb);
         R.replace("succ","alert-warning");
         if(!m.converged())
@@ -233,11 +233,9 @@ public class GLMProgressPage extends Request {
       int i=0;
       for( Entry<String,JsonElement> e : ee )
         cs[i++] = new Coef(e);
-      if( m._glmParams._family._family == Family.binomial )
-        Arrays.sort(cs,new Comparator<Coef>() {
+      Arrays.sort(cs,new Comparator<Coef>() {
             @Override public int compare(Coef c0, Coef c1) { return (c0._d<c1._d) ? 1 : (c0._d==c1._d?0:-1);}
           });
-
       StringBuilder sb = new StringBuilder();
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr>");
@@ -260,9 +258,8 @@ public class GLMProgressPage extends Request {
 
 
     static void validationHTML(GLMModel m, GLMValidation val, StringBuilder sb){
-
-      RString valHeader = new RString("<div class='alert'>Validation of model <a href='/Inspect.html?"+KEY+"=%modelKey'>%modelKey</a> on dataset <a href='/Inspect.html?"+KEY+"=%dataKey'>%dataKey</a></div>");
-      RString xvalHeader = new RString("<div class='alert'>%valName of model <a href='/Inspect.html?"+KEY+"=%modelKey'>%modelKey</a></div>");
+      RString valHeader = new RString("<div class='alert'>Validation on dataset <a href='/Inspect.html?"+KEY+"=%dataKey'>%dataKey</a></div>");
+      RString xvalHeader = new RString("<div class='alert'>%valName</div>");
 
       RString R = new RString("<table class='table table-striped table-bordered table-condensed'>"
           + "<tr><th>Degrees of freedom:</th><td>%DegreesOfFreedom total (i.e. Null);  %ResidualDegreesOfFreedom Residual</td></tr>"
@@ -277,10 +274,8 @@ public class GLMProgressPage extends Request {
           + "<tr><th>Best Threshold</th><td>%threshold</td></tr>");
       if(val.fold() > 1){
         xvalHeader.replace("valName", val.fold() + " fold cross validation");
-        xvalHeader.replace("modelKey", val.modelKey());
         sb.append(xvalHeader.toString());
       } else {
-        valHeader.replace("modelKey", val.modelKey());
         valHeader.replace("dataKey",val.dataKey());
         sb.append(valHeader.toString());
       }
@@ -299,6 +294,7 @@ public class GLMProgressPage extends Request {
         R.replace("CM",R2);
       }
       sb.append(R);
+      ROCplot(val, sb);
       confusionHTML(val.bestCM(),sb);
       if(val.fold() > 1){
         int nclasses = 2;
@@ -314,7 +310,7 @@ public class GLMProgressPage extends Request {
             String mname = "Model " + i++;
             sb.append("<tr>");
             try {
-              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._selfKey.toString(),"UTF-8")+"'>" + mname + "</a></td>");
+              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._key.toString(),"UTF-8")+"'>" + mname + "</a></td>");
             } catch( UnsupportedEncodingException e ) {
               throw  Log.errRTExcept(e);
             }
@@ -333,7 +329,7 @@ public class GLMProgressPage extends Request {
             String mname = "Model " + i++;
             sb.append("<tr>");
             try {
-              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._selfKey.toString(),"UTF-8")+"'>" + mname + "</a></td>");
+              sb.append("<td>" + "<a href='Inspect.html?"+KEY+"="+URLEncoder.encode(xm._key.toString(),"UTF-8")+"'>" + mname + "</a></td>");
             } catch( UnsupportedEncodingException e ) {
               throw  Log.errRTExcept(e);
             }
@@ -375,6 +371,171 @@ public class GLMProgressPage extends Request {
       cmRow(sb,"Err ",err2,err3,cm.err());
       sb.append("</table>");
     }
+
+
+      public static void ROCplot(GLMValidation xval, StringBuilder sb ) {
+          sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
+          sb.append("<div id=\"ROC\">");
+          sb.append("<style type=\"text/css\">");
+          sb.append(".axis path," +
+                  ".axis line {\n" +
+                  "fill: none;\n" +
+                  "stroke: black;\n" +
+                  "shape-rendering: crispEdges;\n" +
+                  "}\n" +
+
+                  ".axis text {\n" +
+                  "font-family: sans-serif;\n" +
+                  "font-size: 11px;\n" +
+                  "}\n");
+
+          sb.append("</style>");
+          sb.append("<div id=\"rocCurve\" style=\"display:inline;\">");
+          sb.append("<script type=\"text/javascript\">");
+
+          sb.append("//Width and height\n");
+          sb.append("var w = 500;\n"+
+                  "var h = 300;\n"+
+                  "var padding = 40;\n"
+          );
+          sb.append("var dataset = [");
+
+          for(int c = 0; c < xval._cm.length; c++) {
+              if (c == 0) {
+                  sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+              }
+              sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+          }
+          for(int c = 0; c < 2*xval._cm.length; c++) {
+              sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
+          }
+          sb.append("];\n");
+
+          sb.append(
+                  "//Create scale functions\n"+
+                          "var xScale = d3.scale.linear()\n"+
+                          ".domain([0, d3.max(dataset, function(d) { return d[0]; })])\n"+
+                          ".range([padding, w - padding * 2]);\n"+
+
+                          "var yScale = d3.scale.linear()"+
+                          ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
+                          ".range([h - padding, padding]);\n"+
+
+                          "var rScale = d3.scale.linear()"+
+                          ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
+                          ".range([2, 5]);\n"+
+
+                          "//Define X axis\n"+
+                          "var xAxis = d3.svg.axis()\n"+
+                          ".scale(xScale)\n"+
+                          ".orient(\"bottom\")\n"+
+                          ".ticks(5);\n"+
+
+                          "//Define Y axis\n"+
+                          "var yAxis = d3.svg.axis()\n"+
+                          ".scale(yScale)\n"+
+                          ".orient(\"left\")\n"+
+                          ".ticks(5);\n"+
+
+                          "//Create SVG element\n"+
+                          "var svg = d3.select(\"#rocCurve\")\n"+
+                          ".append(\"svg\")\n"+
+                          ".attr(\"width\", w)\n"+
+                          ".attr(\"height\", h);\n"+
+
+                          "//Create circles\n"+
+                          "svg.selectAll(\"circle\")\n"+
+                          ".data(dataset)\n"+
+                          ".enter()\n"+
+                          ".append(\"circle\")\n"+
+                          ".attr(\"cx\", function(d) {\n"+
+                          "return xScale(d[0]);\n"+
+                          "})\n"+
+                          ".attr(\"cy\", function(d) {\n"+
+                          "return yScale(d[1]);\n"+
+                          "})\n"+
+                          ".attr(\"fill\", function(d) {\n"+
+                          "  if (d[0] == d[1]) {\n"+
+                          "    return \"red\"\n"+
+                          "  } else {\n"+
+                          "  return \"blue\"\n"+
+                          "  }\n"+
+                          "})\n"+
+                          ".attr(\"r\", function(d) {\n"+
+                          "  if (d[0] == d[1]) {\n"+
+                          "    return 1\n"+
+                          "  } else {\n"+
+                          "  return 2\n"+
+                          "  }\n"+
+                          "})\n" +
+                          ".on(\"mouseover\", function(d,i){\n" +
+                          "   if(i <= 100) {" +
+                          "     document.getElementById(\"select\").selectedIndex = 100 - i\n" +
+                          "     show_cm(i)\n" +
+                          "   }\n" +
+                          "});\n"+
+
+                          "/*"+
+                          "//Create labels\n"+
+                          "svg.selectAll(\"text\")"+
+                          ".data(dataset)"+
+                          ".enter()"+
+                          ".append(\"text\")"+
+                          ".text(function(d) {"+
+                          "return d[0] + \",\" + d[1];"+
+                          "})"+
+                          ".attr(\"x\", function(d) {"+
+                          "return xScale(d[0]);"+
+                          "})"+
+                          ".attr(\"y\", function(d) {"+
+                          "return yScale(d[1]);"+
+                          "})"+
+                          ".attr(\"font-family\", \"sans-serif\")"+
+                          ".attr(\"font-size\", \"11px\")"+
+                          ".attr(\"fill\", \"red\");"+
+                          "*/\n"+
+
+                          "//Create X axis\n"+
+                          "svg.append(\"g\")"+
+                          ".attr(\"class\", \"axis\")"+
+                          ".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
+                          ".call(xAxis);\n"+
+
+                          "//X axis label\n"+
+                          "d3.select('#rocCurve svg')"+
+                          ".append(\"text\")"+
+                          ".attr(\"x\",w/2)"+
+                          ".attr(\"y\",h - 5)"+
+                          ".attr(\"text-anchor\", \"middle\")"+
+                          ".text(\"False Positive Rate\");\n"+
+
+                          "//Create Y axis\n"+
+                          "svg.append(\"g\")"+
+                          ".attr(\"class\", \"axis\")"+
+                          ".attr(\"transform\", \"translate(\" + padding + \",0)\")"+
+                          ".call(yAxis);\n"+
+
+                          "//Y axis label\n"+
+                          "d3.select('#rocCurve svg')"+
+                          ".append(\"text\")"+
+                          ".attr(\"x\",150)"+
+                          ".attr(\"y\",-5)"+
+                          ".attr(\"transform\", \"rotate(90)\")"+
+                          //".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
+                          ".attr(\"text-anchor\", \"middle\")"+
+                          ".text(\"True Positive Rate\");\n"+
+
+                          "//Title\n"+
+                          "d3.select('#rocCurve svg')"+
+                          ".append(\"text\")"+
+                          ".attr(\"x\",w/2)"+
+                          ".attr(\"y\",padding - 20)"+
+                          ".attr(\"text-anchor\", \"middle\")"+
+                          ".text(\"ROC\");\n");
+
+          sb.append("</script>");
+          sb.append("</div>");
+      }
   }
 
 }

@@ -12,9 +12,12 @@ print "The path resolver in python tests will find it in the home dir of the use
 print "to run h2o..i.e from the config json which builds the cloud and passes that info to the test"
 print "via the cloned cloud mechanism (h2o-nodes.json)"
 
+
+DO_GLM = False
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c7_rel(self):
+        h2o.beta_features = False
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
@@ -31,7 +34,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=True)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
-        print csvFilename, 'parse time:', parseResult['response']['time']
         print "Parse result['destination_key']:", parseResult['destination_key']
 
         start = time.time()
@@ -57,20 +59,19 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             'lambda': 1.0E-5,
             'alpha': 0.5,
             'max_iter': 4,
-            'thresholds': 0.5,
             'n_folds': 1,
-            'weight': 100,
             'beta_epsilon': 1.0E-4,
             }
 
         timeoutSecs = 3600
-        start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
-        elapsed = time.time() - start
-        print "glm completed in", elapsed, "seconds.", \
-            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-        h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+        if DO_GLM:
+            start = time.time()
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+            elapsed = time.time() - start
+            print "glm completed in", elapsed, "seconds.", \
+                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
         # do summary of the parsed dataset last, since we know it fails on this dataset
         summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])

@@ -86,7 +86,6 @@ class Basic(unittest.TestCase):
                 'model_key': 'RF_model',
                 'bin_limit': 1024,
                 # 'seed': 784834182943470027,
-                'parallel': 1,
                 'use_non_local_data': 0,
                 'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
                 }

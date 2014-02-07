@@ -51,7 +51,7 @@ public abstract class DKV {
     // TEMPORARY DURING VALUEARRAY TO FLUIDVEC TRANSITION.
     // When ValueArray object writes occur to DKV, whack any possible associated
     // auto-converted Frame object.
-    if (! isConvertedFrameKeyString(key.toString())) {
+    if (! isConvertedFrameKeyString(key.toString()) && old != null && old.isArray()) {
       String frameKeyString = calcConvertedFrameKeyString(key.toString());
       Key k = Key.make(frameKeyString);
       remove(k);
@@ -108,8 +108,8 @@ public abstract class DKV {
       // Hit in local cache?
       if( val != null ) {
         if( len > val._max ) len = val._max; // See if we have enough data cached locally
-        assert len == 0 || val.rawMem() != null || val.rawPOJO() != null || val.isPersisted() : "key="+key+" len="+len+" val._max="+val._max+", nothing cached";
-        return val;
+        if( len == 0 || val.rawMem() != null || val.rawPOJO() != null || val.isPersisted() ) return val;
+        assert !key.home(); // Master must have *something*; we got nothing & need to fetch
       }
 
       // While in theory we could read from any replica, we always need to
@@ -153,5 +153,18 @@ public abstract class DKV {
   /** Return true if a string is a calculated Frame Key string; false otherwise. */
   static public boolean isConvertedFrameKeyString(String s) {
     return s.endsWith(".autoframe");
+  }
+
+  /** Return the calculated name of a ValueArray Key given a Frame Key. */
+  static public String calcConvertedVAKeyString(String valueArrayKeyString) {
+    return valueArrayKeyString + ".autoVA";
+  }
+  static public String unconvertVAKeyString(String s) {
+    return s.substring(0,s.length()-".autoVA".length());
+  }
+
+  /** Return true if a string is a calculated ValueArray Key string; false otherwise. */
+  static public boolean isConvertedVAKeyString(String s) {
+    return s.endsWith(".autoVA");
   }
 }

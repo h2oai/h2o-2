@@ -10,15 +10,18 @@ import java.net.URL;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.*;
 
-import org.apache.commons.lang.ArrayUtils;
 
+import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen.FieldDoc;
+import water.nbhm.UtilUnsafe;
+import water.parser.ParseDataset.Compression;
 import water.parser.ParseDataset;
 import water.parser.ValueString;
-import water.parser.ParseDataset.Compression;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -52,6 +55,30 @@ public class Utils {
     return result;
   }
 
+  /**
+   * Compare two numbers to see if they are within one ulp of the smaller decade.
+   * Order of the arguments does not matter.
+   *
+   * @param a First number
+   * @param b Second number
+   * @return true if a and b are essentially equal, false otherwise.
+   */
+  public static boolean equalsWithinOneSmallUlp(float a, float b) {
+    float ulp_a = Math.ulp(a);
+    float ulp_b = Math.ulp(b);
+    float small_ulp = Math.min(ulp_a, ulp_b);
+    float absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
+    return absdiff_a_b <= small_ulp;
+  }
+
+  public static boolean equalsWithinOneSmallUlp(double a, double b) {
+    double ulp_a = Math.ulp(a);
+    double ulp_b = Math.ulp(b);
+    double small_ulp = Math.min(ulp_a, ulp_b);
+    double absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
+    return absdiff_a_b <= small_ulp;
+  }
+
   public static double lnF(double what) {
     return (what < 1e-06) ? 0 : what * Math.log(what);
   }
@@ -83,6 +110,11 @@ public class Utils {
   public static int sum(int[] from) {
     int result = 0;
     for (int d: from) result += d;
+    return result;
+  }
+  public static float sum(float[] from) {
+    float result = 0;
+    for (float d: from) result += d;
     return result;
   }
 
@@ -321,6 +353,10 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
     return a;
   }
+  public static int[] or(int[] a, int[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
+    return a;
+  }
   public static byte[] add(byte[] a, byte[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
@@ -334,6 +370,7 @@ public class Utils {
     return a;
   }
   public static long[] add(long[] a, long[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
@@ -342,6 +379,7 @@ public class Utils {
     return a;
   }
   public static float[] add(float[] a, float[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
@@ -380,16 +418,38 @@ public class Utils {
     return res;
   }
 
+  public static double[] append(double[] a, double e) {
+    a = Arrays.copyOf(a,a.length+1);
+    a[a.length-1] = e;
+    return a;
+  }
+
+  public static long[][][] append(long[][][] a, long[][] e) {
+    a = Arrays.copyOf(a,a.length+1);
+    a[a.length-1] = e;
+    return a;
+  }
+
   public static <T> T[] append(T[] a, T... b) {
-    return (T[]) ArrayUtils.addAll(a, b);
+    if( a==null ) return b;
+    T[] tmp = Arrays.copyOf(a,a.length+b.length);
+    System.arraycopy(b,0,tmp,a.length,b.length);
+    return tmp;
   }
 
   public static <T> T[] remove(T[] a, int i) {
-    return (T[]) ArrayUtils.remove(a, i);
+    T[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
+  }
+  public static int[] remove(int[] a, int i) {
+    int[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
   }
 
   public static <T> T[] subarray(T[] a, int off, int len) {
-    return (T[]) ArrayUtils.subarray(a, off, off + len);
+    return Arrays.copyOfRange(a,off,off+len);
   }
 
   public static void clearFolder(String folder) {
@@ -425,9 +485,7 @@ public class Utils {
 
   public static ValueArray loadAndParseKey(Key okey, String path) {
     FileIntegrityChecker c = FileIntegrityChecker.check(new File(path),false);
-    Futures fs = new Futures();
-    Key k = c.importFile(0, fs);
-    fs.blockForPending();
+    Key k = c.syncDirectory(null,null,null,null);
     ParseDataset.forkParseDataset(okey, new Key[] { k }, null).get();
     UKV.remove(k);
     ValueArray res = DKV.get(okey).get();
@@ -507,10 +565,6 @@ public class Utils {
    * @param <T>
    */
   public static class IcedArrayList<T extends Iced> extends ArrayList<T> implements Freezable {
-    private static final int I;
-    static {
-      I = TypeMap.onLoad(IcedArrayList.class.getName());
-    }
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
       for(T t:this)
@@ -527,8 +581,9 @@ public class Utils {
     @Override public <T2 extends Freezable> T2 newInstance() {
       return (T2)new IcedArrayList<T>();
     }
+    private static int _frozen$type;
     @Override public int frozenType() {
-      return I;
+      return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedArrayList.class.getName())) : _frozen$type;
     }
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       return bb;
@@ -541,6 +596,20 @@ public class Utils {
   public static class IcedInt extends Iced {
     public final int _val;
     public IcedInt(int v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedInt) ) return false;
+      return ((IcedInt)o)._val == _val;
+    }
+    @Override public int hashCode() { return _val; }
+  }
+  public static class IcedLong extends Iced {
+    public final long _val;
+    public IcedLong(long v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedLong) ) return false;
+      return ((IcedLong)o)._val == _val;
+    }
+    @Override public int hashCode() { return (int)_val; }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
@@ -548,10 +617,6 @@ public class Utils {
    * @param <T>
    */
   public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
-    private static final int I;
-    static {
-      I = TypeMap.onLoad(IcedHashMap.class.getName());
-    }
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
       for(Map.Entry<K, V> e:entrySet())bb.put(e.getKey()).put(e.getValue());
@@ -567,8 +632,9 @@ public class Utils {
     @Override public <T2 extends Freezable> T2 newInstance() {
       return (T2)new IcedHashMap<K,V>();
     }
+    private static int _frozen$type;
     @Override public int frozenType() {
-      return I;
+      return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedHashMap.class.getName())) : _frozen$type;
     }
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       return bb;
@@ -711,12 +777,16 @@ public class Utils {
   }
 
   /** Returns a mapping of given domain to values (0, ... max(dom)).
-   * Unused domain items has mapping to -1. */
+   * Unused domain items has mapping to -1.
+   * @precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
   public static int[] mapping(int[] dom) {
+    if (dom.length == 0) return new int[] {};
+    assert dom[0] <= dom[dom.length-1] : "Domain is not sorted";
+    int min = dom[0];
     int max = dom[dom.length-1];
-    int[] result = new int[max+1];
+    int[] result = new int[(max-min)+1];
     for (int i=0; i<result.length; i++) result[i] = -1; // not used fields
-    for (int i=0; i<dom.length; i++) result[dom[i]] = i;
+    for (int i=0; i<dom.length; i++) result[dom[i]-min] = i;
     return result;
   }
   public static String[] toStringMap(int[] dom) {
@@ -792,5 +862,173 @@ public class Utils {
 
   public static String className(String path) {
     return path.replace('\\', '/').replace('/', '.').substring(0, path.length() - 6);
+  }
+
+  public static double avg(double[] nums) {
+    double sum = 0;
+    for(double n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static double avg(long[] nums) {
+    long sum = 0;
+    for(long n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static float[] div(float[] nums, int n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  public static float[] div(float[] nums, float n) {
+    assert !Float.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  /**
+   * Replace given characters in a given string builder.
+   * The number of characters to replace has to match to number of
+   * characters serving as a replacement.
+   *
+   * @param sb string builder containing a string to be modified
+   * @param from characters to replaced
+   * @param to replacement characters
+   * @return original string builder with replaced characters.
+   */
+  public static StringBuilder replace(StringBuilder sb, CharSequence from, CharSequence to) {
+    assert from.length() == to.length();
+    for (int i=0; i<sb.length(); i++)
+      for (int j=0; j<from.length(); j++)
+        if (sb.charAt(i)==from.charAt(j)) sb.setCharAt(i, to.charAt(j));
+    return sb;
+  }
+
+  /**
+   * Returns true if given string contains at least on of character of
+   * given sequence.
+   * @param s string
+   * @param cs a sequence of character
+   * @return true if s contains at least one of character from given sequence, else false
+   */
+  public static boolean contains(String s, CharSequence cs) {
+    for (int i=0; i<s.length(); i++)
+      for (int j=0; j<cs.length(); j++)
+        if (s.charAt(i) == cs.charAt(j)) return true;
+    return false;
+  }
+
+
+  // Atomically-updated float array
+  public static class AtomicFloatArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Fbase  = _unsafe.arrayBaseOffset(float[].class);
+    private static final int _Fscale = _unsafe.arrayIndexScale(float[].class);
+    private static long rawIndex(final float[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Fbase + idx * _Fscale;
+    }
+    static public void setMin( float fs[], int i, float min ) {
+      float old = fs[i];
+      while( min < old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(min) ) )
+        old = fs[i];
+    }
+    static public void setMax( float fs[], int i, float max ) {
+      float old = fs[i];
+      while( max > old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(max) ) )
+        old = fs[i];
+    }
+    static public String toString( float fs[] ) {
+      SB sb = new SB();
+      sb.p('[');
+      for( float f : fs )
+        sb.p(f==Float.MAX_VALUE ? "max": (f==-Float.MAX_VALUE ? "min": Float.toString(f))).p(',');
+      return sb.p(']').toString();
+    }
+  }
+
+  // Atomically-updated double array
+  public static class AtomicDoubleArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Dbase  = _unsafe.arrayBaseOffset(double[].class);
+    private static final int _Dscale = _unsafe.arrayIndexScale(double[].class);
+    private static long rawIndex(final double[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Dbase + idx * _Dscale;
+    }
+    static public void add( double ds[], int i, double y ) {
+      long adr = rawIndex(ds,i);
+      double old = ds[i];
+      while( !_unsafe.compareAndSwapLong(ds,adr, Double.doubleToRawLongBits(old), Double.doubleToRawLongBits(old+y) ) )
+        old = ds[i];
+    }
+  }
+
+  // Atomically-updated long array.  Instead of using the similar JDK pieces,
+  // allows the bare array to be exposed for fast readers.
+  public static class AtomicLongArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Lbase  = _unsafe.arrayBaseOffset(long[].class);
+    private static final int _Lscale = _unsafe.arrayIndexScale(long[].class);
+    private static long rawIndex(final long[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Lbase + idx * _Lscale;
+    }
+    static public void incr( long ls[], int i ) {
+      long adr = rawIndex(ls,i);
+      long old = ls[i];
+      while( !_unsafe.compareAndSwapLong(ls,adr, old, old+1) )
+        old = ls[i];
+    }
+  }
+  // Atomically-updated int array.  Instead of using the similar JDK pieces,
+  // allows the bare array to be exposed for fast readers.
+  public static class AtomicIntArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Ibase  = _unsafe.arrayBaseOffset(int[].class);
+    private static final int _Iscale = _unsafe.arrayIndexScale(int[].class);
+    private static long rawIndex(final int[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Ibase + idx * _Iscale;
+    }
+    static public void incr( int is[], int i ) { add(is,i,1); }
+    static public void add( int is[], int i, int x ) {
+      long adr = rawIndex(is,i);
+      int old = is[i];
+      while( !_unsafe.compareAndSwapInt(is,adr, old, old+x) )
+        old = is[i];
+    }
+  }
+
+  public static boolean contains(String[] names, String name) {
+    for (String n : names) if (n.equals(name)) return true;
+    return false;
+  }
+
+  /** Java-string illegal characters which need to be escaped */
+  public static final Pattern[] ILLEGAL_CHARACTERS = new Pattern[] { Pattern.compile("\\",Pattern.LITERAL), Pattern.compile("\"",Pattern.LITERAL) };
+  public static final String[]  REPLACEMENTS       = new String [] { "\\\\\\\\", "\\\\\"" };
+
+  /** Escape all " and \ characters to provide a proper Java-like string
+   * Does not escape unicode characters.
+   */
+  public static String escapeJava(String s) {
+    assert ILLEGAL_CHARACTERS.length == REPLACEMENTS.length;
+    for (int i=0; i<ILLEGAL_CHARACTERS.length; i++ ) {
+      Matcher m = ILLEGAL_CHARACTERS[i].matcher(s);
+      s = m.replaceAll(REPLACEMENTS[i]);
+    }
+    return s;
+  }
+
+  public static String[] union(String[] a, String[] b) {
+    String[] r = new String[a.length+b.length];
+    int ia = 0, ib = 0, i = 0;
+    while (ia < a.length && ib < b.length) {
+      int c = a[ia].compareTo(b[ib]);
+      if ( c < 0) r[i++] = a[ia++];
+      else if (c == 0) { r[i++] = a[ia++]; ib++; }
+      else r[i++] = b[ib++];
+    }
+    if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
+    if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
+    return Arrays.copyOf(r, i);
   }
 }

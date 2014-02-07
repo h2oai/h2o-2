@@ -2,10 +2,11 @@ package water;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import jsr166y.CountedCompleter;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
 import water.fvec.*;
@@ -22,7 +23,7 @@ import water.util.Log;
 */
 
 
-public class ValueArray extends Iced implements Cloneable {
+public class ValueArray extends Lockable<ValueArray> implements Cloneable {
 
   public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
   public static final long CHUNK_SZ = 1L << LOG_CHK;
@@ -46,13 +47,13 @@ public class ValueArray extends Iced implements Cloneable {
   // The primary compression is to use 1-byte, 2-byte, or 4-byte columns, with
   // an optional offset & scale factor.  These are described in the meta-data.
 
-  public transient Key _key;     // Main Array Key
   public final Column[] _cols;   // The array of column descriptors; the X dimension
   public long[] _rpc;            // Row# for start of each chunk
   public long _numrows;      // Number of rows; the Y dimension.  Can be >>2^32
   public final int _rowsize;     // Size in bytes for an entire row
 
   public ValueArray(Key key, long numrows, int rowsize, Column[] cols ) {
+    super(key);
     // Always some kind of rowsize.  For plain unstructured data use a single
     // byte column format.
     assert rowsize > 0;
@@ -67,10 +68,10 @@ public class ValueArray extends Iced implements Cloneable {
 
   // Variable-sized chunks.  Pass in the number of whole rows in each chunk.
   public ValueArray(Key key, int[] rows, int rowsize, Column[] cols ) {
+    super(key);
     assert rowsize > 0;
     _rowsize = rowsize;
     _cols = cols;
-    _key = key;
     // Roll-up summary the number rows in each chunk, to the starting row# per chunk.
     _rpc = new long[rows.length+1];
     long sum = 0;
@@ -101,12 +102,6 @@ public class ValueArray extends Iced implements Cloneable {
   public final Key getKey() { return _key; }
 
   @Override public ValueArray clone() { return (ValueArray)super.clone(); }
-
-  // Init of transient fields from deserialization calls
-  @Override public final ValueArray init( Key key ) {
-    _key = key;
-    return this;
-  }
 
   /** Pretty print! */
   @Override
@@ -141,6 +136,17 @@ public class ValueArray extends Iced implements Cloneable {
       _cols[i]._name = names[i];
   }
 
+  public final void setColumnNames(String[] names, int[] colIdx) {
+    for(int i = 0; i < Math.min(_cols.length, colIdx.length); ++i)
+      _cols[colIdx[i]]._name = names[i];
+  }
+
+  public String[][] domains() {
+    String domains[][] = new String[_cols.length][];
+    for( int i=0; i<_cols.length; i++ )
+      domains[i] = _cols[i]._domain;
+    return domains;
+  }
 
   /**Returns the width of a row.*/
   public int rowSize() { return _rowsize; }
@@ -381,7 +387,9 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   static private Futures readPut(Key key, InputStream is, Job job, final Futures fs) throws IOException {
-    UKV.remove(key);
+    // Lock & delete any prior, and lock against future writes
+    Key job_key = job==null ? null : job.self();
+    ValueArray ary = new ValueArray(key,0).delete_and_lock(job_key);
     byte[] oldbuf, buf = null;
     int off = 0, sz = 0;
     long szl = off;
@@ -396,7 +404,7 @@ public class ValueArray extends Iced implements Cloneable {
         off+=sz;
       szl += off;
       if( off<CHUNK_SZ ) break;
-      if( job != null && job.cancelled() ) break;
+      if( job != null && !Job.isRunning(job.self()) ) break;
       final Key ckey = getChunkKey(cidx++,key);
       final Value val = new Value(ckey,buf);
       // Do the 'DKV.put' in a F/J task.  For multi-JVM setups, this step often
@@ -417,7 +425,7 @@ public class ValueArray extends Iced implements Cloneable {
       dkv_fs.add(subtask);
       f_last = subtask;
     }
-    assert is.read(new byte[1]) == -1 || job.cancelled();
+    assert is.read(new byte[1]) == -1 || !Job.isRunning(job.self());
 
     // Last chunk is short, read it; combine buffers and make the last chunk larger
     if( cidx > 0 ) {
@@ -434,11 +442,11 @@ public class ValueArray extends Iced implements Cloneable {
       Key ckey = getChunkKey(cidx,key);
       DKV.put(ckey,new Value(ckey,Arrays.copyOf(buf,off)),fs);
     }
-    UKV.put(key,new ValueArray(key,szl),fs);
-
     // Block for all pending DKV puts, which will in turn add blocking requests
     // to the passed-in Future list 'fs'.
     dkv_fs.blockForPending();
+    // Unlock & set new copy of self
+    new ValueArray(key,szl).unlock(job_key);
 
     return fs;
   }
@@ -557,21 +565,22 @@ public class ValueArray extends Iced implements Cloneable {
         if( !v2.isFrame() ) {
           throw new IllegalArgumentException(k2 + " is not a frame.");
         }
-        Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+        //Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
         return v2.get();
       }
 
       // No cached conversion.  Make one and store it in DKV.
       int cn = conversionNumber.getAndIncrement();
       Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
-      Frame frame = convert();
-      DKV.put(k2, frame);
+      Frame frame = convert(k2);
       Log.info("Conversion " + cn + " complete.");
       return frame;
     }
   }
 
-  private Frame convert() {
+  private Frame convert(Key k2) {
+    new Frame(k2,new String[0], new Vec[0]).delete_and_lock(null);
+    Futures fs = new Futures();
     String[] names = new String[_cols.length];
     // A new random VectorGroup
     Key keys[] = new Vec.VectorGroup().addVecs(_cols.length);
@@ -581,17 +590,29 @@ public class ValueArray extends Iced implements Cloneable {
     Vec[] vecs = new Vec[avs.length];
     for(int i = 0; i < avs.length; ++i) {
       avs[i]._domain = _cols[i]._domain;
-      vecs[i] = avs[i].close(null);
+      vecs[i] = avs[i].close(fs);
     }
-    return new Frame(names, vecs);
+    fs.blockForPending();
+    Frame fr = new Frame(k2,names,vecs);
+    fr.unlock(null);            // Set & unlock new frame
+    return fr;
   }
 
   static class Converter extends MRTask<Converter> {
     final Key _vaKey;
     final Key[] _keys;
     AppendableVec[] _vecs;
+    transient Futures _fs;
 
     Converter( Key vaKey, Key[] keys ) { _vaKey = vaKey; _keys = keys; }
+    @Override public void init() {
+      super.init();
+      _fs = new Futures();
+    }
+    @Override public final void lonCompletion( CountedCompleter caller ) {
+      super.lonCompletion(caller);
+      _fs.blockForPending();
+    }
     @Override public void map(Key key) {
       ValueArray va = DKV.get(_vaKey).get();
       AutoBuffer bits = va.getChunk(key);
@@ -626,16 +647,104 @@ public class ValueArray extends Iced implements Cloneable {
         }
       }
       for(int i = 0; i < chunks.length; ++i)
-        chunks[i].close(cidx, null);
+        chunks[i].close(cidx, _fs);
     }
 
     @Override public void reduce(Converter other) {
-      if(_vecs == null)
-        _vecs = other._vecs;
-      else {
-        for(int i = 0; i < _vecs.length; i++)
-          _vecs[i].reduce(other._vecs[i]);
-      }
+      if(_vecs == null) _vecs = other._vecs;
+      else for(int i = 0; i < _vecs.length; i++)
+             _vecs[i].reduce(other._vecs[i]);
     }
   }
+
+  // Cached conversion of a Frame to a VA.  Returns the existing VA if there is
+  // one (so no staleness/caching check).
+  public static ValueArray frameAsVA(Key frKey) {
+    Key vaKey = Key.make(DKV.calcConvertedVAKeyString(frKey.toString()));
+    ValueArray ary = UKV.get(vaKey);
+    if( ary != null ) return ary; // Return an existing converted VA, if there is one
+    Frame fr = UKV.get(frKey);
+    if( fr == null ) return null; // No Frame, no VA, so return null
+    synchronized( ValueArray.class ) {
+      ary = UKV.get(vaKey);     // Check cache again under lock
+      if( ary != null ) return ary;
+      int cn = conversionNumber.getAndIncrement();
+      Log.info("Converting Frame to ValueArray: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frKey + ")...");
+      ary = convert(fr,vaKey);
+    }
+    return ary;
+  }
+
+  // Convert a Frame to a VA
+  private static ValueArray convert( Frame fr, Key vaKey ) {
+    long nrows = fr.numRows();
+    Vec vs[] = fr.vecs();
+
+    // Build array of column headers
+    Column cols[] = new Column[fr.numCols()];
+    int off=0;                  // Offset within a row
+    for( int i=0; i<cols.length; i++ ) {
+      Column C = cols[i] = new Column();
+      Vec v = vs[i];
+      C._name  = fr._names[i];
+      C._domain= v._domain;
+      C._min   = v.min  ();
+      C._max   = v.max  ();
+      C._mean  = v.mean ();
+      C._sigma = v.sigma();
+      C._n     = nrows - v.naCnt();
+      // No attempt at compression VA style.  We can add this in later.
+      C._base  = 0;
+      C._scale = 1;
+      C._off   = off;
+      byte sz  = 8;            // Full 8 bytes, no compression
+      C._size  = (byte)(v.isInt() ? sz : -sz);
+      off += sz;
+    }
+
+    // Count rows-per-chunk
+    Vec v0 = fr.anyVec();
+    int rows[] = new int[v0.nChunks()];
+    for( int i=0; i<rows.length; i++ )
+      rows[i] = v0.chunkLen(i);
+
+    // Make the VA header
+    final ValueArray va = new ValueArray(vaKey, rows, off, cols );
+    va.delete_and_lock(null);
+
+    // Now fill in the data chunks
+    final int rowsize = off;
+    new MRTask2() {
+      transient Futures _fs;
+      @Override public void setupLocal() { _fs = new Futures(); }
+      @Override public void map(Chunk chks[]) {
+        int off=0;
+        byte[] buf = new byte[rowsize*chks[0]._len];
+        for( int row=0; row<chks[0]._len; row++ )
+          for( int c=0; c<chks.length; c++ ) {
+            Chunk C = chks[c];
+            if( va._cols[c]._size==8 ) {
+              off += UDP.set8(buf,off,C.isNA0(row) ? Long.MIN_VALUE : C.at80(row));
+            } else {
+              off += UDP.set8d(buf,off,C.at0(row));
+            }
+          }
+        assert off == buf.length;
+        Value val = new Value(va.getChunkKey(_lo),buf);
+        DKV.put(val._key,val,_fs,true);
+      }
+      @Override public void closeLocal() { _fs.blockForPending(); }
+    }.doAll(fr);
+    va.unlock(null);
+
+    return va;
+  }
+
+  /** Actually remove/delete all Chunks from memory. */
+  @Override public Futures delete_impl(Futures fs) {
+    for( long i=0; i<chunks(); i++ ) // Delete all the chunks
+      DKV.remove(getChunkKey(i),fs);
+    return fs;
+  }
+  @Override public String errStr() { return "Dataset"; }
 }

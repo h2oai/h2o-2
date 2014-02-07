@@ -19,17 +19,11 @@ public class ParserTest2 extends TestUtil {
   private final char[] SEPARATORS = new char[] {',', ' '};
 
   public static boolean compareDoubles(double a, double b, double threshold){
-    int e1 = 0;
-    int e2 = 0;
-    while(a > 1){
-      a /= 10;
-      ++e1;
-    }
-    while(b > 1){
-       b /= 10;
-       ++e2;
-    }
-    return ((e1 == e2) && Math.abs(a - b) < threshold);
+    if( a==b ) return true;
+    if( ( Double.isNaN(a) && !Double.isNaN(b)) ||
+        (!Double.isNaN(a) &&  Double.isNaN(b)) ) return false;
+    if( Double.isInfinite(a) || Double.isInfinite(b) ) return false;
+    return Math.abs(a-b)/Math.max(Math.abs(a),Math.abs(b)) < threshold;
   }
   public static void testParsed(Key k, double[][] expected, Key inputkey) {
     testParsed(k,expected,inputkey,expected.length);
@@ -44,8 +38,7 @@ public class ParserTest2 extends TestUtil {
         Assert.assertTrue((Double.isNaN(parsedVal) == Double.isNaN(expected[i][j])));
         Assert.assertTrue(Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
       }
-    UKV.remove(k);
-    UKV.remove(inputkey);
+    fr.delete();
   }
 
   @Test public void testBasic() {
@@ -83,6 +76,89 @@ public class ParserTest2 extends TestUtil {
       ParseDataset2.parse(r2, new Key[]{k});
       testParsed(r2,exp,k);
     }
+  }
+
+  // test correctnes of sparse chunks
+  // added after failing to encode properly following data as
+  // 0s were not considered when computing compression strategy and then
+  // lemin was 6108 and there was Short overlfow when encoding zeros.
+  // So, the first column was compressed into C2SChunk with 0s causing short overflow,
+  @Test public void testSparse2(){
+    String data =
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "35351, 0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "6108,  0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "35351, 0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "6334,  0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n";
+
+    double[][] exp = new double[][] {
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(35351,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(6108,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(35351,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(6334,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+    };
+    Key k = FVecTest.makeByteVec(Key.make().toString(),data);
+    Key r1 = Key.make("r1");
+    ParseDataset2.parse(r1, new Key[]{k});
+    testParsed(r1,exp,k);
+
   }
 
   @Test public void testChunkBoundaries() {
@@ -346,9 +422,8 @@ public class ParserTest2 extends TestUtil {
   @Test public void testTimeParse() {
     Key fkey = NFSFileVec.make(find_test_file("smalldata/kaggle/bestbuy_train_10k.csv.gz"));
     Key okey = Key.make("bestbuy.hex");
-    ParseDataset2.parse(okey,new Key[]{fkey});
-    UKV.remove(fkey);
-    UKV.remove(okey);
+    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
+    fr.delete();
   }
 
   @Test public void testMixedSeps() {
@@ -412,8 +487,7 @@ public class ParserTest2 extends TestUtil {
       }
       ++j;
     }
-    UKV.remove(rkey);
-    UKV.remove(okey);
+    fr.delete();
   }
 
 
@@ -424,6 +498,17 @@ public class ParserTest2 extends TestUtil {
 //    Key r1 = Key.make("single_quotes_test");
 //    ParseDataset2.parse(r1, new Key[]{k},gSetup);
 //  }
+  @Test public void testSingleQuotes() {
+    Key k = Key.make("q.hex");
+    try {
+      Frame fr = TestUtil.parseFrame(k,"smalldata/test/test_quote.csv");
+      Assert.assertEquals(fr.numCols(),11);
+      Assert.assertEquals(fr.numRows(), 7);
+    } finally {
+      Lockable.delete(k);
+    }
+  }
+
   @Test public void testSVMLight() {
     String[] data = new String[] {
         "1 2:.2 5:.5 9:.9\n",
@@ -443,6 +528,125 @@ public class ParserTest2 extends TestUtil {
     Key r1 = Key.make("r1");
     ParseDataset2.parse(r1, new Key[]{k});
     testParsed(r1,exp,k);
+  }
+
+  // Test very sparse data
+  @Test public void testSparse() {
+    for (char separator : SEPARATORS) {
+
+      // Build 100 zero's and 1 one.
+      StringBuilder sb = new StringBuilder();
+      for( int i=0; i<50; i++ ) sb.append("0.0\n");
+      sb.append("1.0\n");
+      for( int i=0; i<50; i++ ) sb.append("0.0\n");
+      Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      Key r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      double[][] exp = new double[101][1];
+      exp[50][0] = 1;
+      testParsed(r1,exp,k);
+
+      // Build 100 zero's and 1 non-zero.
+      sb = new StringBuilder();
+      for( int i=0; i<50; i++ ) sb.append("0\n");
+      sb.append("2\n");
+      for( int i=0; i<50; i++ ) sb.append("0\n");
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      exp = new double[101][1];
+      exp[50][0] = 2;
+      testParsed(r1,exp,k);
+
+      // Build 100 zero's and some non-zeros.  Last line is truncated.
+      sb = new StringBuilder();
+      for( int i=0; i<50; i++ ) sb.append("0,0\n");
+      sb.append("2,3\n");
+      for( int i=0; i<49; i++ ) sb.append("0,0\n");
+      sb.append("0");           // Truncated final line
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      exp = new double[101][2];
+      exp[ 50][0] = 2;
+      exp[ 50][1] = 3;
+      exp[100][0] = 0;          // Truncated final line
+      exp[100][1] = Double.NaN;
+      testParsed(r1,exp,k);
+
+      // Build 100000 zero's and some one's
+      sb = new StringBuilder();
+      exp = new double[100100][1];
+      for( int i=0; i<100; i++ ) {
+        for( int j=0; j<1000; j++ )
+          sb.append("0\n");
+        sb.append("1\n");
+        exp[i*1001+1000][0]=1;
+      }
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      testParsed(r1,exp,k);
+
+      // Build 100 zero's, then 100 mix of -1001 & 1001's (to force a
+      // sparse-short, that finally inflates to a full dense-short).
+      sb = new StringBuilder();
+      for( int i=0; i<100; i++ ) sb.append("0\n");
+      for( int i=0; i<100; i+=2 ) sb.append("-1001\n1001\n");
+      exp = new double[200][1];
+      for( int i=0; i<100; i+=2 ) { exp[i+100][0]=-1001; exp[i+101][0]= 1001; }
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      testParsed(r1,exp,k);
+    }
+  }
+
+  // Mix of NA's, very large & very small, ^A Hive-style seperator, comments, labels
+  @Test public void testParseMix() {
+    double[][] exp = new double[][] {
+      d( 0      ,  0.5    ,  1      , 0),
+      d( 3      ,  NaN    ,  4      , 1),
+      d( 6      ,  NaN    ,  8      , 0),
+      d( 0.6    ,  0.7    ,  0.8    , 1),
+      d(+0.6    , +0.7    , +0.8    , 0),
+      d(-0.6    , -0.7    , -0.8    , 1),
+      d(  .6    ,   .7    ,   .8    , 0),
+      d(+ .6    ,  +.7    ,  +.8    , 1),
+      d(- .6    ,  -.7    ,  -.8    , 0),
+      d(+0.6e0  , +0.7e0  , +0.8e0  , 1),
+      d(-0.6e0  , -0.7e0  , -0.8e0  , 0),
+      d(  .6e0  ,   .7e0  ,   .8e0  , 1),
+      d(+ .6e0  ,  +.7e0  ,  +.8e0  , 0),
+      d( -.6e0  ,  -.7e0  ,  -.8e0  , 1),
+      d(+0.6e00 , +0.7e00 , +0.8e00 , 0),
+      d(-0.6e00 , -0.7e00 , -0.8e00 , 1),
+      d(  .6e00 ,   .7e00 ,   .8e00 , 0),
+      d( +.6e00 ,  +.7e00 ,  +.8e00 , 1),
+      d( -.6e00 ,  -.7e00 ,  -.8e00 , 0),
+      d(+0.6e-01, +0.7e-01, +0.8e-01, 1),
+      d(-0.6e-01, -0.7e-01, -0.8e-01, 0),
+      d(  .6e-01,   .7e-01,   .8e-01, 1),
+      d( +.6e-01,  +.7e-01,  +.8e-01, 0),
+      d( -.6e-01,  -.7e-01,  -.8e-01, 1),
+      d(+0.6e+01, +0.7e+01, +0.8e+01, 0),
+      d(-0.6e+01, -0.7e+01, -0.8e+01, 1),
+      d(  .6e+01,   .7e+01,   .8e+01, 0),
+      d( +.6e+01,  +.7e+01,  +.8e+01, 1),
+      d( -.6e+01,  -.7e+01,  -.8e+01, 0),
+      d(+0.6e102, +0.7e102, +0.8e102, 1),
+      d(-0.6e102, -0.7e102, -0.8e102, 0),
+      d(  .6e102,   .7e102,   .8e102, 1),
+      d( +.6e102,  +.7e102,  +.8e102, 0),
+      d( -.6e102,  -.7e102,  -.8e102, 1)
+    };
+    Key k = Key.make("q.hex");
+    try {
+      TestUtil.parseFrame(k,"smalldata/test/test_parse_mix.csv");
+      testParsed(k, exp, null);
+    } finally { 
+      Lockable.delete(k); 
+    }
   }
 
   void runTests(){

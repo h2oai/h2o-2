@@ -2,8 +2,7 @@ package water.parser;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 
 
 import water.*;
@@ -37,21 +36,26 @@ public abstract class CustomParser extends Iced {
     public Key _setupFromFile;
     public Key _hdrFromFile;
     public String [][] _data;
-    public PSetupGuess(ParserSetup ps, int vlines, int ilines, String [][] data, String [] errors){
+    public final boolean _isValid;
+    public PSetupGuess(ParserSetup ps, int vlines, int ilines, String [][] data, boolean isValid, String [] errors){
       _setup = ps;
       _invalidLines = ilines;
       _validLines = vlines;
       _errors = errors;
       _data = data;
+      _isValid = isValid;
     }
-    public final boolean valid(){
-      return _setup._ncols > 0 && _validLines > 0 && _invalidLines < _validLines;
+
+    public Set<String> checkDupColumnNames(){
+      return _setup.checkDupColumnNames();
     }
+
     public final boolean hasErrors(){
       return _errors != null && _errors.length > 0;
     }
+
     public String toString(){
-      if(!valid())
+      if(!_isValid)
         return "Parser setup appears to be broken, got " + _setup.toString();
       else if(hasErrors())
         return "Parser setup appears to work with some errors, got " + _setup.toString();
@@ -96,6 +100,23 @@ public abstract class CustomParser extends Iced {
       _header = header;
       _columnNames = columnNames;
       _singleQuotes = singleQuotes;
+    }
+    public boolean isSpecified(){
+      return _pType != ParserType.AUTO && _separator != CsvParser.AUTO_SEP && (_header || _ncols > 0);
+    }
+    public Set<String> checkDupColumnNames(){
+      HashSet<String> uniqueNames = new HashSet<String>();
+      HashSet<String> conflictingNames = new HashSet<String>();
+      if(_header){
+        for(String n:_columnNames){
+          if(!uniqueNames.contains(n)){
+            uniqueNames.add(n);
+          } else {
+            conflictingNames.add(n);
+          }
+        }
+      }
+      return conflictingNames;
     }
     public ParserSetup clone(){
       return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes);
@@ -187,11 +208,13 @@ public abstract class CustomParser extends Iced {
   }
 
   protected static final boolean isEOL(byte c) {
-    return (c >= CHAR_LF) && ( c<= CHAR_CR);
+    return ((c == CHAR_LF) || (c == CHAR_CR));
   }
   public interface DataIn {
     // Get another chunk of byte data
     public abstract byte[] getChunkData( int cidx );
+    public abstract int  getChunkDataStart( int cidx );
+    public abstract void setChunkDataStart( int cidx, int offset );
   }
   public interface DataOut extends Freezable {
     public void setColumnNames(String [] names);
@@ -214,25 +237,26 @@ public abstract class CustomParser extends Iced {
   }
 
   public interface StreamDataOut extends DataOut {
-    public StreamDataOut nextChunk();
-    public StreamDataOut reduce(StreamDataOut dout);
-    public StreamDataOut close();
-    public StreamDataOut close(Futures fs);
+    StreamDataOut nextChunk();
+    StreamDataOut reduce(StreamDataOut dout);
+    StreamDataOut close();
+    StreamDataOut close(Futures fs);
   }
 
   public static class StreamData implements CustomParser.DataIn {
     final transient InputStream _is;
-    private byte[] _bits0 = new byte[32*1024];
-    private byte[] _bits1 = new byte[32*1024];
+    private byte[] _bits0 = new byte[64*1024];
+    private byte[] _bits1 = new byte[64*1024];
     private int _cidx0=-1, _cidx1=-1; // Chunk #s
+    private int _coff0=-1, _coff1=-1; // Last used byte in a chunk
     public StreamData(InputStream is){_is = is;}
     @Override public byte[] getChunkData(int cidx) {
       if(cidx == _cidx0)return _bits0;
       if(cidx == _cidx1)return _bits1;
       assert cidx==_cidx0+1 || cidx==_cidx1+1;
       byte[] bits = _cidx0<_cidx1 ? _bits0 : _bits1;
-      if( _cidx0<_cidx1 ) _cidx0 = cidx;
-      else                _cidx1 = cidx;
+      if( _cidx0<_cidx1 ) { _cidx0 = cidx; _coff0 = -1; }
+      else                { _cidx1 = cidx; _coff1 = -1; }
       // Read as much as the buffer will hold
       int off=0;
       try {
@@ -243,7 +267,6 @@ public abstract class CustomParser extends Iced {
         }
         assert off == bits.length || _is.available() <= 0;
       } catch( IOException ioe ) {
-        //_parserr = ioe.toString(); }
         throw new RuntimeException(ioe);
       }
       if( off == bits.length ) return bits;
@@ -252,6 +275,15 @@ public abstract class CustomParser extends Iced {
       if( _cidx0==cidx ) _bits0 = bits2;
       else               _bits1 = bits2;
       return bits2;
+    }
+    @Override public int  getChunkDataStart(int cidx) {
+      if( _cidx0 == cidx ) return _coff0;
+      if( _cidx1 == cidx ) return _coff1;
+      return 0; 
+    }
+    @Override public void setChunkDataStart(int cidx, int offset) { 
+      if( _cidx0 == cidx ) _coff0 = offset;
+      if( _cidx1 == cidx ) _coff1 = offset;
     }
   }
   public abstract CustomParser clone();

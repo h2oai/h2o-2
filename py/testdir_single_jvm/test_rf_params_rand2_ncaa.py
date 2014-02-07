@@ -5,7 +5,6 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
 # don't allow None on ntree..causes 50 tree default!
-print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     'response_variable': [None, 16],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
@@ -15,7 +14,6 @@ paramDict = {
     'stat_type': [None, 'ENTROPY', 'GINI'],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,5,10,100,1000],
-    'parallel': [None,0,1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
     'sample': [None,20,40,60,80,90],
     'seed': [None,'0','1','11111','19823134','1231231'],
@@ -53,18 +51,19 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_params_rand2(self):
+    def test_rf_params_rand2_ncaa(self):
         csvPathname = 'ncaa/Players.csv'
         for trial in range(4):
             # params is mutable. This is default.
-            params = {'ntree': 13, 'parallel': 1, 'features': 4}
+            params = {'ntree': 13, 'features': 4}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
+            timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15))
 
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
+            # hack to NA the header (duplicate header names)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', header=0)
             start = time.time()
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start

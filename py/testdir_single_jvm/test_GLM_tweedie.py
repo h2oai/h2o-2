@@ -21,9 +21,9 @@ class Basic(unittest.TestCase):
 
     def test_GLM_tweedie(self):
         csvFilename = "AutoClaim.csv"
-        csvPathname = 'tweedie/' + csvFilename
+        csvPathname = 'standard/' + csvFilename
         print "\nStarting", csvPathname
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
         # columns start at 0
         # regress: glm(CLM_AMT ~ CAR_USE + REVOLKED + GENDER + AREA + MARRIED + CAR_TYPE, data=AutoClaim, family=tweedie(1.34))
         # 

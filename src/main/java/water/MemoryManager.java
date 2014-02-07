@@ -64,6 +64,10 @@ public abstract class MemoryManager {
   // Singleton, allocated now so I do not allocate during an OOM event.
   static private final H2O.Cleaner.Histo myHisto = new H2O.Cleaner.Histo();
 
+  // A monitonically increasing total count memory allocated via MemoryManager.
+  // Useful in tracking total memory consumed by algorithms - just ask for the
+  // before & after amounts and diff them.
+  public static final AtomicLong MEM_ALLOC = new AtomicLong();
 
   public static void setMemGood() {
     if( CAN_ALLOC ) return;
@@ -122,11 +126,17 @@ public abstract class MemoryManager {
       if( oom ) setMemLow(); // Stop allocations; trigger emergency clean
       Boot.kick_store_cleaner();
     } else { // Else we are not *emergency* cleaning, but may be lazily cleaning.
-      if( !CAN_ALLOC )  m = "Unblocking:";
-      else              m = "MemGood:   ";
-      setMemGood();
-      if( oom ) // Confused? OOM should have FullGCd should have set low-mem goals
-        Log.warn(Sys.CLEAN,"OOM but no FullGC callback?  MEM_MAX = " + MEM_MAX + ", DESIRED = " + d +", CACHE = " + cacheUsage + ", p = " + p + ", bytes = " + bytes);
+      setMemGood();             // Cache is as low as we'll go; unblock
+      if( oom ) {               // But still have an OOM?
+        m = "Unblock allocations; cache emptied but memory is low: ";
+        // Means the heap is full of uncached POJO's - which cannot be spilled.
+        // Here we enter the zone of possibly dieing for OOM.  There's no point
+        // in blocking allocations, as no more memory can be freed by more
+        // cache-flushing.  Might as well proceed on a "best effort" basis.
+        Log.warn(Sys.CLEAN,m+" OOM but cache is emptied:  MEM_MAX = " + PrettyPrint.bytes(MEM_MAX) + ", DESIRED_CACHE = " + PrettyPrint.bytes(d) +", CACHE = " + PrettyPrint.bytes(cacheUsage) + ", POJO = " + PrettyPrint.bytes(p) + ", this request bytes = " + PrettyPrint.bytes(bytes));
+      } else { 
+        m = "MemGood:   ";
+      }
     }
 
     // No logging if under memory pressure: can deadlock the cleaner thread
@@ -218,6 +228,7 @@ public abstract class MemoryManager {
           try { _lock.wait(3*1000); } catch (InterruptedException ex) { }
         }
       }
+      MEM_ALLOC.addAndGet(bytes);
       try {
         switch( type ) {
         case  1: return new byte   [elems];
@@ -227,9 +238,10 @@ public abstract class MemoryManager {
         case  5: return new float  [elems];
         case  9: return new double [elems];
         case  0: return new boolean[elems];
-        case -1: return Arrays.copyOfRange((byte[])orig,from,elems);
-        case -4: return Arrays.copyOfRange((int [])orig,from,elems);
-        case -8: return Arrays.copyOfRange((long[])orig,from,elems);
+        case -1: return Arrays.copyOfRange((byte  [])orig,from,elems);
+        case -4: return Arrays.copyOfRange((int   [])orig,from,elems);
+        case -8: return Arrays.copyOfRange((long  [])orig,from,elems);
+        case -9: return Arrays.copyOfRange((double[])orig,from,elems);
         default: throw H2O.unimpl();
         }
       }
@@ -251,12 +263,14 @@ public abstract class MemoryManager {
   public static float  [] malloc4f(int size) { return (float  [])malloc(size,size*4, 5,null,0); }
   public static double [] malloc8d(int size) { return (double [])malloc(size,size*8, 9,null,0); }
   public static boolean[] mallocZ (int size) { return (boolean[])malloc(size,size*1, 0,null,0); }
-  public static byte[] arrayCopyOfRange(byte[] orig, int from, int sz) { return (byte[]) malloc(sz,(sz-from),-1,orig,from); }
-  public static int [] arrayCopyOfRange(int [] orig, int from, int sz) { return (int []) malloc(sz,(sz-from),-4,orig,from); }
-  public static long[] arrayCopyOfRange(long[] orig, int from, int sz) { return (long[]) malloc(sz,(sz-from),-8,orig,from); }
-  public static byte[] arrayCopyOf( byte[] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
-  public static int [] arrayCopyOf( int [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
-  public static long[] arrayCopyOf( long[] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
+  public static byte   [] arrayCopyOfRange(byte  [] orig, int from, int sz) { return (byte  []) malloc(sz,(sz-from)*1,-1,orig,from); }
+  public static int    [] arrayCopyOfRange(int   [] orig, int from, int sz) { return (int   []) malloc(sz,(sz-from)*4,-4,orig,from); }
+  public static long   [] arrayCopyOfRange(long  [] orig, int from, int sz) { return (long  []) malloc(sz,(sz-from)*8,-8,orig,from); }
+  public static double [] arrayCopyOfRange(double[] orig, int from, int sz) { return (double[]) malloc(sz,(sz-from)*8,-9,orig,from); }
+  public static byte   [] arrayCopyOf( byte  [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
+  public static int    [] arrayCopyOf( int   [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
+  public static long   [] arrayCopyOf( long  [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
+  public static double [] arrayCopyOf( double[] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
 
   // Memory available for tasks (we assume 3/4 of the heap is available for tasks)
   static final AtomicLong _taskMem = new AtomicLong(MEM_MAX-(MEM_MAX>>2));

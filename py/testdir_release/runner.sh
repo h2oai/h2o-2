@@ -7,7 +7,7 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-source ./runner_setup.sh
+source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]
@@ -35,6 +35,7 @@ else
     if [[ $USER == "kevin" ]]
     then
         python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+        # python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
     else
         python ../four_hour_cloud.py &
     fi
@@ -86,15 +87,16 @@ echo $TEST
 # myPy c5 test_c5_KMeans_sphere15_180GB.py
 if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
 then
-    myPy c10  test_c10_rel_gbm.py
     myPy c1 test_c1_rel.py
     myPy c2 test_c2_rel.py
     myPy c3 test_c3_rel.py
     myPy c4 test_c4_four_billion_rows.py
     myPy c6 test_c6_hdfs.py
-    myPy c7 test_c7_rel.py
     myPy c8 test_c8_rf_airlines_hdfs.py
     myPy c9 test_c9_GBM_airlines_hdfs.py
+    myPy c10  test_c10_rel_gbm.py
+    # put known failure last
+    myPy c7 test_c7_rel.py
 else
     myPy $TESTDIR $TEST
 fi

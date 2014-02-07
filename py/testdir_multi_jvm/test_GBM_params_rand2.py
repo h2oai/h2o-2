@@ -14,7 +14,7 @@ def define_gbm_params():
         'max_depth': [None, 1, 2, 4, 8, 40], # 0 might cause problem
         'min_rows': [None, 1, 2, 100, 10000000],
         'response': [54],
-        'ignored_cols_by_name': [None, '0,1,2,3', '0'],
+        'ignored_cols_by_name': [None, 'C1,C2,C3,C4', 'C1'],
         'classification': [None, 1], # FIX! add regression when we can predict
     }
     return paramsDict
@@ -100,8 +100,7 @@ class Basic(unittest.TestCase):
                 # use this to set any defaults you want if the pick doesn't set
                 params = {
                     'response': 54, 
-                    'ignored_cols_by_name': 
-                    '0,1,2,3,4', 
+                    'ignored_cols_by_name': 'C1,C2,C3,C4,C5', 
                     'ntrees': 2,
                     'validation': parseTestResult['destination_key'],
                 }
@@ -124,7 +123,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cm']
+                cm = gbmTrainView['gbm_model']['cms'][-1] # use the last one
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"

@@ -81,7 +81,7 @@ class DABuilder {
       final int S = start_row;
       if (!k.home()) continue;     // This is not necessary, but for sure skip no local keys (we only inhale local data)
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-      Log.info(Sys.RANDF,"* loading local key: ", k, " start_row: ", S);
+      Log.debug(Sys.RANDF,"* loading local key: ", k, " start_row: ", S);
       dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }
@@ -89,7 +89,7 @@ class DABuilder {
     for (final Key k : rkeys) {
       final int S = start_row;
       final int rows = ary.rpc(ValueArray.getChunkIndex(k));
-      Log.info(Sys.RANDF,"!!! loading remote key: " + k + " from " + k.home_node(), " start_row: " + S);
+      Log.debug(Sys.RANDF,"** loading remote key: " + k + " from " + k.home_node(), " start_row: " + S);
       dataInhaleJobs.add( loadChunkAction(dapt, ary, k, modelDataMap, ncolumns, rows, S, totalRows) );
       start_row += rows;
     }
@@ -114,7 +114,10 @@ class DABuilder {
           for( int c = 0; c < ncolumns; ++c) { // For all columns being processed
             final int col = modelDataMap[c];   // Column in the dataset
             Column column = ary._cols[col];
-            if( ary.isNA(bits,j,col) ) { dapt.addBad(rowNum, c); continue; }
+            if( ary.isNA(bits,j,col) ) {
+              if (c==ncolumns-1) rowIsValid = false; // if the last column is NA, skip it
+              dapt.addBad(rowNum, c); continue;
+            }
             if( DataAdapter.isByteCol(column,totalRows,c==ncolumns-1) ) { // we do not bin for small values
               int v = (int)ary.data(bits, j, col);
               dapt.add1(v, rowNum, c);

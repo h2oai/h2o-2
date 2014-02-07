@@ -9,7 +9,6 @@ LOG_MACHINE_STATS = False
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
-
     def sub_c2_rel_long(self):
         # a kludge
         h2o.setup_benchmark_log()
@@ -29,7 +28,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
             ]
 
-
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
         else:
@@ -42,9 +40,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
                 (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
-                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster
@@ -62,7 +57,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-                print csvFilepattern, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
 
@@ -77,12 +71,28 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     # these are all the columns that are enums in the dataset...too many for GLM!
                     x = range(542) # don't include the output column
                     # remove the output too! (378)
+                    ignore_x = []
+                    # for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
                     for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541,378]:
                         x.remove(i)
-                    x = ",".join(map(str,x))
+                        ignore_x.append(i)
 
-                    GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
-                        'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                    # increment by one, because we are no long zero offset!
+                    x = ",".join(map(lambda x: "C" + str(x+1), x))
+                    ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
+
+                    GLMkwargs = {
+                        'family': 'binomial',
+                        'x': x,
+                        'y': 'C379', 
+                        'case': 15, 
+                        'case_mode': '>',
+                        'max_iter': 4, 
+                        'n_folds': 1, 
+                        'family': 'binomial',
+                        'alpha': 0.2, 
+                        'lambda': 1e-5
+                    }
 
                     start = time.time()
                     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
@@ -102,10 +112,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
 
     def test_A_c2_rel_short(self):
+        h2o.beta_features = False
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c2_rel_long(self):
+        h2o.beta_features = False
         self.sub_c2_rel_long()
 
 

@@ -104,7 +104,7 @@ public class Tree extends H2OCountedCompleter {
 
   // Actually build the tree
   @Override public void compute2() {
-    if(!_job.cancelled()) {
+    if(Job.isRunning(_job.self())) {
       Timer timer    = new Timer();
       _stats[0]      = new ThreadLocal<Statistic>();
       _stats[1]      = new ThreadLocal<Statistic>();
@@ -371,7 +371,7 @@ public class Tree extends H2OCountedCompleter {
     bs.put8(_seed);
     bs.put1(_producerId);
     _tree.write(bs);
-    Key key = Key.make(UUID.randomUUID().toString(),(byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
+    Key key = Key.make((byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
     DKV.put(key,new Value(key, bs.buf()));
     return key;
   }

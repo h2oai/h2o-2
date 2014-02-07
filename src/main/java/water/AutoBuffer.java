@@ -153,6 +153,7 @@ public final class AutoBuffer {
   public AutoBuffer( byte[] buf ) { this(buf,0); }
   /** Read from a fixed byte[]; should not be closed. */
   public AutoBuffer( byte[] buf, int off ) {
+    assert buf != null : "null fed to ByteBuffer.wrap";
     _bb = ByteBuffer.wrap(buf).order(ByteOrder.nativeOrder());
     _bb.position(off);
     _chan = null;
@@ -215,15 +216,25 @@ public final class AutoBuffer {
   }
 
   private static final ByteBuffer bbMake() {
-    ByteBuffer bb = null;
-    try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
-    catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
-    if( bb != null ) {
-      bbstats(BBCACHE);
-      return bb;
+    while( true ) {             // Repeat loop for DBB OutOfMemory errors
+      ByteBuffer bb = null;
+      try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
+      catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
+      if( bb != null ) {
+        bbstats(BBCACHE);
+        return bb;
+      }
+      try {
+        bb = ByteBuffer.allocateDirect(BBSIZE).order(ByteOrder.nativeOrder());
+        bbstats(BBMAKE);
+        return bb;
+      } catch( OutOfMemoryError oome ) {
+        // java.lang.OutOfMemoryError: Direct buffer memory
+        if( !"Direct buffer memory".equals(oome.getMessage()) ) throw oome;
+        System.out.println("Sleeping & retrying");
+        try { Thread.sleep(100); } catch( InterruptedException ie ) { }
+      }
     }
-    bbstats(BBMAKE);
-    return ByteBuffer.allocateDirect(BBSIZE).order(ByteOrder.nativeOrder());
   }
   private static final void bbFree(ByteBuffer bb) {
     bbstats(BBFREE);
@@ -579,7 +590,7 @@ public final class AutoBuffer {
 
   public AutoBuffer put(Freezable f) {
     if( f == null ) return put2(TypeMap.NULL);
-    assert f.frozenType() > 0;
+    assert f.frozenType() > 0 : "No TypeMap for "+f.getClass().getName();
     put2((short)f.frozenType());
     return f.write(this);
   }
@@ -980,6 +991,17 @@ public final class AutoBuffer {
     for( int i=x; i<x+y; i++ ) ary[i] = getAA4();
     return ary;
   }
+  public long[][][] getAAA8( ) {
+    _arys++;
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    long[][][] ary  = new long[x+y+z][][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getAA8();
+    return ary;
+  }
 
   public String getStr( ) {
     int len = getInt();
@@ -1168,10 +1190,23 @@ public final class AutoBuffer {
     for( int i=x; i<x+y; i++ ) putAA4(ary[i]);
     return this;
   }
+  public AutoBuffer putAAA8( long[][][] ary ) {
+    _arys++;
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putAA8(ary[i]);
+    return this;
+  }
   // Put a String as bytes (not chars!)
   public AutoBuffer putStr( String s ) {
     if( s==null ) return putInt(-1);
-    return putA1(s.getBytes());
+    // Use the explicit getBytes instead of the default no-arg one, to avoid
+    // the overhead of going in an out of a charset decoder.
+    byte[] buf = MemoryManager.malloc1(s.length());
+    s.getBytes(0,buf.length,buf,0);
+    return putA1(buf);
   }
 
   public AutoBuffer putEnum( Enum x ) {
@@ -1314,6 +1349,15 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+  public AutoBuffer putJSONAAA8( long ary[][][] ) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONAA8(ary[i]);
+    }
+    return put1(']');
+  }
 
   public AutoBuffer putEnumJSON( Enum e ) {
     return e==null ? putNULL() : put1('"').putStr2(e.toString()).put1('"');
@@ -1327,6 +1371,7 @@ public final class AutoBuffer {
 
   public AutoBuffer putJSONA8( String name, long ary[] ) { return putJSONStr(name).put1(':').putJSONA8(ary); }
   public AutoBuffer putJSONAA8( String name, long ary[][] ) { return putJSONStr(name).put1(':').putJSONAA8(ary); }
+  public AutoBuffer putJSONAAA8( String name, long ary[][][] ) { return putJSONStr(name).put1(':').putJSONAAA8(ary); }
   public AutoBuffer putJSON4 ( int i ) { return putStr2(Integer.toString(i)); }
   public AutoBuffer putJSON4 ( String name, int i ) { return putJSONStr(name).put1(':').putJSON4(i); }
   public AutoBuffer putJSONA4( int[] a) {

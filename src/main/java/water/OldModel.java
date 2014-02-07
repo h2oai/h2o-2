@@ -6,6 +6,7 @@ import water.ValueArray.Column;
 import water.api.Constants;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.fvec.Frame;
 
 /**
  * A Model models reality (hopefully).
@@ -13,13 +14,10 @@ import water.api.Request.API;
  * compatible dataset - meaning the row has all the columns with the same names
  * as used to build the mode.
  */
-public abstract class OldModel extends Iced {
+public abstract class OldModel extends Lockable<OldModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  /** Key associated with this OldModel, if any.  */
-  @API(help="Key associated with OldModel")
-  public final Key _selfKey;
   /** Columns used in the model.  No dataset needs to be mapped to this
    *  ValueArray, it is just used to control for valid column data.  The mean &
    *  sigma are from the training dataset listed below, and are used when
@@ -37,21 +35,21 @@ public abstract class OldModel extends Iced {
   public final Key _dataKey;
 
   /** Empty constructor for deserialization */
-  public OldModel() { _selfKey = null; _va = null; _dataKey = null; }
+  public OldModel() { super(null); _va = null; _dataKey = null; }
 
-  public OldModel( Key key ) { _selfKey = key; _va = null; _dataKey = null; }
+  public OldModel( Key key ) { super(key); _va = null; _dataKey = null; }
   /** Default model, built from the selected columns of the given dataset.
    *  Data to be scored on the model has to have all the same columns (in any
    *  order, extra cols are ok).  Last column is the response column, or -1
    *  if there is no defined response column.  */
   public OldModel( Key key, int cols[], Key dataKey ) {
-    _selfKey = key;
+    super(key);
     _dataKey = dataKey;
     _va = trimCols((ValueArray)DKV.get(dataKey).get(),cols);
   }
   /** Default artificial model, built from given column names.  */
   public OldModel( Key key, String[] colNames, String[] classNames ) {
-    _selfKey = key;
+    super(key);
     _dataKey = null;
 
     ValueArray.Column Cs[] = new ValueArray.Column[colNames.length+1];
@@ -74,7 +72,7 @@ public abstract class OldModel extends Iced {
    *  column is the response column.
    */
   public OldModel( Key key, ValueArray va, Key dataKey ) {
-    _selfKey = key;
+    super(key);
     _va = va;
     _dataKey = dataKey;
   }
@@ -110,9 +108,6 @@ public abstract class OldModel extends Iced {
     // By default, trim out constant columns
     return C._max != C._min;
   }
-
-  /** Called when deleting this model, to cleanup any internal keys */
-  public void delete() { }
 
   /** Response column info */
   public final ValueArray.Column response() { return _va._cols[_va._cols.length-1]; }
@@ -180,6 +175,10 @@ public abstract class OldModel extends Iced {
     //return isCompatible(data.colNames());
   }
 
+  /** Remove any Model internal Keys */
+  @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
+  @Override public String errStr() { return "Model"; }
+
   /**
    * Simple model wrapper adapting original model to different dataset.
    *
@@ -243,6 +242,9 @@ public abstract class OldModel extends Iced {
     // keep only one adaptor layer! (just in case there would be multiple adapt calls...)
     @Override public final OldModel adapt(ValueArray ary){return M.adapt(ary);}
     @Override public final OldModel adapt(String [] cols){return M.adapt(cols);}
+    /** Remove any Model internal Keys */
+    @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
+    @Override public String errStr() { return "Model"; }
   }
 
   /**
@@ -313,5 +315,29 @@ public abstract class OldModel extends Iced {
   public void fromJson(JsonObject json) {
     // TODO
   }
+  public double getThreshold() { return Double.NaN; }
 
+  // Bridge from new Model scoring to old Model scoring
+  public Frame score( Frame data) {
+    final double threshold = getThreshold();
+    String[][] ds = _va.domains();
+    if( ds[ds.length-1] == null && !Double.isNaN(threshold) ) {
+      // This is a binomial classifier
+      ds[ds.length-1] = new String[]{"F","T"};
+    }
+    Model m = new Model(null,null,_va.colNames(),ds) {
+        @Override
+        protected float[] score0(double data[/*ncols*/], float preds[/*nclasses*/]) {
+          float s = (float)OldModel.this.score0(data);
+          if( preds.length==1 ) preds[0] = s;
+          else {
+            assert preds.length==2;
+            preds[0] = 1-s;
+            preds[1] = s;
+          }
+          return preds;
+        }
+      };
+    return m.score(data);
+  }
 }

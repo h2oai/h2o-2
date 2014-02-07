@@ -2,6 +2,7 @@ import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs
 
+DO_POLL = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -18,13 +19,13 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype_1(self):
+    def test_GLM2_covtype_1(self):
         h2o.beta_features = True
 
         csvFilename = 'covtype.data'
-        csvPathname = 'UCI/UCI-large/covtype/' + csvFilename
+        csvPathname = 'standard/' + csvFilename
 
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='local', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=10)
 
         # inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         # print "\n" + csvPathname, \
@@ -45,7 +46,7 @@ class Basic(unittest.TestCase):
             # 'link': 'logit', # 2 doesn't support
             'n_folds': 2,
             'case_mode': '>',
-            'case_val': 0, # 2
+            'case_val': 1, # 2
             'max_iter': max_iter,
             'beta_epsilon': 1e-3,
             'destination_key': modelKey
@@ -57,14 +58,17 @@ class Basic(unittest.TestCase):
         kwargs.update({'alpha': 0, 'lambda': 0})
 
         def completionHack(jobKey, modelKey):
-            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
-            print "FIX! how do we get the GLM result"
-            # hack it!
-            params = {'job_key': jobKey, 'destination_key': modelKey}
-            a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMProgressPage2.json", params=params)
-            print "GLM result from completion_redirect:", h2o.dump_json(a)
+            if DO_POLL: # not needed
+                pass
+            else: 
+                h2o_jobs.pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
+            # print "FIX! how do we get the GLM result"
+            params = {'_modelKey': modelKey}
+            a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMModelView.json", params=params)
+
+            # print "GLM result from completion_redirect:", h2o.dump_json(a)
     
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
         completionHack(glmFirstResult['job_key'], modelKey)
         print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         ## h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
@@ -72,7 +76,7 @@ class Basic(unittest.TestCase):
         # Elastic
         kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         start = time.time()
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
         completionHack(glmFirstResult['job_key'], modelKey)
         print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         ## h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
@@ -80,7 +84,7 @@ class Basic(unittest.TestCase):
         # L1
         kwargs.update({'alpha': 1, 'lambda': 1e-4})
         start = time.time()
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
         completionHack(glmFirstResult['job_key'], modelKey)
         print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         ## h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)

@@ -3,7 +3,6 @@ package water.parser;
 import java.io.EOFException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
@@ -17,7 +16,6 @@ import water.parser.DParseTask.Pass;
 import water.util.*;
 import water.util.Utils.IcedArrayList;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 
 /**
@@ -29,19 +27,17 @@ import com.google.common.io.Closeables;
 public final class ParseDataset extends Job {
   public static enum Compression { NONE, ZIP, GZIP }
 
-  public static int PLIMIT = Integer.MAX_VALUE;
-
   public final Key  _progress;
 
   private ParseDataset(Key dest, Key[] keys) {
     destination_key = dest;
     Value dataset = DKV.get(keys[0]);
     long total = dataset.length() * Pass.values().length;
-    for(int i = 1; i < keys.length; ++i){
+    for(int i = 1; i < keys.length; ++i) {
       dataset = DKV.get(keys[i]);
       total += dataset.length() * Pass.values().length;
     }
-    _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
+    _progress = Key.make((byte) 0, Key.JOB);
     UKV.put(_progress, new Progress(0,total));
   }
 
@@ -69,7 +65,7 @@ public final class ParseDataset extends Job {
       _conflicts = new IcedArrayList<Key>();
       byte [] bits = Utils.getFirstUnzipedBytes(key);
       _gSetup = ParseDataset.guessSetup(bits, _userSetup, _checkHeader);
-      if(_gSetup == null || !_gSetup.valid())
+      if(_gSetup == null || !_gSetup._isValid)
         _failedSetup.add(key);
       else {
         _gSetup._setupFromFile = key;
@@ -79,11 +75,11 @@ public final class ParseDataset extends Job {
     }
 
     @Override public void reduce(GuessSetupTsk drt) {
-      if(_gSetup == null || !_gSetup.valid()){
+      if(_gSetup == null || !_gSetup._isValid){
         _gSetup = drt._gSetup;
         _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
         _gSetup._setupFromFile = drt._gSetup._setupFromFile;
-      } else if(drt._gSetup.valid() && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
+      } else if(drt._gSetup._isValid && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
         if(_conflicts.contains(_gSetup._setupFromFile) && !drt._conflicts.contains(drt._gSetup._setupFromFile)){
           _gSetup = drt._gSetup; // setups are not compatible, select random setup to send up (thus, the most common setup should make it to the top)
           _gSetup._setupFromFile = drt._gSetup._setupFromFile;
@@ -92,7 +88,7 @@ public final class ParseDataset extends Job {
           _conflicts.add(_gSetup._setupFromFile);
           _conflicts.add(drt._gSetup._setupFromFile);
         }
-      } else if(drt._gSetup.valid()){ // merge the two setups
+      } else if(drt._gSetup._isValid){ // merge the two setups
         if(!_gSetup._setup._header && drt._gSetup._setup._header){
           _gSetup._setup._header = true;
           _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
@@ -122,8 +118,13 @@ public final class ParseDataset extends Job {
     public final PSetupGuess _gSetup;
     public final Key [] _failed;
 
-    public ParseSetupGuessException(String msg, PSetupGuess gSetup, Key [] failed){
-      super(msg);
+    public ParseSetupGuessException(String msg,PSetupGuess gSetup, Key [] failed){
+      super(msg + (gSetup != null?", found setup: " + gSetup.toString():""));
+      _gSetup = gSetup;
+      _failed = failed;
+    }
+    public ParseSetupGuessException(PSetupGuess gSetup, Key [] failed){
+      super(gSetup != null?gSetup.toString():"Failed to guess parser setup.");
       _gSetup = gSetup;
       _failed = failed;
     }
@@ -146,7 +147,7 @@ public final class ParseDataset extends Job {
       t.invoke(ks);
       gSetup = t._gSetup;
 
-      if(gSetup.valid() && (!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
+      if(gSetup._isValid && (!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
         // run guess setup once more, this time knowing the global setup to get rid of conflicts (turns them into failures) and bogus failures (i.e. single line files with unexpected separator)
         GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, !gSetup._setup._header);
         HashSet<Key> keySet = new HashSet<Key>(t._conflicts);
@@ -168,8 +169,9 @@ public final class ParseDataset extends Job {
       }
     } else if(!keys.isEmpty())
       gSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(keys.get(0)),setup,checkHeader);
-    if(!gSetup.valid())
-      throw new ParseSetupGuessException("",gSetup,null);
+    if( gSetup == null || !gSetup._isValid){
+      throw new ParseSetupGuessException(gSetup,null);
+    }
     if(headerKey != null){ // separate headerKey
       Value v = DKV.get(headerKey);
       if(!v.isRawData()){ // either ValueArray or a Frame, just extract the headers
@@ -180,17 +182,17 @@ public final class ParseDataset extends Job {
           Frame fr = v.get();
           colNames = fr._names;
         } else
-          throw new ParseSetupGuessException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.newInstance().getClass().getSimpleName(),gSetup,null);
+          throw new ParseSetupGuessException("Headers can only come from unparsed data, ValueArray or a frame. Got " + v.className(),gSetup,null);
       } else { // check the hdr setup by parsing first bytes
         CustomParser.ParserSetup lSetup = gSetup._setup.clone();
         lSetup._header = true;
         PSetupGuess hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),lSetup,false);
-        if(hSetup == null || !hSetup.valid()) { // no match with global setup, try once more with general setup (e.g. header file can have different separator than the rest)
+        if(hSetup == null || !hSetup._isValid) { // no match with global setup, try once more with general setup (e.g. header file can have different separator than the rest)
           ParserSetup stp = new ParserSetup();
           stp._header = true;
           hSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(headerKey),stp,false);
         }
-        if(!hSetup.valid() || hSetup._setup._columnNames == null)
+        if(!hSetup._isValid || hSetup._setup._columnNames == null)
           throw new ParseSetupGuessException("Invalid header file. I did not find any column names.",gSetup,null);
         if(hSetup._setup._ncols != gSetup._setup._ncols)
           throw new ParseSetupGuessException("Header file has different number of columns than the rest!, expected " + gSetup._setup._ncols + " columns, got " + hSetup._setup._ncols + ", header: " + Arrays.toString(hSetup._setup._columnNames),gSetup,null);
@@ -219,7 +221,7 @@ public final class ParseDataset extends Job {
 
 
   public static PSetupGuess guessSetup(byte [] bits, ParserSetup setup, boolean checkHeader){
-    if(bits == null)return new PSetupGuess(new ParserSetup(), 0, 0, null, null);
+    if(bits == null)return new PSetupGuess(new ParserSetup(), 0, 0, null,false, null);
     ArrayList<PSetupGuess> guesses = new ArrayList<CustomParser.PSetupGuess>();
     PSetupGuess res = null;
     if(setup == null)setup = new ParserSetup();
@@ -232,21 +234,21 @@ public final class ParseDataset extends Job {
         return XlsParser.guessSetup(bits);
       case AUTO:
         try{
-          if((res = XlsParser.guessSetup(bits)) != null && res.valid())
+          if((res = XlsParser.guessSetup(bits)) != null && res._isValid)
             if(!res.hasErrors())return res;
             else guesses.add(res);
         }catch(Exception e){}
         try{
-          if((res = SVMLightParser.guessSetup(bits)) != null && res.valid())
+          if((res = SVMLightParser.guessSetup(bits)) != null && res._isValid)
             if(!res.hasErrors())return res;
             else guesses.add(res);
         }catch(Exception e){}
         try{
-          if((res = CsvParser.guessSetup(bits,setup,checkHeader)) != null && res.valid())
+          if((res = CsvParser.guessSetup(bits,setup,checkHeader)) != null && res._isValid)
             if(!res.hasErrors())return res;
             else guesses.add(res);
         }catch(Exception e){e.printStackTrace();}
-        if(res == null || !res.valid() && !guesses.isEmpty()){
+        if(res == null || !res._isValid && !guesses.isEmpty()){
           for(PSetupGuess pg:guesses)
             if(res == null || pg._validLines > res._validLines)
               res = pg;
@@ -273,11 +275,13 @@ public final class ParseDataset extends Job {
       ArrayList<Key> ks = new ArrayList<Key>(keys.length);
       for (Key k:keys)ks.add(k);
       PSetupGuess guess = guessSetup(ks, null, new ParserSetup(), true);
-      if(!guess.valid())throw new RuntimeException("can not parse this dataset, did not find working setup");
+      if(!guess._isValid)throw new RuntimeException("can not parse this dataset, did not find working setup");
       setup = guess._setup;
     }
+    setup.checkDupColumnNames();
     int j = 0;
-    UKV.remove(job.dest());// remove any previous instance and insert a sentinel (to ensure no one has been writing to the same keys during our parse!
+    // remove any previous instance and insert a sentinel (to ensure no one has
+    // been writing to the same keys during our parse!
     Key [] nonEmptyKeys = new Key[keys.length];
     for (int i = 0; i < keys.length; ++i) {
       Value v = DKV.get(keys[i]);
@@ -297,6 +301,7 @@ public final class ParseDataset extends Job {
           DParseTask p2 = p1.createPassTwo();
           p2.passTwo();
           p2.createValueArrayHeader();
+          Lockable.delete(keys[0],job.self());
           job.remove();
           return;
         } else
@@ -336,8 +341,9 @@ public final class ParseDataset extends Job {
         System.err.println(phaseTwo._error);
         throw new RuntimeException("The dataset format is not recognized/supported");
       }
+      // Delete source files after pass 2
       FileInfo finfo = fileInfo.get(keys[i]);
-      UKV.remove(finfo._okey);
+      Lockable.delete(finfo._okey,job.self());
     }
     phaseTwo.normalizeSigma();
     phaseTwo._colNames = setup._columnNames;
@@ -367,13 +373,29 @@ public final class ParseDataset extends Job {
     @Override
     public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       UKV.remove(job._progress);
-      job.cancel("Got Exception " + ex.getClass().getSimpleName() + ", with msg " + ex.getMessage());
+      if(!(ex instanceof JobCancelledException))
+        job.cancel("Got Exception " + ex.getClass().getSimpleName() + ", with msg " + ex.getMessage());
       return super.onExceptionalCompletion(ex, caller);
     }
   }
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
+    // Some quick sanity checks: no overwriting your input key, and a resource check.
+    long sum=0;
+    for( Key k : keys ) {
+      if( dest.equals(k) ) 
+        throw new IllegalArgumentException("Destination key "+dest+" must be different from all sources");
+      sum += DKV.get(k).length(); // Sum of all input filesizes
+    }
+    long memsz=0;               // Cluster memory
+    for( H2ONode h2o : H2O.CLOUD._memary )
+      memsz += h2o.get_max_mem();
+    if( sum > memsz*2 )
+      throw new IllegalArgumentException("Total input file size of "+PrettyPrint.bytes(sum)+" is much larger than total cluster memory of "+PrettyPrint.bytes(memsz)+", please use either a larger cluster or smaller data.");
+
     ParseDataset job = new ParseDataset(dest, keys);
-    ParserFJTask fjt = new ParserFJTask(job, keys, setup);
+    new ValueArray(job.dest(),0).delete_and_lock(job.self()); // Lock BEFORE returning
+    for( Key k : keys ) Lockable.read_lock(k,job.self());
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup);    // Fire off background parse
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;
@@ -438,7 +460,7 @@ public final class ParseDataset extends Job {
       public void compute2() {
         final Key key = _keys[_idx];
         Value v = DKV.get(key);
-        assert v != null;
+        assert v != null : "Did not find "+key;
         ParserSetup localSetup = ParseDataset.guessSetup(Utils.getFirstUnzipedBytes(v), _parserSetup,false)._setup;
         if(!_parserSetup.isCompatible(localSetup))throw new ParseException("Parsing incompatible files. " + _parserSetup.toString() + " is not compatible with " + localSetup.toString());
         _fileInfo[_idx] = new FileInfo();
@@ -491,13 +513,15 @@ public final class ParseDataset extends Job {
             }
             _fileInfo[_idx]._okey = Key.make(new String(key._kb) + "_UNZIPPED");
             ValueArray.readPut(_fileInfo[_idx]._okey, is,_job);
+            Lockable.read_lock(_fileInfo[_idx]._okey,_job.self());
+            Lockable.delete(_fileInfo[_idx]._ikey,_job.self()); // Delete zip after unzipping
             v = DKV.get(_fileInfo[_idx]._okey);
             onProgressSizeChange(2*(v.length() - csz), _job); // the 2 passes will go over larger file!
             assert v != null;
           }catch (EOFException e){
             if(ris != null && ris instanceof RIStream){
               RIStream r = (RIStream)ris;
-              System.err.println("Unexpected eof after reading " + r.off() + "bytes, expeted size = " + r.expectedSz());
+              System.err.println("Unexpected eof after reading " + r.off() + "bytes, expected size = " + r.expectedSz());
             }
             System.err.println("failed decompressing data " + key.toString() + " with compression " + comp);
             throw new RuntimeException(e);
@@ -555,7 +579,7 @@ public final class ParseDataset extends Job {
         int p = 0;
         int j = 0;
         for(int i = 0; i < _keys.length; ++i){
-          if(p == ParseDataset.PLIMIT) subTasks[j++].join(); else ++p;
+          if(p == H2O.OPT_ARGS.pparse_limit) subTasks[j++].join(); else ++p;
           H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
         }
       }catch(Throwable t){t.printStackTrace();}

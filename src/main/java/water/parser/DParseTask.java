@@ -1,13 +1,12 @@
 package water.parser;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import water.*;
+import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
-import water.util.Log;
 import water.util.Utils;
 
 /** Class responsible for actual parsing of the datasets.
@@ -138,6 +137,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       Value v = DKV.get(key);
       return v == null ? null : v.memOrLoad();
     }
+    @Override public int  getChunkDataStart(int cidx) { return -1; }
+    @Override public void setChunkDataStart(int cidx, int offset) { }
   }
 
   /** Manages the chunk parts of the result hex varray.
@@ -203,7 +204,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       return new Value(_key,bits2);
     }
 
-    @Override public void onSuccess(){
+    @Override public void onSuccess(Value old){
       _bits = null;             // Do not return the bits
     }
   }
@@ -378,7 +379,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         if(t._colTypes[i] == UCOL && t._enums[i] != null && t._enums[i].size() == 1)
           t._colTypes[i] = ECOL;
         if(t._colTypes[i] == ECOL && t._enums[i] != null && !t._enums[i].isKilled())
-          t._colDomains[i] = t._enums[i].computeColumnDomain();
+          t._colDomains[i] = ValueString.toString(t._enums[i].computeColumnDomain());
         else
           t._enums[i] = null;
       }
@@ -405,8 +406,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     _myrows = 0;
     // make sure we delete previous array here, because we insert arraylet header after all chunks are stored in
     // so if we do not delete it now, it will be deleted by UKV automatically later and destroy our values!
-    if(DKV.get(_job.dest()) != null)
-      UKV.remove(_job.dest());
     if(_parser.parallelParseSupported())
       this.invoke(_sourceDataset._key);
     else {
@@ -459,14 +458,13 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._min = _min[i];
       cols[i]._mean = _mean[i];
       cols[i]._sigma = _sigma[i];
-      cols[i]._name = _colNames != null?_colNames[i]:Integer.toString(i);
+      cols[i]._name = _colNames != null?_colNames[i]:("C"+(Integer.toString(i+1)));
       off += Math.abs(cols[i]._size);
     }
     // let any pending progress reports finish
     DKV.write_barrier();
     // finally make the value array header
-    ValueArray ary = new ValueArray(_job.dest(), _numRows, off, cols);
-    UKV.put(_job.dest(), ary);
+    new ValueArray(_job.dest(), _numRows, off, cols).unlock(_job.self());
   }
 
   protected void createEnums() {
@@ -527,8 +525,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
    * splitting it into equal sized chunks.
    */
   @Override public void map(Key key) {
-    if(_job.cancelled())
-      return;
+    if(!Job.isRunning(_job.self()))
+      throw new JobCancelledException();
     _map = true;
     Key aryKey = null;
     boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
@@ -585,7 +583,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
 
   @Override
   public void reduce(DParseTask dpt) {
-    if(_job.cancelled())
+    if(!Job.isRunning(_job.self()))
       return;
     assert dpt._map;
     if(_sigma == null)_sigma = dpt._sigma;
@@ -656,17 +654,24 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   };
 
   static public long [] powers10i = new long[]{
-    1,
-    10,
-    100,
-    1000,
-    10000,
-    100000,
-    1000000,
-    10000000,
-    100000000,
-    1000000000,
-    10000000000l
+    1l,
+    10l,
+    100l,
+    1000l,
+    10000l,
+    100000l,
+    1000000l,
+    10000000l,
+    100000000l,
+    1000000000l,
+    10000000000l,
+    100000000000l,
+    1000000000000l,
+    10000000000000l,
+    100000000000000l,
+    1000000000000000l,
+    10000000000000000l,
+    100000000000000000l,
   };
 
   public static double pow10(int exp){
@@ -674,7 +679,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   }
 
   public static long pow10i(int exp){
-    assert 10 >= exp && exp >= 0:"unexpected exponent " + exp;
     return powers10i[exp];
   }
 
@@ -719,19 +723,25 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         }
         break;
       case ICOL: // number
-        if (_max[i] - _min[i] < 255) {
-          _colTypes[i] = BYTE;
-          _bases[i] = (int)_min[i];
-        } else if ((_max[i] - _min[i]) < 65535) {
-          _colTypes[i] = SHORT;
-          _bases[i] = (int)_min[i];
-        } else if (_max[i] - _min[i] < (1L << 32) &&
-                   _min[i] > Integer.MIN_VALUE && _max[i] < Integer.MAX_VALUE) {
-          _colTypes[i] = INT;
-          _bases[i] = (int)_min[i];
+        if(_min[i] >= Long.MIN_VALUE && _max[i] <= Long.MAX_VALUE){
+          if(_min[i] < Integer.MIN_VALUE || _max[i] > Integer.MAX_VALUE){
+            _colTypes[i] = LONG;
+          } else if (_max[i] - _min[i] < 255) {
+            _colTypes[i] = BYTE;
+            _bases[i] = (int)_min[i];
+          } else if ((_max[i] - _min[i]) < 65535) {
+            _colTypes[i] = SHORT;
+            _bases[i] = (int)_min[i];
+          } else if (_max[i] - _min[i] < (1L << 32) &&
+                     _min[i] > Integer.MIN_VALUE && _max[i] < Integer.MAX_VALUE) {
+            _colTypes[i] = INT;
+            _bases[i] = (int)_min[i];
+          } else
+            _colTypes[i] = LONG;
+          break;
         } else
-          _colTypes[i] = LONG;
-        break;
+          _colTypes[i] = DCOL;
+        //fallthrough
       case FCOL:
       case DCOL:
         if(_scale[i] >= -4 && (_max[i] <= powers10i[powers10i.length-1]) && (_min[i] >= -powers10i[powers10i.length-1])){

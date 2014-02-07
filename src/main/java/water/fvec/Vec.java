@@ -1,13 +1,8 @@
 package water.fvec;
 
-import java.util.Arrays;
 import java.util.UUID;
-import sun.security.krb5.internal.SeqNumber;
 
 import water.*;
-import water.H2O.H2OCallback;
-import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
 import water.util.Utils;
 import static water.util.Utils.seq;
 
@@ -49,7 +44,7 @@ public class Vec extends Iced {
   public static final int LOG_CHK = ValueArray.LOG_CHK; // Same as VA to help conversions
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
-  static final long CHUNK_SZ = 1L << LOG_CHK;
+  static final int CHUNK_SZ = 1 << LOG_CHK;
 
   /** Key mapping a Value which holds this Vec.  */
   final public Key _key;        // Top-level key
@@ -57,8 +52,8 @@ public class Vec extends Iced {
    *  chunks, so the last entry is the total number of rows.  This field is
    *  dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
    *  such as file-backed Vecs. */
-  final private long _espc[];
-  public long [] espc(){return _espc;}
+  final public long _espc[];
+
   /** Enum/factor/categorical names. */
   public String [] _domain;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
@@ -117,6 +112,7 @@ public class Vec extends Iced {
   public Vec makeCon( final double d ) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    if( (long)d==d ) return makeCon((long)d);
     int nchunks = nChunks();
     Vec v0 = new Vec(group().addVecs(1)[0],_espc);
     long row=0;                 // Start row
@@ -135,11 +131,14 @@ public class Vec extends Iced {
   public Vec makeTransf(final int[] domMap, final String[] domain) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, domain, group().addVecs(1)[0],_espc);
+    Vec v0 = new TransfVec(this._key, domMap, (int) min(), domain, group().addVecs(1)[0],_espc);
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
   }
+  // This Vec does not have dependent hidden Vec it uses
+  public Vec masterVec() { return null; }
+
   /**
    * Adapt given vector <code>v</code> to this vector.
    * I.e., unify domains and call makeTransf().
@@ -177,45 +176,22 @@ public class Vec extends Iced {
    *  categorical columns.  Returns null for non-Enum/factor columns. */
   public String[] domain() { return _domain; }
 
-  /** Convert an integer column to an enum column, with just number strings for
-   *  the factors or levels.
-   *
-   *  Deprecated - you should use toEnum ALWAYS returning a new vector which
-   *  provides a correct transformation to enum. The caller of {@link #toEnum()} is ALWAYS responsible
-   *  for its deletion!!!
-   *  */
-  @Deprecated
-  public void asEnum() {
-    if( _domain!=null ) return;
-    if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
-    _domain = defaultLevels();
-    DKV.put(_key,this);
-  }
+  /** Returns cardinality for enum domain or -1 for other types. */
+  public int cardinality() { return isEnum() ? _domain.length : -1; }
 
   /** Transform this vector to enum.
-   * Transformation is done by a {@link TransfVec} which provides a mapping between values.
+   *  Transformation is done by a {@link TransfVec} which provides a mapping between values.
    *
-   * The caller is responsible for vector deletion!
+   *  The caller is responsible for vector deletion!
    */
   public Vec toEnum() {
-    if( _domain!=null ) return this.makeTransf(seq(0,_domain.length), _domain);
-    else {
-      int[] domain;
-      String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
-      int[] domMap = Utils.mapping(domain);
-      if( domain.length > MAX_ENUM_SIZE ) throw H2O.unimpl();
-      return this.makeTransf(domMap, sdomain);
-    }
-  }
-
-  @Deprecated
-  public String[] defaultLevels() {
-    long min = (long)min(), max = (long)max();
-    if( min < 0 || max > 100000L ) throw H2O.unimpl();
-    String domain[] = new String[(int)max+1];
-    for( int i=0; i<(int)max+1; i++ )
-      domain[i] = Integer.toString(i);
-    return domain;
+    if( isEnum() ) return this.makeTransf(seq(0,_domain.length), _domain);
+    if( !isInt() ) throw new IllegalArgumentException("Enum conversion only works on integer columns");
+    int[] domain;
+    String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
+    int[] domMap = Utils.mapping(domain);
+    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column is to big to represent an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
+    return this.makeTransf(domMap, sdomain);
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
@@ -250,38 +226,23 @@ public class Vec extends Iced {
   }
 
   /** Compute the roll-up stats as-needed, and copy into the Vec object */
-  public Vec rollupStats() {
-    rollupStats((H2OCountedCompleter)null);
-    return this;
-  }
-  // wrap CPS style invocation into more convenient interface using Futures
-  public void rollupStats(Futures fs) {
-    H2OEmptyCompleter ec = new H2OEmptyCompleter();
-    rollupStats(ec);
-    fs.add(ec);
-  }
-  // Allow a bunch of rollups to run in parallel allowing CPS style invocation
-  public void rollupStats(final H2OCountedCompleter cc) {
+  public Vec rollupStats() { return rollupStats(null); }
+  // Allow a bunch of rollups to run in parallel.  If Futures is passed in, run
+  // the rollup in the background.  *Always* returns "this".
+  public Vec rollupStats(Futures fs) {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
+      if( vthis == this ) return this;
       _min  = vthis._min;   _max   = vthis._max;
       _mean = vthis._mean;  _sigma = vthis._sigma;
       _size = vthis._size;  _isInt = vthis._isInt;
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
-      // tell the caller we're done!
-      if(cc != null) H2O.submitTask(new H2OCountedCompleter() {  // submit new task to do the completion
-        @Override public byte priority() {return cc.priority();} // as the completer may have some extensive work to do.
-        @Override public void compute2() {cc.tryComplete();}
-      });
-      return;
+    } else {                 // KV store reports we need to recompute
+      RollupStats rs = new RollupStats().dfork(this);
+      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
     }
-    RollupStats rs = new RollupStats();
-    if(cc != null) {
-      rs.setCompleter(cc);
-      rs.dfork(this);
-    } else
-      rs.doAll(this);
+    return this;
   }
 
   /** A private class to compute the rollup stats */
@@ -336,9 +297,8 @@ public class Vec extends Iced {
       _size += rs._size;
       _isInt &= rs._isInt;
     }
-    @Override public boolean logVerbose() {
-      return !H2O.DEBUG;
-    }
+    // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
+    @Override public boolean logVerbose() { return false; }
   }
 
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
@@ -392,6 +352,15 @@ public class Vec extends Iced {
   /** Number of rows in chunk. Does not fetch chunk content. */
   public int chunkLen( int cidx ) { return (int) (_espc[cidx + 1] - _espc[cidx]); }
 
+  /** Get a Vec Key from Chunk Key, without loading the Chunk */
+  static public Key getVecKey( Key key ) {
+    assert key._kb[0]==Key.DVEC;
+    byte [] bits = key._kb.clone();
+    bits[0] = Key.VEC;
+    UDP.set4(bits,6,-1); // chunk#
+    return Key.make(bits);
+  }
+
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
   public Key chunkKey(int cidx ) {
     byte [] bits = _key._kb.clone();
@@ -400,14 +369,21 @@ public class Vec extends Iced {
     return Key.make(bits);
   }
   /** Get a Chunk's Value by index.  Basically the index-to-key map,
-   *  plus the {@link DKV.get}.  Warning: this pulls the data locally;
+   *  plus the {@code DKV.get()}.  Warning: this pulls the data locally;
    *  using this call on every Chunk index on the same node will
    *  probably trigger an OOM!  */
   public Value chunkIdx( int cidx ) {
     Value val = DKV.get(chunkKey(cidx));
-    assert val != null : "Missing chunk "+cidx+" for "+_key;
+    assert checkMissing(cidx,val);
     return val;
   }
+
+  protected boolean checkMissing(int cidx, Value val) {
+    if( val != null ) return true;
+    System.out.println("Missing chunk "+cidx+" for "+_key);
+    return false;
+  }
+
 
   /** Make a new random Key that fits the requirements for a Vec key. */
   static public Key newKey(){return newKey(Key.make());}
@@ -453,8 +429,9 @@ public class Vec extends Iced {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     Chunk c = dvec.get();               // Chunk data to compression wrapper
-    if( c._start == start ) return c;   // Already filled-in
-    assert c._start == -1 || c._start == start; // Second term in case multi-thread access
+    long cstart = c._start;             // Read once, since racily filled in
+    if( cstart == start ) return c;     // Already filled-in
+    assert cstart == -1;       // Was not filled in (everybody racily writes the same start value)
     c._start = start;          // Fields not filled in by unpacking from Value
     c._vec = this;             // Fields not filled in by unpacking from Value
     return c;
@@ -462,14 +439,6 @@ public class Vec extends Iced {
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
   public final Chunk chunk( long i ) {
     return elem2BV(elem2ChunkIdx(i));
-  }
-
-  /** Next Chunk from the current one. */
-  final Chunk nextBV( Chunk bv ) {
-    int cidx = bv.cidx()+1;
-    Chunk next =  cidx == nChunks() ? null : elem2BV(cidx);
-    assert next == null || next.cidx() == cidx;
-    return next;
   }
 
   /** Fetch element the slow way, as a long.  Floating point values are
@@ -502,8 +471,9 @@ public class Vec extends Iced {
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
+      // CNC: Bad plan to load remote data during a toString... messes up debug printing
       // Stupidly elem2BV loads all data locally
-      s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
+      // s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
     }
     return s+"}]";
   }
@@ -514,10 +484,34 @@ public class Vec extends Iced {
   }
 
   @Override public boolean equals( Object o ) {
-    if( !(o instanceof Vec) ) return false;
-    return ((Vec)o)._key.equals(_key);
+    return o instanceof Vec && ((Vec)o)._key.equals(_key);
   }
   @Override public int hashCode() { return _key.hashCode(); }
+
+  /** Always makes a copy of the given vector which shares the same
+   * group.
+   *
+   * The user is responsible for deleting the returned vector.
+   *
+   * This can be expensive operation since it can force copy of data
+   * among nodes.
+   *
+   * @param vec vector which is intended to be copied
+   * @return a copy of vec which shared the same {@link VectorGroup} with this vector
+   */
+  public Vec align(final Vec vec) {
+    assert ! this.group().equals(vec.group()) : "Vector align expects a vector from different vector group";
+    assert this._size == vec._size : "Trying to align vectors with different length!";
+    Vec avec = makeZero(); // aligned vector
+    new MRTask2() {
+      @Override public void map(Chunk c0) {
+        long srow = c0._start;
+        for (int r = 0; r < c0._len; r++) c0.set0(r, vec.at(srow + r));
+      }
+    }.doAll(avec);
+    avec._domain = _domain;
+    return avec;
+  }
 
   /**
    * Class representing the group of vectors.
@@ -596,10 +590,10 @@ public class Vec extends Iced {
     }
     /**
      * Gets the next n keys of this group.
-     * Performs atomic udpate of the group object to assure we get unique keys.
-     * The group size will be udpated by adding n.
+     * Performs atomic update of the group object to assure we get unique keys.
+     * The group size will be updated by adding n.
      *
-     * @param n
+     * @param n number of keys to make
      * @return arrays of unique keys belonging to this group.
      */
     public Key [] addVecs(final int n){
@@ -616,29 +610,37 @@ public class Vec extends Iced {
     }
 
     @Override public boolean equals( Object o ) {
-      if( !(o instanceof VectorGroup) ) return false;
-      return ((VectorGroup)o)._key.equals(_key);
+      return o instanceof VectorGroup && ((VectorGroup)o)._key.equals(_key);
     }
     @Override public int hashCode() {
       return _key.hashCode();
     }
   }
 
+  /** Collect numeric domain of given vector */
   public static class CollectDomain extends MRTask2<CollectDomain> {
     final int _nclass;
     final int _ymin;
-    byte _dom[];
+    byte _dom[]; // Shared between all instances of this tasks since each instance is doing a simple write.
+
+    @Override protected void setupLocal() { _dom = new byte[_nclass]; }
+
     public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
     @Override public void map(Chunk ys) {
-      _dom = new byte[_nclass];
-      int ycls=0;
       for( int row=0; row<ys._len; row++ ) {
         if (ys.isNA0(row)) continue;
-        ycls = (int)ys.at80(row)-_ymin;
-        _dom[ycls] = 1;
+        int ycls = (int)ys.at80(row)-_ymin;
+        if( _dom[ycls] == 0 ) _dom[ycls] = 1; // Only write to shared array
       }
     }
-    @Override public void reduce( CollectDomain that ) { Utils.or(_dom,that._dom); }
+
+    @Override public void reduce(CollectDomain mrt) { Utils.or(this._dom, mrt._dom); }
+
+    /** Returns exact numeric domain of given vector computed by this task.
+     * The domain is always sorted. Hence:
+     *    domain()[0] - minimal domain value
+     *    domain()[domain().length-1] - maximal domain value
+     */
     public int[] domain() {
       int cnt = 0;
       for (int i=0; i<_dom.length; i++) if (_dom[i]>0) cnt++;

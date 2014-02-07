@@ -52,10 +52,8 @@ public class RReader extends Request {
       Response r = RReaderProgress.redirect(response, dest);
       r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
       return r;
-    } catch( IllegalArgumentException e ) {
-      return Response.error(e.getMessage());
-    } catch( Error e ) {
-      return Response.error(e.getMessage());
+    } catch( Throwable e ) {
+      return Response.error(e);
     }
   }
 }

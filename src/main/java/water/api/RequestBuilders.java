@@ -1,19 +1,25 @@
 package water.api;
 
+import com.google.gson.*;
+import water.AutoBuffer;
+import water.H2O;
+import water.Iced;
+import water.PrettyPrint;
+import water.api.Request.API;
+import water.api.RequestBuilders.Response.Status;
+import water.util.JsonUtil;
+import water.util.Log;
+import water.util.RString;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
-
-import water.AutoBuffer;
-import water.H2O;
-import water.PrettyPrint;
-import water.util.*;
-
-import com.google.gson.*;
-import com.google.gson.stream.JsonReader;
 
 /** Builders & response object.
  *
@@ -57,6 +63,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append("<div class='row-fluid'>");
     sb.append("<div class='span12'>");
     sb.append(buildJSONResponseBox(response));
+    if( response._status == Response.Status.done ) response.toJava(sb);
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
@@ -171,7 +178,7 @@ public class RequestBuilders extends RequestQueries {
       case poll:
         if (response._redirectArgs != null) {
           RString poll = new RString(_redirectJs);
-          poll.replace("REDIRECT_URL",getClass().getSimpleName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
+          poll.replace("REDIRECT_URL",requestName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
           result.replace("JSSTUFF", poll.toString());
         } else {
           RString poll = new RString(_pollJs);
@@ -181,7 +188,7 @@ public class RequestBuilders extends RequestQueries {
         int pct = (int) ((double)response._pollProgress / response._pollProgressElements * 100);
         result.replace("BUTTON","<button class='btn btn-primary' onclick='redirect()'>"+response._status.toString()+"</button>");
         result.replace("TEXT","<div style='margin-bottom:0px;padding-bottom:0xp;height:5px;' class='progress progress-stripped'><div class='bar' style='width:"+pct+"%;'></div></div>"
-                + "Request was successful, but the process is not yet finished.  The page will refresh each 5 seconds, or you can any time click the button"
+                + "Request was successful, but the process has not yet finished.  The page will refresh every 2 seconds, or you can click the button"
                 + " on the left.  If you want you can <a href='#' onclick='countdown_stop()'>disable the automatic refresh</a>.");
         break;
       default:
@@ -349,7 +356,20 @@ public class RequestBuilders extends RequestQueries {
       _req = null;
     }
 
-    public Response(Status status, Request req, int progress, int total, String redirTo, Object... args) {
+    private Response(Status status, Request req, int progress, int total, Object...pollArgs) {
+      assert (status == Status.poll);
+      _status = status;
+      _response = null;
+      _redirectName = null;
+      _redirectArgs = null;
+      _redirArgs = pollArgs;
+      _pollProgress = progress;
+      _pollProgressElements = total;
+      _req = req;
+    }
+
+    /** Response v2 constructor */
+    private Response(Status status, Request req, int progress, int total, String redirTo, Object... args) {
       _status = status;
       _response = null;
       _redirectName = redirTo;
@@ -363,7 +383,15 @@ public class RequestBuilders extends RequestQueries {
 
     /** Returns new error response with given error message.
      */
+    public static Response error(Throwable e) {
+      if( !(e instanceof IllegalAccessException ))
+        Log.err(e);
+      String message = e.getMessage();
+      if( message == null ) message = e.getClass().toString();
+      return error(message);
+    }
     public static Response error(String message) {
+      if( message == null ) message = "no error message";
       JsonObject obj = new JsonObject();
       obj.addProperty(ERROR,message);
       Response r = new Response(Status.error,obj);
@@ -376,6 +404,11 @@ public class RequestBuilders extends RequestQueries {
     public static Response done(JsonObject response) {
       assert response != null : "Called Response.done with null JSON response - perhaps you should call Response.doneEmpty";
       return new Response(Status.done, response);
+    }
+
+    /** Response done v2. */
+    public static Response done(Request req) {
+      return new Response(Response.Status.done,req,-1,-1,(String) null);
     }
 
     /** A unique empty response which carries an empty JSON object */
@@ -399,6 +432,11 @@ public class RequestBuilders extends RequestQueries {
           req.getSimpleName(), args);
     }
 
+    /** Redirect for v2 API */
+    public static Response redirect(Request req, String redirectName, Object...redirectArgs) {
+      return new Response(Response.Status.redirect, req, -1, -1, redirectName, redirectArgs);
+    }
+
     /** Returns the poll response object.
      */
     public static Response poll(JsonObject response, int progress, int total) {
@@ -417,7 +455,12 @@ public class RequestBuilders extends RequestQueries {
      */
     public static Response poll(JsonObject response, int progress, int total, JsonObject pollArgs) {
       return new Response(Status.poll,response, progress, total, pollArgs);
+    }
 
+    /** Returns the poll response object.
+     */
+    public static Response poll(Request req, int progress, int total, Object...pollArgs) {
+      return new Response(Status.poll,req, progress, total, pollArgs);
     }
 
     /** Sets the time of the response as a difference between the given time and
@@ -505,6 +548,10 @@ public class RequestBuilders extends RequestQueries {
       return res;
     }
 
+    public void toJava(StringBuilder sb) { 
+      if( _req != null ) _req.toJava(sb);
+    }
+
      /** Returns the error of the request object if any. Returns null if the
      * response is not in error state.
      */
@@ -518,6 +565,33 @@ public class RequestBuilders extends RequestQueries {
       _strictJsonCompliance = true;
     }
 
+    public ResponseInfo extractInfo() {
+      String redirectUrl = null;
+      if (_status == Status.redirect) redirectUrl = _redirectName+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      if (_status == Status.poll)     redirectUrl = _req.href()+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      return new ResponseInfo(redirectUrl, _time, _status);
+    }
+  }
+
+  /** Class holding technical information about request/response. It will be served as a part of Request2's
+   * response.
+   */
+  public static class ResponseInfo extends Iced {
+    static final int API_WEAVER=1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    final @API(help="H2O cloud name.") String h2o;
+    final @API(help="Node serving the response.") String node;
+    final @API(help="Request processing time.") long time;
+    final @API(help="Response status") Response.Status status;
+    final @API(help="Redirect name.") String redirect_url;
+    public ResponseInfo(String redirect_url, long time, Status status) {
+      this.h2o = H2O.NAME;
+      this.node = H2O.SELF.toString();
+      this.redirect_url = redirect_url;
+      this.time = time;
+      this.status = status;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -824,7 +898,7 @@ public class RequestBuilders extends RequestQueries {
       try {
         String k = URLEncoder.encode(content, "UTF-8");
         return super.build("<a href='Inspect.html?key="+k+"'>"+content+"</a>", name);
-      } catch (UnsupportedEncodingException e) {
+      } catch( UnsupportedEncodingException e ) {
         throw Log.errRTExcept(e);
       }
     }
@@ -844,7 +918,7 @@ public class RequestBuilders extends RequestQueries {
         String key = element.getAsString();
         String k = URLEncoder.encode(key, "UTF-8");
         return "<a href='Inspect.html?key="+k+"'>"+key+"</a>";
-      } catch (UnsupportedEncodingException e) {
+      } catch( UnsupportedEncodingException e ) {
         throw Log.errRTExcept(e);
       }
     }
@@ -1041,7 +1115,7 @@ public class RequestBuilders extends RequestQueries {
         String key = URLEncoder.encode(str,"UTF-8");
         String delete = "<a href='RemoveAck.html?"+KEY+"="+key+"'><button class='btn btn-danger btn-mini'>X</button></a>";
         return delete + "&nbsp;&nbsp;<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
-      } catch (UnsupportedEncodingException e) {
+      } catch( UnsupportedEncodingException e ) {
         throw  Log.errRTExcept(e);
       }
     }
@@ -1050,7 +1124,7 @@ public class RequestBuilders extends RequestQueries {
   public class KeyMinAvgMaxBuilder extends ArrayRowElementBuilder {
     private String trunc(JsonObject obj, String fld, int n) {
       JsonElement je = obj.get(fld);
-      if( je == null ) return "<br>";
+      if( je == null || je instanceof JsonNull ) return "<br>";
       String s1 = je.getAsString();
       String s2 = (s1.length() > n ?  s1.substring(0,n) : s1);
       String s3 = s2.replace(" ","&nbsp;");
@@ -1061,4 +1135,5 @@ public class RequestBuilders extends RequestQueries {
       return "<strong>"+trunc(obj,HEADER,10)+"</strong>"+trunc(obj,MIN,6)+trunc(obj,MEAN,6)+trunc(obj,MAX,6);
     }
   }
+
 }

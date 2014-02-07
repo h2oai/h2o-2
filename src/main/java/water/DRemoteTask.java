@@ -1,22 +1,23 @@
 package water;
 
 import java.util.ArrayList;
-import java.util.UUID;
 import java.util.concurrent.*;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinPool;
 import water.DException.DistributedException;
+import water.Job.JobCancelledException;
 import water.util.Log;
 
 /**  A Distributed DTask.
  * Execute a set of Keys on the home for each Key.
  * Limited to doing a map/reduce style.
  */
-public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implements Cloneable {
+public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implements Cloneable, ForkJoinPool.ManagedBlocker {
   // Keys to be worked over
   protected Key[] _keys;
   // One-time flips from false to true
-  transient protected boolean _is_local;
+  transient protected boolean _is_local, _top_level;
   // Other RPCs we are waiting on
   transient private RPC<T> _lo, _hi;
   // Local work we are waiting on
@@ -43,7 +44,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public T invokeOnAllNodes() {
     H2O cloud = H2O.CLOUD;
     Key[] args = new Key[cloud.size()];
-    String skey = "RunOnAll__"+UUID.randomUUID().toString();
+    String skey = "RunOnAll"+Key.rand();
     for( int i = 0; i < args.length; ++i )
       args[i] = Key.make(skey,(byte)0,Key.DFJ_INTERNAL_USER,cloud._memary[i]);
     invoke(args);
@@ -52,21 +53,36 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   }
 
   // Invoked with a set of keys
-  public T dfork ( Key... keys ) { keys(keys); compute2(); return self(); }
+  public T dfork ( Key... keys ) { keys(keys); _top_level=true; compute2(); return self(); }
   public void keys( Key... keys ) { _keys = flatten(keys); }
   public T invoke( Key... keys ) {
-    try { dfork(keys).get(); }
-    catch(ExecutionException eex) { // skip the execution part
-      Throwable tex = eex.getCause();
-      if( tex instanceof Error ) throw (Error)tex;
-      if( tex instanceof DistributedException ) throw (DistributedException)tex;
-      throw new RuntimeException(tex);
-    }
-    catch(InterruptedException  iex) { Log.errRTExcept(iex); }
-    catch(CancellationException cex) { Log.errRTExcept(cex); }
+    try { 
+      ForkJoinPool.managedBlock(dfork(keys));
+    } catch(InterruptedException  iex) { Log.errRTExcept(iex); }
+
     // Intent was to quietlyJoin();
     // Which forks, then QUIETLY join to not propagate local exceptions out.
     return self();
+  }
+
+  // Return true if blocking is unnecessary, which is true if the Task isDone.
+  public boolean isReleasable() {  return isDone();  }
+  // Possibly blocks the current thread.  Returns true if isReleasable would
+  // return true.  Used by the FJ Pool management to spawn threads to prevent
+  // deadlock is otherwise all threads would block on waits.
+  public boolean block() throws InterruptedException {
+    while( !isDone() ) {
+      try { get(); }
+      catch(ExecutionException eex) { // skip the execution part
+        Throwable tex = eex.getCause();
+        if( tex instanceof Error ) throw (Error)tex;
+        if( tex instanceof DistributedException ) throw (DistributedException)tex;
+        if(tex instanceof JobCancelledException)throw (JobCancelledException)tex;
+        throw new RuntimeException(tex);
+      }
+      catch(CancellationException cex) { Log.errRTExcept(cex); }
+    }
+    return true;
   }
 
   // Decide to do local-work or remote-work
@@ -144,7 +160,10 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     if(_local != null && _local._fs != null )
       _local._fs.blockForPending(); // Block on all other pending tasks, also
     _keys = null;                   // Do not return _keys over wire
+    if( _top_level ) postGlobal();
   };
+  // Override to do work after all the forks have returned
+  protected void postGlobal(){}
 
   // 'Reduce' left and right answers.  Gather exceptions
   private void reduce2( T drt ) {

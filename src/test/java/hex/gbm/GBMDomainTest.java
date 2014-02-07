@@ -26,8 +26,8 @@ public class GBMDomainTest extends TestUtil {
    */
   @Test public void testModelAdapt() {
     runAndScoreGBM(
-        "./smalldata/test/classifier/coldom_train.csv",
-        "./smalldata/test/classifier/coldom_test.csv",
+        "./smalldata/test/classifier/coldom_train_1.csv",
+        "./smalldata/test/classifier/coldom_test_1.csv",
         new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
   }
 
@@ -41,8 +41,8 @@ public class GBMDomainTest extends TestUtil {
    */
   @Test public void testModelAdapt2() {
     runAndScoreGBM(
-        "./smalldata/test/classifier/coldom_train.csv",
-        "./smalldata/test/classifier/coldom_test2.csv",
+        "./smalldata/test/classifier/coldom_train_1.csv",
+        "./smalldata/test/classifier/coldom_test_1_2.csv",
         new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
   }
   // Adapt a trained model to a test dataset with different enums
@@ -54,11 +54,11 @@ public class GBMDomainTest extends TestUtil {
     Key fkey2 = NFSFileVec.make(file2);
     Key dest2 = Key.make("test.hex");
     GBM gbm = null;
+    GBM.GBMModel model = null;
     Frame preds = null;
     try {
       gbm = new GBM();
       gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
-      UKV.remove(fkey1);
       gbm.response = prepData.prep(gbm.source);
       gbm.ntrees = 2;
       gbm.max_depth = 3;
@@ -67,28 +67,22 @@ public class GBMDomainTest extends TestUtil {
       gbm.nbins = 1024;
       gbm.cols =  new int[] {0,1,2};
       gbm.invoke();
-      System.out.println("=========3========");   for( Key k : H2O.keySet() ) System.out.println(k);
+      model = UKV.get(gbm.dest());
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
-      UKV.remove(fkey2);
       preds = gbm.score(ftest);
       // Delete test frame
-      ftest.remove();
+      ftest.delete();
 
     } catch (Throwable t) {
       t.printStackTrace();
     } finally {
-      UKV.remove(fkey1);
-      UKV.remove(dest1);        // Remove original hex frame key
-      UKV.remove(fkey2);
-      UKV.remove(dest2);
-      if( gbm != null ) {
-        UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.response._key);
-        gbm.remove();           // Remove GBM Job
-        if( preds != null ) preds.remove();
-      }
+      gbm.source.delete();      // Remove original hex frame key
+      if( preds != null ) preds.delete();
+      if( model != null ) model.delete();
+      UKV.remove(gbm.response._key);
+      gbm.remove();             // Remove GBM Job
     }
   }
 

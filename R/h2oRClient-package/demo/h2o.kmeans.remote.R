@@ -2,7 +2,6 @@
 # It imports a data set, parses it, and prints a summary
 # Then, it runs K-Means with k = 5 centers on a subset of characteristics
 library(h2o)
-h2o.installDepPkgs()
 myIP = readline("Enter IP address of H2O server: ")
 myPort = readline("Enter port number of H2O server: ")
 remoteH2O = h2o.init(ip = myIP, port = as.numeric(myPort), startH2O = FALSE, silentUpgrade = TRUE, promptUpgrade = FALSE)
@@ -20,16 +19,16 @@ if("fpc" %in% rownames(installed.packages())) {
   library(fpc)
   
   par(mfrow=c(1,1))
-  plotcluster(prostate.data, prostate.clus$response)
+  plotcluster(prostate.data, prostate.clus$predict)
   title("K-Means Classification for k = 10")
 }
 
 # if(!"cluster" %in% rownames(installed.packages())) install.packages("cluster")
 if("cluster" %in% rownames(installed.packages())) {
   library(cluster)
-  clusplot(prostate.data, prostate.clus$response, color = TRUE, shade = TRUE)
+  clusplot(prostate.data, prostate.clus$predict, color = TRUE, shade = TRUE)
 }
-pairs(prostate.data[,c(2,3,7,8)], col=prostate.clus$response)
+pairs(prostate.data[,c(2,3,7,8)], col=prostate.clus$predict)
 
 # Plot k-means centers
 par(mfrow = c(1,2))

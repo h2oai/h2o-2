@@ -1,0 +1,38 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1265
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\f0\fs24 \cf0 Read Me: CUSE expanded \
+source: http://data.princeton.edu/wws509/\
+\
+n(observations) = 16 (originally) \
+\
+Dependent Variable: \
+\
+using: a count of the number of observations matching the factor levels in the row and is using birth control. \
+ \
+not using: a count of the number of observations matching the the factor levels in the row and is not using birth control \
+\
+Example: in the first row - 6 women were observed to be using birth control, were younger than 25, had low education, and do want more children. 53 women not using birth control met the same conditions. \
+\
+EXPANDED: \
+\
+Binomial expansion by factor level and count to produce binomial column such that 0=not using, 1= using, and there is one row for each count in the original 16 observation data set. \
+\
+UsingMultiClass: a derived column for multi class classification tasks that ranks observations by membership in userate group, so that women observed as part of the 4-30 using\
+\
+\
+Independent Variables: \
+\
+age: four factor levels for <25, 25-29, 30-39, 40-49. Each of these factor levels has been expanded to a corresponding binomial column. \
+\
+education: two factor levels - low and high, each with a corresponding binomial expanded column. \
+\
+Wantsmore: two factor levels - yes and no, each with a corresponding binomial expanded column\
+\
+\
+\
+\
+}

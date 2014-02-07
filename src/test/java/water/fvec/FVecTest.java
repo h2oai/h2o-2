@@ -28,7 +28,7 @@ public class FVecTest extends TestUtil {
       DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1NCHUNK,Value.ICE),fs);
     }
     DKV.put(bv._key,bv,fs);
-    Frame fr = new Frame(bv);
+    Frame fr = new Frame(k,new String[]{"makeByteVec"},new Vec[]{bv});
     DKV.put(k, fr, fs);
     fs.blockForPending();
     return k;
@@ -68,12 +68,11 @@ public class FVecTest extends TestUtil {
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make("air.hex");
     Frame fr = ParseDataset2.parse(dest, new Key[]{fkey});
-    UKV.remove(fkey);
     try {
       // Scribble into a freshly parsed frame
       new SetDoubleInt().doAll(fr);
     } finally {
-      UKV.remove(dest);
+      fr.delete();
     }
   }
 
@@ -126,7 +125,6 @@ public class FVecTest extends TestUtil {
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make("pro1.hex");
     Frame fr = ParseDataset2.parse(dest, new Key[]{fkey});
-    UKV.remove(fkey);
 
     Key rkey = load_test_file(file,"pro2.data");
     Key vkey = Key.make("pro2.hex");
@@ -155,8 +153,8 @@ public class FVecTest extends TestUtil {
       assertEquals(0,errs);
 
     } finally {
-      UKV.remove(dest);
-      UKV.remove(ary._key);
+      fr.delete();
+      ary.delete();
     }
   }
 
@@ -168,7 +166,6 @@ public class FVecTest extends TestUtil {
     Key okey = Key.make("syn.hex");
     Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
     Vec vz = null;
-    UKV.remove(fkey);
     try {
       assertEquals(fr.numCols(),1050); // Count of columns
       assertEquals(fr.numRows(),2659); // Count of rows
@@ -186,15 +183,14 @@ public class FVecTest extends TestUtil {
       new PairSum().doAll(vz,v0,v1);
       // Add the temp to frame
       // Now total the temp col
-      fr.remove();              // Remove all other columns
-      fr.add("tmp",vz);         // Add just this one
+      fr.delete();              // Remove all other columns
+      fr = new Frame(new String[]{"tmp"},new Vec[]{vz}); // Add just this one
       sums = new Sum().doAll(fr)._sums;
       assertEquals(3949+3986,sums[0],EPSILON);
 
     } finally {
       if( vz != null ) UKV.remove(vz._key);
-      fr.remove();
-      UKV.remove(okey);
+      fr.delete();
     }
   }
 
@@ -236,8 +232,7 @@ public class FVecTest extends TestUtil {
 
     } finally {
       if( vz != null ) UKV.remove(vz._key);
-      fr.remove();
-      UKV.remove(okey);
+      fr.delete();
     }
   }
 }

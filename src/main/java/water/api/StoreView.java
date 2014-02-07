@@ -29,7 +29,7 @@ public class StoreView extends Request {
     int len = 0;
     String filter = _filter.value();
     // Gather some keys that pass all filters
-    for( Key key : H2O.keySet() ) {
+    for( Key key : H2O.globalKeySet(null) ) {
       if( filter != null && // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue; // Ignore this filtered-out key
@@ -52,8 +52,11 @@ public class StoreView extends Request {
     JsonArray ary = new JsonArray();
     for( int i=offset; i<offset+_view.value(); i++ ) {
       if( i >= len ) break;
-      Value val = H2O.get(keys[i]);
-      if( val != null ) ary.add(formatKeyRow(cloud,keys[i],val));
+      Value val = DKV.get(keys[i]);
+      if( val != null ) {
+        JsonObject jo = formatKeyRow(cloud,keys[i],val);
+        ary.add(jo);
+      }
     }
 
     result.add(KEYS,ary);
@@ -149,6 +152,15 @@ public class StoreView extends Request {
         jcols[i] = col;
       }
     }
+
+/*
+   // Whatever this is trying to do, it's not helping.
+   // I think this is trying to decode data files that have been POSTed, but instead it's just
+   // corrupting StoreView output.
+   // Maybe turn this on again once it understands how to disambiguate different data types.
+   //
+   // Tom
+
     if( rows == -1 ) {
       byte [] bits = Utils.getFirstUnzipedBytes(val);
       PSetupGuess sguess = ParseDataset.guessSetup(bits);
@@ -194,6 +206,10 @@ public class StoreView extends Request {
       if( val.length() > len ) sb.append("...");
       str = sb.toString();
     }
+*/
+    // Instead of the brokenness above, just paste in the empty string.
+    result.addProperty(ROWS,"");
+    result.addProperty(COLS,"");
 
     for( int i=0; i<jcols.length; i++ )
       result.add("col_"+i,jcols[i]);

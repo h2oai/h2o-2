@@ -54,6 +54,8 @@ def flat_unzip(my_zip, my_dir):
             with source, target:
                 shutil.copyfileobj(source, target)
                 resultList.append(target)
+            source.close()
+            target.close()
     return resultList
 
 # gunzip gzfile to outfile
@@ -96,6 +98,7 @@ def file_append(infile, outfile):
     in_file = open(infile,'rb')
     out_file = open(outfile,'a')
     out_file.write(in_file.read())
+    in_file.close()
     out_file.close()
     h2o.verboseprint("\nAppend took",  (time.time() - start), "secs")
 
@@ -110,6 +113,8 @@ def file_shuffle(infile, outfile):
     fo = open(outfile, 'w')
     subprocess.call(["sort", "-R"],stdin=fi, stdout=fo)
     print "\nShuffle took",  (time.time() - start), "secs"
+    fi.close()
+    fo.close()
 
 
 # FIX! This is a hack to deal with parser bug

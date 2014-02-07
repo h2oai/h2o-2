@@ -50,7 +50,7 @@ head( prostate.hex )
 tail( prostate.hex )
 
 # notice that RACE imports as an integer in {0,1,2}; we want it to be a factor
-h2o.factor(prostate.hex, 'RACE')
+prostate.hex$RACE = as.factor(prostate.hex$RACE)
 
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","GLEASON"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(prostate.glm)

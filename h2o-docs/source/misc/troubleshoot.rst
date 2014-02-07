@@ -1,16 +1,3 @@
-H\ :sub:`2`\ O Troubleshooting
-------------------------------
-
-
-**How to Send Logs:** Reporting Errors in H\ :sub:`2`\ O
----------------------------------------------------------
-
-**Errors in Browser Based GUI**
-
-  When you encounter an error while working in the web based GUI for
-  H\ :sub:`2`\ O, following the instructions below will assist H\ :sub:`2`\ O developers in
-  giving you the best possible solution. 
-
 **Step 1** 
 
   Through the drop down menu **Admin** go to **Log View**. 
@@ -25,8 +12,8 @@ H\ :sub:`2`\ O Troubleshooting
 
   From your email account contact h2ostream@googlegroups.com with a
   brief description of the error you encountered, and your contact
-  information. Attach the downloaded H\ :sub:`2`\ O logs downloaded from log view
-  to the email before sending. 
+  information. Attach the downloaded H\ :sub:`2`\ O logs downloaded
+  from log view to the email before sending. 
 
 **Step 3**  
 
@@ -34,15 +21,22 @@ H\ :sub:`2`\ O Troubleshooting
   and work to resolve your issue. 
 
 
+Common Question: Why is “Upload” is no longer working?
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+This can occur when a user’s local disk is full or almost full. 
+Free up space on your local disk, and the behavior should resolve. 
+
+
 Troubleshooting R
 """"""""""""""""""
 
 **Dependencies in R**
   
-  H\ :sub:`2`\ O wrapper and H\ :sub:`2`\ O both utilize other R packages (like lattice, and
-  curl). From time to time R will fail to download from CRAN and give
-  an error. In that case it's best to get the binary from CRAN
-  directly and install the package manually using the call:
+  H\ :sub:`2`\ O and H\ :sub:`2`\ O client utilize other R packages
+  (like lattice, and curl). From time to time R will fail to download
+  from CRAN and give an error. In that case it's best to get the
+  binary from CRAN directly and install the package manually using the call:
 
 :: 
 
@@ -54,41 +48,71 @@ Troubleshooting R
 
 **R and H\ :sub:`2`\ O** 
 
-  In order for H\ :sub:`2`\ O and R to work together, an instance of H\ :sub:`2`\ O must be
-  running, and that instance of H\ :sub:`2`\ O must be specified in the R
+  In order for H\ :sub:`2`\ O and R to work together, an instance of
+  H\ :sub:`2`\ O must be running, and that instance of H\ :sub:`2`\ O must be specified in the R
   workspace. If the H\ :sub:`2`\ O instance is terminated the H\ :sub:`2`\ O package in R
   will no longer work because R will no longer be able to send
-  information to H\ :sub:`2`\ O's distributed analysis, and will no longer be able
-  to get information back. Even if a new instance of H\ :sub:`2`\ O is started
-  with the exact same IP and port number, users will need to rerun the
-  initializer package h2oWrapper, and will have to restart their H\ :sub:`2`\ O
-  work session. 
+  information to H\ :sub:`2`\ O's distributed analysis, and will no
+  longer be able to get information back. Even if a new instance of H\
+  :sub:`2`\ O is started with the exact same IP and port number, users
+  will need to rerun the initializer package h2oWrapper, and will have
+  to restart their H\:sub:`2`\ O work session. 
 
 
-**Updating the Wrapper Package**
+**Updating the R Package**
 
   H\ :sub:`2`\ O's R packages are headed for CRAN, but aren't there yet, and
   until recently, they were still "in development." We've made some
   great improvements to H\ :sub:`2`\ O in R. If you are having issues
-  running either package, please visit http://0xdata.com/h2O/, and
+  running either package, please visit http://0xdata.com/downloadtable/, and
   download our latest release. Follow the instructions in our R user
-  documentation to install h2oWrapper (even if it is already
+  documentation to install h2oR (even if it is already
   installed), in order to ensure that you have the most recent
   version. If your issue persists, please let us know. 
 
-
-**Step 2** 
-
-  From your email account contact h2ostream@googlegroups.com with a
-  brief description of the error you encountered, and your contact
-  information. Attach the downloaded H\ :sub:`2`\ O logs downloaded from log view
-  to the email before sending. 
-
-**Step 3**  
-
-  We will route your email to the correct engineer or data scientist
-  and work to resolve your issue. 
+**Internal Server Error in R**
   
+  when passing data sets to H\ :sub:`2`\ O through R, users may see an
+  error that reads “Internal Server Error.” This error tells users
+  that R can’t find the file they are trying to import and parse. It
+  can be corrected by specifying a path to the data file relative to
+  the directory from which H2O is running (not relative to where R is
+  running). Alternatively, users can change their working directory in
+  R (in R studio the option is under the Session menu. In R it is
+  under the menu Misc). By setting the R working directory to the same
+  directory that H2O is running from, the path relative to R and
+  relative to H2O will be the same. 
+  
+
+
+I Updated To Maverics; pull and make from Git has errors
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Development users who use Mac OS and have recently upgraded their
+laptops or operating systems and are using Maverics may recieve 
+a failure indicaticating that **gnutar** is required but not found,
+and as a result the R package cannot compile. 
+
+The use of gnutar is required by R for the cran repository to work,
+and is beyond the control of any one package developer. In order to
+obtain gnutar. 
+
+Macports users will need to uninstall Macports and reinstall Macports
+for Maverics available here:
+https://distfiles.macports.org/MacPorts/MacPorts-2.2.1-10.9-Mavericks.pkg.
+
+and then
+
+::
+
+  sudo port install gnutar
+
+Homebrew users: 
+
+::
+  
+  brew install gnu-tar
+  cd /usr/bin
+  sudo ln -s /usr/local/opt/gnu-tar/libexec/gnubin/tar gnutar
 
 
 
@@ -102,7 +126,7 @@ Log in to the machine where H\ :sub:`2`\ O will run using ssh
 **Step 2**
 
 Start an instance of H\ :sub:`2` \O by locating the working directory and 
-callinga java command similar to the following ( the port number chosen here
+calling a java command similar to the following ( the port number chosen here
 is arbitrary and users might choose something different). 
 ::
 
@@ -147,7 +171,7 @@ specified port numbers and IP address will be different)
 Check cluster status
 
 You are now using H\ :sub:`2` \O from localhost:55577, but the
-instance of H\ :sub:`2` \O isrunning on the remote server (in this
+instance of H\ :sub:`2` \O is running on the remote server (in this
 case the server with the ip address 192.168.1.xxx) at port number 55599. 
 
 To see this in action note that the web UI is pointed at
@@ -157,15 +181,3 @@ on 192.168.1.173:55599
 
 .. Image:: Clusterstattunnel.png
    :width: 70%
-
-
-
-
-
-
-
-
-
-
-  
- 

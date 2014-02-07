@@ -1,32 +1,43 @@
 package water.api;
 
-import hex.*;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Closeables;
+
 import hex.GridSearch.GridSearchProgress;
+import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
-import hex.NeuralNet.NeuralNetProgress;
+import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetScore;
 import hex.drf.DRF;
 import hex.gbm.GBM;
-import hex.glm.*;
-import hex.pca.*;
+import hex.glm.GLM2;
+import hex.glm.GLMGridView;
+import hex.glm.GLMModelView;
+import hex.glm.GLMProgress;
+import hex.pca.PCA;
+import hex.pca.PCAModelView;
+import hex.pca.PCAProgressPage;
+import hex.pca.PCAScore;
+import water.Boot;
+import water.H2O;
+import water.NanoHTTPD;
+import water.api.Script.RunScript;
+import water.api.Upload.PostFile;
+import water.deploy.LaunchJar;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
+import water.util.Utils.ExpectedExceptionForDebug;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-
-import water.*;
-import water.api.Script.RunScript;
-import water.api.Upload.PostFile;
-import water.deploy.LaunchJar;
-import water.util.*;
-import water.util.Log.Tag.Sys;
-import water.util.Utils.ExpectedExceptionForDebug;
-
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
@@ -65,18 +76,17 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",                "Data");
     Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",                "Data");
     Request.addToNavbar(registerRequest(new Upload()),      "Upload",                     "Data");
-    Request.addToNavbar(registerRequest(new Get()),         "Download",                   "Data");
-    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Data");
 
-    Request.addToNavbar(registerRequest(new RF()),          "Random Forest",              "Model");
+    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
+    Request.addToNavbar(registerRequest(new PCA()),         "PCA",                        "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2",                    "Model");
-    Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
-    Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
+    Request.addToNavbar(registerRequest(new GBM()),         "GBM",                        "Model");
+    Request.addToNavbar(registerRequest(new RF()),          "Single Node RF",             "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "DRF2 (Beta)",                "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
@@ -89,9 +99,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
-
-    //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
-    registerRequest(new Plot());
 
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",            "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",  "Admin");
@@ -119,14 +126,17 @@ public class RequestServer extends NanoHTTPD {
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Upload2()),        "Upload2",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
-     }
-
+    }
+    registerRequest(new Get()); // Download
+    //Column Expand
+    registerRequest(new OneHot());
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());
@@ -134,35 +144,40 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DRFProgressPage());
     registerRequest(new DownloadDataset());
     registerRequest(new Exec2());
-    registerRequest(new Exec());      // Will be replaced by Exec2
-    registerRequest(new DataManip()); // Will be replaced by Exec2
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
-    registerRequest(new GetVector()); // Will be replaced by Exec2
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new RPackage.RDownload());
-    registerRequest(new NeuralNetProgress());
+    registerRequest(new NeuralNetModelView());
+    registerRequest(new NeuralNetProgressPage());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
     registerRequest(new PCAProgressPage());
     registerRequest(new PCAModelView());
     registerRequest(new PostFile());
+    registerRequest(new water.api.Upload2.PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
     registerRequest(new PutValue());
-    registerRequest(new PutVector()); // Will be replaced by Exec2
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
     registerRequest(new RPackage());
     registerRequest(new RReaderProgress());
     registerRequest(new Remove());
+    registerRequest(new RemoveAll());
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
+    registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
+    registerRequest(new LogAndEcho());
+    registerRequest(new GLMProgress());
+    registerRequest(new hex.glm.GLMGridProgress());
+    registerRequest(new water.api.Levels2());    // Temporary hack to get factor levels efficiently
+    registerRequest(new water.api.Levels());    // Ditto the above for ValueArray objects
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
@@ -177,9 +192,10 @@ public class RequestServer extends NanoHTTPD {
     // testing hooks
     registerRequest(new TestPoll());
     registerRequest(new TestRedirect());
-    registerRequest(new GLMProgressPage2());
+//    registerRequest(new GLMProgressPage2());
     registerRequest(new GLMModelView());
-    registerRequest(new GLMValidationView());
+    registerRequest(new GLMGridView());
+//    registerRequest(new GLMValidationView());
     registerRequest(new FrameSplit());
     registerRequest(new LaunchJar());
     Request.initializeNavBar();
@@ -215,7 +231,7 @@ public class RequestServer extends NanoHTTPD {
               // Try to get the NanoHTTP daemon started
               SERVER = new RequestServer(H2O._apiSocket);
               break;
-            } catch ( Exception ioe ) {
+            } catch( Exception ioe ) {
               Log.err(Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
               try { Thread.sleep(1000); } catch( InterruptedException e ) { } // prevent denial-of-service
             }
@@ -224,15 +240,67 @@ public class RequestServer extends NanoHTTPD {
       }, "Request Server launcher").start();
   }
 
+  public static String maybeTransformRequest (String uri) {
+    if (uri.isEmpty() || uri.equals("/")) {
+      return "/Tutorials.html";
+    }
+
+    Pattern p = Pattern.compile("/R/bin/([^/]+)/contrib/([^/]+)(.*)");
+    Matcher m = p.matcher(uri);
+    boolean b = m.matches();
+    if (b) {
+      // On Jenkins, this command sticks his own R version's number
+      // into the package that gets built.
+      //
+      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
+      //
+      String versionOfRThatJenkinsUsed = "3.0";
+
+      String platform = m.group(1);
+      String version = m.group(2);
+      String therest = m.group(3);
+      String s = "/R/bin/" + platform + "/contrib/" + versionOfRThatJenkinsUsed + therest;
+      return s;
+    }
+
+    return uri;
+  }
+
   // uri serve -----------------------------------------------------------------
+  void maybeLogRequest (String uri, String method, Properties parms) {
+    boolean filterOutRepetitiveStuff = true;
+
+    if (filterOutRepetitiveStuff) {
+      if (uri.endsWith(".css")) return;
+      if (uri.endsWith(".js")) return;
+      if (uri.endsWith(".png")) return;
+      if (uri.endsWith(".ico")) return;
+      if (uri.startsWith("/Typeahead")) return;
+      if (uri.startsWith("/Cloud.json")) return;
+      if (uri.endsWith("LogAndEcho.json")) return;
+      if (uri.contains("Progress")) return;
+      if (uri.startsWith("/Jobs.json")) return;
+    }
+
+    String log = String.format("%-4s %s", method, uri);
+    for( Object arg : parms.keySet() ) {
+      String value = parms.getProperty((String) arg);
+      if( value != null && value.length() != 0 )
+        log += " " + arg + "=" + value;
+    }
+    Log.info(Sys.HTTPD, log);
+  }
+
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
     // update arguments and determine control variables
-    if( uri.isEmpty() || uri.equals("/") ) uri = "/Tutorials.html";
+    uri = maybeTransformRequest(uri);
     // determine the request type
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
+
+    maybeLogRequest(uri, method, parms);
     try {
       // determine if we have known resource
       Request request = _requests.get(requestName);
@@ -244,7 +312,7 @@ public class RequestServer extends NanoHTTPD {
       request = request.create(parms);
       // call the request
       return request.serve(this,parms,type);
-    } catch (Exception e) {
+    } catch( Exception e ) {
       if(!(e instanceof ExpectedExceptionForDebug))
         e.printStackTrace();
       // make sure that no Exception is ever thrown out from the request
@@ -285,7 +353,11 @@ public class RequestServer extends NanoHTTPD {
       mime = "text/css";
     else if (uri.endsWith(".html"))
       mime = "text/html";
-    return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    // return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    NanoHTTPD.Response res = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    res.addHeader("Content-Length", Long.toString(bytes.length));
+    // res.addHeader("Content-Disposition", "attachment; filename=" + uri);
+    return res;
   }
 
 }

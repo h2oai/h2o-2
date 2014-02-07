@@ -18,7 +18,7 @@ COL_SEP_HIVE = False # comma
 # string.ascii_uppercase string.printable string.letters string.digits string.punctuation string.whitespace
 # restricting the choices makes it easier to find the bad cases
 
-DO_SIMPLE_CHARS_ONLY = False
+DO_SIMPLE_CHARS_ONLY = True
 def random_enum(enumSize, randChars="abeE01" + "" if DO_SIMPLE_CHARS_ONLY else "$%+-.;|\t ", quoteChars="\'\""):
     choiceStr = randChars + quoteChars
     mightBeNumberOrWhite = True

@@ -1,5 +1,6 @@
 package hex.pca;
 
+import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import water.*;
 import water.api.*;
@@ -27,7 +28,13 @@ public class PCAModel extends Model {
   @API(help = "Principal components (eigenvector) matrix")
   final double[][] eigVec;
 
-  @API(help="Offsets of categorical columns into the sdev vector. The last value is the offset of the first numerical column.")
+  @API(help = "If standardized, mean of each numeric data column")
+  final double[] normSub;
+
+  @API(help = "If standardized, one over standard deviation of each numeric data column")
+  final double[] normMul;
+
+  @API(help = "Offsets of categorical columns into the sdev vector. The last value is the offset of the first numerical column.")
   final int[] catOffsets;
 
   @API(help = "Rank of eigenvector matrix")
@@ -39,17 +46,21 @@ public class PCAModel extends Model {
   @API(help = "PCA parameters")
   final PCAParams params;
 
-  public PCAModel(Key selfKey, Key dataKey, Frame fr, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
-    super(selfKey, dataKey, fr);
+  public PCAModel(Key selfKey, Key dataKey, DataInfo dinfo, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
+    super(selfKey, dataKey, dinfo._adaptedFrame);
     this.sdev = sdev;
     this.propVar = propVar;
     this.cumVar = cumVar;
     this.eigVec = eigVec;
     this.params = params;
-    this.catOffsets = gramt.catOffsets();
+    this.catOffsets = dinfo._catOffsets;
     this.namesExp = namesExp();
     this.rank = rank;
     this.num_pc = num_pc;
+
+    // TODO: Need to ensure this maps correctly to scored data cols
+    this.normSub = gramt.normSub();
+    this.normMul = gramt.normMul();
   }
 
   public double[] sdev() { return sdev; }
@@ -62,7 +73,7 @@ public class PCAModel extends Model {
   @Override public void delete() { super.delete(); }
 
   @Override public String toString(){
-    StringBuilder sb = new StringBuilder("PCA Model (key=" + _selfKey + " , trained on " + _dataKey + "):\n");
+    StringBuilder sb = new StringBuilder("PCA Model (key=" + _key + " , trained on " + _dataKey + "):\n");
     return sb.toString();
   }
 
@@ -104,10 +115,10 @@ public class PCAModel extends Model {
 
   public void generateHTML(String title, StringBuilder sb) {
     if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
-    DocGen.HTML.paragraph(sb, "Model Key: " + _selfKey);
+    DocGen.HTML.paragraph(sb, "Model Key: " + _key);
 
-    sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.js'></script>");
-    sb.append("<div class='alert'>Actions: " + PCAScore.link(_selfKey, "Score on dataset") + ", "
+    sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
+    sb.append("<div class='alert'>Actions: " + PCAScore.link(_key, "Score on dataset") + ", "
         + PCA.link(_dataKey, "Compute new model") + "</div>");
     screevarString(sb);
     sb.append("<span style='display: inline-block;'>");

@@ -36,10 +36,28 @@ DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
 JAR_FILE="${OUTDIR}/h2o.jar"
 SRC_JAR_FILE="${OUTDIR}/h2o-sources.jar"
+IMODEL_JAR_FILE="${OUTDIR}/h2o-model.jar"
 
 JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
-JAVADOC=`which javadoc`||echo 'Missing javadoc, please install jdk'
+if [ "${LOGNAME}" = "jenkins" ]; then
+    # This is really awful, but javadoc 6 is reliably hitting this failure in Linux.
+    # Workaround this for now.
+    #
+    #    Standard Doclet version 1.6.0_45
+    #    Building tree for all the packages and classes...
+    #    java.lang.NullPointerException
+    #            at com.sun.tools.javadoc.TypeMaker.getType(TypeMaker.java:67)
+    #            at com.sun.tools.javadoc.TypeMaker.getType(TypeMaker.java:29)
+    #            at com.sun.tools.javadoc.ParameterizedTypeImpl.superclassType(ParameterizedTypeImpl.java:62)
+    #            at com.sun.tools.doclets.internal.toolkit.util.Util.findAllInterfaceTypes(Util.java:441)
+    #            at com.sun.tools.doclets.internal.toolkit.util.Util.addAllInterfaceTypes(Util.java:472)
+    #            ...
+    #
+    JAVADOC=/usr/lib/jvm/java-7-oracle/bin/javadoc
+else
+    JAVADOC=`which javadoc`||echo 'Missing javadoc, please install jdk'
+fi
 
 # need bootclasspath to point to jdk1.6 rt.jar bootstrap classes
 # extdirs can also be passed as -extdirs 
@@ -100,6 +118,7 @@ function clean() {
 function build_classes() {
     echo "building classes..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
+    echo $CLASSPATH > target/classpath
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \
         -sourcepath "$SRC" \
@@ -109,6 +128,11 @@ function build_classes() {
         $SRC/jsr166y/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
+
+    # Copy Java resources
+    # If you delete this line you take responsibility for logging and you have to make
+    # sure that jests3 library will not output its logs into our log files !!!
+    cp -r ${RESOURCES}/* "${CLASSES}"
 }
 
 function build_initializer() {
@@ -124,7 +148,7 @@ function build_jar() {
     echo "creating jar file... ${JAR_FILE}"
     # include all libraries
     cd ${JAR_ROOT}
-    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v mapr`
+    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v 'hadoop/mapr' | grep -v 'hadoop/hdp'`
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
@@ -141,6 +165,13 @@ function build_src_jar() {
     # include H2O source files
     "$JAR" cf ${SRC_JAR_FILE} -C "${SRC}" .
     "$JAR" uf ${SRC_JAR_FILE} -C "${TESTSRC}" .
+}
+
+function build_imodel_jar() {
+    echo "creating imodel jar file... ${IMODEL_JAR_FILE}"
+    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel"
+    [ -d "$CLASSES/resources/" ] || mkdir -p "$CLASSES/resources/"
+    cp "${IMODEL_JAR_FILE}" "$CLASSES/resources/"
 }
 
 function build_samples() {
@@ -178,6 +209,7 @@ if [ "$1" = "clean" ]; then exit 0; fi
 build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
+build_imodel_jar
 build_jar
 build_src_jar
 build_samples

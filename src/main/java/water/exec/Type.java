@@ -23,6 +23,18 @@ public class Type {
   Type( int t, Type[] ts ) { assert varargs_clean(t,ts); _t=t; _ts=ts; }
   Type( int t, Type[] ts, float f ) { this(t,ts); _t|=VARARGS;}
 
+  Type copy() {
+    Type[] ts = null;
+    if (_ts!=null) {
+      ts =_ts.clone(); for (int i = 0; i < ts.length; i++)
+        if (_ts[i]!=null) ts[i] = _ts[i].copy();
+    }
+    int vararg = _t&VARARGS;
+    Type copy = new Type(_t&~VARARGS,ts);
+    copy._t |= vararg;
+    return copy;
+  }
+
   // Check no varargs flags, except on the last type of functions
   private boolean varargs_clean( int t, Type ts[] ) {
     if( (t&VARARGS)!=0 ) return false; // Need to clean this upfront
@@ -130,16 +142,18 @@ public class Type {
         if( (varargs._t&VARARGS)!=0 )
           len--;                // Dont match the varargs arg in 1st loop
         else varargs=null;      // Else not a varargs
-
       }
       for( int i=0; i<len; i++ ) // Match all args
         if( !t0._ts[i].union(t1._ts[i]) )
           ok = false;           // Subtypes are unequal
       if( len == t1._ts.length ) return ok;
+      if( len == t1._ts.length-1 && (t1._ts[len].find()._t&VARARGS) != 0 )
+        return true;  // Also ok for a zero-length varargs in t1, and no arg in t0
       if( varargs==null ) return false;
       // Must be varargs: 
       for( int i=len; i<t1._ts.length; i++ ) {
-        Type var = (varargs._t&(VARARGS-1))==DBLARY0 ? dblary() : varargs; // Use a new unbound type
+        int tvar = (varargs._t&(VARARGS-1));
+        Type var = tvar==DBLARY0 ? dblary() : (tvar==UNBOUND ? unbound() : varargs); // Use a new unbound type
         if( !var.union(t1._ts[i]) )
           ok = false;         // Subtypes are unequal
       }

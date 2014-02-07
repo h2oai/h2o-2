@@ -13,11 +13,10 @@ import water.util.Utils;
  */
 public class MapReduceKMeans extends Job {
   public static void main(String[] args) throws Exception {
-    samples.launchers.CloudProcess.launch(2, MapReduceKMeans.class);
-    // samples.launchers.CloudLocal.launch(1, MinimalKMeans.class);
+    samples.launchers.CloudProcess.launch(MapReduceKMeans.class, 2);
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     // Load and parse a file. Data is distributed to other nodes in a round-robin way
     Key file = NFSFileVec.make(new File("../lib/resources/datasets/gaussian.csv"));
     Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
@@ -63,6 +62,7 @@ public class MapReduceKMeans extends Job {
         System.out.print(df.format(clusters[c][v]) + ", ");
       System.out.println("");
     }
+    return Status.Done;
   }
 
   /**

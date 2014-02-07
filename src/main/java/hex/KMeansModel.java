@@ -78,7 +78,7 @@ public class KMeansModel extends OldModel implements Progress {
    * NaN. Returns the cluster-number, which is mostly an internal value. Last data element refers to
    * the response variable, which is not used for k-means.
    */
-  protected double score0(double[] data) {
+  @Override protected double score0(double[] data) {
     for( int i = 0; i < data.length - 1; i++ ) { // Normalize the data before scoring
       ValueArray.Column C = _va._cols[i];
       double d = data[i];
@@ -94,12 +94,12 @@ public class KMeansModel extends OldModel implements Progress {
   }
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, int row) {
+  @Override protected double score0(ValueArray data, int row) {
     throw H2O.unimpl();
   }
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
+  @Override protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
     throw H2O.unimpl();
   }
 
@@ -189,9 +189,8 @@ public class KMeansModel extends OldModel implements Progress {
     static final int ROW_SIZE = 4;
 
     public static Job run(final Key dest, final KMeansModel model, final ValueArray ary) {
-      UKV.remove(dest); // Delete dest first, or chunk size from previous key can crash job
-      final ChunkProgressJob job = new ChunkProgressJob(ary.chunks());
-      job.destination_key = dest;
+      final ChunkProgressJob job = new ChunkProgressJob(ary.chunks(),dest);
+      new ValueArray(dest,0).delete_and_lock(job.self());
       final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
         @Override public void compute2() {
           KMeansApply kms = new KMeansApply();
@@ -213,8 +212,7 @@ public class KMeansModel extends OldModel implements Progress {
           c._domain = null;
           c._n = ary.numRows();
           ValueArray res = new ValueArray(dest, ary.numRows(), c._size, new Column[] { c });
-          DKV.put(dest, res);
-          DKV.write_barrier();
+          res.unlock(job.self());
           job.remove();
           tryComplete();
         }
@@ -235,7 +233,7 @@ public class KMeansModel extends OldModel implements Progress {
      */
     @Override public void map(Key key) {
       assert key.home();
-      if( !_job.cancelled() ) {
+      if( Job.isRunning(_job.self()) ) {
         ValueArray va = DKV.get(_arykey).get();
         AutoBuffer bits = va.getChunk(key);
         long startRow = va.startRow(ValueArray.getChunkIndex(key));

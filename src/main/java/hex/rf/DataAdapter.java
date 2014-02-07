@@ -250,7 +250,7 @@ final class DataAdapter  {
 
     int rows() { return _isByte ? _rawB.length : _binned.length; }
 
-    public String toString() {
+    @Override public String toString() {
       String res = "Column("+_name+"){";
       if (_ignored) res+="IGNORED";
       else {

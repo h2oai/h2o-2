@@ -59,6 +59,7 @@ public abstract class Paxos {
       }
       if( _commonKnowledge ) {
         _commonKnowledge = false; // No longer sure about things
+        H2O.SELF._heartbeat._common_knowledge = false;
         Log.debug("Cloud voting in progress");
       }
 
@@ -88,8 +89,15 @@ public abstract class Paxos {
       same_size &= (h2o2._heartbeat._cloud_size == H2O.CLOUD.size());
     if( !same_size ) return 0;
 
-    _commonKnowledge = true;    // Yup!  Have consensus
+    H2O.SELF._heartbeat._common_knowledge = true;
+    for( H2ONode h2o2 : h2os )
+      if( !h2o2._heartbeat._common_knowledge ) {
+        return print("Missing common knowledge from all nodes!" ,PROPOSED);
+      }
+    _commonKnowledge = true;    // Yup!  Have global consensus
+
     Paxos.class.notifyAll(); // Also, wake up a worker thread stuck in DKV.put
+    Paxos.print("Announcing new Cloud Membership: ", H2O.CLOUD._memary);
     Log.info("Cloud of size ", H2O.CLOUD.size(), " formed ", H2O.CLOUD.toString());
     H2O.notifyAboutCloudSize(H2O.SELF_ADDRESS, H2O.API_PORT, H2O.CLOUD.size());
     return 0;
@@ -111,8 +119,8 @@ public abstract class Paxos {
     synchronized(Paxos.class) {
       while( !_commonKnowledge )
         try { Paxos.class.wait(); } catch( InterruptedException ie ) { }
+      _cloudLocked = true;
     }
-    _cloudLocked = true;
   }
 
 

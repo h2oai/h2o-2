@@ -27,7 +27,7 @@ public class GLMRunner {
    * Simple GLM wrapper to enable launching GLM from command line.
    *
    * Example input:
-   *   java -jar target/h2o.jar  -name=test -runMethod water.util.GLMRunner   -file=smalldata/logreg/prostate.csv -y=CAPSULE -family=binomial
+   *   java -jar target/h2o.jar -name=test -runClass water.util.GLMRunner -file=smalldata/logreg/prostate.csv -y=CAPSULE -family=binomial
    *
    * @param args
    * @throws InterruptedException

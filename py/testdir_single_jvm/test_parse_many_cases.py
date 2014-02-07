@@ -8,14 +8,14 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SYNDATASETS_DIR
-        SYNDATASETS_DIR = h2o.make_syn_dir()
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1) 
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1) 
+        global SYNDATASETS_DIR
+        SYNDATASETS_DIR = h2o.make_syn_dir()
 
     @classmethod 
     def tearDownClass(cls): 
@@ -223,7 +223,7 @@ class Basic(unittest.TestCase):
                         str(sepCase) + \
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
-                    parseResult = h2i.import_parse(path=csvPathname, schema='put')
+                    parseResult = h2i.import_parse(path=csvPathname, schema='put', noPrint=not h2o.verbose)
                     h2o_cmd.runRF(parseResult=parseResult, trees=1,
                         timeoutSecs=10, retryDelaySecs=0.1, noPrint=True, print_params=False)
                     h2o.verboseprint("Set", set)
