@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
         # if I got to hdfs, it's here
         # hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz
 
-        # h2b.browseTheCloud()
+        h2b.browseTheCloud()
         for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
             # PARSE train****************************************
             start = time.time()

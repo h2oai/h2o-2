@@ -12,20 +12,25 @@ collaboration.
 Defining a PCA Model
 """"""""""""""""""""
 
- **X:**
+ **Ignored Columns:**
 
-   The set of numeric variables that the PCA algorithm is to be
-   applied to. Selections are made by highlighting and selecting from
-   the field, which populates when the data key is specified. PCA does
-   not include categorical variables in analysis. If a variable is a
-   factor, but has been coded as a number (for instance, color has
-   been coded so that Green = 1, Red = 2, and Yellow = 3), users
-   should be sure that these variables are not selected before running
-   PCA. Including these variables can adversely impact results,
-   because PCA will not correctly interpret them. Categorical
-   variables that are alpha or alpha numeric will be omitted by
-   default. These are listed under the field of X variables in a
-   yellow message box. 
+   The set of columns in the specified data set that should me omitted
+   from the PCA.  Selections are made by highlighting and selecting from
+   the field, which populates when the data key is specified. In
+   general PCA does not include categorical variables in
+   analysis. Factors are treated as binomial columns, with an
+   indicator for each factor level, less one reference level. 
+   If a variable is a factor, but has been coded as a number (for
+   instance, color has been coded so that Green = 1, Red = 2, and
+   Yellow = 3), users should be sure that these variables are not
+   selected before running PCA. Including these variables can
+   adversely impact results, because PCA will not correctly interpret
+   them. 
+
+ **Max PC:** 
+
+   An integer value indicating the maximum number of principal
+   components to return. 
 
  **Tolerance:**
 
@@ -39,7 +44,6 @@ Defining a PCA Model
    (2)(.39) = .78 will not be included in the analysis of principal 
    components. 
 
- 
  **Standardize:** 
 
    Allows users to specify whether data should be transformed so that

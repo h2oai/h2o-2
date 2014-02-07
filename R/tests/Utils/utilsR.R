@@ -6,7 +6,7 @@ function(i = NULL) {
 
 setupRandomSeed<-
 function(seed = NULL, suppress = FALSE) {
-    test_name <- R.utils::commandArgs(asValues=TRUE)$"-f"
+    test_name <- R.utils::commandArgs(asValues=TRUE)$"f"
     possible_seed_path <- paste("./Rsandbox_", test_name, "/seed", sep = "")
     if (file.exists(possible_seed_path)) {
         fileseed <- read.table(possible_seed_path)[[1]]

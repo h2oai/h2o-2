@@ -10,13 +10,13 @@ initList = [
         ('r1.hex', 'r1.hex=i.hex'),
         ('r2.hex', 'r2.hex=i.hex'),
         ('r3.hex', 'r3.hex=i.hex'),
-        ('x', 'x=r.hex[,1]; rcnt=nrow(x)-sum(is.na(x))'),
-        ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
-        ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
-        ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
+        # ('x', 'x=r.hex[,1]; rcnt=nrow(x)-sum(is.na(x))'),
+        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
+        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
+        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
         ]
 
-if 1==1:
+if 1==0:
     exprListSmall = [
     # apply: return vector or array or list of values..applying function to margins of array or matrix
     # margins: either rows(1), columns(2) or both(1:2)
@@ -27,6 +27,9 @@ if 1==1:
         # works
         # 'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
         # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+    ]
+    exprListSmall = [
+        "s.hex = r.hex[!is.na(r.hex[,13]),]"
     ]
 else:
     exprListSmall = [

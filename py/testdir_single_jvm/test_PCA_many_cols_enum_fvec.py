@@ -50,24 +50,16 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
-        if localhost:
-            tryList = [
-                (1001, 2, 'cA', 300), 
-                # (10001, 2, 'cA', 300), 
-                # (10000, 500, 'cH', 300), 
-                # (10000, 1000, 'cI', 300), 
-                ]
-        else:
-            tryList = [
-                # (10000, 10, 'cB', 300), 
-                # (10000, 50, 'cC', 300), 
-                (10000, 100, 'cD', 300), 
-                (10000, 200, 'cE', 300), 
-                (10000, 300, 'cF', 300), 
-                (10000, 400, 'cG', 300), 
-                (10000, 500, 'cH', 300), 
-                (10000, 1000, 'cI', 300), 
-                ]
+        tryList = [
+            # (10000, 10, 'cB', 300), 
+            # (10000, 50, 'cC', 300), 
+            (100, 100, 'cD', 300), 
+            (100, 200, 'cE', 300), 
+            (100, 300, 'cF', 300), 
+            (100, 400, 'cG', 300), 
+            (100, 500, 'cH', 300), 
+            (100, 1000, 'cI', 300), 
+            ]
 
         ### h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:

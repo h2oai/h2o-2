@@ -23,15 +23,17 @@ Defining a GBM Model
 
 **Ignored Columns**
 
-  By default all of the information submitted in a data frame will be
+  By default all of the information submitted in a data set will be
   used in building the GBM model. Users specify those attributes
-  that should be omitted from analysis. 
+  that should be omitted from analysis by highlighting them. 
 
 **Classification**
 
   A tic-box option that, when checked, treats the outcome variable as
   categorical, and when unchecked treats the outcome variable as
-  continuous and normally distributed. 
+  continuous. If a continuious real variable has been defined for the
+  Response, H\ :sub:`2`\ O will return an error if a classificaiton model is
+  requested. 
 
 **Validation** 
 
@@ -62,12 +64,14 @@ Defining a GBM Model
   leaf. If any classification must consist of no fewer than five
   elements, min rows should be set to five. 
 
-**N Bins**
+**NBins**
 
   The number of bins data are partitioned into before the best split
   point is determined. A high number of bins relative to a low number
   of observations will have a small number of observations in each
-  bin. 
+  bin. As the number of bins approaches the number of unique values in
+  a column, the analysis approaches evaluation of all possible split
+  points 
 
 **Score Each Iteration** 
 

@@ -8,11 +8,13 @@ These instructions assume you are using R  2.14.0 or later.
 
 **STEP 1**
 
-The download package can be obtained by clicking on the button Download 
-H\ :sub:`2`\ O at 
+The download package containing the  H\ :sub:`2`\ O jar file can be
+obtained by visiting H\ :sub:`2`\ O available downloads at 
 `http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_.
 
-Unzip the downloaded H\ :sub:`2`\ O zip file.
+Choose the version of  H\ :sub:`2`\ O best for you, and unzip the
+downloaded H\ :sub:`2`\ O zip file. The most recent promoted build is
+reccomended. 
 
 **STEP 2**
 
@@ -26,7 +28,7 @@ program will no longer run, and work done will be lost.
 
 **STEP 3:**
 
-New uses can safely skip this step, while users who have previously
+New users may skip this step, while users who have previously
 installed the  H\ :sub:`2`\ O R packages should uninstall them by entering the
 following commands to the R console:  
 
@@ -40,14 +42,14 @@ following commands to the R console:
 
 Note: users may get warnings of the type "Error in
 detatch("package:h2o", unload = TRUE): invalid 'name' argument. 
-This tells users that there is no h2o package to uninstall. These
+This tells users that there is no  H\ :sub:`2`\ O package to uninstall. These
 warnings can safely be ignored. 
 
 **STEP 4:**
 
 Install the H\ :sub:`2`\ O package, and the H\ :sub:`2`\ O client
-package via the  H\ :sub:`2`\ O cran. This repository functions exactly like the R
-repository, but is maintained by  H\ :sub:`2`\ O. 
+package via the  H\ :sub:`2`\ O cran. This repository functions
+exactly like the R repository, but is maintained by  H\ :sub:`2`\ O. 
 
 ::
 
@@ -64,11 +66,10 @@ package, and establish a connection to a running instance of  H\
 If there is no running instance of  H\ :sub:`2`\ O prior to using
 the command "h2o.init()",  H\ :sub:`2`\ O in R will start an instance
 automatically for the user. 
+
 Note that in the call "localH2O<- h2o.init()" the h2o.init object is
 being named localH2O in the R environment for use later in model
-specification. Users who wish to specify a different IP, port, or heap
-size can do so by entering the appropriate information within the
-call. Entering the call exactly as it is written above assumes the
+specification. Entering the call exactly as it is written below assumes the
 user wishes to connect to IP localhost and port: 54321.
 
 ::
@@ -78,7 +79,7 @@ user wishes to connect to IP localhost and port: 54321.
 
 
 Users who wish to specify a connection
-with a server (rather than local host at port 54321) must explicity
+with a server (rather than localhost at port 54321) must explicity
 state the IP address and port number in the h2o.init call. 
 An example is given below, but **do not cut and paste**; users should
 specify the IP and port number appropriate to their specific
@@ -89,7 +90,7 @@ environment.
   library(h2o)
   localH2O = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE, silentUpgrade = TRUE) 
 
-This call *may* return the output:
+The h2o.init() call *may* return output similar to the following:
 
 **Do you want to install H2O R package 2.1.0.99999.1389130748 from the
 server (Y/N)?**

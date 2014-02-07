@@ -310,6 +310,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
       myNames = colnames(x)
       if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
       cind = match(j, myNames)
+      # cind = match(j[j %in% myNames], myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
     lhs = paste(x@key, "[,", cind, "]", sep = "")
@@ -321,6 +322,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
       myNames = colnames(x)
       if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
       cind = match(j, myNames)
+      # cind = match(j[j %in% myNames], myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
     rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
@@ -334,17 +336,20 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
 })
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
-  myNames = colnames(x)
+  if(missing(name) || !is.character(name) || nchar(name) == 0)
+    stop("name must be a non-empty string")
+  if(!inherits(value, "H2OParsedData") && !is.numeric(value))
+    stop("value can only be numeric or a H2OParsedData object")
+  numCols = ncol(x); myNames = colnames(x)
   idx = match(name, myNames)
-  if(is.na(idx)) {
-    stop("Unimplemented: undefined column name specified")
-    lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
-    # TODO: Set column name of ncol(x) + 1 to name
-  } else
-    lhs = paste(x@key, "[,", idx, "]", sep="")
+ 
+  lhs = paste(x@key, "[,", ifelse(is.na(idx), numCols+1, idx), "]", sep = "")
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
+  
+  if(is.na(idx))
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, cols=numCols, comma_separated_list=name)
   return(x)
 })
 
@@ -446,7 +451,7 @@ table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", 
     stop("Can't mix H2O parsed data objects with R objects in table")
   else if(any(idx)) {
     myData = c(...)
-    if(length(myData) > 1 || ncol(myData[[1]]) > 2) stop("Unimplemented")
+    if(length(myData) > 2 || ncol(myData[[1]]) > 2) stop("Unimplemented")
     h2o.__unop2("table", myData[[1]]) 
   } else {
     list.names <- function(...) {
@@ -539,7 +544,7 @@ setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {
     if(class(value) == "H2OParsedDataVA") stop("value must be a FluidVecs object")
     else if(ncol(value) != ncol(x)) stop("Mismatched number of columns")
-    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, copy_from=value@key)
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, copy_from=value@key)
     return(x)
 })
 
@@ -548,7 +553,7 @@ setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
     if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
     else if(any(duplicated(value))) stop("Column names must be unique")
     else if(length(value) != (num = ncol(x))) stop(paste("Must specify a vector of exactly", num, "column names"))
-    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, comma_separated_list=value)
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, comma_separated_list=value)
     return(x)
 })
 
@@ -991,13 +996,14 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
 })
 
 setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
-  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
+  function(x, value) { res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key); return(x) })
 
 setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
   function(x, value) {
     if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
     else if(any(duplicated(value))) stop("Column names must be unique")
-    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
+    return(x)
 })
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
@@ -1024,7 +1030,8 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   if(n > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
   
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=n)
-  temp = lapply(res$rows, function(y) { y$row = NULL; as.data.frame(y) })
+  blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
+  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
 
@@ -1045,7 +1052,8 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   
   idx = seq.int(to = nrx, length.out = n)
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=idx[1], view=length(idx))
-  temp = lapply(res$rows, function(y) { y$row = NULL; as.data.frame(y) })
+  blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
+  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx

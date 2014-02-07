@@ -1,4 +1,4 @@
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 Log.info("Loading LiblineaR and ROCR packages\n")
@@ -13,7 +13,7 @@ test.LiblineaR.airlines <- function(conn) {
     Log.info("   type =    0: Logistic Regression L1-Regularized\n")
     Log.info("   cost = 100: Cost of constraints parameter\n")
     Log.info("epsilon = 1E-4: Tolerance of termination criterion\n")
-    Log.info("  cross =    0: No k-fold cross-validation\n")
+    Log.info("  cross =    0: No kfold cross-validation\n")
     
     LibR.m        <- LiblineaR(train, trainLabels,type=0, epsilon=1E-4, cost=100)
     LibRpreds     <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
@@ -28,7 +28,7 @@ test.LiblineaR.airlines <- function(conn) {
     Log.info(" lambda = 1/ (cost * params) [3.8e-05]: Shrinkage Parameter\n")
     Log.info("  alpha =                           0.0: Elastic Net Parameter\n")
     Log.info("epsilon =                         1E-04: Tolerance of termination criterion\n")
-    Log.info(" nfolds =                             1: No k-fold cross-validation\n")
+    Log.info(" nfolds =                             1: No kfold cross-validation\n")
     h2o.m <- h2o.glm(x            = c("DepTime", "ArrTime", "Distance"),
                                     #c("fYear","fMonth","fDayofMonth","fDayOfWeek","DepTime","ArrTime","UniqueCarrier","Origin","Dest","Distance"), 
                      y            = "IsDepDelayed_REC", 

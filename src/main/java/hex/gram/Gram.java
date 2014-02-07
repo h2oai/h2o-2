@@ -139,7 +139,7 @@ public final class Gram extends Iced {
    * Compute the cholesky decomposition.
    *
    * In case our gram starts with diagonal submatrix of dimension N, we exploit this fact to reduce the complexity of the problem.
-   * We use the standard decompostion of the cholesky factorization into submatrices.
+   * We use the standard decomposition of the cholesky factorization into submatrices.
    *
    * We split the Gram into 3 regions (4 but we only consider lower diagonal, sparse means diagonal region in this context):
    *     diagonal

@@ -14,7 +14,7 @@ def define_gbm_params():
         'max_depth': [None, 1, 2, 4, 8, 40], # 0 might cause problem
         'min_rows': [None, 1, 2, 100, 10000000],
         'response': ['C54'],
-        'ignored_cols_by_name': [None, 'C1,C1,C2,C3', 'C1'],
+        'ignored_cols_by_name': [None, 'C1,C2,C3,C4', 'C1'],
         # 'classification': [None, 1], # this is forced below
         # 'validation': [None]
         # 'validation': 
@@ -82,6 +82,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 # GBM train****************************************
+                h2o.beta_features = True
                 trainStart = time.time()
                 gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
                     timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)

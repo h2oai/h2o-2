@@ -1017,4 +1017,18 @@ public class Utils {
     }
     return s;
   }
+
+  public static String[] union(String[] a, String[] b) {
+    String[] r = new String[a.length+b.length];
+    int ia = 0, ib = 0, i = 0;
+    while (ia < a.length && ib < b.length) {
+      int c = a[ia].compareTo(b[ib]);
+      if ( c < 0) r[i++] = a[ia++];
+      else if (c == 0) { r[i++] = a[ia++]; ib++; }
+      else r[i++] = b[ib++];
+    }
+    if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
+    if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
+    return Arrays.copyOf(r, i);
+  }
 }
