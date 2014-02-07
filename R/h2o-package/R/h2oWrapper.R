@@ -75,7 +75,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
 
   H2OVersion = res$version
   myFile = res$filename
-  serverMD5 = res$md5_hash
+  # serverMD5 = res$md5_hash
 
   if( grepl('\\.99999$', H2OVersion) ){
     H2OVersion <- sub('\\.tar\\.gz$', '', sub('.*_', '', myFile))
@@ -95,6 +95,8 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
   else if(h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
     if("h2oRClient" %in% myPackages) {
       cat("Removing old H2O R package version", toString(packageVersion("h2oRClient")), "\n")
+      if("package:h2oRClient" %in% search())
+        detach("package:h2oRClient", unload=TRUE)
       remove.packages("h2oRClient")
     }
     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
@@ -115,7 +117,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
 h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
   if(silentUpgrade) return(TRUE)
   if(promptUpgrade) {
-    ans = readline(paste("Do you want to install H2O R package", H2OVersion, "from the server (Y/N)? "))
+    ans = readline(paste("Do you want to install H2O R package version", H2OVersion, "from the server (Y/N)? "))
     temp = substr(ans, 1, 1)
     if(temp == "Y" || temp == "y") return(TRUE)
     else if(temp == "N" || temp == "n") return(FALSE)
@@ -225,7 +227,9 @@ h2o.startJar <- function(memory = "1g") {
   #
   
   if(.Platform$OS.type == "windows") {
-    tmp_path <- paste(Sys.getenv("APPDATA"), "h2o", sep = .Platform$file.sep)
+    appdata_path <- Sys.getenv("APPDATA")
+    appdata_path <- gsub("\\\\", .Platform$file.sep, appdata_path)
+    tmp_path <- paste(appdata_path, "h2o", sep = .Platform$file.sep)
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
     stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
     stderr <- paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
