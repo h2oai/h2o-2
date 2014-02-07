@@ -109,6 +109,7 @@ public class NNModel extends Model {
     @API(help = "Model parameters", json = true)
     private NN parameters;
     public final NN get_params() { return parameters; }
+    public final NN job() { return get_params(); }
 
     @API(help = "Mean bias", json = true)
     private double[] mean_bias;
@@ -349,6 +350,48 @@ public class NNModel extends Model {
     model_info = new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
     model_info.initializeMembers();
   }
+
+
+  /**
+   *
+   * @param ftrain potentially downsampled training data for scoring
+   * @param ftest  potentially downsampled validation data for scoring
+   * @param timeStart start time in milliseconds, used to report training speed
+   * @return true if model building is ongoing
+   */
+  transient long _timeLastScoreStart, _timeLastPrint;
+  boolean doDiagnostics(Frame ftrain, Frame ftest, long timeStart, Key dest_key) {
+    epoch_counter = (float)model_info().get_processed_total()/data_info._adaptedFrame.numRows();
+    boolean keep_running = (epoch_counter < model_info().parameters.epochs);
+    final long now = System.currentTimeMillis();
+    final long sinceLastScore = now-_timeLastScoreStart;
+    final long sinceLastPrint = now-_timeLastPrint;
+    if( (sinceLastPrint > 2000) ) {
+      final long samples = model_info().get_processed_total();
+      Log.info("Training time: " + PrettyPrint.msecs(now - timeStart, true)
+              + " processed " + samples + " samples"
+              + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+              + " Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000)) + " samples/sec.");
+      _timeLastPrint = now;
+    }
+    // this is potentially slow - only do every so often
+    if( !keep_running || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
+      if (model_info.parameters.diagnostics) computeDiagnostics();
+      _timeLastScoreStart = now;
+      classificationError(ftrain, "Classification error on training data:", true);
+      if (ftest != null)
+        classificationError(ftest, "Classification error on validation data:", true);
+    }
+    if (model_info().unstable()) {
+      Log.err("Canceling job since the model is unstable (exponential growth observed).");
+      Log.err("Try using L1/L2/max_w2 regularization, a different activation function, or more synchronization in multi-node operation.");
+      keep_running = false;
+    }
+    update(dest_key); //update model in UKV
+//    System.out.println(this);
+    return keep_running;
+  }
+
 
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();

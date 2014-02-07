@@ -18,10 +18,10 @@ public class NNTask extends FrameTask<NNTask> {
   // book-keeping
   int _chunk_node_count; //how many nodes are contributing with chunks?
 
-  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(job,dinfo,input,training,fraction, null);}
-  public NNTask(NN job, DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
-    super(job,dinfo,cmp);
-    _params=job;
+  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(dinfo,input,training,fraction, null);}
+  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
+    super(input.job(),dinfo,cmp);
+    _params=input.get_params();
     _training=training;
     _input=input;
     _useFraction=fraction;

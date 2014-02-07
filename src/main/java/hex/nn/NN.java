@@ -234,38 +234,16 @@ public class NN extends Job.ValidatedJob {
     Frame trainScoreFrame = sampleFrame(train, score_training_samples, seed);
     Frame validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
 
+    // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
     final float sync_fraction = sync_samples == 0l ? 1.0f : (float)sync_samples / train.numRows();
 
-    //Main loop
     long timeStart = System.currentTimeMillis();
-    long lastPrint = System.currentTimeMillis();
+    //main loop
     do {
       // NNTask trains an internal deep copy of model_info
-      final NNTask nntask = new NNTask(this, _dinfo, model.model_info(), true, sync_fraction).doAll(train);
-      model.set_model_info(nntask.model_info()); // update the model we keep in this loop, for next iteration input
-      model.epoch_counter = (float)nntask.model_info().get_processed_total()/train.numRows();
-
-      long now = System.currentTimeMillis();
-      long sinceLastScore = now-lastPrint;
-      if( (sinceLastScore > 2000) ) {
-        final long samples = model.model_info().get_processed_total();
-        Log.info("Training time: " + PrettyPrint.msecs(now - timeStart, true)
-                + " processed " + samples + " samples"
-                + " (" + String.format("%.3f", model.epoch_counter) + " epochs)."
-                + " Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000)) + " samples/sec.");
-        lastPrint = now;
-      }
-
-      doDiagnostics(model, trainScoreFrame, validScoreFrame, model.epoch_counter >= epochs, score_interval, diagnostics);
-      model.update(self());
-
-//      System.out.println(model);
-      if (model.model_info().unstable()) {
-        Log.err("Canceling job since the model is unstable (exponential growth observed).");
-        Log.err("Try using L1/L2/max_w2 regularization, a different activation function, or more synchronization in multi-node operation.");
-        break;
-      }
-    } while (model.epoch_counter < epochs);
+      final NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction).doAll(train);
+      model.set_model_info(nntask.model_info()); //need this for next iteration
+    } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self())); //diagnostics, msgs, UKV
 
     //cleanup
     if (adapted != null) adapted[1].delete();
@@ -274,21 +252,6 @@ public class NN extends Job.ValidatedJob {
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
     Log.info("NN training finished.");
     return model;
-  }
-
-  transient long _timeLastScoreStart;
-  void doDiagnostics(NNModel model, Frame ftrain, Frame ftest, boolean force, double score_interval, boolean diagnostics) {
-    long now = System.currentTimeMillis();
-    long sinceLastScore = now-_timeLastScoreStart;
-//    Score sc = null;
-
-    if( force || (sinceLastScore > score_interval*1000) ) {
-      if (diagnostics) model.computeDiagnostics();
-      _timeLastScoreStart = now;
-      model.classificationError(ftrain, "Classification error on training data:", true);
-      if (ftest != null)
-        model.classificationError(ftest, "Classification error on validation data:", true);
-    }
   }
 
   // Expand grid search related argument sets
