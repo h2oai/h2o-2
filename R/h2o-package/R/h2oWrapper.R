@@ -225,9 +225,10 @@ h2o.startJar <- function(memory = "1g") {
   #
   
   if(.Platform$OS.type == "windows") {
+    tmp_path <- paste(Sys.getenv("APPDATA"), "h2o", sep = .Platform$file.sep)
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
-    stdout <- paste("C:/tmp/h2o", usr, "started_from_r.out", sep="_")
-    stderr <- paste("C:/tmp/h2o", usr, "started_from_r.err", sep="_")
+    stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
+    stderr <- paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
   } else {
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USER"))
     stdout <- paste("/tmp/h2o", usr, "started_from_r.out", sep="_")

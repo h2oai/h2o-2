@@ -9,12 +9,12 @@ RESULT_MAX = 200
 LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
 
 # Initialize functions for R logging
-myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
-if(Sys.info()["sysname"] == "Windows")
-  myPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
-
-pkg.env$h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
-pkg.env$h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
+myPath = paste(Sys.getenv("HOME"), "Library", "Application Support", "h2o", sep=.Platform$file.sep)
+if(.Platform$OS.type == "windows")
+  myPath = paste(Sys.getenv("APPDATA"), "h2o", sep=.Platform$file.sep)
+  
+pkg.env$h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep=.Platform$file.sep)
+pkg.env$h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep=.Platform$file.sep)
 
 h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
 h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
@@ -41,7 +41,7 @@ h2o.__changeLog <- function(path, type) {
     stop("type must be either 'Command' or 'Error'")
   myVar = switch(type, Command = "h2o.__LOG_COMMAND", Error = "h2o.__LOG_ERROR")
   myFile = switch(type, Command = "commands.log", Error = "errors.log")
-  cmd <- paste(path, myFile, sep = "/")
+  cmd <- paste(path, myFile, sep = .Platform$file.sep)
   assign(myVar, cmd, envir = pkg.env)
 }
 
