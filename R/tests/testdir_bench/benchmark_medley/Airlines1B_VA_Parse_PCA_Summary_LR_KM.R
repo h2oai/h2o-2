@@ -62,7 +62,7 @@ function(conn) {
   #if (conn@ip == "127.0.0.1") stop("Expects this medley to run in the cloud...")
 
   start_parse <- round(System$currentTimeMillis())[[1]]
-  #PARSE TRAINING DATA
+  print("DOING PARSE TRAINING DATA")
   hex <- h2o.uploadFile(conn, locate("smalldata/airlines/allyears2k_headers.zip"), key="hex")
   end_parse <- round(System$currentTimeMillis())[[1]]
   parseTime <<- (end_parse - start_parse)/1000
@@ -70,18 +70,17 @@ function(conn) {
   numRows <<- nrow(hex)
   numCols <<- ncol(hex)
  
-  #PCA - 12COLUMNS
-#  start_model <- round(System$currentTimeMillis())[[1]]
-#  m <- h2o.prcomp(data = hex)
-#  end_model <- round(System$currentTimeMillis())[[1]]
-#  pcaModelTime_12col <<- (end_model - start_model)/1000
-#
-#  #PCA - 9COLUMNS
-#  start_model <- round(System$currentTimeMillis())[[1]]
-#  m <- h2o.prcomp(data = hex[,-c("UniqueCarrier","Origin","Dest")])
-#  end_model <- round(System$currentTimeMillis())[[1]]
-#  pcaModelTime_9col <<- (end_model - start_model)/1000
+  print("DOING PCA - 12COLUMNS")
+  start_model <- round(System$currentTimeMillis())[[1]]
+  m <- h2o.prcomp(data = hex)
+  end_model <- round(System$currentTimeMillis())[[1]]
+  pcaModelTime_12col <<- (end_model - start_model)/1000
 
+  print("DOING PCA - 9COLUMNS")
+  start_model <- round(System$currentTimeMillis())[[1]]
+  m <- h2o.prcomp(data = hex, ignored_cols = "UniqueCarrier,Origin,Dest")
+  end_model <- round(System$currentTimeMillis())[[1]]
+  pcaModelTime_9col <<- (end_model - start_model)/1000
 
   print("DOING SUMMARY")
   start_model <- round(System$currentTimeMillis())[[1]]
