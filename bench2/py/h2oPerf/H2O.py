@@ -88,7 +88,7 @@ class H2OCloudNode:
     terminated: Only from a signal.  Not normal shutdown.
     """
 
-    def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, ip, base_port, xmx, output_dir):
+    def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, ip, base_port, xmx, output_dir, isEC2):
         """
         Create a node in a cloud.
 
@@ -111,6 +111,27 @@ class H2OCloudNode:
         self.base_port = base_port
         self.xmx = xmx
         self.output_dir = output_dir
+        self.isEC2 = isEC2
+
+        self.addr = self.ip
+        self.http_addr = self.ip
+        self.username = getpass.getuser()
+        self.password = getpass.getuser()
+        if self.isEC2:
+            self.username = 'ubuntu'
+            self.password = None
+        self.ssh = paramiko.SSHClient()
+        policy = paramiko.AutoAddPolicy()
+        self.ssh.set_missing_host_key_policy(policy)
+        self.ssh.load_system_host_keys()
+        if password is None:
+            self.ssh.connect(self.addr, username=username)
+        else:
+            self.ssh.connect(self.addr, username=username, password=password)
+
+        # keep connection - send keepalive packet evety 5minutes
+        self.ssh.get_transport().set_keepalive(300)
+        self.uploaded = {}
 
         self.port = -1
         self.pid = -1
@@ -126,6 +147,11 @@ class H2OCloudNode:
             (self.cloud_num * self.nodes_per_cloud * ports_per_node) + \
             (self.node_num * ports_per_node)
 
+    def open_channel(self):
+        ch = self.ssh.get_transport().open_session()
+        ch.get_pty() # force the process to die without the connection
+        return ch
+
     def start(self):
         """
         Start one node of H2O.
@@ -133,13 +159,20 @@ class H2OCloudNode:
 
         @return: none
         """
+        #upload flat_file
+        #upload aws_creds
+        #upload hdfs_config
 
         cmd = ["java",
                "-Xmx" + self.xmx,
                "-ea",
-               "-jar", self.h2o_jar,
+               "-jar", self.uploaded[self.h2o_jar],
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port)]
+
+        cmd = ' '.join(cmd)
+        self.channel = self.open_channel()
+        self.channel.exec_command(cmd)
 
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
@@ -256,7 +289,7 @@ class H2OCloud:
     A class representing one of the H2O clouds.
     """
 
-    def __init__(self, cloud_num, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
+    def __init__(self, cloud_num, hosts_in_cloud, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir, isEC2):
         """  
         Create a cloud.
         See node definition above for argument descriptions.
@@ -269,6 +302,7 @@ class H2OCloud:
         self.base_port = base_port
         self.xmx = xmx
         self.output_dir = output_dir
+        self.isEC2 = isEC2
 
         # Randomly choose a five digit cloud number.
         n = random.randint(10000, 99999)
@@ -276,18 +310,57 @@ class H2OCloud:
         user = ''.join(user.split())
 
         self.cloud_name = "H2O_perfTest_{}_{}".format(user, n)
-        self.nodes = [] 
+        self.nodes = []
         self.jobs_run = 0
 
-        for node_num in range(self.nodes_per_cloud):
-            node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud, node_num,
-                                self.cloud_name,
-                                self.h2o_jar,
-                                "127.0.0.1", self.base_port,
-                                self.xmx, self.output_dir)
+        for node_num, node_ in enumerate(self.hosts_in_cloud):
+            node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud,
+                                node_num, self.cloud_name, self.h2o_jar,
+                                node_['ip'],
+                                self.base_port,
+                                node_['memory_bytes'],
+                                self.output_dir, isEC2)
             self.nodes.append(node)
+        self.distribute_h2o()
 
-    def start(self):
+    def distribute_h2o(self):
+        """
+        Distribute the H2O to the remote hosts.
+        @return: none.
+        """
+        f = self.h2o_jar
+        def prog(sofar, total):
+            # output is bad for jenkins.
+            username = getpass.getuser()
+            if username!='jenkins':
+                p = int(10.0 * sofar / total)
+                sys.stdout.write('\rUploading jar [%s%s] %02d%%' % ('#'*p, ' '*(10-p), 100*sofar/total))
+                sys.stdout.flush()
+        for node in self.nodes:
+          m = md5.new()
+          m.update(open(f).read())
+          m.update(getpass.getuser())
+          dest = '/tmp/' +m.hexdigest() +"-"+ os.path.basename(f)
+          sftp = node.ssh.open_sftp()
+          try:
+                  sftp.stat(dest)
+                  print "Skipping upload of file {0}. File {1} exists on remote side!".format(f, dest)
+              except IOError, e:
+                  if e.errno == errno.ENOENT:
+                      sftp.put(f, dest, callback=prog)
+              finally:
+                  sftp.close()
+              node.uploaded[f] = dest
+          sys.stdout.flush()
+      
+#    def start_remote(self):
+#        """
+#        Start an H2O cloud remotely.
+#        @return: none
+#        """
+      
+        
+    def start_local(self):
         """  
         Start H2O cloud.
         The cloud is not up until wait_for_cloud_to_be_up() is called and returns.

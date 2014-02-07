@@ -7,7 +7,7 @@ system('git branch')
 Log.info("Hash: ")
 system('git rev-parse HEAD')
 
-defaultPath <- locate("../../target/R")
+defaultPath <- locate("../../target/R/src/contrib")
 ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 checkNLoadWrapper(ipPort)
 checkNLoadPackages()

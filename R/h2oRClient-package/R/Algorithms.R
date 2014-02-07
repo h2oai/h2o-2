@@ -613,31 +613,31 @@ h2o.__getNNResults <- function(res, params) {
 }
 
 # ----------------------- Principal Components Analysis ----------------------------- #
-h2o.prcomp <- function(data, tol=0, standardize=TRUE, retx=FALSE) {
+h2o.prcomp <- function(data, tol=0, ignored_cols = '', standardize=TRUE, retx=FALSE) {
   if( missing(data) ) stop('Must specify data')
   # if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
   if(!is.numeric(tol)) stop('tol must be numeric')
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
-  
+
   destKey = h2o.__uniqID("PCAModel")
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, destination_key=destKey, tolerance=tol, standardize=as.numeric(standardize))
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_cols = ignored_cols, tolerance=tol, standardize=as.numeric(standardize))
   h2o.__waitOnJob(data@h2o, res$job_key)
   # while(!h2o.__isDone(data@h2o, "PCA", res)) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
   res2 = res2$pca_model
-  
+
   result = list()
   result$num_pc = res2$num_pc
   result$standardized = standardize
   result$sdev = res2$sdev
   nfeat = length(res2$eigVec[[1]])
   temp = t(matrix(unlist(res2$eigVec), nrow = nfeat))
-  rownames(temp) = res2$'_names'
+  rownames(temp) = res2$namesExp #'_names'
   colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
   result$rotation = temp
-  
+
   if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result))
   new("H2OPCAModel", key=destKey, data=data, model=result)
 }
