@@ -50,15 +50,22 @@ class Basic(unittest.TestCase):
         numRows = inspect['numRows']
         numCols = inspect['numCols']
 
-        for execExpr in exprList:
+        execExpr = 's.hex = r.hex[,1]',
+        h2e.exec_expr(h2o.nodes[0], execExpr, resultKey='s.hex', timeoutSecs=10)
+
+        # for i in range(1,56):
+        for i in range(1,10):
+            execExpr = 's.hex[,%s] = r.hex[,%s]' % (i, i),
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey='s.hex', timeoutSecs=10)
-        start = time.time()
+
+        # make it fail with this one (skip)
+        execExpr = 's.hex[,%s] = r.hex[,%s]' % (101, 1),
+        h2e.exec_expr(h2o.nodes[0], execExpr, resultKey='s.hex', timeoutSecs=10)
 
         inspect = h2o_cmd.runInspect(key='s.hex')
         print "\ns.hex" \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
-
 
         h2o.check_sandbox_for_errors()
 
