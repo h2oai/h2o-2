@@ -59,13 +59,19 @@ function(reportScoring) {
 
 medley.bench<-
 function(conn) {
-  #if (conn@ip == "127.0.0.1") stop("Expects this medley to run in the cloud...")
-
-  start_parse <- round(System$currentTimeMillis())[[1]]
-  print("DOING PARSE TRAINING DATA")
-  hex <- h2o.uploadFile(conn, locate("smalldata/airlines/allyears2k_headers.zip"), key="hex")
-  end_parse <- round(System$currentTimeMillis())[[1]]
-  parseTime <<- (end_parse - start_parse)/1000
+  if (conn@ip == "127.0.0.1") {
+    start_parse <- round(System$currentTimeMillis())[[1]]
+    print("DOING PARSE TRAINING DATA")
+    hex <- h2o.uploadFile(conn, locate("smalldata/airlines/allyears2k_headers.zip"), key="air.hex")
+    end_parse <- round(System$currentTimeMillis())[[1]]
+    parseTime <<- (end_parse - start_parse)/1000
+  } else {
+    start_parse <- round(System$currentTimeMillis())[[1]]
+    print("DOING PARSE OF TRAINING DATA")
+    h2o.importHDFS.VA(h, "s3n://h2o-bench/AirlinesClean2", key = "air.hex", parse = TRUE)
+    end_parse <- round(System$currentTimeMillis())[[1]]
+    parseTime <<- (end_parse - start_parse)/1000
+  }
 
   numRows <<- nrow(hex)
   numCols <<- ncol(hex)
