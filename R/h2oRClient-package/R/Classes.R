@@ -544,7 +544,7 @@ setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {
     if(class(value) == "H2OParsedDataVA") stop("value must be a FluidVecs object")
     else if(ncol(value) != ncol(x)) stop("Mismatched number of columns")
-    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, copy_from=value@key)
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, copy_from=value@key)
     return(x)
 })
 
@@ -553,7 +553,7 @@ setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
     if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
     else if(any(duplicated(value))) stop("Column names must be unique")
     else if(length(value) != (num = ncol(x))) stop(paste("Must specify a vector of exactly", num, "column names"))
-    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, comma_separated_list=value)
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES2, source=x@key, comma_separated_list=value)
     return(x)
 })
 
@@ -996,13 +996,14 @@ setMethod("colnames", "H2OParsedDataVA", function(x) {
 })
 
 setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
-  function(x, value) { h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key) })
+  function(x, value) { res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, copy_from=value@key); return(x) })
 
 setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
   function(x, value) {
     if(any(nchar(value) == 0)) stop("Column names must be of non-zero length")
     else if(any(duplicated(value))) stop("Column names must be unique")
-    h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
+    res = h2o.__remoteSend(x@h2o, h2o.__HACK_SETCOLNAMES, target=x@key, comma_separated_list=value)
+    return(x)
 })
 
 setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
