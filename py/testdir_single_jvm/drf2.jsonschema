@@ -13,8 +13,17 @@
                 { "type":"string" }
             },
             "_key": { "type":"string" },
-            "cms": { "type":"array", "items":
-                { "type":"array" }
+            "cms": { "type":"array", "items": {
+                "type":"object", "properties": {
+                    "_arr": { "type":"array", "items":
+                        { "type":"array", }
+                    },
+                    "_classErr": { "type":"array", "items":
+                        { "type":"number", }
+                    },
+                    "_predErr": { "type":"number", }
+                }
+            }   
             },
             "errs": { "type":"array", "items":
                 { "type":"number" }
