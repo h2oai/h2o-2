@@ -117,7 +117,7 @@ public final class Enum extends Iced implements Cloneable{
   // Keys that existed at the time the table write began.  If elements are
   // being deleted, they may be written anyways.  If the Values are changing, a
   // random Value is written.
-  public AutoBuffer write( AutoBuffer ab ) {
+  @Override public AutoBuffer write( AutoBuffer ab ) {
     if( _map == null ) return ab.put1(1); // Killed map marker
     ab.put1(0);                           // Not killed
     ab.put4(maxId());
@@ -126,7 +126,7 @@ public final class Enum extends Iced implements Cloneable{
     return ab.put2((char)65535); // End of map marker
   }
 
-  public Enum read( AutoBuffer ab ) {
+  @Override public Enum read( AutoBuffer ab ) {
     assert _map == null || _map.size()==0;
     _map = null;
     if( ab.get1() == 1 ) return this; // Killed?

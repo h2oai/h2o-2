@@ -466,7 +466,7 @@ class ASTAssign extends AST {
 
     // Partial row assignment?
     if( rows != null ) {
-        throw H2O.unimpl();
+      throw H2O.unimpl();
     }
     assert cols != null; // all/all assignment uses simple-assignment
 
