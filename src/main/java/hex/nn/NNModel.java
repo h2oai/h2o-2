@@ -5,6 +5,7 @@ import water.Iced;
 import water.Key;
 import water.Model;
 import water.PrettyPrint;
+import water.api.ConfusionMatrix;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Frame;
@@ -56,7 +57,6 @@ public class NNModel extends Model {
     boolean validation;
     @API(help = "Classification error on validation data")
     public double valid_err = 1;
-
     @API(help = "Training MSE")
     public double train_mse = Double.POSITIVE_INFINITY;
     @API(help = "Validation MSE")
@@ -65,14 +65,10 @@ public class NNModel extends Model {
     public double train_mce = Double.POSITIVE_INFINITY;
     @API(help = "Validation MCE")
     public double valid_mce = Double.POSITIVE_INFINITY;
-
-//    @API(help = "Number of training set samples for scoring")
-//    public long score_training;
-//    @API(help = "Number of validation set samples for scoring")
-//    public long score_validation;
-
-    @API(help = "Confusion Matrix")
-    public water.api.ConfusionMatrix confusion_matrix;
+    @API(help = "Confusion matrix on training data")
+    public water.api.ConfusionMatrix train_confusion_matrix;
+    @API(help = "Confusion matrix on validation data")
+    public water.api.ConfusionMatrix valid_confusion_matrix;
 
     @Override public String toString() {
 
@@ -275,8 +271,8 @@ public class NNModel extends Model {
 //          }
 //        }
 
-    public void computeDiagnostics() {
-      // compute stats on all nodes
+    // compute stats on all nodes
+    public void computeStats() {
       for( int y = 1; y < units.length; y++ ) {
         mean_bias[y] = rms_bias[y] = 0;
         mean_weight[y] = rms_weight[y] = 0;
@@ -310,30 +306,13 @@ public class NNModel extends Model {
                 || rms_bias[y] > thresh    || Double.isNaN(rms_bias[y])
                 || mean_weight[y] > thresh || Double.isNaN(mean_weight[y])
                 || rms_weight[y] > thresh  || Double.isNaN(rms_weight[y]);
-
-        System.out.println("Layer " + y + " mean weight: " + mean_weight[y]);
-        System.out.println("Layer " + y + " rms  weight: " + rms_weight[y]);
-        System.out.println("Layer " + y + " mean   bias: " + mean_bias[y]);
-        System.out.println("Layer " + y + " rms    bias: " + rms_bias[y]);
+        Log.info("Layer " + y + " mean weight: " + mean_weight[y]);
+        Log.info("Layer " + y + " rms  weight: " + rms_weight[y]);
+        Log.info("Layer " + y + " mean   bias: " + mean_bias[y]);
+        Log.info("Layer " + y + " rms    bias: " + rms_bias[y]);
       }
     }
-
   }
-
-  public void computeDiagnostics() {
-    run_time = (System.currentTimeMillis()-start_time);
-    model_info.computeDiagnostics();
-  }
-
-//  public NNModel(NNModel other) {
-//    super(other._key,null,other.data_info._adaptedFrame);
-//
-//    job_key = other.job_key;
-//    data_info = other.data_info;
-//    run_time = 0;
-//    start_time = System.currentTimeMillis();
-//    model_info = new NNModelInfo(other.model_info);
-//  }
 
   public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
     super(selfKey, dataKey, dinfo._adaptedFrame);
@@ -341,26 +320,25 @@ public class NNModel extends Model {
     data_info = dinfo;
     run_time = 0;
     start_time = System.currentTimeMillis();
-    errors = new Errors[(int)params.epochs];
-    for (int i=0; i<errors.length; ++i) {
-      errors[i] = new Errors();
-    }
-
     model_info = new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
     model_info.initializeMembers();
+    errors = new Errors[1];
+    errors[0] = new Errors();
+    errors[0].validation = (params.validation != null);
   }
 
-
+  transient long _timeLastScoreStart, _timeLastPrint;
   /**
    *
    * @param ftrain potentially downsampled training data for scoring
    * @param ftest  potentially downsampled validation data for scoring
    * @param timeStart start time in milliseconds, used to report training speed
+   * @param dest_key where to store the model with the diagnostics in it
    * @return true if model building is ongoing
    */
-  transient long _timeLastScoreStart, _timeLastPrint;
   boolean doDiagnostics(Frame ftrain, Frame ftest, long timeStart, Key dest_key) {
     epoch_counter = (float)model_info().get_processed_total()/data_info._adaptedFrame.numRows();
+    run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().parameters.epochs);
     final long now = System.currentTimeMillis();
     final long sinceLastScore = now-_timeLastScoreStart;
@@ -375,13 +353,30 @@ public class NNModel extends Model {
     // this is potentially slow - only do every so often
     if( !keep_running || (now-timeStart < 30000) // Score every time for first 30 seconds
             || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
-      if (model_info.parameters.diagnostics) computeDiagnostics();
       _timeLastScoreStart = now;
-      long timeStart2 = System.currentTimeMillis();
-      classificationError(ftrain, "Classification error on training data:", true);
-      if (ftest != null)
-        classificationError(ftest, "Classification error on validation data:", true);
-      Log.info("scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - timeStart2, true));
+      if (model_info().parameters.diagnostics)
+        model_info.computeStats();
+      Errors err = new Errors();
+      err.training_time_ms = now - timeStart;
+      err.validation = ftest != null;
+      err.training_samples = model_info().get_processed_total();
+      err.train_confusion_matrix = new ConfusionMatrix();
+      err.train_err = classificationError(ftrain, "Classification error on training data:", true, err.train_confusion_matrix);
+      if (ftest != null) {
+        err.valid_confusion_matrix = new ConfusionMatrix();
+        err.valid_err = classificationError(ftest, "Classification error on validation data:", true, err.valid_confusion_matrix);
+      }
+
+      // enlarge the error array by one, push latest score back
+      if (errors == null) {
+         errors = new Errors[]{err};
+      } else {
+        Errors[] err2 = new Errors[errors.length+1];
+        System.arraycopy(errors, 0, err2, 0, errors.length);
+        err2[err2.length-1] = err;
+        errors = err2;
+      }
+      Log.info("scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -415,10 +410,9 @@ public class NNModel extends Model {
     return preds;
   }
 
-  public double classificationError(Frame ftest, String label, boolean printCM) {
+  public double classificationError(Frame ftest, String label, boolean printCM, ConfusionMatrix CM) {
     Frame fpreds;
     fpreds = score(ftest);
-    water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
     CM.actual = ftest;
     CM.vactual = ftest.lastVec();
     CM.predict = fpreds;
@@ -443,12 +437,11 @@ public class NNModel extends Model {
     final String mse_format = "%2.6f";
     final String cross_entropy_format = "%2.6f";
 
-    DocGen.HTML.title(sb,title);
+    DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
     model_info.job().toHTML(sb);
     sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", " +
             NN.link(_dataKey, "Compute new model") + "</div>");
-    DocGen.HTML.title(sb, "Epochs: " + epoch_counter);
 
     // stats for training and validation
     final Errors error = errors[errors.length - 1];
@@ -489,13 +482,9 @@ public class NNModel extends Model {
       if (isClassifier()) {
         DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
       }
-      if (error.training_time_ms > 0)
-        DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
     }
-    else {
-      if (error.training_time_ms > 0)
-        DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
-    }
+    if (error.training_time_ms > 0)
+      DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
     if (model_info.parameters != null && model_info.parameters.diagnostics) {
       DocGen.HTML.section(sb, "Status of Hidden and Output Layers");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
@@ -538,10 +527,12 @@ public class NNModel extends Model {
     }
     final String cmTitle = "Confusion Matrix on " + (error.validation ? " Validation Data" : " Training Data");
     DocGen.HTML.section(sb, cmTitle);
-    if (error.confusion_matrix != null)
-      error.confusion_matrix.toHTML(sb);
+    if (error.validation && error.valid_confusion_matrix != null) error.valid_confusion_matrix.toHTML(sb);
+    else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
+    else sb.append("<h5>Not yet computed.</h5>");
 
     sb.append("<h3>" + "Progress" + "</h3>");
+    sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
 //    String training = "Number of training set samples for scoring: " + error.score_training;
     if (error.validation) {
 //      String validation = "Number of validation set samples for scoring: " + error.score_validation;
@@ -550,31 +541,31 @@ public class NNModel extends Model {
     sb.append("<tr>");
     sb.append("<th>Training Time</th>");
     sb.append("<th>Training Samples</th>");
-    sb.append("<th>Training MSE</th>");
-    if (isClassifier()) {
-      sb.append("<th>Training MCE</th>");
-      sb.append("<th>Training Classification Error</th>");
-    }
-    sb.append("<th>Validation MSE</th>");
-    if (isClassifier()) {
-      sb.append("<th>Validation MCE</th>");
-      sb.append("<th>Validation Classification Error</th>");
-    }
+//    sb.append("<th>Training MSE</th>");
+//    if (isClassifier()) {
+//      sb.append("<th>Training MCE</th>");
+      sb.append("<th>Training Error</th>");
+//    }
+//    sb.append("<th>Validation MSE</th>");
+//    if (isClassifier()) {
+//      sb.append("<th>Validation MCE</th>");
+      sb.append("<th>Validation Error</th>");
+//    }
     sb.append("</tr>");
     for( int i = errors.length - 1; i >= 0; i-- ) {
       final Errors e = errors[i];
       sb.append("<tr>");
       sb.append("<td>" + PrettyPrint.msecs(e.training_time_ms, true) + "</td>");
       sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
-      sb.append("<td>" + String.format(mse_format, e.train_mse) + "</td>");
+//      sb.append("<td>" + String.format(mse_format, e.train_mse) + "</td>");
       if (isClassifier()) {
-        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
+//        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
         sb.append("<td>" + formatPct(e.train_err) + "</td>");
       }
       if(e.validation) {
-        sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
+//        sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
         if (isClassifier()) {
-          sb.append("<td>" + String.format(cross_entropy_format, e.valid_mce) + "</td>");
+//          sb.append("<td>" + String.format(cross_entropy_format, e.valid_mce) + "</td>");
           sb.append("<td>" + formatPct(e.valid_err) + "</td>");
         }
       } else

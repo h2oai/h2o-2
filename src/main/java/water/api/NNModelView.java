@@ -25,7 +25,8 @@ public class NNModelView extends Request2 {
   }
 
   @Override public boolean toHTML(StringBuilder sb){
-    neuralnet_model.generateHTML("NeuralNet Model", sb);
+    if (neuralnet_model != null)
+      neuralnet_model.generateHTML("NeuralNet Model", sb);
     return true;
   }
 
