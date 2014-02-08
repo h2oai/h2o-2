@@ -133,7 +133,7 @@ class Basic(unittest.TestCase):
             # "testKey":"syn_binary_10000x10.hex",
             # "cm":[[3621,1399],[1515,3465]]}}
             rf_model = rfView['drf_model']
-            cm = rf_model['cms']
+            cms = rf_model['cms']
             ntrees = rf_model['N']
             errs = rf_model['errs']
             N = rf_model['N']

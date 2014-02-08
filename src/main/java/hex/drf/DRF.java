@@ -1,6 +1,7 @@
 package hex.drf;
 
 import static water.util.Utils.*;
+import hex.ConfusionMatrix;
 import hex.ShuffleTask;
 import hex.gbm.*;
 import hex.gbm.DTree.DecidedNode;
@@ -71,7 +72,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-    public DRFModel(DRFModel prior, double err, long [][] cm) {
+    public DRFModel(DRFModel prior, double err, ConfusionMatrix cm) {
       super(prior, err, cm);
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
@@ -101,7 +102,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
-  @Override protected DRFModel makeModel( DRFModel model, double err, long cm[][]) {
+  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm) {
     return new DRFModel(model, err, cm);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {

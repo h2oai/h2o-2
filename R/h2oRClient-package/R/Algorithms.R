@@ -51,8 +51,9 @@ h2o.__getGBMSummary <- function(res, params) {
   mySum$learn_rate = res$learn_rate
 
   if(params$distribution == "multinomial") {
-    temp = matrix(unlist(res$cm), nrow = length(res$cm))
-    mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+    # temp = matrix(unlist(res$cm), nrow = length(res$cm))
+    # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+    mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
   }
   return(mySum)
 }
@@ -68,12 +69,12 @@ h2o.__getGBMResults <- function(res, params) {
   
   if(result$params$distribution == "multinomial") {
     class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = build_cm(tail(res$cm, 1)[[1]], class_names)  # res$'_domains'[[length(res$'_domains')]])
+    result$confusion = build_cm(tail(res$cm, 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
   } else
     result$classification <- F
 
-  result$err = res$errs
+  result$err = as.numeric(res$errs)
   return(result)
 }
 
@@ -802,8 +803,9 @@ h2o.__getDRFSummary <- function(res) {
   mySum$min_rows = res$min_rows
   mySum$nbins = res$nbins
 
-  temp = matrix(unlist(res$cm), nrow = length(res$cm))
-  mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  # temp = matrix(unlist(res$cm), nrow = length(res$cm))
+  # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
   return(mySum)
 }
 
@@ -822,7 +824,7 @@ h2o.__getDRFResults <- function(res, params) {
   result$forest = rf_matrix
 
   class_names = tail(res$'_domains', 1)[[1]]
-  result$confusion = build_cm(tail(res$cm, 1)[[1]], class_names)  #res$'_domains'[[length(res$'_domains')]])
+  result$confusion = build_cm(tail(res$cm, 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   result$mse = as.numeric(res$errs)
   # result$ntree = res$N
   return(result)
