@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
             nn = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
-            relTol = 0.03 if mode == 'SingleThread' else 0.15 ### 15% relative error is acceptable for Hogwild
+            relTol = 0.03 if mode == 'SingleThread' else 0.20 ### 20% relative error is acceptable for Hogwild
             h2o_nn.checkLastValidationError(self, nn['neuralnet_model'], inspect['numRows'], expectedErr, relTol, **kwargs)
 
             ### Now score using the model, and check the validation error
