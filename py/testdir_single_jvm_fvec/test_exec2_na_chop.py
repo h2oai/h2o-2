@@ -4,9 +4,6 @@ import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2
 
 initList = [
         ('r.hex', 'r.hex=i.hex'),
-        ('r1.hex', 'r1.hex=i.hex'),
-        ('r2.hex', 'r2.hex=i.hex'),
-        ('r3.hex', 'r3.hex=i.hex'),
         ]
 
 exprList = [
@@ -42,7 +39,7 @@ class Basic(unittest.TestCase):
         print "\nr.hex" \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
-        numRows = inspect['numRows']
+        numRows1 = inspect['numRows']
         numCols = inspect['numCols']
 
         for resultKey, execExpr in initList:
@@ -54,6 +51,9 @@ class Basic(unittest.TestCase):
         print "\ns.hex" \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
+        numRows2 = inspect['numRows']
+
+        print numRows1, numRows2
 
 
         h2o.check_sandbox_for_errors()
