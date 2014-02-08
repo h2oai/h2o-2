@@ -93,13 +93,13 @@ public class NNModel extends Model {
 
     // model is described by parameters and the following 4 arrays
     //TODO: check impact of making these volatile
-    private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
-    private double[][] biases; //one 1D bias array per layer
+    final private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
+    final private double[][] biases; //one 1D bias array per layer
     private float[][] weights_momenta;
     private double[][] biases_momenta;
 
     // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
-    boolean _has_momenta;
+    final boolean _has_momenta;
     boolean has_momenta() { return _has_momenta; }
     public final float[] get_weights(int i) { return weights[i]; }
     public final double[] get_biases(int i) { return biases[i]; }
@@ -107,7 +107,7 @@ public class NNModel extends Model {
     public final double[] get_biases_momenta(int i) { return biases_momenta[i]; }
 
     @API(help = "Model parameters", json = true)
-    private NN parameters;
+    final private NN parameters;
     public final NN get_params() { return parameters; }
     public final NN job() { return get_params(); }
 
@@ -141,12 +141,11 @@ public class NNModel extends Model {
     public synchronized long get_processed_total() { return processed_global + processed_local; }
 
     // package local helpers
-    int[] units; //number of neurons per layer, extracted from parameters and from datainfo
+    final int[] units; //number of neurons per layer, extracted from parameters and from datainfo
 
     public NNModelInfo(NN params, int num_input, int num_output) {
       assert(num_input > 0);
       assert(num_output > 0);
-      //TODO: validateParams(params);
       parameters = params;
       _has_momenta = ( parameters.momentum_start != 0 || parameters.momentum_stable != 0 );
       final int layers=parameters.hidden.length;
