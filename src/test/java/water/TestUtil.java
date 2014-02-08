@@ -7,8 +7,10 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.*;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
 import water.deploy.*;
 import water.fvec.*;
@@ -34,6 +36,18 @@ public class TestUtil {
     _initial_keycnt = H2O.store_size();
     assert Job.all().length == 0;      // No outstanding jobs
   }
+
+  /** Execute this rule before each test to print test name and test class */
+  @Rule public TestRule logRule = new TestRule() {
+
+    @Override public Statement apply(Statement base, Description description) {
+      Log.info("###########################################################");
+      Log.info("  * Test class name:  " + description.getClassName());
+      Log.info("  * Test method name: " + description.getMethodName());
+      Log.info("###########################################################");
+      return base;
+    }
+  };
 
   @AfterClass public static void checkLeakedKeys() {
     Job[] jobs = Job.all();
