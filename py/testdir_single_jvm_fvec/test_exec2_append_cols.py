@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=14)
+            h2o.build_cloud(2, java_heap_GB=1)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
 
@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec2_na_chop(self):
+    def test_exec2_append_cols.py(self):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         csvPathname = 'standard/covtype.data'
