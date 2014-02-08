@@ -197,8 +197,11 @@ class ASTddply extends ASTOp {
     // rows.  All the usual Chunk.at0 or Vec.at calls work, except the Chunk
     // does a row-indirection to find the actual Chunk data.
     
-    // Pass-1: Find Groups.
-    // Build a NBHML mapping 1st row-# in group to double[] holding selection cols.
+    // Pass-1.0: Find Groups.
+    // Build a NBHSet of unique double[]'s holding selection cols.
+    // These are the unique groups, found per-node.
+    // Pass-1.5: Stripe the groups around the cluster directly, never getting a
+    // complete list in one node.
     ddplyPass1 p1 = new ddplyPass1(cols).doAll(fr);
     System.out.print(p1.toString());
     
@@ -210,23 +213,28 @@ class ASTddply extends ASTOp {
   // ---
   // Pass1: Find unique groups, based on a subset of columns
   private static class ddplyPass1 extends MRTask2<ddplyPass1> {
-    public int _cols[];         // Selection columns
     public transient NonBlockingHashMap<Entry,Object> _uniques;
     public static final Object V = "";
+    public final int _cols[];   // Selection columns
+    ddplyPass1( int cols[] ) { _cols = cols; }
     // A stupid class to give double[] sane equals & hashCode
     private static class Entry extends Iced {
       public double _ds[];
-      Entry( int len ) { _ds = new double[len]; }
-      @Override public boolean equals( Object o ) { 
-        return o instanceof Entry && Arrays.equals(_ds,((Entry)o)._ds); }
-      @Override public int hashCode() {
-        int sum=0;
-        for( double d : _ds ) sum += Double.doubleToRawLongBits(d);
-        return sum;
+      Entry( int len ) { _ds = new double[len+1/*extra slot to cache hash*/]; }
+      private void fill( int row, Chunk chks[], int cols[] ) {
+        int sum=0;              // hash is sum of field bits
+        for( int c=0; c<cols.length; c++ ) {          // For all selection cols
+          double d = _ds[c] = chks[cols[c]].at0(row); // Load into working array
+          sum += Double.doubleToRawLongBits(d);
+        }
+        if( sum==0 ) sum=1;     // zero hash not allowed
+        _ds[_ds.length-1]=sum;  // cache hash in last slot
       }
+      @Override public boolean equals( Object o ) {  
+        return o instanceof Entry && Arrays.equals(_ds,((Entry)o)._ds); }
+      @Override public int hashCode() { return (int)_ds[_ds.length-1]; }
       @Override public String toString() { return Arrays.toString(_ds); }
     }
-    ddplyPass1( int cols[] ) { _cols = cols; }
     @Override public void setupLocal() {
       _uniques = new NonBlockingHashMap<Entry,Object>();
     }
@@ -235,8 +243,7 @@ class ASTddply extends ASTOp {
       int len = chks[_cols[0]]._len;
       for( int row=0; row<len; row++ ) {
         // Temp array holding the column-selection data
-        for( int c=0; c<_cols.length; c++ )   // For all selection cols
-          e._ds[c] = chks[_cols[c]].at0(row); // Load into working array
+        e.fill(row,chks,_cols);
         if( _uniques.putIfAbsent(e,V)==null ) // Add group signature if not already present
           e = new Entry(_cols.length);        // Was added; so 'e' in hashset; need a new 'e'
       }
@@ -246,31 +253,29 @@ class ASTddply extends ASTOp {
       _uniques.putAll(p1._uniques);         // Smash hashmaps together
     }
     @Override public String toString() { return _uniques.toString(); }
-    // Custom serialization for NBHM.  Much nicer when these are auto-gen'd.
-    @Override public AutoBuffer write( AutoBuffer ab ) {
-      super.write(ab);
-      ab.putA4(_cols);
-      if( _uniques == null ) return ab.put4(0);
-      ab.put4(_uniques.size());
-      for( Entry e : _uniques.keySet() ) ab.put(e);
-      return ab;
-    }
-    
-    @Override public ddplyPass1 read( AutoBuffer ab ) {
-      super.read(ab);
-      assert _uniques == null;
-      _uniques = new NonBlockingHashMap<Entry,Object>();
-      _cols = ab.getA4();
-      int len = ab.get4();
-      for( int i=0; i<len; i++ )
-        _uniques.put((Entry)ab.get(),V);
-      return this;
-    }
-    public void copyOver(DTask that) {
-      ddplyPass1 p1 = (ddplyPass1)that;
-      super.copyOver(p1);
-      p1._cols = _cols;
-      p1._uniques = _uniques;
+
+    // Gather all the locally-unique groups, and forward them to a specific
+    // Node (based on a hash).  That Node then is responsible for handling that
+    // group.
+    @Override protected void closeLocal() {
+      // Iterate over the list of local uniques, gathering them per-target-node
+      int csz = H2O.CLOUD.size();
+      // Count groups heading for each Node
+      int grpcnt[] = new int[csz];
+      for( Entry e : _uniques.keySet() )
+        grpcnt[e.hashCode()%csz]++;
+      // Space for the groups-per-node
+      double dss[][][] = new double[csz][][];
+      for( int n=0; n<csz; n++ )
+        dss[n] = new double[grpcnt[n]][];
+      // Gather groups-per-node
+      for( Entry e : _uniques.keySet() ) {
+        int n = e.hashCode()%csz; // Target node for this group
+        dss[n][--grpcnt[n]] = e._ds; // Gather groups-per-node
+      }
+
+
+      //throw H2O.unimpl();
     }
   }
 
