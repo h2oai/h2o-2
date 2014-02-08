@@ -10,8 +10,7 @@ import java.util.Arrays;
 public class NNTask extends FrameTask<NNTask> {
   final private NN _params;
   final private boolean _training;
-  final private NNModel.NNModelInfo _input;
-
+  private NNModel.NNModelInfo _input;
   private NNModel.NNModelInfo _output;
   public NNModel.NNModelInfo model_info() { return _output; }
 
@@ -31,6 +30,7 @@ public class NNTask extends FrameTask<NNTask> {
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
     _output = new NNModel.NNModelInfo(_input);
+    _input = null;
     _output.set_processed_local(0l);
   }
 

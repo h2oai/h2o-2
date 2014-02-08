@@ -238,13 +238,30 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);
+    int start = 0;
+    int end = nrows;
+
+    boolean contiguous = false;
     Random _random = null;
     if (_useFraction < 1.0) {
-      _random = water.util.Utils.getDeterRNG(new Random().nextLong());
+      if (contiguous) {
+        final int howmany = (int)Math.ceil(_useFraction*nrows);
+        if (howmany > 0) {
+          start = new Random().nextInt(nrows - howmany);
+          end = start + howmany;
+        }
+        assert(start < nrows);
+        assert(end <= nrows);
+      }
+      else {
+        _random = water.util.Utils.getDeterRNG(new Random().nextLong());
+        start = 0;
+        end = nrows;
+      }
     }
 
     OUTER:
-    for(int r = 0; r < nrows; ++r){
+    for(int r = start; r < end; ++r){
       if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
               || (_random != null && _random.nextFloat() > _useFraction))continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
