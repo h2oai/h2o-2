@@ -366,16 +366,16 @@ public class NNModel extends Model {
     final long now = System.currentTimeMillis();
     final long sinceLastScore = now-_timeLastScoreStart;
     final long sinceLastPrint = now-_timeLastPrint;
-    if( (sinceLastPrint > 2000) ) {
+    if( (sinceLastPrint > 5000) ) {
       final long samples = model_info().get_processed_total();
       Log.info("Training time: " + PrettyPrint.msecs(now - timeStart, true)
-              + " processed " + samples + " samples"
-              + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000)) + " samples/sec.");
+              + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+              + " Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000.)) + " samples/sec.");
       _timeLastPrint = now;
     }
     // this is potentially slow - only do every so often
-    if( !keep_running || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
+    if( !keep_running || (now-timeStart < 30000) // Score every time for first 30 seconds
+            || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
       if (model_info.parameters.diagnostics) computeDiagnostics();
       _timeLastScoreStart = now;
       classificationError(ftrain, "Classification error on training data:", true);
