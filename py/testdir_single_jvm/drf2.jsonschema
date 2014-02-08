@@ -18,7 +18,10 @@
                     "_arr": { "type":"array", "items":
                         { "type":"array", }
                     },
-                    "_perr": { "type":"number", }
+                    "_classErr": { "type":"array", "items":
+                        { "type":"number", }
+                    },
+                    "_predErr": { "type":"number", }
                 }
             }   
             },
