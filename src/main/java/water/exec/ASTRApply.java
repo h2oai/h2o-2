@@ -173,8 +173,6 @@ class ASTddply extends ASTOp {
       if( c < 0 || c >= fr.numCols() )
         throw new IllegalArgumentException("Column "+(c+1)+" out of range for frame columns "+fr.numCols());
 
-    // Random implementation hacks/notes...
-
     // Was pondering a SIMD-like execution model, running the fcn "once" - but
     // in parallel for all groups.  But this isn't going to work: each fcn
     // execution will take different control paths.  Also the functions side-
@@ -187,65 +185,75 @@ class ASTddply extends ASTOp {
     // plus roll-ups.  Result/Value is Group structure pointing to NewChunks
     // holding row indices.  
 
-    // Hack-Pass-1: Get a Vec-per-group holding row#s in that group.  Chunks
-    // are node-local and hold node-local rows.  Vecs are made lazily via
-    // hash-table mapping.  After the first roll-up we'll know which groups
-    // exist.  Can compress the row#'s into Chunks also.
-
-    // Hack-Pass-2: ForAllGroups, launch parallel ddply execution tasks with a
-    // bogus Frame, with magical Vecs that use the Group(s) to define their
-    // rows.  All the usual Chunk.at0 or Vec.at calls work, except the Chunk
-    // does a row-indirection to find the actual Chunk data.
-    
     // Pass-1.0: Find Groups.
     // Build a NBHSet of unique double[]'s holding selection cols.
-    // These are the unique groups, found per-node.
-    // Pass-1.5: Stripe the groups around the cluster directly, never getting a
-    // complete list in one node.
+    // These are the unique groups, found per-node, rolled-up globally
     ddplyPass1 p1 = new ddplyPass1(cols).doAll(fr);
     System.out.print(p1.toString());
-    
+
+    // Pass-2.0: Send Groups 'round the cluster
+    // Single-threaded per-group work
+    // Send each group to some remote node for execution
+    Futures fs = new Futures();
+    for( Group g : p1._uniques.keySet() )
+      g.call(fs);
+    fs.blockForPending();
+
     env.pop(4);
     // Push empty frame for debuggging
     env.push(new Frame(new String[0],new Vec[0]));
   }
 
   // ---
+  // Group descrption: unpacked selected double columns
+  private static class Group extends DTask<Group> implements Freezable {
+    public double _ds[];
+    public int _hash;
+    Group( int len ) { _ds = new double[len]; }
+    // Efficiently allow groups to be hashed & hash-probed
+    private void fill( int row, Chunk chks[], int cols[] ) {
+      long sum=0;                          // hash is sum of field bits
+      for( int c=0; c<cols.length; c++ ) { // For all selection cols
+        double d = _ds[c] = chks[cols[c]].at0(row); // Load into working array
+        sum += Double.doubleToRawLongBits(d);
+      }
+      _hash = (int)sum;
+    }
+    @Override public boolean equals( Object o ) {  
+      return o instanceof Group && Arrays.equals(_ds,((Group)o)._ds); }
+    @Override public int hashCode() { return _hash; }
+
+    // Non-blocking, send a group to a remote node for execution
+    void call( Futures fs ) {
+      //int csz = H2O.CLOUD.size();
+      //fs.add(RPC.call(H2O.CLOUD._memary[hashCode()%csz],this));
+    }
+
+    @Override public void compute2() {
+      throw H2O.unimpl();
+    }
+    @Override public String toString() { return Arrays.toString(_ds); }
+  }
+
+
+  // ---
   // Pass1: Find unique groups, based on a subset of columns
   private static class ddplyPass1 extends MRTask2<ddplyPass1> {
-    public transient NonBlockingHashMap<Entry,Object> _uniques;
+    public transient NonBlockingHashMap<Group,Object> _uniques;
     public static final Object V = "";
-    public final int _cols[];   // Selection columns
+    public int _cols[];   // Selection columns
     ddplyPass1( int cols[] ) { _cols = cols; }
-    // A stupid class to give double[] sane equals & hashCode
-    private static class Entry extends Iced {
-      public double _ds[];
-      Entry( int len ) { _ds = new double[len+1/*extra slot to cache hash*/]; }
-      private void fill( int row, Chunk chks[], int cols[] ) {
-        int sum=0;              // hash is sum of field bits
-        for( int c=0; c<cols.length; c++ ) {          // For all selection cols
-          double d = _ds[c] = chks[cols[c]].at0(row); // Load into working array
-          sum += Double.doubleToRawLongBits(d);
-        }
-        if( sum==0 ) sum=1;     // zero hash not allowed
-        _ds[_ds.length-1]=sum;  // cache hash in last slot
-      }
-      @Override public boolean equals( Object o ) {  
-        return o instanceof Entry && Arrays.equals(_ds,((Entry)o)._ds); }
-      @Override public int hashCode() { return (int)_ds[_ds.length-1]; }
-      @Override public String toString() { return Arrays.toString(_ds); }
-    }
     @Override public void setupLocal() {
-      _uniques = new NonBlockingHashMap<Entry,Object>();
+      _uniques = new NonBlockingHashMap<Group,Object>();
     }
     @Override public void map( Chunk chks[] ) {
-      Entry e = new Entry(_cols.length);
+      Group g = new Group(_cols.length);
       int len = chks[_cols[0]]._len;
       for( int row=0; row<len; row++ ) {
         // Temp array holding the column-selection data
-        e.fill(row,chks,_cols);
-        if( _uniques.putIfAbsent(e,V)==null ) // Add group signature if not already present
-          e = new Entry(_cols.length);        // Was added; so 'e' in hashset; need a new 'e'
+        g.fill(row,chks,_cols);
+        if( _uniques.putIfAbsent(g,V)==null ) // Add group signature if not already present
+          g = new Group(_cols.length);        // Was added; so 'e' in hashset; need a new 'e'
       }
     }
     @Override public void reduce( ddplyPass1 p1 ) {
@@ -254,28 +262,31 @@ class ASTddply extends ASTOp {
     }
     @Override public String toString() { return _uniques.toString(); }
 
-    // Gather all the locally-unique groups, and forward them to a specific
-    // Node (based on a hash).  That Node then is responsible for handling that
-    // group.
-    @Override protected void closeLocal() {
-      // Iterate over the list of local uniques, gathering them per-target-node
-      int csz = H2O.CLOUD.size();
-      // Count groups heading for each Node
-      int grpcnt[] = new int[csz];
-      for( Entry e : _uniques.keySet() )
-        grpcnt[e.hashCode()%csz]++;
-      // Space for the groups-per-node
-      double dss[][][] = new double[csz][][];
-      for( int n=0; n<csz; n++ )
-        dss[n] = new double[grpcnt[n]][];
-      // Gather groups-per-node
-      for( Entry e : _uniques.keySet() ) {
-        int n = e.hashCode()%csz; // Target node for this group
-        dss[n][--grpcnt[n]] = e._ds; // Gather groups-per-node
-      }
-
-
-      //throw H2O.unimpl();
+    // Custom serialization for NBHM.  Much nicer when these are auto-gen'd.
+    @Override public AutoBuffer write( AutoBuffer ab ) {
+      super.write(ab);
+      ab.putA4(_cols);
+      if( _uniques == null ) return ab.put4(0);
+      ab.put4(_uniques.size());
+      for( Group g : _uniques.keySet() ) ab.put(g);
+      return ab;
+    }
+    
+    @Override public ddplyPass1 read( AutoBuffer ab ) {
+      super.read(ab);
+      assert _uniques == null;
+      _uniques = new NonBlockingHashMap<Group,Object>();
+      _cols = ab.getA4();
+      int len = ab.get4();
+      for( int i=0; i<len; i++ )
+        _uniques.put(ab.get(Group.class),V);
+      return this;
+    }
+    public void copyOver(DTask that) {
+      ddplyPass1 p1 = (ddplyPass1)that;
+      super.copyOver(p1);
+      p1._cols = _cols;
+      p1._uniques = _uniques;
     }
   }
 
