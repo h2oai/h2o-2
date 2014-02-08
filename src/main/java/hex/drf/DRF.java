@@ -1,7 +1,5 @@
 package hex.drf;
 
-import com.google.gson.JsonObject;
-
 import hex.ShuffleTask;
 import hex.gbm.DHistogram;
 import hex.gbm.DTree;
@@ -135,13 +133,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-
-  @Override
-  protected JsonObject toJSON() {
-    JsonObject jo = super.toJSON();
-    jo.addProperty("mtry_computed", _mtry);
-    return jo;
-  }
 
   @Override protected Status exec() {
     logStart();
