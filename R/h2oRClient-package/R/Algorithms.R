@@ -53,7 +53,7 @@ h2o.__getGBMSummary <- function(res, params) {
   if(params$distribution == "multinomial") {
     # temp = matrix(unlist(res$cm), nrow = length(res$cm))
     # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-    mySum$prediction_error = tail(res$cm, 1)[[1]]$'_perr'
+    mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
   }
   return(mySum)
 }
@@ -805,7 +805,7 @@ h2o.__getDRFSummary <- function(res) {
 
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-  mySum$prediction_error = tail(res$cm, 1)[[1]]$'_perr'
+  mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
   return(mySum)
 }
 
