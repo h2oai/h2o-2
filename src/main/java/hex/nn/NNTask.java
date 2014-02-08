@@ -1,7 +1,9 @@
 package hex.nn;
 
 import hex.FrameTask;
+import water.H2O;
 import water.H2O.H2OCountedCompleter;
+import water.util.Log;
 
 import java.util.Arrays;
 
@@ -17,21 +19,19 @@ public class NNTask extends FrameTask<NNTask> {
 
   int _chunk_node_count = 1;
 
-  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training) {this(dinfo,input,training,null);}
-  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, H2OCountedCompleter cmp){
+  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(dinfo,input,training,fraction, null);}
+  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
     super(input.job(),dinfo,cmp);
     _params=input.get_params();
     _training=training;
     _input=input;
+    _useFraction=fraction;
   }
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
     _output = new NNModel.NNModelInfo(_input);
     _output.set_processed_local(0l);
-    _start = _output.get_processed_total();
-    _num_points = model_info().get_params().sync_samples;
-//    Log.info("Submitting NNTask for points " + _start + " to " + (_start + _num_points));
   }
 
   // create local workspace (neurons)
@@ -57,6 +57,7 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override protected void postGlobal(){
+    if (H2O.CLOUD.size() > 1) Log.info("Synchronizing between nodes.");
 //    Log.info("postGlobal: dividing by " + _chunk_node_count + ".");
     _output.div(_chunk_node_count);
 //    Log.info("postGlobal: before global " + _output.get_processed_global() + ".");

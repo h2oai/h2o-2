@@ -248,13 +248,14 @@ public class NN extends Job.ValidatedJob {
       sync_samples = train.numRows();
       Log.warn("Setting sync_samples to the number of rows of the training data (" + sync_samples + ").");
     }
+    // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
+    final float sync_fraction = sync_samples == 0l ? 1.0f : (float)sync_samples / train.numRows();
 
     long timeStart = System.currentTimeMillis();
     //main loop
     do {
       // NNTask trains an internal deep copy of model_info
-      final NNTask nntask = new NNTask(_dinfo, model.model_info(), true).doAll(train);
-      if (H2O.CLOUD.size() > 1) Log.info("Synchronizing between nodes.");
+      final NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction).doAll(train);
       model.set_model_info(nntask.model_info()); //need this for next iteration
     } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self())); //diagnostics, msgs, UKV
 
