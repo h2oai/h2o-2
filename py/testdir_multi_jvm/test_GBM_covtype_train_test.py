@@ -107,7 +107,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cms'][-1]
+                cm = gbmTrainView['gbm_model']['cms'][-1]['_arr']
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"
