@@ -375,12 +375,14 @@ def infoFromSummary(summaryResult, noPrint=False):
             colname = column['colname']
             coltype = column['type']
             nacnt = column['nacnt']
+            h2o_exec.checkForBadFP(nacnt, 'nacnt')
 
             stats = column['stats']
             stattype = stats['type']
 
             if stattype == 'Enum':
                 cardinality = stats['cardinality']
+                h2o_exec.checkForBadFP(cardinality, 'cardinality')
                 
             else:
                 mean = stats['mean']
@@ -390,6 +392,11 @@ def infoFromSummary(summaryResult, noPrint=False):
                 maxs = stats['maxs']
                 pct = stats['pct']
                 pctile = stats['pctile']
+
+                # check for NaN/Infinity in some of these
+                h2o_exec.checkForBadFP(mean, 'mean')
+                h2o_exec.checkForBadFP(sd, 'sd')
+                h2o_exec.checkForBadFP(zeros, 'zeros')
 
             hstart = column['hstart']
             hstep = column['hstep']

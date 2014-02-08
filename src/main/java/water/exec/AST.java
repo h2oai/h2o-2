@@ -466,7 +466,7 @@ class ASTAssign extends AST {
 
     // Partial row assignment?
     if( rows != null ) {
-        throw H2O.unimpl();
+      throw H2O.unimpl();
     }
     assert cols != null; // all/all assignment uses simple-assignment
 
@@ -484,7 +484,7 @@ class ASTAssign extends AST {
     for( long i : cs ) {
       int cidx = (int)i-1;      // Convert 1-based to 0-based
       Vec rv = env.addRef(rvecs[rvecs.length==1?0:cidx]);
-      if( cidx == ary.numCols() ) ary.add("C"+cidx,rv);
+      if( cidx == ary.numCols() ) ary.add("C"+(int)i,rv);     // New column name created with 1-based index
       else fs = env.subRef(ary.replace(cidx,rv),fs);
     }
     if( fs != null )  fs.blockForPending();

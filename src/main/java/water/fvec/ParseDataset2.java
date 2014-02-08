@@ -270,7 +270,7 @@ public final class ParseDataset2 extends Job {
   }
   private static String [] genericColumnNames(int ncols){
     String [] res = new String[ncols];
-    for(int i = 0; i < res.length; ++i)res[i] = "C" + i;
+    for(int i = 0; i < res.length; ++i) res[i] = "C" + String.valueOf(i+1);
     return res;
   }
 

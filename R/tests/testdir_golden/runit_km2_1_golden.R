@@ -10,7 +10,7 @@ test.km2vanilla.golden <- function(H2Oserver) {
 
 
 #fitR<- kmeans(irisR[,1:4], centers=3, iter.max=1000, nstart=10)
-#fitH2O<- h2o.kmeans(irisH2O, centers=3, cols=c("C0", "C1", "C2", "C3"))
+#fitH2O<- h2o.kmeans(irisH2O, centers=3, cols=c("C1", "C2", "C3", "C4"))
 
 # Sanity check to make sure required fields are actually present in the model that gets returned.
 #if (! ('withinss' %in% names(fitH2O@model))) {

@@ -32,7 +32,7 @@ def rand_rowData():
         rowData = rowData + "," + str(f)
     return rowData
 
-class parse_rand_schmoo(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -52,7 +52,7 @@ class parse_rand_schmoo(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_sort_of_prostate_with_row_schmoo(self):
+    def test_rf_float_rand2(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

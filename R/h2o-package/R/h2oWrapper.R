@@ -226,10 +226,9 @@ h2o.startJar <- function(memory = "1g") {
   # TODO: tmp files should be user-independent
   #
   
+  # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
   if(.Platform$OS.type == "windows") {
-    appdata_path <- Sys.getenv("APPDATA")
-    appdata_path <- gsub("\\\\", .Platform$file.sep, appdata_path)
-    tmp_path <- paste(appdata_path, "h2o", sep = .Platform$file.sep)
+    tmp_path <- paste("C:", "TMP", sep = .Platform$file.sep)
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
     stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
     stderr <- paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
@@ -260,7 +259,7 @@ h2o.startJar <- function(memory = "1g") {
                stderr=stderr,
                wait=FALSE)
   if (rc != 0) {
-    stop(sprintf("Failed to exec %s", jar_file))
+    stop(sprintf("Failed to exec %s with return code=%s", jar_file,as.character(rc)))
   }
   .startedH2O <<- TRUE
 }

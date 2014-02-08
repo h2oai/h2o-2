@@ -7,6 +7,7 @@ import water.*;
 import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
+import water.util.Log;
 import water.util.Utils;
 
 /** Class responsible for actual parsing of the datasets.
@@ -445,6 +446,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     assert (_phase == Pass.TWO);
     Column[] cols = new Column[_ncolumns];
     int off = 0;
+    Log.info("Parse result for " + _job.dest() + ":");
     for( int i = 0; i < cols.length; ++i) {
       cols[i] = new Column();
       cols[i]._n = _numRows - _invalidValues[i];
@@ -459,6 +461,20 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._mean = _mean[i];
       cols[i]._sigma = _sigma[i];
       cols[i]._name = _colNames != null?_colNames[i]:("C"+(Integer.toString(i+1)));
+
+      try {
+        boolean isCategorical = _colDomains[i] != null;
+        boolean isConstant = _min[i] == _max[i];
+        String CStr = String.format("C%d:", i+1);
+        String typeStr = String.format("%s", (isCategorical ? "categorical" : "numeric"));
+        String minStr = String.format("min(%f)", _min[i]);
+        String maxStr = String.format("max(%f)", _max[i]);
+        String isConstantStr = isConstant ? "constant" : "";
+        String numLevelsStr = isCategorical ? String.format("numLevels(%d)", _colDomains[i].length) : "";
+        Log.info(String.format("    %-8s %15s %20s %20s %11s %16s", CStr, typeStr, minStr, maxStr, isConstantStr, numLevelsStr));
+      }
+      catch (Exception _) {}
+
       off += Math.abs(cols[i]._size);
     }
     // let any pending progress reports finish

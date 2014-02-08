@@ -525,22 +525,23 @@ public class DTree extends Iced {
     @API(help = "Bins in the histograms")          public final int nbins;
 
     // For classification models, we'll do a Confusion Matrix right in the
-    // model (for now - really should be seperate).
+    // model (for now - really should be separate).
     @API(help="Testing key for cm and errs") public final Key testKey;
-    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cms[/*CM-per-tree*/][][];
+    // @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cms[/*CM-per-tree*/][][];
+    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
     @API(help="Unscaled variable importance for individual input variables.") public float[] varimp;
     @API(help="Tree statistics") public final TreeStats treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
-      this.testKey = testKey; this.cms = new long[0][][];
+      this.testKey = testKey; this.cms = new ConfusionMatrix[0];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
       treeStats = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, long[][][] cms, TreeStats tstats) {
+    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, ConfusionMatrix[] cms, TreeStats tstats) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -553,13 +554,13 @@ public class DTree extends Iced {
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
     }
 
-    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+    public TreeModel(TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
       this(prior, append(prior.treeBits, trees), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats);
     }
     public TreeModel(TreeModel prior, DTree[] trees, TreeStats tstats) {
       this(prior, append(prior.treeBits, trees), null, null, tstats);
     }
-    public TreeModel(TreeModel prior, double err, long [][] cm) {
+    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm) {
       this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null);
     }
 
@@ -577,11 +578,11 @@ public class DTree extends Iced {
     public int numTrees() { return treeBits.length; }
     // Most recent ConfusionMatrix
     @Override public ConfusionMatrix cm() {
-      long cms[][][] = this.cms; // Avoid racey update; read it once
+      ConfusionMatrix[] cms = this.cms; // Avoid racey update; read it once
       if(cms != null && cms.length > 0){
         int n = cms.length-1;
         while(n > 0 && cms[n] == null)--n;
-        return cms[n] == null?null:new ConfusionMatrix(cms[n]);
+        return cms[n] == null?null:cms[n];
       } else return null;
     }
     @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
@@ -616,7 +617,7 @@ public class DTree extends Iced {
 
       // Generate a display using the last scored Model.  Not all models are
       // scored immediately (since scoring can be a big part of model building).
-      long cm[][] = null;
+      ConfusionMatrix cm = null;
       int last = cms.length-1;
       while( last > 0 && cms[last]==null ) last--;
       cm = 0 <= last && last < cms.length ? cms[last] : null;
@@ -624,7 +625,7 @@ public class DTree extends Iced {
       // Display the CM
       if( cm != null && domain != null ) {
         // Top row of CM
-        assert cm.length==domain.length;
+        assert cm._arr.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey == null ) {
           sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
@@ -637,22 +638,22 @@ public class DTree extends Iced {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
         sb.append("<th>Actual / Predicted</th>"); // Row header
-        for( int i=0; i<cm.length; i++ )
+        for( int i=0; i<cm._arr.length; i++ )
           sb.append("<th>").append(domain[i]).append("</th>");
         sb.append("<th>Error</th>");
         sb.append("</tr>");
 
         // Main CM Body
         long tsum=0, terr=0;               // Total observations & errors
-        for( int i=0; i<cm.length; i++ ) { // Actual loop
+        for( int i=0; i<cm._arr.length; i++ ) { // Actual loop
           sb.append("<tr>");
           sb.append("<th>").append(domain[i]).append("</th>");// Row header
           long sum=0, err=0;                     // Per-class observations & errors
-          for( int j=0; j<cm[i].length; j++ ) { // Predicted loop
+          for( int j=0; j<cm._arr[i].length; j++ ) { // Predicted loop
             sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
-            sb.append(cm[i][j]).append("</td>");
-            sum += cm[i][j];              // Per-class observations
-            if( i != j ) err += cm[i][j]; // and errors
+            sb.append(cm._arr[i][j]).append("</td>");
+            sum += cm._arr[i][j];              // Per-class observations
+            if( i != j ) err += cm._arr[i][j]; // and errors
           }
           sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
           tsum += sum;  terr += err; // Bump totals
@@ -662,9 +663,9 @@ public class DTree extends Iced {
         // Last row of CM
         sb.append("<tr>");
         sb.append("<th>Totals</th>");// Row header
-        for( int j=0; j<cm.length; j++ ) { // Predicted loop
+        for( int j=0; j<cm._arr.length; j++ ) { // Predicted loop
           long sum=0;
-          for( int i=0; i<cm.length; i++ ) sum += cm[i][j];
+          for( int i=0; i<cm._arr.length; i++ ) sum += cm._arr[i][j];
           sb.append("<td>").append(sum).append("</td>");
         }
         sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));

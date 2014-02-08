@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import hex.ConfusionMatrix;
 import hex.rng.MersenneTwisterRNG;
 import jsr166y.CountedCompleter;
 import water.*;
@@ -205,7 +206,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Double update - after scoring
     model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
-                      sc==null ? null : (_nclass>1?sc._cm:null));
+                      sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null));
     model.update(self());
     return model;
   }
@@ -678,7 +679,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 
-  protected abstract TM makeModel( TM model, double err, long cm[][]);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
