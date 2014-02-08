@@ -49,22 +49,16 @@ public class NNTask extends FrameTask<NNTask> {
     if (other._output.get_processed_local() > 0 //other NNTask was active (its model_info should be used for averaging)
             && other._output != _output) //other NNTask worked on a different model_info
     {
-//      Log.info("before reduce: " + _output.get_processed_local() + " and " + other._output.get_processed_local() + " processed.");
       _output.add(other._output);
-//      Log.info("after reduce: " + _output.get_processed_local() + " processed.");
       _chunk_node_count += other._chunk_node_count;
     }
   }
 
   @Override protected void postGlobal(){
-    if (H2O.CLOUD.size() > 1) Log.info("Synchronizing between nodes.");
-//    Log.info("postGlobal: dividing by " + _chunk_node_count + ".");
+    if (H2O.CLOUD.size() > 1) Log.info("Synchronizing between " + _chunk_node_count + " (out of " + H2O.CLOUD.size() + ") nodes.");
     _output.div(_chunk_node_count);
-//    Log.info("postGlobal: before global " + _output.get_processed_global() + ".");
-//    Log.info("postGlobal: adding local " + _output.get_processed_local() + ".");
     _output.add_processed_global(_output.get_processed_local());
     _output.set_processed_local(0l);
-//    Log.info("postGlobal: after global " + _output.get_processed_global() + ".");
   }
 
   // Helper

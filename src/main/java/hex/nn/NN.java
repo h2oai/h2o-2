@@ -194,8 +194,8 @@ public class NN extends Job.ValidatedJob {
   }
 
   @Override public Status exec() {
-    init();
-    trainModel();
+    initModel();
+    buildModel();
     if( _gen_enum ) UKV.remove(response._key);
     remove();
     return Status.Done;
@@ -205,7 +205,7 @@ public class NN extends Job.ValidatedJob {
     return NNProgressPage.redirect(this, self(), dest());
   }
 
-  public void init() {
+  public void initModel() {
     logStart();
     NN.RNG.seed.set(seed);
 
@@ -216,7 +216,8 @@ public class NN extends Job.ValidatedJob {
 
     if (_dinfo == null)
       _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true), 1, true);
-    new NNModel(dest(), self(), source._key, _dinfo, this).delete_and_lock(self());
+    NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
+    model.delete_and_lock(self());
   }
 
   // Helper to downsample a Frame (without stratification)
@@ -234,7 +235,7 @@ public class NN extends Job.ValidatedJob {
     return output;
   }
 
-  public NNModel trainModel(){
+  public NNModel buildModel() {
     final NNModel model = UKV.get(dest());
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     Frame train = _dinfo._adaptedFrame;
@@ -245,12 +246,13 @@ public class NN extends Job.ValidatedJob {
     Frame validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
 
     if (sync_samples > train.numRows()) {
-      sync_samples = train.numRows();
-      Log.warn("Setting sync_samples to the number of rows of the training data (" + sync_samples + ").");
+      Log.warn("Setting sync_samples (" + sync_samples
+              + ") to the number of rows of the training data (" + (sync_samples=train.numRows()) + ").");
     }
     // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
     final float sync_fraction = sync_samples == 0l ? 1.0f : (float)sync_samples / train.numRows();
 
+    Log.info("Starting to train the Neural Net.");
     long timeStart = System.currentTimeMillis();
     //main loop
     do {
@@ -264,7 +266,7 @@ public class NN extends Job.ValidatedJob {
     model.unlock(self());
     if (validScoreFrame != null && validScoreFrame != adapted[0]) validScoreFrame.delete();
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
-    Log.info("NN training finished.");
+    Log.info("Neural Net training finished.");
     return model;
   }
 

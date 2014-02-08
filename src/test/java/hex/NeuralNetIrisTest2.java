@@ -20,7 +20,7 @@ import water.util.Utils;
 import java.util.Random;
 
 public class NeuralNetIrisTest2 extends TestUtil {
-  static final String PATH = "smalldata/iris/iris.csv";
+  static final String PATH = "smalldata/iris/iris.csv.gz";
   Frame _train, _test;
 
   @BeforeClass public static void stall() {
@@ -167,8 +167,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       p.diagnostics = false;
                       p.validation = null;
                       p.fast_mode = false; //to be the same as reference
+                      p.sync_samples = 100000; //sync once per period
 
-                      p.init(); //randomize weights, but don't start training yet
+                      p.initModel(); //randomize weights, but don't start training yet
 
                       NNModel mymodel = UKV.get(p.dest());
                       Neurons[] neurons = NNTask.makeNeurons(p._dinfo, mymodel.model_info());
@@ -191,7 +192,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       ref.train((int)p.epochs, p.rate, p.momentum_stable, loss);
 
                       // Train H2O
-                      mymodel = p.trainModel();
+                      mymodel = p.buildModel();
 
 
                       /**

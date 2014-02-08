@@ -377,9 +377,11 @@ public class NNModel extends Model {
             || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
       if (model_info.parameters.diagnostics) computeDiagnostics();
       _timeLastScoreStart = now;
+      long timeStart2 = System.currentTimeMillis();
       classificationError(ftrain, "Classification error on training data:", true);
       if (ftest != null)
         classificationError(ftest, "Classification error on validation data:", true);
+      Log.info("scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - timeStart2, true));
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -443,7 +445,7 @@ public class NNModel extends Model {
 
     DocGen.HTML.title(sb,title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
-    model_info.parameters.toHTML(sb);
+    model_info.job().toHTML(sb);
     sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", " +
             NN.link(_dataKey, "Compute new model") + "</div>");
     DocGen.HTML.title(sb, "Epochs: " + epoch_counter);
