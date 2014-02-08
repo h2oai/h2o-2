@@ -413,6 +413,7 @@ public class NNModel extends Model {
   public double classificationError(Frame ftest, String label, boolean printCM, ConfusionMatrix CM) {
     Frame fpreds;
     fpreds = score(ftest);
+    if (CM == null) CM = new ConfusionMatrix();
     CM.actual = ftest;
     CM.vactual = ftest.lastVec();
     CM.predict = fpreds;
@@ -527,9 +528,12 @@ public class NNModel extends Model {
     }
     final String cmTitle = "Confusion Matrix on " + (error.validation ? " Validation Data" : " Training Data");
     DocGen.HTML.section(sb, cmTitle);
-    if (error.validation && error.valid_confusion_matrix != null) error.valid_confusion_matrix.toHTML(sb);
-    else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
-    else sb.append("<h5>Not yet computed.</h5>");
+    if (error.train_confusion_matrix.cm.length < 100) {
+      if (error.validation && error.valid_confusion_matrix != null) error.valid_confusion_matrix.toHTML(sb);
+      else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
+      else sb.append("<h5>Not yet computed.</h5>");
+    }
+    else sb.append("<h5>Not shown here (too large).</h5>");
 
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
