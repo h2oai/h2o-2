@@ -29,7 +29,7 @@ noDepDelayedNAs.hex = air.hex[!is.na(air.hex$DepDelay)]
 dim(noDepDelayedNAs.hex)
 
 minutesOfDelayWeTolerate = 15
-noDepDelayedNAs.hex[,numCols+1] = air.hex$DepDelay > minutesOfDelayWeTolerate
+noDepDelayedNAs.hex[,numCols+1] = noDepDelayedNAs.hex$DepDelay > minutesOfDelayWeTolerate
 noDepDelayedNAs.hex[,numCols+1] = as.factor(noDepDelayedNAs.hex[,numCols+1])
 cn = colnames(noDepDelayedNAs.hex)
 cn[numCols+1] = y_col
