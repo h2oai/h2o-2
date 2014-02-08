@@ -208,6 +208,12 @@ public class NN extends Job.ValidatedJob {
   public void init() {
     logStart();
     NN.RNG.seed.set(seed);
+
+    // Lock the input datasets against deletes
+    source.read_lock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.read_lock(self());
+
     if (_dinfo == null)
       _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true), 1, true);
     new NNModel(dest(), self(), source._key, _dinfo, this).delete_and_lock(self());
@@ -238,14 +244,17 @@ public class NN extends Job.ValidatedJob {
     Frame trainScoreFrame = sampleFrame(train, score_training_samples, seed);
     Frame validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
 
-    // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
-    final float sync_fraction = sync_samples == 0l ? 1.0f : (float)sync_samples / train.numRows();
+    if (sync_samples > train.numRows()) {
+      sync_samples = train.numRows();
+      Log.warn("Setting sync_samples to the number of rows of the training data (" + sync_samples + ").");
+    }
 
     long timeStart = System.currentTimeMillis();
     //main loop
     do {
       // NNTask trains an internal deep copy of model_info
-      final NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction).doAll(train);
+      final NNTask nntask = new NNTask(_dinfo, model.model_info(), true).doAll(train);
+      if (H2O.CLOUD.size() > 1) Log.info("Synchronizing between nodes.");
       model.set_model_info(nntask.model_info()); //need this for next iteration
     } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self())); //diagnostics, msgs, UKV
 

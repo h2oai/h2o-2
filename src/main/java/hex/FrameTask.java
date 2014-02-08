@@ -13,7 +13,6 @@ import water.fvec.Vec;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Random;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
@@ -21,7 +20,18 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
 
-  protected float _useFraction;
+  // Optionally restrict this task to a range of global row indices in [0, _dinfo._adaptedFrame.numRows()]
+  protected long _start = 0;
+  protected long _num_points = -1;
+
+  boolean skip(long row) {
+    final long numrows = _dinfo._adaptedFrame.numRows();
+    final long start = _start % numrows;
+    final long end = (_start + _num_points) % numrows;
+    if (start<end && start <= row && row < end) return false;
+    if (start>end && (row < end || start <= row)) return false;
+    return true;
+  }
 
   public FrameTask(Job job, DataInfo dinfo) {
     this(job,dinfo,null);
@@ -30,12 +40,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     super(cmp);
     _job = job;
     _dinfo = dinfo;
-    _useFraction=1.0f;
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
     _job = ft._job;
-    _useFraction=ft._useFraction;
   }
   public double [] normMul(){return _dinfo._normMul;}
   public double [] normSub(){return _dinfo._normSub;}
@@ -220,7 +228,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   /**
    * Override this to initialize at the beginning of chunk processing.
    */
-  protected void chunkInit(int nrows){}
+  protected void chunkInit(){}
   /**
    * Override this to do post-chunk processing work.
    */
@@ -234,20 +242,18 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
     if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     final int nrows = chunks[0]._len;
-    chunkInit(nrows);
+    final long off = chunks[0]._start;
+
+    chunkInit();
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);
-    Random _random = null;
-    if (_useFraction < 1.0) {
-      _random = water.util.Utils.getDeterRNG(new Random().nextLong());
-    }
 
     OUTER:
     for(int r = 0; r < nrows; ++r){
-      if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
-              || (_random != null && _random.nextFloat() > _useFraction))continue;
+      if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId) || skip(off+r)) continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
+
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
         int c = (int)chunks[i].at80(r);

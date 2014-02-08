@@ -15,30 +15,29 @@ public class NNTask extends FrameTask<NNTask> {
 
   transient Neurons[] _neurons;
 
-  // book-keeping
-  int _chunk_node_count; //how many nodes are contributing with chunks?
+  int _chunk_node_count = 1;
 
-  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(dinfo,input,training,fraction, null);}
-  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
+  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training) {this(dinfo,input,training,null);}
+  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, H2OCountedCompleter cmp){
     super(input.job(),dinfo,cmp);
     _params=input.get_params();
     _training=training;
     _input=input;
-    _useFraction=fraction;
   }
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
     _output = new NNModel.NNModelInfo(_input);
     _output.set_processed_local(0l);
+    _start = _output.get_processed_total();
+    _num_points = model_info().get_params().sync_samples;
+//    Log.info("Submitting NNTask for points " + _start + " to " + (_start + _num_points));
   }
 
   // create local workspace (neurons)
   // and link them to shared weights
-  @Override protected void chunkInit(int nrows){
+  @Override protected void chunkInit(){
     _neurons = makeNeurons(_dinfo, _output);
-    _chunk_node_count = nrows > 0 ? 1 : 0;
-//    Log.info("chunkInit: " + nrows + " rows (used: ~" + (nrows * _useFraction) + ")");
   }
 
   @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
@@ -47,10 +46,10 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override public void reduce(NNTask other){
-    if (other._chunk_node_count > 0 //other NNTask was active (its model_info should be used for averaging)
+    if (other._output.get_processed_local() > 0 //other NNTask was active (its model_info should be used for averaging)
             && other._output != _output) //other NNTask worked on a different model_info
     {
-//      Log.info("before reduce: " + _output.get_processed_local() + " processed.");
+//      Log.info("before reduce: " + _output.get_processed_local() + " and " + other._output.get_processed_local() + " processed.");
       _output.add(other._output);
 //      Log.info("after reduce: " + _output.get_processed_local() + " processed.");
       _chunk_node_count += other._chunk_node_count;
@@ -61,6 +60,7 @@ public class NNTask extends FrameTask<NNTask> {
 //    Log.info("postGlobal: dividing by " + _chunk_node_count + ".");
     _output.div(_chunk_node_count);
 //    Log.info("postGlobal: before global " + _output.get_processed_global() + ".");
+//    Log.info("postGlobal: adding local " + _output.get_processed_local() + ".");
     _output.add_processed_global(_output.get_processed_local());
     _output.set_processed_local(0l);
 //    Log.info("postGlobal: after global " + _output.get_processed_global() + ".");
