@@ -440,7 +440,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
     stop("Cannot run k-means on non-numeric columns!")
   
   result$params = list(cols=feat, centers=centers, iter.max=iter.max, normalize=normalize)
-  result$centers = matrix(unlist(res2$clusters), ncol = length(feat))
+  result$centers = matrix(unlist(res2$clusters), ncol = length(feat), byrow = TRUE)
   dimnames(result$centers) = list(seq(1, centers), feat)
   result$tot.withinss = res2$error
   result$cluster = h2o.predict(new("H2OKMeansModelVA", key=destKey, data=data, model=list()))
