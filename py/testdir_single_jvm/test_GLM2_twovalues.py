@@ -96,7 +96,7 @@ class GLM_twovalues(unittest.TestCase):
                 'n_folds': 0,
                 'case_mode': '=',
                 'case_val': case, 
-                'response': 'C12', 
+                'response': 'C13', 
                 'family': 'binomial', 
                 'alpha': 0.5, 
                 'lambda': 1e-4, 
