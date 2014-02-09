@@ -168,6 +168,14 @@ public class NNModel extends Model {
       rms_bias = new double[units.length];
       mean_weight = new double[units.length];
       rms_weight = new double[units.length];
+//      long siz = 0;
+//      for (int i=0; i<weights.length; ++i) siz += weights[i].length * Float.SIZE;
+//      for (int i=0; i<biases.length; ++i) siz += biases[i].length * Double.SIZE;
+//      if (has_momenta()) {
+//        for (int i=0; i<weights_momenta.length; ++i) siz += weights_momenta.length * Float.SIZE;
+//        for (int i=0; i<biases_momenta.length; ++i) siz += biases_momenta.length * Double.SIZE;
+//      }
+//      Log.info("Size of the model: " + String.format("%.3f", (double)siz / (1<<23)) + " MB.");
     }
     public NNModelInfo(NNModelInfo other) {
       this(other.parameters, other.units[0], other.units[other.units.length-1]);
