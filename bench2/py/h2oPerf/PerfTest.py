@@ -22,6 +22,7 @@ class Test:
         self.ip = ""
         self.port = -1
         self.aws = False
+        self.remote_hosts = False
         self.heap_bytes_per_node = "" #test_run table
         self.total_hosts = 0 #test_run table
         self.total_nodes = 0 #test_run table
@@ -53,6 +54,7 @@ class Test:
         cfg = ConfigParser.RawConfigParser()
         cfg.read(self.cfg)
         self.aws = cfg.getboolean("H2OBuildInformation", "aws")
+        self.remote_hosts = cfg.getboolean("H2OBuildInformation", "remote_hosts")
         self.heap_bytes_per_node = cfg.get("H2OBuildInformation", "heap_bytes_per_node")
         self.total_hosts = cfg.getint("H2OBuildInformation", "total_hosts")
         self.total_nodes = cfg.getint("H2OBuildInformation", "total_nodes")
