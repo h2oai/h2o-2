@@ -100,6 +100,7 @@ class H2OCloudNode:
         @param base_port: The starting port number we are trying to get our nodes to listen on.
         @param xmx: Java memory parameter.
         @param output_dir: The directory where we can create an output file for this process.
+        @param isEC2: Whether or not this node is an EC2 node.
         @return: The node object.
         """
         self.cloud_num = cloud_num
@@ -134,9 +135,9 @@ class H2OCloudNode:
         self.uploaded = {}
 
         self.port = -1
-        self.pid = -1
+
         self.output_file_name = ""
-        self.child = None
+        self.error_file_name = ""
         self.terminated = False
 
         # Choose my base port number here.  All math is done here.  Every node has the same
@@ -170,10 +171,6 @@ class H2OCloudNode:
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port)]
 
-        cmd = ' '.join(cmd)
-        self.channel = self.open_channel()
-        self.channel.exec_command(cmd)
-
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
         if (os.path.exists(ec2_hdfs_config_file_name)):
@@ -182,20 +179,26 @@ class H2OCloudNode:
 
         self.output_file_name = \
             os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
-        f = open(self.output_file_name, "w")
-        self.child = subprocess.Popen(args=cmd,
-                                      stdout=f,
-                                      stderr=subprocess.STDOUT,
-                                      cwd=self.output_dir)
+    
+        self.error_file_name = \ 
+            os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".err")
+
+        cmd = ' '.join(cmd)
+        self.channel = self.open_channel()
+        self.stdouterr = self.channel.makefile()
+        PerfUtils.drain(self.channel.makefile(), self.output_file_name)
+        PerfUtils.drain(self.channel.makefile_stderr(), self.error_file_name)
+        self.channel.exec_command(cmd)
+
         @atexit.register
         def kill_process():
             try:
-                self.terminate()
-                self.child.terminate() #paranoid
-            except OSError:  #_very_ paranoid
+                self.stop()
+                self.channel.exec_command('exit')
+                self.ssh.close()
+            except OSError:
                 pass
-        self.pid = self.child.pid
-        print("+ CMD: " + ' '.join(cmd))
+        print "+ CMD: " + cmd
 
     def scrape_port_from_stdout(self):
         """
@@ -207,30 +210,27 @@ class H2OCloudNode:
         @return: none
         """
         retries = 30
-        while (retries > 0):
-            if (self.terminated):
+        while retries > 0:
+            if self.terminated:
                 return
-            f = open(self.output_file_name, "r")
-            s = f.readline()
-            while (len(s) > 0):
-                if (self.terminated):
-                    return
-                match_groups = re.search(r"Listening for HTTP and REST traffic on  http://(\S+):(\d+)", s)
-                if (match_groups is not None):
-                    port = match_groups.group(2)
-                    if (port is not None):
-                        self.port = port
-                        f.close()
-                        print("H2O Cloud {} Node {} started with output file {}".format(self.cloud_num,
-                                                                                        self.node_num,
-                                                                                        self.output_file_name))
+
+            while self.channel.recv_ready():
+                s = self.stdouterr.readline()
+                while len(s) > 0:
+                    if self.terminated:
                         return
+                    match_groups = re.search(r"Listening for HTTP and REST traffic on  http://(\S+):(\d+)", s)
+                    if match_groups is not None:
+                        port = match_groups.group(2)
+                        if port is not None:
+                            self.port = port
+                            print("H2O Cloud {} Node {} started with output file {} and error file".format(self.cloud_num,
+                                                                                            self.node_num,
+                                                                                            self.output_file_name))
+                            return
 
-                s = f.readline()
-
-            f.close()
             retries -= 1
-            if (self.terminated):
+            if self.terminated:
                 return
             time.sleep(1)
 
@@ -246,11 +246,9 @@ class H2OCloudNode:
 
         @return: none
         """
-        if (self.pid > 0):
-            print("Killing JVM with PID {}".format(self.pid))
             try:
-                self.child.terminate()
-            except OSError:
+                requests.get(self.ip + ":" + self.port + "/Shutdown.html")
+            except Exception, e:
                 pass
             self.pid = -1
 
@@ -270,6 +268,10 @@ class H2OCloudNode:
     def get_output_file_name(self):
         """ Return the directory to the output file name. """
         return self.output_file_name    
+
+    def get_error_file_name(self):
+        """ Return the directory to the error file name. """
+        return self.error_file_name
 
     def get_port(self):
         """ Return the port this node is really listening on. """

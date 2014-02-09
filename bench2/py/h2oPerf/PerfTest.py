@@ -16,6 +16,7 @@ class Test:
         3. Predicting
 
     Each file represents a phase of the test.
+    In addition to these R files, there is a config file.
     """
     def __init__(self, cfg, test_dir, test_short_dir, output_dir, parse_file, model_file, predict_file, perfdb):
         self.ip = ""
@@ -62,7 +63,6 @@ class Test:
         if not self.aws:
             self.ip = cfg.get("Host1", "ip")
             for host in cfg.sections():
-                print host
                 if host == 'H2OBuildInformation': 
                     continue
                 h = {}
@@ -71,19 +71,8 @@ class Test:
                 h['port'] = cfg.get(host, "port")
                 h['num_cpus'] = cfg.get(host, "num_cpus")
                 h["memory_bytes"] = cfg.get(host, "memory_bytes")
+                h["isEC2"] = self.aws
                 self.hosts.append(h)
-        #else:
-        #    #TODO: somehow get an ip of aws instance
-        #    for i in range(self.total_hosts):
-        #        host_name = "Host" + str(i)
-        #        ip = "8.8.8.8" #TODO: get the host ips...
-        #        num_cpus = 4 #TODO: get the aws information automatically
-        #        memory_bytes = 123123 #TODO: get this too..
-        #        self.hosts.append({"host_name": host_name, 
-        #                           "ip": ip, 
-        #                           "num_cpus": num_cpus,
-        #                           "memory_bytes": memory_bytes,
-        #                          })
 
     def do_test(self):
         """

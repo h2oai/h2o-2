@@ -1,6 +1,7 @@
 import sys
 import os
 import shutil
+import threading
 
 sig = False
 dash_line = "\n-------------------------------------------------------------------------------------\n"
@@ -151,3 +152,18 @@ def report_summary(object):
         object.__log__("Time/completed test:  N/A")
     object.__log__("")
 
+def __drain__(src, dst):
+    for l in src:
+        if type(dst) == type(0):
+            os.write(dst, l)
+        else:
+            dst.write(l)
+            dst.flush()
+    src.close()
+    if type(dst) == type(0):
+        os.close(dst)
+
+def drain(src, dst):
+    t = threading.Thread(target=__drain__, args=(src,dst))
+    t.daemon = True
+    t.start()
