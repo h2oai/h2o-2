@@ -168,14 +168,6 @@ public class NNModel extends Model {
       rms_bias = new double[units.length];
       mean_weight = new double[units.length];
       rms_weight = new double[units.length];
-//      long siz = 0;
-//      for (int i=0; i<weights.length; ++i) siz += weights[i].length * Float.SIZE;
-//      for (int i=0; i<biases.length; ++i) siz += biases[i].length * Double.SIZE;
-//      if (has_momenta()) {
-//        for (int i=0; i<weights_momenta.length; ++i) siz += weights_momenta.length * Float.SIZE;
-//        for (int i=0; i<biases_momenta.length; ++i) siz += biases_momenta.length * Double.SIZE;
-//      }
-//      Log.info("Size of the model: " + String.format("%.3f", (double)siz / (1<<23)) + " MB.");
     }
     public NNModelInfo(NNModelInfo other) {
       this(other.parameters, other.units[0], other.units[other.units.length-1]);
@@ -199,22 +191,51 @@ public class NNModel extends Model {
     }
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
-      for (int i=0; i<weights.length; ++i)
-        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i]));
-      for (int i=0; i<biases.length; ++i)
-        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
-      if (weights_momenta != null) {
-        for (int i=0; i<weights_momenta.length; ++i)
-          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i]));
+      if (parameters.diagnostics) {
+        Neurons[] neurons = NNTask.makeNeurons(parameters._dinfo, this);
+        sb.append("Status of Hidden and Output Layers:\n");
+        sb.append("#  Units      Activation      Rate     L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
+        final String format = "%7g";
+        for (int i=1; i<neurons.length; ++i) {
+          sb.append(i + " " + String.format("%6d", neurons[i].units)
+                  + " " + String.format("%15s", neurons[i].getClass().getSimpleName())
+                  + " " + String.format("%10g", neurons[i].rate(get_processed_total()))
+                  + " " + String.format("%5f", neurons[i].l1)
+                  + " " + String.format("%5f", neurons[i].l2)
+                  + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))
+                  + " (" + String.format(format, mean_weight[i])
+                  + ", " + String.format(format, rms_weight[i]) + ")"
+                  + " (" + String.format(format, mean_bias[i])
+                  + ", " + String.format(format, rms_bias[i]) + ")\n");
+        }
       }
-      if (biases_momenta != null) {
-        for (int i=0; i<biases_momenta.length; ++i)
-          sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
+      // compute model size
+      long siz = 0;
+      for (int i=0; i<weights.length; ++i) siz += weights[i].length * Float.SIZE;
+      for (int i=0; i<biases.length; ++i) siz += biases[i].length * Double.SIZE;
+      if (has_momenta()) {
+        for (int i=0; i<weights_momenta.length; ++i) siz += weights_momenta.length * Float.SIZE;
+        for (int i=0; i<biases_momenta.length; ++i) siz += biases_momenta.length * Double.SIZE;
       }
-      sb.append("\nunits[]="+Arrays.toString(units));
-      sb.append("\nprocessed global: "+get_processed_global());
-      sb.append("\nprocessed local:  "+get_processed_local());
-      sb.append("\nprocessed total:  " + get_processed_total());
+      sb.append("Size of the model: " + String.format("%.3f", (double)siz / (1<<23)) + " MB.");
+
+      // DEBUGGING
+//      for (int i=0; i<weights.length; ++i)
+//        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i]));
+//      for (int i=0; i<biases.length; ++i)
+//        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
+//      if (weights_momenta != null) {
+//        for (int i=0; i<weights_momenta.length; ++i)
+//          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i]));
+//      }
+//      if (biases_momenta != null) {
+//        for (int i=0; i<biases_momenta.length; ++i)
+//          sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
+//      }
+//      sb.append("\nunits[]="+Arrays.toString(units));
+//      sb.append("\nprocessed global: "+get_processed_global());
+//      sb.append("\nprocessed local:  "+get_processed_local());
+//      sb.append("\nprocessed total:  " + get_processed_total());
       return sb.toString();
     }
     void initializeMembers() {
@@ -314,10 +335,6 @@ public class NNModel extends Model {
                 || rms_bias[y] > thresh    || Double.isNaN(rms_bias[y])
                 || mean_weight[y] > thresh || Double.isNaN(mean_weight[y])
                 || rms_weight[y] > thresh  || Double.isNaN(rms_weight[y]);
-        Log.info("Layer " + y + " mean weight: " + mean_weight[y]);
-        Log.info("Layer " + y + " rms  weight: " + rms_weight[y]);
-        Log.info("Layer " + y + " mean   bias: " + mean_bias[y]);
-        Log.info("Layer " + y + " rms    bias: " + rms_bias[y]);
       }
     }
   }
@@ -362,19 +379,18 @@ public class NNModel extends Model {
     if( !keep_running || (now-timeStart < 30000) // Score every time for first 30 seconds
             || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
       _timeLastScoreStart = now;
-      if (model_info().parameters.diagnostics)
-        model_info.computeStats();
+      boolean printCM = false;
+      // compute errors
       Errors err = new Errors();
       err.training_time_ms = now - timeStart;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
       err.train_confusion_matrix = new ConfusionMatrix();
-      err.train_err = classificationError(ftrain, "Classification error on training data:", true, err.train_confusion_matrix);
+      err.train_err = classificationError(ftrain, "Classification error on training data:", printCM, err.train_confusion_matrix);
       if (ftest != null) {
         err.valid_confusion_matrix = new ConfusionMatrix();
-        err.valid_err = classificationError(ftest, "Classification error on validation data:", true, err.valid_confusion_matrix);
+        err.valid_err = classificationError(ftest, "Classification error on validation data:", printCM, err.valid_confusion_matrix);
       }
-
       // enlarge the error array by one, push latest score back
       if (errors == null) {
          errors = new Errors[]{err};
@@ -384,7 +400,11 @@ public class NNModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
+      // compute stats
+      if (model_info().parameters.diagnostics) model_info.computeStats();
       Log.info("scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
+      // print the model to ASCII
+      for (String s : toString().split("\n")) Log.info(s);
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -399,12 +419,12 @@ public class NNModel extends Model {
 
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(super.toString());
-    sb.append("\n"+data_info.toString());
+//    sb.append(super.toString());
+//    sb.append("\n"+data_info.toString()); //not implemented yet
     sb.append("\n"+model_info.toString());
-    sb.append("\nrun time: " + run_time);
-    sb.append("\nstart time: " + start_time);
-    sb.append("\nepoch counter: " + epoch_counter);
+    sb.append("\n"+errors[errors.length-1].toString());
+//    sb.append("\nrun time: " + PrettyPrint.msecs(run_time, true));
+//    sb.append("\nepoch counter: " + epoch_counter);
     return sb.toString();
   }
 
@@ -454,6 +474,7 @@ public class NNModel extends Model {
 
     // stats for training and validation
     final Errors error = errors[errors.length - 1];
+    assert(error != null);
 
     if (isClassifier()) {
       // Plot training error
@@ -479,19 +500,19 @@ public class NNModel extends Model {
     if (isClassifier()) {
       DocGen.HTML.section(sb, "Training classification error: " + formatPct(error.train_err));
     }
-    DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, error.train_mse));
+//    DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, error.train_mse));
     if (isClassifier()) {
-      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
+//      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
       if(error.validation) {
         DocGen.HTML.section(sb, "Validation classification error: " + formatPct(error.valid_err));
       }
     }
-    if(error.validation) {
-      DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, error.valid_mse));
-      if (isClassifier()) {
-        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
-      }
-    }
+//    if(error.validation) {
+//      DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, error.valid_mse));
+//      if (isClassifier()) {
+//        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
+//      }
+//    }
     if (error.training_time_ms > 0)
       DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
     if (model_info.parameters != null && model_info.parameters.diagnostics) {
@@ -513,7 +534,7 @@ public class NNModel extends Model {
         sb.append("<tr>");
         sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
         sb.append("<td>").append("<b>").append(neurons[i].units).append("</b>").append("</td>");
-        sb.append("<td>").append(neurons[i].getClass().getSimpleName().replace("Vec","").replace("Chunk", "")).append("</td>");
+        sb.append("<td>").append(neurons[i].getClass().getSimpleName()).append("</td>");
         sb.append("<td>").append(String.format("%.5g", neurons[i].rate(error.training_samples))).append("</td>");
        sb.append("<td>").append(neurons[i].l1).append("</td>");
         sb.append("<td>").append(neurons[i].l2).append("</td>");
@@ -536,12 +557,13 @@ public class NNModel extends Model {
     }
     final String cmTitle = "Confusion Matrix on " + (error.validation ? " Validation Data" : " Training Data");
     DocGen.HTML.section(sb, cmTitle);
-    if (error.train_confusion_matrix.cm.length < 100) {
-      if (error.validation && error.valid_confusion_matrix != null) error.valid_confusion_matrix.toHTML(sb);
-      else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
-      else sb.append("<h5>Not yet computed.</h5>");
+    if (error.train_confusion_matrix != null) {
+      if (error.train_confusion_matrix.cm.length < 100) {
+        if (error.validation && error.valid_confusion_matrix != null) error.valid_confusion_matrix.toHTML(sb);
+        else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
+      } else sb.append("<h5>Not shown here (too large).</h5>");
     }
-    else sb.append("<h5>Not shown here (too large).</h5>");
+    else sb.append("<h5>Not yet computed.</h5>");
 
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
