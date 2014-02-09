@@ -1,6 +1,9 @@
 import sys
 import os
 import shutil
+import threading
+import stat
+import tempfile
 
 sig = False
 dash_line = "\n-------------------------------------------------------------------------------------\n"
@@ -36,15 +39,12 @@ def wipe_output_dir(dir_to_wipe):
         print("")
         sys.exit(1)
 
-def start_cloud(object):
+def start_cloud(object, use_remote):
     """ 
     Start H2O Cloud
     """
     if (object.terminated):
         return
-
-#    if (object.use_cloud):
-#        return
 
     print("")
     print("Starting cloud...")
@@ -52,7 +52,11 @@ def start_cloud(object):
 
     if (object.terminated):
         return
-    object.cloud[0].start()  #single cloud test (no parallel cloud build & test)
+
+    if use_remote:
+        object.cloud[0].start_remote()
+    else:
+        object.cloud[0].start_local()
 
     print("")
     print("Waiting for H2O nodes to come up...")
@@ -150,4 +154,27 @@ def report_summary(object):
     else:
         object.__log__("Time/completed test:  N/A")
     object.__log__("")
+
+def __drain__(src, dst):
+    for l in src:
+        if type(dst) == type(0):
+            os.write(dst, l)
+        else:
+            dst.write(l)
+            dst.flush()
+    src.close()
+    if type(dst) == type(0):
+        os.close(dst)
+
+def drain(src, dst):
+    t = threading.Thread(target=__drain__, args=(src,dst))
+    t.daemon = True
+    t.start()
+
+
+def tmp_file(prefix = '', suffix = '', directory = ''):
+    fd, path = tempfile.mkstemp(prefix = prefix, suffix = suffix, dir = directory)
+    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+    os.chmod(path, permissions)
+    return (fd, path)
 

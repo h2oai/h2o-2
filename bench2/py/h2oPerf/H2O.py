@@ -10,6 +10,12 @@ import getpass
 import re
 import subprocess
 import atexit
+import paramiko
+import md5
+import errno
+import PerfUtils
+import stat
+
 
 class H2OUseCloudNode:
     """  
@@ -100,6 +106,7 @@ class H2OCloudNode:
         @param base_port: The starting port number we are trying to get our nodes to listen on.
         @param xmx: Java memory parameter.
         @param output_dir: The directory where we can create an output file for this process.
+        @param isEC2: Whether or not this node is an EC2 node.
         @return: The node object.
         """
         self.cloud_num = cloud_num
@@ -124,19 +131,20 @@ class H2OCloudNode:
         policy = paramiko.AutoAddPolicy()
         self.ssh.set_missing_host_key_policy(policy)
         self.ssh.load_system_host_keys()
-        if password is None:
-            self.ssh.connect(self.addr, username=username)
+  
+        if self.password is None:
+            self.ssh.connect(self.addr, username=self.username)
         else:
-            self.ssh.connect(self.addr, username=username, password=password)
+            self.ssh.connect(self.addr, username=self.username, password=self.password)
 
         # keep connection - send keepalive packet evety 5minutes
         self.ssh.get_transport().set_keepalive(300)
         self.uploaded = {}
 
         self.port = -1
-        self.pid = -1
+
         self.output_file_name = ""
-        self.child = None
+        self.error_file_name = ""
         self.terminated = False
 
         # Choose my base port number here.  All math is done here.  Every node has the same
@@ -152,7 +160,7 @@ class H2OCloudNode:
         ch.get_pty() # force the process to die without the connection
         return ch
 
-    def start(self):
+    def start_remote(self):
         """
         Start one node of H2O.
         (Stash away the self.child and self.pid internally here.)
@@ -170,34 +178,38 @@ class H2OCloudNode:
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port)]
 
+        # Add S3N credentials to cmd if they exist.
+        #ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
+        #if (os.path.exists(ec2_hdfs_config_file_name)):
+        #    cmd.append("-hdfs_config")
+        #    cmd.append(ec2_hdfs_config_file_name)
+
+        self.output_file_name = "java_" + str(self.cloud_num) + "_" + str(self.node_num)
+    
+        self.error_file_name = "java_" + str(self.cloud_num) + "_" + str(self.node_num)
+
         cmd = ' '.join(cmd)
         self.channel = self.open_channel()
+        self.stdouterr = "" #somehow cat outfile & errorfile?
+
+        outfd, self.output_file_name = PerfUtils.tmp_file(prefix = "remoteH2O-" + self.output_file_name, suffix = ".out", directory = self.output_dir)
+        errfd, self.error_file_name = PerfUtils.tmp_file(prefix = "remoteH2O-" + self.error_file_name, suffix = ".err", directory = self.output_dir)
+
+        PerfUtils.drain(self.channel.makefile(), outfd)
+        PerfUtils.drain(self.channel.makefile_stderr(), errfd)
         self.channel.exec_command(cmd)
 
-        # Add S3N credentials to cmd if they exist.
-        ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
-        if (os.path.exists(ec2_hdfs_config_file_name)):
-            cmd.append("-hdfs_config")
-            cmd.append(ec2_hdfs_config_file_name)
-
-        self.output_file_name = \
-            os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
-        f = open(self.output_file_name, "w")
-        self.child = subprocess.Popen(args=cmd,
-                                      stdout=f,
-                                      stderr=subprocess.STDOUT,
-                                      cwd=self.output_dir)
         @atexit.register
         def kill_process():
             try:
-                self.terminate()
-                self.child.terminate() #paranoid
-            except OSError:  #_very_ paranoid
+                self.stop()
+                self.channel.exec_command('exit')
+                self.ssh.close()
+            except OSError:
                 pass
-        self.pid = self.child.pid
-        print("+ CMD: " + ' '.join(cmd))
+        print "+ CMD: " + cmd
 
-    def scrape_port_from_stdout(self):
+    def scrape_port_from_stdout_remote(self):
         """
         Look at the stdout log and figure out which port the JVM chose.
         Write this to self.port.
@@ -206,11 +218,11 @@ class H2OCloudNode:
 
         @return: none
         """
-        retries = 30
+        retries = 30 
         while (retries > 0):
             if (self.terminated):
                 return
-            f = open(self.output_file_name, "r")
+            f = open(self.output_file_name, "r") 
             s = f.readline()
             while (len(s) > 0):
                 if (self.terminated):
@@ -219,7 +231,7 @@ class H2OCloudNode:
                 if (match_groups is not None):
                     port = match_groups.group(2)
                     if (port is not None):
-                        self.port = port
+                        self.port = port 
                         f.close()
                         print("H2O Cloud {} Node {} started with output file {}".format(self.cloud_num,
                                                                                         self.node_num,
@@ -229,7 +241,7 @@ class H2OCloudNode:
                 s = f.readline()
 
             f.close()
-            retries -= 1
+            retries -= 1 
             if (self.terminated):
                 return
             time.sleep(1)
@@ -239,29 +251,27 @@ class H2OCloudNode:
         print("")
         sys.exit(1)
 
-    def stop(self):
+    def stop_remote(self):
         """
         Normal node shutdown.
         Ignore failures for now.
 
         @return: none
         """
-        if (self.pid > 0):
-            print("Killing JVM with PID {}".format(self.pid))
-            try:
-                self.child.terminate()
-            except OSError:
-                pass
-            self.pid = -1
+        try:
+            requests.get(self.ip + ":" + self.port + "/Shutdown.html")
+        except Exception, e:
+            pass
+        self.pid = -1
 
-    def terminate(self):
+    def terminate_remote(self):
         """
         Terminate a running node.  (Due to a signal.)
 
         @return: none
         """
         self.terminated = True
-        self.stop()
+        self.stop_remote()
 
     def get_ip(self):
         """ Return the ip address this node is really listening on. """
@@ -270,6 +280,10 @@ class H2OCloudNode:
     def get_output_file_name(self):
         """ Return the directory to the output file name. """
         return self.output_file_name    
+
+    def get_error_file_name(self):
+        """ Return the directory to the error file name. """
+        return self.error_file_name
 
     def get_port(self):
         """ Return the port this node is really listening on. """
@@ -289,7 +303,7 @@ class H2OCloud:
     A class representing one of the H2O clouds.
     """
 
-    def __init__(self, cloud_num, hosts_in_cloud, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir, isEC2):
+    def __init__(self, cloud_num, hosts_in_cloud, nodes_per_cloud, h2o_jar, base_port, output_dir, isEC2, remote_hosts):
         """  
         Create a cloud.
         See node definition above for argument descriptions.
@@ -300,9 +314,10 @@ class H2OCloud:
         self.nodes_per_cloud = nodes_per_cloud
         self.h2o_jar = h2o_jar
         self.base_port = base_port
-        self.xmx = xmx
         self.output_dir = output_dir
         self.isEC2 = isEC2
+        self.remote_hosts = remote_hosts
+        self.hosts_in_cloud = hosts_in_cloud
 
         # Randomly choose a five digit cloud number.
         n = random.randint(10000, 99999)
@@ -337,29 +352,31 @@ class H2OCloud:
                 sys.stdout.write('\rUploading jar [%s%s] %02d%%' % ('#'*p, ' '*(10-p), 100*sofar/total))
                 sys.stdout.flush()
         for node in self.nodes:
-          m = md5.new()
-          m.update(open(f).read())
-          m.update(getpass.getuser())
-          dest = '/tmp/' +m.hexdigest() +"-"+ os.path.basename(f)
-          sftp = node.ssh.open_sftp()
-          try:
-                  sftp.stat(dest)
-                  print "Skipping upload of file {0}. File {1} exists on remote side!".format(f, dest)
-              except IOError, e:
-                  if e.errno == errno.ENOENT:
-                      sftp.put(f, dest, callback=prog)
-              finally:
-                  sftp.close()
-              node.uploaded[f] = dest
-          sys.stdout.flush()
-      
-#    def start_remote(self):
-#        """
-#        Start an H2O cloud remotely.
-#        @return: none
-#        """
-      
-        
+            m = md5.new()
+            m.update(open(f).read())
+            m.update(getpass.getuser())
+            dest = '/tmp/' +m.hexdigest() +"-"+ os.path.basename(f)
+            print "Uploading h2o jar to: " + dest + "on " + node.ip
+            sftp = node.ssh.open_sftp()
+            try:
+                sftp.stat(dest)
+                print "Skipping upload of file {0}. File {1} exists on remote side!".format(f, dest)
+            except IOError, e:
+                if e.errno == errno.ENOENT:
+                    sftp.put(f, dest, callback=prog)
+            finally:
+                sftp.close()
+            node.uploaded[f] = dest
+           # sys.stdout.flush()
+
+    def start_remote(self):
+        """
+        Start an H2O cloud remotely.
+        @return: none
+        """
+        for node in self.nodes:
+            node.start_remote()
+
     def start_local(self):
         """  
         Start H2O cloud.
@@ -382,7 +399,10 @@ class H2OCloud:
 
         @return: none
         """
-        self._scrape_port_from_stdout()
+        if self.remote_hosts:
+            self._scrape_port_from_stdout_remote()
+        else:
+            self._scrape_port_from_stdout_local()
 
     def stop(self):
         """  
@@ -415,6 +435,10 @@ class H2OCloud:
     def _scrape_port_from_stdout(self):
         for node in self.nodes:
             node.scrape_port_from_stdout()
+
+    def _scrape_port_from_stdout_remote(self):
+        for node in self.nodes:
+            node.scrape_port_from_stdout_remote()
 
     def __str__(self):
         s = ""

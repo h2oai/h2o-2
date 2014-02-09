@@ -189,7 +189,6 @@ class ASTddply extends ASTOp {
     // Build a NBHSet of unique double[]'s holding selection cols.
     // These are the unique groups, found per-node, rolled-up globally
     ddplyPass1 p1 = new ddplyPass1(cols).doAll(fr);
-    System.out.print(p1.toString());
 
     // Pass-2.0: Send Groups 'round the cluster
     // Single-threaded per-group work
@@ -225,12 +224,12 @@ class ASTddply extends ASTOp {
 
     // Non-blocking, send a group to a remote node for execution
     void call( Futures fs ) {
-      //int csz = H2O.CLOUD.size();
-      //fs.add(RPC.call(H2O.CLOUD._memary[hashCode()%csz],this));
+      int csz = H2O.CLOUD.size();
+      fs.add(RPC.call(H2O.CLOUD._memary[hashCode()%csz],this));
     }
 
     @Override public void compute2() {
-      throw H2O.unimpl();
+      System.out.println("ddply on group "+Arrays.toString(_ds));
     }
     @Override public String toString() { return Arrays.toString(_ds); }
   }

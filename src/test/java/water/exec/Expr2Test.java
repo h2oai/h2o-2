@@ -234,15 +234,12 @@ public class Expr2Test extends TestUtil {
       checkStr("quantile(runif(seq_len(10000)),seq_len(10)/10)");
       checkStr("quantile(h.hex[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))");
 
-      // ddply
+      // ddply error checks
       checkStr("ddply(h.hex,h.hex,sum)","Only one column-of-columns for column selection");
       checkStr("ddply(h.hex,seq_len(10000),sum)","Too many columns selected");
       checkStr("ddply(h.hex,NA,sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,NA,3),sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,99,3),sum)","Column 99 out of range for frame columns 17");
-      checkStr("h.hex");
-      checkStr("ddply(h.hex,c(1,5),sum)");
-
 
       // Cleanup testing temps
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope
@@ -255,7 +252,6 @@ public class Expr2Test extends TestUtil {
   void checkStr( String s ) {
     Env env=null;
     try { 
-      System.out.println(s);
       env = Exec2.exec(s); 
       if( env.isAry() ) {       // Print complete frames for inspection
         Frame res = env.popAry();
@@ -294,7 +290,7 @@ public class Expr2Test extends TestUtil {
   }
 
   // Handy code to debug leaking keys
-  void debug_print( String s ) {
+  public static void debug_print( String s ) {
   //  int sz=0;
   //  int vgs=0, frs=0, vcs=0, cks=0;
   //  for( Key k : H2O.keySet() ) {
