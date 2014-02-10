@@ -102,7 +102,7 @@ public class Frame extends Lockable<Frame> {
   }
 
  /** Appends a named column, keeping the last Vec as the response */
-  public void add( String name, Vec vec ) {
+  public Frame add( String name, Vec vec ) {
     assert _vecs.length == 0 || anyVec().group().equals(vec.group());
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len = _names.length;
@@ -112,6 +112,7 @@ public class Frame extends Lockable<Frame> {
     _names[len] = name;
     _vecs [len] = vec ;
     _keys [len] = vec._key;
+    return this;
   }
 
   /** Appends an entire Frame */
