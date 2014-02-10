@@ -604,6 +604,13 @@ public class Vec extends Iced {
         res[i] = vecKey(i + tsk._n);
       return res;
     }
+    /**
+     * Shortcut for addVecs(1).
+     * @see #addVecs(int)
+     */
+    public Key addVec() {
+      return addVecs(1)[0];
+    }
 
     @Override public String toString() {
       return "VecGrp "+_key.toString()+", next free="+_len;
