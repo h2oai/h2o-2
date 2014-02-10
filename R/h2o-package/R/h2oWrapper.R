@@ -135,6 +135,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
+.startedH2O <- FALSE
 
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
@@ -188,7 +189,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
         myURL = paste("http://", ip, ":", port, sep = "")
         
         require(RCurl); require(rjson)
-        if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
+        if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
         eval(.LastOriginal(...), envir = envir)
       }, envir = .GlobalEnv)
@@ -198,7 +199,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
         myURL = paste("http://", ip, ":", port, sep = "")
         
         require(RCurl); require(rjson)
-        if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
+        if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
       }, envir = .GlobalEnv)
   }
