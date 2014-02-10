@@ -105,7 +105,7 @@ class PerfRunner:
             test.test_run.row['end_epoch_ms'] = test.end_ms
             test.test_run.row['test_name'] = test.test_name
             test.test_run.update(True)
-            PerfUtils.stop_cloud(self)
+            PerfUtils.stop_cloud(self, test.remote_hosts)
 
     def __get_instance_type__(self):
         return "localhost"

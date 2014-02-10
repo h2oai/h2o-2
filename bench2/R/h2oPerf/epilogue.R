@@ -6,6 +6,7 @@
 #                                                        # 
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
+.NaN = -999999991
 end_time <<- round(System$currentTimeMillis())[[1]]
 correct_pass <<- 1
 time_pass <<- 1
@@ -96,7 +97,7 @@ function() {
 function() {
   r <- list(kmeans_result = 
                 list(k = kmeans_k,
-                     withinss = kmeans_withinss ))
+                     withinss = ifelse(kmeans_withinss == "NaN", .NaN, kmeans_withinss )))
   .coda("KMEANS", r)
 }
 
@@ -111,9 +112,9 @@ function() {
 .emitRegressionResults<-
 function() {
   r <- list(regression_result = 
-                list(aic = aic,
-                     null_deviance = null_dev,
-                     residual_deviance = res_dev))
+                list(aic = ifelse(aic == "NaN", .NaN, aic),
+                     null_deviance = ifelse(null_dev == "NaN", .NaN, null_dev),
+                     residual_deviance = ifelse(res_dec == "NaN", .NaN, res_dev)))
   .coda("REGRESSION", r)
 }
 
@@ -129,11 +130,11 @@ function() {
 .emitBinomResults<-
 function() {
   r <- list(binomial_result = 
-                list(auc = auc,
-                     precision_ = precision[[1]],
-                     recall = recall[[1]],
-                     error_rate = error_rate[[1]],
-                     minority_error_rate = minority_error_rate[[1]]))
+                list(auc = ifelse(auc == "NaN", .Nan, auc),
+                     precision_ = ifelse(precision[[1]] == "NaN", .NaN, precision[[1]]),
+                     recall = ifelse(recall[[1]] == "NaN", .NaN, recall[[1]]),
+                     error_rate = ifelse(error_rate[[1]] == "NaN", .NaN, error_rate[[1]]),
+                     minority_error_rate = ifelse(minority_error_rate[[1]] == "NaN", .NaN, minority_error_rate[[1]])))
   .coda("BINOMIAL", r)
 }
 

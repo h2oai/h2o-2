@@ -202,9 +202,16 @@ class H2OCloudNode:
         @atexit.register
         def kill_process():
             try:
-                self.stop()
-                self.channel.exec_command('exit')
-                self.ssh.close()
+                try:
+                    self.stop_remote()
+                    self.channel.exec_command('exit')
+                    self.ssh.close()
+                except:
+                    pass
+                try:
+                    self.stop_local()
+                except:
+                    pass
             except OSError:
                 pass
         print "+ CMD: " + cmd
@@ -264,6 +271,20 @@ class H2OCloudNode:
             pass
         self.pid = -1
 
+    def stop_local(self):
+        """ 
+        Normal node shutdown.
+        Ignore failures for now.
+
+        @return: none
+        """
+        #TODO: terminate self.child
+        try:
+            requests.get(self.ip + ":" + self.port + "/Shutdown.html")
+        except Exception, e:
+            pass
+        self.pid = -1
+
     def terminate_remote(self):
         """
         Terminate a running node.  (Due to a signal.)
@@ -272,6 +293,15 @@ class H2OCloudNode:
         """
         self.terminated = True
         self.stop_remote()
+    
+    def terminate_local(self):
+        """ 
+        Terminate a running node.  (Due to a signal.)
+
+        @return: none
+        """
+        self.terminated = True
+        self.stop_local()
 
     def get_ip(self):
         """ Return the ip address this node is really listening on. """
@@ -391,7 +421,7 @@ class H2OCloud:
             sys.exit(1)
 
         for node in self.nodes:
-            node.start()
+            node.start_local()
 
     def wait_for_cloud_to_be_up(self):
         """  
@@ -404,23 +434,41 @@ class H2OCloud:
         else:
             self._scrape_port_from_stdout_local()
 
-    def stop(self):
+    def stop_remote(self):
         """  
         Normal cloud shutdown.
 
         @return: none
         """
         for node in self.nodes:
-            node.stop()
+            node.stop_remote()
 
-    def terminate(self):
+    def stop_local(self):
+        """  
+        Normal cloud shutdown.
+
+        @return: none
+        """
+        for node in self.nodes:
+            node.stop_local()
+
+    def terminate_remote(self):
         """  
         Terminate a running cloud.  (Due to a signal.)
 
         @return: none
         """
         for node in self.nodes:
-            node.terminate()
+            node.terminate_remote()
+
+    def terminate_local(self):
+        """  
+        Terminate a running cloud.  (Due to a signal.)
+
+        @return: none
+        """
+        for node in self.nodes:
+            node.terminate_local()
 
     def get_ip(self):
         """ Return an ip to use to talk to this cloud. """
