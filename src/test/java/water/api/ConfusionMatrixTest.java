@@ -188,8 +188,8 @@ public class ConfusionMatrixTest extends TestUtil {
   @Test public void testBadModelPrect() {
     Frame v1 = null, v2 = null;
     try {
-      v1 = frame("v1", vec(ar("A","B","C"), ar(0,0,1,1,2) ));
-      v2 = frame("v2", vec(ar("A","B","C"), ar(1,1,2,2,2) ));
+      v1 = frame("v1", vec(ar("A","B","C"), ari(0,0,1,1,2) ));
+      v2 = frame("v2", vec(ar("A","B","C"), ari(1,1,2,2,2) ));
       ConfusionMatrix cm = computeCM(v1, v2);
       assertCMEqual(
           ar("A","B","C"),
