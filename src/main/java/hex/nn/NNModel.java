@@ -434,7 +434,7 @@ public class NNModel extends Model {
 //    sb.append(super.toString());
 //    sb.append("\n"+data_info.toString()); //not implemented yet
     sb.append(model_info.toString());
-    sb.append("\n"+errors[errors.length-1].toString());
+    sb.append(errors[errors.length-1].toString());
 //    sb.append("\nrun time: " + PrettyPrint.msecs(run_time, true));
 //    sb.append("\nepoch counter: " + epoch_counter);
     return sb.toString();
@@ -569,7 +569,11 @@ public class NNModel extends Model {
       DocGen.HTML.section(sb, msg);
       DocGen.HTML.section(sb, "=======================================================================================");
     }
-    final String cmTitle = "Confusion Matrix on " + (error.validation ? " Validation Data" : " Training Data");
+    long score_valid = model_info().get_params().score_validation_samples;
+    long score_train = model_info().get_params().score_training_samples;
+    final String cmTitle = "Confusion Matrix on " + (error.validation ?
+            "Validation Data" + (score_valid==0 ? "" : " (" + score_valid + " samples)")
+            : "Training Data" + (score_train==0 ? "" : " (" + score_train + " samples)"));
     DocGen.HTML.section(sb, cmTitle);
     if (error.train_confusion_matrix != null) {
       if (error.train_confusion_matrix.cm.length < 100) {
@@ -581,6 +585,22 @@ public class NNModel extends Model {
 
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
+
+    String training = "Number of training set samples for scoring: " + (score_train == 0 ? "all" : score_train);
+    if (score_train > 0) {
+      if (score_train < 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+      if (score_train > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+    }
+    DocGen.HTML.section(sb, training);
+    if (error.validation) {
+      String validation = "Number of validation set samples for scoring: " + (score_valid == 0 ? "all" : score_valid);
+      if (score_valid > 0) {
+        if (score_train < 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (score_train > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+      }
+      DocGen.HTML.section(sb, validation);
+    }
+
 //    String training = "Number of training set samples for scoring: " + error.score_training;
     if (error.validation) {
 //      String validation = "Number of validation set samples for scoring: " + error.score_validation;
@@ -605,8 +625,8 @@ public class NNModel extends Model {
       final Errors e = errors[i];
       sb.append("<tr>");
       sb.append("<td>" + PrettyPrint.msecs(e.training_time_ms, true) + "</td>");
-      sb.append("<td>" + e.epoch_counter + "</td>");
-      sb.append("<td>" + e.training_samples + "</td>");
+      sb.append("<td>" + String.format("%g", e.epoch_counter) + "</td>");
+      sb.append("<td>" + String.format("%d", e.training_samples) + "</td>");
 //      sb.append("<td>" + String.format(mse_format, e.train_mse) + "</td>");
       if (isClassifier()) {
 //        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
