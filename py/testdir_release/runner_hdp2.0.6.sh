@@ -19,7 +19,10 @@ mkdir -p sandbox
 
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after buildingk
-HDP_JOBTRACKER=192.168.1.154:8021
+# HDP_JOBTRACKER=192.168.1.154:8021
+# now resource manager is at 8050?
+HDP_JOBTRACKER=192.168.1.154:8050
+
 HDP_NODES=4
 HDP_HEAP=20g
 HDP_JAR=h2odriver_hdp2.0.6.jar
