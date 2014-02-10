@@ -21,6 +21,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
   if(!is.character(Xmx)) stop("Xmx must be of class character")
   if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   
+  .startedH2O <<- FALSE
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
     if(!startH2O)
@@ -188,7 +189,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
         myURL = paste("http://", ip, ":", port, sep = "")
         
         require(RCurl); require(rjson)
-        if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
+        if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
         eval(.LastOriginal(...), envir = envir)
       }, envir = .GlobalEnv)
@@ -198,7 +199,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
         myURL = paste("http://", ip, ":", port, sep = "")
         
         require(RCurl); require(rjson)
-        if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
+        if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
       }, envir = .GlobalEnv)
   }

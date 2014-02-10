@@ -400,14 +400,16 @@ public class GLMProgressPage extends Request {
           );
           sb.append("var dataset = [");
 
-          for(int c = 0; c < xval._cm.length; c++) {
-              if (c == 0) {
-                  sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
-              }
-              sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
-          }
-          for(int c = 0; c < 2*xval._cm.length; c++) {
-              sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
+          if(xval != null && xval._cm != null && xval._fprs != null && xval._tprs != null) {
+            for(int c = 0; c < xval._cm.length; c++) {
+                if (c == 0) {
+                    sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+                }
+                sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+            }
+            for(int c = 0; c < 2*xval._cm.length; c++) {
+                sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
+            }
           }
           sb.append("];\n");
 
