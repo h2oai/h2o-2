@@ -404,6 +404,16 @@ public class Frame extends Lockable<Frame> {
         fs[c] = "%"+w+"."+w+"s";
       } else {
         Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+        // Possible situation: 1) vec is INT - C is has no floats => OK
+        // 2) vec is INT - C has floats => IMPOSSIBLE,
+        // 3) vec is FLOAT - C has floats => OK,
+        // 4) vec is FLOAT - C has no floats => find the first chunk with floats
+        if (!_vecs[c].isInt() &&  !C.hasFloat()) {
+          for (int i=1; i<_vecs[c].nChunks(); i++) {
+            C=_vecs[c].elem2BV(i);
+            if (C.hasFloat()) break;
+          }
+        }
         String f = fs[c] = C.pformat();  // Printable width
         for( int x=0; x<f.length(); x++ )// Get printable width from format
           if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');
