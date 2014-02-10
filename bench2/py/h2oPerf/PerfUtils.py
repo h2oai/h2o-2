@@ -67,7 +67,7 @@ def start_cloud(object, use_remote):
     object.cloud[0].wait_for_cloud_to_be_up()
     object.jvm_output_file = object.cloud[0].nodes[0].get_output_file_name()
 
-def stop_cloud(object):
+def stop_cloud(object, use_remote):
     """
     Stop H2O cloud.
     """
@@ -83,7 +83,10 @@ def stop_cloud(object):
     print("")
     print("All tets completed; tearing down clouds...")
     print("")
-    object.cloud[0].stop()
+    if use_remote:
+        object.cloud[0].stop_remote()
+    else:
+        object.cloud[0].stop_local()
 
 def __scrape_h2o_sys_info__(object):
     """

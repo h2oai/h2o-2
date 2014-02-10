@@ -126,35 +126,88 @@ public class Vec extends Iced {
     return v0;
   }
 
-  // Create a vector transforming values according given domain map
-  public Vec makeTransf(final int[] domMap) { return makeTransf(domMap, null); }
-  public Vec makeTransf(final int[] domMap, final String[] domain) {
+  /** Create a vector transforming values according given domain map.
+   * @see Vec#makeTransf(int[], int[], String[])
+   */
+  public Vec makeTransf(final int[][] map) { return makeTransf(map[0], map[1], null); }
+  Vec makeTransf(final int[] values, final int[] indexes) { return makeTransf(values, indexes, null); }
+  /**
+   * TODO
+   * @param values
+   * @param indexes
+   * @param domain
+   * @return
+   */
+  Vec makeTransf(final int[] values, final int[] indexes, final String[] domain) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, (int) min(), domain, group().addVecs(1)[0],_espc);
+    Vec v0 = new TransfVec(this._key, values, indexes, domain, group().addVecs(1)[0],_espc);
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
   }
-  // This Vec does not have dependent hidden Vec it uses
+  /**
+   * TODO
+   * @return
+   * @see Vec#makeTransf(int[], int[], String[])
+   */
+  Vec makeIdentityTransf() {
+    assert _domain != null : "Cannot make an identity transformation of non-enum vector!";
+    return makeTransf(seq(0, _domain.length), null, _domain);
+  }
+  /**
+   * TODO
+   * @param values
+   * @param domain
+   * @return
+   * @see Vec#makeTransf(int[], int[], String[])
+   */
+  Vec makeSimpleTransf(int[] values, String[] domain) {
+    return makeTransf(values, null, domain);
+  }
+  /** This Vec does not have dependent hidden Vec it uses.
+   *
+   * @return dependent hidden vector or <code>null</code>
+   */
   public Vec masterVec() { return null; }
 
   /**
    * Adapt given vector <code>v</code> to this vector.
-   * I.e., unify domains and call makeTransf().
+   * I.e., unify domains, compute transformation, and call makeTransf().
+   *
+   * This vector is a leader - it determines a domain (i.e., {@link #domain()}) and mapping between values stored in vector
+   * and domain values.
+   * The vector <code>v</code> can contain different domain (subset, superset), hence the values stored in the vector
+   * has to be transformed to the values determined by this vector. The resulting vector domain is the
+   * same as this vector domain.
+   *
+   * Always returns a new vector and user's responsibility is delete the vector.
+   *
+   * @param v vector which should be adapter in according this vector.
+   * @param exact should vector match exactly (recommended value is true).
+   * @return a new vector which implements transformation of original values.
    */
+  /*// Not used any more in code ??
   public Vec adaptTo(Vec v, boolean exact) {
+    assert isInt() : "This vector has to be int/enum vector!";
     int[] domain = null;
-    String[] sdomain = _domain == null
+    // Compute domain of this vector
+    // - if vector is enum, use domain directly
+    // - if vector is int, then vector numeric domain is collected and transformed to string domain
+    // and then adapted
+    String[] sdomain =
+        (_domain == null)
         ? Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain()) // it is number-column
         : domain(); // it is enum
-    int[] domMap = Model.getDomainMapping(null, v._domain, sdomain, exact);
+    // Compute transformation - domain map - each value in an array is one value from vector domain, its index
+    // represents an index into string domain representation.
+    int[] domMap = Model.getDomainMapping(v._domain, sdomain, exact);
     if (domain!=null) {
       // do a mapping from INT -> ENUM -> this vector ENUM
       domMap = Utils.compose(Utils.mapping(domain), domMap);
     }
     return this.makeTransf(domMap, sdomain);
-  }
+  }*/
 
   /** Number of elements in the vector.  Overridden by subclasses that compute
    *  length in an alternative way, such as file-backed Vecs. */
@@ -180,18 +233,20 @@ public class Vec extends Iced {
   public int cardinality() { return isEnum() ? _domain.length : -1; }
 
   /** Transform this vector to enum.
+   *  If the vector is integer vector then its domain is collected and transformed to
+   *  corresponding strings.
+   *  If the vector is enum an identity transformation vector is returned.
    *  Transformation is done by a {@link TransfVec} which provides a mapping between values.
    *
-   *  The caller is responsible for vector deletion!
+   *  @return always returns a new vector and the caller is responsible for vector deletion!
    */
   public Vec toEnum() {
-    if( isEnum() ) return this.makeTransf(seq(0,_domain.length), _domain);
+    if( isEnum() ) return this.makeIdentityTransf(); // Make an identity transformation of this vector
     if( !isInt() ) throw new IllegalArgumentException("Enum conversion only works on integer columns");
     int[] domain;
     String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
-    int[] domMap = Utils.mapping(domain);
-    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column is to big to represent an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
-    return this.makeTransf(domMap, sdomain);
+    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column domain is too large to be represented as an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
+    return this.makeSimpleTransf(domain, sdomain);
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
@@ -603,6 +658,13 @@ public class Vec extends Iced {
       for(int i = 0; i < n; ++i)
         res[i] = vecKey(i + tsk._n);
       return res;
+    }
+    /**
+     * Shortcut for addVecs(1).
+     * @see #addVecs(int)
+     */
+    public Key addVec() {
+      return addVecs(1)[0];
     }
 
     @Override public String toString() {

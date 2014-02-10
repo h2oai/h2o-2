@@ -14,6 +14,7 @@ import org.junit.runners.model.Statement;
 
 import water.deploy.*;
 import water.fvec.*;
+import water.fvec.Vec.VectorGroup;
 import water.parser.ParseDataset;
 import water.util.Log;
 
@@ -373,6 +374,25 @@ public class TestUtil {
     return ParseDataset2.parse(okey, new Key[] { fkey });
   }
 
+  public static Vec vec(int...rows) { return vec(null, null, rows); }
+  public static Vec vec(String[] domain, int ...rows) { return vec(null, domain, rows); }
+
+  public static Vec vec(Key k, String[] domain, int ...rows) {
+    k = (k==null) ? new Vec.VectorGroup().addVec() : k;
+    Futures fs = new Futures();
+    AppendableVec avec = new AppendableVec(k);
+    NewChunk chunk = new NewChunk(avec, 0);
+    for( int r = 0; r < rows.length; r++ )
+      chunk.addNum(rows[r]);
+    chunk.close(0, fs);
+    Vec vec = avec.close(fs);
+    fs.blockForPending();
+    vec._domain = domain;
+    return vec;
+  }
+
+  public static Frame frame(String name, Vec vec) { return new Frame().add(name, vec); }
+  public static Frame frame(String[] names, Vec[] vecs) { return new Frame(names, vecs); }
   public static Frame frame(String[] names, double[]... rows) {
     assert names == null || names.length == rows[0].length;
     Futures fs = new Futures();
@@ -398,8 +418,9 @@ public class TestUtil {
     System.err.println("----------------------");
   }
 
-  public static String[] ar(String ...a) { return a; }
-  public static int   [] ar(int    ...a) { return a; }
-  public static long  [] ar(long   ...a) { return a; }
-  public static long[][] ar(long[] ...a) { return a; }
+  public static String[] ar (String ...a) { return a; }
+  public static long  [] ar (long   ...a) { return a; }
+  public static long[][] ar (long[] ...a) { return a; }
+  public static int   [] ari(int    ...a) { return a; }
+  public static int [][] ar (int[]  ...a) { return a; }
 }

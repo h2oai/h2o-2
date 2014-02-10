@@ -110,7 +110,6 @@ class TableRow:
         Passes self to the PerfDB object for processing.
         Follows the schema rules (i.e. no nulls)
         """
-        pprint(self.row)
         if self.__is_complete__():
             self.perfdb_connection.insert(self, commit)
         else:
