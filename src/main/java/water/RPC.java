@@ -212,7 +212,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     while( !isDone() ) { 
       try {
         // Wait for local to complete
-        if( _target==H2O.SELF ) { _dt.get(); _done=true; }
+        if( _target==H2O.SELF ) { _dt.get(); notifyAll(); _done=true; }
         else wait();            // Wait for remote to complete
       } 
       catch( InterruptedException e ) { }

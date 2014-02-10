@@ -1,31 +1,28 @@
 package water.exec;
 
-import static org.junit.Assert.*;
-import java.io.File;
+import static org.junit.Assert.fail;
 
-import org.junit.Rule;
-import org.junit.Test;
 import org.junit.BeforeClass;
-import org.junit.rules.ExpectedException;
-import water.*;
-import water.fvec.*;
+import org.junit.Test;
+import water.Key;
+import water.Lockable;
+import water.TestUtil;
+import water.fvec.Frame;
 
 public class DdplyTest extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
-
-  @Rule public ExpectedException thrown = ExpectedException.none();
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
 
   // This test is intended to use a file large enough to strip across multiple
   // nodes with multiple groups, to test that all generated groups are both
   // built and executed distributed.
   /*@Test*/ public void testDdplyBig() {
-    Key dest = Key.make("covtype.hex");
+    Key dest = Key.make("orange.hex");
     try {
       // A big enough file to distribute across multiple nodes.
-      Frame fr = parseFrame(dest,"../datasets/UCI/UCI-large/covtype/covtype.data");
+      Frame fr = parseFrame(dest,"smalldata/unbalanced/orange_small_train.data.zip");
       System.out.println(fr);
 
-      checkStr("ddply(covtype.hex,c(11,12,13),sum)");
+      checkStr("ddply(orange.hex,c(7),sum)");
 
     } finally {
       Lockable.delete(dest);    // Remove original hex frame key

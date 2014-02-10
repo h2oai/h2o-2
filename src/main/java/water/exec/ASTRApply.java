@@ -199,7 +199,7 @@ class ASTddply extends ASTOp {
     fs.blockForPending();
 
     env.pop(4);
-    // Push empty frame for debuggging
+    // Push empty frame for debugging
     env.push(new Frame(new String[0],new Vec[0]));
   }
 
@@ -216,7 +216,10 @@ class ASTddply extends ASTOp {
         double d = _ds[c] = chks[cols[c]].at0(row); // Load into working array
         sum += Double.doubleToRawLongBits(d);
       }
-      _hash = (int)sum;
+      long h=sum;             // Doubles are lousy hashes; mix up the bits some
+      h ^= (h>>>20) ^ (h>>>12);
+      h ^= (h>>> 7) ^ (h>>> 4);
+      _hash = (int)((h^(h>>32))&0x7FFFFFFF);
     }
     @Override public boolean equals( Object o ) {  
       return o instanceof Group && Arrays.equals(_ds,((Group)o)._ds); }
@@ -230,6 +233,7 @@ class ASTddply extends ASTOp {
 
     @Override public void compute2() {
       System.out.println("ddply on group "+Arrays.toString(_ds));
+      tryComplete();
     }
     @Override public String toString() { return Arrays.toString(_ds); }
   }
