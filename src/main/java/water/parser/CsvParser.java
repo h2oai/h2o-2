@@ -605,7 +605,7 @@ NEXT_CHAR:
         try {
           String[] t1 = determineTokens(l1, separators[i], single_quote);
           String[] t2 = determineTokens(l2, separators[i], single_quote);
-          if( t1.length != s1[i] || t2.length != s2[i] )
+          if( t1.length != s1[i]+1 || t2.length != s2[i]+1 )
             continue;           // Token parsing fails
           return separators[i];
         } catch (Exception e) { /*pass; try another parse attempt*/ }
