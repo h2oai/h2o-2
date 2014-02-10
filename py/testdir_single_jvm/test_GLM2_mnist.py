@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             modelKey = 'GLM_model'
             params = {
                 'ignored_cols': ignoreX, 
-                'response': 'C' + str(y),
+                'response': 'C' + str(y+1),
                 # 'case_mode': '=',
                 # 'case_val': 0,
                 'family': 'binomial',
@@ -140,7 +140,7 @@ class Basic(unittest.TestCase):
 
                 # This seems wrong..what's the format of the cm?
                 if 1==0:
-                    cm = glm['glm_model']['submodels'][0]['validation']['_cms'][0]['_arr']
+                    cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
                     print "cm:", cm
                     pctWrong = h2o_gbm.pp_cm_summary(cm);
                     # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")

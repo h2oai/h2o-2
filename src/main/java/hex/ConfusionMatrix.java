@@ -14,8 +14,10 @@ public final class ConfusionMatrix extends Iced {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
   @API(help="Confusion matrix (Actual/Predicted)")
   public long[][] _arr; // [actual][predicted]
+  @API(help = "Prediction error by class")
+  public final double[] _classErr;
   @API(help = "Prediction error")
-  public final double _perr;
+  public final double _predErr;
 
   @Override public ConfusionMatrix clone() {
     ConfusionMatrix res = new ConfusionMatrix(0);
@@ -55,12 +57,14 @@ public final class ConfusionMatrix extends Iced {
 
   public ConfusionMatrix(int n) {
     _arr = new long[n][n];
-    _perr = err();
+    _classErr = classErr();
+    _predErr = err();
   }
 
   public ConfusionMatrix(long[][] value) {
     _arr = value;
-    _perr = err();
+    _classErr = classErr();
+    _predErr = err();
   }
 
   public void add(int i, int j) {

@@ -22,12 +22,12 @@ mkdir -p sandbox
 
 # resource manager is still on 162
 # yarn.resourcemanager.address  8032
-CDH4_YARN_JOBTRACKER=192.168.1.162:8032
-CDH4_YARN_NODES=6
+CDH5_YARN_JOBTRACKER=192.168.1.179:8032
+CDH5_YARN_NODES=2
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
-echo "can't get more than 7g for now. boost the node count to 6"
-CDH4_YARN_HEAP=7g
-CDH4_YARN_JAR=h2odriver_cdh4_yarn.jar
+echo "can't get more than 7g for now. node count 2"
+CDH5_YARN_HEAP=7g
+CDH5_YARN_JAR=h2odriver_cdh4_yarn.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
@@ -36,7 +36,7 @@ HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xcustomer
-REMOTE_IP=192.168.1.162
+REMOTE_IP=192.168.1.179
 REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
@@ -51,7 +51,7 @@ set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
 echo "hdfs dfs -rm -r /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
-echo "hadoop jar $CDH4_YARN_JAR water.hadoop.h2odriver -jt $CDH4_YARN_JOBTRACKER -libjars $H2O_JAR -mapperXmx $CDH4_YARN_HEAP -nodes $CDH4_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "hadoop jar $CDH5_YARN_JAR water.hadoop.h2odriver -jt $CDH5_YARN_JOBTRACKER -libjars $H2O_JAR -mapperXmx $CDH5_YARN_HEAP -nodes $CDH5_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
@@ -60,7 +60,7 @@ $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 # do the jars last, so we can see the script without waiting for the copy
 echo "scp some jars"
-$REMOTE_SCP $H2O_HADOOP/$CDH4_YARN_JAR  $REMOTE_USER:$REMOTE_HOME
+$REMOTE_SCP $H2O_HADOOP/$CDH5_YARN_JAR  $REMOTE_USER:$REMOTE_HOME
 $REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
 # exchange keys so jenkins can do this?
@@ -82,7 +82,7 @@ done < h2o_one_node
 
 rm -fr h2o-nodes.json
 # NOTE: keep this hdfs info in sync with the json used to build the cloud above
-../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node 192.168.1.161 -expected_size $CDH4_YARN_NODES
+../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node 192.168.1.179 -expected_size $CDH5_YARN_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json

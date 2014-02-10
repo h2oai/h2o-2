@@ -144,7 +144,7 @@ class Basic(unittest.TestCase):
                 p = h2i.count_keys_at_all_nodes()
                 print "number of keys in the two StoreViews, o:", o, "p:", p
                 ## print "newStoreViewResult:", h2o.dump_json(newStoreViewResult)
-                oOkay = {1, 2, 3, 4, 5, 6}
+                oOkay = {1, 2, 3, 4, 5, 6, 7, 8}
                 pOkay = {1, 2, 3, 4, 5}
                 print o, pOkay, p, oOkay
                 if (o in oOkay) and (p in pOkay):

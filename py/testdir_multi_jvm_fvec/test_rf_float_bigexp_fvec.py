@@ -107,7 +107,7 @@ class Basic(unittest.TestCase):
                 'took', time.time() - start, 'seconds'
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
 
-            # cm0 = rfView['drf_model']['cms'][0]
+            # cm0 = rfView['drf_model']['cms'][0]['_arr']
             # print cm0
             # self.assertEqual(len(cm0), numCols,
             #     msg="%s cols in cm, means rf must have ignored some cols. I created data with %s cols" % (len(cm0), numCols-1))

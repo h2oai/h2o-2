@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys, socket
 import h2o
-import h2o_browse as h2b, h2o_rf as h2f, h2o_exec
+import h2o_browse as h2b, h2o_rf as h2f, h2o_exec, h2o_gbm
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
