@@ -155,7 +155,7 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("rate_decay") || arg._name.equals("sync_samples")
             || arg._name.equals("fast_mode")
             ) {
-      if (!expert_mode)  arg.disable("Only in expert mode.");
+      if (!expert_mode) arg.disable("Only in expert mode.");
     }
   }
 
@@ -192,7 +192,19 @@ public class NN extends Job.ValidatedJob {
     return NNProgressPage.redirect(this, self(), dest());
   }
 
+  void checkParams() {
+    if(!classification && loss != Loss.MeanSquare) {
+      Log.warn("Setting loss to MeanSquare for regression.");
+      loss = Loss.MeanSquare;
+    }
+    if (H2O.CLOUD.size() == 1 && sync_samples != 0) {
+      Log.warn("Setting sync_samples to 0 for single-node operation.");
+      sync_samples = 0;
+    }
+  }
+
   public void initModel() {
+    checkParams();
     logStart();
     NN.RNG.seed.set(seed);
 
