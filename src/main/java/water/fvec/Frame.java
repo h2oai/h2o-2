@@ -88,9 +88,10 @@ public class Frame extends Lockable<Frame> {
 
   /** Finds the first column with a matching name.  */
   public int find( String name ) {
-    for( int i=0; i<_names.length; i++ )
-      if( name.equals(_names[i]) )
-        return i;
+    if (_names!=null)
+      for( int i=0; i<_names.length; i++ )
+        if( name.equals(_names[i]) )
+          return i;
     return -1;
   }
 
@@ -102,16 +103,17 @@ public class Frame extends Lockable<Frame> {
   }
 
  /** Appends a named column, keeping the last Vec as the response */
-  public void add( String name, Vec vec ) {
+  public Frame add( String name, Vec vec ) {
     assert _vecs.length == 0 || anyVec().group().equals(vec.group());
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
-    final int len = _names.length;
-    _names = Arrays.copyOf(_names,len+1);
-    _vecs  = Arrays.copyOf(_vecs ,len+1);
-    _keys  = Arrays.copyOf(_keys ,len+1);
+    final int len = _names != null ? _names.length : 0;
+    _names = _names != null ? Arrays.copyOf(_names,len+1) : new String[len+1];
+    _vecs  = _names != null ? Arrays.copyOf(_vecs ,len+1) : new Vec   [len+1];
+    _keys  = _names != null ? Arrays.copyOf(_keys ,len+1) : new Key   [len+1];
     _names[len] = name;
     _vecs [len] = vec ;
     _keys [len] = vec._key;
+    return this;
   }
 
   /** Appends an entire Frame */
