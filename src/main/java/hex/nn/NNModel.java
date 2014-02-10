@@ -265,18 +265,19 @@ public class NNModel extends Model {
     }
     void initializeMembers() {
       randomizeWeights();
-      for (int i=0; i<=parameters.hidden.length; ++i) {
+      Arrays.fill(biases[0], 0.5); //first hidden layer
+      // remaining hidden layers
+      for (int i=1; i<parameters.hidden.length; ++i) {
         if (parameters.activation == NN.Activation.Rectifier
+                || parameters.activation == NN.Activation.RectifierWithDropout
                 || parameters.activation == NN.Activation.Maxout) {
           Arrays.fill(biases[i], 1.);
         }
+        else if (parameters.activation == NN.Activation.Tanh) {
+          Arrays.fill(biases[i], 0.5); //same as sigmoid with 1.0
+        }
       }
-//      // initialize bias values differently for different layers
-//      Arrays.fill(biases[0], 0.5); //first hidden layer
-//      for (int i=1; i<parameters.hidden.length; ++i) {
-//        Arrays.fill(biases[i], 1.0); //remaining hidden layers
-//      }
-//      Arrays.fill(biases[biases.length-1], 0.0); //output layer
+      Arrays.fill(biases[biases.length-1], 1.0); //output layer
     }
     public void add(NNModelInfo other) {
       Utils.add(weights, other.weights);
