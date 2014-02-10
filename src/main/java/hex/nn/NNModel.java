@@ -1,7 +1,10 @@
 package hex.nn;
 
 import hex.FrameTask.DataInfo;
-import water.*;
+import water.Iced;
+import water.Key;
+import water.Model;
+import water.PrettyPrint;
 import water.api.ConfusionMatrix;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -74,6 +77,17 @@ public class NNModel extends Model {
       if (validation) s += ", validation error: " + String.format("%.2f", (100 * valid_err)) + "%";
       return s;
     }
+  }
+
+  /** for grid search error reporting */
+  @Override
+  public hex.ConfusionMatrix cm() {
+    if (errors == null) return null;
+    water.api.ConfusionMatrix cm = errors[errors.length-1].validation ?
+            errors[errors.length-1].valid_confusion_matrix :
+            errors[errors.length-1].train_confusion_matrix;
+    if (cm == null) return null;
+    return new hex.ConfusionMatrix(cm.cm);
   }
 
   // This describes the model, together with the parameters
@@ -214,11 +228,11 @@ public class NNModel extends Model {
       if (parameters.diagnostics) {
         Neurons[] neurons = NNTask.makeNeurons(parameters._dinfo, this);
         sb.append("Status of Hidden and Output Layers:\n");
-        sb.append("#  Units      Activation      Rate     L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
+        sb.append("#  Units       Activation     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
         final String format = "%7g";
         for (int i=1; i<neurons.length; ++i) {
           sb.append(i + " " + String.format("%6d", neurons[i].units)
-                  + " " + String.format("%15s", neurons[i].getClass().getSimpleName())
+                  + " " + String.format("%16s", neurons[i].getClass().getSimpleName())
                   + " " + String.format("%10g", neurons[i].rate(get_processed_total()))
                   + " " + String.format("%5f", neurons[i].l1)
                   + " " + String.format("%5f", neurons[i].l2)
@@ -257,7 +271,12 @@ public class NNModel extends Model {
           Arrays.fill(biases[i], 1.);
         }
       }
-
+//      // initialize bias values differently for different layers
+//      Arrays.fill(biases[0], 0.5); //first hidden layer
+//      for (int i=1; i<parameters.hidden.length; ++i) {
+//        Arrays.fill(biases[i], 1.0); //remaining hidden layers
+//      }
+//      Arrays.fill(biases[biases.length-1], 0.0); //output layer
     }
     public void add(NNModelInfo other) {
       Utils.add(weights, other.weights);
@@ -288,6 +307,7 @@ public class NNModel extends Model {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
             final double range = Math.sqrt(6. / (units[i] + units[i+1]));
             weights[i][j] = (float)uniformDist(rng, -range, range);
+            //if (i==weights.length-1 && parameters.classification) weights[i][j] *= 4; //Softmax might need an extra factor 4, since it's like a sigmoid
           }
           else if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.Uniform) {
             weights[i][j] = (float)uniformDist(rng, -parameters.initial_weight_scale, parameters.initial_weight_scale);
@@ -480,7 +500,7 @@ public class NNModel extends Model {
 
     DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
-    DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + model_info().size()[0]);
+    DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()[0]));
 
     model_info.job().toHTML(sb);
     sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", " +
@@ -553,7 +573,7 @@ public class NNModel extends Model {
        sb.append("<td>").append(neurons[i].l1).append("</td>");
         sb.append("<td>").append(neurons[i].l2).append("</td>");
         final String format = "%g";
-        sb.append("<td>").append(neurons[i].momentum(error.training_samples)).append("</td>");
+        sb.append("<td>").append(String.format("%.5f", neurons[i].momentum(error.training_samples))).append("</td>");
         sb.append("<td>(").append(String.format(format, model_info.mean_weight[i])).
                 append(", ").append(String.format(format, model_info.rms_weight[i])).append(")</td>");
         sb.append("<td>(").append(String.format(format, model_info.mean_bias[i])).
@@ -626,7 +646,7 @@ public class NNModel extends Model {
       sb.append("<tr>");
       sb.append("<td>" + PrettyPrint.msecs(e.training_time_ms, true) + "</td>");
       sb.append("<td>" + String.format("%g", e.epoch_counter) + "</td>");
-      sb.append("<td>" + String.format("%d", e.training_samples) + "</td>");
+      sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
 //      sb.append("<td>" + String.format(mse_format, e.train_mse) + "</td>");
       if (isClassifier()) {
 //        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");

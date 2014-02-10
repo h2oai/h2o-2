@@ -8,7 +8,6 @@ import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
 
-import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -162,9 +161,7 @@ public class NN extends Job.ValidatedJob {
 
   public Frame score( Frame fr ) { return ((NNModel)UKV.get(dest())).score(fr);  }
 
-  @Override public Key defaultDestKey(){return null;}
-  @Override public Key defaultJobKey() {return null;}
-
+  /** Print model parameters as JSON */
   @Override public boolean toHTML(StringBuilder sb) {
     return makeJsonBox(sb);
   }
@@ -175,17 +172,6 @@ public class NN extends Job.ValidatedJob {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
-  }
-
-
-  @Override protected Response serve() {
-    init();
-    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, true);
-    _dinfo = new DataInfo(fr, 1, true);
-    if(destination_key == null)destination_key = Key.make("NNModel_"+Key.make());
-    if(job_key == null)job_key = Key.make("NNJob_"+Key.make());
-    fork();
-    return NNModelView.redirect(this, dest());
   }
 
   @Override public float progress(){
@@ -279,11 +265,6 @@ public class NN extends Job.ValidatedJob {
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
     Log.info("Neural Net training finished.");
     return model;
-  }
-
-  // Expand grid search related argument sets
-  @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
-    return superServeGrid(server, parms, type);
   }
 
   // Make a differently seeded random generator every time someone asks for one

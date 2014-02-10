@@ -146,6 +146,8 @@ public class GridSearch extends Job {
               link = DRFModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )
               link = NeuralNetModelView.link(link, info._job.destination_key);
+            else if( info._model instanceof hex.nn.NNModel)
+              link = NNModelView.link(link, info._job.destination_key);
             if( info._model instanceof KMeans2Model )
               link = KMeans2ModelView.link(link, info._job.destination_key);
             else
