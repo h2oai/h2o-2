@@ -400,7 +400,7 @@ public class GLMProgressPage extends Request {
           );
           sb.append("var dataset = [");
 
-          if(xval != null && xval._cm != null) {
+          if(xval != null && xval._cm != null && xval._fprs != null && xval._tprs != null) {
             for(int c = 0; c < xval._cm.length; c++) {
                 if (c == 0) {
                     sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
