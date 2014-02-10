@@ -21,6 +21,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
   if(!is.character(Xmx)) stop("Xmx must be of class character")
   if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   
+  .startedH2O <<- FALSE
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
     if(!startH2O)
@@ -135,7 +136,6 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
-.startedH2O <- FALSE
 
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
