@@ -10,8 +10,8 @@ import java.util.Arrays;
 public class NNTask extends FrameTask<NNTask> {
   final private NN _params;
   final private boolean _training;
-  private NNModel.NNModelInfo _input;
-  private NNModel.NNModelInfo _output;
+  protected NNModel.NNModelInfo _input;
+  NNModel.NNModelInfo _output;
   public NNModel.NNModelInfo model_info() { return _output; }
 
   transient Neurons[] _neurons;
@@ -25,6 +25,7 @@ public class NNTask extends FrameTask<NNTask> {
     _training=training;
     _input=input;
     _useFraction=fraction;
+    assert(_output == null);
   }
 
   // transfer ownership from input to output (which will be worked on)
@@ -55,10 +56,12 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override protected void postGlobal(){
-    if (H2O.CLOUD.size() > 1) Log.info("Synchronizing between " + _chunk_node_count + " (out of " + H2O.CLOUD.size() + ") nodes.");
+    if (H2O.CLOUD.size() > 1 && _chunk_node_count < H2O.CLOUD.size())
+      Log.warn("Only " + _chunk_node_count + " nodes (out of " + H2O.CLOUD.size() + ") are contributing to model updates.");
     _output.div(_chunk_node_count);
     _output.add_processed_global(_output.get_processed_local());
     _output.set_processed_local(0l);
+    assert(_input == null);
   }
 
   // Helper

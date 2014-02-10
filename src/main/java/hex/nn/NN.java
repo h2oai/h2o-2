@@ -83,7 +83,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Shortest interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 2;
 
-  @API(help = "Synchronization period in training samples (after which scoring can happen).", filter = Default.class, lmin = 1, json = true)
+  @API(help = "Number of training set samples between synchronization (0 for all).", filter = Default.class, lmin = 0, json = true)
   public long sync_samples = 1000l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
@@ -146,6 +146,7 @@ public class NN extends Job.ValidatedJob {
       arg.disable("Only if a validation set is specified.");
     }
     if (arg._name.equals("sync_samples") && H2O.CLOUD.size() == 1) {
+      sync_samples = 0; //sync once per epoch on a single node
       arg.disable("Only for multi-node operation.");
     }
     if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
@@ -218,6 +219,9 @@ public class NN extends Job.ValidatedJob {
       _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true), 1, true);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.delete_and_lock(self());
+    final long[] model_size = model.model_info().size();
+    Log.info("Number of model parameters (weights/biases): " + String.format("%g", (double)model_size[0]));
+    Log.info("Memory usage of the model: " + String.format("%g", (double)model_size[1] / (1<<20)) + " MB.");
   }
 
   // Helper to downsample a Frame (without stratification)
@@ -257,8 +261,15 @@ public class NN extends Job.ValidatedJob {
     //main loop
     do {
       // NNTask trains an internal deep copy of model_info
-      final NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction).doAll(train);
-      model.set_model_info(nntask.model_info()); //need this for next iteration
+      NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction).doAll(train);
+      // FOR DEBUGGING ONLY
+      {
+        AutoBuffer bb = new AutoBuffer();
+        nntask.write(bb);
+        Log.info("Size of the (serialized) NNTask: " + String.format("%.3f", (double) bb.buf().length / (1 << 20)) + " MB.");
+      }
+      //need this for next iteration
+      model.set_model_info(nntask.model_info());
     } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self())); //diagnostics, msgs, UKV
 
     //cleanup

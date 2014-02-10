@@ -1,10 +1,7 @@
 package hex.nn;
 
 import hex.FrameTask.DataInfo;
-import water.Iced;
-import water.Key;
-import water.Model;
-import water.PrettyPrint;
+import water.*;
 import water.api.ConfusionMatrix;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -47,6 +44,8 @@ public class NNModel extends Model {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "How many epochs the algorithm has processed")
+    public double epoch_counter;
     @API(help = "How many rows the algorithm has processed")
     public long training_samples;
     @API(help = "How long the algorithm ran in ms")
@@ -57,27 +56,23 @@ public class NNModel extends Model {
     boolean validation;
     @API(help = "Classification error on validation data")
     public double valid_err = 1;
-    @API(help = "Training MSE")
-    public double train_mse = Double.POSITIVE_INFINITY;
-    @API(help = "Validation MSE")
-    public double valid_mse = Double.POSITIVE_INFINITY;
-    @API(help = "Training MCE")
-    public double train_mce = Double.POSITIVE_INFINITY;
-    @API(help = "Validation MCE")
-    public double valid_mce = Double.POSITIVE_INFINITY;
+//    @API(help = "Training MSE")
+//    public double train_mse = Double.POSITIVE_INFINITY;
+//    @API(help = "Validation MSE")
+//    public double valid_mse = Double.POSITIVE_INFINITY;
+//    @API(help = "Training MCE")
+//    public double train_mce = Double.POSITIVE_INFINITY;
+//    @API(help = "Validation MCE")
+//    public double valid_mce = Double.POSITIVE_INFINITY;
     @API(help = "Confusion matrix on training data")
     public water.api.ConfusionMatrix train_confusion_matrix;
     @API(help = "Confusion matrix on validation data")
     public water.api.ConfusionMatrix valid_confusion_matrix;
 
     @Override public String toString() {
-
-      return   "Training error: " + String.format("%.2f", (100 * train_err)) + "%"
-           + ", validation error: " + String.format("%.2f", (100 * valid_err)) + "%"
-//              + " (MSE:" + String.format("%.2e", mean_square)
-//              + ", MCE:" + String.format("%.2e", cross_entropy)
-//              + ")"
-      ;
+      String s = "Training error: " + String.format("%.2f", (100 * train_err)) + "%";
+      if (validation) s += ", validation error: " + String.format("%.2f", (100 * valid_err)) + "%";
+      return s;
     }
   }
 
@@ -93,6 +88,31 @@ public class NNModel extends Model {
     final private double[][] biases; //one 1D bias array per layer
     private float[][] weights_momenta;
     private double[][] biases_momenta;
+
+    // compute model size [#number of model parameters, #number of bytes (uncompressed)]
+    public long[] size() {
+      long[] siz = new long[2];
+      for (int i=0; i<weights.length; ++i) {
+        siz[0] += weights[i].length;
+        siz[1] += weights[i].length * Float.SIZE;
+      }
+      for (int i=0; i<biases.length; ++i) {
+        siz[0] += biases[i].length;
+        siz[1] += biases[i].length * Double.SIZE;
+      }
+      if (has_momenta()) {
+        for (int i=0; i<weights_momenta.length; ++i) {
+          siz[0] += weights_momenta.length;
+          siz[1] += weights_momenta.length * Float.SIZE;
+        }
+        for (int i=0; i<biases_momenta.length; ++i) {
+          siz[0] += biases_momenta.length;
+          siz[1] += biases_momenta.length * Double.SIZE;
+        }
+      }
+      siz[1] /= 8; //in bytes
+      return siz;
+    }
 
     // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
     final boolean _has_momenta;
@@ -117,7 +137,7 @@ public class NNModel extends Model {
     private double[] mean_weight;
 
     @API(help = "RMS weight", json = true)
-    private double[] rms_weight;
+    public double[] rms_weight;
 
     @API(help = "Unstable", json = true)
     private boolean unstable = false;
@@ -209,15 +229,6 @@ public class NNModel extends Model {
                   + ", " + String.format(format, rms_bias[i]) + ")\n");
         }
       }
-      // compute model size
-      long siz = 0;
-      for (int i=0; i<weights.length; ++i) siz += weights[i].length * Float.SIZE;
-      for (int i=0; i<biases.length; ++i) siz += biases[i].length * Double.SIZE;
-      if (has_momenta()) {
-        for (int i=0; i<weights_momenta.length; ++i) siz += weights_momenta.length * Float.SIZE;
-        for (int i=0; i<biases_momenta.length; ++i) siz += biases_momenta.length * Double.SIZE;
-      }
-      sb.append("Size of the model: " + String.format("%.3f", (double)siz / (1<<23)) + " MB.");
 
       // DEBUGGING
 //      for (int i=0; i<weights.length; ++i)
@@ -383,6 +394,7 @@ public class NNModel extends Model {
       // compute errors
       Errors err = new Errors();
       err.training_time_ms = now - timeStart;
+      err.epoch_counter = epoch_counter;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
       err.train_confusion_matrix = new ConfusionMatrix();
@@ -421,7 +433,7 @@ public class NNModel extends Model {
     StringBuilder sb = new StringBuilder();
 //    sb.append(super.toString());
 //    sb.append("\n"+data_info.toString()); //not implemented yet
-    sb.append("\n"+model_info.toString());
+    sb.append(model_info.toString());
     sb.append("\n"+errors[errors.length-1].toString());
 //    sb.append("\nrun time: " + PrettyPrint.msecs(run_time, true));
 //    sb.append("\nepoch counter: " + epoch_counter);
@@ -468,6 +480,8 @@ public class NNModel extends Model {
 
     DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
+    DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + model_info().size()[0]);
+
     model_info.job().toHTML(sb);
     sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", " +
             NN.link(_dataKey, "Compute new model") + "</div>");
@@ -574,6 +588,7 @@ public class NNModel extends Model {
     sb.append("<table class='table table-striped table-bordered table-condensed'>");
     sb.append("<tr>");
     sb.append("<th>Training Time</th>");
+    sb.append("<th>Training Epochs</th>");
     sb.append("<th>Training Samples</th>");
 //    sb.append("<th>Training MSE</th>");
 //    if (isClassifier()) {
@@ -590,7 +605,8 @@ public class NNModel extends Model {
       final Errors e = errors[i];
       sb.append("<tr>");
       sb.append("<td>" + PrettyPrint.msecs(e.training_time_ms, true) + "</td>");
-      sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
+      sb.append("<td>" + e.epoch_counter + "</td>");
+      sb.append("<td>" + e.training_samples + "</td>");
 //      sb.append("<td>" + String.format(mse_format, e.train_mse) + "</td>");
       if (isClassifier()) {
 //        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
@@ -603,7 +619,7 @@ public class NNModel extends Model {
           sb.append("<td>" + formatPct(e.valid_err) + "</td>");
         }
       } else
-        sb.append("<td></td><td></td><td></td>");
+        sb.append("<td></td>"); //<td></td><td></td>");
       sb.append("</tr>");
     }
     sb.append("</table>");
