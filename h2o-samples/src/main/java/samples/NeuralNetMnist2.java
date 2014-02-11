@@ -5,13 +5,15 @@ import water.*;
 import water.fvec.Frame;
 import water.util.Log;
 
+import static water.util.MRUtils.sampleFrame;
+
 /**
  * Runs a neural network on the MNIST dataset.
  */
 public class NeuralNetMnist2 extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist2.class;
-//    samples.launchers.CloudLocal.launch(job, 1);
+    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
@@ -26,8 +28,8 @@ public class NeuralNetMnist2 extends Job {
     long seed = 0xC0FFEE;
     double fraction = 1.0;
 //    Frame trainf = NN.sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv"), (long)(60000*fraction), seed);
-    Frame trainf = NN.sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/train10x.csv"), (long)(600000*fraction), seed);
-    Frame testf = NN.sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv"), (long)(10000*fraction), seed+1);
+    Frame trainf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/train10x.csv"), (long)(600000*fraction), seed);
+    Frame testf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv"), (long)(10000*fraction), seed+1);
     Log.info("Done.");
 
     NN p = new NN();

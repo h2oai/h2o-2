@@ -9,7 +9,6 @@ import hex.Trainer;
 import hex.rng.MersenneTwisterRNG;
 import water.Job;
 import water.TestUtil;
-import water.api.FrameSplit;
 import water.fvec.AppendableVec;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -41,26 +40,6 @@ public class NeuralNetMnist extends Job {
 
   private Vec[] train, test;
   protected transient volatile Trainer _trainer;
-
-  void load(double fraction, long seed) {
-    assert(fraction > 0 && fraction <= 1);
-    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
-    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
-    if (fraction < 1) {
-      System.out.println("Sampling " + fraction*100 + "% of data with random seed: " + seed + ".");
-      FrameSplit split = new FrameSplit();
-      final double[] ratios = {fraction, 1-fraction};
-      trainf = split.splitFrame(trainf, ratios, seed)[0];
-      testf = split.splitFrame(testf, ratios, seed)[0];
-
-      // for debugging only
-//      UKV.put(water.Key.make("train"+fraction), trainf);
-//      UKV.put(water.Key.make("test"+fraction), testf);
-    }
-    train = trainf.vecs();
-    test = testf.vecs();
-    //NeuralNet.reChunk(train);
-  }
 
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[5];
@@ -111,9 +90,12 @@ public class NeuralNetMnist extends Job {
   }
 
   @Override protected Status exec() {
-    final double fraction = 1.0;
     final long seed = 0xC0FFEE;
-    load(fraction, seed);
+
+    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
+    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
+    train = trainf.vecs();
+    test = testf.vecs();
 
     // Labels are on last column for this dataset
     final Vec trainLabels = train[train.length - 1];

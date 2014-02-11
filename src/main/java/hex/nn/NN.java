@@ -3,13 +3,18 @@ package hex.nn;
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
 import water.*;
-import water.api.*;
+import water.api.DocGen;
+import water.api.NNProgressPage;
+import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static water.util.MRUtils.sampleFrame;
+import static water.util.Utils.getDeterRNG;
 
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -210,7 +215,7 @@ public class NN extends Job.ValidatedJob {
 
     // Lock the input datasets against deletes
     source.read_lock(self());
-    if( validation != null && !source._key.equals(validation._key) )
+    if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
       validation.read_lock(self());
 
     if (_dinfo == null)
@@ -220,21 +225,6 @@ public class NN extends Job.ValidatedJob {
     final long[] model_size = model.model_info().size();
     Log.info("Number of model parameters (weights/biases): " + String.format("%g", (double)model_size[0]));
     Log.info("Memory usage of the model: " + String.format("%g", (double)model_size[1] / (1<<20)) + " MB.");
-  }
-
-  // Helper to downsample a Frame (without stratification)
-  public static Frame sampleFrame(final Frame input, long rows, long seed) {
-    if (input == null) return null;
-    double fraction = rows > 0 ? (double)rows / input.numRows() : 1.0;
-    fraction = Math.max(Math.min(fraction, 1), 0);
-    if (fraction==0 || fraction==1.0) return input;
-    final FrameSplit split = new FrameSplit();
-    Frame output = split.splitFrame(input, new double[]{fraction, 1-fraction}, seed)[0];
-    if (output.numRows() == 0) {
-      Log.err("Sampled frame has no rows, falling back to original frame with " + input.numRows() + " rows.");
-      output = input;
-    }
-    return output;
   }
 
   public NNModel buildModel() {
@@ -286,7 +276,7 @@ public class NN extends Job.ValidatedJob {
     public static AtomicLong seed = new AtomicLong(new Random().nextLong());
 
     public static Random getRNG() {
-      return water.util.Utils.getDeterRNG(seed.getAndIncrement());
+      return getDeterRNG(seed.getAndIncrement());
     }
   }
 
