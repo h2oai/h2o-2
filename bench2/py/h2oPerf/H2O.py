@@ -15,7 +15,7 @@ import md5
 import errno
 import PerfUtils
 import stat
-
+import requests
 
 class H2OUseCloudNode:
     """  
@@ -266,8 +266,13 @@ class H2OCloudNode:
         @return: none
         """
         try:
-            requests.get(self.ip + ":" + self.port + "/Shutdown.html")
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+            try:
+                r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout = 2)
+            except Exception, e:
+                pass
         except Exception, e:
+            print "Successfully shutdown h2o!"
             pass
         self.pid = -1
 
