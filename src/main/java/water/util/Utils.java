@@ -794,6 +794,12 @@ public class Utils {
     for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
     return result;
   }
+  public static String[] toStringMap(int first, int last) {
+    if(first > last) throw new IllegalArgumentException("first must be an integer less than or equal to last");
+    String[] result = new String[last-first+1];
+    for(int i = first; i <= last; i++) result[i-first] = String.valueOf(i);
+    return result;
+  }
   public static int[] compose(int[] first, int[] transf) {
     for (int i=0; i<first.length; i++) {
       if (first[i]!=-1) first[i] = transf[first[i]];

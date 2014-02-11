@@ -125,13 +125,13 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
   public void copyOver(T that) {
-    that._exception = _exception;
-    that._msg = _msg;
-    that._eFromNode = _eFromNode;
-    that._lineNum = _lineNum;
-    that._fname = _fname;
-    that._cls = _cls;
-    that._mth = _mth;
+    this._exception = that._exception;
+    this._eFromNode = that._eFromNode;
+    this._lineNum   = that._lineNum;
+    this._fname     = that._fname;
+    this._msg       = that._msg;
+    this._cls       = that._cls;
+    this._mth       = that._mth;
   }
   private RuntimeException barf(String method) {
     return new RuntimeException(H2O.SELF + ":" + getClass().toString()+ " " + method +  " should be automatically overridden in the subclass by the auto-serialization code");

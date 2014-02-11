@@ -294,7 +294,8 @@ public class GLMProgressPage extends Request {
         R.replace("CM",R2);
       }
       sb.append(R);
-      ROCplot(val, sb);
+      if (val._cm != null && val._fprs != null && val._tprs != null)
+        ROCplot(val, sb);
       confusionHTML(val.bestCM(),sb);
       if(val.fold() > 1){
         int nclasses = 2;
@@ -401,13 +402,13 @@ public class GLMProgressPage extends Request {
           sb.append("var dataset = [");
 
           for(int c = 0; c < xval._cm.length; c++) {
-              if (c == 0) {
-                  sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
-              }
-              sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+            if (c == 0) {
+              sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+            }
+            sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
           }
           for(int c = 0; c < 2*xval._cm.length; c++) {
-              sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
+            sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
           }
           sb.append("];\n");
 

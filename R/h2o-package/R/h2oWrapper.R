@@ -2,6 +2,7 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
 
 h2o.__PAGE_RPACKAGE = "RPackage.json"
 h2o.__PAGE_SHUTDOWN = "Shutdown.json"
+h2o.__PAGE_CLOUD = "Cloud.json"
 
 setMethod("show", "H2OClient", function(object) {
   cat("IP Address:", object@ip, "\n")
@@ -21,6 +22,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
   if(!is.character(Xmx)) stop("Xmx must be of class character")
   if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   
+  .startedH2O <<- FALSE
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
     if(!startH2O)
@@ -41,7 +43,11 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
     detach("package:h2oRClient", unload=TRUE)
   if("h2oRClient" %in% installed.packages()[,1])
     library(h2oRClient)
-  return(new("H2OClient", ip = ip, port = port))
+  
+  H2Oserver = new("H2OClient", ip = ip, port = port)
+  tmp = h2o.clusterStatus(H2Oserver)
+  cat("Cluster status:\n"); print(tmp)
+  return(H2Oserver)
 }
 
 # Shuts down H2O instance running at given IP and port
@@ -61,7 +67,32 @@ h2o.shutdown <- function(object, prompt = TRUE) {
     if(!is.null(res$error))
       stop(paste("Unable to shutdown H2O. Server returned the following error:\n", res$error))
   }
-  # if(url.exists(myURL)) stop("H2O failed to shutdown.")
+}
+
+# ----------------------- Diagnostics ----------------------- #
+h2o.clusterStatus <- function(client) {
+  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  myURL = paste("http://", client@ip, ":", client@port, "/", h2o.__PAGE_CLOUD, sep = "")
+  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
+  res = fromJSON(postForm(myURL, style = "POST"))
+  
+  cat("Version:", res$version, "\n")
+  cat("Cloud name:", res$cloud_name, "\n")
+  cat("Node name:", res$node_name, "\n")
+  cat("Cloud size:", res$cloud_size, "\n")
+  if(res$locked) cat("Cloud is locked\n\n") else cat("Accepting new members\n\n")
+  if(is.null(res$nodes) || length(res$nodes) == 0) stop("No nodes found!")
+  
+  # Calculate how many seconds ago we last contacted cloud
+  cur_time <- Sys.time()
+  for(i in 1:length(res$nodes)) {
+    last_contact_sec = as.numeric(res$nodes[[i]]$last_contact)/1e3
+    time_diff = cur_time - as.POSIXct(last_contact_sec, origin = "1970-01-01")
+    res$nodes[[i]]$last_contact = as.numeric(time_diff)
+  }
+  cnames = c("name", "value_size_bytes", "free_mem_bytes", "max_mem_bytes", "free_disk_bytes", "max_disk_bytes", "num_cpus", "system_load", "rpcs", "last_contact")
+  temp = data.frame(t(sapply(res$nodes, c)))
+  return(temp[,cnames])
 }
 
 #-------------------------------- Helper Methods --------------------------------#
@@ -75,7 +106,6 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
 
   H2OVersion = res$version
   myFile = res$filename
-  # serverMD5 = res$md5_hash
 
   if( grepl('\\.99999$', H2OVersion) ){
     H2OVersion <- sub('\\.tar\\.gz$', '', sub('.*_', '', myFile))
@@ -100,14 +130,6 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
       remove.packages("h2oRClient")
     }
     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
-    # download.file(paste(myURL, "R", myFile, sep="/"), destfile = paste(getwd(), myFile, sep="/"), mode = "wb")
-#     temp = getBinaryURL(paste(myURL, "R", myFile, sep="/"))
-#     writeBin(temp, paste(getwd(), myFile, sep="/"))
-# 
-#     if(as.character(serverMD5) != as.character(md5sum(paste(getwd(), myFile, sep="/"))))
-#       warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
-#     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
-#     file.remove(paste(getwd(), myFile, sep="/"))
     install.packages("h2oRClient", repos = c(H2O = paste(myURL, "R", sep = "/"), getOption("repos")))
   }
 }
@@ -135,7 +157,6 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
-.startedH2O <- FALSE
 
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
@@ -148,13 +169,6 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
           you will often have to explicitly install libcurl-devel to have the header files and the libcurl library.")
   }
   # TODO: Not sure how to check for libcurl in Windows
-  
-  # Install and load H2O R package dependencies
-#  require(tools)
-#   myPackages = rownames(installed.packages())
-#   myReqPkgs = c("bitops", "RCurl", "rjson", "statmod")
-#   temp = lapply(myReqPkgs, function(x) { if(!x %in% myPackages) { cat("Installing package dependency", x, "\n"); install.packages(x, repos = "http://cran.rstudio.com/") }
-#                                          if(!require(x, character.only = TRUE)) stop("The required package ", x, " is not installed. Please type install.packages(\"", x, "\") to install the dependency from CRAN.") })
 }
 
 .onAttach <- function(libname, pkgname) {
@@ -217,7 +231,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 #   myURL = paste("http://", ip, ":", port, sep = "")
 #   
 #   require(RCurl); require(rjson)
-#   if(url.exists(myURL) && exists(".startedH2O") && .startedH2O)
+#   if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
@@ -263,63 +277,4 @@ h2o.startJar <- function(memory = "1g") {
     stop(sprintf("Failed to exec %s with return code=%s", jar_file,as.character(rc)))
   }
   .startedH2O <<- TRUE
-}
-
-#---------------------------------- Deprecated ----------------------------------#
-# Start H2O launcher GUI if installed locally from InstallBuilder executable
-h2oWrapper.startLauncher <- function() {
-  myOS = Sys.info()["sysname"]
-  
-  if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
-  else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
-  myFiles = list.files(verPath)
-  if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
-  # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
-  
-  # Get H2O with latest version number
-  # If latest isn't working, maybe go down list to earliest until one executes?
-  fileName = paste(verPath, tail(myFiles, n=1), sep="/")
-  myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
-  launchPath = readChar(fileName, file.info(fileName)$size)
-  if(is.null(launchPath) || launchPath == "")
-    stop(paste("No H2O launcher matching H2O version", myVersion, "found"))
-  
-  cat("Launching H2O version", myVersion)
-  if(myOS == "Windows") {
-    tempPath = paste(launchPath, "windows/h2o.bat", sep="/")
-    if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
-    shell.exec(tempPath)
-  }
-  else {
-    tempPath = paste(launchPath, "Contents/MacOS/h2o", sep="/")
-    if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
-    system(paste("bash ", tempPath))
-  }
-}
-
-h2o.__genScript <- function(target = NULL, memory = "2g") {
-  if(.Platform$OS.type == "windows")
-    run.template <- paste(.h2o.pkg.path, "scripts", "h2o.bat.TEMPLATE", sep = .Platform$file.sep)
-  else
-    run.template <- paste(.h2o.pkg.path, "scripts", "h2o.TEMPLATE", sep = .Platform$file.sep)
-  rt <- readLines(run.template)
-  
-  settings <- c("JAVA_HOME", "JAVA_PROG", "H2O_JAR", "FLAT", "MEM")
-  sl <- list()
-  for (i in settings) sl[[i]] <- Sys.getenv(i)
-  if (nchar(sl[["JAVA_PROG"]]) == 0) {
-    if (nchar(sl[["JAVA_HOME"]]) > 0) {
-      jc <- paste(sl[["JAVA_HOME"]], "bin", "java", sep = .Platform$file.sep)
-      if (file.exists(jc)) 
-        sl[["JAVA_PROG"]] <- jc
-    }
-    else sl[["JAVA_PROG"]] <- "java"
-  }
-  sl[["H2O_JAR"]] <- system.file("java", "h2o.jar", package = "h2o")
-  sl[["FLAT"]] <- system.file("java", "flatfile.txt", package = "h2o")
-  sl[["MEM"]] <- memory
-  
-  for (i in names(sl)) rt <- gsub(paste("@", i, "@", sep = ""), sl[[i]], rt)
-  if (is.null(target)) return(rt)
-  writeLines(rt, target)
 }
