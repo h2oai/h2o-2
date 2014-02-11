@@ -16,11 +16,13 @@ class Test:
         3. Predicting
 
     Each file represents a phase of the test.
+    In addition to these R files, there is a config file.
     """
     def __init__(self, cfg, test_dir, test_short_dir, output_dir, parse_file, model_file, predict_file, perfdb):
         self.ip = ""
         self.port = -1
         self.aws = False
+        self.remote_hosts = False
         self.heap_bytes_per_node = "" #test_run table
         self.total_hosts = 0 #test_run table
         self.total_nodes = 0 #test_run table
@@ -52,6 +54,7 @@ class Test:
         cfg = ConfigParser.RawConfigParser()
         cfg.read(self.cfg)
         self.aws = cfg.getboolean("H2OBuildInformation", "aws")
+        self.remote_hosts = cfg.getboolean("H2OBuildInformation", "remote_hosts")
         self.heap_bytes_per_node = cfg.get("H2OBuildInformation", "heap_bytes_per_node")
         self.total_hosts = cfg.getint("H2OBuildInformation", "total_hosts")
         self.total_nodes = cfg.getint("H2OBuildInformation", "total_nodes")
@@ -62,7 +65,6 @@ class Test:
         if not self.aws:
             self.ip = cfg.get("Host1", "ip")
             for host in cfg.sections():
-                print host
                 if host == 'H2OBuildInformation': 
                     continue
                 h = {}
@@ -71,19 +73,8 @@ class Test:
                 h['port'] = cfg.get(host, "port")
                 h['num_cpus'] = cfg.get(host, "num_cpus")
                 h["memory_bytes"] = cfg.get(host, "memory_bytes")
+                h["isEC2"] = self.aws
                 self.hosts.append(h)
-        #else:
-        #    #TODO: somehow get an ip of aws instance
-        #    for i in range(self.total_hosts):
-        #        host_name = "Host" + str(i)
-        #        ip = "8.8.8.8" #TODO: get the host ips...
-        #        num_cpus = 4 #TODO: get the aws information automatically
-        #        memory_bytes = 123123 #TODO: get this too..
-        #        self.hosts.append({"host_name": host_name, 
-        #                           "ip": ip, 
-        #                           "num_cpus": num_cpus,
-        #                           "memory_bytes": memory_bytes,
-        #                          })
 
     def do_test(self):
         """

@@ -74,7 +74,7 @@ function(object) {
 
 .calcPhase<-
 function() {
-  path <- normalizePath(basename(R.utils::commandArgs(asValues=TRUE)$"-f"))
+  path <- normalizePath(basename(R.utils::commandArgs(asValues=TRUE)$"f"))
   f <- function(it) {
     return(grepl(it, path))
   }

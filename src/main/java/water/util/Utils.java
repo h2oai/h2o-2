@@ -800,6 +800,22 @@ public class Utils {
     }
     return first;
   }
+  public static int[][] compose(int[][] first, int[][] second) {
+    int[] firstDom = first[0];
+    int[] firstRan = first[1];  // flat transformation
+    int[] secondDom = second[0];
+    int[] secondRan = second[1];
+
+    int[] resDom = firstDom.clone();
+    int[] resRan = firstRan!=null ? firstRan.clone() : new int[firstDom.length];
+    for (int i=0; i<resDom.length; i++) {
+      int v = firstRan!=null ? firstRan[i] : i; // resulting value
+      int vi = Arrays.binarySearch(secondDom, v);
+      assert vi >=0 : "Trying to compose two incompatible transformation: first=" + Arrays.deepToString(first) + ", second=" + Arrays.deepToString(second);
+      resRan[i] = secondRan!=null ? secondRan[vi] : vi;
+    }
+    return new int[][] { resDom, resRan };
+  }
 
   private static final DecimalFormat default_dformat = new DecimalFormat("0.#####");
   public static String pprint(double[][] arr){
@@ -1035,5 +1051,22 @@ public class Utils {
     if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
     if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
     return Arrays.copyOf(r, i);
+  }
+
+  public static int[][] pack(int[] values, boolean[] usemap) {
+    assert values.length == usemap.length : "Cannot pack the map according given use map!";
+    int cnt = 0;
+    for (int i=0; i<usemap.length; i++) cnt += usemap[i] ? 1 : 0;
+    int[] pvals = new int[cnt]; // only used values
+    int[] pindx = new int[cnt]; // indexes of used values
+    int index = 0;
+    for (int i=0; i<usemap.length; i++) {
+      if (usemap[i]) {
+        pvals[index] = values[i];
+        pindx[index] = i;
+        index++;
+      }
+    }
+    return new int[][] { pvals, pindx };
   }
 }

@@ -162,8 +162,8 @@ public abstract class Model extends Lockable<Model> {
   }
 
   /** Single row scoring, on a compatible set of data, given an adaption vector */
-  public final float[] score( int map[][], double row[], float[] preds ) {
-    int[] colMap = map[map.length-1]; // Column mapping is the final array
+  public final float[] score( int map[][][], double row[], float[] preds ) {
+    /*FIXME final int[][] colMap = map[map.length-1]; // Response column mapping is the last array
     assert colMap.length == _names.length-1 : " "+Arrays.toString(colMap)+" "+Arrays.toString(_names);
     double tmp[] = new double[colMap.length]; // The adapted data
     for( int i=0; i<colMap.length; i++ ) {
@@ -179,12 +179,13 @@ public abstract class Model extends Lockable<Model> {
       }
       tmp[i] = d;
     }
-    return score0(tmp,preds);   // The results.
+    return score0(tmp,preds);   // The results. */
+    return null;
   }
 
-  /** Build an adaption array.  The length is equal to the Model's vector
-   *  length minus the response plus a column mapping.  Each inner array is a
-   *  domain map from data domains to model domains - or null for non-enum
+  /** Build an adaption array.  The length is equal to the Model's vector length.
+   *  Each inner 2D-array is a
+   *  compressed domain map from data domains to model domains - or null for non-enum
    *  columns, or null for identity mappings.  The extra final int[] is the
    *  column mapping itself, mapping from model columns to data columns. or -1
    *  if missing.
@@ -194,9 +195,9 @@ public abstract class Model extends Lockable<Model> {
    *    any enums returned by the model that the data does not have a mapping for.
    *  If 'exact' is false, these situations will use or return NA's instead.
    */
-  private int[][] adapt( String names[], String domains[][], boolean exact) {
+  private int[][][] adapt( String names[], String domains[][], boolean exact) {
     int maplen = names.length;
-    int map[][] = new int[maplen][];
+    int map[][][] = new int[maplen][][];
     // Make sure all are compatible
     for( int c=0; c<names.length;++c) {
             // Now do domain mapping
@@ -241,7 +242,7 @@ public abstract class Model extends Lockable<Model> {
         frvecs[i] = frvecs[i].toEnum();
         toEnum[i] = true;
       }
-    int map[][] = adapt(names,vfr.domains(),exact);
+    int[][][] map = adapt(names,vfr.domains(),exact);
     assert map.length == names.length; // Be sure that adapt call above do not skip any column
     ArrayList<Vec> avecs = new ArrayList<Vec>(); // adapted vectors
     ArrayList<String> anames = new ArrayList<String>(); // names for adapted vector
@@ -261,20 +262,47 @@ public abstract class Model extends Lockable<Model> {
     return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
   }
 
-  /** Returns a mapping between values domains for a given column.  */
-  public static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
-    int emap[] = new int[dom.length];
+  /** Returns a mapping between values of model domains (<code>modelDom</code>) and given column domain.
+   * @see #getDomainMapping(String, String[], String[], boolean) */
+  public static int[][] getDomainMapping(String[] modelDom, String[] colDom, boolean exact) {
+    return getDomainMapping(null, modelDom, colDom, exact);
+  }
+  /**
+   * Returns a mapping for given column according to given <code>modelDom</code>.
+   * In this case, <code>modelDom</code> is
+   *
+   * @param colName name of column which is mapped, can be null.
+   * @param modelDom
+   * @param dom
+   * @param exact
+   * @return
+   */
+  public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean exact) {
+    int emap[] = new int[modelDom.length];
+    boolean bmap[] = new boolean[modelDom.length];
     HashMap<String,Integer> md = new HashMap<String, Integer>();
-    for( int i = 0; i < modelDom.length; i++) md.put(modelDom[i], i);
-    for( int i = 0; i < dom.length; i++) {
-      Integer I = md.get(dom[i]);
-      if( I==null && exact )
-        Log.warn(Sys.SCORM, "Column "+colName+" was not trained with factor '"+dom[i]+"' which appears in the data");
-      emap[i] = I==null ? -1 : I;
+    for( int i = 0; i < colDom.length; i++) md.put(colDom[i], i);
+    for( int i = 0; i < modelDom.length; i++) {
+      Integer I = md.get(modelDom[i]);
+      if (I == null && exact)
+        Log.warn(Sys.SCORM, "Column "+colName+" was trained with factor '"+modelDom[i]+"' which DOES NOT appear in column data");
+      if (I!=null) {
+        emap[i] = I;
+        bmap[i] = true;
+      }
     }
-    for( int i = 0; i < dom.length; i++)
-      assert emap[i]==-1 || modelDom[emap[i]].equals(dom[i]);
-    return emap;
+    if (exact) { // Inform about additional values in column domain which do not appear in model domain
+      for (int i=0; i<colDom.length; i++) {
+        boolean found = false;
+        for (int j=0; j<emap.length; j++)
+          if (emap[j]==i) { found=true; break; }
+        if (!found)
+          Log.warn(Sys.SCORM, "Column "+colName+" WAS NOT trained with factor '"+colDom[i]+"' which appears in column data");
+      }
+    }
+
+    // produce packed values
+    return Utils.pack(emap, bmap);
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,

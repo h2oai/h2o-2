@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             modelKey = 'GLM_model'
             params = {
                 'ignored_cols': ignoreX, 
-                'response': 'C' + str(y),
+                'response': 'C' + str(y+1),
                 # 'case_mode': '=',
                 # 'case_val': 0,
                 'family': 'binomial',

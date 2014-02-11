@@ -82,7 +82,7 @@ class PerfRunner:
         while len(self.tests_not_started) > 0:
             test = self.tests_not_started.pop(0)
 
-            self.use_aws = test.aws
+            self.isEC2 = test.aws
             self.xmx = test.heap_bytes_per_node
             self.ip = test.ip
             self.base_port = test.port
@@ -90,12 +90,12 @@ class PerfRunner:
             self.hosts_in_cloud = test.hosts  #this will be used to support multi-machine / aws
             #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
 
-            if self.use_aws:
+            if self.isEC2:
                 raise Exception("Unimplemented: AWS support under construction...")
 
-            cloud = H2OCloud(1, self.nodes_in_cloud, self.h2o_jar, self.base_port, self.xmx, self.output_dir)
+            cloud = H2OCloud(1, self.hosts_in_cloud, self.nodes_in_cloud, self.h2o_jar, self.base_port, self.output_dir, self.isEC2, test.remote_hosts)
             self.cloud.append(cloud)
-            PerfUtils.start_cloud(self)
+            PerfUtils.start_cloud(self, test.remote_hosts)
             test.port = self.cloud[0].get_port()
 
             test.test_run = TableRow("test_run", self.perfdb)
@@ -105,7 +105,7 @@ class PerfRunner:
             test.test_run.row['end_epoch_ms'] = test.end_ms
             test.test_run.row['test_name'] = test.test_name
             test.test_run.update(True)
-            PerfUtils.stop_cloud(self)
+            PerfUtils.stop_cloud(self, test.remote_hosts)
 
     def __get_instance_type__(self):
         return "localhost"

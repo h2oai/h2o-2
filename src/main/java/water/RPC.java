@@ -119,6 +119,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Make an initial RPC, or re-send a packet.  Always called on 1st send; also
   // called on a timeout.
   public synchronized RPC<V> call() {
+    // If running on self, just submit to queues & do locally
+    if( _target==H2O.SELF ) {
+      H2O.submitTask(_dt);
+      return this;
+    }
+
     // Keep a global record, for awhile
     _target.taskPut(_tasknum,this);
     try {
@@ -188,7 +194,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   public V get() {
     // check priorities - FJ task can only block on a task with higher priority!
     Thread cThr = Thread.currentThread();
-    int priority = (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority : 0;
+    int priority = (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority : -1;
     assert _dt.priority() > priority || (_dt.priority() == priority && (_dt instanceof DRemoteTask || _dt instanceof MRTask2))
       : "*** Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + priority;
     if( _done ) return result(); // Fast-path shortcut
@@ -205,7 +211,15 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // return true.  Used by the FJ Pool management to spawn threads to prevent
   // deadlock is otherwise all threads would block on waits.
   public synchronized boolean block() {
-    while( !isDone() ) { try { wait(); } catch( InterruptedException e ) { } }
+    while( !isDone() ) { 
+      try {
+        // Wait for local to complete
+        if( _target==H2O.SELF ) { _dt.get(); notifyAll(); _done=true; }
+        else wait();            // Wait for remote to complete
+      } 
+      catch( InterruptedException e ) { }
+      catch(   ExecutionException e ) { return true; }
+    }
     return true;
   }
 

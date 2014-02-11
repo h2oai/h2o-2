@@ -83,6 +83,21 @@ public class NewChunk extends Chunk {
     if( _ds==null||_len >= _ds.length ) append2slowd();
     _ds[_len++] = d;  _len2++;
   }
+  // Append all of 'nc' onto the current NewChunk.  Longs only.  Special-cased
+  // to have extra asserts for ddply (otherwise ddply needs the assert's
+  // contents exposable from here, forcing a bunch of public accessors).
+  public void add( NewChunk nc ) {
+    assert _len > 0 && nc._len > 0;
+    assert _ds==null && nc._ds==null;
+    assert _ls[_len-1] < nc._ls[0]; // All longs are monotonically in-order
+    while( _len+nc._len >= _ls.length )
+      _ls = MemoryManager.arrayCopyOf(_ls,_ls.length<<1);
+    _xs = MemoryManager.malloc4(_ls.length);
+    System.arraycopy(nc._ls,0,_ls,_len,nc._len);
+    _len += nc._len;
+    _len2 = _len;
+  }
+
   // Fast-path append long data
   void append2( long l, int x ) {
     if( _ls==null||_len >= _ls.length ) append2slow();

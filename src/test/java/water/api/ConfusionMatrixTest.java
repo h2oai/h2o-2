@@ -181,6 +181,33 @@ public class ConfusionMatrixTest extends TestUtil {
          false);
   }
 
+  /** Test for PUB-216:
+   * The case when vector domain is set to a value (0~A, 1~B, 2~C), but actual values stored in
+   * vector references only a subset of domain (1~B, 2~C). The TransfVec was using minimum from
+   * vector (i.e., value 1) to compute transformation but minimum was wrong since it should be 0. */
+  @Test public void testBadModelPrect() {
+    Frame v1 = null, v2 = null;
+    try {
+      v1 = frame("v1", vec(ar("A","B","C"), ari(0,0,1,1,2) ));
+      v2 = frame("v2", vec(ar("A","B","C"), ari(1,1,2,2,2) ));
+      ConfusionMatrix cm = computeCM(v1, v2);
+      assertCMEqual(
+          ar("A","B","C"),
+          ar("A","B","C"),
+          ar("A","B","C"),
+          ar( ar(0L, 2L, 0L, 0L),
+              ar(0L, 0L, 2L, 0L),
+              ar(0L, 0L, 1L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          cm);
+
+    } finally {
+      if (v1 != null) v1.delete();
+      if (v2 != null) v2.delete();
+    }
+  }
+
 
   private void simpleCMTest(String f1, String f2, String[] expectedActualDomain, String[] expectedPredictDomain, String[] expectedDomain, long[][] expectedCM, boolean debug) {
     Frame v1 = null, v2 = null;
