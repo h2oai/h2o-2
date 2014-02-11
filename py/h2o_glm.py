@@ -118,6 +118,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     else:
         GLMModel = glm['GLMModel']
 
+    if not GLMModel:
+        raise Exception("GLMModel didn't exist in the glm response? %s" % h2o.dump_json(glm))
+    
+
     warnings = None
     if 'warnings' in GLMModel and GLMModel['warnings']:
         warnings = GLMModel['warnings']

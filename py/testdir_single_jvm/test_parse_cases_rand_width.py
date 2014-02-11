@@ -150,11 +150,15 @@ class Basic(unittest.TestCase):
         # just randomly chop the string before we template-resolve it
         newRows = []
         for r in rows:
-            newLength = random.randint(1,len(r))
-            # add random 0 or 1 to the start, and make RF use the first col
-            # so rf doesn't complain about the response
-            newRows.append(random.choice(["0","1"]) + "|" + random.choice(["0","1"]) + "|" + 
-                r[:newLength])
+            # this template set has empty lines
+            if r=="":
+                newRows.append(r)
+            else:
+                newLength = random.randint(1,len(r))
+                # add random 0 or 1 to the start, and make RF use the first col
+                # so rf doesn't complain about the response
+                newRows.append(random.choice(["0","1"]) + "|" + random.choice(["0","1"]) + "|" + 
+                    r[:newLength])
         return newRows
 
 
