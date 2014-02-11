@@ -7,10 +7,7 @@ import hex.nn.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import water.JUnitRunnerDebug;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+import water.*;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -63,18 +60,6 @@ public class NeuralNetIrisTest2 extends TestUtil {
       double[] momenta = { 0, new Random().nextDouble() * 0.99 };
       int[] hiddens = { 1, new Random().nextInt(50) };
       int[] epochs = { 1, new Random().nextInt(50) };
-
-      //waiting for PUB-216
-//      NN.Activation[] activations = { NN.Activation.Tanh };
-//      NN.Loss[] losses = { NN.Loss.MeanSquare };
-//      NN.InitialWeightDistribution[] dists = {
-//              NN.InitialWeightDistribution.Uniform,
-//      };
-//      double[] initial_weight_scales = { 0.28672023995659524, };
-//      double[] holdout_ratios = { 0.7706159974145869 };
-//      double[] momenta = { 0.0 };
-//      int[] hiddens = { 1 };
-//      int[] epochs = { 1 };
 
       int num_runs = 0;
       for (NN.Activation activation : activations) {
@@ -144,6 +129,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
                       ref.init(activation, Utils.getDeterRNG(seed), holdout_ratio, hidden);
 
+                      p.job_key = Key.make("iris_test.job");
                       p.destination_key = Key.make("iris_test.model");
                       p.seed = seed;
                       p.hidden = new int[]{hidden};
@@ -168,6 +154,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       p.validation = null;
                       p.fast_mode = false; //to be the same as reference
                       p.sync_samples = 100000; //sync once per period
+
+                      DKV.put(p.job_key, new Value(p.job_key, new byte[0]), null);
 
                       p.initModel(); //randomize weights, but don't start training yet
 
@@ -274,9 +262,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       final double myTestErr = mymodel.classificationError(_test,  "Final testing error:",  true, null);
                       Log.info("H2O  training error : " + myTrainErr*100 + "%, test error: " + myTestErr*100 + "%");
                       Log.info("REF  training error : " + trainErr*100 + "%, test error: " + testErr*100 + "%");
-                      //waiting for PUB-216
-//                      compareVal(trainErr, myTrainErr, abseps, releps);
-//                      compareVal(testErr,  myTestErr,  abseps, releps);
+                      compareVal(trainErr, myTrainErr, abseps, releps);
+                      compareVal(testErr,  myTestErr,  abseps, releps);
                       Log.info("Scoring: PASS");
 
                       // cleanup
@@ -285,6 +272,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       _test.delete();
                       frame.delete();
                       fr.delete();
+                      UKV.remove(p.job_key);
 
                       num_runs++;
                       Log.info("Parameters combination " + num_runs + ": PASS");
