@@ -206,10 +206,11 @@ public class KMeansModel extends OldModel implements Progress {
           c._size = ROW_SIZE;
           c._scale = 1;
           c._min = 0;
-          c._max = model._clusters.length;
+          c._max = model._clusters.length-1;
           c._mean = Double.NaN;
           c._sigma = Double.NaN;
-          c._domain = null;
+          // c._domain = null;
+          c._domain = Utils.toStringMap(0, model._clusters.length-1);
           c._n = ary.numRows();
           ValueArray res = new ValueArray(dest, ary.numRows(), c._size, new Column[] { c });
           res.unlock(job.self());
