@@ -1,7 +1,5 @@
-#TODO: Pass config from Test object to H2O cloud builder
-#TODO: Where will AWS instance info come from?
-#TODO: Finish main in this runner.py (lines below)
 #TODO: Debug & Examples
+#TODO: Add test name to the jvm_output_file name
 
 from h2oPerf.Table import *
 from h2oPerf import PerfUtils
