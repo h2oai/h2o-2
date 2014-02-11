@@ -139,11 +139,9 @@ public class Vec extends Iced {
    * @return
    */
   Vec makeTransf(final int[] values, final int[] indexes, final String[] domain) {
-    Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, values, indexes, domain, group().addVecs(1)[0],_espc);
-    DKV.put(v0._key,v0,fs);
-    fs.blockForPending();
+    Vec v0 = new TransfVec(values, indexes, domain, this._key, group().addVecs(1)[0],_espc);
+    UKV.put(v0._key,v0);
     return v0;
   }
   /**

@@ -83,19 +83,26 @@ public class NewChunk extends Chunk {
     if( _ds==null||_len >= _ds.length ) append2slowd();
     _ds[_len++] = d;  _len2++;
   }
-  // Append all of 'nc' onto the current NewChunk.  Longs only.  Special-cased
-  // to have extra asserts for ddply (otherwise ddply needs the assert's
-  // contents exposable from here, forcing a bunch of public accessors).
+  // Append all of 'nc' onto the current NewChunk.  Kill nc.
   public void add( NewChunk nc ) {
-    assert _len > 0 && nc._len > 0;
-    assert _ds==null && nc._ds==null;
-    assert _ls[_len-1] < nc._ls[0]; // All longs are monotonically in-order
-    while( _len+nc._len >= _ls.length )
-      _ls = MemoryManager.arrayCopyOf(_ls,_ls.length<<1);
-    _xs = MemoryManager.malloc4(_ls.length);
+    if( nc._len == 0 ) return;
+    if( _ds != null ) throw H2O.unimpl();
+    while( _len+nc._len >= _xs.length )
+      _xs = MemoryManager.arrayCopyOf(_xs,_xs.length<<1);
+    _ls = MemoryManager.arrayCopyOf(_ls,_xs.length);
     System.arraycopy(nc._ls,0,_ls,_len,nc._len);
-    _len += nc._len;
-    _len2 = _len;
+    System.arraycopy(nc._xs,0,_xs,_len,nc._len);
+    _len2= (_len += nc._len);
+    nc._ls = null;  nc._xs = null;  nc._len = nc._len2 = 0;
+  }
+  // PREpend all of 'nc' onto the current NewChunk.  Kill nc.
+  public void addr( NewChunk nc ) {
+    long  [] tmpl = _ls; _ls = nc._ls; nc._ls = tmpl;
+    int   [] tmpi = _xs; _xs = nc._xs; nc._xs = tmpi;
+    double[] tmpd = _ds; _ds = nc._ds; nc._ds = tmpd;
+    int      tmp  = _len; _len=nc._len; nc._len=tmp;
+    _len2=_len;
+    add(nc);
   }
 
   // Fast-path append long data
@@ -154,7 +161,7 @@ public class NewChunk extends Chunk {
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
-  public Chunk new_close(Futures fs) {
+  public Chunk new_close() {
     Chunk chk = compress();
     if(_vec instanceof AppendableVec)
       ((AppendableVec)_vec).closeChunk(this);
@@ -446,4 +453,5 @@ public class NewChunk extends Chunk {
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
   @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
   @Override boolean hasFloat() { throw H2O.fail(); }
+  @Override public String toString() { return "NewChunk._len="+_len; }
 }

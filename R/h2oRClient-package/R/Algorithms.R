@@ -388,17 +388,17 @@ h2o.__getGLM2Results <- function(model, params) {
 }
 
 # ------------------------------ K-Means Clustering --------------------------------- #
-h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, version = 1) {
+h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", version = 1) {
   if(version == 1)
-    h2o.kmeans.VA(data, centers, cols, iter.max, normalize)
+    h2o.kmeans.VA(data, centers, cols, iter.max, normalize, init)
   else if(version == 2)
-    h2o.kmeans.FV(data, centers, cols, iter.max, normalize)
+    h2o.kmeans.FV(data, centers, cols, iter.max, normalize, init)
   else
     stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
 
 # -------------------------- ValueArray -------------------------- #
-h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE) {
+h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none") {
   if(missing(data) ) stop('Must specify data')
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
@@ -410,6 +410,8 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if( any(iter.max < 1)) stop('iter.max must be >= 1')
   if(!is.logical(normalize)) stop("normalize must be of class logical")
   if(length(centers) > 1 || length(iter.max) > 1) stop("K-Means grid search not supported under ValueArray")
+  if(length(init) > 1 || !init %in% c("none", "plusplus", "furthest"))
+    stop("init must be one of 'none', 'plusplus', or 'furthest'")
   
   cc <- colnames(data)
   if(length(cols) == 1 && cols == '')
@@ -424,8 +426,9 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
     }
   }
   cols_ind <- cols_ind - 1
+  myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
   
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = cols_ind)
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = cols_ind, initialization = myInit)
   job_key = res$response$redirect_request_args$job
   destKey = res$destination_key
 
@@ -439,7 +442,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if(length(res2$clusters[[1]]) < length(feat))
     stop("Cannot run k-means on non-numeric columns!")
   
-  result$params = list(cols=feat, centers=centers, iter.max=iter.max, normalize=normalize)
+  result$params = list(cols=feat, centers=centers, iter.max=iter.max, normalize=normalize, init=myInit)
   result$centers = matrix(unlist(res2$clusters), ncol = length(feat), byrow = TRUE)
   dimnames(result$centers) = list(seq(1, centers), feat)
   result$tot.withinss = res2$error
@@ -453,7 +456,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE) {
+h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE, init = "none") {
   if( missing(data) ) stop('Must specify data')
   # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
@@ -461,9 +464,12 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
   if( missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be a positive integer')
   if( any(centers < 1) ) stop("centers must be an integer greater than 0")
+  if(!is.character(cols) && !is.numeric(cols)) stop("cols must be of class character or numeric")
   if(!is.numeric(iter.max)) stop('iter.max must be numeric')
   if( any(iter.max < 1)) stop('iter.max must be >= 1')
   if(!is.logical(normalize)) stop("normalize must be logical")
+  if(length(init) > 1 || !init %in% c("none", "plusplus", "furthest"))
+    stop("init must be one of 'none', 'plusplus', or 'furthest'")
 
   if(length(cols) == 1 && cols == '') cols = colnames(data)
   cc <- colnames(data)
@@ -475,9 +481,10 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
 
   temp = setdiff(cc, cols)
   myIgnore <- ifelse(cols == '' || length(temp) == 0, '', paste(temp, sep=','))
-
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize))
-  params = list(cols=ifelse(cols == "", cc, cols), centers=centers, iter.max=iter.max, normalize=normalize)
+  myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
+  
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization = myInit)
+  params = list(cols=ifelse(cols == "", cc, cols), centers=centers, iter.max=iter.max, normalize=normalize, init = myInit)
   
   if(length(centers) == 1 && length(iter.max) == 1) {
     h2o.__waitOnJob(data@h2o, res$job_key)

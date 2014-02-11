@@ -18,34 +18,24 @@ import water.util.Utils;
  * returns two implementation of underlying chunk ({@link TransfChunk} when {@link #_indexes} is not <code>null</code>,
  * and {@link FlatTransfChunk} when {@link #_indexes} is <code>null</code>.</p>
  */
-public class TransfVec extends Vec {
-  /** A key for underlying vector which contains values which are transformed by this vector. */
-  final Key   _masterVecKey;
+public class TransfVec extends WrappedVec {
   /** List of values from underlying vector which this vector map to a new value. If
    * a value is not included in this array the implementation returns NA. */
   final int[] _values;
   /** The transformed value - i.e. transformed value is: <code>int idx = find(value, _values); return _indexes[idx]; </code> */
   final int[] _indexes;
-  /** Cached instances of underlying vector. */
-  transient Vec _masterVec;
 
-  public TransfVec(Key masterVecKey, int[][] mapping, Key key, long[] espc) {
-    this(masterVecKey, mapping, null, key, espc);
+  public TransfVec(int[][] mapping, Key masterVecKey, Key key, long[] espc) {
+    this(mapping, null, masterVecKey, key, espc);
   }
-  public TransfVec(Key masterVecKey, int[][] mapping, String[] domain, Key key, long[] espc) {
-    this(masterVecKey, mapping[0], mapping[1], domain, key, espc);
+  public TransfVec(int[][] mapping, String[] domain, Key masterVecKey, Key key, long[] espc) {
+    this(mapping[0], mapping[1], domain, masterVecKey, key, espc);
   }
-  public TransfVec(Key masterVecKey, int[] values, int[] indexes, String[] domain, Key key, long[] espc) {
-    super(key, espc);
-    _masterVecKey = masterVecKey;
+  public TransfVec(int[] values, int[] indexes, String[] domain, Key masterVecKey, Key key, long[] espc) {
+    super(masterVecKey, key, espc);
     _values  =  values;
     _indexes =  indexes;
     _domain = domain;
-  }
-
-  @Override public Vec masterVec() {
-    if (_masterVec==null) _masterVec = DKV.get(_masterVecKey).get();
-    return _masterVec;
   }
 
   @Override public Chunk elem2BV(int cidx) {
