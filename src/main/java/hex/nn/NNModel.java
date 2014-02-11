@@ -234,8 +234,8 @@ public class NNModel extends Model {
           sb.append(i + " " + String.format("%6d", neurons[i].units)
                   + " " + String.format("%16s", neurons[i].getClass().getSimpleName())
                   + " " + String.format("%10g", neurons[i].rate(get_processed_total()))
-                  + " " + String.format("%5f", neurons[i].l1)
-                  + " " + String.format("%5f", neurons[i].l2)
+                  + " " + String.format("%5f", neurons[i].params.l1)
+                  + " " + String.format("%5f", neurons[i].params.l2)
                   + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))
                   + " (" + String.format(format, mean_weight[i])
                   + ", " + String.format(format, rms_weight[i]) + ")"
@@ -571,8 +571,8 @@ public class NNModel extends Model {
         sb.append("<td>").append("<b>").append(neurons[i].units).append("</b>").append("</td>");
         sb.append("<td>").append(neurons[i].getClass().getSimpleName()).append("</td>");
         sb.append("<td>").append(String.format("%.5g", neurons[i].rate(error.training_samples))).append("</td>");
-       sb.append("<td>").append(neurons[i].l1).append("</td>");
-        sb.append("<td>").append(neurons[i].l2).append("</td>");
+       sb.append("<td>").append(neurons[i].params.l1).append("</td>");
+        sb.append("<td>").append(neurons[i].params.l2).append("</td>");
         final String format = "%g";
         sb.append("<td>").append(String.format("%.5f", neurons[i].momentum(error.training_samples))).append("</td>");
         sb.append("<td>(").append(String.format(format, model_info.mean_weight[i])).
