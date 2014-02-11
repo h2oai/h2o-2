@@ -1,5 +1,5 @@
 import h2o
-import webbrowser, re, getpass, urllib
+import webbrowser, re, getpass, urllib, time
 # just some things useful for debugging or testing. pops the brower and let's you look at things
 # like the confusion matrix by matching the RFView json (h2o keeps the json history for us)
 
@@ -56,12 +56,16 @@ def browseJsonHistoryAsUrl():
             if not re.search('Cloud', url):
                 # url = re.sub("GLMGridProgress","GLMGridProgress.html",url)
                 # url = re.sub("Progress","Progress.html",url)
+                url = re.sub("ProgressPage","ProgressPage.html",url)
+                url = re.sub("Progress?!Page","Progress.html",url)
+                url = re.sub("Progress\?","Progress.html?",url)
                 url = re.sub(".json",".html",url)
                 print "browseJsonHistoryAsUrl:", url
                 print "same, decoded:", urllib.unquote(url)
                 # does this open in same window?
                 h2o.log(url, comment="From browseJsonHistoryAsUrl")
                 webbrowser.open(url)
+                time.sleep(0.25)
                 tabCount += 1
 
             if tabCount==50: 

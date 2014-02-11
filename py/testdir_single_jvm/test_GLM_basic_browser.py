@@ -77,7 +77,9 @@ class Basic(unittest.TestCase):
             sys.stdout.flush() 
 
         # now redo it all thru the browser
-        h2b.browseJsonHistoryAsUrl()
+        # three times!
+        for i in range(3):
+            h2b.browseJsonHistoryAsUrl()
 
         h2o.nodes[0].log_view()
         namelist = h2o.nodes[0].log_download()
