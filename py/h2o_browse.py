@@ -48,20 +48,21 @@ def browseJsonHistoryAsUrlLastMatch(matchme,swapme=None):
 # note that put/upload  and rf/rfview methods are different for html vs json
 def browseJsonHistoryAsUrl():
     if not h2o.browse_disable:
-        ignoring = "Cloud"
-        i = -1
         # stop if you get to -50, don't want more than 50 tabs on browser
         tabCount = 0
-        while (tabCount<50 and len_history+i!=0):
-            i = i - 1
+        for url in h2o.json_url_history:
             # ignore the Cloud "alive" views
             # FIX! we probably want to expand ignoring to more than Cloud?
-            if not re.search(ignoring,h2o.json_url_history[i]):
-                url = h2o.json_url_history[i]
-                url = re.sub("GLMGridProgress","GLMGridProgress.html",url)
-                url = re.sub("Progress","Progress.html",url)
+            if not re.search('Cloud', url):
+                # url = re.sub("GLMGridProgress","GLMGridProgress.html",url)
+                # url = re.sub("Progress","Progress.html",url)
                 url = re.sub(".json",".html",url)
                 print "browseJsonHistoryAsUrl:", url
                 print "same, decoded:", urllib.unquote(url)
+                # does this open in same window?
+                h2o.log(url, comment="From browseJsonHistoryAsUrl")
                 webbrowser.open(url)
                 tabCount += 1
+
+            if tabCount==50: 
+                break;

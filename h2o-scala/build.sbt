@@ -69,6 +69,9 @@ connectInput in run := true
 
 outputStrategy in run := Some(StdoutOutput)
 
+javaOptions in run += "-Xmx4g -Xms4g"
+
+// EclipseKeys.withSource := true
 //javaOptions in run += "-Xdebug"
 
 //javaOptions in run += "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"

@@ -33,7 +33,7 @@ public class TransfVec extends Vec {
     this(masterVecKey, mapping, null, key, espc);
   }
   public TransfVec(Key masterVecKey, int[][] mapping, String[] domain, Key key, long[] espc) {
-      this(masterVecKey, mapping[0], mapping[1], domain, key, espc);
+    this(masterVecKey, mapping[0], mapping[1], domain, key, espc);
   }
   public TransfVec(Key masterVecKey, int[] values, int[] indexes, String[] domain, Key key, long[] espc) {
     super(key, espc);
