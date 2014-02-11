@@ -23,7 +23,7 @@ mkdir -p sandbox
 # resource manager is still on 162
 # yarn.resourcemanager.address  8032
 CDH5_YARN_JOBTRACKER=192.168.1.179:8032
-CDH5_YARN_NODES=2
+CDH5_YARN_NODES=1
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 7g for now. node count 2"
 CDH5_YARN_HEAP=7g
