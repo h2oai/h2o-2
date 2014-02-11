@@ -218,30 +218,7 @@ h2o.__checkClientHealth <- function(client) {
   return(0)
 }
 
-h2o.__writeToFile <- function(res, fileName) {
-  formatVector = function(vec) {
-    result = rep(" ", length(vec))
-    nams = names(vec)
-    for(i in 1:length(vec))
-      result[i] = paste(nams[i], ": ", vec[i], sep="")
-    paste(result, collapse="\n")
-  }
-  
-  cat("Writing JSON response to", fileName, "\n")
-  temp = strsplit(as.character(Sys.time()), " ")[[1]]
-  # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
-  write(paste(temp[1], temp[2], '\t', formatVector(unlist(res))), file = fileName, append = TRUE)
-  # writeLines(unlist(lapply(res$response, paste, collapse=" ")), fileConn)
-}
-
-h2o.__formatError <- function(error,prefix="  ") {
-  result = ""
-  items = strsplit(error,"\n")[[1]];
-  for (i in 1:length(items))
-    result = paste(result,prefix,items[i],"\n",sep="")
-  result
-}
-
+#------------------------------------ Job Polling ------------------------------------#
 h2o.__poll <- function(client, keyName) {
   if(missing(client)) stop("client is missing!")
   if(class(client) != "H2OClient") stop("client must be a H2OClient object")
@@ -339,6 +316,104 @@ h2o.__cancelJob <- function(client, keyName) {
   }
 }
 
+#------------------------------------ Exec2 ------------------------------------#
+h2o.__exec2 <- function(client, expr) {
+  destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
+  pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
+  h2o.__exec2_dest_key(client, expr, destKey)
+  # h2o.__exec2_dest_key(client, expr, TEMP_KEY)
+}
+
+h2o.__exec2_dest_key <- function(client, expr, destKey) {
+  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
+  if (type != "character")
+    expr = deparse(substitute(expr))
+  expr = paste(destKey, "=", expr)
+  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC2, str=expr)
+  if(!is.null(res$response$status) && res$response$status == "error") stop("H2O returned an error!")
+  res$dest_key = destKey
+  return(res)
+}
+
+h2o.__unop2 <- function(op, x) {
+  if(missing(x)) stop("Must specify data set")
+  if(!(class(x) %in% c("H2OParsedData","H2OParsedDataVA"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  
+  expr = paste(op, "(", x@key, ")", sep = "")
+  res = h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
+  if(op %in% LOGICAL_OPERATORS)
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
+  else
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
+}
+
+h2o.__binop2 <- function(op, x, y) {
+  # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
+  #  stop("Can only operate on single column vectors")
+  # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+  LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
+  
+  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) & !( op %in% c('==', '!='))) {
+    anyFactorsX <- h2o.__checkForFactors(x)
+    anyFactorsY <- h2o.__checkForFactors(y)
+    anyFactors <- any(c(anyFactorsX, anyFactorsY))
+    if(anyFactors) warning("Operation not meaningful for factors.")
+  }
+  
+  # RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  RHS = ifelse(inherits(y, "H2OParsedData"), y@key, y)
+  expr = paste(LHS, op, RHS)
+  # if(class(x) == "H2OParsedData") myClient = x@h2o
+  if(inherits(x, "H2OParsedData")) myClient = x@h2o
+  else myClient = y@h2o
+  res = h2o.__exec2(myClient, expr)
+  
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
+  if(op %in% LOGICAL_OPERATORS)
+    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
+  else
+    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
+}
+
+h2o.__castType <- function(object) {
+  if(!inherits(object, "H2OParsedData")) stop("object must be a H2OParsedData or H2OParsedDataVA object")
+  h2o.__checkClientHealth(object@h2o)
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_INSPECT, key = object@key)
+  if(is.null(res$value_size_bytes))
+    return(new("H2OParsedData", h2o=object@h2o, key=object@key))
+  else
+    return(new("H2OParsedDataVA", h2o=object@h2o, key=object@key))
+}
+
+#------------------------------------ Utilities ------------------------------------#
+h2o.__writeToFile <- function(res, fileName) {
+  formatVector = function(vec) {
+    result = rep(" ", length(vec))
+    nams = names(vec)
+    for(i in 1:length(vec))
+      result[i] = paste(nams[i], ": ", vec[i], sep="")
+    paste(result, collapse="\n")
+  }
+  
+  cat("Writing JSON response to", fileName, "\n")
+  temp = strsplit(as.character(Sys.time()), " ")[[1]]
+  # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
+  write(paste(temp[1], temp[2], '\t', formatVector(unlist(res))), file = fileName, append = TRUE)
+  # writeLines(unlist(lapply(res$response, paste, collapse=" ")), fileConn)
+}
+
+h2o.__formatError <- function(error,prefix="  ") {
+  result = ""
+  items = strsplit(error,"\n")[[1]];
+  for (i in 1:length(items))
+    result = paste(result,prefix,items[i],"\n",sep="")
+  result
+}
+
 h2o.__uniqID <- function(prefix = "") {
   if("uuid" %in% installed.packages()[,1]) {
     library(uuid)
@@ -394,67 +469,4 @@ h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-
            poisson = poisson(link),
            gamma = gamma(link))
   }
-}
-
-#------------------------------------ FluidVecs -----------------------------------------#
-h2o.__exec2 <- function(client, expr) {
-  destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
-  pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
-  h2o.__exec2_dest_key(client, expr, destKey)
-  # h2o.__exec2_dest_key(client, expr, TEMP_KEY)
-}
-
-h2o.__exec2_dest_key <- function(client, expr, destKey) {
-  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
-  if (type != "character")
-    expr = deparse(substitute(expr))
-  expr = paste(destKey, "=", expr)
-  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC2, str=expr)
-  if(!is.null(res$response$status) && res$response$status == "error") stop("H2O returned an error!")
-  res$dest_key = destKey
-  return(res)
-}
-
-h2o.__unop2 <- function(op, x) {
-  if(missing(x)) stop("Must specify data set")
-  if(!(class(x) %in% c("H2OParsedData","H2OParsedDataVA"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
-    
-  expr = paste(op, "(", x@key, ")", sep = "")
-  res = h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
-  if(op %in% LOGICAL_OPERATORS)
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
-  else
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
-}
-
-h2o.__binop2 <- function(op, x, y) {
-  # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
-  #  stop("Can only operate on single column vectors")
-  # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
-  LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
-  
-  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
-  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) & !( op %in% c('==', '!='))) {
-    anyFactorsX <- h2o.__checkForFactors(x)
-    anyFactorsY <- h2o.__checkForFactors(y)
-    anyFactors <- any(c(anyFactorsX, anyFactorsY))
-    if(anyFactors) warning("Operation not meaningful for factors.")
-  }
-
-  # RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
-  RHS = ifelse(inherits(y, "H2OParsedData"), y@key, y)
-  expr = paste(LHS, op, RHS)
-  # if(class(x) == "H2OParsedData") myClient = x@h2o
-  if(inherits(x, "H2OParsedData")) myClient = x@h2o
-  else myClient = y@h2o
-  res = h2o.__exec2(myClient, expr)
-
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
-  if(op %in% LOGICAL_OPERATORS)
-    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
-  else
-    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
 }
