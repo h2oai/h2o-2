@@ -15,8 +15,8 @@ import static water.util.Utils.getDeterRNG;
 public class MRUtils {
 
   public static Frame sampleFrame(Frame fr, final long rows, final long seed) {
-    assert(rows >= 1);
     final float fraction = rows > 0 ? (float)rows / fr.numRows() : 1.f;
+    if (fraction >= 1.f) return fr;
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
@@ -32,7 +32,7 @@ public class MRUtils {
     if (r.numRows() == 0) {
       Log.warn("You asked for " + rows + " rows (out of " + fr.numRows() + "), but you got none (seed=" + seed + ").");
       Log.warn("Let's try again. You've gotta ask yourself a question: \"Do I feel lucky?\"");
-      sampleFrame(fr, rows, seed+1);
+      return sampleFrame(fr, rows, seed+1);
     }
     return r;
   }
