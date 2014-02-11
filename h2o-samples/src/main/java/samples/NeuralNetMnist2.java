@@ -1,9 +1,7 @@
 package samples;
 
 import hex.nn.NN;
-import water.Job;
-import water.Key;
-import water.TestUtil;
+import water.*;
 import water.fvec.Frame;
 import water.util.Log;
 
@@ -36,7 +34,7 @@ public class NeuralNetMnist2 extends Job {
     // Hinton parameters -> should lead to ~1 % test error after a few dozen million samples
     p.seed = seed;
     p.hidden = new int[]{1024,1024,2048};
-//    p.hidden = new int[]{128,128,256};
+    //p.hidden = new int[]{128,128,256};
     p.rate = 0.01;
     p.activation = NN.Activation.RectifierWithDropout;
     p.loss = NN.Loss.CrossEntropy;
@@ -63,6 +61,8 @@ public class NeuralNetMnist2 extends Job {
     p.sync_samples = 50000;
     p.score_interval = 30;
     p.destination_key = Key.make("mnist.model");
+    p.job_key = Key.make("mnist.job");
+    DKV.put(p.job_key, new Value(p.job_key, new byte[0]), null);
     return p.exec();
   }
 }
