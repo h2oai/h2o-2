@@ -16,8 +16,6 @@ import water.util.Utils;
 import java.util.Arrays;
 import java.util.Random;
 
-import static hex.nn.NN.RNG.getRNG;
-
 public class NNModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -303,7 +301,7 @@ public class NNModel extends Model {
     }
     void randomizeWeights() {
       for (int i=0; i<weights.length; ++i) {
-        final Random rng = getRNG(); //Use a newly seeded generator for each layer for backward compatibility (for now)
+        final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD533D + i);
         for( int j = 0; j < weights[i].length; j++ ) {
           if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.UniformAdaptive) {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
@@ -464,7 +462,7 @@ public class NNModel extends Model {
   @Override public float[] score0(double[] data, float[] preds) {
     Neurons[] neurons = NNTask.makeNeurons(data_info, model_info);
     ((Neurons.Input)neurons[0]).setInput(data);
-    NNTask.step(neurons, model_info, false, null);
+    NNTask.step(-1, neurons, model_info, false, null);
     double[] out = neurons[neurons.length - 1]._a;
     assert out.length == preds.length;
     for (int i=0; i<out.length; ++i) preds[i] = (float)out[i];

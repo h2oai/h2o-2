@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import static hex.nn.NN.Loss;
-import static hex.nn.NN.RNG.getRNG;
 
 public abstract class Neurons extends Iced {
   static final int API_WEAVER = 1;
@@ -68,7 +67,7 @@ public abstract class Neurons extends Iced {
 
     private Dropout(int units) {
       _bits = new byte[(units+7)/8];
-      _rand = getRNG();
+      //_rand is left null, user must call Neurons.setTrainingRow(gid) for each training row to create a new _rand
     }
 
     // for input layer
@@ -107,6 +106,10 @@ public abstract class Neurons extends Iced {
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
     }
+  }
+
+  protected void setTrainingRow(long row) {
+//    System.err.println("row " + row);
   }
 
   protected abstract void fprop(boolean training);
@@ -275,10 +278,21 @@ public abstract class Neurons extends Iced {
     public TanhDropout(int units) {
       super(units);
     }
+
+    @Override
+    protected void setTrainingRow(long row) {
+      super.setTrainingRow(row);
+      long seed = params.seed + 0xDA7A + row;
+      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+      if (dropout == null) dropout = createDropout(units);
+      if (dropout._rand == null) dropout._rand = new Random(seed);
+      else dropout._rand.setSeed(seed);
+    }
+
     @Override
     protected void fprop(boolean training) {
       if (training) {
-        if (dropout == null) dropout = createDropout(units);
         dropout.fillBytes();
         if (_previous.isInput())
           dropout.clearSomeInput(_previous);
@@ -382,11 +396,19 @@ public abstract class Neurons extends Iced {
     public RectifierDropout(int units) {
       super(units);
     }
-
+    @Override
+    protected void setTrainingRow(long row) {
+      super.setTrainingRow(row);
+      long seed = params.seed + 0x3C71F1ED + row;
+      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+      if (dropout == null) dropout = createDropout(units);
+      if (dropout._rand == null) dropout._rand = new Random(seed);
+      else dropout._rand.setSeed(seed);
+    }
     @Override
     protected void fprop(boolean training) {
       if (training) {
-        if (dropout == null) dropout = createDropout(units);
         dropout.fillBytes();
         if (_previous.isInput())
           dropout.clearSomeInput(_previous);

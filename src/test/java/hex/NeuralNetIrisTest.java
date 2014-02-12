@@ -17,7 +17,6 @@ import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static hex.Layer.Rectifier;
 import static hex.Layer.Tanh;
@@ -114,7 +113,6 @@ public class NeuralNetIrisTest extends TestUtil {
 
                 NeuralNet p = new NeuralNet();
                 p.seed = seed;
-                NeuralNet.RNG.seed = new AtomicLong(seed);
                 p.rate = 0.01;
                 p.activation = activation;
                 p.max_w2 = Double.MAX_VALUE;
@@ -173,9 +171,6 @@ public class NeuralNetIrisTest extends TestUtil {
 
                 // Reference
                 ref.train((int)p.epochs, p.rate, loss);
-
-                // reset the seed - start again at seed and increment for each chunk offset (here only needed once, for offset 0) - (RNG used for dropout only)
-                NeuralNet.RNG.seed = new AtomicLong(seed);
 
                 // H2O
                 if (trainer == NeuralNet.ExecutionMode.SingleThread) {

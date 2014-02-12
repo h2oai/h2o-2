@@ -2,6 +2,7 @@ package hex.nn;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
+import hex.rng.H2ORandomRNG;
 import water.*;
 import water.api.DocGen;
 import water.api.NNProgressPage;
@@ -9,12 +10,11 @@ import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
+import water.util.Utils;
 
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static water.util.MRUtils.sampleFrame;
-import static water.util.Utils.getDeterRNG;
 
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -211,7 +211,7 @@ public class NN extends Job.ValidatedJob {
   public void initModel() {
     checkParams();
     logStart();
-    NN.RNG.seed = new AtomicLong(seed);
+    Utils.setUsedRNGKind(H2ORandomRNG.RNGKind.value("deter"));
 
     // Lock the input datasets against deletes
     source.read_lock(self());
@@ -268,17 +268,6 @@ public class NN extends Job.ValidatedJob {
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
     Log.info("Neural Net training finished.");
     return model;
-  }
-
-  // Make a differently seeded random generator every time someone asks for one
-  public static class RNG {
-    // Atomicity is not really needed here (since in multi-threaded operation, the weights are simultaneously updated),
-    // but it is still done for posterity since it's cheap (and to be able to count the number of actual getRNG() calls)
-    public static AtomicLong seed;
-
-    public static Random getRNG() {
-      return getDeterRNG(seed.getAndIncrement());
-    }
   }
 
 }

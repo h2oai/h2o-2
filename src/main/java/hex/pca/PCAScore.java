@@ -2,13 +2,13 @@ package hex.pca;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-
-import java.util.Arrays;
-
-import water.Job.*;
-import water.*;
+import water.Job;
+import water.Job.FrameJob;
+import water.Key;
 import water.api.DocGen;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
 import water.util.RString;
 
 /**
@@ -89,7 +89,7 @@ public class PCAScore extends FrameJob {
     }
 
     // Note: Rows with NAs (missing values) are automatically skipped!
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] response, NewChunk[] outputs) {
+    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] response, NewChunk[] outputs) {
       for(int c = 0; c < _ncomp; c++) {
         double x = 0;
         for(int d = 0; d < ncats; d++)

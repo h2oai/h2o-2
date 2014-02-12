@@ -59,7 +59,8 @@ public abstract class Trainer {
       throw new UnsupportedOperationException();
     }
 
-    final void step() {
+    final void step(long gid) {
+      for (Layer l : _ls) l.setTrainingRow(gid);
       fprop();
       for( int i = 1; i < _ls.length - 1; i++ )
         Arrays.fill(_ls[i]._e, 0);
@@ -104,7 +105,7 @@ public abstract class Trainer {
 
       Input input = (Input) _ls[0];
       for( ; _limit == 0 || _processed < _limit; _processed++ ) {
-        step();
+        step(_processed);
         input.move();
         if( _job != null && (!Job.isRunning(_job) || !NeuralNet.running ) )
           break;
@@ -172,7 +173,7 @@ public abstract class Trainer {
               if( job != null && (!Job.isRunning(job) || !NeuralNet.running ) )
                 break;
               try {
-                trainer.step();
+                trainer.step(input._pos + i);
                 input.move();
                 _processed.incrementAndGet();
               } catch (Exception e) {
@@ -424,7 +425,7 @@ public abstract class Trainer {
         }
         Base base = new Base(clones);
         for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
-          base.step();
+          base.step(_cs[0]._start + input._pos);
         int chunk = _cs[0].cidx();
         _node.stepped(chunk);
       }
@@ -460,7 +461,7 @@ public abstract class Trainer {
       for( int y = 1; y < _ws.length; y++ ) {
         _wi[y] = ws[y].clone();
         _bi[y] = bs[y].clone();
-        if( ls[y].momentum_start != 0 || ls[y].momentum_stable != 0 ) {
+        if( ls[y].params.momentum_start != 0 || ls[y].params.momentum_stable != 0 ) {
           _wm[y] = new float[ws[y].length];
           _bm[y] = new double[bs[y].length];
         }

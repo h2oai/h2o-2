@@ -413,7 +413,7 @@ public final class Gram extends Iced {
       _hasIntercept = hasIntercept;
       _isWeighted = isWeighted;
     }
-    @Override protected void chunkInit(long ignored){
+    @Override protected void chunkInit(){
       _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,_hasIntercept);
       final int responses = _dinfo._responses - (_isWeighted?1:0);
       if(responses > 0){
@@ -422,7 +422,7 @@ public final class Gram extends Iced {
           _XY[i] = MemoryManager.malloc8d(_gram._fullN);
       }
     }
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
+    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
       double w = _isWeighted?responses[responses.length-1]:1;
       _gram.addRow(nums, ncats, cats, w);
       if(_XY != null){

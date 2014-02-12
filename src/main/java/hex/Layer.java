@@ -9,8 +9,6 @@ import water.util.Utils;
 
 import java.util.Random;
 
-import static hex.NeuralNet.RNG.getRNG;
-
 /**
  * Neural network layer.
  *
@@ -24,69 +22,7 @@ public abstract class Layer extends Iced {
   @ParamsSearch.Ignore
   public int units;
 
-  @API(help = "Initial Weight Distribution")
-  public NeuralNet.InitialWeightDistribution initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
-
-  @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
-  @ParamsSearch.Info(origin = 0.01)
-  public double initial_weight_scale;
-
-  @API(help = "Learning rate")
-  public double rate;
-
-  @API(help = "Learning rate decay factor (N-th layer: rate*alpha^(N-1))")
-  public double rate_decay;
-
-  @API(help = "Learning rate annealing")
-  public double rate_annealing;
-
-  @API(help = "L1 regularisation")
-  public double l1;
-
-  @API(help = "L2 regularisation")
-  public double l2;
-
-  @API(help = "Initial momentum value")
-  @ParamsSearch.Info(origin = 1)
-  public double momentum_start;
-
-  @API(help = "Number of samples during which momentum value varies")
-  public long momentum_ramp;
-
-  @API(help = "Momentum value once ramp is over")
-  @ParamsSearch.Info(origin = 1)
-  public double momentum_stable;
-
-  @API(help = "Constraint for squared sum of incoming weights per unit")
-  public double max_w2;
-
-  public void transferParams(NeuralNet p) {
-    initial_weight_distribution = p.initial_weight_distribution;
-    initial_weight_scale = p.initial_weight_scale;
-    rate = p.rate;
-    rate_decay = p.rate_decay;
-    rate_annealing = p.rate_annealing;
-    l1 = p.l1;
-    l2 = p.l2;
-    momentum_start = p.momentum_start;
-    momentum_ramp = p.momentum_ramp;
-    momentum_stable = p.momentum_stable;
-    max_w2 = p.max_w2;
-  }
-
-  public void transferParams(Layer p) {
-    initial_weight_distribution = p.initial_weight_distribution;
-    initial_weight_scale = p.initial_weight_scale;
-    rate = p.rate;
-    rate_decay = p.rate_decay;
-    rate_annealing = p.rate_annealing;
-    l1 = p.l1;
-    l2 = p.l2;
-    momentum_start = p.momentum_start;
-    momentum_ramp = p.momentum_ramp;
-    momentum_stable = p.momentum_stable;
-    max_w2 = p.max_w2;
-  }
+  protected NeuralNet params;
 
   // Layer state: activity, error
   protected transient double[] _a, _e;
@@ -134,7 +70,7 @@ public abstract class Layer extends Iced {
 
     private Dropout(int units) {
       _bits = new byte[(units+7)/8];
-      _rand = getRNG();
+      //_rand is left null, user must call Neurons.setTrainingRow(gid) for each training row to create a new _rand
     }
 
     // for input layer
@@ -157,12 +93,12 @@ public abstract class Layer extends Iced {
   }
 
   public final void init(Layer[] ls, int index, NeuralNet p) {
-    transferParams(p);
+    params = (NeuralNet)p.clone();
     init(ls, index, true);
   }
 
   public void init(Layer[] ls, int index, boolean weights) {
-    rate *= Math.pow(rate_decay, index-1);
+    params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new double[units];
     if (!(this instanceof Output)) {
       _e = new double[units];
@@ -173,7 +109,7 @@ public abstract class Layer extends Iced {
     if( weights ) {
       _w = new float[units * _previous.units];
       _b = new double[units];
-      if( momentum_start != 0 || momentum_stable != 0 ) {
+      if( params.momentum_start != 0 || params.momentum_stable != 0 ) {
         _wm = new float[_w.length];
         _bm = new double[_b.length];
       }
@@ -191,19 +127,19 @@ public abstract class Layer extends Iced {
   void randomize(Random rng, double prefactor) {
     if (_w == null) return;
 
-    if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
+    if (params.initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
       final double range = prefactor * Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
         _w[i] = (float)uniformDist(rng, -range, range);
     }
     else {
-      if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
+      if (params.initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
         for (int i = 0; i < _w.length; i++) {
-          _w[i] = (float)uniformDist(rng, -initial_weight_scale, initial_weight_scale);
+          _w[i] = (float)uniformDist(rng, -params.initial_weight_scale, params.initial_weight_scale);
         }
-      } else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
+      } else if (params.initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
         for (int i = 0; i < _w.length; i++) {
-          _w[i] = (float) (0 + rng.nextGaussian() * initial_weight_scale);
+          _w[i] = (float) (0 + rng.nextGaussian() * params.initial_weight_scale);
         }
       }
     }
@@ -224,6 +160,10 @@ public abstract class Layer extends Iced {
   public void close() {
   }
 
+  protected void setTrainingRow(long row) {
+//    System.err.println("row " + row);
+  }
+
   protected abstract void fprop(boolean training);
 
   protected abstract void bprop();
@@ -240,7 +180,7 @@ public abstract class Layer extends Iced {
       int w = off + i;
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
-      double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
 
       // TODO finish per-weight acceleration, doesn't help for now
 //      if( _wp != null && d != 0 ) {
@@ -265,10 +205,10 @@ public abstract class Layer extends Iced {
         d = _wm[w];
       }
       _w[w] += r * d;
-      if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
+      if (params.max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
     }
-    if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      final double scale = Math.sqrt(max_w2 / r2);
+    if( params.max_w2 != Double.POSITIVE_INFINITY && r2 > params.max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+      final double scale = Math.sqrt(params.max_w2 / r2);
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
     double d = g;
@@ -281,16 +221,16 @@ public abstract class Layer extends Iced {
   }
 
   public double rate(long n) {
-    return rate / (1 + rate_annealing * n);
+    return params.rate / (1 + params.rate_annealing * n);
   }
 
   public double momentum(long n) {
-    double m = momentum_start;
-    if( momentum_ramp > 0 ) {
-      if( n >= momentum_ramp )
-        m = momentum_stable;
+    double m = params.momentum_start;
+    if( params.momentum_ramp > 0 ) {
+      if( n >= params.momentum_ramp )
+        m = params.momentum_stable;
       else
-        m += (momentum_stable - momentum_start) * n / momentum_ramp;
+        m += (params.momentum_stable - params.momentum_start) * n / params.momentum_ramp;
     }
     return m;
   }
@@ -553,7 +493,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(getRNG(), 4.0f);
+        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 4.0f);
       }
     }
 
@@ -611,7 +551,7 @@ public abstract class Layer extends Iced {
       this.units = stats != null ? stats.units : (int) (vec.max() + 1);
       this.vec = vec;
       loss = l;
-      if (stats != null) transferParams(stats);
+      params = stats != null ? (NeuralNet)stats.params.clone() : null;
     }
 
     @Override protected int target() {
@@ -634,7 +574,7 @@ public abstract class Layer extends Iced {
       units = stats.units;
       _chunk = chunk;
       loss = stats.loss;
-      transferParams(stats);
+      params = (NeuralNet)stats.params.clone();
     }
 
     @Override protected int target() {
@@ -654,7 +594,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(getRNG(), 1.0f);
+        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
       }
     }
 
@@ -690,7 +630,7 @@ public abstract class Layer extends Iced {
       assert(stats == null || stats.units == 1);
       units = 1; //regression
       _vec = vec;
-      if (stats != null) transferParams(stats);
+      params = stats != null ? (NeuralNet)stats.params.clone() : null;
     }
 
     @Override double[] target() {
@@ -711,7 +651,7 @@ public abstract class Layer extends Iced {
       units = 1;
       _chunk = chunk;
       loss = stats.loss;
-      transferParams(stats);
+      params = (NeuralNet)stats.params.clone();
     }
 
     @Override double[] target() {
@@ -734,7 +674,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(getRNG(), 1.0f);
+        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
       }
     }
 
@@ -776,11 +716,19 @@ public abstract class Layer extends Iced {
     public TanhDropout(int units) {
       super(units);
     }
-
+    @Override
+    protected void setTrainingRow(long row) {
+      super.setTrainingRow(row);
+      long seed = params.seed + 0xDA7A + row;
+      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+      if (dropout == null) dropout = createDropout(units);
+      if (dropout._rand == null) dropout._rand = new Random(seed);
+      else dropout._rand.setSeed(seed);
+    }
     @Override
     protected void fprop(boolean training) {
       if (training) {
-        if (dropout == null) dropout = createDropout(units);
         dropout.fillBytes();
         if (_previous.isInput())
           dropout.clearSomeInput(_previous);
@@ -829,7 +777,7 @@ public abstract class Layer extends Iced {
           int w = i * _a.length + o;
           if( _previous._e != null )
             _previous._e[i] += g * _w[w];
-          _w[w] += r * (g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1);
+          _w[w] += r * (g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1);
         }
         _b[o] += r * g;
       }
@@ -845,7 +793,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(getRNG(), 1.0f);
+        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -901,7 +849,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(getRNG(), 1.0f);
+        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -938,11 +886,20 @@ public abstract class Layer extends Iced {
     public RectifierDropout(int units) {
       super(units);
     }
-
+    @Override
+    protected void setTrainingRow(long row) {
+      super.setTrainingRow(row);
+      long seed = params.seed + 0x3C71F1ED + row;
+      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+      if (dropout == null) dropout = createDropout(units);
+      if (dropout._rand == null) dropout._rand = new Random(seed);
+      else dropout._rand.setSeed(seed);
+    }
     @Override
     protected void fprop(boolean training) {
       if (training) {
-        if (dropout == null) dropout = createDropout(units);
+        assert(dropout != null);
         dropout.fillBytes();
         if (_previous.isInput())
           dropout.clearSomeInput(_previous);
@@ -993,12 +950,12 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + u;
           if( _previous._e != null ) _previous._e[i] += g * _w[w];
-          double d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+          double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
           _w[w] += r * d;
-          if (max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
+          if (params.max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
         }
-        if( max_w2 != Double.POSITIVE_INFINITY && r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-          final double scale = Math.sqrt(max_w2 / r2);
+        if( params.max_w2 != Double.POSITIVE_INFINITY && r2 > params.max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+          final double scale = Math.sqrt(params.max_w2 / r2);
           for( int i = 0; i < _previous._a.length; i++ ) _w[i * _a.length + u] *= scale;
         }
         _b[u] += r * g;

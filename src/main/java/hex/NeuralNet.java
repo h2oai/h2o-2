@@ -1,6 +1,7 @@
 package hex;
 
 import hex.Layer.*;
+import hex.rng.H2ORandomRNG;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -16,7 +17,6 @@ import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static hex.NeuralNet.ExecutionMode.*;
 
@@ -221,7 +221,7 @@ public class NeuralNet extends ValidatedJob {
 
   void startTrain() {
     logStart();
-    NeuralNet.RNG.seed = new AtomicLong(seed);
+    Utils.setUsedRNGKind(H2ORandomRNG.RNGKind.value("deter"));
     running = true;
 // Vec[] vecs = Utils.append(_train, response);
 // reChunk(vecs);
@@ -396,7 +396,6 @@ public class NeuralNet extends ValidatedJob {
         return e;
       }
     };
-    NeuralNet.RNG.seed = new AtomicLong(seed); //reproduce behavior of new NN code (which seeds per chunk, using the offset (here 0))
     trainer.start();
     monitor.start();
     trainer.join();
@@ -788,8 +787,8 @@ public class NeuralNet extends ValidatedJob {
           sb.append("<td>").append("<b>").append(layers[i].units).append("</b>").append("</td>");
           sb.append("<td>").append(layers[i].getClass().getSimpleName().replace("Vec","").replace("Chunk", "")).append("</td>");
           sb.append("<td>").append(String.format("%.5g", layers[i].rate(train.training_samples))).append("</td>");
-          sb.append("<td>").append(layers[i].l1).append("</td>");
-          sb.append("<td>").append(layers[i].l2).append("</td>");
+          sb.append("<td>").append(layers[i].params.l1).append("</td>");
+          sb.append("<td>").append(layers[i].params.l2).append("</td>");
           final String format = "%g";
           sb.append("<td>").append(layers[i].momentum(train.training_samples)).append("</td>");
           sb.append("<td>(").append(String.format(format, mean_weight[i])).
@@ -1086,17 +1085,6 @@ public class NeuralNet extends ValidatedJob {
         t._domain = vecs[v]._domain;
         vecs[v] = t;
       }
-    }
-  }
-
-  // Make a differently seeded random generator every time someone asks for one
-  public static class RNG {
-    // Atomicity is not really needed here (since in multi-threaded operation, the weights are simultaneously updated),
-    // but it is still done for posterity since it's cheap (and to be able to count the number of actual getRNG() calls)
-    public static AtomicLong seed;
-
-    public static Random getRNG() {
-      return water.util.Utils.getDeterRNG(seed.getAndIncrement());
     }
   }
 }

@@ -59,13 +59,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    *      B,B - ncats = 2, indexes = [0,2]
    *      and so on
    *
+   * @param gid      - global id of this row, in [0,_adaptedFrame.numRows())
    * @param nums     - numeric values of this row
    * @param ncats    - number of passed (non-zero) categoricals
    * @param cats     - indexes of categoricals into the expanded beta-vector.
    * @param response - numeric value for the response
    */
-  protected void processRow(double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
-  protected void processRow(double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
 
   public static class DataInfo extends Iced {
@@ -223,7 +224,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   /**
    * Override this to initialize at the beginning of chunk processing.
    */
-  protected void chunkInit(long offset){}
+  protected void chunkInit(){}
   /**
    * Override this to do post-chunk processing work.
    */
@@ -238,7 +239,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     final int nrows = chunks[0]._len;
     final long offset = chunks[0]._start;
-    chunkInit(offset);
+    chunkInit();
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);
@@ -246,9 +247,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     int end = nrows;
 
     boolean contiguous = false;
-    Random _random = null;
+    Random _random = null; //random generator for skipping rows
     if (_useFraction < 1.0) {
-      _random = water.util.Utils.getDeterRNG(_seed + chunks[0]._start);
+      _random = water.util.Utils.getDeterRNG(_seed + 0x600D5EED + offset);
       if (contiguous) {
         final int howmany = (int)Math.ceil(_useFraction*nrows);
         if (howmany > 0) {
@@ -257,10 +258,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         }
         assert(start < nrows);
         assert(end <= nrows);
-      }
-      else {
-        start = 0;
-        end = nrows;
       }
     }
 
@@ -283,9 +280,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       for(i = 0; i < _dinfo._responses; ++i)
         response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
       if(outputs != null && outputs.length > 0)
-        processRow(nums, ncats, cats,response,outputs);
+        processRow(offset+r, nums, ncats, cats, response, outputs);
       else
-        processRow(nums, ncats, cats,response);
+        processRow(offset+r, nums, ncats, cats, response);
     }
     chunkDone();
   }

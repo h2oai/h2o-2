@@ -6,7 +6,6 @@ import water.H2O.H2OCountedCompleter;
 import water.util.Log;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class NNTask extends FrameTask<NNTask> {
   final private NN _params;
@@ -39,16 +38,13 @@ public class NNTask extends FrameTask<NNTask> {
 
   // create local workspace (neurons)
   // and link them to shared weights
-  @Override protected void chunkInit(long offset){
-    //set seed for reproducibility in multi-VM mode
-    //Note: seed is only used for dropout (weight randomization is already done)
-    NN.RNG.seed = new AtomicLong(model_info().get_params().seed + offset);
+  @Override protected void chunkInit(){
     _neurons = makeNeurons(_dinfo, _output);
   }
 
-  @Override public final void processRow(final double [] nums, final int numcats, final int [] cats, double [] responses){
+  @Override public final void processRow(long gid, final double [] nums, final int numcats, final int [] cats, double [] responses){
     ((Neurons.Input)_neurons[0]).setInput(nums, numcats, cats);
-    step(_neurons, _output, _training, responses);
+    step(gid, _neurons, _output, _training, responses);
   }
 
   @Override public void reduce(NNTask other){
@@ -111,9 +107,11 @@ public class NNTask extends FrameTask<NNTask> {
 
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
-  static void step(Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
-    for (int i=1; i<neurons.length-1; ++i)
+  static void step(long gid, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
+    for (int i=1; i<neurons.length-1; ++i) {
+      if (training && gid >= 0) neurons[i].setTrainingRow(gid);
       neurons[i].fprop(training);
+    }
     if (minfo.get_params().classification) {
       ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
       if (training) {
@@ -142,7 +140,7 @@ public class NNTask extends FrameTask<NNTask> {
        */
       //Note: in multi-vm operation, all vms sync their number of processed rows after every reduce() call.
       //That means that the number of processed rows will jump regularly, and then continue to increase in steps of 1.
-      //This is equivalent to saying that each vms thinks that its rows come first in every epoch, which is probably
+      //This is equivalent to saying that each VM thinks that its rows come first in every epoch, which is probably
       //the closest thing to do when trying to match the single-node behavior.
       minfo.add_processed_local(1);
 //      if (minfo.get_processed_local() % 1000 == 0) {
