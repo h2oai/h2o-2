@@ -265,19 +265,20 @@ public class NNModel extends Model {
     }
     void initializeMembers() {
       randomizeWeights();
-      Arrays.fill(biases[0], 0.5); //first hidden layer
-      // remaining hidden layers
-      for (int i=1; i<parameters.hidden.length; ++i) {
+      //TODO: determine good/optimal/best initialization scheme for biases
+      //For now, reproduce behavior of old NeuralNet code
+      // hidden layers
+      for (int i=0; i<parameters.hidden.length; ++i) {
         if (parameters.activation == NN.Activation.Rectifier
                 || parameters.activation == NN.Activation.RectifierWithDropout
                 || parameters.activation == NN.Activation.Maxout) {
           Arrays.fill(biases[i], 1.);
         }
         else if (parameters.activation == NN.Activation.Tanh) {
-          Arrays.fill(biases[i], 0.5); //same as sigmoid with 1.0
+          Arrays.fill(biases[i], 0.0);
         }
       }
-      Arrays.fill(biases[biases.length-1], 1.0); //output layer
+      Arrays.fill(biases[biases.length-1], 0.0); //output layer
     }
     public void add(NNModelInfo other) {
       Utils.add(weights, other.weights);
@@ -308,7 +309,7 @@ public class NNModel extends Model {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
             final double range = Math.sqrt(6. / (units[i] + units[i+1]));
             weights[i][j] = (float)uniformDist(rng, -range, range);
-            //if (i==weights.length-1 && parameters.classification) weights[i][j] *= 4; //Softmax might need an extra factor 4, since it's like a sigmoid
+            if (i==weights.length-1 && parameters.classification) weights[i][j] *= 4; //Softmax might need an extra factor 4, since it's like a sigmoid
           }
           else if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.Uniform) {
             weights[i][j] = (float)uniformDist(rng, -parameters.initial_weight_scale, parameters.initial_weight_scale);
@@ -378,7 +379,6 @@ public class NNModel extends Model {
     run_time = 0;
     start_time = System.currentTimeMillis();
     model_info = new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
-    model_info.initializeMembers();
     errors = new Errors[1];
     errors[0] = new Errors();
     errors[0].validation = (params.validation != null);

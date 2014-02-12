@@ -221,7 +221,7 @@ public class NeuralNet extends ValidatedJob {
 
   void startTrain() {
     logStart();
-    RNG.seed = new AtomicLong(seed);
+    NeuralNet.RNG.seed = new AtomicLong(seed);
     running = true;
 // Vec[] vecs = Utils.append(_train, response);
 // reChunk(vecs);
@@ -396,6 +396,7 @@ public class NeuralNet extends ValidatedJob {
         return e;
       }
     };
+    NeuralNet.RNG.seed = new AtomicLong(seed); //reproduce behavior of new NN code (which seeds per chunk, using the offset (here 0))
     trainer.start();
     monitor.start();
     trainer.join();
@@ -1092,7 +1093,7 @@ public class NeuralNet extends ValidatedJob {
   public static class RNG {
     // Atomicity is not really needed here (since in multi-threaded operation, the weights are simultaneously updated),
     // but it is still done for posterity since it's cheap (and to be able to count the number of actual getRNG() calls)
-    public static AtomicLong seed = new AtomicLong(new Random().nextLong());
+    public static AtomicLong seed;
 
     public static Random getRNG() {
       return water.util.Utils.getDeterRNG(seed.getAndIncrement());

@@ -57,7 +57,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
       };
       double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
       double[] holdout_ratios = { 0.1 + new Random().nextDouble() * 0.8 };
-      double[] momenta = { 0, new Random().nextDouble() * 0.99 };
+      double[] momenta = { 0 }; //anything else will fail now because of the 1-m correction
       int[] hiddens = { 1, new Random().nextInt(50) };
       int[] epochs = { 1, new Random().nextInt(50) };
 
@@ -92,8 +92,6 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         if (_test != null) _test.delete();
                         if (fr != null) fr.delete();
 
-                        // try a seed
-                        seed = new Random().nextLong();
                         rand = Utils.getDeterRNG(seed);
 
                         double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
@@ -136,9 +134,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       p.rate = 0.01;
                       p.activation = activation;
                       p.max_w2 = Double.MAX_VALUE;
-                      p.rate = 0.01;
                       p.epochs = epoch;
-                      p.activation = activation;
                       p.input_dropout_ratio = 0;
                       p.rate_annealing = 0; //do not change - not implemented in reference
                       p.l1 = 0;
@@ -150,9 +146,10 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       p.initial_weight_distribution = dist;
                       p.initial_weight_scale = scale;
                       p.classification = true;
-                      p.diagnostics = false;
+                      p.diagnostics = true;
                       p.validation = null;
                       p.fast_mode = false; //to be the same as reference
+//                      p.fast_mode = true; //to be the same as old NeuralNet code
                       p.sync_samples = 100000; //sync once per period
 
                       DKV.put(p.job_key, new Value(p.job_key, new byte[0]), null);
@@ -165,15 +162,21 @@ public class NeuralNetIrisTest2 extends TestUtil {
                       // use the same random weights for the reference implementation
                       Neurons l = neurons[1];
                       for( int o = 0; o < l._a.length; o++ ) {
-                        for( int i = 0; i < l._previous._a.length; i++ )
+                        for( int i = 0; i < l._previous._a.length; i++ ) {
+//                          System.out.println("initial weight[" + o + "]=" + l._w[o * l._previous._a.length + i]);
                           ref._nn.ihWeights[i][o] = l._w[o * l._previous._a.length + i];
+                        }
                         ref._nn.hBiases[o] = l._b[o];
+//                        System.out.println("initial bias[" + o + "]=" + l._b[o]);
                       }
                       l = neurons[2];
                       for( int o = 0; o < l._a.length; o++ ) {
-                        for( int i = 0; i < l._previous._a.length; i++ )
+                        for( int i = 0; i < l._previous._a.length; i++ ) {
+//                          System.out.println("initial weight[" + o + "]=" + l._w[o * l._previous._a.length + i]);
                           ref._nn.hoWeights[i][o] = l._w[o * l._previous._a.length + i];
+                        }
                         ref._nn.oBiases[o] = l._b[o];
+//                        System.out.println("initial bias[" + o + "]=" + l._b[o]);
                       }
 
                       // Train the Reference
@@ -199,6 +202,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                           double a = ref._nn.ihWeights[i][o];
                           double b = l._w[o * l._previous._a.length + i];
                           compareVal(a, b, abseps, releps);
+//                          System.out.println("weight[" + o + "]=" + b);
                         }
                         double ba = ref._nn.hBiases[o];
                         double bb = l._b[o];

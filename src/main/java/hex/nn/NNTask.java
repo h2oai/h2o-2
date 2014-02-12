@@ -6,6 +6,7 @@ import water.H2O.H2OCountedCompleter;
 import water.util.Log;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class NNTask extends FrameTask<NNTask> {
   final private NN _params;
@@ -25,6 +26,7 @@ public class NNTask extends FrameTask<NNTask> {
     _training=training;
     _input=input;
     _useFraction=fraction;
+    _seed=_params.seed;
     assert(_output == null);
   }
 
@@ -37,7 +39,10 @@ public class NNTask extends FrameTask<NNTask> {
 
   // create local workspace (neurons)
   // and link them to shared weights
-  @Override protected void chunkInit(){
+  @Override protected void chunkInit(long offset){
+    //set seed for reproducibility in multi-VM mode
+    //Note: seed is only used for dropout (weight randomization is already done)
+    NN.RNG.seed = new AtomicLong(model_info().get_params().seed + offset);
     _neurons = makeNeurons(_dinfo, _output);
   }
 

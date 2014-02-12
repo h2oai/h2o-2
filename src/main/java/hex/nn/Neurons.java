@@ -5,6 +5,7 @@ import water.Iced;
 import water.MemoryManager;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -59,7 +60,7 @@ public abstract class Neurons extends Iced {
 //  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
 
   /**
-   * Helper class for dropout, only to be used from within a Layer
+   * Helper class for dropout, only to be used from within a layer of neurons
    */
   private class Dropout {
     private transient Random _rand;
@@ -72,7 +73,6 @@ public abstract class Neurons extends Iced {
 
     // for input layer
     private void clearSomeInput(Neurons previous) {
-      if (_rand == null) _rand = getRNG();
       assert(previous.isInput());
       final double rate = ((Input)previous)._dropout_rate;
       for( int i = 0; i < previous._a.length; i++ ) {
@@ -238,11 +238,6 @@ public abstract class Neurons extends Iced {
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(boolean training) {
-      if (dropout != null && training) {
-        dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
-      }
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
@@ -261,10 +256,6 @@ public abstract class Neurons extends Iced {
           _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
 
 //          _a[o] = Math.tanh(_a[o]); //slow
-
-          if( !training && dropout != null ) {
-            _a[o] *= .5f;
-          }
         }
       }
     }
@@ -283,7 +274,17 @@ public abstract class Neurons extends Iced {
   public static class TanhDropout extends Tanh {
     public TanhDropout(int units) {
       super(units);
-      dropout = createDropout(units);
+    }
+    @Override
+    protected void fprop(boolean training) {
+      if (training) {
+        if (dropout == null) dropout = createDropout(units);
+        dropout.fillBytes();
+        if (_previous.isInput())
+          dropout.clearSomeInput(_previous);
+      }
+      super.fprop(training);
+      if (!training) Utils.div(_a, 2.f);
     }
   }
 
@@ -341,12 +342,6 @@ public abstract class Neurons extends Iced {
     }
 
     @Override protected void fprop(boolean training) {
-      if (dropout != null && training) {
-        dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
-      }
-
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
@@ -354,10 +349,7 @@ public abstract class Neurons extends Iced {
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] += _w[off+i] * _previous._a[i];
           _a[o] += _b[o];
-          if( _a[o] < 0 )
-            _a[o] = 0;
-          else if( !training && dropout != null )
-            _a[o] *= .5f;
+          _a[o] = Math.max(_a[o], 0);
         }
       }
     }
@@ -389,7 +381,18 @@ public abstract class Neurons extends Iced {
   public static class RectifierDropout extends Rectifier {
     public RectifierDropout(int units) {
       super(units);
-      this.dropout = createDropout(units);
+    }
+
+    @Override
+    protected void fprop(boolean training) {
+      if (training) {
+        if (dropout == null) dropout = createDropout(units);
+        dropout.fillBytes();
+        if (_previous.isInput())
+          dropout.clearSomeInput(_previous);
+      }
+      super.fprop(training);
+      if (!training) Utils.div(_a, 2.f);
     }
   }
 

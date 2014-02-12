@@ -211,7 +211,7 @@ public class NN extends Job.ValidatedJob {
   public void initModel() {
     checkParams();
     logStart();
-    NN.RNG.seed.set(seed);
+    NN.RNG.seed = new AtomicLong(seed);
 
     // Lock the input datasets against deletes
     source.read_lock(self());
@@ -222,6 +222,7 @@ public class NN extends Job.ValidatedJob {
       _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true), 1, true);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.delete_and_lock(self());
+    model.model_info().initializeMembers();
     final long[] model_size = model.model_info().size();
     Log.info("Number of model parameters (weights/biases): " + String.format("%g", (double)model_size[0]));
     Log.info("Memory usage of the model: " + String.format("%g", (double)model_size[1] / (1<<20)) + " MB.");
@@ -250,12 +251,12 @@ public class NN extends Job.ValidatedJob {
     do {
       // NNTask trains an internal deep copy of model_info
       NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction).doAll(train);
-      // FOR DEBUGGING ONLY
-      {
-        AutoBuffer bb = new AutoBuffer();
-        nntask.write(bb);
-        Log.info("Size of the (serialized) NNTask: " + String.format("%.3f", (double) bb.buf().length / (1 << 20)) + " MB.");
-      }
+//      // FOR DEBUGGING ONLY
+//      {
+//        AutoBuffer bb = new AutoBuffer();
+//        nntask.write(bb);
+//        Log.info("Size of the (serialized) NNTask: " + String.format("%.3f", (double) bb.buf().length / (1 << 20)) + " MB.");
+//      }
       //need this for next iteration
       model.set_model_info(nntask.model_info());
     } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self())); //diagnostics, msgs, UKV
@@ -273,7 +274,7 @@ public class NN extends Job.ValidatedJob {
   public static class RNG {
     // Atomicity is not really needed here (since in multi-threaded operation, the weights are simultaneously updated),
     // but it is still done for posterity since it's cheap (and to be able to count the number of actual getRNG() calls)
-    public static AtomicLong seed = new AtomicLong(new Random().nextLong());
+    public static AtomicLong seed;
 
     public static Random getRNG() {
       return getDeterRNG(seed.getAndIncrement());

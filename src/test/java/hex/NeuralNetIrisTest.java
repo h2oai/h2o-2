@@ -9,7 +9,6 @@ import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
-import water.UKV;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -18,6 +17,7 @@ import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static hex.Layer.Rectifier;
 import static hex.Layer.Tanh;
@@ -113,10 +113,11 @@ public class NeuralNetIrisTest extends TestUtil {
                 Vec labels = _train.vecs()[_train.vecs().length - 1];
 
                 NeuralNet p = new NeuralNet();
+                p.seed = seed;
+                NeuralNet.RNG.seed = new AtomicLong(seed);
                 p.rate = 0.01;
                 p.activation = activation;
                 p.max_w2 = Double.MAX_VALUE;
-                p.rate = 0.01;
                 p.epochs = 13*17;
                 p.activation = activation;
                 p.input_dropout_ratio = 0;
@@ -128,14 +129,21 @@ public class NeuralNetIrisTest extends TestUtil {
                 p.momentum_stable = 0;
                 p.initial_weight_distribution = dist;
                 p.initial_weight_scale = scale;
+                p.diagnostics = true;
 
                 Layer[] ls = new Layer[3];
                 ls[0] = new VecsInput(data, null);
                 if (activation == NeuralNet.Activation.Tanh) {
                   ls[1] = new Tanh(7);
                 }
+                else if (activation == NeuralNet.Activation.TanhWithDropout) {
+                  ls[1] = new Layer.TanhDropout(7);
+                }
                 else if (activation == NeuralNet.Activation.Rectifier) {
                   ls[1] = new Rectifier(7);
+                }
+                else if (activation == NeuralNet.Activation.RectifierWithDropout) {
+                  ls[1] = new Layer.RectifierDropout(7);
                 }
                 ls[2] = new VecSoftmax(labels, null, loss);
 
@@ -146,19 +154,28 @@ public class NeuralNetIrisTest extends TestUtil {
                 // use the same random weights for the reference implementation
                 Layer l = ls[1];
                 for( int o = 0; o < l._a.length; o++ ) {
-                  for( int i = 0; i < l._previous._a.length; i++ )
+                  for( int i = 0; i < l._previous._a.length; i++ ) {
+//                    System.out.println("initial weight[" + o + "]=" + l._w[o * l._previous._a.length + i]);
                     ref._nn.ihWeights[i][o] = l._w[o * l._previous._a.length + i];
+                  }
                   ref._nn.hBiases[o] = l._b[o];
+//                  System.out.println("initial bias[" + o + "]=" + l._b[o]);
                 }
                 l = ls[2];
                 for( int o = 0; o < l._a.length; o++ ) {
-                  for( int i = 0; i < l._previous._a.length; i++ )
+                  for( int i = 0; i < l._previous._a.length; i++ ) {
+//                    System.out.println("initial weight[" + o + "]=" + l._w[o * l._previous._a.length + i]);
                     ref._nn.hoWeights[i][o] = l._w[o * l._previous._a.length + i];
+                  }
                   ref._nn.oBiases[o] = l._b[o];
+//                  System.out.println("initial bias[" + o + "]=" + l._b[o]);
                 }
 
                 // Reference
                 ref.train((int)p.epochs, p.rate, loss);
+
+                // reset the seed - start again at seed and increment for each chunk offset (here only needed once, for offset 0) - (RNG used for dropout only)
+                NeuralNet.RNG.seed = new AtomicLong(seed);
 
                 // H2O
                 if (trainer == NeuralNet.ExecutionMode.SingleThread) {
@@ -168,7 +185,6 @@ public class NeuralNetIrisTest extends TestUtil {
                 } else {
                   new Trainer.MapReduce(ls, p.epochs, null).run();
                 }
-
 
                 // tiny absolute and relative tolerances for single threaded mode
                 double abseps = 1e-15;
@@ -183,6 +199,7 @@ public class NeuralNetIrisTest extends TestUtil {
                     double b = l._w[o * l._previous._a.length + i];
                     if (trainer == NeuralNet.ExecutionMode.SingleThread) {
                       compareVal(a, b, abseps, releps);
+//                      System.out.println("weight[" + o + "]=" + b);
                     } else {
                       weight_mse += (a-b) * (a-b);
                     }

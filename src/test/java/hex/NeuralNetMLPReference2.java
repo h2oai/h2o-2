@@ -520,9 +520,9 @@ public class NeuralNetMLPReference2 {
 
       for( int i = 0; i < numHidden; ++i )
         // apply activation
-        if (activation == NN.Activation.Tanh) {
+        if (activation == NN.Activation.Tanh || activation == NN.Activation.TanhWithDropout) {
           hOutputs[i] = HyperTanFunction(hSums[i]);
-        } else if (activation == NN.Activation.Rectifier) {
+        } else if (activation == NN.Activation.Rectifier || activation == NN.Activation.RectifierWithDropout) {
           hOutputs[i] = Rectifier(hSums[i]);
         } else throw new RuntimeException("invalid activation.");
 
@@ -599,9 +599,9 @@ public class NeuralNetMLPReference2 {
       // 2. compute hidden gradients
       for( int i = 0; i < hGrads.length; ++i ) {
         double derivative = 1;
-        if (activation == NN.Activation.Tanh) {
+        if (activation == NN.Activation.Tanh || activation == NN.Activation.TanhWithDropout) {
           derivative = (1 - hOutputs[i]) * (1 + hOutputs[i]); // derivative of tanh (y) = (1 - y) * (1 + y)
-        } else if (activation == NN.Activation.Rectifier) {
+        } else if (activation == NN.Activation.Rectifier || activation == NN.Activation.RectifierWithDropout) {
           derivative = hOutputs[i] <= 0 ? 0 : 1;
         } else throw new RuntimeException("invalid activation.");
 
