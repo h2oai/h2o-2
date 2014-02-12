@@ -308,7 +308,7 @@ public class ConfusionTask extends MRTask {
   }
 
   /** Reduction combines the confusion matrices. */
-  public void reduce(DRemoteTask drt) {
+  @Override public void reduce(DRemoteTask drt) {
     ConfusionTask C = (ConfusionTask) drt;
     if (_matrix == null) {
       _matrix = C._matrix;
