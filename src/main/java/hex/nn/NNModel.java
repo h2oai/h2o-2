@@ -382,7 +382,7 @@ public class NNModel extends Model {
     errors[0].validation = (params.validation != null);
   }
 
-  transient long _timeLastScoreStart, _timeLastPrint;
+  transient long _now, _timeLastScoreStart, _sinceLastScore;
   /**
    *
    * @param ftrain potentially downsampled training data for scoring
@@ -395,24 +395,16 @@ public class NNModel extends Model {
     epoch_counter = (float)model_info().get_processed_total()/data_info._adaptedFrame.numRows();
     run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().parameters.epochs);
-    final long now = System.currentTimeMillis();
-    final long sinceLastScore = now-_timeLastScoreStart;
-    final long sinceLastPrint = now-_timeLastPrint;
-    if( (sinceLastPrint > 5000) ) {
-      final long samples = model_info().get_processed_total();
-      Log.info("Training time: " + PrettyPrint.msecs(now - timeStart, true)
-              + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", (double)samples/((now - timeStart)/1000.)) + " samples/sec.");
-      _timeLastPrint = now;
-    }
+    _now = System.currentTimeMillis();
+    _sinceLastScore = _now-_timeLastScoreStart;
     // this is potentially slow - only do every so often
-    if( !keep_running || (now-timeStart < 30000) // Score every time for first 30 seconds
-            || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
-      _timeLastScoreStart = now;
+    if( !keep_running || (_now-timeStart < 30000) // Score every time for first 30 seconds
+            || (_sinceLastScore > model_info().parameters.score_interval*1000) ) {
+      _timeLastScoreStart = _now;
       boolean printCM = false;
       // compute errors
       Errors err = new Errors();
-      err.training_time_ms = now - timeStart;
+      err.training_time_ms = _now - timeStart;
       err.epoch_counter = epoch_counter;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
@@ -433,7 +425,8 @@ public class NNModel extends Model {
       }
       // compute stats
       if (model_info().parameters.diagnostics) model_info.computeStats();
-      Log.info("scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
+      Log.info("scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
+
       // print the model to ASCII
       for (String s : toString().split("\n")) Log.info(s);
     }
@@ -452,6 +445,10 @@ public class NNModel extends Model {
     StringBuilder sb = new StringBuilder();
 //    sb.append(super.toString());
 //    sb.append("\n"+data_info.toString()); //not implemented yet
+    final long samples = model_info().get_processed_total();
+    Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
+            + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+            + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     sb.append(model_info.toString());
     sb.append(errors[errors.length-1].toString());
 //    sb.append("\nrun time: " + PrettyPrint.msecs(run_time, true));
