@@ -4,11 +4,27 @@ import java.util.Arrays;
 
 import water.*;
 import water.fvec.*;
-import water.util.Log;
 import water.util.Utils;
 
 /**
  *  Compare two categorical columns, reporting a grid of co-occurrences.
+ *
+ *  <p>The semantics follows R-approach - see R code:
+ *  <pre>
+ *  > l = c("A", "B", "C")
+ *  > a = factor(c("A", "B", "C"), levels=l)
+ *  > b = factor(c("A", "B", "A"), levels=l)
+ *  > confusionMatrix(a,b)
+ *
+ *            Reference
+ * Prediction A B C
+ *          A 1 0 0
+ *          B 0 1 0
+ *          C 1 0 0
+ *  </pre></p>
+ *
+ *  <p>Note: By default we report zero rows and columns.</p>
+ *
  *  @author cliffc
  */
 public class ConfusionMatrix extends Request2 {
@@ -101,9 +117,9 @@ public class ConfusionMatrix extends Request2 {
   }
 
   public static String[] show( long xs[], String ds[] ) {
-    String ss[] = new String[xs.length];
+    String ss[] = new String[xs.length]; // the same length
     for( int i=0; i<ds.length; i++ )
-      if( xs[i] > 0 || (ds[i] != null && ds[i].length() > 0) && !Integer.toString(i).equals(ds[i]) )
+      if( xs[i] >= 0 || (ds[i] != null && ds[i].length() > 0) && !Integer.toString(i).equals(ds[i]) )
         ss[i] = ds[i];
     if( xs[xs.length-1] > 0 )
       ss[xs.length-1] = "NA";
@@ -124,6 +140,7 @@ public class ConfusionMatrix extends Request2 {
 
     String adomain[] = show(acts , domain);
     String pdomain[] = show(preds, domain);
+    assert adomain.length == pdomain.length : "The confusion matrix should have the same length for both directions.";
 
     DocGen.HTML.arrayHead(sb);
     // Top row of CM

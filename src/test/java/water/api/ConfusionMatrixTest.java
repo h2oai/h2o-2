@@ -186,12 +186,10 @@ public class ConfusionMatrixTest extends TestUtil {
    * vector references only a subset of domain (1~B, 2~C). The TransfVec was using minimum from
    * vector (i.e., value 1) to compute transformation but minimum was wrong since it should be 0. */
   @Test public void testBadModelPrect() {
-    Frame v1 = null, v2 = null;
-    try {
-      v1 = frame("v1", vec(ar("A","B","C"), ari(0,0,1,1,2) ));
-      v2 = frame("v2", vec(ar("A","B","C"), ari(1,1,2,2,2) ));
-      ConfusionMatrix cm = computeCM(v1, v2);
-      assertCMEqual(
+
+      simpleCMTest(
+          frame("v1", vec(ar("A","B","C"), ari(0,0,1,1,2) )),
+          frame("v2", vec(ar("A","B","C"), ari(1,1,2,2,2) )),
           ar("A","B","C"),
           ar("A","B","C"),
           ar("A","B","C"),
@@ -200,20 +198,58 @@ public class ConfusionMatrixTest extends TestUtil {
               ar(0L, 0L, 1L, 0L),
               ar(0L, 0L, 0L, 0L)
               ),
-          cm);
+          false);
 
-    } finally {
-      if (v1 != null) v1.delete();
-      if (v2 != null) v2.delete();
-    }
+      simpleCMTest(
+          frame("v1", vec(ar("B","C"), ari(0,0,1,1) )),
+          frame("v2", vec(ar("A","B"), ari(1,1,0,0) )),
+          ar("B","C"),
+          ar("A","B"),
+          ar("A","B","C"),
+          ar( ar(0L, 0L, 0L, 0L),
+              ar(0L, 2L, 0L, 0L),
+              ar(2L, 0L, 0L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          false);
+  }
+
+  @Test public void testBadModelPrect2() {
+      simpleCMTest(
+          frame("v1", vec(ari(-1,-1,0,0,1) )),
+          frame("v2", vec(ari( 0, 0,1,1,1) )),
+          ar("-1","0","1"),
+          ar("0","1"),
+          ar("-1","0","1"),
+          ar( ar(0L, 2L, 0L, 0L),
+              ar(0L, 0L, 2L, 0L),
+              ar(0L, 0L, 1L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          false);
+
+      simpleCMTest(
+          frame("v1", vec(ari(-1,-1,0,0) )),
+          frame("v2", vec(ari( 1, 1,0,0) )),
+          ar("-1","0"),
+          ar("0","1"),
+          ar("-1","0","1"),
+          ar( ar(0L, 0L, 2L, 0L),
+              ar(0L, 2L, 0L, 0L),
+              ar(0L, 0L, 0L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          false);
   }
 
 
   private void simpleCMTest(String f1, String f2, String[] expectedActualDomain, String[] expectedPredictDomain, String[] expectedDomain, long[][] expectedCM, boolean debug) {
-    Frame v1 = null, v2 = null;
+    simpleCMTest(parseFrame(Key.make("v1.hex"), find_test_file(f1)), parseFrame(Key.make("v2.hex"), find_test_file(f2)), expectedActualDomain, expectedPredictDomain, expectedDomain, expectedCM, debug);
+  }
+
+  /** Delete v1, v2 after processing. */
+  private void simpleCMTest(Frame v1, Frame v2, String[] expectedActualDomain, String[] expectedPredictDomain, String[] expectedDomain, long[][] expectedCM, boolean debug) {
     try {
-      v1 = parseFrame(Key.make("v1.hex"), find_test_file(f1));
-      v2 = parseFrame(Key.make("v2.hex"), find_test_file(f2));
       ConfusionMatrix cm = computeCM(v1, v2);
       // -- DEBUG --
       if (debug) {
