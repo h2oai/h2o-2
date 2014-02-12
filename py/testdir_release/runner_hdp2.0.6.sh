@@ -23,8 +23,8 @@ mkdir -p sandbox
 # now resource manager is at 8050?
 HDP_JOBTRACKER=192.168.1.154:8050
 
-HDP_NODES=4
-HDP_HEAP=20g
+HDP_NODES=2
+HDP_HEAP=5g
 HDP_JAR=h2odriver_hdp2.0.6.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
