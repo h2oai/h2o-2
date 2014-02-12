@@ -2,7 +2,6 @@ package hex.nn;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import hex.rng.H2ORandomRNG;
 import water.*;
 import water.api.DocGen;
 import water.api.NNProgressPage;
@@ -10,7 +9,6 @@ import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
-import water.util.Utils;
 
 import java.util.Random;
 
@@ -188,8 +186,6 @@ public class NN extends Job.ValidatedJob {
   @Override public Status exec() {
     initModel();
     buildModel();
-    if( _gen_enum ) UKV.remove(response._key);
-    remove();
     return Status.Done;
   }
 
@@ -206,12 +202,17 @@ public class NN extends Job.ValidatedJob {
       Log.warn("Setting sync_samples to 0 for single-node operation.");
       sync_samples = 0;
     }
+    // make default job_key and destination_key in case they are missing
+    if (dest() == null) destination_key = Key.make("NN_model");
+    if (self() == null) {
+      job_key = Key.make("NN_job");
+      DKV.put(self(), new Value(self(), new byte[0]), null);
+    }
   }
 
   public void initModel() {
     checkParams();
     logStart();
-    Utils.setUsedRNGKind(H2ORandomRNG.RNGKind.value("deter"));
 
     // Lock the input datasets against deletes
     source.read_lock(self());
@@ -266,6 +267,8 @@ public class NN extends Job.ValidatedJob {
     model.unlock(self());
     if (validScoreFrame != null && validScoreFrame != adapted[0]) validScoreFrame.delete();
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
+    if( _gen_enum ) UKV.remove(response._key);
+    UKV.remove(self());
     Log.info("Neural Net training finished.");
     return model;
   }

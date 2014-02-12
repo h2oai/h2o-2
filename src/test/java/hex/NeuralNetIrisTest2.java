@@ -129,8 +129,6 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
                         ref.init(activation, Utils.getDeterRNG(seed), holdout_ratio, hidden);
 
-                        p.job_key = Key.make("iris_test.job");
-                        p.destination_key = Key.make("iris_test.model");
                         p.seed = seed;
                         p.hidden = new int[]{hidden};
                         p.rate = rate / (1 - momentum); //adapt to (1-m) correction that's done inside (only for constant momentum!)
@@ -153,9 +151,6 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.fast_mode = false; //to be the same as reference
 //                      p.fast_mode = true; //to be the same as old NeuralNet code
                         p.sync_samples = 100000; //sync once per period
-
-                        DKV.put(p.job_key, new Value(p.job_key, new byte[0]), null);
-
                         p.initModel(); //randomize weights, but don't start training yet
 
                         NNModel mymodel = UKV.get(p.dest());
@@ -278,7 +273,6 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         _test.delete();
                         frame.delete();
                         fr.delete();
-                        UKV.remove(p.job_key);
 
                         num_runs++;
                         Log.info("Parameters combination " + num_runs + ": PASS");
