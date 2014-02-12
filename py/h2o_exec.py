@@ -165,7 +165,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
 
         if keyX:
             inspect = h2o_cmd.runInspect(key=keyX)
-            print "\ns.hex" \
+            print keyX, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
 
