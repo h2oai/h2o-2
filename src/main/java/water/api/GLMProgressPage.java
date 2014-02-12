@@ -294,7 +294,9 @@ public class GLMProgressPage extends Request {
         R.replace("CM",R2);
       }
       sb.append(R);
-      ROCplot(val, sb);
+      if (val._cm != null && val._fprs != null && val._tprs != null) {
+        ROCplot(val, sb);
+      }
       confusionHTML(val.bestCM(),sb);
       if(val.fold() > 1){
         int nclasses = 2;
