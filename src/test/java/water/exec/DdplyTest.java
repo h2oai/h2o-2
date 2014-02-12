@@ -16,9 +16,14 @@ public class DdplyTest extends TestUtil {
   // nodes with multiple groups, to test that all generated groups are both
   // built and executed distributed.
   /*@Test*/ public void testDdplyBig() {
+    Key k0 = Key.make("cars.hex");
     Key k1 = Key.make("orange.hex");
     Key k2 = Key.make("covtype.hex");
     try {
+      Frame fr0 = parseFrame(k0,"smalldata/cars.csv");
+      System.out.println(fr0);
+      checkStr("ddply(cars.hex,c(3),sum)");
+
       // A big enough file to distribute across multiple nodes.
       Frame fr1 = parseFrame(k1,"smalldata/unbalanced/orange_small_train.data.zip");
       System.out.println(fr1);
@@ -29,6 +34,7 @@ public class DdplyTest extends TestUtil {
       checkStr("ddply(covtype.hex,c(11),sum)");
 
     } finally {
+      Lockable.delete(k0);    // Remove original hex frame key
       Lockable.delete(k1);    // Remove original hex frame key
       Lockable.delete(k2);    // Remove original hex frame key
     }
