@@ -240,6 +240,25 @@ public class ConfusionMatrixTest extends TestUtil {
               ar(0L, 0L, 0L, 0L)
               ),
           false);
+
+      // The case found by Nidhi on modified covtype dataset
+      simpleCMTest(
+          frame("v1", vec(ari( 1, 2, 3, 4, 5, 6,  7) )),
+          frame("v2", vec(ari( 1, 2, 3, 4, 5, 6, -1) )),
+          ar(      "1","2","3","4","5","6","7"),
+          ar("-1", "1","2","3","4","5","6"),
+          ar("-1", "1","2","3","4","5","6","7"),
+          ar( ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "-1"
+              ar( 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "1"
+              ar( 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L), // "2"
+              ar( 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L), // "3"
+              ar( 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L), // "4"
+              ar( 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L), // "5"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L), // "6"
+              ar( 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "7"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
+              ),
+          false);
   }
 
 
