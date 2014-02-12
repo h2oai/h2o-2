@@ -413,7 +413,7 @@ public final class Gram extends Iced {
       _hasIntercept = hasIntercept;
       _isWeighted = isWeighted;
     }
-    @Override protected void chunkInit(){
+    @Override protected void chunkInit(long ignored){
       _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,_hasIntercept);
       final int responses = _dinfo._responses - (_isWeighted?1:0);
       if(responses > 0){

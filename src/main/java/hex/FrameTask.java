@@ -22,6 +22,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   // size of the expanded vector of parameters
 
   protected float _useFraction;
+  protected long _seed;
 
   public FrameTask(Job job, DataInfo dinfo) {
     this(job,dinfo,null);
@@ -31,11 +32,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     _job = job;
     _dinfo = dinfo;
     _useFraction=1.0f;
+    _seed=new Random().nextLong();
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
     _job = ft._job;
-    _useFraction=ft._useFraction;
+    _useFraction = ft._useFraction;
+    _seed = ft._seed;
   }
   public double [] normMul(){return _dinfo._normMul;}
   public double [] normSub(){return _dinfo._normSub;}
@@ -220,7 +223,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   /**
    * Override this to initialize at the beginning of chunk processing.
    */
-  protected void chunkInit(){}
+  protected void chunkInit(long offset){}
   /**
    * Override this to do post-chunk processing work.
    */
@@ -234,7 +237,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
     if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     final int nrows = chunks[0]._len;
-    chunkInit();
+    final long offset = chunks[0]._start;
+    chunkInit(offset);
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);
@@ -244,17 +248,17 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     boolean contiguous = false;
     Random _random = null;
     if (_useFraction < 1.0) {
+      _random = water.util.Utils.getDeterRNG(_seed + chunks[0]._start);
       if (contiguous) {
         final int howmany = (int)Math.ceil(_useFraction*nrows);
         if (howmany > 0) {
-          start = new Random().nextInt(nrows - howmany);
+          start = _random.nextInt(nrows - howmany);
           end = start + howmany;
         }
         assert(start < nrows);
         assert(end <= nrows);
       }
       else {
-        _random = water.util.Utils.getDeterRNG(new Random().nextLong());
         start = 0;
         end = nrows;
       }
