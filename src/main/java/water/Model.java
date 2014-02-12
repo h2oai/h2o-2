@@ -242,7 +242,7 @@ public abstract class Model extends Lockable<Model> {
       if(map[c] != null) { // Column needs adaptation
         Vec adaptedVec = null;
         if (toEnum[c]) { // Vector was flipped to column already, compose transformation
-          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], false );
+          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], vfr.domains()[c], false);
         } else adaptedVec = frvecs[c].makeTransf(map[c]);
         avecs.add(frvecs[c] = adaptedVec);
         anames.add(names[c]); // Collect right names
