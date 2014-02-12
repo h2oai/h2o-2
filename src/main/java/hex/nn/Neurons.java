@@ -262,7 +262,7 @@ public abstract class Neurons extends Iced {
     @Override protected void bprop() {
       long processed = _minfo.get_processed_total();
       double m = momentum(processed);
-      double r = rate(processed);// * (1 - m);
+      double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
         double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-x^2
@@ -324,7 +324,7 @@ public abstract class Neurons extends Iced {
     @Override protected void bprop() {
       long processed = _minfo.get_processed_total();
       double m = momentum(processed);
-      double r = rate(processed);// * (1 - m);
+      double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         double g = _e[u];
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
@@ -357,7 +357,7 @@ public abstract class Neurons extends Iced {
     @Override protected void bprop() {
       long processed = _minfo.get_processed_total();
       final double m = momentum(processed);
-      final double r = rate(processed);// * (1 - m);
+      final double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
 
@@ -438,7 +438,7 @@ public abstract class Neurons extends Iced {
     protected void bprop(int target) {
       long processed = _minfo.get_processed_total();
       double m = momentum(processed);
-      double r = rate(processed);// * (1 - m);
+      double r = rate(processed) * (1 - m);
 //      if (target == missing_int_value) return; //ignore missing response values
       for( int u = 0; u < _a.length; u++ ) {
         final double targetval = (u == target ? 1 : 0);
@@ -467,7 +467,7 @@ public abstract class Neurons extends Iced {
     protected void bprop(double target) {
       long processed = _minfo.get_processed_total();
       double m = momentum(processed);
-      double r = rate(processed);// * (1 - m);
+      double r = rate(processed) * (1 - m);
       assert(loss == Loss.MeanSquare);
       int u = 0;
 //      if (target == missing_double_value) return;
