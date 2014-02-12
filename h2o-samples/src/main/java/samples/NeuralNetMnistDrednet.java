@@ -21,7 +21,7 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
 
   @Override protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[5];
-    ls[0] = new VecsInput(data, inputStats, 0.2);
+    ls[0] = new VecsInput(data, inputStats);
     ls[1] = new Layer.RectifierDropout(1024);
     ls[2] = new Layer.RectifierDropout(1024);
     ls[3] = new Layer.RectifierDropout(2048);
@@ -32,6 +32,7 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     p.rate_annealing = 1e-6f;
     p.epochs = 1000;
     p.activation = NeuralNet.Activation.RectifierWithDropout;
+    p.input_dropout_ratio = 0.2;
     p.max_w2 = 15;
     p.momentum_start = 0.5f;
     p.momentum_ramp = 1800000;

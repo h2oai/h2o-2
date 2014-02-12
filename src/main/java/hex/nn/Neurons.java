@@ -73,7 +73,7 @@ public abstract class Neurons extends Iced {
     // for input layer
     private void clearSomeInput(Neurons previous) {
       assert(previous.isInput());
-      final double rate = ((Input)previous)._dropout_rate;
+      final double rate = ((Input)previous).params.input_dropout_ratio;
       for( int i = 0; i < previous._a.length; i++ ) {
         if (_rand.nextFloat() < rate) previous._a[i] = 0;
       }
@@ -207,10 +207,6 @@ public abstract class Neurons extends Iced {
     @Override protected boolean isInput() {
       return true;
     }
-
-    @API(help = "Dropout rate for the input layer")
-    double _dropout_rate;
-
 
     public void setInput(final double[] data) {
       assert(_dinfo != null);

@@ -233,7 +233,7 @@ public class NeuralNet extends ValidatedJob {
     final Vec trainResp = classification ? response.toEnum() : response;
 
     final Layer[] ls = new Layer[hidden.length + 2];
-    ls[0] = new VecsInput(train, null, input_dropout_ratio);
+    ls[0] = new VecsInput(train, null);
     for( int i = 0; i < hidden.length; i++ ) {
       switch( activation ) {
         case Tanh:

@@ -76,7 +76,7 @@ public abstract class Layer extends Iced {
     // for input layer
     private void clearSomeInput(Layer previous) {
       assert(previous.isInput());
-      final double rate = ((Input)previous)._dropout_rate;
+      final double rate = ((Input)previous).params.input_dropout_ratio;
       for( int i = 0; i < previous._a.length; i++ ) {
         if (_rand.nextFloat() < rate) previous._a[i] = 0;
       }
@@ -252,9 +252,6 @@ public abstract class Layer extends Iced {
       return true;
     }
 
-    @API(help = "Dropout rate for the input layer")
-    double _dropout_rate;
-
     public final long move() {
       return _pos = _pos == _len - 1 ? 0 : _pos + 1;
     }
@@ -285,11 +282,6 @@ public abstract class Layer extends Iced {
       if( o._chunks != null )
         o._chunks = new Chunk[o._chunks.length];
       return o;
-    }
-
-    public VecsInput(Vec[] vecs, VecsInput train, double dropout_rate) {
-      _dropout_rate = dropout_rate;
-      Init(vecs, train);
     }
 
     public VecsInput(Vec[] vecs, VecsInput train) {
@@ -899,7 +891,6 @@ public abstract class Layer extends Iced {
     @Override
     protected void fprop(boolean training) {
       if (training) {
-        assert(dropout != null);
         dropout.fillBytes();
         if (_previous.isInput())
           dropout.clearSomeInput(_previous);
