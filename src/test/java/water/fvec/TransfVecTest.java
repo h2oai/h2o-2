@@ -53,6 +53,11 @@ public class TransfVecTest extends TestUtil {
 
   @Test public void testMappingComposition() {
     assertEqualMapping(
+                 ar( ari(1), ari(0)),          // expecting composed mapping
+      Utils.compose( ar( ari(-1,1), null),     // <- 1st mapping
+                     ar( ari( 1,2), ari(0,1))) // <- 2nd mapping
+        );
+    assertEqualMapping(
                      ar( ari(1,2,3,4,5,6), ari(0,1,2,3,4,5)),     // expecting composed mapping
       Utils.compose( ar( ari(-1,1,2,3,4,5,6), null),              // <- 1st mapping
                      ar( ari(1,2,3,4,5,6),    ari(0,1,2,3,4,5)))  // <- 2nd mapping
