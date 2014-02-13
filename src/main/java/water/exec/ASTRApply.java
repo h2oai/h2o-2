@@ -202,22 +202,21 @@ class ASTddply extends ASTOp {
     // Send each group to some remote node for execution
     int csz = H2O.CLOUD.size();
     Futures fs = new Futures();
-    Frame frs[] = new Frame[p1._groups.size()];
     int grpnum=0; // vecs[] iteration order exactly matches p1._groups.keySet()
     for( Group g : p1._groups.keySet() ) {
-      Vec rows = vecs[grpnum]; // Rows for this Vec
+      // vecs[] iteration order exactly matches p1._grpoups.keySet()
+      Vec rows = vecs[grpnum++]; // Rows for this Vec
       Vec[] data = fr.vecs();    // Full data columns
       Vec[] gvecs = new Vec[data.length];
       Key[] keys = rows.group().addVecs(data.length);
       for( int c=0; c<data.length; c++ )
         gvecs[c] = new SubsetVec(rows._key,data[c]._key,keys[c],rows._espc);
-      Frame fg = frs[grpnum++] = new Frame(fr._names,gvecs);
+      Frame fg = new Frame(fr._names,gvecs);
       // Non-blocking, send a group to a remote node for execution
-      fs.add(RPC.call(H2O.CLOUD._memary[g.hashCode()%csz],new RemoteExec(g._ds,fg)));
+      fs.add(RPC.call(H2O.CLOUD._memary[g.hashCode()%csz],new RemoteExec(g._ds,fg,op,env)));
     }
     fs.blockForPending();
 
-    for( Frame fr2 : frs ) fr2.delete();
     for( Vec v : vecs ) UKV.remove(v._key);
 
     env.pop(4);
@@ -416,11 +415,28 @@ class ASTddply extends ASTOp {
   }
 
   private static class RemoteExec extends DTask<RemoteExec> implements Freezable {
-    final public double _ds[];
-    final public Frame _fr;
-    RemoteExec( double ds[], Frame fr ) { _ds=ds; _fr=fr; }
+    // INS
+    public double _ds[];
+    public Frame _fr;
+    public ASTOp _op;
+    public Env _env;
+    RemoteExec( double ds[], Frame fr, ASTOp op, Env env ) { _ds=ds; _fr=fr; _op=op; _env=env; }
     @Override public void compute2() {
-      System.out.println("ddply on group "+Arrays.toString(_ds)+" rows="+_fr.numRows());
+      System.out.println("ddply on group "+Arrays.toString(_ds)+" rows="+_fr.numRows()+", env="+_env+", op="+_op);
+      
+      // Clone a private copy of the environment for local execution
+      _env = _env.capture(true);
+
+      _env.push(_op);
+      _env.push(_fr);
+      _op.apply(_env,2/*1-arg function*/);
+      System.out.println("ddply on group "+Arrays.toString(_ds)+", env="+_env);
+      
+      _fr.delete();
+      _fr = null;
+      _ds = null;
+      _op = null;
+      _env= null;
       tryComplete();
     }
   }

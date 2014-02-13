@@ -204,8 +204,8 @@ public class Env extends Iced {
   public void poppush(double d) { pop(); push(d); }
 
   // Capture the current environment & return it (for some closure's future execution).
-  Env capture( ) { return new Env(this); }
-  private Env( Env e ) {
+  Env capture( boolean cntrefs ) { return new Env(this,cntrefs); }
+  private Env( Env e, boolean cntrefs ) {
     _sp = e._sp;
     _key= Arrays.copyOf(e._key,_sp);
     _ary= Arrays.copyOf(e._ary,_sp);
@@ -214,7 +214,7 @@ public class Env extends Iced {
     _tod= e._tod;
     _display = Arrays.copyOf(e._display,_tod+1);
     // All other fields are ignored/zero
-    _refcnt = null;
+    _refcnt = cntrefs ? new HashMap<Vec,Integer>() : null;
     _sb = null;
     _locked = null;
   }
