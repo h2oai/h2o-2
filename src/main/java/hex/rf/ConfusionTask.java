@@ -562,26 +562,17 @@ public class ConfusionTask extends MRTask {
     int rows = votes.length;
     int validation_rows = 0;
     int cmin = (int) _data._cols[_classcol]._min;
-
+    int[] ties = new int[_N];
     // Assemble the votes-per-class into predictions & score each row
-    cm._matrix = new long[_N][_N]; // Make an empty confusion matrix for this chunk
-    for( int i = 0; i < rows; i++ ) {
-      int[] vi = votes[i];
-      if(_classWt != null )
+    cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
+    for( int row = 0; row < rows; row++ ) { // Iterate over rows
+      int[] vi = votes[row];                // Votes for i-th row
+      if(_classWt != null )                 // Apply class weights
         for( int v = 0; v<_N; v++) vi[v] = (int)(vi[v]*_classWt[v]);
-      int result = 0, tied = 1;
-      for( int l = 1; l<_N; l++)
-        if( vi[l] > vi[result] ) { result=l; tied=1; }
-        else if( vi[l] == vi[result] ) { tied++; }
-      if( vi[result]==0 ) { cm._skippedRows++; continue; }// Ignore rows with zero votes
-      if( tied>1 ) {                // Tie-breaker logic
-        int j = _rand.nextInt(tied);
-        int k = 0;
-        for( int l=0; l<_N; l++ )
-          if( vi[l]==vi[result] && (k++ >= j) )  // From zero to number of tied classes-1
-            { result = l; break; }
-      }
-      int cclass = alignDataIdx((int) _data.data(bits, i, _classcol) - cmin);
+      int result = Model.getPrediction(vi, ties, row); // Share logic to get a prediction for classifiers (solve ties)
+      if( vi[result]==0 ) { cm._skippedRows++; System.err.println("@@ Skipped row (no row vote) i=" + row + " result =" + result); continue; }// Ignore rows with zero votes
+
+      int cclass = alignDataIdx((int) _data.data(bits, row, _classcol) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;
