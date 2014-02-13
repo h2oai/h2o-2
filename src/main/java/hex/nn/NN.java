@@ -2,16 +2,21 @@ package hex.nn;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
+import junit.framework.Assert;
+import org.junit.Test;
 import water.*;
 import water.api.DocGen;
 import water.api.NNProgressPage;
 import water.api.RequestServer;
 import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
 import water.util.Log;
 import water.util.RString;
 
 import java.util.Random;
 
+import static water.TestUtil.find_test_file;
 import static water.util.MRUtils.sampleFrame;
 
 public class NN extends Job.ValidatedJob {
@@ -20,7 +25,6 @@ public class NN extends Job.ValidatedJob {
   public static final String DOC_GET = "Neural Network";
 
   public DataInfo _dinfo;
-  private boolean _gen_enum;
 
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
@@ -269,10 +273,60 @@ public class NN extends Job.ValidatedJob {
     model.unlock(self());
     if (validScoreFrame != null && validScoreFrame != adapted[0]) validScoreFrame.delete();
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
-    if( _gen_enum ) UKV.remove(response._key);
     UKV.remove(self());
     Log.info("Neural Net training finished.");
     return model;
   }
 
+
+  @Test
+  public void test() {
+    Key file = NFSFileVec.make(find_test_file("smalldata/mnist/test.csv.gz"));
+    Frame fr = ParseDataset2.parse(Key.make("iris_nn2"), new Key[]{file});
+    NN p = new NN();
+    p.hidden = new int[]{128,128,256};
+    p.activation = NN.Activation.RectifierWithDropout;
+    p.input_dropout_ratio = 0.4;
+    p.validation = null;
+    p.source = fr;
+    p.response = fr.lastVec();
+    p.ignored_cols = null;
+
+    DataInfo dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true), 1, true);
+    NNModel.NNModelInfo model_info  = new NNModel.NNModelInfo(p, p.source.numCols()-1, 10);
+    NNTask nnt = new NNTask(dinfo, model_info, true, 1.0f);
+
+    int numcats = 0;
+    int[] cats = null;
+    Neurons[] neurons  = nnt.makeNeuronsForTraining(dinfo, model_info);
+    //dropout training for 100 rows - just to populate the weights/biases a bit
+    for (long row = 0; row < 100; ++row) {
+      double[] nums = new double[dinfo._nums];
+      for (int i=0; i<dinfo._nums; ++i)
+        nums[i] = fr.vecs()[i].at(row); //wrong: get the FIRST 717 columns (instead of the non-const ones), but doesn't matter here (just want SOME numbers)
+      ((Neurons.Input)neurons[0]).setInput(row, nums, 0, cats);
+      final double[] responses = new double[]{fr.vecs()[p.source.numCols()-1].at(row)};
+      nnt.step(row, neurons, model_info, true, responses);
+    }
+
+    // take the trained model_info and build another Neurons[] for testing
+    Neurons[] neurons2 = nnt.makeNeuronsForTesting(dinfo, model_info);
+
+    for (int i=1; i<neurons.length-1; ++i) {
+      Assert.assertEquals(neurons[i]._w, neurons2[i]._w); //same reference (from same model_info)
+      for (int j=0; j<neurons[i]._w.length; ++j)
+        Assert.assertEquals(neurons[i]._w[j], neurons2[i]._w[j]); //same values
+      Assert.assertEquals(neurons[i]._b, neurons2[i]._b); //same reference (from same model_info)
+      for (int j=0; j<neurons[i]._b.length; ++j)
+        Assert.assertEquals(neurons[i]._b[j], neurons2[i]._b[j]); //same values
+      Assert.assertNotSame(neurons[i]._a, neurons2[i]._a); //different activation containers
+      for (int j=0; j<neurons[i]._a.length; ++j)
+        Assert.assertNotSame(neurons[i]._a[j], neurons2[i]._a[j]); //same activation values
+      if (! (neurons[i] instanceof Neurons.Output) ) {
+        Assert.assertNotSame(neurons[i]._e, neurons2[i]._e);
+        for (int j=0; j<neurons[i]._e.length; ++j)
+          Assert.assertEquals(neurons[i]._e[j], neurons2[i]._e[j]);
+      }
+    }
+  }
 }

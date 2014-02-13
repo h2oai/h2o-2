@@ -19,7 +19,7 @@ public class NNTask extends FrameTask<NNTask> {
   int _chunk_node_count = 1;
 
   public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(dinfo,input,training,fraction, null);}
-  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
+  private NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
     super(input.job(),dinfo,cmp);
     _params=input.get_params();
     _training=training;
@@ -39,7 +39,7 @@ public class NNTask extends FrameTask<NNTask> {
   // create local workspace (neurons)
   // and link them to shared weights
   @Override protected void chunkInit(){
-    _neurons = makeNeurons(_dinfo, _output, true);
+    _neurons = makeNeuronsForTraining(_dinfo, _output);
   }
 
   @Override public final void processRow(long row, final double [] nums, final int numcats, final int [] cats, double [] responses){
@@ -65,15 +65,15 @@ public class NNTask extends FrameTask<NNTask> {
     assert(_input == null);
   }
 
-  public static Neurons[] makeNeuronsForTraining(DataInfo dinfo, NNModel.NNModelInfo minfo) {
+  public static Neurons[] makeNeuronsForTraining(final DataInfo dinfo, final NNModel.NNModelInfo minfo) {
     return makeNeurons(dinfo, minfo, true);
   }
-  public static Neurons[] makeNeuronsForTesting(DataInfo dinfo, NNModel.NNModelInfo minfo) {
+  public static Neurons[] makeNeuronsForTesting(final DataInfo dinfo, final NNModel.NNModelInfo minfo) {
     return makeNeurons(dinfo, minfo, false);
   }
 
   // Helper
-  private static Neurons[] makeNeurons(DataInfo dinfo, NNModel.NNModelInfo minfo, boolean training) {
+  private static Neurons[] makeNeurons(final DataInfo dinfo, final NNModel.NNModelInfo minfo, boolean training) {
     final NN params = minfo.get_params();
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output

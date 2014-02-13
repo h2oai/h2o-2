@@ -117,6 +117,11 @@ public class Utils {
     for (float d: from) result += d;
     return result;
   }
+  public static double sum(double[] from) {
+    double result = 0;
+    for (double d: from) result += d;
+    return result;
+  }
 
   public static String sampleToString(int[] val, int max) {
     if (val == null || val.length < max) return Arrays.toString(val);

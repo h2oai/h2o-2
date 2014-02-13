@@ -2,6 +2,7 @@ package hex.nn;
 
 import hex.FrameTask;
 import junit.framework.Assert;
+import org.junit.Test;
 import water.Iced;
 import water.MemoryManager;
 import water.api.DocGen;
@@ -42,6 +43,7 @@ public abstract class Neurons extends Iced {
 
   // Dropout (for input + hidden layers)
   transient Dropout dropout;
+  public final Dropout get_dropout() { return dropout; }
   Neurons(int units) {
     this.units = units;
   }
@@ -59,17 +61,26 @@ public abstract class Neurons extends Iced {
   /**
    * Helper class for dropout, only to be used from within a layer of neurons
    */
-  private static class Dropout {
+  public static class Dropout {
     private transient Random _rand;
     private transient byte[] _bits;
+    private long _seed;
 
-    private Dropout(int units) {
+    public Dropout() {
+    }
+
+    Dropout(int units) {
       _bits = new byte[(units+7)/8];
     }
+
+    public final byte[] get_bits() { return _bits; }
+    public final Random get_rand() { return _rand; }
+    public final long get_seed() { return _seed; }
 
     void setSeed(long seed) {
       if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
       if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+      _seed = seed;
       if (_rand == null) _rand = new Random(seed);
       else _rand.setSeed(seed);
     }
@@ -82,7 +93,7 @@ public abstract class Neurons extends Iced {
     }
 
     // for hidden layers
-    private void fillBytes() {
+    public void fillBytes() {
       Assert.assertTrue("Must call setSeed() first", _rand != null);
       _rand.nextBytes(_bits);
     }
@@ -90,9 +101,42 @@ public abstract class Neurons extends Iced {
     private boolean unit_active(int o) {
       return (_bits[o / 8] & (1 << (o % 8))) != 0;
     }
+
+    @Test public void test() throws Exception {
+      final int units = 1000;
+      double[] a = new double[units];
+      double sum1=0, sum2=0, sum3=0, sum4=0;
+
+      final int loops = 1000;
+      for (int l = 0; l < loops; ++l) {
+        Dropout d = new Dropout(units);
+        d.setSeed(new Random().nextLong());
+        Arrays.fill(a, 1.);
+        d.randomlySparsifyActivation(a, 0.3);
+        sum1 += water.util.Utils.sum(a);
+        Arrays.fill(a, 1.);
+        d.randomlySparsifyActivation(a, 0.0);
+        sum2 += water.util.Utils.sum(a);
+        Arrays.fill(a, 1.);
+        d.randomlySparsifyActivation(a, 1.0);
+        sum3 += water.util.Utils.sum(a);
+        d.fillBytes();
+        for (int i=0; i<units; ++i)
+          if (d.unit_active(i)) sum4++;
+      }
+      sum1 /= loops;
+      sum2 /= loops;
+      sum3 /= loops;
+      sum4 /= loops;
+      Assert.assertTrue(Math.abs(sum1-700)<1);
+      Assert.assertTrue(sum2 == units);
+      Assert.assertTrue(sum3 == 0);
+      Assert.assertTrue(Math.abs(sum4-500)<1);
+    }
   }
 
-  public final void init(Neurons[] neurons, int index, NN p, NNModel.NNModelInfo minfo, boolean training) {
+
+  public final void init(Neurons[] neurons, int index, NN p, final NNModel.NNModelInfo minfo, boolean training) {
     params = (NN)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new double[units];
@@ -197,7 +241,7 @@ public abstract class Neurons extends Iced {
       _a = new double[units];
     }
 
-    Input(int units, FrameTask.DataInfo d) {
+    Input(int units, final FrameTask.DataInfo d) {
       super(units);
       _dinfo = d;
       _numStart = _dinfo.numStart();
@@ -480,12 +524,6 @@ public abstract class Neurons extends Iced {
       g *= (1 - _a[u]) * _a[u];
       bprop(u, g, r, m);
     }
-  }
-
-  @Override public Neurons clone() {
-    Neurons l = (Neurons) super.clone();
-    if (dropout != null) l.dropout = new Dropout(units);
-    return l;
   }
 
 }

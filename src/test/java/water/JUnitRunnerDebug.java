@@ -42,6 +42,8 @@ public class JUnitRunnerDebug {
       // tests = JUnitRunner.all();
 //      tests.add(hex.NeuralNetSpiralsTest.class);
       tests.add(hex.NeuralNetIrisTest2.class);
+      tests.add(hex.nn.Neurons.Dropout.class);
+      tests.add(hex.nn.NN.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}
