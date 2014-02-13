@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 28
+        tryHeap = 20
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
         noPoll = False
@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
-                parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                parseResult = h2i.import_parse(path=importFolderPath + "/" + csvFilepattern,
                     hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
@@ -117,7 +117,7 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        parseResult = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
+                        parseResult = h2i.import_parse(path=importFolderPath + "/" + csvFilepattern,
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
@@ -128,7 +128,7 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                        parseResult = h2i.import_parse(path=importFolderPath + "/" + csvFilepattern,
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
