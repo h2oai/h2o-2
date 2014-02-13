@@ -36,10 +36,11 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_1m_cols(self):
+    def test_parse_65k_cols_01(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10, 65000, 'cH', 30),
+            (10, 63000, 'cH', 100),
+            (10, 65000, 'cH', 100),
             ]
 
         h2b.browseTheCloud()
@@ -78,7 +79,7 @@ class Basic(unittest.TestCase):
             
 
             # we should obey max_column_display
-            column_limits = [25, 25000, 50000]
+            column_limits = [25, 25000]
             for column_limit in column_limits:
                 inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=column_limit, timeoutSecs=timeoutSecs)
                 self.assertEqual(len( inspect['cols'] ) , column_limit, "inspect obeys max_column_display = " + str(column_limit))
