@@ -108,7 +108,7 @@ public class TransfVec extends WrappedVec {
   }
 
   /** Compose this vector with given transformation. Always return a new vector */
-  public Vec compose(int[][] transfMap) { return compose(this, transfMap, true);  }
+  public Vec compose(int[][] transfMap, String[] domain) { return compose(this, transfMap, domain, true);  }
 
   /**
    * Compose given origVector with given transformation. Always returns a new vector.
@@ -118,10 +118,10 @@ public class TransfVec extends WrappedVec {
    * @param keepOrig
    * @return a new instance of {@link TransfVec} composing transformation of origVector and tranfsMap
    */
-  public static Vec compose(TransfVec origVec, int[][] transfMap, boolean keepOrig) {
+  public static Vec compose(TransfVec origVec, int[][] transfMap, String[] domain, boolean keepOrig) {
     // Do a mapping from INT -> ENUM -> this vector ENUM
     int[][] domMap = Utils.compose(new int[][] {origVec._values, origVec._indexes }, transfMap);
-    Vec result = origVec.masterVec().makeTransf(domMap[0], domMap[1], origVec._domain);
+    Vec result = origVec.masterVec().makeTransf(domMap[0], domMap[1], domain);;
     if (!keepOrig) DKV.remove(origVec._key);
     return result;
   }

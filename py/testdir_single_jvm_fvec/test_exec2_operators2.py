@@ -9,6 +9,7 @@ initList = [
         ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
         ('r4.hex', 'r4.hex=c(5.3,0,1,2,3,4,5)'),
         ('r.hex', 'r.hex=i.hex'),
+        ('z.hex', 'z.hex=c(0)'),
         ]
 
 exprListSmall = [
@@ -125,7 +126,7 @@ exprList = []
 for i in range(10):
     expr = ""
     for j in range(1):
-        expr += "z.hex=" + random.choice(exprListSmall) + ";"
+        expr += random.choice(exprListSmall)
     exprList.append(expr)
         
 
@@ -156,7 +157,7 @@ class Basic(unittest.TestCase):
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r0.hex', maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

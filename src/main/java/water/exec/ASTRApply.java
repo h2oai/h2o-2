@@ -194,27 +194,30 @@ class ASTddply extends ASTOp {
     // Pass 2: Build Groups.
     // Wrap Vec headers around all the local row-counts.
     ddplyPass2 p2 = new ddplyPass2(p1).invokeOnAllNodes();
+    // vecs[] iteration order exactly matches p1._grpoups.keySet()
     Vec vecs[] = p2.close();
-    // Wrap Frames around the Vecs, that mimic the original Frame but using a subset of rows
     
-
-    int i=0;
-    for( Group g : p1._groups.keySet() ) {
-      long row = vecs[i].at8(0);
-      System.out.println("Group "+g+", rows="+vecs[i]+", orig_row0="+row+", row="+fr.toString(row));
-      i++;
-    }
-
     // Pass 3: Send Groups 'round the cluster
-    // Single-threaded per-group work
+    // Single-threaded per-group work.
     // Send each group to some remote node for execution
     int csz = H2O.CLOUD.size();
     Futures fs = new Futures();
-    for( Group g : p1._groups.keySet() )
+    Frame frs[] = new Frame[p1._groups.size()];
+    int grpnum=0; // vecs[] iteration order exactly matches p1._groups.keySet()
+    for( Group g : p1._groups.keySet() ) {
+      Vec rows = vecs[grpnum]; // Rows for this Vec
+      Vec[] data = fr.vecs();    // Full data columns
+      Vec[] gvecs = new Vec[data.length];
+      Key[] keys = rows.group().addVecs(data.length);
+      for( int c=0; c<data.length; c++ )
+        gvecs[c] = new SubsetVec(rows._key,data[c]._key,keys[c],rows._espc);
+      Frame fg = frs[grpnum++] = new Frame(fr._names,gvecs);
       // Non-blocking, send a group to a remote node for execution
-      fs.add(RPC.call(H2O.CLOUD._memary[g.hashCode()%csz],g));
+      fs.add(RPC.call(H2O.CLOUD._memary[g.hashCode()%csz],new RemoteExec(g._ds,fg)));
+    }
     fs.blockForPending();
 
+    for( Frame fr2 : frs ) fr2.delete();
     for( Vec v : vecs ) UKV.remove(v._key);
 
     env.pop(4);
@@ -224,7 +227,7 @@ class ASTddply extends ASTOp {
 
   // ---
   // Group descrption: unpacked selected double columns
-  private static class Group extends DTask<Group> implements Freezable {
+  private static class Group extends Iced {
     public double _ds[];
     public int _hash;
     Group( int len ) { _ds = new double[len]; }
@@ -246,11 +249,6 @@ class ASTddply extends ASTOp {
     @Override public boolean equals( Object o ) {  
       return o instanceof Group && Arrays.equals(_ds,((Group)o)._ds); }
     @Override public int hashCode() { return _hash; }
-
-    @Override public void compute2() {
-      System.out.println("ddply on group "+Arrays.toString(_ds));
-      tryComplete();
-    }
     @Override public String toString() { return Arrays.toString(_ds); }
   }
 
@@ -347,7 +345,7 @@ class ASTddply extends ASTOp {
       if( len == 0 ) return this;
       _groups = new NonBlockingHashMap<Group,NewChunk>();
       for( int i=0; i<len; i++ )
-        _groups.put(ab.get(Group.class),new NewChunk(null,-1));
+        _groups.put(ab.get(Group.class),new NewChunk(null,-99));
       return this;
     }
     @Override public void copyOver( DTask dt ) {
@@ -378,26 +376,27 @@ class ASTddply extends ASTOp {
       int i=0;
       for( Group g : p1._groups.keySet() ) {
         _dss[i] = g._ds;
-        _avs[i++] = new AppendableVec(Key.make((byte)0,Key.VEC));
+        _avs[i++] = new AppendableVec(new Vec.VectorGroup().addVec());
       }
     }
 
     // Local (per-Node) work.  Gather the chunks together into the Vecs
     @Override public void lcompute() {
       ddplyPass1 p1 = ddplyPass1.PASS1TMP.remove(_p1key);
-      if( p1._groups!=null ) {
-        Futures fs = new Futures();
-        for( int i=0; i<_dss.length; i++ ) { // For all possible groups
-          // Get the newchunk of local rows for a group
-          Group g = new Group(_dss[i]);
-          NewChunk nc = p1._groups.get(g);
-          if( nc != null ) {    // Fill in fields we punted on during construction
-            nc._vec = _avs[i];  // Assign a proper vector
-            nc.close(H2O.SELF.index(),fs); // Close & compress chunk
-          }
+      Futures fs = new Futures();
+      int cidx = H2O.SELF.index();
+      for( int i=0; i<_dss.length; i++ ) { // For all possible groups
+        // Get the newchunk of local rows for a group
+        Group g = new Group(_dss[i]);
+        NewChunk nc = p1._groups == null ? null : p1._groups.get(g);
+        if( nc != null && nc._len > 0 ) { // Fill in fields we punted on during construction
+          nc._vec = _avs[i];  // Assign a proper vector
+          nc.close(cidx,fs);  // Close & compress chunk
+        } else {              // All nodes have a chunk, even if its empty
+          DKV.put(_avs[i].chunkKey(cidx), new C0LChunk(0,0),fs);
         }
-        fs.blockForPending();
       }
+      fs.blockForPending();
       _p1key = null;            // No need to return these
       _dss = null;
       tryComplete();
@@ -413,6 +412,16 @@ class ASTddply extends ASTOp {
       for( int i=0; i<_avs.length; i++ ) vs[i] = _avs[i].close(fs);
       fs.blockForPending();
       return vs;
+    }
+  }
+
+  private static class RemoteExec extends DTask<RemoteExec> implements Freezable {
+    final public double _ds[];
+    final public Frame _fr;
+    RemoteExec( double ds[], Frame fr ) { _ds=ds; _fr=fr; }
+    @Override public void compute2() {
+      System.out.println("ddply on group "+Arrays.toString(_ds)+" rows="+_fr.numRows());
+      tryComplete();
     }
   }
 

@@ -688,7 +688,8 @@ public class Vec extends Iced {
     public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
     @Override public void map(Chunk ys) {
       for( int row=0; row<ys._len; row++ ) {
-        if (ys.isNA0(row)) continue;
+        if (ys.isNA0(row))
+          continue;
         int ycls = (int)ys.at80(row)-_ymin;
         if( _dom[ycls] == 0 ) _dom[ycls] = 1; // Only write to shared array
       }

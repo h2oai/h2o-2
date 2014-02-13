@@ -812,15 +812,20 @@ public class Utils {
     int[] secondDom = second[0];
     int[] secondRan = second[1];
 
+    boolean[] filter = new boolean[firstDom.length]; int fcnt = 0;
     int[] resDom = firstDom.clone();
     int[] resRan = firstRan!=null ? firstRan.clone() : new int[firstDom.length];
     for (int i=0; i<resDom.length; i++) {
       int v = firstRan!=null ? firstRan[i] : i; // resulting value
       int vi = Arrays.binarySearch(secondDom, v);
-      assert vi >=0 : "Trying to compose two incompatible transformation: first=" + Arrays.deepToString(first) + ", second=" + Arrays.deepToString(second);
-      resRan[i] = secondRan!=null ? secondRan[vi] : vi;
+      // Do not be too strict in composition assert vi >=0 : "Trying to compose two incompatible transformation: first=" + Arrays.deepToString(first) + ", second=" + Arrays.deepToString(second);
+      if (vi<0) {
+        filter[i] = true;
+        fcnt++;
+      } else
+        resRan[i] = secondRan!=null ? secondRan[vi] : vi;
     }
-    return new int[][] { resDom, resRan };
+    return new int[][] { filter(resDom,filter,fcnt), filter(resRan,filter,fcnt) };
   }
 
   private static final DecimalFormat default_dformat = new DecimalFormat("0.#####");
@@ -1052,6 +1057,18 @@ public class Utils {
     if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
     if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
     return Arrays.copyOf(r, i);
+  }
+
+  public static int[] filter(int[] values, boolean[] filter, int fcnt) {
+    assert filter.length == values.length : "Values should have same length as filter!";
+    assert filter.length - fcnt >= 0 : "Cannot filter more values then legth of filter vector!";
+    if (fcnt==0) return values;
+    int[] result = new int[filter.length - fcnt];
+    int c = 0;
+    for (int i=0; i<values.length; i++) {
+      if (!filter[i]) result[c++] = values[i];
+    }
+    return result;
   }
 
   public static int[][] pack(int[] values, boolean[] usemap) {
