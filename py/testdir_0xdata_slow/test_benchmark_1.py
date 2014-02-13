@@ -24,9 +24,12 @@ class Basic(unittest.TestCase):
         covtype200xSize = 15033863400
         synSize =  183
         if 1==1:
-            importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
+            # importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
+            importFolderPathFull = '/home/0xdiag/datasets/manyfiles-nflx-gz'
+            importFolderPath = 'manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
+                ("file_1.dat.gz", "file_1_A.dat.gz", 1 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
 
@@ -64,7 +67,7 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 28
+        tryHeap = 20
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
         noPoll = False
@@ -92,9 +95,14 @@ class Basic(unittest.TestCase):
 
             # to avoid sticky ports?
             ### base_port += 2
+            h2o.beta_features = True
 
             for trial in range(trialMax):
-                (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
+                # (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
+                csvPathname = importFolderPath + "/" + csvFilepattern
+                (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', 
+                        path=csvPathname, schema='local', timeoutSecs=timeoutSecs)
+
 
                 importFullList = importResult['files']
                 importFailList = importResult['fails']
@@ -105,7 +113,8 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
-                parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                csvPathname = importFolderPath + "/" + csvFilepattern
+                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
                     hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
@@ -117,8 +126,11 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        parseResult = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                            hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                        # parseResult = h2i.import_parse(path=importFolderPath + "/" + csvFilepattern,
+                        csvPathname = importFolderPathFull + "/" + csvFilepattern
+                        parseResult = h2i.import_parse(path=csvPathname,
+                            hex_key=csvFilename + ".hex", 
+                            timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
@@ -128,7 +140,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                        csvPathname = importFolderPathFull + "/" + csvFilepattern
+                        parseResult = h2i.import_parse(path=csvPathname,
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
@@ -164,15 +177,16 @@ class Basic(unittest.TestCase):
 
                 # BUG here?
                 if not noPoll:
+                    pass
                     # We should be able to see the parse result?
-                    h2o_cmd.check_enums_from_inspect(parseResult)
+                    # h2o_cmd.check_enums_from_inspect(parseResult)
                         
                 # the nflx data doesn't have a small enough # of classes in any col
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
                 origKey = parseResult['destination_key']
                 # execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
                 execExpr = 'a = slice('+origKey+',1,200)' 
-                h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
+                # h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
                 # runRF takes the parseResult directly
                 newParseKey = {'destination_key': 'a'}
 

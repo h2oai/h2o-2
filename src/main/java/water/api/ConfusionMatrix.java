@@ -73,9 +73,9 @@ public class ConfusionMatrix extends Request2 {
       if (!Arrays.equals(actual_domain, predicted_domain)) {
         domain = Utils.union(actual_domain, predicted_domain);
         int[][] vamap = Model.getDomainMapping(domain, actual_domain, true);
-        va = TransfVec.compose( (TransfVec) va, vamap, false ); // delete original va
+        va = TransfVec.compose( (TransfVec) va, vamap, domain, false ); // delete original va
         int[][] vpmap = Model.getDomainMapping(domain, predicted_domain, true);
-        vp = TransfVec.compose( (TransfVec) vp, vpmap, false ); // delete original vp
+        vp = TransfVec.compose( (TransfVec) vp, vpmap, domain, false ); // delete original vp
       } else domain = actual_domain;
       // The vectors are from different groups => align them, but properly delete it after computation
       if (!va.group().equals(vp.group())) {

@@ -696,18 +696,21 @@ public class DTree extends Iced {
 
     }
 
+    static final String NA = "---";
     protected void generateHTMLTreeStats(StringBuilder sb) {
       DocGen.HTML.section(sb,"Tree stats");
       DocGen.HTML.arrayHead(sb);
       sb.append("<tr><th>&nbsp;</th>").append("<th>Min</th><th>Mean</th><th>Max</th></tr>");
+
+      boolean valid = treeStats.isValid();
       sb.append("<tr><th>Depth</th>")
-            .append("<td>").append(treeStats.minDepth).append("</td>")
-            .append("<td>").append(treeStats.meanDepth).append("</td>")
-            .append("<td>").append(treeStats.maxDepth).append("</td></tr>");
+            .append("<td>").append(valid ? treeStats.minDepth  : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.meanDepth : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.maxDepth  : NA).append("</td></tr>");
       sb.append("<th>Leaves</th>")
-            .append("<td>").append(treeStats.minLeaves).append("</td>")
-            .append("<td>").append(treeStats.meanLeaves).append("</td>")
-            .append("<td>").append(treeStats.maxLeaves).append("</td></tr>");
+            .append("<td>").append(valid ? treeStats.minLeaves  : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.meanLeaves : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.maxLeaves  : NA).append("</td></tr>");
       DocGen.HTML.arrayTail(sb);
     }
 
@@ -743,6 +746,7 @@ public class DTree extends Iced {
       transient long sumDepth  = 0;
       transient long sumLeaves = 0;
       transient int  numTrees = 0;
+      public boolean isValid() { return minDepth <= maxDepth; }
       public void updateBy(DTree[] ktrees) {
         if (ktrees==null) return;
         for (int i=0; i<ktrees.length; i++) {

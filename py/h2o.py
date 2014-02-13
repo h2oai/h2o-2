@@ -1129,10 +1129,11 @@ class H2O(object):
 
         if 'response_info' in response: # trigger v2 for GBM always?
             status = response['response_info']['status']
-            # default to "" if doesn't exist
+            progress = response.get('progress', "")
         else:
-            status = response['response']['status']
-        progress = response.get('progress', "")
+            r = response['response']
+            status = r['status']
+            progress = r.get('progress', "")
         doFirstPoll = status != 'done'
 
         (url, params) = get_redirect_url(response, beta_features)
@@ -1207,10 +1208,11 @@ class H2O(object):
                 doFirstPoll = False
                 if beta_features or 'response_info' in response: # trigger v2 for GBM always?
                     status = response['response_info']['status']
+                    progress = response.get('progress', "")
                 else:
-                    status = response['response']['status']
-
-                progress = response.get('progress', "")
+                    r = response['response']
+                    status = r['status']
+                    progress = r.get('progress', "")
 
                 # get the redirect url
                 if beta_features and not reuseFirstPollUrl: # reuse url for all v1 stuff

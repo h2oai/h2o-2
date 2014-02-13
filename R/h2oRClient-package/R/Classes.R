@@ -405,31 +405,27 @@ setMethod("log", "H2OParsedData", function(x) { h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
 setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
 
-setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
-setGeneric("as.h2o.key", function(h2o, object, key) { standardGeneric("as.h2o.key") })
-
-setMethod("as.h2o", signature(h2o="H2OClient", object="data.frame"),
- function(h2o, object) {
-   tmpf <- tempfile(fileext=".csv")
-   write.csv(object, file=tmpf, quote=F, row.names=F)
-   destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
-   pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
-   h2f <- h2o.uploadFile(h2o, tmpf, key=destKey)
-   unlink(tmpf)
-   return(h2f)
- })
-
-setMethod("as.h2o", signature(h2o="H2OClient", object="numeric"),
-  function(h2o, object) {
-    res <- h2o.__exec2(h2o, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""))
-    return(new("H2OParsedData", h2o=h2o, key=res$dest_key))
-  })
-
-setMethod("as.h2o.key", signature(h2o="H2OClient", object="numeric", key="character"),
-  function(h2o, object, key) {
-    res <- h2o.__exec2_dest_key(h2o, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""), key)
-    return(res$dest_key)
-  })
+as.h2o <- function(client, object, key = "") {
+  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")
+  if(!is.character(key)) stop("key must be of class character")
+  
+  if(!missing(key) && nchar(key) > 0) {
+    res <- h2o.__exec2_dest_key(client, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""), key)
+    return(new("H2OParsedData", h2o=client, key=res$dest_key))
+  } else if(is.numeric(object)) {
+    res <- h2o.__exec2(client, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""))
+    return(new("H2OParsedData", h2o=client, key=res$dest_key))
+  } else {
+    tmpf <- tempfile(fileext=".csv")
+    write.csv(object, file=tmpf, quote=F, row.names=F)
+    destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
+    pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
+    h2f <- h2o.uploadFile(client, tmpf, key=destKey)
+    unlink(tmpf)
+    return(h2f)
+  }
+}
 
 setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
 setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x, breaks) {
