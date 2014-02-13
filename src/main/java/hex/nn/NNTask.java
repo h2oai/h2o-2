@@ -43,8 +43,9 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override public final void processRow(long row, final double [] nums, final int numcats, final int [] cats, double [] responses){
-    ((Neurons.Input)_neurons[0]).setInput(row, nums, numcats, cats);
-    step(row, _neurons, _output, _training, responses);
+    final long processed = model_info().get_processed_total() + row;
+    ((Neurons.Input)_neurons[0]).setInput(processed, nums, numcats, cats);
+    step(processed, _neurons, _output, _training, responses);
   }
 
   @Override public void reduce(NNTask other){
