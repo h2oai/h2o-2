@@ -224,7 +224,7 @@ public class NNModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (parameters.diagnostics) {
-        Neurons[] neurons = NNTask.makeNeurons(parameters._dinfo, this);
+        Neurons[] neurons = NNTask.makeNeuronsForTesting(parameters._dinfo, this);
         sb.append("Status of Hidden and Output Layers:\n");
         sb.append("#  Units       Activation     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
         final String format = "%7g";
@@ -457,8 +457,8 @@ public class NNModel extends Model {
   }
 
   @Override public float[] score0(double[] data, float[] preds) {
-    Neurons[] neurons = NNTask.makeNeurons(data_info, model_info);
-    ((Neurons.Input)neurons[0]).setInput(data);
+    Neurons[] neurons = NNTask.makeNeuronsForTesting(data_info, model_info);
+    ((Neurons.Input)neurons[0]).setInput(-1, data);
     NNTask.step(-1, neurons, model_info, false, null);
     double[] out = neurons[neurons.length - 1]._a;
     assert out.length == preds.length;
@@ -559,7 +559,7 @@ public class NNModel extends Model {
       sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
       sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
       sb.append("</tr>");
-      Neurons[] neurons = NNTask.makeNeurons(model_info.parameters._dinfo, model_info()); //link the weights to the neurons, for easy access
+      Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info.parameters._dinfo, model_info()); //link the weights to the neurons, for easy access
       for (int i=1; i<neurons.length; ++i) {
         sb.append("<tr>");
         sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");

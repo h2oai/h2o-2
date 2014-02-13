@@ -1,6 +1,7 @@
 package hex.nn;
 
 import hex.FrameTask;
+import junit.framework.Assert;
 import water.Iced;
 import water.MemoryManager;
 import water.api.DocGen;
@@ -41,11 +42,8 @@ public abstract class Neurons extends Iced {
 
   // Dropout (for input + hidden layers)
   transient Dropout dropout;
-  Dropout createDropout(int units) {
-    return new Dropout(units);
-  }
   Neurons(int units) {
-    this.units  = units;
+    this.units = units;
   }
 
 //  /**
@@ -61,26 +59,31 @@ public abstract class Neurons extends Iced {
   /**
    * Helper class for dropout, only to be used from within a layer of neurons
    */
-  private class Dropout {
+  private static class Dropout {
     private transient Random _rand;
     private transient byte[] _bits;
 
     private Dropout(int units) {
       _bits = new byte[(units+7)/8];
-      //_rand is left null, user must call Neurons.setTrainingRow(gid) for each training row to create a new _rand
+    }
+
+    void setSeed(long seed) {
+      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+      if (_rand == null) _rand = new Random(seed);
+      else _rand.setSeed(seed);
     }
 
     // for input layer
-    private void clearSomeInput(Neurons previous) {
-      assert(previous.isInput());
-      final double rate = ((Input)previous).params.input_dropout_ratio;
-      for( int i = 0; i < previous._a.length; i++ ) {
-        if (_rand.nextFloat() < rate) previous._a[i] = 0;
-      }
+    private void randomlySparsifyActivation(double[] a, double rate) {
+      Assert.assertTrue("Must call setSeed() first", _rand != null);
+      for( int i = 0; i < a.length; i++ )
+        if (_rand.nextFloat() < rate) a[i] = 0;
     }
 
     // for hidden layers
     private void fillBytes() {
+      Assert.assertTrue("Must call setSeed() first", _rand != null);
       _rand.nextBytes(_bits);
     }
 
@@ -89,12 +92,16 @@ public abstract class Neurons extends Iced {
     }
   }
 
-  public final void init(Neurons[] neurons, int index, NN p, NNModel.NNModelInfo minfo) {
+  public final void init(Neurons[] neurons, int index, NN p, NNModel.NNModelInfo minfo, boolean training) {
     params = (NN)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new double[units];
     if (!(this instanceof Output) && !(this instanceof Input)) {
       _e = new double[units];
+    }
+    if (training && (this instanceof Maxout || this instanceof TanhDropout ||
+                    this instanceof RectifierDropout || this instanceof Input) ) {
+      dropout = new Dropout(units);
     }
     if (!isInput()) {
       _previous = neurons[index-1]; //incoming neurons
@@ -108,11 +115,7 @@ public abstract class Neurons extends Iced {
     }
   }
 
-  protected void setTrainingRow(long row) {
-//    System.err.println("row " + row);
-  }
-
-  protected abstract void fprop(boolean training);
+  protected abstract void fprop(long row, boolean training);
 
   protected abstract void bprop();
 
@@ -202,13 +205,13 @@ public abstract class Neurons extends Iced {
     }
 
     @Override protected void bprop() { throw new UnsupportedOperationException(); }
-    @Override protected void fprop(boolean ignored) { throw new UnsupportedOperationException(); }
+    @Override protected void fprop(long row, boolean training) { throw new UnsupportedOperationException(); }
 
     @Override protected boolean isInput() {
       return true;
     }
 
-    public void setInput(final double[] data) {
+    public void setInput(long row, final double[] data) {
       assert(_dinfo != null);
       double [] nums = MemoryManager.malloc8d(_dinfo._nums);
       int    [] cats = MemoryManager.malloc4(_dinfo._cats);
@@ -223,20 +226,24 @@ public abstract class Neurons extends Iced {
         if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
         nums[i-_dinfo._cats] = d;
       }
-      setInput(nums, ncats, cats);
+      setInput(row, nums, ncats, cats);
     }
 
-    public void setInput(final double[] nums, final int numcat, final int[] cats) {
+    public void setInput(long row, final double[] nums, final int numcat, final int[] cats) {
       Arrays.fill(_a, 0.);
       for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
       System.arraycopy(nums, 0, _a, _numStart, nums.length);
+      final double rate = params.input_dropout_ratio;
+      if (rate == 0 || row < 0) return; // row is set to -1 for testing (no input dropout done there)
+      dropout.setSeed(params.seed + 0x1337B4BE + row);
+      dropout.randomlySparsifyActivation(_a, rate);
     }
 
   }
 
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long row, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
@@ -276,39 +283,27 @@ public abstract class Neurons extends Iced {
     }
 
     @Override
-    protected void setTrainingRow(long row) {
-      super.setTrainingRow(row);
-      long seed = params.seed + 0xDA7A + row;
-      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
-      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
-      if (dropout == null) dropout = createDropout(units);
-      if (dropout._rand == null) dropout._rand = new Random(seed);
-      else dropout._rand.setSeed(seed);
-    }
-
-    @Override
-    protected void fprop(boolean training) {
+    protected void fprop(long row, boolean training) {
       if (training) {
+        dropout.setSeed(params.seed + 0xDA7A6000 + row);
         dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
+        super.fprop(row, true);
       }
-      super.fprop(training);
-      if (!training) Utils.div(_a, 2.f);
+      else {
+        super.fprop(row, false);
+        Utils.div(_a, 2.f);
+      }
     }
   }
 
   public static class Maxout extends Neurons {
     public Maxout(int units) {
       super(units);
-      dropout = createDropout(units);
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long row, boolean training) {
       if (dropout != null && training) {
         dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
       }
 
       double max = 0;
@@ -351,7 +346,7 @@ public abstract class Neurons extends Iced {
       this.units = units;
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long row, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
@@ -393,24 +388,16 @@ public abstract class Neurons extends Iced {
       super(units);
     }
     @Override
-    protected void setTrainingRow(long row) {
-      super.setTrainingRow(row);
-      long seed = params.seed + 0x3C71F1ED + row;
-      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
-      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
-      if (dropout == null) dropout = createDropout(units);
-      if (dropout._rand == null) dropout._rand = new Random(seed);
-      else dropout._rand.setSeed(seed);
-    }
-    @Override
-    protected void fprop(boolean training) {
+    protected void fprop(long row, boolean training) {
       if (training) {
+        dropout.setSeed(params.seed + 0x3C71F1ED + row);
         dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
+        super.fprop(row, true);
       }
-      super.fprop(training);
-      if (!training) Utils.div(_a, 2.f);
+      else {
+        super.fprop(row, false);
+        Utils.div(_a, 2.f);
+      }
     }
   }
 
@@ -424,7 +411,7 @@ public abstract class Neurons extends Iced {
     Output(int units) { super(units); }
 
     protected abstract void fprop(); //don't differentiate between testing/training
-    protected void fprop(boolean training) { throw new UnsupportedOperationException(); }
+    protected void fprop(long row, boolean training) { throw new UnsupportedOperationException(); }
     protected void bprop() { throw new UnsupportedOperationException(); };
   }
 

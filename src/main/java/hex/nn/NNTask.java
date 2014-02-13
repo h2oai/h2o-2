@@ -39,12 +39,12 @@ public class NNTask extends FrameTask<NNTask> {
   // create local workspace (neurons)
   // and link them to shared weights
   @Override protected void chunkInit(){
-    _neurons = makeNeurons(_dinfo, _output);
+    _neurons = makeNeurons(_dinfo, _output, true);
   }
 
-  @Override public final void processRow(long gid, final double [] nums, final int numcats, final int [] cats, double [] responses){
-    ((Neurons.Input)_neurons[0]).setInput(nums, numcats, cats);
-    step(gid, _neurons, _output, _training, responses);
+  @Override public final void processRow(long row, final double [] nums, final int numcats, final int [] cats, double [] responses){
+    ((Neurons.Input)_neurons[0]).setInput(row, nums, numcats, cats);
+    step(row, _neurons, _output, _training, responses);
   }
 
   @Override public void reduce(NNTask other){
@@ -65,8 +65,15 @@ public class NNTask extends FrameTask<NNTask> {
     assert(_input == null);
   }
 
+  public static Neurons[] makeNeuronsForTraining(DataInfo dinfo, NNModel.NNModelInfo minfo) {
+    return makeNeurons(dinfo, minfo, true);
+  }
+  public static Neurons[] makeNeuronsForTesting(DataInfo dinfo, NNModel.NNModelInfo minfo) {
+    return makeNeurons(dinfo, minfo, false);
+  }
+
   // Helper
-  public static Neurons[] makeNeurons(DataInfo dinfo, NNModel.NNModelInfo minfo) {
+  private static Neurons[] makeNeurons(DataInfo dinfo, NNModel.NNModelInfo minfo, boolean training) {
     final NN params = minfo.get_params();
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output
@@ -100,17 +107,16 @@ public class NNTask extends FrameTask<NNTask> {
 
     //copy parameters from NN, and set previous/input layer links
     for( int i = 0; i < neurons.length; i++ )
-      neurons[i].init(neurons, i, params, minfo);
+      neurons[i].init(neurons, i, params, minfo, training);
 
     return neurons;
   }
 
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
-  static void step(long gid, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
+  static void step(long row, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
     for (int i=1; i<neurons.length-1; ++i) {
-      if (training && gid >= 0) neurons[i].setTrainingRow(gid);
-      neurons[i].fprop(training);
+      neurons[i].fprop(row, training);
     }
     if (minfo.get_params().classification) {
       ((Neurons.Softmax)neurons[neurons.length-1]).fprop();

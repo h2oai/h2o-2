@@ -26,7 +26,7 @@ public class NN extends Job.ValidatedJob {
   public Activation activation = Activation.Tanh;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double input_dropout_ratio = 0.2;
+  public double input_dropout_ratio = 0.0;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class, json = true)
   public int[] hidden = new int[] { 200, 200 };
@@ -130,11 +130,11 @@ public class NN extends Job.ValidatedJob {
       classification = true;
       arg.disable("Regression is not currently supported.");
     }
-    if (arg._name.equals("input_dropout_ratio") &&
-            (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
-            ) {
-      arg.disable("Only with Dropout.", inputArgs);
-    }
+//    if (arg._name.equals("input_dropout_ratio") &&
+//            (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
+//            ) {
+//      arg.disable("Only with Dropout.", inputArgs);
+//    }
     if(arg._name.equals("initial_weight_scale") &&
             (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
@@ -206,6 +206,8 @@ public class NN extends Job.ValidatedJob {
     if (dest() == null) destination_key = Key.make("NN_model");
     if (self() == null) {
       job_key = Key.make("NN_job");
+    }
+    if (DKV.get(self()) == null) {
       DKV.put(self(), new Value(self(), new byte[0]), null);
     }
   }
