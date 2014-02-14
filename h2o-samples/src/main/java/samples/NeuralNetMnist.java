@@ -47,23 +47,27 @@ public class NeuralNetMnist extends Job {
     ls[1] = new Layer.RectifierDropout(128);
     ls[2] = new Layer.RectifierDropout(128);
     ls[3] = new Layer.RectifierDropout(256);
-    ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.Loss.CrossEntropy);
+
+    ls[ls.length-1] = new VecSoftmax(labels, outputStats);
 
     NeuralNet p = new NeuralNet();
-    p.rate = 0.01f;
-    p.rate_annealing = 1e-6f;
-    p.epochs = 1000;
-    p.activation = NeuralNet.Activation.RectifierWithDropout;
-    p.input_dropout_ratio = 0.4;
     p.seed = 0xC0FFEE;
+    p.rate = 0.01;
+    p.rate_annealing = 1e-6;
+    p.activation = NeuralNet.Activation.RectifierWithDropout;
+    p.loss = NeuralNet.Loss.CrossEntropy;
+    p.input_dropout_ratio = 0.2;
     p.max_w2 = 15;
-    p.momentum_start = 0.5f;
+    p.epochs = 10;
+    p.l1 = 1e-5;
+    p.l2 = 0;
+    p.momentum_start = 0.5;
     p.momentum_ramp = 1800000;
-    p.momentum_stable = 0.99f;
-    p.l1 = .00001f;
-    p.l2 = .00f;
+    p.momentum_stable = 0.99;
     p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
+    p.classification = true;
     p.diagnostics = true;
+    p.expert_mode = true;
 
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].init(ls, i, p);
@@ -72,9 +76,9 @@ public class NeuralNetMnist extends Job {
   }
 
   protected void startTraining(Layer[] ls) {
-    double epochs = 2.0;
+    double epochs = 10.0;
 
-//    // Single-thread SGD
+    // Single-thread SGD
 //    System.out.println("Single-threaded\n");
 //    _trainer = new Trainer.Direct(ls, epochs, self());
 

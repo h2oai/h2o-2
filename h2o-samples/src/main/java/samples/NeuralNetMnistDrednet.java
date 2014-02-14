@@ -25,7 +25,7 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     ls[1] = new Layer.RectifierDropout(1024);
     ls[2] = new Layer.RectifierDropout(1024);
     ls[3] = new Layer.RectifierDropout(2048);
-    ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.Loss.CrossEntropy);
+    ls[4] = new VecSoftmax(labels, outputStats);
 
     NeuralNet p = new NeuralNet();
     p.rate = 0.01f;
@@ -33,6 +33,7 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     p.epochs = 1000;
     p.activation = NeuralNet.Activation.RectifierWithDropout;
     p.input_dropout_ratio = 0.2;
+    p.loss = NeuralNet.Loss.CrossEntropy;
     p.max_w2 = 15;
     p.momentum_start = 0.5f;
     p.momentum_ramp = 1800000;
@@ -62,12 +63,12 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
 
     System.out.println("Main training");
 
-//    System.out.println("Multi-threaded");
-//    _trainer = new Trainer.Threaded(ls, 0, self());
-//    _trainer.start();
-
-    System.out.println("MapReduce");
-    _trainer = new Trainer.MapReduce(ls, 0, self());
+    System.out.println("Multi-threaded");
+    _trainer = new Trainer.Threaded(ls, 0, self(), -1);
     _trainer.start();
+
+//    System.out.println("MapReduce");
+//    _trainer = new Trainer.MapReduce(ls, 0, self());
+//    _trainer.start();
   }
 }
