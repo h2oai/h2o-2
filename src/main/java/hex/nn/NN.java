@@ -18,6 +18,7 @@ import java.util.Random;
 
 import static water.TestUtil.find_test_file;
 import static water.util.MRUtils.sampleFrame;
+import static water.util.MRUtils.shuffleFramePerChunk;
 
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -100,6 +101,9 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
+
+  @API(help = "Shuffle training data", filter = Default.class, json = true)
+  public boolean shuffle_training_data = false;
 
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
@@ -222,7 +226,11 @@ public class NN extends Job.ValidatedJob {
   public void initModel() {
     checkParams();
     logStart();
-
+    if (shuffle_training_data) {
+      Log.info("Shuffling training data.");
+      source = shuffleFramePerChunk(source, seed); //might want global shuffle
+      response = source.lastVec();
+    }
     // Lock the input datasets against deletes
     source.read_lock(self());
     if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
