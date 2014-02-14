@@ -23,6 +23,11 @@ public class SubsetVec extends WrappedVec {
     return new SubsetChunk(crows,this,masterVec());
   }
 
+  @Override public void remove(Futures fs) { 
+    super.remove(fs);
+    UKV.remove(_subsetRowsKey,fs); 
+  }
+
   // 
   static class SubsetChunk extends Chunk {
     final Chunk _crows;

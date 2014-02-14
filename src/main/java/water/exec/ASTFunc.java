@@ -70,7 +70,7 @@ public class ASTFunc extends ASTOp {
     // Make a shallow copy (the body remains shared across all ASTFuncs).
     // Then fill in the current environment.
     ASTFunc fun = (ASTFunc)clone();
-    fun._env = env.capture();
+    fun._env = env.capture(false);
     env.push(fun);
   }
   @Override void apply(Env env, int argcnt) { 
