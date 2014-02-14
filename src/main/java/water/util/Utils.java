@@ -239,9 +239,9 @@ public class Utils {
     return result;
   }
 
-  public static void shuffleArray(long[] a) {
+  public static void shuffleArray(long[] a, long seed) {
     int n = a.length;
-    Random random = new Random();
+    Random random = getDeterRNG(seed);
     random.nextInt();
     for (int i = 0; i < n; i++) {
       int change = i + random.nextInt(n - i);
