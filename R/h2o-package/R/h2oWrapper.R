@@ -136,15 +136,17 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
-  
-  if(.Platform$OS.type == "unix") {
-    print("Checking libcurl version...")
-    curl_path <- Sys.which("curl-config")
-    if(system2(curl_path, args = "--version") != 0)
-      stop("libcurl not found! Please install libcurl (version 7.14.0 or higher) from http://curl.haxx.se. On Linux systems, 
+
+  # installing RCurl requires curl and curl-config, which is typically separately installed
+  if(!( 'RCurl' %in% installed.packages()[,1] )) {
+    if(.Platform$OS.type == "unix") {
+      print("Checking libcurl version...")
+      curl_path <- Sys.which("curl-config")
+      if( curl_path[[1]] == '' || system2(curl_path, args = "--version") != 0)
+        stop("libcurl not found! Please install libcurl (version 7.14.0 or higher) from http://curl.haxx.se. On Linux systems, 
           you will often have to explicitly install libcurl-devel to have the header files and the libcurl library.")
+    }
   }
-  # TODO: Not sure how to check for libcurl in Windows
   
   # Install and load H2O R package dependencies
 #  require(tools)
