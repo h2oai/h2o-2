@@ -3,11 +3,11 @@ import h2o, h2o_cmd, sys
 import time, random, re
 import h2o_browse as h2b
 
-def checkForBadFP(value, name='min_value'):
+def checkForBadFP(value, name='min_value', nanOkay=False):
     if 'Infinity' in str(value):
-        raise Exception("Infinity in inspected %s can't be good: %s" % (str(value), name))
-    if 'NaN' in str(value):
-        raise Exception("NaN in inspected %s can't be good: %s" % (str(value), name))
+        raise Exception("Infinity in inspected %s can't be good for: %s" % (str(value), name))
+    if 'NaN' in str(value) and not nanOkay:
+        raise Exception("NaN in inspected %s can't be good for: %s" % (str(value), name))
 
 def checkScalarResult(resultInspect, resultKey):
     # make the common problems easier to debug

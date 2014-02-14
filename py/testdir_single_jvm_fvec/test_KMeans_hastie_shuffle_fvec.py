@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    clusters1 = {}
+    clusters1 = []
     def test_KMeans_hastie_shuffle_fvec(self):
         h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
