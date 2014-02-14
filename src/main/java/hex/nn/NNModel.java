@@ -1,10 +1,7 @@
 package hex.nn;
 
 import hex.FrameTask.DataInfo;
-import water.Iced;
-import water.Key;
-import water.Model;
-import water.PrettyPrint;
+import water.*;
 import water.api.ConfusionMatrix;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -396,6 +393,7 @@ public class NNModel extends Model {
     // this is potentially slow - only do every so often
     if( !keep_running || (_now-timeStart < 30000) // Score every time for first 30 seconds
             || (_sinceLastScore > model_info().parameters.score_interval*1000) ) {
+      Log.info("Scoring the model.");
       _timeLastScoreStart = _now;
       boolean printCM = false;
       // compute errors
@@ -419,13 +417,10 @@ public class NNModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
-      // compute stats
-      if (model_info().parameters.diagnostics) model_info.computeStats();
-      Log.info("scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
-
-      // print the model to ASCII
-      for (String s : toString().split("\n")) Log.info(s);
+      Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
     }
+    // print the model to ASCII
+    for (String s : toString().split("\n")) Log.info(s);
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
       Log.err("Try using L1/L2/max_w2 regularization, a different activation function, or more synchronization in multi-node operation.");
