@@ -4,7 +4,6 @@ import java.util.*;
 
 import water.*;
 import water.fvec.*;
-import water.util.Utils;
 import water.nbhm.NonBlockingHashMap;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -146,12 +145,7 @@ class ASTddply extends ASTOp {
   @Override String opStr(){ return "ddply";}
   @Override ASTOp make() {return new ASTddply();}
   @Override void apply(Env env, int argcnt) {
-    // Peek everything from the stack
-    // Function to execute on the groups
-    final ASTOp op = env.fcn(-1); // ary->dblary: subRxC -> 1xN
-    
     Frame fr = env.ary(-3);    // The Frame to work on
-    final int ncols = fr.numCols();
 
     // Either a single column, or a collection of columns to group on.
     int cols[];
@@ -222,6 +216,7 @@ class ASTddply extends ASTOp {
 
     // Delete the group row vecs
     for( Vec v : vecs ) UKV.remove(v._key);
+    UKV.remove(envkey);
 
     env.pop(4);
     // Push empty frame for debugging
@@ -274,13 +269,13 @@ class ASTddply extends ASTOp {
     // Make a NewChunk to hold rows, that has a random Key and is not
     // associated with any Vec.  We'll fold these into a Vec later when we know
     // cluster-wide what the Groups (and hence Vecs) are.
-    private static NewChunk makeNC( Chunk C ) { return new NewChunk(null,H2O.SELF.index()); }
+    private static NewChunk makeNC( ) { return new NewChunk(null,H2O.SELF.index()); }
     // Build a Map mapping Groups to a NewChunk of row #'s
     @Override public void map( Chunk chks[] ) {
       _groups = new NonBlockingHashMap<Group,NewChunk>();
       Group g = new Group(_cols.length);
+      NewChunk nc = makeNC();
       Chunk C = chks[_cols[0]];
-      NewChunk nc = makeNC(C);
       int len = C._len;
       long start = C._start;
       for( int row=0; row<len; row++ ) {
@@ -290,7 +285,7 @@ class ASTddply extends ASTOp {
         if( nc_old==null ) {    // Add group signature if not already present
           nc_old = nc;          // Jammed 'nc' into the table to hold rows
           g = new Group(_cols.length); // Need a new <Group,NewChunk> pair
-          nc = makeNC(C);
+          nc = makeNC();
         }
         nc_old.addNum(start+row,0); // Append rows into the existing group
       }
@@ -418,6 +413,7 @@ class ASTddply extends ASTOp {
     }
   }
 
+  // Called once-per-group, it executes the given function on the group.
   private static class RemoteExec extends DTask<RemoteExec> implements Freezable {
     // INS
     public double _ds[];        // Displayable name for this group

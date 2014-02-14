@@ -56,6 +56,7 @@ public class Exec2 {
   //   op  := ary byCol(ary,dbl op2(dbl,dbl))
 
   public static Env exec( String str ) throws IllegalArgumentException {
+    cluster_init();
     // Preload the global environment from existing Frames
     ArrayList<ASTId> global = new ArrayList<ASTId>();
     ArrayList<Key>   locked = new ArrayList<Key>  ();
@@ -209,5 +210,21 @@ public class Exec2 {
     if( i<=hi ) s+= '^';
     s += '\n';
     throw new IllegalArgumentException(s);
+  }
+
+  // To avoid a class-circularity hang, we need to force other members of the
+  // cluster to load the Exec & AST classes BEFORE trying to execute code
+  // remotely, because e.g. ddply runs functions on all nodes.
+  private static boolean _inited;       // One-shot init
+  private static void cluster_init() {
+    if( _inited ) return;
+    new DRemoteTask() {
+      @Override public void lcompute() {
+        new ASTPlus();          // Touch a common class to force loading
+        tryComplete();
+      }
+      @Override public void reduce( DRemoteTask dt ) { }
+    }.invokeOnAllNodes();
+    _inited = true;
   }
 }

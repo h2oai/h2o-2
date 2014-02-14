@@ -1,4 +1,4 @@
-import h2o_cmd, h2o, h2o_util
+import h2o_cmd, h2o, h2o_util, h2o_gbm
 import re, random, math
 
 def pickRandGlmParams(paramDict, params):
@@ -218,8 +218,30 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "%15s %s" % ("auc:\t", validations['auc'])
         if h2o.beta_features:
             print "%15s %s" % ("best_threshold:\t", validations['best_threshold'])
+            # show the middle one? 
+            print "We're just going to print the middle '_cms' ..that must be threshold 0.5?. this isn't above best_threshold"
+            # cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
+            cms = glm['glm_model']['submodels'][0]['validation']['_cms']
+            # rounds to int
+            mid = len(cms)/2
+            cm = cms[mid]
+
+            print "cm:", h2o.dump_json(cm['_arr'])
+            predErr = cm['_predErr']
+            classErr = cm['_classErr']
+            # compare to predErr
+            pctWrong = h2o_gbm.pp_cm_summary(cm['_arr']);
+            print "predErr:", predErr
+            print "calculated pctWrong from cm:", pctWrong
+            print "classErr:", classErr
+
+            # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
+
+            print "\nTrain\n==========\n"
+            print h2o_gbm.pp_cm(cm['_arr'])
         else:
             print "%15s %s" % ("threshold:\t", validations['threshold'])
+
 
     if family=="poisson" or family=="gaussian":
         print "%15s %s" % ("aic:\t", validations['aic'])
