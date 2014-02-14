@@ -533,9 +533,19 @@ table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", 
   }   
 }
 
-h2o.runif <- function(n, min = 0, max = 1) { 
-  if(min != 0 || max != 1) stop("Unimplemented")
-  h2o.__unop2("runif", n)
+h2o.runif <- function(x, min = 0, max = 1) {
+  if(missing(x)) stop("Must specify data set")
+  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(!is.numeric(min)) stop("min must be a single number")
+  if(!is.numeric(max)) stop("max must be a single number")
+  if(length(min) > 1 || length(max) > 1) stop("Unimplemented")
+  if(min > max) stop("min must be a number less than or equal to max")
+  expr = paste("runif(", x@key, ")*(", max - min, ")+", min, sep = "")
+  res = h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
+  else
+    return(new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE))
 }
 
 setMethod("colnames", "H2OParsedData", function(x) {
