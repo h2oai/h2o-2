@@ -20,9 +20,6 @@ public class NNModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="Key assigned to the job building this model")
-  private final Key job_key;
-
   @API(help="Input data info")
   final private DataInfo data_info;
 
@@ -95,7 +92,6 @@ public class NNModel extends Model {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
     // model is described by parameters and the following 4 arrays
-    //TODO: check impact of making these volatile
     final private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
     final private double[][] biases; //one 1D bias array per layer
     private float[][] weights_momenta;
@@ -104,22 +100,22 @@ public class NNModel extends Model {
     // compute model size [#number of model parameters, #number of bytes (uncompressed)]
     public long[] size() {
       long[] siz = new long[2];
-      for (int i=0; i<weights.length; ++i) {
-        siz[0] += weights[i].length;
-        siz[1] += weights[i].length * Float.SIZE;
+      for (float[] w : weights) {
+        siz[0] += w.length;
+        siz[1] += w.length * Float.SIZE;
       }
-      for (int i=0; i<biases.length; ++i) {
-        siz[0] += biases[i].length;
-        siz[1] += biases[i].length * Double.SIZE;
+      for (double[] b : biases) {
+        siz[0] += b.length;
+        siz[1] += b.length * Double.SIZE;
       }
       if (has_momenta()) {
-        for (int i=0; i<weights_momenta.length; ++i) {
-          siz[0] += weights_momenta.length;
-          siz[1] += weights_momenta.length * Float.SIZE;
+        for (float[] wm : weights_momenta) {
+          siz[0] += wm.length;
+          siz[1] += wm.length * Float.SIZE;
         }
-        for (int i=0; i<biases_momenta.length; ++i) {
-          siz[0] += biases_momenta.length;
-          siz[1] += biases_momenta.length * Double.SIZE;
+        for (double[] bm : biases_momenta) {
+          siz[0] += bm.length;
+          siz[1] += bm.length * Double.SIZE;
         }
       }
       siz[1] /= 8; //in bytes
@@ -157,8 +153,8 @@ public class NNModel extends Model {
 
     @API(help = "Processed samples", json = true)
     private long processed_global;
-    public synchronized void set_processed_global(long p) { processed_global = p; }
     public synchronized long get_processed_global() { return processed_global; }
+    public synchronized void set_processed_global(long p) { processed_global = p; }
     public synchronized void add_processed_global(long p) { processed_global += p; }
 
     private long processed_local;
@@ -225,6 +221,7 @@ public class NNModel extends Model {
       StringBuilder sb = new StringBuilder();
       if (parameters.diagnostics) {
         Neurons[] neurons = NNTask.makeNeuronsForTesting(parameters._dinfo, this);
+        computeStats();
         sb.append("Status of Hidden and Output Layers:\n");
         sb.append("#  Units       Activation     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
         final String format = "%7g";
@@ -301,7 +298,7 @@ public class NNModel extends Model {
     }
     void randomizeWeights() {
       for (int i=0; i<weights.length; ++i) {
-        final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD533D + i);
+        final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD5EED + i);
         for( int j = 0; j < weights[i].length; j++ ) {
           if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.UniformAdaptive) {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
@@ -372,7 +369,6 @@ public class NNModel extends Model {
 
   public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
     super(selfKey, dataKey, dinfo._adaptedFrame);
-    job_key = jobKey;
     data_info = dinfo;
     run_time = 0;
     start_time = System.currentTimeMillis();
@@ -439,7 +435,6 @@ public class NNModel extends Model {
 //    System.out.println(this);
     return keep_running;
   }
-
 
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -611,8 +606,8 @@ public class NNModel extends Model {
     if (error.validation) {
       String validation = "Number of validation set samples for scoring: " + (score_valid == 0 ? "all" : score_valid);
       if (score_valid > 0) {
-        if (score_train < 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-        if (score_train > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+        if (score_valid < 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (score_valid > 10000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
       }
       DocGen.HTML.section(sb, validation);
     }

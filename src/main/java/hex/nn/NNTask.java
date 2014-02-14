@@ -8,9 +8,8 @@ import water.util.Log;
 import java.util.Arrays;
 
 public class NNTask extends FrameTask<NNTask> {
-  final private NN _params;
   final private boolean _training;
-  protected NNModel.NNModelInfo _input;
+  private NNModel.NNModelInfo _input;
   NNModel.NNModelInfo _output;
   public NNModel.NNModelInfo model_info() { return _output; }
 
@@ -21,17 +20,17 @@ public class NNTask extends FrameTask<NNTask> {
   public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(dinfo,input,training,fraction, null);}
   private NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
     super(input.job(),dinfo,cmp);
-    _params=input.get_params();
     _training=training;
     _input=input;
     _useFraction=fraction;
-    _seed=_params.seed;
+    _seed=_input.get_params().seed;
     assert(_output == null);
   }
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    _output = new NNModel.NNModelInfo(_input);
+    _output = _input;
+//    _output = new NNModel.NNModelInfo(_input);
     _input = null;
     _output.set_processed_local(0l);
   }
@@ -42,18 +41,21 @@ public class NNTask extends FrameTask<NNTask> {
     _neurons = makeNeuronsForTraining(_dinfo, _output);
   }
 
-  @Override public final void processRow(long row, final double [] nums, final int numcats, final int [] cats, double [] responses){
-    final long processed = model_info().get_processed_total() + row;
+  @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
+    final long processed = model_info().get_processed_total() + seed;
     ((Neurons.Input)_neurons[0]).setInput(processed, nums, numcats, cats);
     step(processed, _neurons, _output, _training, responses);
   }
 
   @Override public void reduce(NNTask other){
+//    Log.info("reduce: my local " + _output.get_processed_local());
+//    Log.info("reduce: other local " + other._output.get_processed_local());
     if (other._output.get_processed_local() > 0 //other NNTask was active (its model_info should be used for averaging)
             && other._output != _output) //other NNTask worked on a different model_info
     {
       _output.add(other._output);
       _chunk_node_count += other._chunk_node_count;
+//      Log.info("reduce: adding them together, now have " + _chunk_node_count + " contributions, total: " + _output.get_processed_local());
     }
   }
 
@@ -102,7 +104,7 @@ public class NNTask extends FrameTask<NNTask> {
     }
     // output
     if(params.classification)
-      neurons[neurons.length - 1] = new Neurons.Softmax(dinfo._adaptedFrame.lastVec().domain().length, params.loss);
+      neurons[neurons.length - 1] = new Neurons.Softmax(dinfo._adaptedFrame.lastVec().domain().length);
     else
       neurons[neurons.length - 1] = new Neurons.Linear(1);
 
@@ -115,7 +117,7 @@ public class NNTask extends FrameTask<NNTask> {
 
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
-  static void step(long row, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
+  public static void step(long row, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
     for (int i=1; i<neurons.length-1; ++i) {
       neurons[i].fprop(row, training);
     }

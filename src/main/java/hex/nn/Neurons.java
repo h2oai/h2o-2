@@ -1,20 +1,22 @@
 package hex.nn;
 
 import hex.FrameTask;
-import junit.framework.Assert;
-import org.junit.Test;
-import water.Iced;
 import water.MemoryManager;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.util.Utils;
 
 import java.util.Arrays;
-import java.util.Random;
 
 import static hex.nn.NN.Loss;
 
-public abstract class Neurons extends Iced {
+/**
+ * This class implements the concept of a Neuron layer in a Neural Network
+ * During training, every MRTask2 F/J thread is expected to create these neurons for every map call (Cheap to make).
+ * These Neurons are NOT sent over the wire.
+ * The weights connecting the neurons are in a separate class (NNModel.NNModelInfo), and will be shared per node.
+ */
+public abstract class Neurons {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
 
@@ -22,7 +24,15 @@ public abstract class Neurons extends Iced {
   protected int units;
 
   /**
-   * Parameters (potentially different from the user input, can be modified here, e.g. rate)
+   * Constructor of a Neuron Layer
+   * @param units How many neurons are in this layer?
+   */
+  Neurons(int units) {
+    this.units = units;
+  }
+
+  /**
+   * Parameters (deep-cloned() from the user input, can be modified here, e.g. learning rate decay)
    */
   protected NN params;
 
@@ -35,18 +45,16 @@ public abstract class Neurons extends Iced {
    * References for feed-forward connectivity
    */
   public Neurons _previous; // previous layer of neurons
-  protected NNModel.NNModelInfo _minfo; //reference to shared model info
+  NNModel.NNModelInfo _minfo; //reference to shared model info
   public float[] _w; //reference to _minfo.weights[layer] for convenience
-  public float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
+  float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
   public double[] _b; //reference to _minfo.biases[layer] for convenience
-  public double[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
+  private double[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
 
-  // Dropout (for input + hidden layers)
-  transient Dropout dropout;
-  public final Dropout get_dropout() { return dropout; }
-  Neurons(int units) {
-    this.units = units;
-  }
+  /**
+   * For Dropout training
+   */
+  protected Dropout dropout;
 
 //  /**
 //   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
@@ -59,83 +67,13 @@ public abstract class Neurons extends Iced {
 //  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
 
   /**
-   * Helper class for dropout, only to be used from within a layer of neurons
+   * Initialization of the parameters and connectivity of a Neuron layer
+   * @param neurons Array of all neuron layers, to establish feed-forward connectivity
+   * @param index Which layer am I?
+   * @param p User-given parameters (Job parental object hierarchy is not used)
+   * @param minfo Model information (weights/biases and their momenta)
+   * @param training Whether training is done or just testing (no need for dropout)
    */
-  public static class Dropout {
-    private transient Random _rand;
-    private transient byte[] _bits;
-    private long _seed;
-
-    public Dropout() {
-    }
-
-    Dropout(int units) {
-      _bits = new byte[(units+7)/8];
-    }
-
-    public final byte[] get_bits() { return _bits; }
-    public final Random get_rand() { return _rand; }
-    public final long get_seed() { return _seed; }
-
-    void setSeed(long seed) {
-      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
-      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
-      _seed = seed;
-      if (_rand == null) _rand = new Random(seed);
-      else _rand.setSeed(seed);
-    }
-
-    // for input layer
-    private void randomlySparsifyActivation(double[] a, double rate) {
-      Assert.assertTrue("Must call setSeed() first", _rand != null);
-      for( int i = 0; i < a.length; i++ )
-        if (_rand.nextFloat() < rate) a[i] = 0;
-    }
-
-    // for hidden layers
-    public void fillBytes() {
-      Assert.assertTrue("Must call setSeed() first", _rand != null);
-      _rand.nextBytes(_bits);
-    }
-
-    private boolean unit_active(int o) {
-      return (_bits[o / 8] & (1 << (o % 8))) != 0;
-    }
-
-    @Test public void test() throws Exception {
-      final int units = 1000;
-      double[] a = new double[units];
-      double sum1=0, sum2=0, sum3=0, sum4=0;
-
-      final int loops = 1000;
-      for (int l = 0; l < loops; ++l) {
-        Dropout d = new Dropout(units);
-        d.setSeed(new Random().nextLong());
-        Arrays.fill(a, 1.);
-        d.randomlySparsifyActivation(a, 0.3);
-        sum1 += water.util.Utils.sum(a);
-        Arrays.fill(a, 1.);
-        d.randomlySparsifyActivation(a, 0.0);
-        sum2 += water.util.Utils.sum(a);
-        Arrays.fill(a, 1.);
-        d.randomlySparsifyActivation(a, 1.0);
-        sum3 += water.util.Utils.sum(a);
-        d.fillBytes();
-        for (int i=0; i<units; ++i)
-          if (d.unit_active(i)) sum4++;
-      }
-      sum1 /= loops;
-      sum2 /= loops;
-      sum3 /= loops;
-      sum4 /= loops;
-      Assert.assertTrue(Math.abs(sum1-700)<1);
-      Assert.assertTrue(sum2 == units);
-      Assert.assertTrue(sum3 == 0);
-      Assert.assertTrue(Math.abs(sum4-500)<1);
-    }
-  }
-
-
   public final void init(Neurons[] neurons, int index, NN p, final NNModel.NNModelInfo minfo, boolean training) {
     params = (NN)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
@@ -147,7 +85,7 @@ public abstract class Neurons extends Iced {
                     this instanceof RectifierDropout || this instanceof Input) ) {
       dropout = new Dropout(units);
     }
-    if (!isInput()) {
+    if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
       _minfo = minfo;
       _w = minfo.get_weights(index-1); //incoming weights
@@ -159,14 +97,24 @@ public abstract class Neurons extends Iced {
     }
   }
 
-  protected abstract void fprop(long row, boolean training);
+  /**
+   * Forward propagation
+   * @param seed For seeding the RNG inside (for dropout)
+   * @param training Whether training is done or just testing (no need for dropout)
+   */
+  protected abstract void fprop(long seed, boolean training);
 
+  /**
+   *  Back propagation
+   */
   protected abstract void bprop();
-
-  boolean isInput() { return false; }
 
   /**
    * Apply gradient g to unit u with rate r and momentum m.
+   * @param u Unit (source of gradient correction)
+   * @param g Gradient (derivative of the loss function with respect to changing the weight of this unit)
+   * @param r Learning rate (as of this moment, in case there is learning rate annealing)
+   * @param m Momentum (as of this moment, in case there is a momentum ramp)
    */
   final void bprop(int u, double g, double r, double m) {
     double r2 = 0;
@@ -215,10 +163,21 @@ public abstract class Neurons extends Iced {
     }
   }
 
+  /**
+   * The learning rate
+   * @param n The number of training samples seen so far (for rate_annealing > 0)
+   * @return Learning rate
+   */
   public double rate(long n) {
     return params.rate / (1 + params.rate_annealing * n);
   }
 
+  /**
+   * The momentum - real number in [0, 1)
+   * Can be a linear ramp from momentum_start to momentum_stable, over momentum_ramp training samples
+   * @param n The number of training samples seen so far
+   * @return momentum
+   */
   public double momentum(long n) {
     double m = params.momentum_start;
     if( params.momentum_ramp > 0 ) {
@@ -230,35 +189,34 @@ public abstract class Neurons extends Iced {
     return m;
   }
 
+  /**
+   * Input layer of the Neural Network
+   * This layer is different from other layers as it has no incoming weights,
+   * but instead gets its activation values from the training points.
+   */
   public static class Input extends Neurons {
 
-    FrameTask.DataInfo _dinfo;
-    int _numStart;
-
-    public Input(int units, int numStart) {
-      super(units);
-      _numStart = numStart;
-      _a = new double[units];
-    }
+    private FrameTask.DataInfo _dinfo; //training data
 
     Input(int units, final FrameTask.DataInfo d) {
       super(units);
       _dinfo = d;
-      _numStart = _dinfo.numStart();
       _a = new double[units];
     }
 
     @Override protected void bprop() { throw new UnsupportedOperationException(); }
-    @Override protected void fprop(long row, boolean training) { throw new UnsupportedOperationException(); }
+    @Override protected void fprop(long seed, boolean training) { throw new UnsupportedOperationException(); }
 
-    @Override protected boolean isInput() {
-      return true;
-    }
-
-    public void setInput(long row, final double[] data) {
+    /**
+     * One of two methods to set layer input values. This one is for raw double data, e.g. for scoring
+     * @param seed For seeding the RNG inside (for input dropout)
+     * @param data Data (training columns and responses) to extract the training columns
+     *             from to be mapped into the input neuron layer
+     */
+    public void setInput(long seed, final double[] data) {
       assert(_dinfo != null);
-      double [] nums = MemoryManager.malloc8d(_dinfo._nums);
-      int    [] cats = MemoryManager.malloc4(_dinfo._cats);
+      double [] nums = MemoryManager.malloc8d(_dinfo._nums); // a bit wasteful - reallocated each time
+      int    [] cats = MemoryManager.malloc4(_dinfo._cats); // a bit wasteful - reallocated each time
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
         int c = (int)data[i];
@@ -270,16 +228,24 @@ public abstract class Neurons extends Iced {
         if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
         nums[i-_dinfo._cats] = d;
       }
-      setInput(row, nums, ncats, cats);
+      setInput(seed, nums, ncats, cats);
     }
 
-    public void setInput(long row, final double[] nums, final int numcat, final int[] cats) {
+    /**
+     * The second method used to set input layer values. This one is used directly by FrameTask.processRow() and by the method above.
+     * @param seed For seeding the RNG inside (for input dropout)
+     * @param nums Array containing numerical values
+     * @param numcat Number of horizontalized categorical non-zero values (i.e., those not being the first factor of a class)
+     * @param cats Array of indices, the first numcat values are the input layer unit (==column) indices for the non-zero categorical values
+     *             (This allows this array to be re-usable by the caller, without re-allocating each time)
+     */
+    public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
       Arrays.fill(_a, 0.);
       for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
-      System.arraycopy(nums, 0, _a, _numStart, nums.length);
+      System.arraycopy(nums, 0, _a, _dinfo.numStart(), nums.length);
       final double rate = params.input_dropout_ratio;
-      if (rate == 0 || row < 0) return; // row is set to -1 for testing (no input dropout done there)
-      dropout.setSeed(params.seed + 0x1337B4BE + row);
+      if (rate == 0 || seed < 0) return; // seed is set to -1 for testing (no input dropout done there)
+      dropout.setSeed(params.seed + 0x1337B4BE + seed);
       dropout.randomlySparsifyActivation(_a, rate);
     }
 
@@ -287,7 +253,7 @@ public abstract class Neurons extends Iced {
 
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
-    @Override protected void fprop(long row, boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
@@ -327,14 +293,14 @@ public abstract class Neurons extends Iced {
     }
 
     @Override
-    protected void fprop(long row, boolean training) {
+    protected void fprop(long seed, boolean training) {
       if (training) {
-        dropout.setSeed(params.seed + 0xDA7A6000 + row);
+        dropout.setSeed(params.seed + 0xDA7A6000 + seed);
         dropout.fillBytes();
-        super.fprop(row, true);
+        super.fprop(seed, true);
       }
       else {
-        super.fprop(row, false);
+        super.fprop(seed, false);
         Utils.div(_a, 2.f);
       }
     }
@@ -345,7 +311,7 @@ public abstract class Neurons extends Iced {
       super(units);
     }
 
-    @Override protected void fprop(long row, boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       if (dropout != null && training) {
         dropout.fillBytes();
       }
@@ -353,7 +319,7 @@ public abstract class Neurons extends Iced {
       double max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        if( !training || dropout.unit_active(o) ) {
+        if( !training || (dropout != null && dropout.unit_active(o))) {
           final int off = o * _previous._a.length;
           _a[o] = Double.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
@@ -390,7 +356,7 @@ public abstract class Neurons extends Iced {
       this.units = units;
     }
 
-    @Override protected void fprop(long row, boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
@@ -411,7 +377,7 @@ public abstract class Neurons extends Iced {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
 
         // no need to update the weights if there are no momenta and l1=0 and l2=0
-        if (params.fast_mode || (_wm == null && params.l1 == 0.0 && params.l2 == 0.0)) { //correct
+        if (params.fast_mode || (_wm == null && params.l1 == 0.0 && params.l2 == 0.0)) {
           if( _a[u] > 0 ) { // don't use >= (faster this way: lots of zeros)
             final double g = _e[u]; // * 1.0 (from derivative of rectifier)
             bprop(u, g, r, m);
@@ -432,14 +398,14 @@ public abstract class Neurons extends Iced {
       super(units);
     }
     @Override
-    protected void fprop(long row, boolean training) {
+    protected void fprop(long seed, boolean training) {
       if (training) {
-        dropout.setSeed(params.seed + 0x3C71F1ED + row);
+        dropout.setSeed(params.seed + 0x3C71F1ED + seed);
         dropout.fillBytes();
-        super.fprop(row, true);
+        super.fprop(seed, true);
       }
       else {
-        super.fprop(row, false);
+        super.fprop(seed, false);
         Utils.div(_a, 2.f);
       }
     }
@@ -449,21 +415,15 @@ public abstract class Neurons extends Iced {
     static final int API_WEAVER = 1;
     public static DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Loss function")
-    public Loss loss = Loss.MeanSquare;
-
     Output(int units) { super(units); }
 
     protected abstract void fprop(); //don't differentiate between testing/training
-    protected void fprop(long row, boolean training) { throw new UnsupportedOperationException(); }
-    protected void bprop() { throw new UnsupportedOperationException(); };
+    protected void fprop(long seed, boolean training) { throw new UnsupportedOperationException(); }
+    protected void bprop() { throw new UnsupportedOperationException(); }
   }
 
   public static class Softmax extends Output {
-    public Softmax(int units, Loss loss) {
-      super(units);
-      this.loss = loss;
-    }
+    public Softmax(int units) { super(units); }
 
     @Override protected void fprop() {
       double max = Double.NEGATIVE_INFINITY;
@@ -492,9 +452,9 @@ public abstract class Neurons extends Iced {
       for( int u = 0; u < _a.length; u++ ) {
         final double targetval = (u == target ? 1 : 0);
         double g = targetval - _a[u];
-        if (loss == Loss.CrossEntropy) {
+        if (params.loss == Loss.CrossEntropy) {
           //nothing else needed
-        } else if (loss == Loss.MeanSquare) {
+        } else if (params.loss == Loss.MeanSquare) {
           g *= (1 - _a[u]) * _a[u];
         }
         bprop(u, g, r, m);
@@ -517,7 +477,7 @@ public abstract class Neurons extends Iced {
       long processed = _minfo.get_processed_total();
       double m = momentum(processed);
       double r = rate(processed) * (1 - m);
-      assert(loss == Loss.MeanSquare);
+      assert(params.loss == Loss.MeanSquare);
       int u = 0;
 //      if (target == missing_double_value) return;
       double g = target - _a[u];

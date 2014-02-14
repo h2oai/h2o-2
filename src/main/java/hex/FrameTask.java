@@ -31,8 +31,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     super(cmp);
     _job = job;
     _dinfo = dinfo;
-    _useFraction=1.0f;
-    _seed=new Random().nextLong();
+    _useFraction = 1.0f;
+    _seed = new Random().nextLong();
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
@@ -81,7 +81,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public final int _foldId;
     public final int _nfolds;
 
-    private DataInfo(DataInfo dinfo,int foldId, int nfolds){
+    private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       _standardize = dinfo._standardize;
       _responses = dinfo._responses;
       _nums = dinfo._nums;
@@ -105,20 +105,21 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     /**
      * Prepare a Frame (with a single response) to be processed by the FrameTask
      * 1) Place response at the end
-     * 2) Remove rows with constant values and rows with >20% NaNs
+     * 2) (Optionally) Remove rows with constant values or with >20% NaNs
      * 3) Possibly turn integer categoricals into enums
      *
      * @param source A frame to be expanded and sanity checked
      * @param response (should be part of source)
      * @param toEnum Whether or not to turn categoricals into enums
+     * @param dropConstantCols Whether or not to drop constant columns
      * @return Frame to be used by FrameTask
      */
-    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum) {
+    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
       Frame fr = new Frame(source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
-      ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
-      for(int i = 0; i < vecs.length-1; ++i) {// put response to the end (if not already)
+      // put response to the end (if not already)
+      for(int i = 0; i < vecs.length-1; ++i) {
         if(vecs[i] == response){
           final String n = fr._names[i];
           if (toEnum) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
@@ -131,11 +132,16 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         final String n = fr._names[vecs.length-1];
         fr.add(n, fr.remove(vecs.length-1).toEnum());
       }
-      for(int i = 0; i < vecs.length-1; ++i) // remove constant cols and cols with too many NAs
-        if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
+      ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+      for(int i = 0; i < vecs.length-1; ++i) {
+        // remove constant cols and cols with too many NAs
+        if( (dropConstantCols && vecs[i].min() == vecs[i].max()) || vecs[i].naCnt() > vecs[i].length()*0.2)
+          constantOrNAs.add(i);
+      }
       if(!constantOrNAs.isEmpty()){
         int [] cols = new int[constantOrNAs.size()];
-        for(int i = 0; i < cols.length; ++i)cols[i] = constantOrNAs.get(i);
+        for(int i = 0; i < cols.length; ++i)
+          cols[i] = constantOrNAs.get(i);
         fr.remove(cols);
       }
       return fr;
@@ -186,7 +192,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         names[i+ncats] = fr._names[nums[i]];
         if(standardize){
           _normSub[i] = v.mean();
-          _normMul[i] = 1.0/v.sigma();
+          _normMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
         }
       }
       _adaptedFrame = new Frame(names,vecs2);
@@ -247,13 +253,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     int end = nrows;
 
     boolean contiguous = false;
-    Random _random = null; //random generator for skipping rows
+    Random skip_rng = null; //random generator for skipping rows
     if (_useFraction < 1.0) {
-      _random = water.util.Utils.getDeterRNG(_seed + 0x600D5EED + offset);
+      skip_rng = water.util.Utils.getDeterRNG(_seed+++0x600D5EED+offset); //change seed to avoid periodicity across epochs
       if (contiguous) {
         final int howmany = (int)Math.ceil(_useFraction*nrows);
         if (howmany > 0) {
-          start = _random.nextInt(nrows - howmany);
+          start = skip_rng.nextInt(nrows - howmany);
           end = start + howmany;
         }
         assert(start < nrows);
@@ -264,7 +270,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     OUTER:
     for(int r = start; r < end; ++r){
       if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
-              || (_random != null && _random.nextFloat() > _useFraction))continue;
+              || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){

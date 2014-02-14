@@ -98,6 +98,9 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Enable fast mode (minor approximation in backpropagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
 
+  @API(help = "Ignore constant training columns", filter = Default.class, json = true)
+  public boolean ignore_const_cols = true;
+
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
   }
@@ -226,13 +229,13 @@ public class NN extends Job.ValidatedJob {
       validation.read_lock(self());
 
     if (_dinfo == null)
-      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true), 1, true);
+      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true, ignore_const_cols), 1, true);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
-    model.delete_and_lock(self());
     model.model_info().initializeMembers();
     final long[] model_size = model.model_info().size();
     Log.info("Number of model parameters (weights/biases): " + String.format("%g", (double)model_size[0]));
     Log.info("Memory usage of the model: " + String.format("%g", (double)model_size[1] / (1<<20)) + " MB.");
+    model.delete_and_lock(self());
   }
 
   public NNModel buildModel() {
@@ -291,14 +294,15 @@ public class NN extends Job.ValidatedJob {
     p.source = fr;
     p.response = fr.lastVec();
     p.ignored_cols = null;
+    p.ignore_const_cols = true;
 
-    DataInfo dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true), 1, true);
+    DataInfo dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols), 1, true);
     NNModel.NNModelInfo model_info  = new NNModel.NNModelInfo(p, p.source.numCols()-1, 10);
     NNTask nnt = new NNTask(dinfo, model_info, true, 1.0f);
 
     int numcats = 0;
     int[] cats = null;
-    Neurons[] neurons  = nnt.makeNeuronsForTraining(dinfo, model_info);
+    Neurons[] neurons  = NNTask.makeNeuronsForTraining(dinfo, model_info);
     //dropout training for 100 rows - just to populate the weights/biases a bit
     for (long row = 0; row < 100; ++row) {
       double[] nums = new double[dinfo._nums];
@@ -306,11 +310,11 @@ public class NN extends Job.ValidatedJob {
         nums[i] = fr.vecs()[i].at(row); //wrong: get the FIRST 717 columns (instead of the non-const ones), but doesn't matter here (just want SOME numbers)
       ((Neurons.Input)neurons[0]).setInput(row, nums, 0, cats);
       final double[] responses = new double[]{fr.vecs()[p.source.numCols()-1].at(row)};
-      nnt.step(row, neurons, model_info, true, responses);
+      NNTask.step(row, neurons, model_info, true, responses);
     }
 
     // take the trained model_info and build another Neurons[] for testing
-    Neurons[] neurons2 = nnt.makeNeuronsForTesting(dinfo, model_info);
+    Neurons[] neurons2 = NNTask.makeNeuronsForTesting(dinfo, model_info);
 
     for (int i=1; i<neurons.length-1; ++i) {
       Assert.assertEquals(neurons[i]._w, neurons2[i]._w); //same reference (from same model_info)
