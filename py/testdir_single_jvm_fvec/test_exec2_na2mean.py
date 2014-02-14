@@ -48,6 +48,8 @@ class Basic(unittest.TestCase):
                 "mean=total / rcnt; " + \
                 "ifelse(is.na(x),mean,x)} " + \
             ")" ,
+            # throw in a na flush to 0
+            "s=r.hex[,1]; s.hex[,1]=ifelse(is.na(x),0,x)",
         ]
         execExprList += execExprList2
 

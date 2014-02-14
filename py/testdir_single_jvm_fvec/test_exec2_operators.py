@@ -21,6 +21,7 @@ if 1==0:
     # apply: return vector or array or list of values..applying function to margins of array or matrix
     # margins: either rows(1), columns(2) or both(1:2)
         # "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
+        "s.hex = r.hex[!is.na(r.hex[,13]),]"
         "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
         # doesn't work. Should work according to earl
         # 'r.hex[is.na(r.hex)]<-0',
