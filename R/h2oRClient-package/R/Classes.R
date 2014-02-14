@@ -291,6 +291,10 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   #  stop("Array index out of bounds!")
   if(!(missing(i) || is.numeric(i)) || !(missing(j) || is.numeric(j) || is.character(j)))
     stop("Row/column types not supported!")
+  if(!inherits(value, "H2OParsedData") && !is.numeric(value))
+    stop("value can only be numeric or a H2OParsedData object")
+  if(is.numeric(value) && length(value) != 1 && length(value) != numRows)
+    stop("value must be either a single number or a vector of length ", numRows)
 
   if(!missing(i) && is.numeric(i)) {
     if(any(i == 0)) stop("Array index out of bounds")
@@ -329,8 +333,8 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
     lhs = paste(x@key, "[", rind, ",", cind, "]", sep = "")
   }
 
-  # rhs = ifelse(class(value) == "H2OParsedData", value@key, value)
-  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, value)
+  # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   return(x)
 })
@@ -529,7 +533,10 @@ table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", 
   }   
 }
 
-h2o.runif <- function(x) { h2o.__unop2("runif", x) }
+h2o.runif <- function(n, min = 0, max = 1) { 
+  if(min != 0 || max != 1) stop("Unimplemented")
+  h2o.__unop2("runif", n)
+}
 
 setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
