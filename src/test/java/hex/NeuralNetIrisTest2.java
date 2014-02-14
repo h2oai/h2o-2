@@ -7,7 +7,10 @@ import hex.nn.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import water.*;
+import water.JUnitRunnerDebug;
+import water.Key;
+import water.TestUtil;
+import water.UKV;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -17,7 +20,7 @@ import water.util.Utils;
 import java.util.Random;
 
 public class NeuralNetIrisTest2 extends TestUtil {
-  static final String PATH = "smalldata/iris/iris.csv.gz";
+  static final String PATH = "smalldata/iris/iris.csv";
   Frame _train, _test;
 
   @BeforeClass public static void stall() {
@@ -27,15 +30,12 @@ public class NeuralNetIrisTest2 extends TestUtil {
   void compareVal(double a, double b, double abseps, double releps) {
     // check for equality
     if (Double.compare(a, b) == 0) {
-      return;
     }
     // check for small relative error
     else if (Math.abs(a-b)/Math.max(a,b) < releps) {
-      return;
     }
     // check for small absolute error
     else if (Math.abs(a - b) <= abseps) {
-      return;
     }
     // fail
     else Assert.failNotEquals("Not equal: ", a, b);
@@ -119,7 +119,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                           p.source = _train;
                           p.response = _train.lastVec();
                           p.ignored_cols = null;
-                          fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true);
+                          p.ignore_const_cols = true;
+                          fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
                           p._dinfo = new FrameTask.DataInfo(fr, 1, true);
                         }
                         // must have all output classes in training data (since that's what the reference implementation has hardcoded)
@@ -245,7 +246,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                           int maxIndex = NeuralNetMLPReference2.NeuralNetwork.MaxIndexWithTieBreaking(yValues_float, i);
 
                           // compare predicted label
-                          Assert.assertTrue( maxIndex == (int)fpreds.vecs()[0].at(i) );
+                          Assert.assertTrue(maxIndex == (int) fpreds.vecs()[0].at(i));
                           // compare predicted probabilities
                           for (int j=0; j<ref_preds.length; ++j) {
                             compareVal((float)(ref_preds[j]), fpreds.vecs()[1+j].at(i), abseps, releps);

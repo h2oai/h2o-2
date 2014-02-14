@@ -8,7 +8,6 @@ import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
-import water.UKV;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -43,10 +42,11 @@ public class NeuralNetSpiralsTest extends TestUtil {
     p.momentum_stable = 0;
     p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.Normal;
     p.initial_weight_scale = 2.5;
+    p.loss = NeuralNet.Loss.CrossEntropy;
 
     Layer[] ls = new Layer[3];
     VecsInput input = new VecsInput(data, null);
-    VecSoftmax output = new VecSoftmax(labels, null, NeuralNet.Loss.CrossEntropy);
+    VecSoftmax output = new VecSoftmax(labels, null);
     ls[0] = input;
     ls[1] = new Layer.Tanh(100);
     ls[2] = output;
@@ -66,7 +66,6 @@ public class NeuralNetSpiralsTest extends TestUtil {
     }
 
     frame.delete();
-    for( int i = 0; i < ls.length; i++ )
-      ls[i].close();
+    for (Layer l : ls) l.close();
   }
 }
