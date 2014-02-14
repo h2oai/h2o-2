@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.Arrays;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -59,8 +60,8 @@ public abstract class Trainer {
       throw new UnsupportedOperationException();
     }
 
-    final void step(long gid) {
-      for (Layer l : _ls) l.setTrainingRow(gid);
+    final void step(long seed) {
+      for (Layer l : _ls) l.setSeed(seed);
       fprop();
       for( int i = 1; i < _ls.length - 1; i++ )
         Arrays.fill(_ls[i]._e, 0);
@@ -167,13 +168,14 @@ public abstract class Trainer {
         _trainers[t] = new Base(clones);
         final Base trainer = _trainers[t];
 
+        final int thread_num = t;
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
             for( long i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
               if( job != null && (!Job.isRunning(job) || !NeuralNet.running ) )
                 break;
               try {
-                trainer.step(input._pos + i);
+                trainer.step(thread_num * _stepsPerThread + input._pos);
                 input.move();
                 _processed.incrementAndGet();
               } catch (Exception e) {
@@ -425,7 +427,7 @@ public abstract class Trainer {
         }
         Base base = new Base(clones);
         for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
-          base.step(_cs[0]._start + input._pos);
+          base.step(new Random().nextLong()); //warning: no reproducible seeding
         int chunk = _cs[0].cidx();
         _node.stepped(chunk);
       }

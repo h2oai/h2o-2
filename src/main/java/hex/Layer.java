@@ -1,5 +1,6 @@
 package hex;
 
+import junit.framework.Assert;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -70,11 +71,12 @@ public abstract class Layer extends Iced {
 
     private Dropout(int units) {
       _bits = new byte[(units+7)/8];
-      //_rand is left null, user must call Neurons.setTrainingRow(gid) for each training row to create a new _rand
+      //_rand is left null, user must call Neurons.setSeed() for each training row to create a new _rand
     }
 
     // for input layer
     private void clearSomeInput(Layer previous) {
+      Assert.assertTrue("Must call setSeed() first", _rand != null);
       assert(previous.isInput());
       final double rate = ((Input)previous).params.input_dropout_ratio;
       for( int i = 0; i < previous._a.length; i++ ) {
@@ -84,6 +86,7 @@ public abstract class Layer extends Iced {
 
     // for hidden layers
     private void fillBytes() {
+      Assert.assertTrue("Must call setSeed() first", _rand != null);
       _rand.nextBytes(_bits);
     }
 
@@ -160,8 +163,7 @@ public abstract class Layer extends Iced {
   public void close() {
   }
 
-  protected void setTrainingRow(long row) {
-//    System.err.println("row " + row);
+  protected void setSeed(long seed) {
   }
 
   protected abstract void fprop(boolean training);
@@ -462,12 +464,8 @@ public abstract class Layer extends Iced {
     static final int API_WEAVER = 1;
     public static DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Loss function")
-    public NeuralNet.Loss loss = NeuralNet.Loss.MeanSquare;
-
     public final void init(Layer[] ls, int index, NeuralNet p, NeuralNet.Loss l) {
       super.init(ls, index, p);
-      loss = l;
     }
 
     protected final long pos() {
@@ -517,9 +515,9 @@ public abstract class Layer extends Iced {
       for( int u = 0; u < _a.length; u++ ) {
         final double targetval = (u == label ? 1 : 0);
         double g = targetval - _a[u];
-        if (loss == NeuralNet.Loss.CrossEntropy) {
+        if (params.loss == NeuralNet.Loss.CrossEntropy) {
           //nothing else needed
-        } else if (loss == NeuralNet.Loss.MeanSquare) {
+        } else if (params.loss == NeuralNet.Loss.MeanSquare) {
           g *= (1 - _a[u]) * _a[u];
         }
         bprop(u, g, r, m);
@@ -534,7 +532,7 @@ public abstract class Layer extends Iced {
     VecSoftmax() {
     }
 
-    public VecSoftmax(Vec vec, VecSoftmax stats, NeuralNet.Loss l) {
+    public VecSoftmax(Vec vec, VecSoftmax stats) {
 // Waiting for Michal stuff, for now enum must start at 0
 //      if( vec.domain() == null ) {
 //        vec = vec.toEnum();
@@ -542,7 +540,6 @@ public abstract class Layer extends Iced {
 //      }
       this.units = stats != null ? stats.units : (int) (vec.max() + 1);
       this.vec = vec;
-      loss = l;
       params = stats != null ? (NeuralNet)stats.params.clone() : null;
     }
 
@@ -565,7 +562,6 @@ public abstract class Layer extends Iced {
     public ChunkSoftmax(Chunk chunk, VecSoftmax stats) {
       units = stats.units;
       _chunk = chunk;
-      loss = stats.loss;
       params = (NeuralNet)stats.params.clone();
     }
 
@@ -604,7 +600,7 @@ public abstract class Layer extends Iced {
       double m = momentum(processed);
       double r = rate(processed) * (1 - m);
       double[] v = target();
-      assert(loss == NeuralNet.Loss.MeanSquare);
+      assert(params.loss == NeuralNet.Loss.MeanSquare);
       for( int u = 0; u < _a.length; u++ ) {
         if (v[u] == missing_double_value) continue; //ignore missing regression targets
         double g = v[u] - _a[u];
@@ -642,8 +638,7 @@ public abstract class Layer extends Iced {
       assert(stats == null || stats.units == 1);
       units = 1;
       _chunk = chunk;
-      loss = stats.loss;
-      params = (NeuralNet)stats.params.clone();
+      params = (NeuralNet) (stats != null ? stats.params.clone() : null);
     }
 
     @Override double[] target() {
@@ -709,9 +704,9 @@ public abstract class Layer extends Iced {
       super(units);
     }
     @Override
-    protected void setTrainingRow(long row) {
-      super.setTrainingRow(row);
-      long seed = params.seed + 0xDA7A + row;
+    protected void setSeed(long seed) {
+      super.setSeed(seed);
+      seed += params.seed + 0xDA7A;
       if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
       if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
       if (dropout == null) dropout = createDropout(units);
@@ -801,7 +796,7 @@ public abstract class Layer extends Iced {
       double max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        if( !training || dropout.unit_active(o) ) {
+        if( !training || (dropout != null && dropout.unit_active(o))) {
           _a[o] = Float.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] = Math.max(_a[o], _w[o * _previous._a.length + i] * _previous._a[i]);
@@ -879,9 +874,9 @@ public abstract class Layer extends Iced {
       super(units);
     }
     @Override
-    protected void setTrainingRow(long row) {
-      super.setTrainingRow(row);
-      long seed = params.seed + 0x3C71F1ED + row;
+    protected void setSeed(long seed) {
+      super.setSeed(seed);
+      seed += params.seed + 0x3C71F1ED;
       if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
       if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
       if (dropout == null) dropout = createDropout(units);

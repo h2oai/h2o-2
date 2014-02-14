@@ -255,7 +255,7 @@ public class NeuralNet extends ValidatedJob {
     }
 
     if( classification )
-      ls[ls.length - 1] = new VecSoftmax(trainResp, null, loss);
+      ls[ls.length - 1] = new VecSoftmax(trainResp, null);
     else
       ls[ls.length - 1] = new VecLinear(trainResp, null);
 
@@ -438,7 +438,7 @@ public class NeuralNet extends ValidatedJob {
   public static Errors eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm) {
     Output output = (Output) ls[ls.length - 1];
     if( output instanceof VecSoftmax )
-      output = new VecSoftmax(resp, (VecSoftmax) output, output.loss);
+      output = new VecSoftmax(resp, (VecSoftmax) output);
     else
       output = new VecLinear(resp, (VecLinear) output);
     return eval(ls, new VecsInput(vecs, (VecsInput) ls[0]), output, n, cm);
@@ -756,6 +756,7 @@ public class NeuralNet extends ValidatedJob {
         }
       }
       if( validation_errors != null ) {
+        assert valid != null;
         DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, valid.mean_square));
         if (classification) {
           DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, valid.cross_entropy));
@@ -821,8 +822,8 @@ public class NeuralNet extends ValidatedJob {
       if (valid != null) {
         String validation = "Number of validation set samples for scoring: " + valid.score_validation;
         if (valid.score_validation > 0) {
-          if (valid.score_training < 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-          if (valid.score_training > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+          if (valid.score_validation < 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+          if (valid.score_validation > 10000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         }
         DocGen.HTML.section(sb, validation);
       }
@@ -1028,8 +1029,7 @@ public class NeuralNet extends ValidatedJob {
         sumError += error;
       }
       sb.append("<tr><th>Totals</th>");
-      for( int i = 0; i < totals.length; ++i )
-        sb.append("<td>" + totals[i] + "</td>");
+      for (long total : totals) sb.append("<td>" + total + "</td>");
       sb.append("<td><b>");
       sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
       sb.append("</b></td></tr>");
