@@ -619,7 +619,8 @@ public class Utils {
   public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
-      for(Map.Entry<K, V> e:entrySet())bb.put(e.getKey()).put(e.getValue());
+      for( Map.Entry<K, V> e : entrySet() )
+        bb.put(e.getKey()).put(e.getValue());
       return bb;
     }
     @Override public IcedHashMap<K,V> read(AutoBuffer bb) {
@@ -629,19 +630,13 @@ public class Utils {
       return this;
     }
 
-    @Override public <T2 extends Freezable> T2 newInstance() {
-      return (T2)new IcedHashMap<K,V>();
-    }
+    @Override public IcedHashMap<K,V> newInstance() { return new IcedHashMap<K,V>(); }
     private static int _frozen$type;
     @Override public int frozenType() {
       return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedHashMap.class.getName())) : _frozen$type;
     }
-    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
-      return bb;
-    }
-    @Override public FieldDoc[] toDocField() {
-      return null;
-    }
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
+    @Override public FieldDoc[] toDocField() { return null; }
   }
   public static final boolean hasNaNsOrInfs(double [] arr){
     for(double d:arr) if(Double.isNaN(d) || Double.isInfinite(d))return true;

@@ -987,9 +987,6 @@ public final class H2O {
   /** Starts the local k-v store.
 * Initializes the local k-v store, local node and the local cloud with itself
 * as the only member.
-*
-* @param args Command line arguments
-* @return Unprocessed command line arguments for further processing.
 */
   private static void startLocalNode() {
     // Figure self out; this is surprisingly hard
