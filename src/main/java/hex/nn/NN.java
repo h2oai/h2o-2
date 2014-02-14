@@ -18,7 +18,6 @@ import java.util.Random;
 
 import static water.TestUtil.find_test_file;
 import static water.util.MRUtils.sampleFrame;
-import static water.util.MRUtils.shuffleFramePerChunk;
 
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -226,11 +225,6 @@ public class NN extends Job.ValidatedJob {
   public void initModel() {
     checkParams();
     logStart();
-    if (shuffle_training_data) {
-      Log.info("Shuffling training data.");
-      source = shuffleFramePerChunk(source, seed); //might want global shuffle
-      response = source.lastVec();
-    }
     // Lock the input datasets against deletes
     source.read_lock(self());
     if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
@@ -263,12 +257,12 @@ public class NN extends Job.ValidatedJob {
     // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
     final float sync_fraction = sync_samples == 0l ? 1.0f : (float)sync_samples / train.numRows();
 
-    Log.info("Starting to train the Neural Net.");
+    Log.info("Starting to train the Neural Net model.");
     long timeStart = System.currentTimeMillis();
     //main loop
     do {
       // NNTask trains an internal deep copy of model_info
-      NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction).doAll(train);
+      NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction, shuffle_training_data).doAll(train);
 //      // FOR DEBUGGING ONLY
 //      {
 //        AutoBuffer bb = new AutoBuffer();
@@ -306,17 +300,14 @@ public class NN extends Job.ValidatedJob {
 
     DataInfo dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols), 1, true);
     NNModel.NNModelInfo model_info  = new NNModel.NNModelInfo(p, p.source.numCols()-1, 10);
-    NNTask nnt = new NNTask(dinfo, model_info, true, 1.0f);
 
-    int numcats = 0;
-    int[] cats = null;
     Neurons[] neurons  = NNTask.makeNeuronsForTraining(dinfo, model_info);
     //dropout training for 100 rows - just to populate the weights/biases a bit
     for (long row = 0; row < 100; ++row) {
       double[] nums = new double[dinfo._nums];
       for (int i=0; i<dinfo._nums; ++i)
         nums[i] = fr.vecs()[i].at(row); //wrong: get the FIRST 717 columns (instead of the non-const ones), but doesn't matter here (just want SOME numbers)
-      ((Neurons.Input)neurons[0]).setInput(row, nums, 0, cats);
+      ((Neurons.Input)neurons[0]).setInput(row, nums, 0, null);
       final double[] responses = new double[]{fr.vecs()[p.source.numCols()-1].at(row)};
       NNTask.step(row, neurons, model_info, true, responses);
     }

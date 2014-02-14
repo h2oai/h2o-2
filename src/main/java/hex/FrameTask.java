@@ -10,6 +10,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
+import water.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,8 +22,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
 
-  protected float _useFraction;
+  protected float _useFraction = 1.0f;
   protected long _seed;
+  protected boolean _shuffle = false;
 
   public FrameTask(Job job, DataInfo dinfo) {
     this(job,dinfo,null);
@@ -31,7 +33,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     super(cmp);
     _job = job;
     _dinfo = dinfo;
-    _useFraction = 1.0f;
     _seed = new Random().nextLong();
   }
   protected FrameTask(FrameTask ft){
@@ -39,6 +40,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     _job = ft._job;
     _useFraction = ft._useFraction;
     _seed = ft._seed;
+    _shuffle = ft._shuffle;
   }
   public double [] normMul(){return _dinfo._normMul;}
   public double [] normSub(){return _dinfo._normSub;}
@@ -267,8 +269,17 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       }
     }
 
+    long[] shuf_map = null;
+    if (_shuffle) {
+      shuf_map = new long[end-start];
+      for (int i=0;i<shuf_map.length;++i)
+        shuf_map[i] = start + i;
+      Utils.shuffleArray(shuf_map, _seed+++0xD0650F1E+offset);
+    }
+
     OUTER:
-    for(int r = start; r < end; ++r){
+    for(int rr = start; rr < end; ++rr){
+      final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
       if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
               || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!

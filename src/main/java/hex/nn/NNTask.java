@@ -17,13 +17,14 @@ public class NNTask extends FrameTask<NNTask> {
 
   int _chunk_node_count = 1;
 
-  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction){this(dinfo,input,training,fraction, null);}
-  private NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
+  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, boolean shuffle){this(dinfo,input,training,fraction,shuffle,null);}
+  private NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, boolean shuffle, H2OCountedCompleter cmp){
     super(input.job(),dinfo,cmp);
     _training=training;
     _input=input;
     _useFraction=fraction;
     _seed=_input.get_params().seed;
+    _shuffle = shuffle;
     assert(_output == null);
   }
 
@@ -60,8 +61,12 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override protected void postGlobal(){
-    if (H2O.CLOUD.size() > 1 && _chunk_node_count < H2O.CLOUD.size())
-      Log.warn("Only " + _chunk_node_count + " nodes (out of " + H2O.CLOUD.size() + ") are contributing to model updates.");
+    if (H2O.CLOUD.size() > 1) {
+      Log.info("Synchronizing across " + _chunk_node_count + " H2O nodes.");
+      if (_chunk_node_count < H2O.CLOUD.size())
+        Log.warn(H2O.CLOUD.size() - _chunk_node_count + " nodes (out of "
+                + H2O.CLOUD.size() + ") are not contributing to model updates. Consider using a larger training dataset (or fewer H2O nodes).");
+    }
     _output.div(_chunk_node_count);
     _output.add_processed_global(_output.get_processed_local());
     _output.set_processed_local(0l);
