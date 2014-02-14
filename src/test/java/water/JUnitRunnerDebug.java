@@ -42,7 +42,7 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       // tests = JUnitRunner.all();
-//      tests.add(hex.NeuralNetSpiralsTest.class);
+      tests.add(hex.NeuralNetSpiralsTest.class);
       tests.add(hex.NeuralNetIrisTest.class);
       tests.add(hex.NeuralNetIrisTest2.class);
       tests.add(Dropout.class);
