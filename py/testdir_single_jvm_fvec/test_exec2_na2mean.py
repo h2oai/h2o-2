@@ -48,6 +48,10 @@ class Basic(unittest.TestCase):
                 "mean=total / rcnt; " + \
                 "ifelse(is.na(x),mean,x)} " + \
             ")" ,
+            # this got an exception. note I forgot to assign to x here
+            "s=r.hex[,1]; s.hex[,1]=ifelse(is.na(x),0,x)",
+            # throw in a na flush to 0
+            "x=r.hex[,1]; s.hex[,1]=ifelse(is.na(x),0,x)",
         ]
         execExprList += execExprList2
 
@@ -78,7 +82,7 @@ class Basic(unittest.TestCase):
 
         print "results from the individual exec expresssions (ignore last which was an apply)"
         print "results:", results
-        self.assertEqual(results, [0.0, 0.0, 0.0, 1859.0, 581012.0, 581012.0, 2959.365300544567, 1859.0, 1859.0])
+        self.assertEqual(results, [0.0, 0.0, 0.0, 1859.0, 581012.0, 581012.0, 2959.365300544567, 1859.0, 1859.0, 1859.0, 1859.0])
 
 
 

@@ -47,6 +47,8 @@ public class Cloud extends Request {
     response.addProperty(CLOUD_NAME, H2O.NAME);
     response.addProperty(NODE_NAME, self.toString());
     response.addProperty(CLOUD_SIZE, cloud._memary.length);
+    long now = System.currentTimeMillis();
+    response.addProperty(CLOUD_UPTIME_MILLIS, now - H2O.START_TIME_MILLIS);
     boolean cloudHealthy = true;
     JsonArray nodes = new JsonArray();
     for (H2ONode h2o : cloud._memary) {
