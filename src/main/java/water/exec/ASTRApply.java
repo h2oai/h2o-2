@@ -133,7 +133,7 @@ class ASTSApply extends ASTRApply {
 //   C - Cols in original frame
 //   subC - Subset of C; either a single column entry, or a 1 Vec frame with a list of columns.
 //   subR - Subset of R, where all subC values are the same.
-//   N - Return column(s).
+//   N - Return column(s).  Can be 1, and so fcn can return a dbl instead of 1xN
 //  #R - # of unique combos in the original "subC" set
 
 class ASTddply extends ASTOp {
@@ -196,6 +196,9 @@ class ASTddply extends ASTOp {
     ddplyPass2 p2 = new ddplyPass2(p1).invokeOnAllNodes();
     // vecs[] iteration order exactly matches p1._grpoups.keySet()
     Vec vecs[] = p2.close();
+    // Push the execution env around the cluster
+    Key envkey = Key.make();
+    UKV.put(envkey,env);
     
     // Pass 3: Send Groups 'round the cluster
     // Single-threaded per-group work.
@@ -213,10 +216,11 @@ class ASTddply extends ASTOp {
         gvecs[c] = new SubsetVec(rows._key,data[c]._key,keys[c],rows._espc);
       Frame fg = new Frame(fr._names,gvecs);
       // Non-blocking, send a group to a remote node for execution
-      fs.add(RPC.call(H2O.CLOUD._memary[g.hashCode()%csz],new RemoteExec(g._ds,fg,op,env)));
+      fs.add(RPC.call(H2O.CLOUD._memary[g.hashCode()%csz],new RemoteExec(g._ds,fg,envkey)));
     }
     fs.blockForPending();
 
+    // Delete the group row vecs
     for( Vec v : vecs ) UKV.remove(v._key);
 
     env.pop(4);
@@ -416,27 +420,26 @@ class ASTddply extends ASTOp {
 
   private static class RemoteExec extends DTask<RemoteExec> implements Freezable {
     // INS
-    public double _ds[];
-    public Frame _fr;
-    public ASTOp _op;
-    public Env _env;
-    RemoteExec( double ds[], Frame fr, ASTOp op, Env env ) { _ds=ds; _fr=fr; _op=op; _env=env; }
+    public double _ds[];        // Displayable name for this group
+    public Frame _fr;           // Frame for this group
+    public Key _envkey;         // Key for the execution environment
+    RemoteExec( double ds[], Frame fr, Key envkey ) { _ds=ds; _fr=fr; _envkey=envkey; }
     @Override public void compute2() {
-      System.out.println("ddply on group "+Arrays.toString(_ds)+" rows="+_fr.numRows()+", env="+_env+", op="+_op);
-      
+      Env shared_env = UKV.get(_envkey);
       // Clone a private copy of the environment for local execution
-      _env = _env.capture(true);
+      Env env = shared_env.capture(true);
+      ASTOp op = env.fcn(-1);
 
-      _env.push(_op);
-      _env.push(_fr);
-      _op.apply(_env,2/*1-arg function*/);
-      System.out.println("ddply on group "+Arrays.toString(_ds)+", env="+_env);
+      System.out.println("ddply on group "+Arrays.toString(_ds)+" rows="+_fr.numRows()+", env="+env+", op="+op);
+      env.push(op);
+      env.push(_fr);
+      op.apply(env,2/*1-arg function*/);
+      System.out.println("ddply on group "+Arrays.toString(_ds)+", env="+env);
       
       _fr.delete();
       _fr = null;
       _ds = null;
-      _op = null;
-      _env= null;
+      _envkey= null;
       tryComplete();
     }
   }
