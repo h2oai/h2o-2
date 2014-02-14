@@ -29,6 +29,7 @@ public final class H2O {
   public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
 
   public static String VERSION = "(unknown)";
+  public static long START_TIME_MILLIS = -1;
 
   // User name for this Cloud (either the username or the argument for the option -name)
   public static String NAME;
@@ -926,6 +927,7 @@ public final class H2O {
     IS_SYSTEM_RUNNING = true;
 
     VERSION = getVersion();   // Pick this up from build-specific info.
+    START_TIME_MILLIS = System.currentTimeMillis();
 
     // Parse args
     Arguments arguments = new Arguments(args);
