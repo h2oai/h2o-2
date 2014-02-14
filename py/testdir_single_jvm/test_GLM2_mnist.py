@@ -128,7 +128,12 @@ class Basic(unittest.TestCase):
                 aHack = {'destination_key': 'A.hex'}
                 glmFirstResult = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, 
                     noPoll=True, **kwargs)
+                print "\nglmFirstResult:", h2o.dump_json(glmFirstResult)
+                job_key = glmFirstResult['job_key']
                 h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=5)
+
+                # double check...how come the model is bogus?
+                h2o_jobs.pollWaitJobs()
                 glm = h2o.nodes[0].glm_view(_modelKey=modelKey)
 
                 elapsed = time.time() - start

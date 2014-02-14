@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu','disk', 'network', 'iostats']
         # IOStatus can hang?
         benchmarkLogging = ['cpu', 'disk' 'network']
-        pollTimeoutSecs = 120
+        pollTimeoutSecs = 180
         retryDelaySecs = 10
 
         localhost = h2o.decide_if_localhost()
