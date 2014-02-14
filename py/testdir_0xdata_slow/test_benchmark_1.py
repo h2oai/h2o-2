@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ### time.sleep(3600)
+        # time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_benchmark_import(self):
@@ -25,11 +25,15 @@ class Basic(unittest.TestCase):
         synSize =  183
         if 1==1:
             # importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
-            importFolderPathFull = '/home/0xdiag/datasets/manyfiles-nflx-gz'
-            importFolderPath = 'manyfiles-nflx-gz'
+            # importFolderPathFull = '/home/0xdiag/datasets/manyfiles-nflx-gz'
+            importFolderPath = 'more1_1200_link'
+            # importFolderPath = 'manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
+            # this pattern from browser correctly does 100 files, 1M rowsj
+            # source_key=*/home/0xdiag/datasets/manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz
             csvFilenameAll = [
                 ("file_1.dat.gz", "file_1_A.dat.gz", 1 * avgMichalSize, 3600),
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
 
@@ -80,29 +84,27 @@ class Basic(unittest.TestCase):
         pollTimeoutSecs = 120
         retryDelaySecs = 10
 
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
+                enable_benchmark_log=True)
+        else:
+            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
+                enable_benchmark_log=True)
+
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
-            localhost = h2o.decide_if_localhost()
-            if (localhost):
-                h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
-                    enable_benchmark_log=True)
-
-            else:
-                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
-                    enable_benchmark_log=True)
-
             # pop open a browser on the cloud
             ### h2b.browseTheCloud()
 
             # to avoid sticky ports?
             ### base_port += 2
-            h2o.beta_features = True
+            h2o.beta_features = False
 
             for trial in range(trialMax):
                 # (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
                 csvPathname = importFolderPath + "/" + csvFilepattern
                 (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', 
                         path=csvPathname, schema='local', timeoutSecs=timeoutSecs)
-
 
                 importFullList = importResult['files']
                 importFailList = importResult['fails']
@@ -112,22 +114,28 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
-                start = time.time()
                 csvPathname = importFolderPath + "/" + csvFilepattern
+                start = time.time()
                 parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
                     hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,
                     benchmarkLogging=benchmarkLogging)
+                elapsed = time.time() - start
+                print "Parse#", trial, parseResult['destination_key'], "took", elapsed, "seconds",\
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+                h2o_cmd.infoFromInspect(inspect, csvPathname)
 
                 if noPoll:
                     if (i+1) < len(csvFilenameList):
-                        time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
                         # parseResult = h2i.import_parse(path=importFolderPath + "/" + csvFilepattern,
                         csvPathname = importFolderPathFull + "/" + csvFilepattern
+                        start = time.time()
                         parseResult = h2i.import_parse(path=csvPathname,
                             hex_key=csvFilename + ".hex", 
                             timeoutSecs=timeoutSecs, 
@@ -135,9 +143,13 @@ class Basic(unittest.TestCase):
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
                             benchmarkLogging=benchmarkLogging)
+                        elapsed = time.time() - start
+                        print "Parse#", trial, parseResult['destination_key'], "took", elapsed, "seconds",\
+                            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+                        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+                        h2o_cmd.infoFromInspect(inspect, csvPathname)
 
                     if (i+2) < len(csvFilenameList):
-                        time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
                         csvPathname = importFolderPathFull + "/" + csvFilepattern
@@ -147,10 +159,12 @@ class Basic(unittest.TestCase):
                             pollTimeoutSecs=pollTimeoutSecs,
                             noPoll=noPoll,
                             benchmarkLogging=benchmarkLogging)
+                        elapsed = time.time() - start
+                        print "Parse#", trial, parseResult['destination_key'], "took", elapsed, "seconds",\
+                            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+                        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+                        h2o_cmd.infoFromInspect(inspect, csvPathname)
 
-                elapsed = time.time() - start
-                print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
-                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
                 # print stats on all three if noPoll
                 if noPoll:
@@ -221,11 +235,16 @@ class Basic(unittest.TestCase):
                     h2o.cloudPerfH2O.message(l)
 
                 #**********************************************************************************
+                # print "Waiting 30 secs"
+                # time.sleep(30)
+
                 h2o_cmd.checkKeyDistribution()
                 h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
+                h2o.nodes[0].remove_all_keys()
 
                 ### time.sleep(3600)
-                h2o.tear_down_cloud()
+
+                ### h2o.tear_down_cloud()
                 if not localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
                     ### time.sleep(30)

@@ -47,6 +47,7 @@ public class Constants extends Iced {
   public static final String CLOUD_HEALTH          = "cloud_healthy";
   public static final String CLOUD_NAME            = "cloud_name";
   public static final String CLOUD_SIZE            = "cloud_size";
+  public static final String CLOUD_UPTIME_MILLIS   = "cloud_uptime_millis";
   public static final String CLUSTERS              = "clusters";
   public static final String COEFFICIENTS          = "coefficients";
   public static final String COLS                  = "cols";
