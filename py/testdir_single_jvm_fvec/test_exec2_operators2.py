@@ -13,7 +13,8 @@ initList = [
         ]
 
 exprListSmall = [
-        'x= 3; r.hex[(x > 0) & (x < 4)]',    # all x values between 0 and 1
+        'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
+        'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
         'if (any(r3.hex == 0) || any(r4.hex == 0))', "zero encountered"
 
         'x <- c(NA, FALSE, TRUE)'
@@ -59,7 +60,8 @@ exprListSmall = [
 
         "r.hex[2,3]",
         "r.hex[!2,3]",
-        "r.hex[2,!3]",
+        # no cols selectd
+        # "r.hex[2,!3]",
 
         "r.hex[2+4,-4]",
         "r.hex[1,-1]; r.hex[1,-1]; r.hex[1,-1]",
@@ -190,7 +192,7 @@ class Basic(unittest.TestCase):
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=500, timeoutSecs=10)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'
