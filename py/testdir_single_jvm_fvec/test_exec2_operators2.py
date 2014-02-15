@@ -12,12 +12,14 @@ initList = [
         ('z.hex', 'z.hex=c(0)'),
         ]
 
-exprListSmall = [
+exprListFull = [
         'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
         'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
-        'if (any(r3.hex == 0) || any(r4.hex == 0))', "zero encountered"
+        # 'z = if (any(r3.hex == 0) || any(r4.hex == 0)), "zero encountered"',
 
-        'x <- c(NA, FALSE, TRUE)'
+        # FALSE and TRUE don't exist?
+        # 'x <- c(NA, FALSE, TRUE)',
+
         # 'names(x) <- as.character(x)'
         # outer(x, x, "&")## AND table
         # outer(x, x, "|")## OR  table
@@ -59,7 +61,7 @@ exprListSmall = [
         "a=!0; x=!0",
 
         "r.hex[2,3]",
-        "r.hex[!2,3]",
+        # "r.hex[!2,3]",
         # no cols selectd
         # "r.hex[2,!3]",
 
@@ -156,12 +158,12 @@ exprListSmall = [
         ]
 
 
-# concatenate a lot of random choices to make life harder
+# concatenate some random choices to make life harder
 exprList = []
-for i in range(10):
+for i in range(100):
     expr = ""
     for j in range(1):
-        expr += random.choice(exprListSmall)
+        expr += random.choice(exprListFull)
     exprList.append(expr)
         
 
@@ -192,7 +194,15 @@ class Basic(unittest.TestCase):
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=500, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
+
+        # now run them just concatenating each time. We don't do any template substitutes, so don't need
+        # exec_expr_list_rand()
+        
+        bigExecExpr = ""
+        for execExpr in exprList:
+            bigExecExpr += execExpr + ";"
+            h2e.exec_expr(h2o.nodes[0], bigExecExpr, resultKey=None, timeoutSecs=4)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'
