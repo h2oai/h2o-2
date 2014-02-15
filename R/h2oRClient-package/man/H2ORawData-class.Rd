@@ -2,13 +2,11 @@
 \Rdversion{1.1}
 \docType{class}
 \alias{H2ORawData-class}
-\alias{h2o.parseRaw,H2ORawData,character-method}
-\alias{h2o.parseRaw,H2ORawData,missing-method}
 \alias{show,H2ORawData-method}
 
 \title{Class \code{"H2ORawData"}}
 \description{
-A class for representing imported data sets that have not been parsed.
+A class for representing imported FluidVecs data sets that have not been parsed.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2ORawData", ...)}.
@@ -16,16 +14,14 @@ Objects can be created by calls of the form \code{new("H2ORawData", ...)}.
 }
 \section{Slots}{
   \describe{
-    \item{\code{h2o}:}{Object of class \code{"H2OClient"} ~~ }
-    \item{\code{key}:}{Object of class \code{"character"} ~~ }
+    \item{\code{h2o}:}{Object of class \code{"H2OClient"}, which is the client object that was passed into the function call.}
+    \item{\code{key}:}{Object of class \code{"character"}, which is the hex key assigned to the imported data.}
   }
 }
 \section{Methods}{
   \describe{
-    \item{parseRaw}{\code{signature(data = "H2ORawData", key = "character")}: ... }
-    \item{parseRaw}{\code{signature(data = "H2ORawData", key = "missing")}: ... }
     \item{show}{\code{signature(object = "H2ORawData")}: ... }
-	 }
+    }
 }
 \references{
 %%  ~~put references to the literature/web site here~~

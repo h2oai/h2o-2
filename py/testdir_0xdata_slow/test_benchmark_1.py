@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
 import h2o_exec as h2e, h2o_jobs
 
+DO_IMPORT_CHECK = True
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -26,25 +27,24 @@ class Basic(unittest.TestCase):
         if 1==1:
             # importFolderPath = '/home/0xdiag/datasets/more1_1200_link'
             # importFolderPathFull = '/home/0xdiag/datasets/manyfiles-nflx-gz'
-            importFolderPath = 'more1_1200_link'
-            # importFolderPath = 'manyfiles-nflx-gz'
+            # importFolderPath = 'more1_1200_link'
+            importFolderPath = 'manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
             # this pattern from browser correctly does 100 files, 1M rowsj
             # source_key=*/home/0xdiag/datasets/manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz
             csvFilenameAll = [
                 ("file_1.dat.gz", "file_1_A.dat.gz", 1 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
                 ("*[3-4][0-4][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
 
-                ("*[3-4][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
-                ("*[3-4][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
+                # ("*[3-4][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
+                # ("*[3-4][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
 
                 ("*[3-4][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
                 ("*[3-4][0-6][0-9].dat.gz", "file_140_B.dat.gz", 140 * avgMichalSize, 3600),
 
-                ("*[3-4][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
-                ("*[3-4][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
+                # ("*[3-4][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
+                # ("*[3-4][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
 
                 ("*[3-4][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
                 ("*[3-4][0-8][0-9].dat.gz", "file_180_B.dat.gz", 180 * avgMichalSize, 3600),
@@ -54,6 +54,8 @@ class Basic(unittest.TestCase):
 
                 ("*[3-5][0-9][0-9].dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
                 ("*[3-5][0-9][0-9].dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
+
+                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
                 ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
@@ -71,7 +73,6 @@ class Basic(unittest.TestCase):
         trialMax = 1
         # rebuild the cloud for each file
         base_port = 54321
-        tryHeap = 20
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
         noPoll = False
@@ -81,14 +82,15 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu','disk', 'network', 'iostats']
         # IOStatus can hang?
         benchmarkLogging = ['cpu', 'disk' 'network']
-        pollTimeoutSecs = 120
+        pollTimeoutSecs = 180
         retryDelaySecs = 10
 
         localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
-                enable_benchmark_log=True)
+        if localhost:
+            tryHeap = 4
+            h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port, enable_benchmark_log=True)
         else:
+            tryHeap = 28
             h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
                 enable_benchmark_log=True)
 
@@ -98,18 +100,21 @@ class Basic(unittest.TestCase):
 
             # to avoid sticky ports?
             ### base_port += 2
-            h2o.beta_features = False
+            h2o.beta_features = True
 
             for trial in range(trialMax):
                 # (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
-                csvPathname = importFolderPath + "/" + csvFilepattern
-                (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', 
-                        path=csvPathname, schema='local', timeoutSecs=timeoutSecs)
 
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
-                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
-                # creates csvFilename.hex from file in importFolder dir 
+                if DO_IMPORT_CHECK:
+                    for i in range(2):
+                        csvPathname = importFolderPath + "/" + csvFilepattern
+                        (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', 
+                                path=csvPathname, schema='local', timeoutSecs=timeoutSecs)
+
+                        importFullList = importResult['files']
+                        importFailList = importResult['fails']
+                        print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
+                        # creates csvFilename.hex from file in importFolder dir 
 
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")

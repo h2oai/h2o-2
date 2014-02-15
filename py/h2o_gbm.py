@@ -46,7 +46,9 @@ def pp_cm(jcm, header=None):
     header = ['"%s"'%i for i in range(len(jcm[0]))]
     # cm = '   '.join(header)
     cm = '{0:<8}'.format('')
-    for h in header: cm = '{0}|{1:<8}'.format(cm, h)
+    for h in header: 
+        cm = '{0}|{1:<8}'.format(cm, h)
+
     cm = '{0}|{1:<8}'.format(cm, 'error')
     c = 0
     for line in jcm:

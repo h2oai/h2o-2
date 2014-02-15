@@ -69,7 +69,7 @@ connectInput in run := true
 
 outputStrategy in run := Some(StdoutOutput)
 
-javaOptions in run += "-Xmx4g -Xms4g"
+javaOptions in run ++= Seq("-Xmx4g", "-Xms4g")
 
 // EclipseKeys.withSource := true
 //javaOptions in run += "-Xdebug"

@@ -8,7 +8,7 @@ H2O: K-Means Clustering
 Performs k-means clustering on an \code{\linkS4class{H2OParsedData} object.
 }}
 \usage{
-h2o.kmeans(data, centers, cols = "", iter.max = 10)
+h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,22 +24,21 @@ The number of clusters k.
   \item{iter.max}{
 The maximum number of iterations allowed.
 }
+  \item{normalize}{
+(Optional) A logical value indicating whether the data should be normalized before running k-means.
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
+  \item{init}{
+(Optional) Method by which to select the k initial cluster centroids. Possible values are \code{"none"} for random initialization, \code{"plusplus"} for k-means++ initialization, and \code{"furthest"} for initialization at the furthest point from each successive centroid. See the \href{http://docs.0xdata.com/datascience/kmeans.html}{H2O K-means documentation} for more details.
+  }
 }
+
 \value{
 An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and model, where the last is a list of the following components:
-\item{centers }{A matrix of cluster centers.}
-\item{cluster }{A \code{\linkS4class{H2OParsedData}} object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
-\item{size }{The number of points in each cluster.}
-\item{withinss }{Vector of within-cluster sum of squares, with one component per cluster.}
-\item{tot.withinss }{Total within-cluster sum of squares, i.e., sum(withinss).}
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+  \item{centers }{A matrix of cluster centers.}
+  \item{cluster }{A \code{\linkS4class{H2OParsedData}} object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
+  \item{size }{The number of points in each cluster.}
+  \item{withinss }{Vector of within-cluster sum of squares, with one component per cluster.}
+  \item{tot.withinss }{Total within-cluster sum of squares, i.e., sum(withinss).}
 }
 
 \examples{

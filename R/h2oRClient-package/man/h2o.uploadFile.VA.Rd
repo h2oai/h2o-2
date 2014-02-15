@@ -8,7 +8,7 @@ Upload Local Data File to ValueArray
 Uploads a file from the local drive and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.uploadFile.VA(object, path, key = "", parse = TRUE)
+h2o.uploadFile.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,9 +24,15 @@ The complete normalized file path of the file to be imported. Each row of data a
   \item{parse}{
 (Optional) A logical value indicating whether the file should be parsed after import.
 }
+  \item{header}{
+(Optional) A logical value indicating whether the first line of the file contains column headers. If left empty, the parser will try to automatically detect this.
+  }
   \item{sep}{
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
 }
+  \item{col.names}{
+(Optional) A \code{\linkS4class{H2OParsedData}} object containing a single delimited line with the column names for the file.
+  }
   \item{silent}{
 (Optional) A logical value indicating whether or not to display an upload progress bar.
 }
