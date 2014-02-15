@@ -415,19 +415,14 @@ h2o.__formatError <- function(error,prefix="  ") {
 }
 
 h2o.__uniqID <- function(prefix = "") {
-  if("uuid" %in% installed.packages()[,1]) {
-    library(uuid)
-    temp = UUIDgenerate()
-  } else {
-    hex_digits <- c(as.character(0:9), letters[1:6])
-    y_digits <- hex_digits[9:12]
-    temp = paste(
-      paste(sample(hex_digits, 8, replace=TRUE), collapse='', sep=''),
-      paste(sample(hex_digits, 4, replace=TRUE), collapse='', sep=''),
-      paste('4', paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep=''),
-      paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep = ''),
-      paste(sample(hex_digits, 12, replace=TRUE), collapse='', sep=''), sep='-')
-  }
+  hex_digits <- c(as.character(0:9), letters[1:6])
+  y_digits <- hex_digits[9:12]
+  temp = paste(
+    paste(sample(hex_digits, 8, replace=TRUE), collapse='', sep=''),
+    paste(sample(hex_digits, 4, replace=TRUE), collapse='', sep=''),
+    paste('4', paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep=''),
+    paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep = ''),
+    paste(sample(hex_digits, 12, replace=TRUE), collapse='', sep=''), sep='-')
   temp = gsub("-", "", temp)
   paste(prefix, temp, sep="_")
 }
