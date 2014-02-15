@@ -1,3 +1,5 @@
+import("RCurl", "rjson", "statmod")
+importFrom("utils", "installed.packages")
 exportPattern("^[[:alpha:]]+")
 export("h2o.shutdown", "h2o.init")
 exportClasses(

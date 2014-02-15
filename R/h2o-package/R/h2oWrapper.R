@@ -1,8 +1,8 @@
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 
-h2o.__PAGE_RPACKAGE = "RPackage.json"
-h2o.__PAGE_SHUTDOWN = "Shutdown.json"
-h2o.__PAGE_CLOUD = "Cloud.json"
+.h2o.__PAGE_RPACKAGE = "RPackage.json"
+.h2o.__PAGE_SHUTDOWN = "Shutdown.json"
+.h2o.__PAGE_CLOUD = "Cloud.json"
 
 setMethod("show", "H2OClient", function(object) {
   cat("IP Address:", object@ip, "\n")
@@ -22,7 +22,6 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
   if(!is.character(Xmx)) stop("Xmx must be of class character")
   if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   
-  .startedH2O <<- FALSE
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
     if(!startH2O)
@@ -31,13 +30,13 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
       cat("\nH2O is not running yet, starting it now...\n")
       # h2oWrapper.startLauncher()
       # invisible(readline("Start H2O, then hit <Return> to continue: "))
-      h2o.startJar(Xmx)
+      .h2o.startJar(Xmx)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }
   cat("Successfully connected to", myURL, "\n")
-  h2o.checkPackage(myURL, silentUpgrade, promptUpgrade)
+  .h2o.checkPackage(myURL, silentUpgrade, promptUpgrade)
   
   if("package:h2oRClient" %in% search())
     detach("package:h2oRClient", unload=TRUE)
@@ -51,18 +50,18 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
 }
 
 # Shuts down H2O instance running at given IP and port
-h2o.shutdown <- function(object, prompt = TRUE) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+h2o.shutdown <- function(client, prompt = TRUE) {
+  if(class(client) != "H2OClient") stop("client must be of class H2OClient")
   if(!is.logical(prompt)) stop("prompt must be of class logical")
   
-  myURL = paste("http://", object@ip, ":", object@port, sep="")
+  myURL = paste("http://", client@ip, ":", client@port, sep="")
   if(!url.exists(myURL)) stop(paste("There is no H2O instance running at", myURL))
   if(prompt) {
     ans = readline(paste("Are you sure you want to shutdown the H2O instance running at", myURL, "(Y/N)? "))
     temp = substr(ans, 1, 1)
   } else temp = "y"
   if(temp == "Y" || temp == "y") {
-    res = getURLContent(paste(myURL, h2o.__PAGE_SHUTDOWN, sep="/"))
+    res = getURLContent(paste(myURL, .h2o.__PAGE_SHUTDOWN, sep="/"))
     res = fromJSON(res)
     if(!is.null(res$error))
       stop(paste("Unable to shutdown H2O. Server returned the following error:\n", res$error))
@@ -72,7 +71,7 @@ h2o.shutdown <- function(object, prompt = TRUE) {
 # ----------------------- Diagnostics ----------------------- #
 h2o.clusterStatus <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
-  myURL = paste("http://", client@ip, ":", client@port, "/", h2o.__PAGE_CLOUD, sep = "")
+  myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
   if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
   res = fromJSON(postForm(myURL, style = "POST"))
   
@@ -98,8 +97,16 @@ h2o.clusterStatus <- function(client) {
 #-------------------------------- Helper Methods --------------------------------#
 # NB: if H2OVersion matches \.99999$ is a development version, so pull package info out of file.  yes this is a hack
 #     but it makes development versions properly prompt upgrade
-h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
-  temp = postForm(paste(myURL, h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
+.h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
+  h2oWrapper.__formatError <- function(error, prefix="  ") {
+    result = ""
+    items = strsplit(error,"\n")[[1]];
+    for (i in 1:length(items))
+      result = paste(result, prefix, items[i], "\n", sep="")
+    result
+  }
+  
+  temp = postForm(paste(myURL, .h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
   res = fromJSON(temp)
   if (!is.null(res$error))
     stop(paste(myURL," returned the following error:\n", h2oWrapper.__formatError(res$error)))
@@ -122,7 +129,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
 
   if("h2oRClient" %in% myPackages && !needs_upgrade )
     cat("H2O R package and server version", H2OVersion, "match\n")
-  else if(h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
+  else if(.h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
     if("h2oRClient" %in% myPackages) {
       cat("Removing old H2O R package version", toString(packageVersion("h2oRClient")), "\n")
       if("package:h2oRClient" %in% search())
@@ -136,7 +143,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
 
 # Check if user wants to install H2O R package matching version on server
 # Note: silentUpgrade supercedes promptUpgrade
-h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
+.h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
   if(silentUpgrade) return(TRUE)
   if(promptUpgrade) {
     ans = readline(paste("Do you want to install H2O R package version", H2OVersion, "from the server (Y/N)? "))
@@ -147,32 +154,22 @@ h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
   } else return(FALSE)
 }
 
-h2oWrapper.__formatError <- function(error, prefix="  ") {
-  result = ""
-  items = strsplit(error,"\n")[[1]];
-  for (i in 1:length(items))
-    result = paste(result, prefix, items[i], "\n", sep="")
-  result
-}
-
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
 
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
-
+  
   # installing RCurl requires curl and curl-config, which is typically separately installed
-  if(!( 'RCurl' %in% installed.packages()[,1] )) {
-
+  if(!("RCurl" %in% installed.packages()[,1])) {
     if(.Platform$OS.type == "unix") {
-        print("Checking libcurl version...")
-        curl_path <- Sys.which("curl-config")
-        if( curl_path[[1]] == '' || system2(curl_path, args = "--version") != 0)
-          stop("libcurl not found! Please install libcurl (version 7.14.0 or higher) from http://curl.haxx.se. On Linux systems, 
+      packageStartupMessage("Checking libcurl version...")
+      curl_path <- Sys.which("curl-config")
+      if(curl_path[[1]] == '' || system2(curl_path, args = "--version") != 0)
+        stop("libcurl not found! Please install libcurl (version 7.14.0 or higher) from http://curl.haxx.se. On Linux systems, 
               you will often have to explicitly install libcurl-devel to have the header files and the libcurl library.")
-       }
+    }
   }
-  # TODO: Not sure how to check for libcurl in Windows
 }
 
 .onAttach <- function(libname, pkgname) {
@@ -200,15 +197,19 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
   packageStartupMessage(msg)
   
   # TODO: Might need to be careful if .LastOriginal exists. Also, user can override .Last manually and break hack.
+  .startedH2O <<- FALSE
+  .LastOriginal <<- function() { return(NULL) }
   if(exists(".Last", envir = .GlobalEnv)) {
     .LastOriginal <<- get(".Last", envir = .GlobalEnv)
     assign(".Last", function(..., envir = parent.frame()) {
         ip = "127.0.0.1"; port = 54321
         myURL = paste("http://", ip, ":", port, sep = "")
         
-        require(RCurl); require(rjson)
-        if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
+        # require(RCurl); require(rjson)
+        if(exists(".startedH2O") && .startedH2O && url.exists(myURL)) {
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
+          .startedH2O <<- FALSE
+        }
         eval(.LastOriginal(...), envir = envir)
       }, envir = .GlobalEnv)
   } else {
@@ -216,9 +217,11 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
         ip = "127.0.0.1"; port = 54321
         myURL = paste("http://", ip, ":", port, sep = "")
         
-        require(RCurl); require(rjson)
-        if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
+        # require(RCurl); require(rjson)
+        if(exists(".startedH2O") && .startedH2O && url.exists(myURL)) {
           h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
+          .startedH2O <<- FALSE
+        }
       }, envir = .GlobalEnv)
   }
 }
@@ -239,7 +242,7 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
-h2o.startJar <- function(memory = "1g") {
+.h2o.startJar <- function(memory = "1g") {
   command <- Sys.which("java")
   #
   # TODO: tmp files should be user-independent
