@@ -29,6 +29,7 @@ public class Dropout {
 
   // for input layer
   public void randomlySparsifyActivation(double[] a, double rate) {
+    if (rate == 0) return;
     Assert.assertTrue("Must call setSeed() first", _rand != null);
     for( int i = 0; i < a.length; i++ )
       if (_rand.nextFloat() < rate) a[i] = 0;

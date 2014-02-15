@@ -390,6 +390,10 @@ public class NNModel extends Model {
     boolean keep_running = (epoch_counter < model_info().parameters.epochs);
     _now = System.currentTimeMillis();
     _sinceLastScore = _now-_timeLastScoreStart;
+    final long samples = model_info().get_processed_total();
+    Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
+            + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+            + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     // this is potentially slow - only do every so often
     if( !keep_running || (_now-timeStart < 30000) // Score every time for first 30 seconds
             || (_sinceLastScore > model_info().parameters.score_interval*1000) ) {
@@ -417,10 +421,10 @@ public class NNModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
+      // print the freshly scored model to ASCII
+      for (String s : toString().split("\n")) Log.info(s);
       Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
     }
-    // print the model to ASCII
-    for (String s : toString().split("\n")) Log.info(s);
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
       Log.err("Try using L1/L2/max_w2 regularization, a different activation function, or more synchronization in multi-node operation.");
@@ -435,10 +439,6 @@ public class NNModel extends Model {
     StringBuilder sb = new StringBuilder();
 //    sb.append(super.toString());
 //    sb.append("\n"+data_info.toString()); //not implemented yet
-    final long samples = model_info().get_processed_total();
-    Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
-            + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-            + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     sb.append(model_info.toString());
     sb.append(errors[errors.length-1].toString());
 //    sb.append("\nrun time: " + PrettyPrint.msecs(run_time, true));
