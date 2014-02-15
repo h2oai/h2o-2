@@ -23,6 +23,7 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
   \describe{
     \item{\code{h2o}:}{Object of class \code{"H2OClient"}, which is the client object that was passed into the function call.}
     \item{\code{key}:}{Object of class \code{"character"}, which is the hex key assigned to the imported data.}
+    \item{\code{logic}:}{Logical value indicating whether the \code{"H2OParsedData"} object represents logical data}
   }
 }
 \section{Methods}{
