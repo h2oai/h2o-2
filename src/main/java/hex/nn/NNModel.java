@@ -91,8 +91,8 @@ public class NNModel extends Model {
     // model is described by parameters and the following 4 arrays
     final private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
     final private double[][] biases; //one 1D bias array per layer
-    private float[][] weights_momenta;
-    private double[][] biases_momenta;
+    private transient float[][] weights_momenta;
+    private transient double[][] biases_momenta;
 
     // compute model size [#number of model parameters, #number of bytes (uncompressed)]
     public long[] size() {
@@ -105,16 +105,17 @@ public class NNModel extends Model {
         siz[0] += b.length;
         siz[1] += b.length * Double.SIZE;
       }
-      if (has_momenta()) {
-        for (float[] wm : weights_momenta) {
-          siz[0] += wm.length;
-          siz[1] += wm.length * Float.SIZE;
-        }
-        for (double[] bm : biases_momenta) {
-          siz[0] += bm.length;
-          siz[1] += bm.length * Double.SIZE;
-        }
-      }
+      // momenta don't count towards model parameters
+//      if (has_momenta()) {
+//        for (float[] wm : weights_momenta) {
+//          siz[0] += wm.length;
+//          siz[1] += wm.length * Float.SIZE;
+//        }
+//        for (double[] bm : biases_momenta) {
+//          siz[0] += bm.length;
+//          siz[1] += bm.length * Double.SIZE;
+//        }
+//      }
       siz[1] /= 8; //in bytes
       return siz;
     }
@@ -183,10 +184,10 @@ public class NNModel extends Model {
       biases = new double[layers+1][];
       for (int i=0; i<=layers; ++i) biases[i] = new double[units[i+1]];
       if (has_momenta()) {
-        weights_momenta = new float[layers+1][];
-        for (int i=0; i<=layers; ++i) weights_momenta[i] = new float[units[i]*units[i+1]];
-        biases_momenta = new double[layers+1][];
-        for (int i=0; i<=layers; ++i) biases_momenta[i] = new double[units[i+1]];
+        weights_momenta = new float[weights.length][];
+        for (int i=0; i<weights_momenta.length; ++i) weights_momenta[i] = new float[units[i]*units[i+1]];
+        biases_momenta = new double[biases.length][];
+        for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
       }
       // for diagnostics
       mean_bias = new double[units.length];
@@ -194,26 +195,8 @@ public class NNModel extends Model {
       mean_weight = new double[units.length];
       rms_weight = new double[units.length];
     }
-    public NNModelInfo(NNModelInfo other) {
-      this(other.parameters, other.units[0], other.units[other.units.length-1]);
-      set_processed_local(other.get_processed_local());
-      set_processed_global(other.get_processed_global());
-      for (int i=0; i<other.weights.length; ++i)
-        weights[i] = other.weights[i].clone();
-      for (int i=0; i<other.biases.length; ++i)
-        biases[i] = other.biases[i].clone();
-      if (has_momenta()) {
-        for (int i=0; i<other.weights_momenta.length; ++i)
-          weights_momenta[i] = other.weights_momenta[i].clone();
-        for (int i=0; i<other.biases_momenta.length; ++i)
-          biases_momenta[i] = other.biases_momenta[i].clone();
-      }
-      mean_bias = other.mean_bias.clone();
-      rms_bias = other.rms_bias.clone();
-      mean_weight = other.mean_weight.clone();
-      rms_weight = other.rms_weight.clone();
-      unstable = other.unstable;
-    }
+
+
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (parameters.diagnostics) {
@@ -375,7 +358,7 @@ public class NNModel extends Model {
     errors[0].validation = (params.validation != null);
   }
 
-  transient long _now, _timeLastScoreStart, _sinceLastScore;
+  transient long _now, _timeLastScoreStart, _timeLastPrintStart;
   /**
    *
    * @param ftrain potentially downsampled training data for scoring
@@ -389,14 +372,17 @@ public class NNModel extends Model {
     run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().parameters.epochs);
     _now = System.currentTimeMillis();
-    _sinceLastScore = _now-_timeLastScoreStart;
+    final long sinceLastScore = _now-_timeLastScoreStart;
+    final long sinceLastPrint = _now-_timeLastPrintStart;
     final long samples = model_info().get_processed_total();
-    Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
-            + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-            + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
+    if (sinceLastPrint > model_info().parameters.score_interval*1000) {
+      _timeLastPrintStart = _now;
+      Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
+              + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+              + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
+    }
     // this is potentially slow - only do every so often
-    if( !keep_running || (_now-timeStart < 30000) // Score every time for first 30 seconds
-            || (_sinceLastScore > model_info().parameters.score_interval*1000) ) {
+    if( !keep_running || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
       Log.info("Scoring the model.");
       _timeLastScoreStart = _now;
       boolean printCM = false;
@@ -427,7 +413,13 @@ public class NNModel extends Model {
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
-      Log.err("Try using L1/L2/max_w2 regularization, a different activation function, or more synchronization in multi-node operation.");
+      Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
+      keep_running = false;
+    } else if (ftest == null && errors[errors.length-1].train_err == 0) {
+      Log.info("Achieved 100% classification accuracy on the training data. We are done here.");
+      keep_running = false;
+    } else if (ftest != null && errors[errors.length-1].valid_err == 0) {
+      Log.info("Achieved 100% classification accuracy on the validation data. We are done here.");
       keep_running = false;
     }
     update(dest_key); //update model in UKV

@@ -60,12 +60,18 @@ public class NNTask extends FrameTask<NNTask> {
     }
   }
 
+  static long _lastWarn;
+  static long _warnCount;
   @Override protected void postGlobal(){
     if (H2O.CLOUD.size() > 1) {
-      Log.info("Synchronizing across " + _chunk_node_count + " H2O nodes.");
-      if (_chunk_node_count < H2O.CLOUD.size())
+      long now = System.currentTimeMillis();
+      if (_chunk_node_count < H2O.CLOUD.size() && (now - _lastWarn > 5000) && _warnCount < 10) {
+        Log.info("Synchronizing across " + _chunk_node_count + " H2O nodes.");
         Log.warn(H2O.CLOUD.size() - _chunk_node_count + " nodes (out of "
                 + H2O.CLOUD.size() + ") are not contributing to model updates. Consider using a larger training dataset (or fewer H2O nodes).");
+        _lastWarn = now;
+        _warnCount++;
+      }
     }
     _output.div(_chunk_node_count);
     _output.add_processed_global(_output.get_processed_local());
