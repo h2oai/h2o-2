@@ -40,8 +40,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
         print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
         h2o_cmd.infoFromInspect(inspect, csvPathname)
-        # num_rows = inspect['num_rows']
-        # num_cols = inspect['num_cols']
+        num_rows = inspect['num_rows']
+        num_cols = inspect['num_cols']
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
+        h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numCols=num_cols, numRows=num_rows)
 
         keepPattern = "oly_|mt_|b_"
         y = "is_purchase"
@@ -73,9 +75,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-        # do summary of the parsed dataset last, since we know it fails on this dataset
-        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
-        h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
 
 if __name__ == '__main__':
     h2o.unit_main()

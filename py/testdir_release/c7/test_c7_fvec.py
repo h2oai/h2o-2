@@ -18,7 +18,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "Running with h2o.beta_features=True for all"
         h2o.beta_features = True
 
-        DO_INSPECT = True
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
@@ -43,21 +42,20 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         start = time.time()
 
-        # is the json too big?
-        if DO_INSPECT:
-            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
-            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
-            h2o_cmd.infoFromInspect(inspect, csvPathname)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
+        print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
+        h2o_cmd.infoFromInspect(inspect, csvPathname)
+        numRows = inspect['numRows']
+        numCols = inspect['numCols']
 
         # do summary of the parsed dataset last, since we know it fails on this dataset
         # does the json fail with too many???
-        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2)
+        #summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2)
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
 
         # Need to update this for new stuff
-        ## h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
+        h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numCols=2, numRows=numRows)
 
-        # num_rows = inspect['num_rows']
-        # num_cols = inspect['num_cols']
 
         keepPattern = "oly_|mt_|b_"
         y = "is_purchase"

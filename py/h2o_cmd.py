@@ -359,11 +359,20 @@ def infoFromInspect(inspect, csvPathname):
 
     return missingValuesList
 
-def infoFromSummary(summaryResult, noPrint=False):
+# summary doesn't have the # of rows
+# we need it to see if na count = number of rows. min/max/mean/sigma/zeros then are ignored (undefined?)
+# while we're at it, let's cross check numCols
+# if we don't pass these extra params, just ignore
+def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
     if h2o.beta_features:
         # names = summaryResult['names']
         # means = summaryResult['means']
         summaries = summaryResult['summaries']
+
+        # what if we didn't get the full # of cols in this summary view? 
+        # I guess the test should deal with that
+        if numCols and (len(summaries!=numCols)):
+            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
 
         for column in summaries:
             colname = column['colname']
@@ -391,6 +400,16 @@ def infoFromSummary(summaryResult, noPrint=False):
                 h2o_exec.checkForBadFP(mean, 'mean for colname: %s stattype: %s' % (colname, stattype), nanOkay=True)
                 h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True)
                 h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
+
+                if numRows and (na==numRows):
+                    print "%s is all NAs. no checking for min/max/mean/sigma" % name
+                else:
+                    if not mins:
+                        print h2o.dump_json(columns)
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s" % (mins, stype, N))
+                    if not maxs:
+                        print h2o.dump_json(columns)
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s" % (mins, stype, N))
 
             hstart = column['hstart']
             hstep = column['hstep']
@@ -424,6 +443,8 @@ def infoFromSummary(summaryResult, noPrint=False):
     else:
         summary = summaryResult['summary']
         columnsList = summary['columns']
+        if numCols and (len(columnsList!=numCols)):
+            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
         for columns in columnsList:
             N = columns['N']
             # self.assertEqual(N, rowCount)
@@ -452,24 +473,28 @@ def infoFromSummary(summaryResult, noPrint=False):
             if stype != "enum":
                 zeros = columns['zeros']
                 na = columns['na']
-                smax = columns['max']
-                smin = columns['min']
+                maxs = columns['max']
+                mins = columns['min']
                 mean = columns['mean']
                 sigma = columns['sigma']
                 if not noPrint:
                     print "zeros:", zeros
                     print "na:", na
-                    print "smax:", smax
-                    print "smin:", smin
+                    print "maxs:", maxs
+                    print "mins:", mins
                     print "mean:", mean
                     print "sigma:", sigma
 
-                if not smin:
-                    print h2o.dump_json(columns)
-                    raise Exception ("Why is min[] empty for a %s col (%s) ? %s" % (smin, stype, N))
-                if not smax:
-                    print h2o.dump_json(columns)
-                    raise Exception ("Why is max[] empty for a %s col? (%s) ? %s" % (smin, stype, N))
+                if numRows and (na==numRows):
+                    print "%s is all NAs. no checking for min/max/mean/sigma" % name
+                else:
+                    if not mins:
+                        print h2o.dump_json(columns)
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s" % (mins, stype, N))
+                    if not maxs:
+                        print h2o.dump_json(columns)
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s" % (mins, stype, N))
+
 
                 # sometimes we don't get percentiles? (if 0 or 1 bins?)
                 if len(bins) >= 2:
@@ -479,18 +504,18 @@ def infoFromSummary(summaryResult, noPrint=False):
 
                     if not noPrint:
                         # h2o shows 5 of them, ordered
-                        print "len(max):", len(smax), smax
-                        print "len(min):", len(smin), smin
+                        print "len(max):", len(maxs), maxs
+                        print "len(min):", len(mins), mins
                         print "len(thresholds):", len(thresholds), thresholds
                         print "len(values):", len(values), values
 
                     for v in values:
                         # 0 is the most max or most min
-                       if not v >= smin[0]:
-                            m = "Percentile value %s should all be >= the min dataset value %s" % (v, smin[0])
+                       if not v >= mins[0]:
+                            m = "Percentile value %s should all be >= the min dataset value %s" % (v, mins[0])
                             raise Exception(m)
-                       if not v <= smax[0]:
-                            m = "Percentile value %s should all be <= the max dataset value %s" % (v, smax[0])
+                       if not v <= maxs[0]:
+                            m = "Percentile value %s should all be <= the max dataset value %s" % (v, maxs[0])
                             raise Exception(m)
 
 def dot():

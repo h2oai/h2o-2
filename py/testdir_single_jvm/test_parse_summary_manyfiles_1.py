@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
 
             # SUMMARY****************************************
             summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360)
-            h2o_cmd.infoFromSummary(summaryResult)
+            h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"
