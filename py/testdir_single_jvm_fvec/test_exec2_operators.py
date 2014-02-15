@@ -10,40 +10,44 @@ initList = [
         ('r1.hex', 'r1.hex=i.hex'),
         ('r2.hex', 'r2.hex=i.hex'),
         ('r3.hex', 'r3.hex=i.hex'),
+        # not supported. should? also row vector assign?
+        # ('r.hex',  'r.hex[1,]=3.3'),
+
         # ('x', 'x=r.hex[,1]; rcnt=nrow(x)-sum(is.na(x))'),
         # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
         # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
         # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
         ]
 
-if 1==0:
-    exprListSmall = [
-    # apply: return vector or array or list of values..applying function to margins of array or matrix
-    # margins: either rows(1), columns(2) or both(1:2)
-        # "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
-        "s.hex = r.hex[!is.na(r.hex[,13]),]"
+# apply: return vector or array or list of values..applying function to margins of array or matrix
+# margins: either rows(1), columns(2) or both(1:2)
+# "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
+# doesn't work. Should work according to earl
+# 'r.hex[is.na(r.hex)]<-0',
+# works
+# 'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
+# "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+
+if 1==1:
+    exprListFull = [
+        "z.hex=a=c(1,2,3); a[a[,1]>10,1];",
+        "s.hex = r.hex[!is.na(r.hex[,13]),]",
         "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
-        # doesn't work. Should work according to earl
-        # 'r.hex[is.na(r.hex)]<-0',
-        # works
-        # 'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
-        # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
-    ]
-    exprListSmall = [
-        "s.hex = r.hex[!is.na(r.hex[,13]),]"
-    ]
-else:
-    exprListSmall = [
+        "s.hex = r.hex[!is.na(r.hex[,13]),]",
         'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
         'cct.hex=runif(r.hex);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',
 
-        # 'r<n>[,0] = r0[,0] * r<n-1>[,0]',
-        # 'r<n>[0,] = r1[0,] + r<n-1>[0,]',
-        # 'r<n> = r1 + r<n-1>',
-        # doesn't work
-        # ';;',
-        'r1.hex[,1]=r1.hex[,1] == 1.0',
+        'r1.hex[,0] = r1.hex[,0] * r2.hex[,1]',
+        'r1.hex[,0] = r1.hex[,0] + r2.hex[,1]',
+        'r1.hex = r1.hex + r2.hex[,1]',
+
+        # bad exception due to different sizes
+        # 'r1.hex = r1.hex + r2.hex[1,]',
+
+        'r1.hex[,1]=r1.hex[,1]==1.0',
+        'r1.hex[1,]=r1.hex[1,]==1.0',
         'b.hex=runif(r3.hex[,1])',
+        'b.hex=runif(r3.hex[1,])',
 
         # 'r1.hex[,1]=r1.hex[,1] + 1.3',
         # 'r<n>.hex=min(r1.hex,1+2)',
@@ -60,6 +64,11 @@ else:
         # doesn't work
         # ",1.23 + 2.34 * 3" #  10.71, L2R eval order
         ## ",1.23 2.34"   #  Syntax error
+        "1.23e0<2.34e1", #  1
+        "+1.23e0<+2.34e1", #  1
+        "-1.23e0<+-2.34e1", #  1
+        "-1.23e000<+-2.34e100", #  1
+        "-1.23e-001<+-2.34e-100", #  1
         "1.23<2.34", #  1
         "1.23<=2.34", #  1
         "1.23>2.34", #  0
@@ -119,6 +128,7 @@ else:
         # ?
         ## "(r.hex+1)<-2",
         "r.hex[nrow(r.hex),]",
+        "r.hex[,ncol(r.hex)]",
         # double semi doesn't work
         # "r.hex[2,3]<-4;",
         "c(1,3,5)",
@@ -149,8 +159,10 @@ else:
         "sum(4,c(1,3,5),2,6)",
         "sum(1,r.hex,3)",
         # unimplemented?
-        ## "r.hex[,c(1)]",
+        "r.hex[,c(1)]",
+        "r.hex[c(1),]",
         "r.hex[c(1,3,5),]",
+        "r.hex[,c(1,3,5)]",
         "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
         # doesn't work
         # "function(a){a[];a=1}",
@@ -185,10 +197,15 @@ else:
 
         #  Slice assignment & map
         "r.hex[,1]",
+        "r.hex[1,]",
         "r.hex[,1]+1",
+        "r.hex[1,]+1",
         "r.hex[,1]=3.3;r.hex",  #  Replace a col with a constant
+        "r.hex[1,]=3.3;r.hex",
         "r.hex[,1]=r.hex[,1]+1",#  Replace a col
+        "r.hex[1,]=r.hex[1,]+1",
         "r.hex[,ncol(r.hex)+1]=4",#  Extend a col
+        "r.hex[nrow(r.hex)+1,]=4",
         "a=ncol(r.hex); r.hex[,c(a+1,a+2)]=5",#  Extend two cols
         # doesn't work
         # "table(r.hex)",
@@ -217,8 +234,8 @@ exprList = []
 for i in range(10):
     expr = ""
     for j in range(1):
-        expr += "z.hex=" + random.choice(exprListSmall) + ";"
-        # expr += random.choice(exprListSmall) + ";"
+        expr += "z.hex=" + random.choice(exprListFull) + ";"
+        # expr += random.choice(exprListFull) + ";"
     exprList.append(expr)
         
 
@@ -243,7 +260,8 @@ class Basic(unittest.TestCase):
     def test_exec2_operators(self):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
-        csvPathname = 'airlines/year2013.csv'
+        # csvPathname = 'airlines/year2013.csv'
+        csvPathname = 'standard/covtype.data'
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 

@@ -13,8 +13,22 @@ initList = [
         ]
 
 exprListSmall = [
+        'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
+        'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
+        'if (any(r3.hex == 0) || any(r4.hex == 0))', "zero encountered"
+
+        'x <- c(NA, FALSE, TRUE)'
+        # 'names(x) <- as.character(x)'
+        # outer(x, x, "&")## AND table
+        # outer(x, x, "|")## OR  table
         "1.23",
+        "!1.23",
+
         "1.23<2.34",
+        "!1.23<2.34",
+        "!1.23<!2.34",
+        "1.23<!2.34",
+
         "1.23<=2.34",
         "1.23>2.34",
         "1.23>=2.34",
@@ -22,14 +36,33 @@ exprListSmall = [
         "1.23!=2.34",
 
         "r.hex",
-        "+(1.23,2.34)",
+        "!r.hex",
+
+        # Not supported
+        # "+(1.23,2.34)",
         "x=0; x+2",
+        "x=!0; !x+2",
+        "x=!0; x+!2",
+
         "x=1",
+        "x=!1",
+
         "x<-1",
+        "x<-!1",
         "c(1,3,5)",
+        "!c(1,3,5)",
+        "!c(!1,3,5)",
+        "!c(1,!3,5)",
+        "!c(1,3,!5)",
+
         "a=0; x=0",
+        "a=!0; x=!0",
 
         "r.hex[2,3]",
+        "r.hex[!2,3]",
+        # no cols selectd
+        # "r.hex[2,!3]",
+
         "r.hex[2+4,-4]",
         "r.hex[1,-1]; r.hex[1,-1]; r.hex[1,-1]",
         "r.hex[1,]",
@@ -68,11 +101,13 @@ exprListSmall = [
         # "cbind(c(1,2,3), c(4,5,6), c(7,8,9))",
         # "cbind(c(1,2,3,4), c(5,6,7))",
         # "cbind(c(1,2,3), c(4,5,6,7))",
+        "cbind(c(1,2,3,4), c(5,6,7,8))",
 
         "r.hex[c(1,3,5),]",
         "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
         "r.hex[r.hex[,1]>4,]",
-        "a=c(1,2,3); a[a[,1]>10,1]",
+        # fails?
+        # "a=c(1,2,3); a[a[,1]>10,1]",
 
         "ifelse(0,1,2)",
         "ifelse(0,r.hex+1,r.hex+2)",
@@ -157,7 +192,7 @@ class Basic(unittest.TestCase):
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=500, timeoutSecs=10)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

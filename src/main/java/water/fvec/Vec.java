@@ -433,7 +433,7 @@ public class Vec extends Iced {
 
   protected boolean checkMissing(int cidx, Value val) {
     if( val != null ) return true;
-    System.out.println("Missing chunk "+cidx+" for "+_key);
+    System.out.println("Error: Missing chunk "+cidx+" for "+_key);
     return false;
   }
 

@@ -53,7 +53,9 @@ def checkScalarResult(resultInspect, resultKey):
         print "Inspect metaDict:", key, value
             
     min_value = metaDict['min']
-    checkForBadFP(min_value)
+    stype = metaDict['type']
+    # if it's an enum col, it's okay for min to be NaN ..
+    checkForBadFP(min_value, nanOkay=stype=='Enum')
 
 
     # do a VA inspect to see if the fvec to va converter works
