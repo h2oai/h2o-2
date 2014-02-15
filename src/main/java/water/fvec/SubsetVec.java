@@ -43,7 +43,10 @@ public class SubsetVec extends WrappedVec {
       long rownum = _crows.at8_impl(idx);
       return _masterVec.at(rownum);
     }
-    @Override protected long    at8_impl(int idx) { throw H2O.unimpl(); }
+    @Override protected long   at8_impl(int idx) { 
+      long rownum = _crows.at8_impl(idx);
+      return _masterVec.at8(rownum);
+    }
     @Override protected boolean isNA_impl(int idx) { 
       long rownum = _crows.at8_impl(idx);
       return _masterVec.isNA(rownum);
