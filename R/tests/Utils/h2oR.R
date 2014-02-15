@@ -59,7 +59,7 @@ function(m) {
   logging(paste("[WARN] : ",m,sep=""))
   #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
   #m <- paste('[',temp[1], ' ',temp[2],']', '\t', m)
-  h2o.__logIt("[WARN] :", m, "Error")
+  .h2o.__logIt("[WARN] :", m, "Error")
   traceback()
 }
 
@@ -71,7 +71,7 @@ function(m) {
   logging("[ERROR] : TEST FAILED")
   #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
   #m <- paste('[',temp[1], ' ',temp[2],']', '\t', m)
-  h2o.__logIt("[ERROR] :", m, "Error")
+  .h2o.__logIt("[ERROR] :", m, "Error")
   traceback()
   q("no",1,FALSE) #exit with nonzero exit code
 }
@@ -277,7 +277,7 @@ function() {
 h2o.removeAll <-
 function(object) {
   Log.info("Throwing away any keys on the H2O cluster")
-  h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
+  .h2o.__remoteSend(object, .h2o.__PAGE_REMOVEALL)
 }
 
 #Log.info("Loading other required test packages")

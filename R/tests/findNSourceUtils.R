@@ -165,7 +165,7 @@ if (file.exists(ms))  {
 }
 setupRandomSeed(seed, suppress = FALSE)
 sandbox()
-h2o.__logIt("[SEED] :", SEED, "Command")
+.h2o.__logIt("[SEED] :", SEED, "Command")
 
 
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
