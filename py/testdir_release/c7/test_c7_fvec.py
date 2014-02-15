@@ -49,12 +49,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         numCols = inspect['numCols']
 
         # do summary of the parsed dataset last, since we know it fails on this dataset
-        # does the json fail with too many???
+        # does the json fail with too many??
         #summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2)
-        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2500)
 
         # Need to update this for new stuff
-        h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numCols=2, numRows=numRows)
+        h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numCols=numCols, numRows=numRows)
 
 
         keepPattern = "oly_|mt_|b_"

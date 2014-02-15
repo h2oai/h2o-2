@@ -8,7 +8,7 @@
 
     "key_filename": "~/.0xcustomer/0xcustomer_id_rsa",
     "h2o_per_host": 3, 
-    "java_heap_GB": 4, 
+    "java_heap_GB": 40, 
 
     "hdfs_name_node": "192.168.1.176",
     "hdfs_version": "cdh3",
@@ -19,7 +19,7 @@
     "cloud_name": "jenkins-164",
 
     "ip": [
-        "127.0.0.1"
+        "192.168.1.164"
     ]
 }
 
