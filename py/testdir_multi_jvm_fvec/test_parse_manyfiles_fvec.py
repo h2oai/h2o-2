@@ -34,36 +34,8 @@ class Basic(unittest.TestCase):
             # source_key=*/home/0xdiag/datasets/manyfiles-nflx-gz/file_1[0-9][0-9].dat.gz
             csvFilenameAll = [
                 ("file_1.dat.gz", "file_1_A.dat.gz", 1 * avgMichalSize, 3600),
-                ("*[3-4][0-4][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-                ("*[3-4][0-4][0-9].dat.gz", "file_100_B.dat.gz", 100 * avgMichalSize, 3600),
-
-                # ("*[3-4][0-5][0-9].dat.gz", "file_120_A.dat.gz", 120 * avgMichalSize, 3600),
-                # ("*[3-4][0-5][0-9].dat.gz", "file_120_B.dat.gz", 120 * avgMichalSize, 3600),
-
-                ("*[3-4][0-6][0-9].dat.gz", "file_140_A.dat.gz", 140 * avgMichalSize, 3600),
-                ("*[3-4][0-6][0-9].dat.gz", "file_140_B.dat.gz", 140 * avgMichalSize, 3600),
-
-                # ("*[3-4][0-7][0-9].dat.gz", "file_160_A.dat.gz", 160 * avgMichalSize, 3600),
-                # ("*[3-4][0-7][0-9].dat.gz", "file_160_B.dat.gz", 160 * avgMichalSize, 3600),
-
-                ("*[3-4][0-8][0-9].dat.gz", "file_180_A.dat.gz", 180 * avgMichalSize, 3600),
-                ("*[3-4][0-8][0-9].dat.gz", "file_180_B.dat.gz", 180 * avgMichalSize, 3600),
-
-                ("*[3-4][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
-                ("*[3-4][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 3600),
-
-                ("*[3-5][0-9][0-9].dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
-                ("*[3-5][0-9][0-9].dat.gz", "file_300.dat.gz", 300 * avgMichalSize, 3600),
-
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
-                ("*[3-6][0-9][0-9].dat.gz", "file_400.dat.gz", 400 * avgMichalSize, 3600),
+                ("file_[1-2].dat.gz", "file_2_A.dat.gz", 2 * avgMichalSize, 3600),
+                ("file_[1-4].dat.gz", "file_4_A.dat.gz", 4 * avgMichalSize, 3600),
             ]
 
         # csvFilenameList = random.sample(csvFilenameAll,1)
