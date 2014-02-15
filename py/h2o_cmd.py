@@ -35,10 +35,10 @@ def runInspect(node=None, key=None, timeoutSecs=30, verbose=False, **kwargs):
         print "inspect of %s:" % key, h2o.dump_json(a)
     return a
 
-def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
+def runSummary(node=None, key=None, timeoutSecs=30, numRows=None, numCols=None, **kwargs):
     if not key: raise Exception('No key for Summary')
     if not node: node = h2o.nodes[0]
-    return node.summary_page(key, timeoutSecs=timeoutSecs, **kwargs)
+    return node.summary_page(key, timeoutSecs=timeoutSecs, numRows=numRows, numCols=numCols, **kwargs)
 
 # Not working in H2O yet, but support the test
 def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
@@ -371,7 +371,7 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
 
         # what if we didn't get the full # of cols in this summary view? 
         # I guess the test should deal with that
-        if numCols and (len(summaries!=numCols)):
+        if numCols and (len(summaries)!=numCols):
             raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
 
         for column in summaries:
@@ -401,15 +401,15 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                 h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True)
                 h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
 
-                if numRows and (na==numRows):
+                if numRows and (nacnt==numRows):
                     print "%s is all NAs. no checking for min/max/mean/sigma" % name
                 else:
                     if not mins:
-                        print h2o.dump_json(columns)
-                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s" % (mins, stype, N))
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, N, nacnt, numRows))
                     if not maxs:
-                        print h2o.dump_json(columns)
-                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s" % (mins, stype, N))
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, N, nacnt, numRows))
 
             hstart = column['hstart']
             hstep = column['hstep']
@@ -442,15 +442,15 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
 
     else:
         summary = summaryResult['summary']
-        columnsList = summary['columns']
-        if numCols and (len(columnsList!=numCols)):
-            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
-        for columns in columnsList:
-            N = columns['N']
+        columnList = summary['columns']
+        if numCols and (len(columnList)!=numCols):
+            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(columnList)))
+        for column in columnList:
+            N = column['N']
             # self.assertEqual(N, rowCount)
-            name = columns['name']
-            stype = columns['type']
-            histogram = columns['histogram']
+            name = column['name']
+            stype = column['type']
+            histogram = column['histogram']
             bin_size = histogram['bin_size']
             bin_names = histogram['bin_names']
             # if not noPrint:
@@ -471,12 +471,12 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
 
             # not done if enum
             if stype != "enum":
-                zeros = columns['zeros']
-                na = columns['na']
-                maxs = columns['max']
-                mins = columns['min']
-                mean = columns['mean']
-                sigma = columns['sigma']
+                zeros = column['zeros']
+                na = column['na']
+                maxs = column['max']
+                mins = column['min']
+                mean = column['mean']
+                sigma = column['sigma']
                 if not noPrint:
                     print "zeros:", zeros
                     print "na:", na
@@ -489,16 +489,16 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                     print "%s is all NAs. no checking for min/max/mean/sigma" % name
                 else:
                     if not mins:
-                        print h2o.dump_json(columns)
-                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s" % (mins, stype, N))
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stype, N, na, numRows))
                     if not maxs:
-                        print h2o.dump_json(columns)
-                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s" % (mins, stype, N))
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stype, N, na, numRows))
 
 
                 # sometimes we don't get percentiles? (if 0 or 1 bins?)
                 if len(bins) >= 2:
-                    percentiles = columns['percentiles']
+                    percentiles = column['percentiles']
                     thresholds = percentiles['thresholds']
                     values = percentiles['values']
 
