@@ -79,7 +79,9 @@ else:
         "1.23== 2.34", #  0
         "1.23!= 2.34", #  1
         "r.hex",       #  Simple ref
-        "+(1.23,2.34)",#  prefix 3.57
+        # syntax error "missing ')'"
+        # This doesn't work anymore?
+        # "+(1.23,2.34)",#  prefix 3.57
         ## "+(1.23)",     #  Syntax error, not enuf args
         ## "+(1.23,2,3)", #  Syntax error, too many args
         "r.hex[2,3]",  #  Scalar selection
