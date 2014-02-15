@@ -10,22 +10,33 @@ import water.TestUtil;
 import water.fvec.Frame;
 
 public class DdplyTest extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // This test is intended to use a file large enough to strip across multiple
   // nodes with multiple groups, to test that all generated groups are both
   // built and executed distributed.
   /*@Test*/ public void testDdplyBig() {
-    Key dest = Key.make("orange.hex");
+    Key k0 = Key.make("cars.hex");
+    Key k1 = Key.make("orange.hex");
+    Key k2 = Key.make("covtype.hex");
     try {
-      // A big enough file to distribute across multiple nodes.
-      Frame fr = parseFrame(dest,"smalldata/unbalanced/orange_small_train.data.zip");
-      System.out.println(fr);
+      Frame fr0 = parseFrame(k0,"smalldata/cars.csv");
+      System.out.println(fr0);
+      checkStr("ddply(cars.hex,c(3),sum)");
 
+      // A big enough file to distribute across multiple nodes.
+      Frame fr1 = parseFrame(k1,"smalldata/unbalanced/orange_small_train.data.zip");
+      System.out.println(fr1);
       checkStr("ddply(orange.hex,c(7),sum)");
 
+      Frame fr2 = parseFrame(k2,"../datasets/UCI/UCI-large/covtype/covtype.data");
+      System.out.println(fr2);
+      checkStr("ddply(covtype.hex,c(11),sum)");
+
     } finally {
-      Lockable.delete(dest);    // Remove original hex frame key
+      Lockable.delete(k0);    // Remove original hex frame key
+      Lockable.delete(k1);    // Remove original hex frame key
+      Lockable.delete(k2);    // Remove original hex frame key
     }
   }
 

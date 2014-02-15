@@ -624,7 +624,8 @@ public class Utils {
   public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
-      for(Map.Entry<K, V> e:entrySet())bb.put(e.getKey()).put(e.getValue());
+      for( Map.Entry<K, V> e : entrySet() )
+        bb.put(e.getKey()).put(e.getValue());
       return bb;
     }
     @Override public IcedHashMap<K,V> read(AutoBuffer bb) {
@@ -634,19 +635,13 @@ public class Utils {
       return this;
     }
 
-    @Override public <T2 extends Freezable> T2 newInstance() {
-      return (T2)new IcedHashMap<K,V>();
-    }
+    @Override public IcedHashMap<K,V> newInstance() { return new IcedHashMap<K,V>(); }
     private static int _frozen$type;
     @Override public int frozenType() {
       return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedHashMap.class.getName())) : _frozen$type;
     }
-    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
-      return bb;
-    }
-    @Override public FieldDoc[] toDocField() {
-      return null;
-    }
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
+    @Override public FieldDoc[] toDocField() { return null; }
   }
   public static final boolean hasNaNsOrInfs(double [] arr){
     for(double d:arr) if(Double.isNaN(d) || Double.isInfinite(d))return true;
@@ -799,6 +794,12 @@ public class Utils {
     for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
     return result;
   }
+  public static String[] toStringMap(int first, int last) {
+    if(first > last) throw new IllegalArgumentException("first must be an integer less than or equal to last");
+    String[] result = new String[last-first+1];
+    for(int i = first; i <= last; i++) result[i-first] = String.valueOf(i);
+    return result;
+  }
   public static int[] compose(int[] first, int[] transf) {
     for (int i=0; i<first.length; i++) {
       if (first[i]!=-1) first[i] = transf[first[i]];
@@ -811,15 +812,20 @@ public class Utils {
     int[] secondDom = second[0];
     int[] secondRan = second[1];
 
+    boolean[] filter = new boolean[firstDom.length]; int fcnt = 0;
     int[] resDom = firstDom.clone();
     int[] resRan = firstRan!=null ? firstRan.clone() : new int[firstDom.length];
     for (int i=0; i<resDom.length; i++) {
       int v = firstRan!=null ? firstRan[i] : i; // resulting value
       int vi = Arrays.binarySearch(secondDom, v);
-      assert vi >=0 : "Trying to compose two incompatible transformation: first=" + Arrays.deepToString(first) + ", second=" + Arrays.deepToString(second);
-      resRan[i] = secondRan!=null ? secondRan[vi] : vi;
+      // Do not be too strict in composition assert vi >=0 : "Trying to compose two incompatible transformation: first=" + Arrays.deepToString(first) + ", second=" + Arrays.deepToString(second);
+      if (vi<0) {
+        filter[i] = true;
+        fcnt++;
+      } else
+        resRan[i] = secondRan!=null ? secondRan[vi] : vi;
     }
-    return new int[][] { resDom, resRan };
+    return new int[][] { filter(resDom,filter,fcnt), filter(resRan,filter,fcnt) };
   }
 
   private static final DecimalFormat default_dformat = new DecimalFormat("0.#####");
@@ -1056,6 +1062,18 @@ public class Utils {
     if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
     if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
     return Arrays.copyOf(r, i);
+  }
+
+  public static int[] filter(int[] values, boolean[] filter, int fcnt) {
+    assert filter.length == values.length : "Values should have same length as filter!";
+    assert filter.length - fcnt >= 0 : "Cannot filter more values then legth of filter vector!";
+    if (fcnt==0) return values;
+    int[] result = new int[filter.length - fcnt];
+    int c = 0;
+    for (int i=0; i<values.length; i++) {
+      if (!filter[i]) result[c++] = values[i];
+    }
+    return result;
   }
 
   public static int[][] pack(int[] values, boolean[] usemap) {

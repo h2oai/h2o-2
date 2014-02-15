@@ -149,7 +149,7 @@ public class KMeans2 extends ColumnsJob {
         cc._means = means;
         cc._mults = mults;
         cc.doAll(1, vecs);
-        Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[1][]);
+        Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[][] { Utils.toStringMap(0,cc._clusters.length-1) } );
         fr2.delete_and_lock(self()).unlock(self());
         break;
       }
@@ -378,14 +378,15 @@ public class KMeans2 extends ColumnsJob {
       double[][] _clusters;         // Cluster centers
       double[] _means, _mults;      // Normalization
 
-      @Override public void map(Chunk[] cs, NewChunk[] ncs) {
+      @Override public void map(Chunk[] cs, NewChunk ncs) {
           double[] values = new double[_clusters[0].length];
           ClusterDist cd = new ClusterDist();
           for (int row = 0; row < cs[0]._len; row++) {
               data(values, cs, row, _means, _mults);
               closest(_clusters, values, cd);
               int clu = cd._cluster;
-              ncs[0].addNum(clu);
+              // ncs[0].addNum(clu);
+              ncs.addEnum(clu);
           }
       }
   }

@@ -88,7 +88,7 @@ function() {
 
 .getArgs<-
 function(args) {
-  fileName <- commandArgs()[grep('*\\.R',unlist(commandArgs()))]
+  fileName <- commandArgs()[grepl('*\\.R',unlist(commandArgs()))]
 
   if (length(args) == 0) {
     IP   <<- "127.0.0.1"
@@ -352,40 +352,40 @@ function() {
     return(0)
   }
   print("PREDICT TYPE:")
-  if (grep("GLM", h2o.ls(h))) {
+  if (grepl("GLM", h2o.ls(h))) {
     if(model@model$params$family[[1]] != "binomial") {
-      cat("regression")
+      cat("regression\n")
       predict_type <<- "regression"
       return(0)
     } else {
-      cat("binomial")
+      cat("binomial\n")
       predict_type <<- "binomial"
       return(0)
     }   
   }
-  if (grep("GBM", h2o.ls(h))) {
+  if (grepl("GBM", h2o.ls(h))) {
     if(model@model$distribution == "gaussian") {
       cat("regression")
       predict_type <<- "regression"
       return(0)
     } else {
-      cat("multinomial")
+      cat("multinomial\n")
       predict_type <<- "multinomial"
       return(0)
     }   
   }
-  if (grep("NeuralNet", h2o.ls(h))) {
+  if (grepl("NeuralNet", h2o.ls(h))) {
     cat("multinomial")
     predict_type <<- "multinomial"
     return(0)
   }
-  if (grep("RF", h2o.ls(h))) {
-    cat("multinomial")
+  if (grepl("RF", h2o.ls(h))) {
+    cat("multinomial\n")
     predict_type <<- "multinomial"
     return(0)
   }
-  if (grep("PCA", h2o.ls(h)) || grep("KMeans", h2o.ls(h))) {
-    cat("no predict")
+  if (grepl("PCA", h2o.ls(h)) || grepl("KMeans", h2o.ls(h))) {
+    cat("no predict\n")
     predict_type <<- "no predict"
     return(0)
   }

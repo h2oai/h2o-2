@@ -7,7 +7,7 @@ import h2o_common
 
 class Basic(h2o_common.SetupUnitTest, unittest.TestCase):
     nodes = 3
-    java_xmx = 1
+    java_xmx = 4
 
     def test_A_Basic(self):
         ### h2o.verify_cloud_size()

@@ -251,7 +251,7 @@ public abstract class Model extends Lockable<Model> {
       if(map[c] != null) { // Column needs adaptation
         Vec adaptedVec = null;
         if (toEnum[c]) { // Vector was flipped to column already, compose transformation
-          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], false );
+          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], vfr.domains()[c], false);
         } else adaptedVec = frvecs[c].makeTransf(map[c]);
         avecs.add(frvecs[c] = adaptedVec);
         anames.add(names[c]); // Collect right names
@@ -332,6 +332,9 @@ public abstract class Model extends Lockable<Model> {
    * @param preds an array of prediction distribution. Length of arrays is equal to a number of classes.
    * @param ties a pre-allocated array to hold class numbers participating in tie
    * @return the best prediction (index of class)
+   *
+   * @see #getPrediction(double[], int[], int)
+   * @see #getPrediction(int[], int[], int)
    */
   public static final int getPrediction(float[] preds, int[] ties, int rowInChunk) {
     assert preds.length == ties.length;
@@ -344,11 +347,11 @@ public abstract class Model extends Lockable<Model> {
         ties[++tieCnt] = c;
       }
     }
-    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
+    if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
     return best;
   }
   // Argh Java needs templates for primitive types
-  public static final int getPrediction(double[] preds, int[] ties, int rowInChunk) {
+  public static final int getPrediction(int[] preds, int[] ties, int rowInChunk) {
     assert preds.length == ties.length;
     int best=0; int tieCnt = 0; ties[tieCnt] = 0;
     for (int c=1; c<preds.length; c++) {
@@ -359,9 +362,26 @@ public abstract class Model extends Lockable<Model> {
         ties[++tieCnt] = c;
       }
     }
-    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
+    if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
     return best;
   }
+ // Argh Java needs templates for primitive types
+ public static final int getPrediction(double[] preds, int[] ties, int rowInChunk) {
+   assert preds.length == ties.length;
+   int best=0; int tieCnt = 0; ties[tieCnt] = 0;
+   for (int c=1; c<preds.length; c++) {
+     if (preds[best] < preds[c]) {
+       best = c; // take the max index
+       ties[tieCnt=0] = c;
+     } else if (preds[best] == preds[c]) {
+       ties[++tieCnt] = c;
+     }
+   }
+   if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
+   return best;
+ }
+
+ static final int solveTie(int[] ties, int tieCnt, int rowInChunk) { return ties[rowInChunk % (tieCnt+1)]; }
 
 
   /** Return a String which is a valid Java program representing a class that

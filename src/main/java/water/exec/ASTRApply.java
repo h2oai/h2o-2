@@ -4,7 +4,6 @@ import java.util.*;
 
 import water.*;
 import water.fvec.*;
-import water.util.Utils;
 import water.nbhm.NonBlockingHashMap;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -133,7 +132,7 @@ class ASTSApply extends ASTRApply {
 //   C - Cols in original frame
 //   subC - Subset of C; either a single column entry, or a 1 Vec frame with a list of columns.
 //   subR - Subset of R, where all subC values are the same.
-//   N - Return column(s).
+//   N - Return column(s).  Can be 1, and so fcn can return a dbl instead of 1xN
 //  #R - # of unique combos in the original "subC" set
 
 class ASTddply extends ASTOp {
@@ -146,12 +145,7 @@ class ASTddply extends ASTOp {
   @Override String opStr(){ return "ddply";}
   @Override ASTOp make() {return new ASTddply();}
   @Override void apply(Env env, int argcnt) {
-    // Peek everything from the stack
-    // Function to execute on the groups
-    final ASTOp op = env.fcn(-1); // ary->dblary: subRxC -> 1xN
-    
     Frame fr = env.ary(-3);    // The Frame to work on
-    final int ncols = fr.numCols();
 
     // Either a single column, or a collection of columns to group on.
     int cols[];
@@ -185,18 +179,44 @@ class ASTddply extends ASTOp {
     // plus roll-ups.  Result/Value is Group structure pointing to NewChunks
     // holding row indices.  
 
-    // Pass-1.0: Find Groups.
+    // Pass 1: Find Groups.
     // Build a NBHSet of unique double[]'s holding selection cols.
     // These are the unique groups, found per-node, rolled-up globally
+    // Record the rows belonging to each group, locally.
     ddplyPass1 p1 = new ddplyPass1(cols).doAll(fr);
 
-    // Pass-2.0: Send Groups 'round the cluster
-    // Single-threaded per-group work
+    // Pass 2: Build Groups.
+    // Wrap Vec headers around all the local row-counts.
+    ddplyPass2 p2 = new ddplyPass2(p1).invokeOnAllNodes();
+    // vecs[] iteration order exactly matches p1._grpoups.keySet()
+    Vec vecs[] = p2.close();
+    // Push the execution env around the cluster
+    Key envkey = Key.make();
+    UKV.put(envkey,env);
+    
+    // Pass 3: Send Groups 'round the cluster
+    // Single-threaded per-group work.
     // Send each group to some remote node for execution
+    int csz = H2O.CLOUD.size();
     Futures fs = new Futures();
-    for( Group g : p1._groups.keySet() )
-      g.call(fs);
+    int grpnum=0; // vecs[] iteration order exactly matches p1._groups.keySet()
+    for( Group g : p1._groups.keySet() ) {
+      // vecs[] iteration order exactly matches p1._grpoups.keySet()
+      Vec rows = vecs[grpnum++]; // Rows for this Vec
+      Vec[] data = fr.vecs();    // Full data columns
+      Vec[] gvecs = new Vec[data.length];
+      Key[] keys = rows.group().addVecs(data.length);
+      for( int c=0; c<data.length; c++ )
+        gvecs[c] = new SubsetVec(rows._key,data[c]._key,keys[c],rows._espc);
+      Frame fg = new Frame(fr._names,gvecs);
+      // Non-blocking, send a group to a remote node for execution
+      fs.add(RPC.call(H2O.CLOUD._memary[g.hashCode()%csz],new RemoteExec(g._ds,fg,envkey)));
+    }
     fs.blockForPending();
+
+    // Delete the group row vecs
+    for( Vec v : vecs ) UKV.remove(v._key);
+    UKV.remove(envkey);
 
     env.pop(4);
     // Push empty frame for debugging
@@ -205,58 +225,57 @@ class ASTddply extends ASTOp {
 
   // ---
   // Group descrption: unpacked selected double columns
-  private static class Group extends DTask<Group> implements Freezable {
+  private static class Group extends Iced {
     public double _ds[];
     public int _hash;
     Group( int len ) { _ds = new double[len]; }
+    Group( double ds[] ) { _ds = ds; _hash=hash(); }
     // Efficiently allow groups to be hashed & hash-probed
     private void fill( int row, Chunk chks[], int cols[] ) {
-      long sum=0;                          // hash is sum of field bits
-      for( int c=0; c<cols.length; c++ ) { // For all selection cols
-        double d = _ds[c] = chks[cols[c]].at0(row); // Load into working array
-        sum += Double.doubleToRawLongBits(d);
-      }
-      long h=sum;             // Doubles are lousy hashes; mix up the bits some
+      for( int c=0; c<cols.length; c++ ) // For all selection cols
+        _ds[c] = chks[cols[c]].at0(row); // Load into working array
+      _hash = hash();
+    }
+    private int hash() {
+      long h=0;                 // hash is sum of field bits
+      for( double d : _ds ) h += Double.doubleToRawLongBits(d);
+      // Doubles are lousy hashes; mix up the bits some
       h ^= (h>>>20) ^ (h>>>12);
       h ^= (h>>> 7) ^ (h>>> 4);
-      _hash = (int)((h^(h>>32))&0x7FFFFFFF);
+      return (int)((h^(h>>32))&0x7FFFFFFF);
     }
     @Override public boolean equals( Object o ) {  
       return o instanceof Group && Arrays.equals(_ds,((Group)o)._ds); }
     @Override public int hashCode() { return _hash; }
-
-    // Non-blocking, send a group to a remote node for execution
-    void call( Futures fs ) {
-      int csz = H2O.CLOUD.size();
-      fs.add(RPC.call(H2O.CLOUD._memary[hashCode()%csz],this));
-    }
-
-    @Override public void compute2() {
-      System.out.println("ddply on group "+Arrays.toString(_ds));
-      tryComplete();
-    }
     @Override public String toString() { return Arrays.toString(_ds); }
   }
 
 
   // ---
-  // Pass1: Find unique groups, based on a subset of columns
+  // Pass1: Find unique groups, based on a subset of columns.
+  // Collect rows-per-group, locally.
   private static class ddplyPass1 extends MRTask2<ddplyPass1> {
-    // Map input
-    public final int _cols[];   // Selection columns
-    ddplyPass1( int cols[] ) { _cols = cols; }
-    // Map Output: mapping from groups to row#s that are in that group
-    public transient NonBlockingHashMap<Group,NewChunk> _groups;
+    // INS:
+    public int _cols[];   // Selection columns
+    public Key _uniq;     // Unique Key for this entire ddply pass
+    ddplyPass1( int cols[] ) { _cols = cols; _uniq=Key.make(); }
+    // OUTS: mapping from groups to row#s that are in that group
+    public NonBlockingHashMap<Group,NewChunk> _groups;
+
+    // *Local* results from ddplyPass1 are kept locally in this tmp structure.
+    // Pass2 reads them out & reclaims the space.
+    private static NonBlockingHashMap<Key,ddplyPass1> PASS1TMP = new NonBlockingHashMap<Key,ddplyPass1>();
+
     // Make a NewChunk to hold rows, that has a random Key and is not
     // associated with any Vec.  We'll fold these into a Vec later when we know
     // cluster-wide what the Groups (and hence Vecs) are.
-    private static NewChunk makeNC( Chunk C ) { return new NewChunk(null,C.cidx()); }
+    private static NewChunk makeNC( ) { return new NewChunk(null,H2O.SELF.index()); }
     // Build a Map mapping Groups to a NewChunk of row #'s
     @Override public void map( Chunk chks[] ) {
       _groups = new NonBlockingHashMap<Group,NewChunk>();
       Group g = new Group(_cols.length);
+      NewChunk nc = makeNC();
       Chunk C = chks[_cols[0]];
-      NewChunk nc = makeNC(C);
       int len = C._len;
       long start = C._start;
       for( int row=0; row<len; row++ ) {
@@ -266,13 +285,14 @@ class ASTddply extends ASTOp {
         if( nc_old==null ) {    // Add group signature if not already present
           nc_old = nc;          // Jammed 'nc' into the table to hold rows
           g = new Group(_cols.length); // Need a new <Group,NewChunk> pair
-          nc = makeNC(C);
+          nc = makeNC();
         }
         nc_old.addNum(start+row,0); // Append rows into the existing group
       }
     }
     // Fold together two Group/NewChunk Maps.  For the same Group, append
-    // NewChunks (up to a size limit).
+    // NewChunks (hence gathering rows together).  Since the custom serializers
+    // do not send the rows over the wire, we have only *local* row-counts.
     @Override public void reduce( ddplyPass1 p1 ) {
       assert _groups != p1._groups;
       // Fold 2 hash tables together.
@@ -284,41 +304,140 @@ class ASTddply extends ASTOp {
       for( Group g : m1.keySet() ) {
         NewChunk nc0 = m0.get(g);
         NewChunk nc1 = m1.get(g);
-        if( nc0 == null ) m0.put(g,nc0=nc1);
-        else nc0.add(nc1);
-        System.out.println("After reduce, Group="+g+", row0="+nc0.at8_impl(0)+", numrows="+nc0._len);
+        if( nc0 == null ) m0.put(g,nc1);
+        // unimplemented: expected to blow out on large row counts, where we
+        // actually need a collection of chunks, not 1 uber-chunk
+        else {
+          // All longs are monotonically in-order.  Not sure if this is needed
+          // but it's an easy invariant to keep and it makes reading row#s easier.
+          if( nc0._len > 0 && nc1._len > 0 && // len==0 for reduces from remotes (since no rows sent)
+              nc0.at8_impl(nc0._len-1) >= nc1.at8_impl(0) )   nc0.addr(nc1);
+          else                                                nc0.add (nc1);
+        }
       }
       _groups = m0;
       p1._groups = null;
     }
     @Override public String toString() { return _groups.toString(); }
+    // Save local results for pass2
+    @Override public void closeLocal() { PASS1TMP.put(_uniq,this); }
 
     // Custom serialization for NBHM.  Much nicer when these are auto-gen'd.
-    //@Override public AutoBuffer write( AutoBuffer ab ) {
-    //  super.write(ab);
-    //  ab.putA4(_cols);
-    //  if( _uniques == null ) return ab.put4(0);
-    //  ab.put4(_uniques.size());
-    //  for( Group g : _uniques.keySet() ) ab.put(g);
-    //  return ab;
-    //}
-    //
-    //@Override public ddplyPass1 read( AutoBuffer ab ) {
-    //  super.read(ab);
-    //  assert _uniques == null;
-    //  _uniques = new NonBlockingHashMap<Group,Object>();
-    //  _cols = ab.getA4();
-    //  int len = ab.get4();
-    //  for( int i=0; i<len; i++ )
-    //    _uniques.put(ab.get(Group.class),V);
-    //  return this;
-    //}
-    //public void copyOver(DTask that) {
-    //  ddplyPass1 p1 = (ddplyPass1)that;
-    //  super.copyOver(p1);
-    //  p1._cols = _cols;
-    //  p1._uniques = _uniques;
-    //}
+    // Only sends Groups over the wire, NOT NewChunks with rows.
+    @Override public AutoBuffer write( AutoBuffer ab ) {
+      super.write(ab);
+      ab.putA4(_cols);
+      ab.put(_uniq);
+      if( _groups == null ) return ab.put4(0);
+      ab.put4(_groups.size());
+      for( Group g : _groups.keySet() ) ab.put(g);
+      return ab;
+    }
+    
+    @Override public ddplyPass1 read( AutoBuffer ab ) {
+      super.read(ab);
+      assert _groups == null;
+      _cols = ab.getA4();
+      _uniq = ab.get();
+      int len = ab.get4();
+      if( len == 0 ) return this;
+      _groups = new NonBlockingHashMap<Group,NewChunk>();
+      for( int i=0; i<len; i++ )
+        _groups.put(ab.get(Group.class),new NewChunk(null,-99));
+      return this;
+    }
+    @Override public void copyOver( DTask dt ) {
+      ddplyPass1 that = (ddplyPass1)dt;
+      super.copyOver(that);
+      this._cols   = that._cols;
+      this._uniq   = that._uniq;
+      this._groups = that._groups;
+    }
+  }
+
+  // ---
+  // Pass 2: Build Groups.
+  // Wrap Frame/Vec headers around all the local row-counts.
+  private static class ddplyPass2 extends DRemoteTask<ddplyPass2> {
+    // Key uniquely identifying a pass1 collection of NewChunks
+    Key _p1key;
+    // One new Vec per Group, holding just rows
+    AppendableVec _avs[];
+    // The Group descripters
+    double _dss[][];
+
+    ddplyPass2( ddplyPass1 p1 ) {
+      _p1key = p1._uniq;        // Key to finding the pass1 data
+      // One new Vec per Group, holding just rows
+      _avs = new AppendableVec[p1._groups.size()];
+      _dss = new double       [p1._groups.size()][];
+      int i=0;
+      for( Group g : p1._groups.keySet() ) {
+        _dss[i] = g._ds;
+        _avs[i++] = new AppendableVec(new Vec.VectorGroup().addVec());
+      }
+    }
+
+    // Local (per-Node) work.  Gather the chunks together into the Vecs
+    @Override public void lcompute() {
+      ddplyPass1 p1 = ddplyPass1.PASS1TMP.remove(_p1key);
+      Futures fs = new Futures();
+      int cidx = H2O.SELF.index();
+      for( int i=0; i<_dss.length; i++ ) { // For all possible groups
+        // Get the newchunk of local rows for a group
+        Group g = new Group(_dss[i]);
+        NewChunk nc = p1._groups == null ? null : p1._groups.get(g);
+        if( nc != null && nc._len > 0 ) { // Fill in fields we punted on during construction
+          nc._vec = _avs[i];  // Assign a proper vector
+          nc.close(cidx,fs);  // Close & compress chunk
+        } else {              // All nodes have a chunk, even if its empty
+          DKV.put(_avs[i].chunkKey(cidx), new C0LChunk(0,0),fs);
+        }
+      }
+      fs.blockForPending();
+      _p1key = null;            // No need to return these
+      _dss = null;
+      tryComplete();
+    }
+    @Override public void reduce( ddplyPass2 p2 ) {
+      for( int i=0; i<_avs.length; i++ )
+        _avs[i].reduce(p2._avs[i]);
+    }
+    // Close all the AppendableVecs & return normal Vecs.
+    Vec[] close() {
+      Futures fs = new Futures();
+      Vec vs[] = new Vec[_avs.length];
+      for( int i=0; i<_avs.length; i++ ) vs[i] = _avs[i].close(fs);
+      fs.blockForPending();
+      return vs;
+    }
+  }
+
+  // Called once-per-group, it executes the given function on the group.
+  private static class RemoteExec extends DTask<RemoteExec> implements Freezable {
+    // INS
+    public double _ds[];        // Displayable name for this group
+    public Frame _fr;           // Frame for this group
+    public Key _envkey;         // Key for the execution environment
+    RemoteExec( double ds[], Frame fr, Key envkey ) { _ds=ds; _fr=fr; _envkey=envkey; }
+    @Override public void compute2() {
+      Env shared_env = UKV.get(_envkey);
+      // Clone a private copy of the environment for local execution
+      Env env = shared_env.capture(true);
+      ASTOp op = env.fcn(-1);
+
+      System.out.println("ddply on group "+Arrays.toString(_ds)+" rows="+_fr.numRows()+", env="+env+", op="+op);
+      env.push(op);
+      env.push(_fr);
+      op.apply(env,2/*1-arg function*/);
+      System.out.println("ddply on group "+Arrays.toString(_ds)+", env="+env);
+      
+      _fr.delete();
+      _fr = null;
+      _ds = null;
+      _envkey= null;
+      tryComplete();
+    }
   }
 
 }

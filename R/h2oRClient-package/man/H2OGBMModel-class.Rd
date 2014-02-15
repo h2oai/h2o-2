@@ -17,11 +17,12 @@ Objects can be created by calls of the form \code{new("H2OGBMModel", ...)}.
     \item{\code{key}:}{Object of class \code{"character"}, representing the unique hex key that identifies the model.}
     \item{\code{data}:}{Object of class \code{\linkS4class{H2OParsedData}}, which is the input data used to build the model.}
     \item{\code{model}:}{Object of class \code{"list"} containing the following elements:
-    \itemize{
-    \item{\code{err}: The mean-squared error in each tree.}
-    \item{\code{cm}: (Only for classification). The confusion matrix of the response, with actual observations as rows and predicted values as columns.}
-    }
+      \itemize{
+      \item{\code{err}: The mean-squared error in each tree.}
+      \item{\code{cm}: (Only for classification). The confusion matrix of the response, with actual observations as rows and predicted values as columns.}
+      }
   }
+  \item{\code{valid}:}{Object of class \code{\linkS4class{H2OParsedData}}, which is the dataset used to validate the model.}
 }}
 \section{Methods}{
   \describe{

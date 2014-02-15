@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.junit.*;
 
 import water.*;
+import water.util.Utils;
 
 public class TransfVecTest extends TestUtil {
 
@@ -49,4 +50,23 @@ public class TransfVecTest extends TestUtil {
       if (indexes[i] < 0 || indexes[i]>=modelDomain.length)
         Assert.assertTrue("Returned index mapping at " + i + "does not index correctly model domain " + Arrays.toString(modelDomain), false);
   }
+
+  @Test public void testMappingComposition() {
+    assertEqualMapping(
+                 ar( ari(1), ari(0)),          // expecting composed mapping
+      Utils.compose( ar( ari(-1,1), null),     // <- 1st mapping
+                     ar( ari( 1,2), ari(0,1))) // <- 2nd mapping
+        );
+    assertEqualMapping(
+                     ar( ari(1,2,3,4,5,6), ari(0,1,2,3,4,5)),     // expecting composed mapping
+      Utils.compose( ar( ari(-1,1,2,3,4,5,6), null),              // <- 1st mapping
+                     ar( ari(1,2,3,4,5,6),    ari(0,1,2,3,4,5)))  // <- 2nd mapping
+                     );
+  }
+
+  private void assertEqualMapping(int[][] expectedMapping, int[][] actualMapping) {
+    Assert.assertEquals("Mapping should be composed of two arrays", 2, actualMapping.length);
+    Assert.assertEquals("Mapping should be composed of two arrays of equal length", actualMapping[0].length, actualMapping[1].length);
+  }
+
 }

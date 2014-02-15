@@ -9,11 +9,28 @@ initList = [
         ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
         ('r4.hex', 'r4.hex=c(5.3,0,1,2,3,4,5)'),
         ('r.hex', 'r.hex=i.hex'),
+        ('z.hex', 'z.hex=c(0)'),
         ]
 
-exprListSmall = [
+exprListFull = [
+        'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
+        'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
+        # 'z = if (any(r3.hex == 0) || any(r4.hex == 0)), "zero encountered"',
+
+        # FALSE and TRUE don't exist?
+        # 'x <- c(NA, FALSE, TRUE)',
+
+        # 'names(x) <- as.character(x)'
+        # outer(x, x, "&")## AND table
+        # outer(x, x, "|")## OR  table
         "1.23",
+        "!1.23",
+
         "1.23<2.34",
+        "!1.23<2.34",
+        "!1.23<!2.34",
+        "1.23<!2.34",
+
         "1.23<=2.34",
         "1.23>2.34",
         "1.23>=2.34",
@@ -21,14 +38,33 @@ exprListSmall = [
         "1.23!=2.34",
 
         "r.hex",
-        "+(1.23,2.34)",
+        "!r.hex",
+
+        # Not supported
+        # "+(1.23,2.34)",
         "x=0; x+2",
+        "x=!0; !x+2",
+        "x=!0; x+!2",
+
         "x=1",
+        "x=!1",
+
         "x<-1",
+        "x<-!1",
         "c(1,3,5)",
+        "!c(1,3,5)",
+        "!c(!1,3,5)",
+        "!c(1,!3,5)",
+        "!c(1,3,!5)",
+
         "a=0; x=0",
+        "a=!0; x=!0",
 
         "r.hex[2,3]",
+        # "r.hex[!2,3]",
+        # no cols selectd
+        # "r.hex[2,!3]",
+
         "r.hex[2+4,-4]",
         "r.hex[1,-1]; r.hex[1,-1]; r.hex[1,-1]",
         "r.hex[1,]",
@@ -67,11 +103,13 @@ exprListSmall = [
         # "cbind(c(1,2,3), c(4,5,6), c(7,8,9))",
         # "cbind(c(1,2,3,4), c(5,6,7))",
         # "cbind(c(1,2,3), c(4,5,6,7))",
+        "cbind(c(1,2,3,4), c(5,6,7,8))",
 
         "r.hex[c(1,3,5),]",
         "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
         "r.hex[r.hex[,1]>4,]",
-        "a=c(1,2,3); a[a[,1]>10,1]",
+        # fails?
+        # "a=c(1,2,3); a[a[,1]>10,1]",
 
         "ifelse(0,1,2)",
         "ifelse(0,r.hex+1,r.hex+2)",
@@ -120,12 +158,12 @@ exprListSmall = [
         ]
 
 
-# concatenate a lot of random choices to make life harder
+# concatenate some random choices to make life harder
 exprList = []
-for i in range(10):
+for i in range(100):
     expr = ""
     for j in range(1):
-        expr += "z.hex=" + random.choice(exprListSmall) + ";"
+        expr += random.choice(exprListFull)
     exprList.append(expr)
         
 
@@ -156,7 +194,15 @@ class Basic(unittest.TestCase):
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r0.hex', maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
+
+        # now run them just concatenating each time. We don't do any template substitutes, so don't need
+        # exec_expr_list_rand()
+        
+        bigExecExpr = ""
+        for execExpr in exprList:
+            bigExecExpr += execExpr + ";"
+            h2e.exec_expr(h2o.nodes[0], bigExecExpr, resultKey=None, timeoutSecs=4)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

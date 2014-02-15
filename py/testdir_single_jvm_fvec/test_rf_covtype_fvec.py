@@ -164,6 +164,8 @@ class Basic(unittest.TestCase):
             # FIX! should update this expected classification error
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=data_key)
 
+            print "classErrorPctList:", classErrorPctList
+            self.assertEqual(len(classErrorPctList), 7, "Should be 7 output classes, so should have 7 class error percentages from a reasonable predict")
             eList.append(classErrorPctList[4])
             fList.append(trainElapsed)
             if DO_PLOT:

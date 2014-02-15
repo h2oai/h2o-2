@@ -375,14 +375,13 @@ def infoFromSummary(summaryResult, noPrint=False):
             colname = column['colname']
             coltype = column['type']
             nacnt = column['nacnt']
-            h2o_exec.checkForBadFP(nacnt, 'nacnt')
-
             stats = column['stats']
             stattype = stats['type']
+            h2o_exec.checkForBadFP(nacnt, 'nacnt for colname: %s stattype: %s' % (colname, stattype))
 
             if stattype == 'Enum':
                 cardinality = stats['cardinality']
-                h2o_exec.checkForBadFP(cardinality, 'cardinality')
+                h2o_exec.checkForBadFP(cardinality, 'cardinality for colname: %s stattype: %s' % (colname, stattype))
                 
             else:
                 mean = stats['mean']
@@ -394,9 +393,10 @@ def infoFromSummary(summaryResult, noPrint=False):
                 pctile = stats['pctile']
 
                 # check for NaN/Infinity in some of these
-                h2o_exec.checkForBadFP(mean, 'mean')
-                h2o_exec.checkForBadFP(sd, 'sd')
-                h2o_exec.checkForBadFP(zeros, 'zeros')
+                # apparently we can get NaN in the mean for a numerica col with all NA?
+                h2o_exec.checkForBadFP(mean, 'mean for colname: %s stattype: %s' % (colname, stattype), nanOkay=True)
+                h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True)
+                h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
 
             hstart = column['hstart']
             hstep = column['hstep']

@@ -22,11 +22,12 @@ mkdir -p sandbox
 
 # resource manager is still on 162
 # yarn.resourcemanager.address  8032
-CDH5_YARN_JOBTRACKER=192.168.1.179:8032
-CDH5_YARN_NODES=2
+CDH5_YARN_JOBTRACKER=192.168.1.180:8032
+CDH5_YARN_NODES=1
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
-echo "can't get more than 7g for now. node count 2"
-CDH5_YARN_HEAP=7g
+echo "can't get more than 5g for now. node count 2"
+echo "need to adjust the cdh5 cloudera config (yarn memory?)"
+CDH5_YARN_HEAP=5g
 CDH5_YARN_JAR=h2odriver_cdh4_yarn.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
@@ -82,7 +83,8 @@ done < h2o_one_node
 
 rm -fr h2o-nodes.json
 # NOTE: keep this hdfs info in sync with the json used to build the cloud above
-../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node 192.168.1.179 -expected_size $CDH5_YARN_NODES
+echo "Make sure you update this to point to the right name node, which can be different than the resource manager"
+../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node 192.168.1.180 -expected_size $CDH5_YARN_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json

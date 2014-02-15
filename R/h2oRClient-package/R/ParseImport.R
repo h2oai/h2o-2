@@ -40,7 +40,7 @@ h2o.checkClient <- function(object) {
     if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
   } else { 
     cat("Successfully connected to", myURL, "\n")
-    if("h2oRClient" %in% rownames(installed.packages()) && (pv=packageVersion("h2oRClient")) != (sv=h2o.__version(object)))
+    if("h2oRClient" %in% rownames(installed.packages()) && (pv=packageVersion("h2oRClient")) != (sv=.h2o.__version(object)))
       warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
   }
 }
@@ -49,7 +49,7 @@ h2o.ls <- function(object, pattern = "") {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(pattern)) stop("pattern must be of class character")
   
-  res = h2o.__remoteSend(object, h2o.__PAGE_VIEWALL, filter=pattern)
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_VIEWALL, filter=pattern)
   if(length(res$keys) == 0) return(list())
   myList = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
   temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2, byrow = TRUE))
@@ -64,7 +64,7 @@ h2o.rm <- function(object, keys) {
   if(!is.character(keys)) stop("keys must be of class character")
   
   for(i in 1:length(keys))
-    h2o.__remoteSend(object, h2o.__PAGE_REMOVE, key=keys[[i]])
+    .h2o.__remoteSend(object, .h2o.__PAGE_REMOVE, key=keys[[i]])
 }
 
 h2o.assign <- function(data, key) {
@@ -74,26 +74,9 @@ h2o.assign <- function(data, key) {
   if(nchar(key) == 0) stop("key cannot be an empty string")
   if(key == data@key) stop(paste("Destination key must differ from data key", data@key))
   
-  res = h2o.__exec2_dest_key(data@h2o, data@key, key)
+  res = .h2o.__exec2_dest_key(data@h2o, data@key, key)
   data@key = key
   return(data)
-}
-
-h2o.push <- function(client, object, key) {
-  if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
-  if(missing(object)) stop("must specify object to push")
-  else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
-  if(missing(key)) key <- deparse(substitute(object))
-  else if(!is.character(key)) stop("key must be of class character")
-  else if(nchar(key) == 0) stop("key cannot be an empty string")
-  
-  if(is.numeric(object))
-    res = h2o.__exec2_dest_key(client, object, key)
-  else if(is.function(object)) {
-    object <- match.fun(object)
-    res = h2o.__exec2_dest_key(client, object, key)
-    # TODO: Push function to the H2O server
-  }
 }
 
 # ----------------------------------- File Import Operations --------------------------------- #
@@ -115,7 +98,7 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
   if(!is.character(key)) stop("key must be of class character")
   if(!is.logical(parse)) stop("parse must be of class logical")
   
-  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=path)
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_IMPORTFILES, path=path)
   if(length(res$fails) > 0) {
     for(i in 1:length(res$fails)) 
       cat(res$fails[[i]], "failed to import")
@@ -146,8 +129,8 @@ h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TR
   if(!is.logical(parse)) stop("parse must be of class logical")
   
   # if(!file.exists(path)) stop("Directory does not exist!")
-  # res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES2, path=normalizePath(path))
-  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES2, path=path)
+  # res = .h2o.__remoteSend(object, .h2o.__PAGE_IMPORTFILES2, path=normalizePath(path))
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_IMPORTFILES2, path=path)
   if(length(res$fails) > 0) {
     for(i in 1:length(res$fails)) 
       cat(res$fails[[i]], "failed to import")
@@ -214,7 +197,7 @@ h2o.importURL.VA <- function(object, path, key = "", parse = TRUE, header, sep =
   if(!is.logical(parse)) stop("parse must be of class logical")
   
   destKey = ifelse(parse, "", key)
-  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path, key=destKey)
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_IMPORTURL, url=path, key=destKey)
   rawData = new("H2ORawDataVA", h2o=object, key=res$key)
   if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) else rawData
 }
@@ -241,7 +224,7 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
   if(!is.character(key)) stop("key must be of class character")
   if(!is.logical(parse)) stop("parse must be of class logical")
   
-  res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTHDFS, path=path)
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_IMPORTHDFS, path=path)
   if(length(res$failed) > 0) {
     for(i in 1:res$num_failed) 
       cat(res$failed[[i]]$file, "failed to import")
@@ -288,7 +271,7 @@ h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep 
   
   url = paste("http://", object@ip, ":", object@port, "/PostFile.json", sep="")
   url = paste(url, "?key=", path, sep="")
-  if(file.exists(h2o.__getLog("Command"))) h2o.__logIt(url, NULL, "Command")
+  if(file.exists(h2o.__getLog("Command"))) .h2o.__logIt(url, NULL, "Command")
   if(silent)
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
   else
@@ -307,7 +290,7 @@ h2o.uploadFile.FV <- function(object, path, key = "", parse = TRUE, header, sep 
   
   url = paste("http://", object@ip, ":", object@port, "/2/PostFile.json", sep="")
   url = paste(url, "?key=", path, sep="")
-  if(file.exists(h2o.__getLog("Command"))) h2o.__logIt(url, NULL, "Command")
+  if(file.exists(h2o.__getLog("Command"))) .h2o.__logIt(url, NULL, "Command")
   if(silent)
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
   else
@@ -336,16 +319,16 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
   if(missing(header) && missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii)
   else if(missing(header) && !missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=1, header_from_file=col.names@key)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=1, header_from_file=col.names@key)
   else if(!missing(header) && missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
   else
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
   
-  # on.exit(h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job))
-  h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
+  # on.exit(.h2o.__cancelJob(data@h2o, res$response$redirect_request_args$job))
+  .h2o.__waitOnJob(data@h2o, res$response$redirect_request_args$job)
   parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
 }
 
@@ -359,19 +342,19 @@ h2o.parseRaw.FV <- function(data, key = "", header, sep = "", col.names) {
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
   if(missing(header) && missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii)
   else if(missing(header) && !missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=1, header_from_file=col.names@key)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=1, header_from_file=col.names@key)
   else if(!missing(header) && missing(col.names))
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header))
   else
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key)
   
-  # on.exit(h2o.__cancelJob(data@h2o, res$job_key))
-  h2o.__waitOnJob(data@h2o, res$job_key)
+  # on.exit(.h2o.__cancelJob(data@h2o, res$job_key))
+  .h2o.__waitOnJob(data@h2o, res$job_key)
   parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
-          
+      
 #-------------------------------- Miscellaneous -----------------------------------#
 h2o.exportHDFS <- function(object, path) {
   if(inherits(object, "H2OModelVA")) stop("h2o.exportHDFS does not work under ValueArray")
@@ -379,7 +362,7 @@ h2o.exportHDFS <- function(object, path) {
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
   
-  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
+  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
 }
 
 h2o.downloadCSV <- function(data, filename) {
@@ -409,38 +392,30 @@ h2o.downloadCSV <- function(data, filename) {
 
 setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })
 setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function(x, value) {
-  res = h2o.__exec2_dest_key(x@h2o, value@key, x@key); return(x)
+  res = .h2o.__exec2_dest_key(x@h2o, value@key, x@key); return(x)
 })
 
 setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, value) {
-  res = h2o.__exec2_dest_key(x@h2o, paste("c(", paste(value, collapse=","), ")", sep=""), x@key); return(x)
+  res = .h2o.__exec2_dest_key(x@h2o, paste("c(", paste(value, collapse=","), ")", sep=""), x@key); return(x)
 })
 
-# ----------------------- Diagnostics ----------------------- #
-h2o.clusterStatus <- function(client) {
-  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
-  myURL = paste("http://", client@ip, ":", client@port, "/", h2o.__PAGE_CLOUD, sep = "")
-  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
-  res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
-  
-  cat("Version:", res$version, "\n")
-  cat("Cloud name:", res$cloud_name, "\n")
-  cat("Node name:", res$node_name, "\n")
-  cat("Cloud size:", res$cloud_size, "\n")
-  if(res$locked) cat("Cloud is locked\n\n") else cat("Accepting new members\n\n")
-  if(is.null(res$nodes) || length(res$nodes) == 0) stop("No nodes found!")
-  
-  # Calculate how many seconds ago we last contacted cloud
-  cur_time <- Sys.time()
-  for(i in 1:length(res$nodes)) {
-    last_contact_sec = as.numeric(res$nodes[[i]]$last_contact)/1e3
-    time_diff = cur_time - as.POSIXct(last_contact_sec, origin = "1970-01-01")
-    res$nodes[[i]]$last_contact = as.numeric(time_diff)
-  }
-  cnames = c("name", "value_size_bytes", "free_mem_bytes", "max_mem_bytes", "free_disk_bytes", "max_disk_bytes", "num_cpus", "system_load", "rpcs", "last_contact")
-  temp = data.frame(t(sapply(res$nodes, c)))
-  return(temp[,cnames])
-}
+# ----------------------------------- Work in Progress --------------------------------- #
+# h2o.push <- function(client, object, key) {
+#   if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+#   if(missing(object)) stop("must specify object to push")
+#   else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
+#   if(missing(key)) key <- deparse(substitute(object))
+#   else if(!is.character(key)) stop("key must be of class character")
+#   else if(nchar(key) == 0) stop("key cannot be an empty string")
+#   
+#   if(is.numeric(object))
+#     res = .h2o.__exec2_dest_key(client, object, key)
+#   else if(is.function(object)) {
+#     object <- match.fun(object)
+#     res = .h2o.__exec2_dest_key(client, object, key)
+#     # TODO: Push function to the H2O server
+#   }
+# }
 
 # ----------------------- Log helper ----------------------- #
 h2o.logAndEcho <- function(conn, message) {
@@ -449,7 +424,7 @@ h2o.logAndEcho <- function(conn, message) {
   if (class(message) != "character")
       stop("message must be a character string")
   
-  res = h2o.__remoteSend(conn, h2o.__PAGE_LOG_AND_ECHO, message=message)
+  res = .h2o.__remoteSend(conn, .h2o.__PAGE_LOG_AND_ECHO, message=message)
   echo_message = res$message
   return (echo_message)
 }
@@ -462,7 +437,7 @@ h2o.downloadAllLogs <- function(client, dir_name = ".", file_name = NULL) {
     else if(nchar(file_name) == 0) stop("file_name must be a non-empty string")
   }
   
-  url = paste("http://", client@ip, ":", client@port, "/", h2o.__DOWNLOAD_LOGS, sep="")
+  url = paste("http://", client@ip, ":", client@port, "/", .h2o.__DOWNLOAD_LOGS, sep="")
   if(!file.exists(dir_name)) dir.create(dir_name)
   
   cat("Downloading H2O logs from server...\n")

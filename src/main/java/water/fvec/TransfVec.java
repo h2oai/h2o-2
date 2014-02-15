@@ -18,34 +18,24 @@ import water.util.Utils;
  * returns two implementation of underlying chunk ({@link TransfChunk} when {@link #_indexes} is not <code>null</code>,
  * and {@link FlatTransfChunk} when {@link #_indexes} is <code>null</code>.</p>
  */
-public class TransfVec extends Vec {
-  /** A key for underlying vector which contains values which are transformed by this vector. */
-  final Key   _masterVecKey;
+public class TransfVec extends WrappedVec {
   /** List of values from underlying vector which this vector map to a new value. If
    * a value is not included in this array the implementation returns NA. */
   final int[] _values;
   /** The transformed value - i.e. transformed value is: <code>int idx = find(value, _values); return _indexes[idx]; </code> */
   final int[] _indexes;
-  /** Cached instances of underlying vector. */
-  transient Vec _masterVec;
 
-  public TransfVec(Key masterVecKey, int[][] mapping, Key key, long[] espc) {
-    this(masterVecKey, mapping, null, key, espc);
+  public TransfVec(int[][] mapping, Key masterVecKey, Key key, long[] espc) {
+    this(mapping, null, masterVecKey, key, espc);
   }
-  public TransfVec(Key masterVecKey, int[][] mapping, String[] domain, Key key, long[] espc) {
-    this(masterVecKey, mapping[0], mapping[1], domain, key, espc);
+  public TransfVec(int[][] mapping, String[] domain, Key masterVecKey, Key key, long[] espc) {
+    this(mapping[0], mapping[1], domain, masterVecKey, key, espc);
   }
-  public TransfVec(Key masterVecKey, int[] values, int[] indexes, String[] domain, Key key, long[] espc) {
-    super(key, espc);
-    _masterVecKey = masterVecKey;
+  public TransfVec(int[] values, int[] indexes, String[] domain, Key masterVecKey, Key key, long[] espc) {
+    super(masterVecKey, key, espc);
     _values  =  values;
     _indexes =  indexes;
     _domain = domain;
-  }
-
-  @Override public Vec masterVec() {
-    if (_masterVec==null) _masterVec = DKV.get(_masterVecKey).get();
-    return _masterVec;
   }
 
   @Override public Chunk elem2BV(int cidx) {
@@ -118,7 +108,7 @@ public class TransfVec extends Vec {
   }
 
   /** Compose this vector with given transformation. Always return a new vector */
-  public Vec compose(int[][] transfMap) { return compose(this, transfMap, true);  }
+  public Vec compose(int[][] transfMap, String[] domain) { return compose(this, transfMap, domain, true);  }
 
   /**
    * Compose given origVector with given transformation. Always returns a new vector.
@@ -128,10 +118,10 @@ public class TransfVec extends Vec {
    * @param keepOrig
    * @return a new instance of {@link TransfVec} composing transformation of origVector and tranfsMap
    */
-  public static Vec compose(TransfVec origVec, int[][] transfMap, boolean keepOrig) {
+  public static Vec compose(TransfVec origVec, int[][] transfMap, String[] domain, boolean keepOrig) {
     // Do a mapping from INT -> ENUM -> this vector ENUM
     int[][] domMap = Utils.compose(new int[][] {origVec._values, origVec._indexes }, transfMap);
-    Vec result = origVec.masterVec().makeTransf(domMap[0], domMap[1], origVec._domain);
+    Vec result = origVec.masterVec().makeTransf(domMap[0], domMap[1], domain);;
     if (!keepOrig) DKV.remove(origVec._key);
     return result;
   }

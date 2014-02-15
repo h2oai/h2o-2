@@ -139,11 +139,9 @@ public class Vec extends Iced {
    * @return
    */
   Vec makeTransf(final int[] values, final int[] indexes, final String[] domain) {
-    Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, values, indexes, domain, group().addVecs(1)[0],_espc);
-    DKV.put(v0._key,v0,fs);
-    fs.blockForPending();
+    Vec v0 = new TransfVec(values, indexes, domain, this._key, group().addVecs(1)[0],_espc);
+    UKV.put(v0._key,v0);
     return v0;
   }
   /**
@@ -435,7 +433,7 @@ public class Vec extends Iced {
 
   protected boolean checkMissing(int cidx, Value val) {
     if( val != null ) return true;
-    System.out.println("Missing chunk "+cidx+" for "+_key);
+    System.out.println("Error: Missing chunk "+cidx+" for "+_key);
     return false;
   }
 
@@ -690,7 +688,8 @@ public class Vec extends Iced {
     public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
     @Override public void map(Chunk ys) {
       for( int row=0; row<ys._len; row++ ) {
-        if (ys.isNA0(row)) continue;
+        if (ys.isNA0(row))
+          continue;
         int ycls = (int)ys.at80(row)-_ymin;
         if( _dom[ycls] == 0 ) _dom[ycls] = 1; // Only write to shared array
       }

@@ -3,11 +3,11 @@ import h2o, h2o_cmd, sys
 import time, random, re
 import h2o_browse as h2b
 
-def checkForBadFP(value, name='min_value'):
+def checkForBadFP(value, name='min_value', nanOkay=False):
     if 'Infinity' in str(value):
-        raise Exception("Infinity in inspected %s can't be good: %s" % (str(value), name))
-    if 'NaN' in str(value):
-        raise Exception("NaN in inspected %s can't be good: %s" % (str(value), name))
+        raise Exception("Infinity in inspected %s can't be good for: %s" % (str(value), name))
+    if 'NaN' in str(value) and not nanOkay:
+        raise Exception("NaN in inspected %s can't be good for: %s" % (str(value), name))
 
 def checkScalarResult(resultInspect, resultKey):
     # make the common problems easier to debug
@@ -53,7 +53,9 @@ def checkScalarResult(resultInspect, resultKey):
         print "Inspect metaDict:", key, value
             
     min_value = metaDict['min']
-    checkForBadFP(min_value)
+    stype = metaDict['type']
+    # if it's an enum col, it's okay for min to be NaN ..
+    checkForBadFP(min_value, nanOkay=stype=='Enum')
 
 
     # do a VA inspect to see if the fvec to va converter works
@@ -165,7 +167,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
 
         if keyX:
             inspect = h2o_cmd.runInspect(key=keyX)
-            print "\ns.hex" \
+            print keyX, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
 

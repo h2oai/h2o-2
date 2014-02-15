@@ -629,9 +629,15 @@ NEXT_CHAR:
   private static int guessNcols(ParserSetup setup,String [][] data){
     int res = data[0].length;
     if(setup._header)return res;
-    boolean samelen = true;
-    for(String [] s:data) samelen &= (s.length == res);
-    if(samelen)return res;
+    boolean samelen = true;     // True if all are same length
+    boolean longest0 = true;    // True if no line is longer than 1st line
+    for(String [] s:data) {
+      samelen  &= (s.length == res);
+      if( s.length > res ) longest0=false;
+    }
+    if(samelen)return res;      // All same length, take it
+    if( longest0 ) return res;  // 1st line is longer than all the rest; take it
+
     // we don't have lines of same length, pick the most common length
     HashMap<Integer, Integer> lengths = new HashMap<Integer, Integer>();
     for(String [] s:data){

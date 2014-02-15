@@ -12,6 +12,7 @@ Data Science in H\ :sub:`2`\ O
    summary
    gbm
    machlearning
+   sgd
    references
  
 
