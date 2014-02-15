@@ -25,10 +25,12 @@ setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ONNGrid", contains="H2OGrid")
 
-setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
+setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character"))
+# setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
 # setClass("H2OParsedDataVA", representation(h2o="H2OClient", key="character", env="environment"))
 setClass("H2OParsedDataVA", contains="H2OParsedData")
-setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", env="environment", "VIRTUAL"))
+setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", "VIRTUAL"))
+# setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
 setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
 setClass("H2OGLMGridVA", contains="H2OGridVA")
@@ -443,7 +445,7 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
 })
 
 # TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
-table_internal <- table
+.table_internal <- table
 table <- function(..., exclude = if (useNA == "no") c(NA, NaN), useNA = c("no", "ifany", "always"), dnn = list.names(...), deparse.level = 1) {
   # idx = sapply(c(...), function(x) { class(x) == "H2OParsedData" })
   idx = sapply(c(...), function(x) { class(x) %in% c("H2OParsedData", "H2OParsedDataVA") })
@@ -596,7 +598,7 @@ setMethod("ncol", "H2OParsedData", function(x) {
 #   max(..., .h2o.__unop2("max", x), na.rm)
 # })
 
-min_internal <- min
+.min_internal <- min
 min <- function(..., na.rm = FALSE) {
   # idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
   idx = sapply(c(...), function(y) { class(y) %in% c("H2OParsedData", "H2OParsedDataVA") })
@@ -612,7 +614,7 @@ min <- function(..., na.rm = FALSE) {
     .Primitive("min")(..., na.rm = na.rm)
 }
 
-max_internal <- max
+.max_internal <- max
 max <- function(..., na.rm = FALSE) {
   # idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
   idx = sapply(c(...), function(y) { class(y) %in% c("H2OParsedData", "H2OParsedDataVA") })
@@ -628,7 +630,7 @@ max <- function(..., na.rm = FALSE) {
     .Primitive("max")(..., na.rm = na.rm)
 }
 
-sum_internal <- sum
+.sum_internal <- sum
 sum <- function(..., na.rm = FALSE) {
   # idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
   idx = sapply(c(...), function(y) { class(y) %in% c("H2OParsedData", "H2OParsedDataVA") })

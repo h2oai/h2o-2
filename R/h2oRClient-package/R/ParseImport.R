@@ -79,23 +79,6 @@ h2o.assign <- function(data, key) {
   return(data)
 }
 
-h2o.push <- function(client, object, key) {
-  if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
-  if(missing(object)) stop("must specify object to push")
-  else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
-  if(missing(key)) key <- deparse(substitute(object))
-  else if(!is.character(key)) stop("key must be of class character")
-  else if(nchar(key) == 0) stop("key cannot be an empty string")
-  
-  if(is.numeric(object))
-    res = .h2o.__exec2_dest_key(client, object, key)
-  else if(is.function(object)) {
-    object <- match.fun(object)
-    res = .h2o.__exec2_dest_key(client, object, key)
-    # TODO: Push function to the H2O server
-  }
-}
-
 # ----------------------------------- File Import Operations --------------------------------- #
 # WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 # ----------------------------------- Import Folder --------------------------------- #
@@ -371,7 +354,7 @@ h2o.parseRaw.FV <- function(data, key = "", header, sep = "", col.names) {
   .h2o.__waitOnJob(data@h2o, res$job_key)
   parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
-          
+      
 #-------------------------------- Miscellaneous -----------------------------------#
 h2o.exportHDFS <- function(object, path) {
   if(inherits(object, "H2OModelVA")) stop("h2o.exportHDFS does not work under ValueArray")
@@ -415,6 +398,24 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function
 setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, value) {
   res = .h2o.__exec2_dest_key(x@h2o, paste("c(", paste(value, collapse=","), ")", sep=""), x@key); return(x)
 })
+
+# ----------------------------------- Work in Progress --------------------------------- #
+# h2o.push <- function(client, object, key) {
+#   if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+#   if(missing(object)) stop("must specify object to push")
+#   else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
+#   if(missing(key)) key <- deparse(substitute(object))
+#   else if(!is.character(key)) stop("key must be of class character")
+#   else if(nchar(key) == 0) stop("key cannot be an empty string")
+#   
+#   if(is.numeric(object))
+#     res = .h2o.__exec2_dest_key(client, object, key)
+#   else if(is.function(object)) {
+#     object <- match.fun(object)
+#     res = .h2o.__exec2_dest_key(client, object, key)
+#     # TODO: Push function to the H2O server
+#   }
+# }
 
 # ----------------------- Log helper ----------------------- #
 h2o.logAndEcho <- function(conn, message) {

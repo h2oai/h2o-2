@@ -1,15 +1,15 @@
-\name{H2ORawData-class}
+\name{H2ORawDataVA-class}
 \Rdversion{1.1}
 \docType{class}
-\alias{H2ORawData-class}
-\alias{show,H2ORawData-method}
+\alias{H2ORawDataVA-class}
+\alias{show,H2ORawDataVA-method}
 
-\title{Class \code{"H2ORawData"}}
+\title{Class \code{"H2ORawDataVA"}}
 \description{
-A class for representing imported FluidVecs data sets that have not been parsed.
+A class for representing imported ValueArray data sets that have not been parsed.
 }
 \section{Objects from the Class}{
-Objects can be created by calls of the form \code{new("H2ORawData", ...)}.
+Objects can be created by calls of the form \code{new("H2ORawDataVA", ...)}.
 %%  ~~ describe objects here ~~ 
 }
 \section{Slots}{
@@ -20,8 +20,8 @@ Objects can be created by calls of the form \code{new("H2ORawData", ...)}.
 }
 \section{Methods}{
   \describe{
-    \item{show}{\code{signature(object = "H2ORawData")}: ... }
-    }
+    \item{show}{\code{signature(object = "H2ORawDataVA")}: ... }
+	 }
 }
 \references{
 %%  ~~put references to the literature/web site here~~
@@ -40,6 +40,6 @@ Objects can be created by calls of the form \code{new("H2ORawData", ...)}.
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
 }
 \examples{
-showClass("H2ORawData")
+showClass("H2ORawDataVA")
 }
 \keyword{classes}

@@ -2,7 +2,7 @@
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02, n.bins=100, validation) {
-  args <- verify_dataxy(data, x, y)
+  args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
   if( any(n.trees < 1) ) stop('n.trees must be >= 1')
@@ -36,8 +36,8 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     result = .h2o.__getGBMResults(res2$gbm_model, params)
     new("H2OGBMModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
-    # h2o.gridsearch.internal("GBM", data, res$job_key, res$destination_key, validation, params)
-    h2o.gridsearch.internal("GBM", data, res, validation, params)
+    # .h2o.gridsearch.internal("GBM", data, res$job_key, res$destination_key, validation, params)
+    .h2o.gridsearch.internal("GBM", data, res, validation, params)
   }
 }
 
@@ -95,7 +95,7 @@ h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5,
 h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1.0e-5, epsilon=1.0e-5, standardize=TRUE, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA)), thresholds=ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA))) {
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
-  args <- verify_dataxy(data, x, y)
+  args <- .verify_dataxy(data, x, y)
   
   if(missing(family) || !family %in% c("gaussian", "binomial", "poisson", "gamma", "tweedie"))
     stop("family must be one of gaussian, binomial, poisson, gamma, and tweedie")
@@ -114,14 +114,14 @@ h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1.0e-5, 
   
   # NB: externally, 1 based indexing; internally, 0 based
   if((missing(lambda) || length(lambda) == 1) && (missing(alpha) || length(alpha) == 1))
-    h2o.glm.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize, tweedie.p, thresholds)
+    .h2o.glm.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize, tweedie.p, thresholds)
   else {
     if(!missing(tweedie.p) && !is.na(tweedie.p)) print('tweedie variance power not available in GLM grid search under ValueArray')
-    h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize, thresholds)
+    .h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize, thresholds)
   }
 }
 
-h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p, thresholds) {
+.h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p, thresholds) {
   if(family == 'tweedie' && (tweedie.p < 1 || tweedie.p > 2 )) stop('tweedie.p must be in (1,2)')
   if(family != "tweedie" && !(missing(tweedie.p) || is.na(tweedie.p) ) ) stop('tweedie.p may only be set for family tweedie')
   
@@ -159,7 +159,7 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_s
   new("H2OGLMModelVA", key=destKey, data=data, model=modelOrig, xval=res_xval)
 }
 
-h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, thresholds) {
+.h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, thresholds) {
   thres = .seq_to_string(thresholds)
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_eps = epsilon, standardize = as.numeric(standardize), case_mode="=", case=1.0, parallel=1, thresholds=thres)
   params = list(x=x, y=y, family=.h2o.__getFamily(family), nfolds=nfolds, alpha=alpha, lambda=lambda, beta_epsilon=epsilon, standardize=standardize, thresholds=thresholds)
@@ -239,7 +239,7 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda, epsi
 
 # -------------------------- FluidVecs -------------------------- #
 h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
-  args <- verify_dataxy(data, x, y)
+  args <- .verify_dataxy(data, x, y)
   
   if(!is.numeric(nfolds)) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
@@ -283,10 +283,10 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
     }
     new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
   } else
-    h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
+    .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
 }
 
-h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p) {
+.h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p) {
   if(family != "tweedie")
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize))
   else
@@ -495,8 +495,8 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
     result = .h2o.__getKM2Results(res2, data, params)
     new("H2OKMeansModel", key=res2$'_key', data=data, model=result)
   } else {
-    # h2o.gridsearch.internal("KM", data, res$job_key, res$destination_key)
-    h2o.gridsearch.internal("KM", data, res, params=params)
+    # .h2o.gridsearch.internal("KM", data, res$job_key, res$destination_key)
+    .h2o.gridsearch.internal("KM", data, res, params=params)
   }
 }
 
@@ -535,7 +535,7 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
 
 # ------------------------------- Neural Network ------------------------------------ #
 h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, rate=0.01, l1_reg=1e-4, l2_reg=0.0010, epoch=100, validation) {
-  args <- verify_dataxy(data, x, y)
+  args <- .verify_dataxy(data, x, y)
 
   if(!is.logical(classification)) stop('classification must be true or false')
   if(!is.character(activation)) stop('activation must be [Tanh, Rectifier]')
@@ -573,8 +573,8 @@ h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, 
     result = .h2o.__getNNResults(res2$neuralnet_model, params)
     new("H2ONNModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
-    # h2o.gridsearch.internal("NN", data, res$job_key, res$destination_key, validation)
-    h2o.gridsearch.internal("NN", data, res, validation, params)
+    # .h2o.gridsearch.internal("NN", data, res$job_key, res$destination_key, validation)
+    .h2o.gridsearch.internal("NN", data, res, validation, params)
   }
 }
 
@@ -652,7 +652,7 @@ h2o.prcomp <- function(data, tol=0, ignored_cols = '', standardize=TRUE, retx=FA
 
 # setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
-  args <- verify_dataxy(data, x, y)
+  args <- .verify_dataxy(data, x, y)
   
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
@@ -667,7 +667,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
   
   x_ignore <- args$x_ignore
   x_ignore <- ifelse( x_ignore=='', y, c(x_ignore,y) )
-  myModel <- h2o.prcomp.internal(data=data, x_ignore=x_ignore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
+  myModel <- .h2o.prcomp.internal(data=data, x_ignore=x_ignore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
   myScore <- h2o.predict(myModel)
   
   myScore[,ncomp+1] = data[,args$y_i]    # Bind response to frame of principal components
@@ -675,7 +675,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
   h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
 }
 
-h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=TRUE) {
+.h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=TRUE) {
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, ignored_cols_by_name=x_ignore, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
   .h2o.__waitOnJob(data@h2o, res$job_key)
   # while(!.h2o.__isDone(data@h2o, "PCA", res)) { Sys.sleep(1) }
@@ -714,7 +714,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   
-  args <- verify_dataxy(data, x, y)
+  args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop("ntree must be numeric")
   if(any(ntree <= 0)) stop("ntree must be > 0")
   if(!is.numeric(depth)) stop("depth must be numeric")
@@ -768,7 +768,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 
 # -------------------------- FluidVecs -------------------------- #
 h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed=-1, validation) {
-  args <- verify_dataxy(data, x, y)
+  args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
   if(!is.numeric(depth)) stop('depth must be a number')
@@ -798,8 +798,8 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
     result = .h2o.__getDRFResults(res2$drf_model, params)
     new("H2ODRFModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
-    # h2o.gridsearch.internal("RF", data, res$job_key, res$destination_key, validation, args$y_i)
-    h2o.gridsearch.internal("RF", data, res, validation, params)
+    # .h2o.gridsearch.internal("RF", data, res$job_key, res$destination_key, validation, args$y_i)
+    .h2o.gridsearch.internal("RF", data, res, validation, params)
   }
 }
 
@@ -889,7 +889,7 @@ h2o.confusionMatrix <- function(data, reference) {
 
 # ------------------------------- Helper Functions ---------------------------------------- #
 # Used to verify data, x, y and turn into the appropriate things
-verify_dataxy <- function(data, x, y) {
+.verify_dataxy <- function(data, x, y) {
   if( missing(data) ) stop('Must specify data')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop('data must be an H2O parsed dataset')
 
@@ -923,8 +923,8 @@ verify_dataxy <- function(data, x, y) {
   list(x=x, y=y, x_i=x_i, x_ignore=x_ignore, y_i=y_i)
 }
 
-# h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
-h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, params = list()) {
+# .h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
+.h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, params = list()) {
   if(!algo %in% c("GBM", "KM", "RF", "NN")) stop("General grid search not supported for ", algo)
   prog_view = switch(algo, GBM = .h2o.__PAGE_GBMProgress, KM = .h2o.__PAGE_KM2Progress, RF = .h2o.__PAGE_DRFProgress, NN = .h2o.__PAGE_NNProgress)
   
