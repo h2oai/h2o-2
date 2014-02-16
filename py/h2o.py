@@ -2141,13 +2141,17 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': 1000000,
+                # h2o won't let me go bigger?
+                'max_ncols': 1000,
+                # 'max_ncols': 1000000,
                 }
         else:
             params_dict = {
                 'key': key,
                 'x': None,
-                'max_column_display': 1000000,
+                # h2o won't let me go bigger?
+                'max_column_display': 1000,
+                # 'max_column_display': 1000000,
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
