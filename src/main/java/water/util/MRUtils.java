@@ -20,6 +20,7 @@ public class MRUtils {
    * @return Sampled frame
    */
   public static Frame sampleFrame(Frame fr, final long rows, final long seed) {
+    if (fr == null) return null;
     final float fraction = rows > 0 ? (float)rows / fr.numRows() : 1.f;
     if (fraction >= 1.f) return fr;
     Frame r = new MRTask2() {

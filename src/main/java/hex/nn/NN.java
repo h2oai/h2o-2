@@ -234,17 +234,17 @@ public class NN extends Job.ValidatedJob {
       _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true, ignore_const_cols), 1, true);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.model_info().initializeMembers();
-    final long[] model_size = model.model_info().size();
-    Log.info("Number of model parameters (weights/biases): " + String.format("%g", (double)model_size[0]));
-    Log.info("Memory usage of the model: " + String.format("%g", (double)model_size[1] / (1<<20)) + " MB.");
+    final long model_size = model.model_info().size();
+    Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
+    Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
     model.delete_and_lock(self());
   }
 
   public NNModel buildModel() {
     final NNModel model = UKV.get(dest());
-    final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
+    final Frame[] valid_adapted = validation == null ? null : model.adapt(validation, false);
     Frame train = _dinfo._adaptedFrame;
-    Frame valid = validation == null ? null : adapted[0];
+    Frame valid = validation == null ? null : valid_adapted[0];
 
     // Optionally downsample data for scoring
     Frame trainScoreFrame = sampleFrame(train, score_training_samples, seed);
@@ -261,27 +261,79 @@ public class NN extends Job.ValidatedJob {
     long timeStart = System.currentTimeMillis();
     //main loop
     do {
-      // NNTask trains an internal deep copy of model_info
+//      shuffle();
       NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction, shuffle_training_data).doAll(train);
-//      // FOR DEBUGGING ONLY
-//      {
-//        AutoBuffer bb = new AutoBuffer();
-//        nntask.write(bb);
-//        Log.info("Size of the (serialized) NNTask: " + String.format("%.3f", (double) bb.buf().length / (1 << 20)) + " MB.");
-//      }
-      //need this for next iteration
       model.set_model_info(nntask.model_info());
-    } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self())); //diagnostics, msgs, UKV
+    } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self()));
 
     //cleanup
-    if (adapted != null) adapted[1].delete();
+    //unlock the model, and training/validation sets
     model.unlock(self());
-    if (validScoreFrame != null && validScoreFrame != adapted[0]) validScoreFrame.delete();
+    source.unlock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.unlock(self());
+
+    //delete temporary frames
+    if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
+    if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
+//    if (_newsource != null && _newsource != source) _newsource.delete();
+
     UKV.remove(self());
     Log.info("Neural Net training finished.");
     return model;
   }
+
+  /*
+  long _iter = 0;
+  Frame _newsource = null;
+  private void shuffle() {
+    if (!shuffle_training_data) return;
+    Log.info("Shuffling.");
+    _newsource = shuffleAndBalance(source, seed+_iter++, shuffle_training_data);
+    Vec resp = _newsource.vecs()[resp_pos];
+    _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(_newsource, resp, ignored_cols, true, ignore_const_cols), 1, true);
+    Log.info("Shuffling done.");
+  }
+
+  // master node collects all rows, and distributes them across the cluster - slow
+  private static Frame shuffleAndBalance(Frame fr, long seed, final boolean shuffle) {
+    int cores = 0;
+    for( H2ONode node : H2O.CLOUD._memary )
+      cores += node._heartbeat._num_cpus;
+    final int splits = 4*cores;
+
+    long[] idx = null;
+    if (shuffle) {
+      idx = new long[(int)fr.numRows()]; //HACK: int instead of of long
+      for (int r=0; r<idx.length; ++r) idx[r] = r;
+      Utils.shuffleArray(idx, seed);
+    }
+
+    Vec[] vecs = fr.vecs();
+    if( vecs[0].nChunks() < splits || shuffle ) {
+      Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
+      for( int v = 0; v < vecs.length; v++ ) {
+        AppendableVec vec = new AppendableVec(keys[v]);
+        final long rows = fr.numRows();
+        for( int split = 0; split < splits; split++ ) {
+          long off = rows * split / splits;
+          long lim = rows * (split + 1) / splits;
+          NewChunk chunk = new NewChunk(vec, split);
+          for( long r = off; r < lim; r++ ) {
+            if (shuffle) chunk.addNum(fr.vecs()[v].at(idx[(int)r]));
+            else chunk.addNum(fr.vecs()[v].at(r));
+          }
+          chunk.close(split, null);
+        }
+        Vec t = vec.close(null);
+        t._domain = vecs[v]._domain;
+        vecs[v] = t;
+      }
+    }
+    return new Frame(fr.names(), vecs);
+  }
+  */
 
 
   @Test
@@ -299,9 +351,9 @@ public class NN extends Job.ValidatedJob {
     p.ignore_const_cols = true;
 
     DataInfo dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols), 1, true);
-    NNModel.NNModelInfo model_info  = new NNModel.NNModelInfo(p, p.source.numCols()-1, 10);
+    NNModel.NNModelInfo model_info = new NNModel.NNModelInfo(p, dinfo);
 
-    Neurons[] neurons  = NNTask.makeNeuronsForTraining(dinfo, model_info);
+    Neurons[] neurons  = NNTask.makeNeuronsForTraining(model_info);
     //dropout training for 100 rows - just to populate the weights/biases a bit
     for (long row = 0; row < 100; ++row) {
       double[] nums = new double[dinfo._nums];
@@ -313,7 +365,7 @@ public class NN extends Job.ValidatedJob {
     }
 
     // take the trained model_info and build another Neurons[] for testing
-    Neurons[] neurons2 = NNTask.makeNeuronsForTesting(dinfo, model_info);
+    Neurons[] neurons2 = NNTask.makeNeuronsForTesting(model_info);
 
     for (int i=1; i<neurons.length-1; ++i) {
       Assert.assertEquals(neurons[i]._w, neurons2[i]._w); //same reference (from same model_info)

@@ -39,7 +39,7 @@ public class NNTask extends FrameTask<NNTask> {
   // create local workspace (neurons)
   // and link them to shared weights
   @Override protected void chunkInit(){
-    _neurons = makeNeuronsForTraining(_dinfo, _output);
+    _neurons = makeNeuronsForTraining(_output);
   }
 
   @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
@@ -66,8 +66,8 @@ public class NNTask extends FrameTask<NNTask> {
     if (H2O.CLOUD.size() > 1) {
       long now = System.currentTimeMillis();
       if (_chunk_node_count < H2O.CLOUD.size() && (now - _lastWarn > 5000) && _warnCount < 10) {
-        Log.info("Synchronizing across " + _chunk_node_count + " H2O nodes.");
-        Log.warn(H2O.CLOUD.size() - _chunk_node_count + " nodes (out of "
+        Log.info("Synchronizing across " + _chunk_node_count + " H2O node(s).");
+        Log.warn(H2O.CLOUD.size() - _chunk_node_count + " node(s) (out of "
                 + H2O.CLOUD.size() + ") are not contributing to model updates. Consider using a larger training dataset (or fewer H2O nodes).");
         _lastWarn = now;
         _warnCount++;
@@ -79,15 +79,16 @@ public class NNTask extends FrameTask<NNTask> {
     assert(_input == null);
   }
 
-  public static Neurons[] makeNeuronsForTraining(final DataInfo dinfo, final NNModel.NNModelInfo minfo) {
-    return makeNeurons(dinfo, minfo, true);
+  public static Neurons[] makeNeuronsForTraining(final NNModel.NNModelInfo minfo) {
+    return makeNeurons(minfo, true);
   }
-  public static Neurons[] makeNeuronsForTesting(final DataInfo dinfo, final NNModel.NNModelInfo minfo) {
-    return makeNeurons(dinfo, minfo, false);
+  public static Neurons[] makeNeuronsForTesting(final NNModel.NNModelInfo minfo) {
+    return makeNeurons(minfo, false);
   }
 
   // Helper
-  private static Neurons[] makeNeurons(final DataInfo dinfo, final NNModel.NNModelInfo minfo, boolean training) {
+  private static Neurons[] makeNeurons(final NNModel.NNModelInfo minfo, boolean training) {
+    DataInfo dinfo = minfo.data_info();
     final NN params = minfo.get_params();
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output

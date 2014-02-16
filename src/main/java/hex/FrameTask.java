@@ -1,11 +1,8 @@
 package hex;
 
 import water.H2O.H2OCountedCompleter;
-import water.Iced;
-import water.Job;
+import water.*;
 import water.Job.JobCancelledException;
-import water.MRTask2;
-import water.MemoryManager;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -124,7 +121,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       for(int i = 0; i < vecs.length-1; ++i) {
         if(vecs[i] == response){
           final String n = fr._names[i];
-          if (toEnum) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
+          if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
           else fr.add(n, fr.remove(i));
           break;
         }

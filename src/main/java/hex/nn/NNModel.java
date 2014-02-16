@@ -17,13 +17,13 @@ public class NNModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="Input data info")
-  final private DataInfo data_info;
-
   @API(help="Model info", json = true)
   private volatile NNModelInfo model_info;
   void set_model_info(NNModelInfo mi) { model_info = mi; }
   final public NNModelInfo model_info() { return model_info; }
+
+  @API(help="Job that built the model", json = true)
+  private Key jobKey;
 
   @API(help="Time to build the model", json = true)
   private long run_time;
@@ -34,6 +34,11 @@ public class NNModel extends Model {
 
   @API(help = "Scoring during model building")
   public Errors[] errors;
+
+  @Override public void delete() {
+    super.delete();
+    model_info.cleanUp();
+  }
 
   public static class Errors extends Iced {
     static final int API_WEAVER = 1;
@@ -88,35 +93,26 @@ public class NNModel extends Model {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    // model is described by parameters and the following 4 arrays
+    @API(help="Input data info")
+    final private DataInfo data_info;
+    public DataInfo data_info() { return data_info; }
+
+    // model is described by parameters and the following 2 arrays
     final private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
     final private double[][] biases; //one 1D bias array per layer
-    private transient float[][] weights_momenta;
-    private transient double[][] biases_momenta;
 
-    // compute model size [#number of model parameters, #number of bytes (uncompressed)]
-    public long[] size() {
-      long[] siz = new long[2];
-      for (float[] w : weights) {
-        siz[0] += w.length;
-        siz[1] += w.length * Float.SIZE;
-      }
-      for (double[] b : biases) {
-        siz[0] += b.length;
-        siz[1] += b.length * Double.SIZE;
-      }
-      // momenta don't count towards model parameters
-//      if (has_momenta()) {
-//        for (float[] wm : weights_momenta) {
-//          siz[0] += wm.length;
-//          siz[1] += wm.length * Float.SIZE;
-//        }
-//        for (double[] bm : biases_momenta) {
-//          siz[0] += bm.length;
-//          siz[1] += bm.length * Double.SIZE;
-//        }
-//      }
-      siz[1] /= 8; //in bytes
+    // helpers for storing previous step deltas
+    // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in NNTask.initLocal()
+    // But then, after each reduction, the weights would be lost and would have to restart afresh -> not *exactly* right, but close...
+    private float[][] weights_momenta;
+    private double[][] biases_momenta;
+
+    // compute model size (number of model parameters required for making predictions)
+    // momenta are not counted here, but they are needed for model building
+    public long size() {
+      long siz = 0;
+      for (float[] w : weights) siz += w.length;
+      for (double[] b : biases) siz += b.length;
       return siz;
     }
 
@@ -165,7 +161,11 @@ public class NNModel extends Model {
     // package local helpers
     final int[] units; //number of neurons per layer, extracted from parameters and from datainfo
 
-    public NNModelInfo(NN params, int num_input, int num_output) {
+//    public NNModelInfo(NN params, int num_input, int num_output) {
+    public NNModelInfo(NN params, DataInfo dinfo) {
+      data_info = dinfo;
+      final int num_input = dinfo.fullN();
+      final int num_output = dinfo._adaptedFrame.lastVec().domain().length;
       assert(num_input > 0);
       assert(num_output > 0);
       parameters = params;
@@ -183,12 +183,7 @@ public class NNModel extends Model {
       // biases (only for hidden layers and output layer)
       biases = new double[layers+1][];
       for (int i=0; i<=layers; ++i) biases[i] = new double[units[i+1]];
-      if (has_momenta()) {
-        weights_momenta = new float[weights.length][];
-        for (int i=0; i<weights_momenta.length; ++i) weights_momenta[i] = new float[units[i]*units[i+1]];
-        biases_momenta = new double[biases.length][];
-        for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
-      }
+      createMomenta();
       // for diagnostics
       mean_bias = new double[units.length];
       rms_bias = new double[units.length];
@@ -196,11 +191,22 @@ public class NNModel extends Model {
       rms_weight = new double[units.length];
     }
 
+    protected void createMomenta() {
+      if (has_momenta() && weights_momenta == null) {
+        weights_momenta = new float[weights.length][];
+        for (int i=0; i<weights_momenta.length; ++i) weights_momenta[i] = new float[units[i]*units[i+1]];
+        biases_momenta = new double[biases.length][];
+        for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
+      }
+    }
+    public void cleanUp() {
+      UKV.remove(data_info()._adaptedFrame.lastVec()._key);
+    }
 
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (parameters.diagnostics) {
-        Neurons[] neurons = NNTask.makeNeuronsForTesting(parameters._dinfo, this);
+        Neurons[] neurons = NNTask.makeNeuronsForTesting(this);
         computeStats();
         sb.append("Status of Hidden and Output Layers:\n");
         sb.append("#  Units       Activation     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
@@ -349,10 +355,10 @@ public class NNModel extends Model {
 
   public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
     super(selfKey, dataKey, dinfo._adaptedFrame);
-    data_info = dinfo;
+    this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
-    model_info = new NNModelInfo(params, data_info.fullN(), data_info._adaptedFrame.lastVec().domain().length);
+    model_info = new NNModelInfo(params, dinfo);
     errors = new Errors[1];
     errors[0] = new Errors();
     errors[0].validation = (params.validation != null);
@@ -368,7 +374,7 @@ public class NNModel extends Model {
    * @return true if model building is ongoing
    */
   boolean doDiagnostics(Frame ftrain, Frame ftest, long timeStart, Key dest_key) {
-    epoch_counter = (float)model_info().get_processed_total()/data_info._adaptedFrame.numRows();
+    epoch_counter = (float)model_info().get_processed_total()/model_info().data_info._adaptedFrame.numRows();
     run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().parameters.epochs);
     _now = System.currentTimeMillis();
@@ -394,7 +400,7 @@ public class NNModel extends Model {
       err.training_samples = model_info().get_processed_total();
       err.train_confusion_matrix = new ConfusionMatrix();
       err.train_err = classificationError(ftrain, "Classification error on training data:", printCM, err.train_confusion_matrix);
-      if (ftest != null) {
+      if (err.validation) {
         err.valid_confusion_matrix = new ConfusionMatrix();
         err.valid_err = classificationError(ftest, "Classification error on validation data:", printCM, err.valid_confusion_matrix);
       }
@@ -439,7 +445,7 @@ public class NNModel extends Model {
   }
 
   @Override public float[] score0(double[] data, float[] preds) {
-    Neurons[] neurons = NNTask.makeNeuronsForTesting(data_info, model_info);
+    Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info);
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     NNTask.step(-1, neurons, model_info, false, null);
     double[] out = neurons[neurons.length - 1]._a;
@@ -478,7 +484,8 @@ public class NNModel extends Model {
 
     DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
-    DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()[0]));
+    DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
+    DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     model_info.job().toHTML(sb);
     sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", " +
@@ -541,7 +548,7 @@ public class NNModel extends Model {
       sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
       sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
       sb.append("</tr>");
-      Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info.parameters._dinfo, model_info()); //link the weights to the neurons, for easy access
+      Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info()); //link the weights to the neurons, for easy access
       for (int i=1; i<neurons.length; ++i) {
         sb.append("<tr>");
         sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
