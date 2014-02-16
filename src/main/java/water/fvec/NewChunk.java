@@ -37,6 +37,14 @@ public class NewChunk extends Chunk {
     _len = _len2 = C._len;
   }
 
+  // Pre-sized newchunks.
+  public NewChunk( Vec vec, int cidx, int len ) {
+    this(vec,cidx);
+    _ds = new double[len];
+    Arrays.fill(_ds,Double.NaN);
+    _len = _len2 = len;
+  }
+
   // Heuristic to decide the basic type of a column
   public byte type() {
     if( _naCnt == -1 ) {        // No rollups yet?
@@ -167,6 +175,7 @@ public class NewChunk extends Chunk {
       ((AppendableVec)_vec).closeChunk(this);
     return chk;
   }
+  public void close(Futures fs) { close(_cidx,fs); }
 
   // Study this NewVector and determine an appropriate compression scheme.
   // Return the data so compressed.
@@ -416,7 +425,7 @@ public class NewChunk extends Chunk {
     _ls[i]=l; _xs[i]=0;
     return true;
   }
-  @Override boolean set_impl(int i, double d) {
+  @Override public boolean set_impl(int i, double d) {
     if( _ls != null ) {         // Flip to using doubles
       if( _len2 != _len ) throw H2O.unimpl();
       double ds[] = MemoryManager.malloc8d(_len);
