@@ -193,7 +193,7 @@ function build_javadoc() {
 
 function junit() {
     echo "running JUnit tests..."
-    "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
+    "$JAVA" -Xmx2g -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
 if [ "$1" = "onlydoc" ]; then
