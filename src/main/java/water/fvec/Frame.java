@@ -73,7 +73,9 @@ public class Frame extends Lockable<Frame> {
           // probably be done in CPS style in the future
           @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
           @Override public void compute2() {
-            vecs[ii] = DKV.get(k).get();
+            Value v = DKV.get(k);
+            if( v==null ) System.err.println("Missing vector during Frame fetch: "+k);
+            vecs[ii] = v.get();
             tryComplete();
           }
         };

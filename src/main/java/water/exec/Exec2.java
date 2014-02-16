@@ -79,10 +79,14 @@ public class Exec2 {
       if( !H2O.raw_get(k).isFrame() ) continue;
       Frame fr = DKV.get(k).get(); // Fetch whole thing
       String kstr = k.toString();
-      global.add(new ASTId(Type.ARY,kstr,0,global.size()));
-      env.push(fr,kstr);
-      fr.read_lock(null);
-      locked.add(fr._key);
+      try { 
+        env.push(fr,kstr); 
+        global.add(new ASTId(Type.ARY,kstr,0,global.size()));
+        fr.read_lock(null);
+        locked.add(fr._key);
+      } catch( Exception e ) { 
+        System.err.println("Exception while adding frame "+k+" to Exec env");
+      }
     }
 
     // Some global constants
