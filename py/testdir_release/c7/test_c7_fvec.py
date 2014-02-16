@@ -35,7 +35,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # looks like it takes the hex string (two chars)
         start = time.time()
         # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=True)
+        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=False)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
         print "Parse result['destination_key']:", parseResult['destination_key']
@@ -51,10 +51,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # do summary of the parsed dataset last, since we know it fails on this dataset
         # does the json fail with too many??
         #summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2)
-        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2500)
+        # summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2500)
+        # can't do more than 1000
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
 
         # Need to update this for new stuff
-        h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numCols=numCols, numRows=numRows)
+        # leave off numCols so we don't check it vs. summary
+        h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numRows=numRows)
 
 
         keepPattern = "oly_|mt_|b_"
