@@ -128,7 +128,11 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
                 raise Exception(msg)
 
             if result:
-                print "non-empty result: %s for %s", (result, key)
+                # ignore if 'val' is 'OK'
+                if 'val' in result and result['val'] == 'OK':
+                    pass
+                else:
+                    print "non-empty result: %s for %s" % (result, key)
 
             if errorIfCancelled and cancelled:
                 h2o.check_sandbox_for_errors()
