@@ -549,7 +549,7 @@ public abstract class Request2 extends Request {
 
   protected void logStart() {
     Log.info("Building " + this.getClass().getSimpleName() + " model with these parameters:");
-    for (String s : this.toString().split("\n")) Log.info(s);
+    for (String s : toString().split("\n")) Log.info(s);
   }
 
   protected boolean makeJsonBox(StringBuilder sb) {
