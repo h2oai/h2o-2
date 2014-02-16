@@ -402,7 +402,7 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                 h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
 
                 if numRows and (nacnt==numRows):
-                    print "%s is all NAs. no checking for min/max/mean/sigma" % name
+                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (colName, stattype)
                 else:
                     if not mins:
                         print h2o.dump_json(column)
@@ -487,7 +487,7 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                     print "sigma:", sigma
 
                 if numRows and (na==numRows):
-                    print "%s is all NAs. no checking for min/max/mean/sigma" % name
+                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (name, stype)
                 else:
                     if not mins:
                         print h2o.dump_json(column)

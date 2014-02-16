@@ -578,8 +578,8 @@ def goodXFromColumnInfo(y,
     if returnStringX:
         x = ",".join(map(str, x))
 
-    if h2o.beta_features: # add the 'C" prefix because of ignored_cols_by_name
-        ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
+    if h2o.beta_features: # add the 'C" prefix because of ignored_cols_by_name (and the start-with-1 offset)
+        ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
     else:
         ignore_x = ",".join(map(lambda x: str(x), ignore_x))
 
