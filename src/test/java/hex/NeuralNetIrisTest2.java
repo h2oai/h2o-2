@@ -152,10 +152,12 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.fast_mode = false; //to be the same as reference
 //                      p.fast_mode = true; //to be the same as old NeuralNet code
                         p.sync_samples = 100000; //sync once per period
+                        p.ignore_const_cols = false;
+                        p.shuffle_training_data = false;
                         p.initModel(); //randomize weights, but don't start training yet
 
                         NNModel mymodel = UKV.get(p.dest());
-                        Neurons[] neurons = NNTask.makeNeuronsForTraining(p._dinfo, mymodel.model_info());
+                        Neurons[] neurons = NNTask.makeNeuronsForTraining(mymodel.model_info());
 
                         // use the same random weights for the reference implementation
                         Neurons l = neurons[1];
@@ -193,7 +195,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         /**
                          * Compare weights and biases in hidden layer
                          */
-                        neurons = NNTask.makeNeuronsForTesting(p._dinfo, mymodel.model_info()); //link the weights to the neurons, for easy access
+                        neurons = NNTask.makeNeuronsForTesting(mymodel.model_info()); //link the weights to the neurons, for easy access
                         l = neurons[1];
                         for( int o = 0; o < l._a.length; o++ ) {
                           for( int i = 0; i < l._previous._a.length; i++ ) {
@@ -230,8 +232,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                          * so we must use their "own" test data, which is assumed to be created correctly.
                          */
                         // H2O predictions
-                        Frame fpreds;
-                        fpreds = mymodel.score(_test); //[0] is label, [1]...[4] are the probabilities
+                        Frame fpreds = mymodel.score(_test); //[0] is label, [1]...[4] are the probabilities
 
                         for (int i=0; i<_test.numRows(); ++i) {
                           // Reference predictions
