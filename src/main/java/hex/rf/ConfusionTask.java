@@ -570,7 +570,7 @@ public class ConfusionTask extends MRTask {
       if(_classWt != null )                 // Apply class weights
         for( int v = 0; v<_N; v++) vi[v] = (int)(vi[v]*_classWt[v]);
       int result = Model.getPrediction(vi, ties, row); // Share logic to get a prediction for classifiers (solve ties)
-      if( vi[result]==0 ) { cm._skippedRows++; System.err.println("@@ Skipped row (no row vote) i=" + row + " result =" + result); continue; }// Ignore rows with zero votes
+      if( vi[result]==0 ) { cm._skippedRows++; continue; }// Ignore rows with zero votes
 
       int cclass = alignDataIdx((int) _data.data(bits, row, _classcol) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);

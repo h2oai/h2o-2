@@ -406,10 +406,10 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                 else:
                     if not mins:
                         print h2o.dump_json(column)
-                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, N, nacnt, numRows))
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colName, nacnt, numRows))
                     if not maxs:
                         print h2o.dump_json(column)
-                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, N, nacnt, numRows))
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colName, nacnt, numRows))
 
             hstart = column['hstart']
             hstep = column['hstep']

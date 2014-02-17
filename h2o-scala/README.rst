@@ -1,6 +1,6 @@
 
-Shalala
-=======
+Scala for H\ :sub:`2`\ O: Shalala
+===================================
 
 Overview
 --------

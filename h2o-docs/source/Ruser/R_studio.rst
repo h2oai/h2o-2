@@ -8,7 +8,7 @@ These instructions assume you are using R Studio 2.14.0 or later.
 
 **STEP 1**
 
-To use H2O in R, users need a copy of H2O. 
+To use H\ :sub: `2`\ O in R, users need a copy of  H\ :sub: `2`\ O. 
 The download package can be obtained by clicking on the button Download H\ :sub:`2`\ O at `http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_.
 
 Unzip the downloaded H\ :sub:`2`\ O zip file.
