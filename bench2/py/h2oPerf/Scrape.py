@@ -295,6 +295,9 @@ class PredictScraper(Scraper):
             flag = False
             for line in f:
                 if flag:
+                    print "---------------------------------"
+                    print line
+                    print "---------------------------------"
                     predict_type = self.__get_predict_type__(line.strip())[0]
                     flag = False
                     break
