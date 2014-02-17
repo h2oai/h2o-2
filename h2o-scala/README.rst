@@ -40,6 +40,7 @@ Currently the library supports following expressions abstracting H2O API.
   shutdown          - shutdown H2O cloud
 
 *M/R commands*
+
 ::
 
 
@@ -55,6 +56,7 @@ Build Scalala
 To build Shalala `sbt` is required. You can get `sbt` from http://www.scala-sbt.org/release/docs/Getting-Started/Setup.
 
 To compile Shalala please type:
+
 ::
 
   sbt compile
@@ -63,7 +65,7 @@ To compile Shalala please type:
 Launch REPL
 -----------
 Shalala provides an integrated Scala REPL exposing H2O DSL. 
-You can start REPL via `sbt`:
+You can start REPL via ``sbt``:
 
 ::
 
@@ -73,7 +75,7 @@ You can start REPL via `sbt`:
 Key points of implementation
 ----------------------------
 * Using primitive types specialization (to allow for generation code using primitive types)
-* All objects passed around cloud has to inherits from `water.Iced`
+* All objects passed around cloud has to inherits from ``water.Iced``
 
 Examples
 --------
@@ -107,7 +109,9 @@ FAQs
      
     > eclipse
 
-  - In Eclipse use the *Import Wizard* to import the project into workspace
+  - In Eclipse use the ``Import Wizard`` to import the project into
+    workspace
+
 
 * **How to run REPL from Eclipse?**
 
