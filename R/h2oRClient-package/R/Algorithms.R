@@ -460,6 +460,7 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
   if( missing(data) ) stop('Must specify data')
   # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+  if(h2o.anyFactor(data)) stop("Unimplemented: K-means can only model on numeric data")
 
   if( missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be a positive integer')
@@ -916,7 +917,7 @@ h2o.confusionMatrix <- function(data, reference) {
     y_i <- y
     y <- cc[ y ]
   }
-  if( y %in% x ) stop(y, 'is both an explanatory and dependent variable')
+  if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
 
   x_ignore <- setdiff(setdiff( cc, x ), y)
   if( length(x_ignore) == 0 ) x_ignore <- ''

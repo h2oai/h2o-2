@@ -163,16 +163,11 @@ h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "
 }
 
 h2o.importFile.VA <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  if(!is.character(key)) stop("key must be of class character")
-  if(!is.logical(parse)) stop("parse must be of class logical")
-  
-  if(missing(key) || nchar(key) == 0)
-    h2o.importFolder.VA(object, path, pattern = "", key = "", parse, header, sep, col.names = col.names)
-  else
-    h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, header, sep, col.names = col.names)
+  h2o.importFolder.VA(object, path, pattern = "", key, parse, header, sep, col.names)
+  # if(missing(key) || nchar(key) == 0)
+  #  h2o.importFolder.VA(object, path, pattern = "", key = "", parse, header, sep, col.names = col.names)
+  # else
+  #  h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, header, sep, col.names = col.names)
 }
 
 h2o.importFile.FV <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
