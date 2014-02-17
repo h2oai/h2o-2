@@ -31,6 +31,15 @@ public abstract class Neurons {
     this.units = units;
   }
 
+  @Override
+  public String toString() {
+    String s = this.getClass().getSimpleName();
+    s += "\nNumber of Neurons: " + units;
+    s += "\nParameters:\n" + params.toString();
+    if (dropout != null) s += "\nDropout:\n" + dropout.toString();
+    return s;
+  }
+
   /**
    * Parameters (deep-cloned() from the user input, can be modified here, e.g. learning rate decay)
    */

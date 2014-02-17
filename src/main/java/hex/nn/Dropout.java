@@ -16,6 +16,16 @@ public class Dropout {
   public Dropout() {
   }
 
+  @Override
+  public String toString() {
+    String s = "Dropout: " + super.toString();
+    s += "\nRandom: " + _rand.toString();
+    s += "\nbits: ";
+    for (int i=0; i< _bits.length*8; ++i) s += unit_active(i) ? "1":"0";
+    s += "\n";
+    return s;
+  }
+
   Dropout(int units) {
     _bits = new byte[(units+7)/8];
     _rand = new Random();
@@ -67,6 +77,7 @@ public class Dropout {
       d.fillBytes(seed+3);
       for (int i=0; i<units; ++i)
         if (d.unit_active(i)) sum4++;
+//      Log.info(d.toString());
     }
     sum1 /= loops;
     sum2 /= loops;

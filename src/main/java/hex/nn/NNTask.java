@@ -124,6 +124,9 @@ public class NNTask extends FrameTask<NNTask> {
     for( int i = 0; i < neurons.length; i++ )
       neurons[i].init(neurons, i, params, minfo, training);
 
+//    // debugging
+//    for (Neurons n : neurons) Log.info(n.toString());
+
     return neurons;
   }
 
