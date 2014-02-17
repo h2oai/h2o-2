@@ -464,10 +464,6 @@ public abstract class Layer extends Iced {
     static final int API_WEAVER = 1;
     public static DocGen.FieldDoc[] DOC_FIELDS;
 
-    public final void init(Layer[] ls, int index, NeuralNet p, NeuralNet.Loss l) {
-      super.init(ls, index, p);
-    }
-
     protected final long pos() {
       return _input._pos;
     }
