@@ -245,8 +245,8 @@ public abstract class Neurons {
       System.arraycopy(nums, 0, _a, _dinfo.numStart(), nums.length);
       final double rate = params.input_dropout_ratio;
       if (rate == 0 || seed < 0) return; // seed is set to -1 for testing (no input dropout done there)
-      dropout.setSeed(params.seed + 0x1337B4BE + seed);
-      dropout.randomlySparsifyActivation(_a, rate);
+      seed += params.seed + 0x1337B4BE;
+      dropout.randomlySparsifyActivation(_a, rate, seed);
     }
 
   }
@@ -295,8 +295,8 @@ public abstract class Neurons {
     @Override
     protected void fprop(long seed, boolean training) {
       if (training) {
-        dropout.setSeed(params.seed + 0xDA7A6000 + seed);
-        dropout.fillBytes();
+        seed += params.seed + 0xDA7A6000;
+        dropout.fillBytes(seed);
         super.fprop(seed, true);
       }
       else {
@@ -313,7 +313,7 @@ public abstract class Neurons {
 
     @Override protected void fprop(long seed, boolean training) {
       if (dropout != null && training) {
-        dropout.fillBytes();
+        dropout.fillBytes(seed);
       }
 
       double max = 0;
@@ -400,8 +400,8 @@ public abstract class Neurons {
     @Override
     protected void fprop(long seed, boolean training) {
       if (training) {
-        dropout.setSeed(params.seed + 0x3C71F1ED + seed);
-        dropout.fillBytes();
+        seed += params.seed + 0x3C71F1ED;
+        dropout.fillBytes(seed);
         super.fprop(seed, true);
       }
       else {

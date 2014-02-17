@@ -21,28 +21,28 @@ public class Dropout {
     _rand = new Random();
   }
 
-  void setSeed(long seed) {
-    if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
-    if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
-    _rand.setSeed(seed);
-  }
-
   // for input layer
-  public void randomlySparsifyActivation(double[] a, double rate) {
+  public void randomlySparsifyActivation(double[] a, double rate, long seed) {
     if (rate == 0) return;
-    Assert.assertTrue("Must call setSeed() first", _rand != null);
+    setSeed(seed);
     for( int i = 0; i < a.length; i++ )
       if (_rand.nextFloat() < rate) a[i] = 0;
   }
 
   // for hidden layers
-  public void fillBytes() {
-    Assert.assertTrue("Must call setSeed() first", _rand != null);
+  public void fillBytes(long seed) {
+    setSeed(seed);
     _rand.nextBytes(_bits);
   }
 
   public boolean unit_active(int o) {
     return (_bits[o / 8] & (1 << (o % 8))) != 0;
+  }
+
+  private void setSeed(long seed) {
+    if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+    if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+    _rand.setSeed(seed);
   }
 
   @Test
@@ -54,17 +54,17 @@ public class Dropout {
     final int loops = 10000;
     for (int l = 0; l < loops; ++l) {
       Dropout d = new Dropout(units);
-      d.setSeed(new Random().nextLong());
+      long seed = new Random().nextLong();
       Arrays.fill(a, 1.);
-      d.randomlySparsifyActivation(a, 0.3);
+      d.randomlySparsifyActivation(a, 0.3, seed);
       sum1 += water.util.Utils.sum(a);
       Arrays.fill(a, 1.);
-      d.randomlySparsifyActivation(a, 0.0);
+      d.randomlySparsifyActivation(a, 0.0, seed+1);
       sum2 += water.util.Utils.sum(a);
       Arrays.fill(a, 1.);
-      d.randomlySparsifyActivation(a, 1.0);
+      d.randomlySparsifyActivation(a, 1.0, seed+2);
       sum3 += water.util.Utils.sum(a);
-      d.fillBytes();
+      d.fillBytes(seed+3);
       for (int i=0; i<units; ++i)
         if (d.unit_active(i)) sum4++;
     }
