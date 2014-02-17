@@ -71,7 +71,7 @@ You can start REPL via `sbt`:
 
 
 Key points of implementation
-----------
+----------------------------
 * Using primitive types specialization (to allow for generation code using primitive types)
 * All objects passed around cloud has to inherits from `water.Iced`
 
