@@ -4,19 +4,17 @@ source('../findNSourceUtils.R')
 test.km2vanilla.golden <- function(H2Oserver) {
 
 #Import Data:
-dummyH2O<- h2o.uploadFile.FV(H2Oserver, locate("../../smalldata/dummydata.csv"), key="dummyH2O")
+dummyH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/dummydata.csv"), key="dummyH2O")
 dummyR<- read.csv(locate("smalldata/dummydata.csv"), header=T)
 
-#Remove unneeded cols
-dataR<- dummyR[,-1]
-dataH2O<- dummyH2O[,-1]
+
 
 #Fit matching R and H2O models for k=2 on simple data
-fitR<- kmeans(dataR, centers=2)
-fitH2O<- h2o.kmeans.FV(dataH2O, centers=2)
+fitR<- kmeans(dummyR[,2:3], centers=2)
+fitH2O<- h2o.kmeans.FV(dummyH2O, centers=2, cols=c("V1", "V2"))
 
 # Build a 1 center model because that's the baseline against which K=n >1 will be compared
-fit2H2O<- h2o.kmeans.FV(dataH2O, centers=1)
+fit2H2O<- h2o.kmeans.FV(dummyH2O, centers=1)
 
 
 Log.info("Print model statistics for R and H2O... \n")
@@ -24,7 +22,7 @@ Log.info("Print model statistics for R and H2O... \n")
 Log.info(paste("H2O WithinSS  : ", fitH2O@model$withinss, "\t\t", "R WithinSS   : ", fitR$withinss))
 Log.info(paste("H2O TotalSS   : ", fitH2O@model$totss,    "\t\t", "R TotalSS    : ", fitR$totss))
 
-Log.info("Compare model descriptives in R to model statistics in H2O")
+#Log.info("Compare model descriptives in R to model statistics in H2O")
 expect_equal(fitH2O@model$withinss, fitR$withinss, tolerance = 0.01)
 expect_equal(fitH2O@model$totss,    fitR$totss,    tolerance = 0.01)
 
