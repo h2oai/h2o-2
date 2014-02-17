@@ -126,4 +126,3 @@ FAQs
   
   - In Idea open the project located in ``h2o-scala`` directory
 
-
