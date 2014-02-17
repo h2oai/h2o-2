@@ -16,6 +16,7 @@ h2o.rm(object, keys)
 
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.assign}}, \code{\link{h2o.ls}}
 }
 \examples{
 # Remove an H2O object from the server where H2O is running. 

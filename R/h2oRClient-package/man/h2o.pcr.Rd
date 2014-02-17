@@ -7,7 +7,7 @@
 Runs GLM regression on PCA results, and allows for transformation of test data to match PCA transformations of training data.  
 }
 \usage{
-h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, tweedie.p)
+h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1e-05, standardize = TRUE, tweedie.p)
 }
 
 \arguments{
@@ -27,13 +27,19 @@ h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, twe
     A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported.
   }
   \item{nfolds}{
-    Number of folds for cross-validation. The default is 10.
+    (Optional) Number of folds for cross-validation. The default is 10.
   }
   \item{alpha}{
-    The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined to be \deqn{P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|]} so \code{alpha=1} is the lasso penalty, while \code{alpha=0} is the ridge penalty.
+    (Optional) The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined to be \deqn{P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|]} so \code{alpha=1} is the lasso penalty, while \code{alpha=0} is the ridge penalty.
   }
   \item{lambda}{
-    The shrinkage parameter, which multiples \eqn{P(\alpha,\beta)} in the objective. The larger \code{lambda} is, the more the coefficients are shrunk toward zero (and each other).
+    (Optional) The shrinkage parameter, which multiples \eqn{P(\alpha,\beta)} in the objective. The larger \code{lambda} is, the more the coefficients are shrunk toward zero (and each other).
+  }
+  \item{epsilon}{
+  (Optional) Number indicating the cutoff for determining if a coefficient is zero.
+  }
+  \item{standardize}{
+  (Optional) Logical value indicating whether the data should be standardized (set to mean = 0, variance = 1) before running GLM.
   }
   \item{tweedie.p}{The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}
   }

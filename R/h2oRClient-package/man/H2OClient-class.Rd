@@ -9,7 +9,7 @@
 
 \title{Class \code{"H2OClient"}}
 \description{
-An object representing the server/ local machine on which H2O is running.
+An object representing the server/local machine on which H2O is running.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OClient", ...)}
@@ -31,22 +31,6 @@ Objects can be created by calls of the form \code{new("H2OClient", ...)}
     		+ key = "character", parse = "logical")}: ... }
     \item{show}{\code{signature(object = "H2OClient")}: ... }
 	 }
-}
-\references{
-%%  ~~put references to the literature/web site here~~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
-%%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
 }
 \examples{
 showClass("H2OClient")

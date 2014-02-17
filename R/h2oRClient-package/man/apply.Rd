@@ -21,9 +21,6 @@ The margin along wich the function should be applied
 The function to be applied by H2O. 
 }
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
 Produces a new vector or array of the output of the applied function. That vector is stored in H2O so that it can be used in subsequent H2O processes. 
 }

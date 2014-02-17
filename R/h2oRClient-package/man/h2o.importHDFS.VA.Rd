@@ -8,7 +8,7 @@
   Imports a HDFS file or set of files in a directory and parses them, returning a list of objects containing the identifying hex keys.
 }
 \usage{
-h2o.importHDFS.VA(object, path, pattern = "", parse = TRUE, header, sep = "", col.names)
+h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -19,8 +19,11 @@ h2o.importHDFS.VA(object, path, pattern = "", parse = TRUE, header, sep = "", co
     The path of the file or folder directory to be imported. If it does not contain an absolute path, the file name is relative to the current working directory.
   }
   \item{pattern}{
-(Optional) Character string containing a regular expression to match file(s) in the folder.
+  (Optional) Character string containing a regular expression to match file(s) in the folder.
   }
+  \item{key}{
+  (Optional) The unique hex key assigned to the imported file. If none is given, a key will automatically be generated based on the file path.
+}
   \item{parse}{
   (Optional) A logical value indicating whether the file should be parsed after import.
   }
