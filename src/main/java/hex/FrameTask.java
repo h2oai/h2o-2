@@ -69,7 +69,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
 
   public static class DataInfo extends Iced {
-    public final Frame _adaptedFrame;
+    public Frame _adaptedFrame;
     public final int _responses; // number of responses
     public final boolean _standardize;
     public final int _nums;

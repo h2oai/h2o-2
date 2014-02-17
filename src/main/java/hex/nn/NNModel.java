@@ -163,7 +163,7 @@ public class NNModel extends Model {
 
 //    public NNModelInfo(NN params, int num_input, int num_output) {
     public NNModelInfo(NN params, DataInfo dinfo) {
-      data_info = dinfo;
+      data_info = dinfo; //should be deep_clone()?
       final int num_input = dinfo.fullN();
       final int num_output = dinfo._adaptedFrame.lastVec().domain().length;
       assert(num_input > 0);
@@ -200,6 +200,7 @@ public class NNModel extends Model {
       }
     }
     public void cleanUp() {
+      // ugly: whoever made data_info should also clean this up... but sometimes it was made by Weaver from UKV!
       UKV.remove(data_info()._adaptedFrame.lastVec()._key);
     }
 
@@ -388,7 +389,7 @@ public class NNModel extends Model {
               + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
-    if( !keep_running || (sinceLastScore > model_info().parameters.score_interval*1000) ) {
+    if( !keep_running || sinceLastScore > model_info().parameters.score_interval*1000) {
       Log.info("Scoring the model.");
       _timeLastScoreStart = _now;
       boolean printCM = false;

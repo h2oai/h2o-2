@@ -1,5 +1,6 @@
 package water;
 
+import hex.*;
 import hex.nn.Dropout;
 import hex.nn.NN;
 import org.junit.internal.TextListener;
@@ -15,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 3;
+  public static final int NODES = 1;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
@@ -42,9 +43,11 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       // tests = JUnitRunner.all();
-      tests.add(hex.NeuralNetSpiralsTest.class);
-      tests.add(hex.NeuralNetIrisTest.class);
-      tests.add(hex.NeuralNetIrisTest2.class);
+      tests.add(NNvsNeuralNet.class);
+      tests.add(NeuralNetSpiralsTest.class);
+      tests.add(NeuralNetSpiralsTest2.class);
+      tests.add(NeuralNetIrisTest.class);
+      tests.add(NeuralNetIrisTest2.class);
       tests.add(Dropout.class);
       tests.add(NN.class);
 
