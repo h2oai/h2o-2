@@ -8,7 +8,7 @@
   Imports all the files in the local directory and parses them, returning a list of objects containing the identifying hex keys.
 }
 \usage{
-  h2o.importFolder.VA(object, path, pattern = "", parse = TRUE, header, sep = "", col.names)
+  h2o.importFolder.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -20,6 +20,9 @@
   }
   \item{pattern}{
 (Optional) Character string containing a regular expression to match file(s) in the folder.
+  }
+  \item{key}{
+  (Optional) The unique hex key assigned to the imported file. If none is given, a key will automatically be generated based on the file path.
   }
   \item{parse}{
 (Optional) A logical value indicating whether the file should be parsed after import.
@@ -35,35 +38,25 @@
   }
 }
 \details{
+This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedDataVA}} object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
+
 This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFolder}}. WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
 }
 \value{
-  If \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawDataVA}}.
+  If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}.
   %%  ~Describe the value returned
   %%  If it is a LIST, use
   %%  \item{comp1 }{Description of 'comp1'}
   %%  \item{comp2 }{Description of 'comp2'}
   %% ...
 }
-\references{
-  %% ~put references to the literature/web site here ~
-}
-\author{
-  %%  ~~who you are~~
-}
-\note{
-  %%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-  
 \seealso{
   %% ~~objects to See Also as \code{\link{help}}, ~~~
+  \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importHDFS.VA}}, \code{\link{h2o.importURL.VA}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 myPath = paste(path.package("h2oRClient"), "extdata", sep="/")
 all_files.hex = h2o.importFolder.VA(localH2O, path = myPath)
 for(i in 1:length(all_files.hex))

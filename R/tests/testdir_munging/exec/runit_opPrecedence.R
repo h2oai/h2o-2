@@ -2,7 +2,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 get.eval.result <- function(conn, expr) {
-    res =  h2o.__exec2(conn, expr)
+    res =  .h2o.__exec2(conn, expr)
     return(new("H2OParsedData", h2o=conn, key=res$dest_key))
 }
 

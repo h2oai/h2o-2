@@ -124,10 +124,9 @@ FAQs
   - Launch ``sbt``
   
   - In ``sbt`` use the command ``gen-idea`` to create Idea project files
-     ::
+    ::
   
-     > gen-idea
+    > gen-idea
   
   - In Idea open the project located in ``h2o-scala`` directory
-
 

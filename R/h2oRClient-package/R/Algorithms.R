@@ -1,7 +1,7 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
-h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02, n.bins=100, validation) {
+h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.1, n.bins=100, validation) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
@@ -460,6 +460,7 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
   if( missing(data) ) stop('Must specify data')
   # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+  if(h2o.anyFactor(data)) stop("Unimplemented: K-means can only model on numeric data")
 
   if( missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be a positive integer')
@@ -621,15 +622,27 @@ h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, 
 }
 
 # ----------------------- Principal Components Analysis ----------------------------- #
-h2o.prcomp <- function(data, tol=0, ignored_cols = '', standardize=TRUE, retx=FALSE) {
-  if( missing(data) ) stop('Must specify data')
+h2o.prcomp <- function(data, tol=0, ignored_cols = "", standardize=TRUE, retx=FALSE) {
+  if(missing(data)) stop('Must specify data')
   # if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
   if(!is.numeric(tol)) stop('tol must be numeric')
+  if(!is.character(ignored_cols) && !is.numeric(ignored_cols))
+    stop("ignored_cols must be either a character or numeric vector")
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
 
   destKey = .h2o.__uniqID("PCAModel")
+  cc <- colnames(data)
+  if(is.character(ignored_cols)) {
+    if(ignored_cols[1] != "" && any(!(ignored_cols %in% cc))) 
+      stop(paste(paste(ignored_cols[!(ignored_cols %in% cc)], collapse=','), 'is not a valid column name'))
+  } else {
+    if(any(ignored_cols < 1 | ignored_cols > length(cc))) 
+      stop(paste('Out of range explanatory variable', paste(ignored_cols[ignored_cols < 1 | ignored_cols > length(cc)], collapse=',')))
+    ignored_cols <- cc[ignored_cols]
+  }
+  
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_cols = ignored_cols, tolerance=tol, standardize=as.numeric(standardize))
   .h2o.__waitOnJob(data@h2o, res$job_key)
   # while(!.h2o.__isDone(data@h2o, "PCA", res)) { Sys.sleep(1) }
@@ -650,8 +663,7 @@ h2o.prcomp <- function(data, tol=0, ignored_cols = '', standardize=TRUE, retx=FA
   new("H2OPCAModel", key=destKey, data=data, model=result)
 }
 
-# setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
-h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
+h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
   args <- .verify_dataxy(data, x, y)
   
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
@@ -672,7 +684,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
   
   myScore[,ncomp+1] = data[,args$y_i]    # Bind response to frame of principal components
   myGLMData = new("H2OParsedData", h2o=data@h2o, key=myScore@key)
-  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
+  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, epsilon, standardize = FALSE, tweedie.p)
 }
 
 .h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=TRUE) {
@@ -916,7 +928,7 @@ h2o.confusionMatrix <- function(data, reference) {
     y_i <- y
     y <- cc[ y ]
   }
-  if( y %in% x ) stop(y, 'is both an explanatory and dependent variable')
+  if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
 
   x_ignore <- setdiff(setdiff( cc, x ), y)
   if( length(x_ignore) == 0 ) x_ignore <- ''

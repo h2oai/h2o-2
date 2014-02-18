@@ -49,28 +49,14 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}}, \code{\link{h2o.importURL.VA}}, \code{\link{h2o.importHDFS.VA}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
-prostate.hex = h2o.uploadFile.VA(localH2O, 
- + path = system.file("extdata", "prostate.csv", package="h2oRClient"), 
- + key = "prostate.hex")
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+prostate.hex = h2o.uploadFile.VA(localH2O, path = system.file("extdata", "prostate.csv", package="h2oRClient"), key = "prostate.hex")
 summary(prostate.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

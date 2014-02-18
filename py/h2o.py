@@ -1449,6 +1449,7 @@ class H2O(object):
 
     # &offset=
     # &view=
+    # FIX! need to have max > 1000? 
     def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, 
         timeoutSecs=30, useVA=False):
         if beta_features and not useVA:
@@ -2142,16 +2143,16 @@ class H2O(object):
                 'source': key,
                 'cols': None,
                 # h2o won't let me go bigger?
-                'max_ncols': 1000,
-                # 'max_ncols': 1000000,
+                # 'max_ncols': 1000,
+                'max_ncols': 1000000,
                 }
         else:
             params_dict = {
                 'key': key,
                 'x': None,
                 # h2o won't let me go bigger?
-                'max_column_display': 1000,
-                # 'max_column_display': 1000000,
+                # 'max_column_display': 1000,
+                'max_column_display': 1000000,
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)

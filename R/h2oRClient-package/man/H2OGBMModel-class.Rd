@@ -24,26 +24,18 @@ Objects can be created by calls of the form \code{new("H2OGBMModel", ...)}.
   }
   \item{\code{valid}:}{Object of class \code{\linkS4class{H2OParsedData}}, which is the dataset used to validate the model.}
 }}
+\section{Extends}{
+Class \code{"\linkS4class{H2OModel}"}, directly.
+}
 \section{Methods}{
   \describe{
     \item{show}{\code{signature(object = "H2OGBMModel")}: ... }
 	 }
 }
-\references{
-%%  ~~put references to the literature/web site here~~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
+\code{\link{h2o.gbm}}
 }
 \examples{
 showClass("H2OGBMModel")

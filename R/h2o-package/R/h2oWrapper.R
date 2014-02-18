@@ -44,8 +44,8 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
     library(h2oRClient)
   
   H2Oserver = new("H2OClient", ip = ip, port = port)
-  tmp = h2o.clusterStatus(H2Oserver)
-  cat("Cluster status:\n"); print(tmp)
+  h2o.clusterInfo(H2Oserver)
+  cat("\n")
   return(H2Oserver)
 }
 
