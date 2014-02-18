@@ -1,6 +1,8 @@
 package water;
 
-import hex.NNvsNeuralNet;
+import hex.*;
+import hex.nn.Dropout;
+import hex.nn.NN;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -42,12 +44,12 @@ public class JUnitRunnerDebug {
       // Classes to test:
       // tests = JUnitRunner.all();
       tests.add(NNvsNeuralNet.class);
-//      tests.add(NeuralNetSpiralsTest.class);
-//      tests.add(NeuralNetSpiralsTest2.class);
-//      tests.add(NeuralNetIrisTest.class);
-//      tests.add(NeuralNetIrisTest2.class);
-//      tests.add(Dropout.class);
-//      tests.add(NN.class);
+      tests.add(NeuralNetSpiralsTest.class);
+      tests.add(NeuralNetSpiralsTest2.class);
+      tests.add(NeuralNetIrisTest.class);
+      tests.add(NeuralNetIrisTest2.class);
+      tests.add(Dropout.class);
+      tests.add(NN.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}
