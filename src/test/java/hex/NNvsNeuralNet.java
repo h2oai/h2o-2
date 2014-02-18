@@ -4,6 +4,7 @@ import hex.nn.NN;
 import hex.nn.NNModel;
 import hex.nn.NNTask;
 import hex.nn.Neurons;
+import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
@@ -41,9 +42,8 @@ public class NNvsNeuralNet extends TestUtil {
     }
     // fail
     else {
-//      Thread.dumpStack();
-      Log.err("Not close enough: " + a + " " + b);
-//      System.exit(0);
+//      Log.err("Not close enough: " + a + " " + b);
+      Assert.failNotEquals("Not equal: ", a, b);
     }
   }
 
@@ -53,38 +53,49 @@ public class NNvsNeuralNet extends TestUtil {
     // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
     // Note: Initial weight distributions are copied, but what is tested is the stability behavior.
 
-    NN.Activation[] activations = { NN.Activation.Tanh };
-//    NN.Activation[] activations = { NN.Activation.RectifierWithDropout };
-    NN.Loss[] losses = { NN.Loss.CrossEntropy };
-    NN.InitialWeightDistribution[] dists = { NN.InitialWeightDistribution.UniformAdaptive };
-    double[] initial_weight_scales = { 0.01 };
-    double[] holdout_ratios = { 0.8 };
-    int[][] hiddens = { {20,20} };
-    double[] rates = { 0.01 };
+    NN.Activation[] activations = { NN.Activation.RectifierWithDropout, NN.Activation.Tanh, NN.Activation.Rectifier, NN.Activation.TanhWithDropout };
+    NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
+    NN.InitialWeightDistribution[] dists = { NN.InitialWeightDistribution.Normal, NN.InitialWeightDistribution.Uniform, NN.InitialWeightDistribution.UniformAdaptive };
 
-//    String[] files = { "smalldata/mnist/train.csv" };
-//    int[] epochs = { 2 };
+    double[] initial_weight_scales = { 1e-3 + 1e-2 * new Random().nextFloat() };
+    double[] holdout_ratios = { 0.7 + 0.1 * new Random().nextFloat() };
+    int[][] hiddens = { {1}, {1+new Random().nextInt(50)}, {17,13}, {20,10,5} };
+    double[] rates = { 0.005 + 1e-2 * new Random().nextFloat() };
+    int[] epochs = { 10 + new Random().nextInt(5) };
 
-    String[] files = { "smalldata/iris/iris.csv" };
-    int[] epochs = { 1 };
-
-//    String[] files = { "smalldata/covtype/covtype.20k.data" };
-//    int[] epochs = { 10 };
-
-//    String[] files = { "smalldata/logreg/prostate.csv" };
-//    int[] epochs = { 100 };
-
+    boolean threaded = false;
     int num_repeats = 1;
 
+    // TODO: test that NN and NeuralNet agree for Mnist dataset
+//    String[] files = { "smalldata/mnist/train.csv" };
+//    hiddens = new int[][]{ {50,50} };
+//    threaded = true;
+//    num_repeats = 5;
+
+    // TODO: test that NN and NeuralNet agree for covtype dataset
+//    String[] files = { "smalldata/covtype/covtype.20k.data" };
+//    hiddens = new int[][]{ {50,50} };
+//    threaded = true;
+//    num_repeats = 5;
+
+    String[] files = { "smalldata/iris/iris.csv" };
+
     //set parameters
-    double p0 = 0.5;
-    long pR = 100000;
-    double p1 = 0.9;
-    double l1 = 1e-5;
-    double l2 = 0;
-    double max_w2 = 15;
-    double input_dropout = 0.3;
-    double rate_annealing = 1e-6;
+
+    // TODO: make NN and NeuralNet agree for momentum training (NN is same as MSFT reference, but NeuralNet might be better)
+//    double p0 = 0.5;
+//    long pR = 100000;
+//    double p1 = 0.9;
+
+    double p0 = 0;
+    long pR = 0;
+    double p1 = 0;
+
+    double l1 = 1e-5 * new Random().nextFloat();
+    double l2 = 1e-5 * new Random().nextFloat();
+    double max_w2 = new Random().nextInt(50);
+    double input_dropout = new Random().nextFloat() * 0.5;
+    double rate_annealing = 1e-7 + new Random().nextFloat() * 1e-6;
 
     for (NN.Activation activation : activations) {
       for (NN.Loss loss : losses) {
@@ -115,12 +126,9 @@ public class NNvsNeuralNet extends TestUtil {
                         _train = sampleFrame(frame, (long)(frame.numRows()*holdout_ratio), seed);
                         _test = sampleFrame(frame, (long)(frame.numRows()*(1-holdout_ratio)), seed+1);
 
-                        if (input_dropout > 0 && activation != NN.Activation.RectifierWithDropout)
-                          input_dropout = 0; //old NeuralNet code cannot do input dropout unless RectifierWithDropout is used.
-
                         // Train new NN
-                        Neurons[] neurons = null;
-                        NNModel mymodel = null;
+                        Neurons[] neurons;
+                        NNModel mymodel;
                         {
                           NN p = new NN();
                           p.source = (Frame)_train.clone();
@@ -150,9 +158,9 @@ public class NNvsNeuralNet extends TestUtil {
                           p.fast_mode = true; //to be the same as old NeuralNet code
                           p.sync_samples = 0; //sync once per period
                           p.ignore_const_cols = false; //to be the same as old NeuralNet code
-//                          p.ignore_const_cols = true; //better
-//                          p.shuffle_training_data = true; //better?
-                          p.shuffle_training_data = false; //better?
+                          p.shuffle_training_data = false; //same as old NeuralNet code
+//                          p.ignore_const_cols = true; //better results
+//                          p.shuffle_training_data = true; //better results
                           p.exec(); //randomize weights, but don't start training yet
 
                           mymodel = UKV.get(p.dest());
@@ -193,14 +201,12 @@ public class NNvsNeuralNet extends TestUtil {
                           for (int i=0; i<hidden.length; ++i) {
                             if (activation == NN.Activation.Tanh) {
                               p.activation = NeuralNet.Activation.Tanh;
-                              assert(p.input_dropout_ratio == 0);
                               ls[1+i] = new Layer.Tanh(hidden[i]);
                             } else if (activation == NN.Activation.TanhWithDropout) {
                               p.activation = Activation.TanhWithDropout;
                               ls[1+i] = new Layer.TanhDropout(hidden[i]);
                             } else if (activation == NN.Activation.Rectifier) {
                               p.activation = Activation.Rectifier;
-                              assert(p.input_dropout_ratio == 0);
                               ls[1+i] = new Layer.Rectifier(hidden[i]);
                             } else if (activation == NN.Activation.RectifierWithDropout) {
                               p.activation = Activation.RectifierWithDropout;
@@ -211,17 +217,15 @@ public class NNvsNeuralNet extends TestUtil {
                           for (int i = 0; i < ls.length; i++) {
                             ls[i].init(ls, i, p);
                           }
-                          // Debugging
-//                          refmodel = new NeuralNetModel(null, null, _train, ls, p);
-//                          Log.info("Initial model:\n" + refmodel);
-
-//                          Trainer trainer = new Trainer.Threaded(ls, p.epochs, null, 1);
-                          Trainer trainer = new Trainer.Direct(ls, p.epochs, null);
+                          Trainer trainer;
+                          if (threaded)
+                            trainer = new Trainer.Threaded(ls, p.epochs, null, -1);
+                          else
+                            trainer = new Trainer.Direct(ls, p.epochs, null);
                           trainer.start();
                           trainer.join();
 
                           refmodel = new NeuralNetModel(null, null, _train, ls, p);
-//                          Log.info("Final model:\n" + refmodel);
                         }
 
 
@@ -248,9 +252,6 @@ public class NNvsNeuralNet extends TestUtil {
                          * Note: Reference and H2O each do their internal data normalization,
                          * so we must use their "own" test data, which is assumed to be created correctly.
                          */
-                        // H2O predictions
-
-
                         // NN scoring
                         {
                           Frame fpreds = mymodel.score(_test); //[0] is label, [1]...[4] are the probabilities
@@ -267,6 +268,7 @@ public class NNvsNeuralNet extends TestUtil {
                         }
                         // NeuralNet scoring
                         {
+                          Log.info("\nNeuralNet Scoring:");
                           final Frame[] adapted = refmodel.adapt(_test, false);
                           Vec[] data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
                           Vec labels = _test.vecs()[_test.vecs().length - 1];
@@ -274,11 +276,15 @@ public class NNvsNeuralNet extends TestUtil {
                           input.vecs = data;
                           input._len = data[0].length();
                           ((Layer.VecSoftmax) ls[ls.length-1]).vec = labels;
-                          NeuralNet.Errors test = NeuralNet.eval(ls, 0, null);
+                          long [][] cm;
+                          int classes = ls[ls.length - 1].units; //WARNING: only works if training set is large enough to have all classes
+                          cm = new long[classes][classes];
+                          NeuralNet.Errors test = NeuralNet.eval(ls, 0, cm);
+                          Log.info("\nNeuralNet Confusion Matrix:");
+                          Log.info(new ConfusionMatrix(cm).toString());
                           referror += test.classification;
                           adapted[1].delete();
                         }
-
 
                         // cleanup
                         mymodel.delete();
@@ -293,8 +299,8 @@ public class NNvsNeuralNet extends TestUtil {
                       /**
                        * Tolerances
                        */
-                      final double abseps = 0.01;
-                      final double releps = 0.01;
+                      final double abseps = threaded ? 1e-3 : 1e-13;
+                      final double releps = threaded ? 1e-3 : 1e-13;
 
                       // overal test set scoring
                       Log.info("NeuralNet test error " + referror);
@@ -307,8 +313,8 @@ public class NNvsNeuralNet extends TestUtil {
                         Log.info("NN        mean weight for layer " + n + ": " + b[n]/numweights);
                         Log.info("NeuralNet mean bias for layer " + n + ": " + ba[n]/numbiases);
                         Log.info("NN        mean bias for layer " + n + ": " + bb[n]/numbiases);
-//                        compareVal(ba[n]/num_repeats, bb[n]/num_repeats, abseps, releps);
-//                        compareVal(a[n]/num_repeats, b[n]/num_repeats, abseps, releps);
+                        compareVal(a[n]/numweights, b[n]/numweights, abseps, releps);
+                        compareVal(ba[n]/numbiases, bb[n]/numbiases, abseps, releps);
                       }
 
                     }
