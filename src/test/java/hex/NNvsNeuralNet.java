@@ -73,23 +73,18 @@ public class NNvsNeuralNet extends TestUtil {
 //    num_repeats = 5;
 
     // TODO: test that NN and NeuralNet agree for covtype dataset
-//    String[] files = { "smalldata/covtype/covtype.20k.data" };
-//    hiddens = new int[][]{ {50,50} };
+//    String[] files = { "smalldata/covtype/covtype.20k.data.my" };
+//    hiddens = new int[][]{ {100,100} };
+//    epochs = new int[]{ 50 };
 //    threaded = true;
-//    num_repeats = 5;
+//    num_repeats = 2;
 
-    String[] files = { "smalldata/iris/iris.csv" };
-
+    String[] files = { "smalldata/iris/iris.csv", "smalldata/neural/two_spiral.data" };
     //set parameters
 
-    // TODO: make NN and NeuralNet agree for momentum training (NN is same as MSFT reference, but NeuralNet might be better)
-//    double p0 = 0.5;
-//    long pR = 100000;
-//    double p1 = 0.9;
-
-    double p0 = 0;
-    long pR = 0;
-    double p1 = 0;
+    double p0 = 0.5 * new Random().nextFloat();
+    long pR = 1000 + new Random().nextInt(1000);
+    double p1 = 0.5 + 0.49 * new Random().nextFloat();
 
     double l1 = 1e-5 * new Random().nextFloat();
     double l2 = 1e-5 * new Random().nextFloat();
@@ -106,7 +101,8 @@ public class NNvsNeuralNet extends TestUtil {
                 for (int epoch : epochs) {
                   for (double rate : rates) {
                     for (String file : files) {
-                      double referror=0, myerror=0;
+                      double reftrainerr=0, trainerr=0;
+                      double reftesterr=0, testerr=0;
                       double[] a = new double[hidden.length+2];
                       double[] b = new double[hidden.length+2];
                       double[] ba = new double[hidden.length+2];
@@ -155,9 +151,9 @@ public class NNvsNeuralNet extends TestUtil {
                           p.classification = true;
                           p.diagnostics = true;
                           p.validation = null;
-                          p.fast_mode = true; //to be the same as old NeuralNet code
+                          p.fast_mode = true; //same as old NeuralNet code
                           p.sync_samples = 0; //sync once per period
-                          p.ignore_const_cols = false; //to be the same as old NeuralNet code
+                          p.ignore_const_cols = false; //same as old NeuralNet code
                           p.shuffle_training_data = false; //same as old NeuralNet code
 //                          p.ignore_const_cols = true; //better results
 //                          p.shuffle_training_data = true; //better results
@@ -254,21 +250,39 @@ public class NNvsNeuralNet extends TestUtil {
                          */
                         // NN scoring
                         {
-                          Frame fpreds = mymodel.score(_test); //[0] is label, [1]...[4] are the probabilities
+
+                          Frame fpreds = mymodel.score(_train); //[0] is label, [1]...[4] are the probabilities
                           water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
-                          CM.actual = _test;
-                          CM.vactual = _test.lastVec();
+                          CM.actual = _train;
+                          CM.vactual = _train.lastVec();
                           CM.predict = fpreds;
                           CM.vpredict = fpreds.vecs()[0];
                           CM.serve();
                           StringBuilder sb = new StringBuilder();
-                          myerror += CM.toASCII(sb);
+                          trainerr += CM.toASCII(sb);
                           for (String s : sb.toString().split("\n")) Log.info(s);
                           fpreds.delete();
+
+                          Frame fpreds2 = mymodel.score(_test); //[0] is label, [1]...[4] are the probabilities
+                          CM = new water.api.ConfusionMatrix();
+                          CM.actual = _test;
+                          CM.vactual = _test.lastVec();
+                          CM.predict = fpreds2;
+                          CM.vpredict = fpreds2.vecs()[0];
+                          CM.serve();
+                          sb = new StringBuilder();
+                          testerr += CM.toASCII(sb);
+                          for (String s : sb.toString().split("\n")) Log.info(s);
+                          fpreds2.delete();
                         }
                         // NeuralNet scoring
                         {
                           Log.info("\nNeuralNet Scoring:");
+                          //training set
+                          NeuralNet.Errors train = NeuralNet.eval(ls, 0, null);
+                          reftrainerr += train.classification;
+
+                          //test set
                           final Frame[] adapted = refmodel.adapt(_test, false);
                           Vec[] data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
                           Vec labels = _test.vecs()[_test.vecs().length - 1];
@@ -282,7 +296,7 @@ public class NNvsNeuralNet extends TestUtil {
                           NeuralNet.Errors test = NeuralNet.eval(ls, 0, cm);
                           Log.info("\nNeuralNet Confusion Matrix:");
                           Log.info(new ConfusionMatrix(cm).toString());
-                          referror += test.classification;
+                          reftesterr += test.classification;
                           adapted[1].delete();
                         }
 
@@ -293,19 +307,25 @@ public class NNvsNeuralNet extends TestUtil {
                         _test.delete();
                         frame.delete();
                       }
-                      myerror /= (double)num_repeats;
-                      referror /= (double)num_repeats;
+                      trainerr /= (double)num_repeats;
+                      reftrainerr /= (double)num_repeats;
+                      testerr /= (double)num_repeats;
+                      reftesterr /= (double)num_repeats;
 
                       /**
                        * Tolerances
                        */
-                      final double abseps = threaded ? 1e-3 : 1e-13;
-                      final double releps = threaded ? 1e-3 : 1e-13;
+                      final double abseps = threaded ? 1e-2 : 1e-13;
+                      final double releps = threaded ? 1e-2 : 1e-13;
 
-                      // overal test set scoring
-                      Log.info("NeuralNet test error " + referror);
-                      Log.info("NN        test error " + myerror);
-                      compareVal(referror, myerror, abseps, releps);
+                      // training set scoring
+                      Log.info("NeuralNet train error " + reftrainerr);
+                      Log.info("NN        train error " + trainerr);
+                      compareVal(reftrainerr, trainerr, abseps, releps);
+                      // test set scoring
+                      Log.info("NeuralNet test error " + reftesterr);
+                      Log.info("NN        test error " + testerr);
+                      compareVal(reftrainerr, trainerr, abseps, releps);
 
                       // mean weights/biases
                       for (int n=1; n<hidden.length+2; ++n) {

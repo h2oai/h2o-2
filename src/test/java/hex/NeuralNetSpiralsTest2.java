@@ -31,7 +31,7 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       p.seed = 7401699394609084302l;
       p.rate = 0.007;
       p.rate_annealing = 0;
-      p.epochs = 20000;
+      p.epochs = 11000;
       p.hidden = new int[]{100};
       p.activation = NN.Activation.Tanh;
       p.max_w2 = Double.MAX_VALUE;
@@ -49,9 +49,10 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       p.score_interval = 10;
       p.ignored_cols = null;
       p.sync_samples = 0;
-      p.fast_mode = true; //to match old NeuralNet behavior
-      p.ignore_const_cols = true;
-      p.shuffle_training_data = false;
+      p.fast_mode = true; //same as old NeuralNet code
+      p.ignore_const_cols = false; //same as old NeuralNet code
+      p.shuffle_training_data = false; //same as old NeuralNet code
+      p.nesterov_accelerated_gradient = true; //same as old NeuralNet code
       p.classification = true;
       p.diagnostics = true;
       p.expert_mode = true;
