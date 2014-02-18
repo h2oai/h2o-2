@@ -1,16 +1,14 @@
 package water.api;
 
 import hex.drf.DRF.DRFModel;
-import water.*;
-
-import com.google.gson.JsonObject;
+import water.Job;
+import water.Key;
+import water.UKV;
 
 public class DRFProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
-  @Override protected Response jobDone(final Job job, final Key dst) {
-    JsonObject args = new JsonObject();
-    args.addProperty(MODEL_KEY, job.dest().toString());
-    return DRFModelView.redirect(this, job.dest());
+  @Override protected Response jobDone(final Key dst) {
+    return DRFModelView.redirect(this, dst);
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {

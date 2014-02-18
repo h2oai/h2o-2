@@ -2,7 +2,6 @@ package hex.glm;
 
 import water.*;
 import water.api.*;
-import water.api.RequestBuilders.Response;
 
 public class GLMProgress extends Progress2 {
 
@@ -16,7 +15,7 @@ public class GLMProgress extends Progress2 {
 
   /** Return {@link Response} for finished job. */
   @Override
-  protected Response jobDone(final Job job, final Key dst) {
+  protected Response jobDone(final Key dst) {
     return GLMModelView.redirect(this, dst);
   }
 

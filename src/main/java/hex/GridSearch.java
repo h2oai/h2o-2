@@ -184,7 +184,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final Key dst) {
+    @Override protected Response jobDone(final Key dst) {
       return Response.done(this);
     }
   }

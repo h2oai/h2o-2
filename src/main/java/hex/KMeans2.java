@@ -169,7 +169,7 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @Override protected Response jobDone(Job job, Key dst) {
+    @Override protected Response jobDone(Key dst) {
       return KMeans2ModelView.redirect(this, destination_key);
     }
 

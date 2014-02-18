@@ -35,12 +35,12 @@ public class Progress2 extends Request2 {
     if( jjob != null && jjob.isCancelled())
       return Response.error(jjob.exception == null ? "Job was cancelled by user!" : jjob.exception);
     if( jjob == null || jjob.end_time > 0 || jjob.isCancelled() )
-      return jobDone(jjob, destination_key);
+      return jobDone(destination_key);
     return jobInProgress(jjob, destination_key);
   }
 
   /** Return {@link Response} for finished job. */
-  protected Response jobDone(final Job job, final Key dst) {
+  protected Response jobDone(final Key dst) {
     return Inspect2.redirect(this, dst.toString());
   }
 
