@@ -577,12 +577,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   // Score the *tree* columns, and produce a confusion matrix
   public class Score extends MRTask2<Score> {
-    long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
-    double _sum;                // Sum-squared-error
-    long _snrows;               // Count of voted-on rows
+    /* @OUT */ long    _cm[/*actual*/][/*predicted*/]; // Confusion matrix
+    /* @OUT */ double  _sum;                           // Sum-squared-error
+    /* @OUT */ long    _snrows;                        // Count of voted-on rows
+    /* @IN */  boolean _oob;
+    /* @IN */  boolean _validation;
     //double _auc;               //Area under the ROC curve for _nclass == 2
-    /* @IN */ boolean _oob;
-    /* @IN */ boolean _validation;
 
     public double   sum()   { return _sum; }
     public long[][] cm ()   { return _cm;  }
@@ -590,17 +590,25 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     public double   mse()   { return sum() / nrows(); }
    // public double   auc()   { return _auc; }
 
-    // Compute CM & MSE on either the training or testing dataset
+    /**
+     * Compute CM & MSE on either the training or testing dataset.
+     *
+     * @param model a model which is used to perform computation
+     * @param fr    a model training frame
+     * @param validation a test frame or null
+     * @param oob   perform out-of-bag validation on training frame
+     * @param build_tree_per_node
+     * @return
+     */
     public Score doIt(Model model, Frame fr, Frame validation, boolean oob, boolean build_tree_per_node) {
-      assert !oob || validation==null ; // oob => validation==null
+      assert !oob || validation==null : "Validation frame cannot be specified if oob validation is demanded!"; // oob => validation==null
       _oob = oob;
-      // No validation, so do on training data
-      //System.err.println(fr.toStringAll());
+      // No validation frame is specified, so perform computation on training data
       if( validation == null ) return doAll(fr, build_tree_per_node);
       _validation = true;
       // Validation: need to score the set, getting a probability distribution for each class
-      // Frame has nclass vectors (nclass, or 1 for regression)
-      Frame res = model.score(validation);
+      // Frame has nclass vectors (nclass, or 1 for regression), for classification it
+      Frame res = model.score(validation); /* For classification: predicted values (~ values in res[0]) are in interval 0..domain().length-1 */
       // Adapt the validation set to the model
       Frame frs[] = model.adapt(validation,false);
       Frame adapValidation = frs[0]; // adapted validation dataset
@@ -609,6 +617,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         for( int i=0; i<_nclass; i++ ) // Distribution of response classes
           adapValidation.add("ClassDist"+i,res.vecs()[i+1]);
         adapValidation.add("Prediction",res.vecs()[0]); // Predicted values
+        System.err.println(Arrays.toString(res.vecs()[0]._domain));
       } else { // Regression
         adapValidation.add("Prediction",res.vecs()[0]);
       }
