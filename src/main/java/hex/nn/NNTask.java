@@ -30,8 +30,8 @@ public class NNTask extends FrameTask<NNTask> {
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
-    _output = _input;
-//    _output = new NNModel.NNModelInfo(_input);
+    _output = _input; //faster, good enough in this case (since the input was freshly deserialized by the Weaver)
+//    _output = new NNModel.NNModelInfo(_input); //"correct" - but not needed
     _input = null;
     _output.set_processed_local(0l);
   }
@@ -49,14 +49,11 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override public void reduce(NNTask other){
-//    Log.info("reduce: my local " + _output.get_processed_local());
-//    Log.info("reduce: other local " + other._output.get_processed_local());
     if (other._output.get_processed_local() > 0 //other NNTask was active (its model_info should be used for averaging)
             && other._output != _output) //other NNTask worked on a different model_info
     {
       _output.add(other._output);
       _chunk_node_count += other._chunk_node_count;
-//      Log.info("reduce: adding them together, now have " + _chunk_node_count + " contributions, total: " + _output.get_processed_local());
     }
   }
 
@@ -67,8 +64,8 @@ public class NNTask extends FrameTask<NNTask> {
       long now = System.currentTimeMillis();
       if (_chunk_node_count < H2O.CLOUD.size() && (now - _lastWarn > 5000) && _warnCount < 10) {
         Log.info("Synchronizing across " + _chunk_node_count + " H2O node(s).");
-        Log.warn(H2O.CLOUD.size() - _chunk_node_count + " node(s) (out of "
-                + H2O.CLOUD.size() + ") are not contributing to model updates. Consider using a larger training dataset (or fewer H2O nodes).");
+        Log.warn(H2O.CLOUD.size() - _chunk_node_count + " node(s) (out of " + H2O.CLOUD.size()
+                + ") are not contributing to model updates. Consider using a larger training dataset (or fewer H2O nodes).");
         _lastWarn = now;
         _warnCount++;
       }
@@ -112,6 +109,9 @@ public class NNTask extends FrameTask<NNTask> {
         case Maxout:
           neurons[i+1] = new Neurons.Maxout(h[i]);
           break;
+        case MaxoutWithDropout:
+          neurons[i+1] = new Neurons.MaxoutDropout(h[i]);
+          break;
       }
     }
     // output
@@ -126,7 +126,6 @@ public class NNTask extends FrameTask<NNTask> {
 
 //    // debugging
 //    for (Neurons n : neurons) Log.info(n.toString());
-
     return neurons;
   }
 
@@ -162,16 +161,7 @@ public class NNTask extends FrameTask<NNTask> {
       /**
        * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
        */
-      //Note: in multi-node operation, all nodes sync their number of processed rows after every reduce() call.
-      //That means that the number of processed rows will jump regularly, and then continue to increase in steps of 1.
-      //This is equivalent to saying that each node thinks that its rows comes first in every epoch, which is probably
-      //the closest thing to do when trying to match the single-node behavior.
       minfo.add_processed_local(1);
-//      if (minfo.get_processed_local() % 1000 == 0) {
-//        Log.info("processed global: " + minfo.get_processed_global());
-//        Log.info("processed local : " + minfo.get_processed_local());
-//        Log.info("processed total : " + minfo.get_processed_total());
-//      }
     }
   }
 

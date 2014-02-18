@@ -38,10 +38,6 @@ public abstract class Layer extends Iced {
   // Dropout (for input + hidden layers)
   transient Dropout dropout;
 
-  Dropout createDropout(int units) {
-    return new Dropout(units);
-  }
-
   /**
    * Start of refactoring in specification & running data, for layers and trainers.
    */
@@ -68,9 +64,6 @@ public abstract class Layer extends Iced {
   public class Dropout {
     private transient Random _rand;
     private transient byte[] _bits;
-
-    public Dropout() {
-    }
 
     @Override
     public String toString() {
@@ -120,14 +113,13 @@ public abstract class Layer extends Iced {
   public void init(Layer[] ls, int index, boolean weights) {
     params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new double[units];
-    if (!(this instanceof Output)) {
+    if (!(this instanceof Output) && !(this instanceof Input)) {
       _e = new double[units];
     }
     _previous = ls[index - 1];
     _input = (Input) ls[0];
 
-    if (this instanceof Maxout || this instanceof TanhDropout ||
-            this instanceof RectifierDropout) {
+    if (this instanceof MaxoutDropout || this instanceof TanhDropout || this instanceof RectifierDropout) {
       dropout = new Dropout(units);
     }
 
@@ -189,8 +181,6 @@ public abstract class Layer extends Iced {
   protected abstract void fprop(long seed, boolean training);
 
   protected abstract void bprop();
-
-  boolean isInput() { return false; }
 
   /**
    * Apply gradient g to unit u with rate r and momentum m.
@@ -268,7 +258,6 @@ public abstract class Layer extends Iced {
 
     public void inputDropout(long seed) {
       double rate = params.input_dropout_ratio;
-      if (rate == 0 || dropout == null) return;
       seed += params.seed + 0x1337B4BE;
       dropout.randomlySparsifyActivation(_a, rate, seed);
     }
@@ -276,11 +265,6 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean isInput() {
-      return true;
     }
 
     public final long move() {
@@ -304,9 +288,6 @@ public abstract class Layer extends Iced {
     double[] subs, muls;
 
     transient Chunk[] _chunks;
-
-    VecsInput() {
-    }
 
     @Override public Layer clone() {
       VecsInput o = (VecsInput) super.clone();
@@ -678,13 +659,7 @@ public abstract class Layer extends Iced {
   }
 
   public static class Tanh extends Layer {
-    Tanh() {
-    }
-
-    public Tanh(int units) {
-      this.units = units;
-    }
-
+    public Tanh(int units) { this.units = units; }
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
@@ -727,9 +702,7 @@ public abstract class Layer extends Iced {
   }
 
   public static class TanhDropout extends Tanh {
-    public TanhDropout(int units) {
-      super(units);
-    }
+    public TanhDropout(int units) { super(units); }
     @Override
     protected void fprop(long seed, boolean training) {
       if (training) {
@@ -748,13 +721,9 @@ public abstract class Layer extends Iced {
    * Apply tanh to the weights' transpose. Used for auto-encoders.
    */
   public static class TanhPrime extends Tanh {
-    TanhPrime() {
-    }
-
     public TanhPrime(int units) {
       super(units);
     }
-
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       // Auto encoder has its own bias vector
@@ -791,42 +760,30 @@ public abstract class Layer extends Iced {
   }
 
   public static class Maxout extends Layer {
-    public Maxout(int units) {
-      this.units = units;
-      dropout = createDropout(units);
-    }
-
+    public Maxout(int units) { this.units = units; }
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
         randomize(params.seed + 0xBAD5EED + index, 1.0f);
         for( int i = 0; i < _b.length; i++ )
-          _b[i] = 1;
+          _b[i] = index == 1 ? 0.5 : 1;
       }
     }
 
     @Override protected void fprop(long seed, boolean training) {
-      if (dropout != null && training)
-        dropout.fillBytes(seed);
       double max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        if( !training || (dropout != null && dropout.unit_active(o))) {
-          _a[o] = Float.NEGATIVE_INFINITY;
+        if( !training || dropout == null || dropout.unit_active(o)) {
+          final int off = o * _previous._a.length;
+          _a[o] = Double.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
-            _a[o] = Math.max(_a[o], _w[o * _previous._a.length + i] * _previous._a[i]);
+            _a[o] = Math.max(_a[o], _w[off+i] * _previous._a[i]);
           _a[o] += _b[o];
-          if( !training )
-            _a[o] *= .5f;
-          if( max < _a[o] )
-            max = _a[o];
+          max = Math.max(_a[o], max);
         }
       }
-      if( max > 1 )
-        for( int o = 0; o < _a.length; o++ )
-          _a[o] /= max;
-      if (!training && dropout != null)
-        Utils.div(_a, 2.f);
+      if( max > 1 ) Utils.div(_a, max);
     }
 
     @Override protected void bprop() {
@@ -842,20 +799,29 @@ public abstract class Layer extends Iced {
     }
   }
 
+  public static class MaxoutDropout extends Maxout {
+    public MaxoutDropout(int units) { super(units); }
+    @Override protected void fprop(long seed, boolean training) {
+      if (training) {
+        seed += params.seed + 0x51C8D00D;
+        dropout.fillBytes(seed);
+        super.fprop(seed, true);
+      }
+      else {
+        super.fprop(seed, false);
+        Utils.div(_a, 2.f);
+      }
+    }
+  }
+
   public static class Rectifier extends Layer {
-    Rectifier() {
-    }
-
-    public Rectifier(int units) {
-      this.units = units;
-    }
-
+    public Rectifier(int units) { this.units = units; }
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
         randomize(params.seed + 0xBAD5EED + index, 1.0f);
         for( int i = 0; i < _b.length; i++ )
-          _b[i] = 1;
+          _b[i] = index == 1 ? 0.5 : 1;
       }
     }
 
@@ -887,11 +853,8 @@ public abstract class Layer extends Iced {
   }
 
   public static class RectifierDropout extends Rectifier {
-    public RectifierDropout(int units) {
-      super(units);
-    }
-    @Override
-    protected void fprop(long seed, boolean training) {
+    public RectifierDropout(int units) { super(units); }
+    @Override protected void fprop(long seed, boolean training) {
       if (training) {
         seed += params.seed + 0x3C71F1ED;
         dropout.fillBytes(seed);
@@ -905,19 +868,13 @@ public abstract class Layer extends Iced {
   }
 
   public static class RectifierPrime extends Rectifier {
-    RectifierPrime() {
-    }
-
-    public RectifierPrime(int units) {
-      super(units);
-    }
-
+    public RectifierPrime(int units) { super(units); }
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       // Auto encoder has its own bias vector
       _b = new double[units];
       for( int i = 0; i < _b.length; i++ )
-        _b[i] = 1;
+        _b[i] = index == 1 ? 0.5 : 1;
     }
 
     @Override protected void fprop(long seed, boolean training) {

@@ -36,7 +36,7 @@ public abstract class Neurons {
     String s = this.getClass().getSimpleName();
     s += "\nNumber of Neurons: " + units;
     s += "\nParameters:\n" + params.toString();
-    if (dropout != null) s += "\nDropout:\n" + dropout.toString();
+    if (_dropout != null) s += "\nDropout:\n" + _dropout.toString();
     return s;
   }
 
@@ -63,7 +63,7 @@ public abstract class Neurons {
   /**
    * For Dropout training
    */
-  protected Dropout dropout;
+  protected Dropout _dropout;
 
 //  /**
 //   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
@@ -74,6 +74,26 @@ public abstract class Neurons {
 //   */
 //  public static final int missing_int_value = Integer.MAX_VALUE; //encode missing label or target
 //  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
+
+
+  void sanityCheck(boolean training) {
+    if (this instanceof Input) {
+      assert(_previous == null);
+      assert (!training || _dropout != null);
+    } else {
+      assert(_previous != null);
+      if (params.momentum_stable != params.momentum_start) {
+        assert(_minfo.has_momenta());
+        assert(_minfo.has_momenta());
+        assert(params.momentum_ramp > 0);
+        assert(_wm != null);
+        assert(_bm != null);
+      }
+      if (this instanceof MaxoutDropout || this instanceof TanhDropout || this instanceof RectifierDropout) {
+        assert (!training || _dropout != null);
+      }
+    }
+  }
 
   /**
    * Initialization of the parameters and connectivity of a Neuron layer
@@ -90,9 +110,9 @@ public abstract class Neurons {
     if (!(this instanceof Output) && !(this instanceof Input)) {
       _e = new double[units];
     }
-    if (training && (this instanceof Maxout || this instanceof TanhDropout ||
-                    this instanceof RectifierDropout || this instanceof Input) ) {
-      dropout = new Dropout(units);
+    if (training && (this instanceof MaxoutDropout || this instanceof TanhDropout
+            || this instanceof RectifierDropout || this instanceof Input) ) {
+      _dropout = new Dropout(units);
     }
     if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
@@ -104,6 +124,8 @@ public abstract class Neurons {
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
     }
+
+    sanityCheck(training);
   }
 
   /**
@@ -273,9 +295,9 @@ public abstract class Neurons {
       for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
       System.arraycopy(nums, 0, _a, _dinfo.numStart(), nums.length);
       final double rate = params.input_dropout_ratio;
-      if (rate == 0 || dropout == null) return;
+      if (rate == 0 || _dropout == null) return;
       seed += params.seed + 0x1337B4BE;
-      dropout.randomlySparsifyActivation(_a, rate, seed);
+      _dropout.randomlySparsifyActivation(_a, rate, seed);
     }
 
   }
@@ -286,7 +308,7 @@ public abstract class Neurons {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
-        if( !training || dropout == null || dropout.unit_active(o) ) {
+        if( !training || _dropout == null || _dropout.unit_active(o) ) {
           for( int i = 0; i < _previous._a.length; i++ ) {
             _a[o] += _w[off+i] * _previous._a[i];
           }
@@ -317,15 +339,11 @@ public abstract class Neurons {
   }
 
   public static class TanhDropout extends Tanh {
-    public TanhDropout(int units) {
-      super(units);
-    }
-
-    @Override
-    protected void fprop(long seed, boolean training) {
+    public TanhDropout(int units) { super(units); }
+    @Override protected void fprop(long seed, boolean training) {
       if (training) {
         seed += params.seed + 0xDA7A6000;
-        dropout.fillBytes(seed);
+        _dropout.fillBytes(seed);
         super.fprop(seed, true);
       }
       else {
@@ -336,37 +354,22 @@ public abstract class Neurons {
   }
 
   public static class Maxout extends Neurons {
-    public Maxout(int units) {
-      super(units);
-    }
-
+    public Maxout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      if (dropout != null && training) {
-        dropout.fillBytes(seed);
-      }
-
       double max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        if( !training || (dropout != null && dropout.unit_active(o))) {
+        if( !training || _dropout == null || _dropout.unit_active(o) ) {
           final int off = o * _previous._a.length;
           _a[o] = Double.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] = Math.max(_a[o], _w[off+i] * _previous._a[i]);
           _a[o] += _b[o];
-          if( !training )
-            _a[o] *= .5f;
-          if( max < _a[o] )
-            max = _a[o];
+          max = Math.max(_a[o], max);
         }
       }
-      if( max > 1 )
-        for( int o = 0; o < _a.length; o++ )
-          _a[o] /= max;
-      if (!training && dropout != null)
-        Utils.div(_a, 2.f);
+      if( max > 1 ) Utils.div(_a, max);
     }
-
     @Override protected void bprop() {
       long processed = _minfo.get_processed_total();
       double m = momentum(processed);
@@ -380,18 +383,28 @@ public abstract class Neurons {
     }
   }
 
-  public static class Rectifier extends Neurons {
-
-    public Rectifier(int units) {
-      super(units);
-      this.units = units;
+  public static class MaxoutDropout extends Maxout {
+    public MaxoutDropout(int units) { super(units); }
+    @Override protected void fprop(long seed, boolean training) {
+      if (training) {
+        seed += params.seed + 0x51C8D00D;
+        _dropout.fillBytes(seed);
+        super.fprop(seed, true);
+      }
+      else {
+        super.fprop(seed, false);
+        Utils.div(_a, 2.f);
+      }
     }
+  }
 
+  public static class Rectifier extends Neurons {
+    public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         final int off = o * _previous._a.length;
-        if( !training || dropout == null || dropout.unit_active(o) ) {
+        if( !training || _dropout == null || _dropout.unit_active(o) ) {
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] += _w[off+i] * _previous._a[i];
           _a[o] += _b[o];
@@ -425,14 +438,11 @@ public abstract class Neurons {
   }
 
   public static class RectifierDropout extends Rectifier {
-    public RectifierDropout(int units) {
-      super(units);
-    }
-    @Override
-    protected void fprop(long seed, boolean training) {
+    public RectifierDropout(int units) { super(units); }
+    @Override protected void fprop(long seed, boolean training) {
       if (training) {
         seed += params.seed + 0x3C71F1ED;
-        dropout.fillBytes(seed);
+        _dropout.fillBytes(seed);
         super.fprop(seed, true);
       }
       else {
@@ -445,9 +455,7 @@ public abstract class Neurons {
   public static abstract class Output extends Neurons {
     static final int API_WEAVER = 1;
     public static DocGen.FieldDoc[] DOC_FIELDS;
-
     Output(int units) { super(units); }
-
     protected abstract void fprop(); //don't differentiate between testing/training
     protected void fprop(long seed, boolean training) { throw new UnsupportedOperationException(); }
     protected void bprop() { throw new UnsupportedOperationException(); }
@@ -455,7 +463,6 @@ public abstract class Neurons {
 
   public static class Softmax extends Output {
     public Softmax(int units) { super(units); }
-
     @Override protected void fprop() {
       double max = Double.NEGATIVE_INFINITY;
       for( int o = 0; o < _a.length; o++ ) {

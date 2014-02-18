@@ -210,12 +210,17 @@ public class NNModel extends Model {
         Neurons[] neurons = NNTask.makeNeuronsForTesting(this);
         computeStats();
         sb.append("Status of Hidden and Output Layers:\n");
-        sb.append("#  Units       Activation     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
+        sb.append("#  Units       Activation  Dropout     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
         final String format = "%7g";
-        for (int i=1; i<neurons.length; ++i) {
-          sb.append(i + " " + String.format("%6d", neurons[i].units)
+        for (int i=0; i<neurons.length; ++i) {
+          sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
                   + " " + String.format("%16s", neurons[i].getClass().getSimpleName())
-                  + " " + String.format("%10g", neurons[i].rate(get_processed_total()))
+                  + " " + String.format("%8s", (i == 0 ? neurons[i].params.input_dropout_ratio*100 :
+                  (neurons[i] instanceof Neurons.TanhDropout || neurons[i] instanceof Neurons.RectifierDropout
+                          || neurons[i] instanceof Neurons.MaxoutDropout  ? 50 : 0))) + "%");
+          if (i == 0) { sb.append("\n"); continue; }
+          sb.append(
+                  " " + String.format("%10g", neurons[i].rate(get_processed_total()))
                   + " " + String.format("%5f", neurons[i].params.l1)
                   + " " + String.format("%5f", neurons[i].params.l2)
                   + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))
@@ -253,11 +258,13 @@ public class NNModel extends Model {
       for (int i=0; i<parameters.hidden.length; ++i) {
         if (parameters.activation == NN.Activation.Rectifier
                 || parameters.activation == NN.Activation.RectifierWithDropout
-                || parameters.activation == NN.Activation.Maxout) {
-          Arrays.fill(biases[i], 1.); //old behavior
-//          Arrays.fill(biases[i], i == 0 ? 0.5 : 1.); //new behavior, might be slightly better
+                || parameters.activation == NN.Activation.Maxout
+                || parameters.activation == NN.Activation.MaxoutWithDropout
+                ) {
+//          Arrays.fill(biases[i], 1.); //old behavior
+          Arrays.fill(biases[i], i == 0 ? 0.5 : 1.); //new behavior, might be slightly better
         }
-        else if (parameters.activation == NN.Activation.Tanh) {
+        else if (parameters.activation == NN.Activation.Tanh || parameters.activation == NN.Activation.TanhWithDropout) {
           Arrays.fill(biases[i], 0.0);
         }
       }
@@ -537,12 +544,13 @@ public class NNModel extends Model {
     if (error.training_time_ms > 0)
       DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
     if (model_info.parameters != null && model_info.parameters.diagnostics) {
-      DocGen.HTML.section(sb, "Status of Hidden and Output Layers");
+      DocGen.HTML.section(sb, "Status of Neuron Layers");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
       sb.append("<tr>");
       sb.append("<th>").append("#").append("</th>");
       sb.append("<th>").append("Units").append("</th>");
       sb.append("<th>").append("Activation").append("</th>");
+      sb.append("<th>").append("Dropout").append("</th>");
       sb.append("<th>").append("Rate").append("</th>");
       sb.append("<th>").append("L1").append("</th>");
       sb.append("<th>").append("L2").append("</th>");
@@ -551,11 +559,23 @@ public class NNModel extends Model {
       sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
       sb.append("</tr>");
       Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info()); //link the weights to the neurons, for easy access
-      for (int i=1; i<neurons.length; ++i) {
+      for (int i=0; i<neurons.length; ++i) {
         sb.append("<tr>");
-        sb.append("<td>").append("<b>").append(i).append("</b>").append("</td>");
+        sb.append("<td>").append("<b>").append(i+1).append("</b>").append("</td>");
         sb.append("<td>").append("<b>").append(neurons[i].units).append("</b>").append("</td>");
         sb.append("<td>").append(neurons[i].getClass().getSimpleName()).append("</td>");
+        sb.append("<td>").append((i == 0 ? String.format("%g", neurons[i].params.input_dropout_ratio*100) :
+                (neurons[i] instanceof Neurons.TanhDropout || neurons[i] instanceof Neurons.RectifierDropout
+                        || neurons[i] instanceof Neurons.MaxoutDropout  ? 50 : 0)) + "%</td>");
+        if (i==0) {
+          sb.append("<td></td>");
+          sb.append("<td></td>");
+          sb.append("<td></td>");
+          sb.append("<td></td>");
+          sb.append("<td></td>");
+          sb.append("<td></td>");
+          continue;
+        }
         sb.append("<td>").append(String.format("%.5g", neurons[i].rate(error.training_samples))).append("</td>");
        sb.append("<td>").append(neurons[i].params.l1).append("</td>");
         sb.append("<td>").append(neurons[i].params.l2).append("</td>");

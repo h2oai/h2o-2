@@ -113,10 +113,9 @@ public class NN extends Job.ValidatedJob {
 
   /**
    * Activation functions
-   * Tanh, Rectifier and RectifierWithDropout have been tested.  TanhWithDropout and Maxout are experimental.
    */
   public enum Activation {
-    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
+    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout
   }
 
   /**

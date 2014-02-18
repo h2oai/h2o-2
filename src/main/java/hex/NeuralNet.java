@@ -174,10 +174,9 @@ public class NeuralNet extends ValidatedJob {
 
   /**
 * Activation functions
-* Tanh, Rectifier and RectifierWithDropout have been tested. TanhWithDropout and Maxout are experimental.
 */
   public enum Activation {
-    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
+    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout
   }
 
   /**
@@ -232,19 +231,22 @@ public class NeuralNet extends ValidatedJob {
     for( int i = 0; i < hidden.length; i++ ) {
       switch( activation ) {
         case Tanh:
-          ls[i + 1] = new Layer.Tanh(hidden[i]);
+          ls[i + 1] = new Tanh(hidden[i]);
           break;
         case TanhWithDropout:
-          ls[i + 1] = new Layer.TanhDropout(hidden[i]);
+          ls[i + 1] = new TanhDropout(hidden[i]);
           break;
         case Rectifier:
-          ls[i + 1] = new Layer.Rectifier(hidden[i]);
+          ls[i + 1] = new Rectifier(hidden[i]);
           break;
         case RectifierWithDropout:
-          ls[i + 1] = new Layer.RectifierDropout(hidden[i]);
+          ls[i + 1] = new RectifierDropout(hidden[i]);
           break;
         case Maxout:
-          ls[i + 1] = new Layer.Maxout(hidden[i]);
+          ls[i + 1] = new Maxout(hidden[i]);
+          break;
+        case MaxoutWithDropout:
+          ls[i + 1] = new MaxoutDropout(hidden[i]);
           break;
       }
     }
