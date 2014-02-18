@@ -7,7 +7,7 @@
 Runs GLM regression on PCA results, and allows for transformation of test data to match PCA transformations of training data.  
 }
 \usage{
-h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1e-05, standardize = TRUE, tweedie.p)
+h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1e-05, tweedie.p)
 }
 
 \arguments{
@@ -38,15 +38,12 @@ h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, eps
   \item{epsilon}{
   (Optional) Number indicating the cutoff for determining if a coefficient is zero.
   }
-  \item{standardize}{
-  (Optional) Logical value indicating whether the data should be standardized (set to mean = 0, variance = 1) before running GLM.
-  }
   \item{tweedie.p}{The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}
   }
 }
 
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+This method standardizes the data, obtains the first \code{ncomp} principal components using PCA (in decreasing order of standard deviation), and then runs GLM with the components as the predictor variables. 
 }
 \value{
   An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:
@@ -68,32 +65,15 @@ h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, eps
   The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
 }
 
-
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.prcomp}, \link{h2o.glm}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE,                    
-  + promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 # Run PCR on Prostate Data
-prostate.hex = h2o.importURL(localH2O, 
- + path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
- + key = "prostate.hex")
-h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, 
- + family = "binomial", 
-nfolds = 10, alpha = 0.5, ncomp = 3)
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5, ncomp = 3)
 }
 

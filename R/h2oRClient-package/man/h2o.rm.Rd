@@ -30,7 +30,7 @@ h2o.ls(localH2O)
 h2o.rm(object= localH2O, keys= "Last.value.0")
 h2o.ls(localH2O)
 
-#Remove an H2O object from the server and from the R environment
+# Remove an H2O object from the server and from the R environment
 h2o.rm(object= localH2O, keys= "prostate.hex")
 remove(prostate.hex)
 }
