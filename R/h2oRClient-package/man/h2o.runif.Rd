@@ -10,7 +10,8 @@
   }
 \value{A vector of random, uniformly distributed numbers. The elements are between 0 and 1 unless otherwise specified.}
 \examples{
-localH2O = h2o.init()
+library(h2o)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 s = h2o.runif(prostate.hex)
@@ -20,4 +21,5 @@ prostate.train = h2o.assign(prostate.train, "prostate.train")
 prostate.test = prostate.hex[s > 0.8,]
 prostate.test = h2o.assign(prostate.test, "prostate.test")
 nrow(prostate.train) + nrow(prostate.test)
+h2o.shutdown(localH2O)
 }

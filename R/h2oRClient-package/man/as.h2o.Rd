@@ -29,8 +29,12 @@ Converts an R object to an H2O Parsed data object.
 
 \examples{
 library(h2o)
-local.h2o<- h2o.init()
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+
+data(iris)
 summary(iris)
-iris.r<- iris
-iris.h2o<- as.h2o(local.h2o, iris.r, key="iris.h2o")
+iris.r <- iris
+iris.h2o <- as.h2o(localH2O, iris.r, key="iris.h2o")
 class(iris.h2o)
+h2o.shutdown(localH2O)
+}

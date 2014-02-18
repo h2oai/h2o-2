@@ -5,8 +5,7 @@
 H2O: K-Means Clustering
 }
 \description{
-Performs k-means clustering on an \code{\linkS4class{H2OParsedData} object.
-}}
+Performs k-means clustering on an \code{\linkS4class{H2OParsedData}} object.}
 \usage{
 h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", version = 1)
 }
@@ -54,4 +53,5 @@ covPath = system.file("extdata", "covtype.csv", package="h2oRClient")
 covtype.hex = h2o.importFile(localH2O, path = covPath)
 covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
 print(covtype.km)
+h2o.shutdown(localH2O)
 }
