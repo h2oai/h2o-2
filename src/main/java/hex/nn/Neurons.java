@@ -343,6 +343,8 @@ public abstract class Neurons {
       if( max > 1 )
         for( int o = 0; o < _a.length; o++ )
           _a[o] /= max;
+      if (!training && dropout != null)
+        Utils.div(_a, 2.f);
     }
 
     @Override protected void bprop() {
