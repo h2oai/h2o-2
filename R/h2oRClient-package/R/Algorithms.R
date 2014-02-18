@@ -1,7 +1,7 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
-h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02, n.bins=100, validation) {
+h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.1, n.bins=100, validation) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
@@ -634,10 +634,12 @@ h2o.prcomp <- function(data, tol=0, ignored_cols = "", standardize=TRUE, retx=FA
 
   destKey = .h2o.__uniqID("PCAModel")
   cc <- colnames(data)
-  if(is.character(ignored_cols) && ignored_cols[1] != "") {
-    if(any(!(ignored_cols %in% cc))) stop(paste(paste(ignored_cols[!(ignored_cols %in% cc)], collapse=','), 'is not a valid column name'))
+  if(is.character(ignored_cols)) {
+    if(ignored_cols[1] != "" && any(!(ignored_cols %in% cc))) 
+      stop(paste(paste(ignored_cols[!(ignored_cols %in% cc)], collapse=','), 'is not a valid column name'))
   } else {
-    if(any(ignored_cols < 1 | ignored_cols > length(cc))) stop(paste('Out of range explanatory variable', paste(ignored_cols[ignored_cols < 1 | ignored_cols > length(cc)], collapse=',')))
+    if(any(ignored_cols < 1 | ignored_cols > length(cc))) 
+      stop(paste('Out of range explanatory variable', paste(ignored_cols[ignored_cols < 1 | ignored_cols > length(cc)], collapse=',')))
     ignored_cols <- cc[ignored_cols]
   }
   
@@ -661,8 +663,7 @@ h2o.prcomp <- function(data, tol=0, ignored_cols = "", standardize=TRUE, retx=FA
   new("H2OPCAModel", key=destKey, data=data, model=result)
 }
 
-# setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
-h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
+h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
   args <- .verify_dataxy(data, x, y)
   
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
@@ -683,7 +684,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
   
   myScore[,ncomp+1] = data[,args$y_i]    # Bind response to frame of principal components
   myGLMData = new("H2OParsedData", h2o=data@h2o, key=myScore@key)
-  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, epsilon, standardize, tweedie.p)
+  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, epsilon, standardize = FALSE, tweedie.p)
 }
 
 .h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=TRUE) {

@@ -1,5 +1,42 @@
 # Unique methods to H2O
 # H2O client management operations
+
+.readableTime<-function(epochTimeMillis) {
+  days=epochTimeMillis/(24*60*60*1000)
+  hours=(days-trunc(days))*24
+  minutes=(hours-trunc(hours))*60
+  seconds=(minutes-trunc(minutes))*60
+  milliseconds=(seconds-trunc(seconds))*1000
+  durationVector=trunc(c(days,hours,minutes,seconds,milliseconds))
+  names(durationVector)=c("days","hours","minutes","seconds","milliseconds")
+  if(length(durationVector[durationVector>0])>1)
+  {showVec<-durationVector[durationVector>0][1:2]} else {showVec<-durationVector[durationVector>0]}
+  x1=as.numeric(showVec)
+  x2=names(showVec)
+  return(paste(x1,x2))
+}
+
+h2o.clusterInfo <- function(client) {
+  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
+  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
+  res = fromJSON(postForm(myURL, style = "POST"))
+  
+  nodeInfo = res$nodes
+  maxMem = sum(sapply(nodeInfo,function(x) as.numeric(x['max_mem_bytes']))) / (1024 * 1024 * 1024)
+  numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
+  clusterHealth =  all(sapply(nodeInfo,function(x) as.logical(x['num_cpus']))==TRUE)
+  
+  cat("R is connected to H2O cluster:\n")
+  cat("    H2O cluster uptime:       ", .readableTime(as.numeric(res$cloud_uptime_millis)), "\n")
+  cat("    H2O cluster version:      ", res$version, "\n")
+  cat("    H2O cluster name:         ", res$cloud_name, "\n")
+  cat("    H2O cluster total nodes:  ", res$cloud_size, "\n")
+  cat("    H2O cluster total memory: ", sprintf("%.2f GB", maxMem), "\n")
+  cat("    H2O cluster total cores:  ", numCPU, "\n")
+  cat("    H2O cluster healthy:      ", clusterHealth, "\n")  
+}
+
 h2o.startLauncher <- function() {
   myOS = Sys.info()["sysname"]
   
