@@ -144,14 +144,13 @@ class Basic(unittest.TestCase):
                 modelKey = glm['glm_model']['_key']
 
                 # This seems wrong..what's the format of the cm?
-                if 1==0:
-                    cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
-                    print "cm:", cm
-                    pctWrong = h2o_gbm.pp_cm_summary(cm);
-                    # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
+                cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]['_arr']
+                print "cm:", cm
+                pctWrong = h2o_gbm.pp_cm_summary(cm);
+                # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
 
-                    print "\nTrain\n==========\n"
-                    print h2o_gbm.pp_cm(cm)
+                print "\nTrain\n==========\n"
+                print h2o_gbm.pp_cm(cm)
 
 
                 # Score *******************************
@@ -167,7 +166,7 @@ class Basic(unittest.TestCase):
 
                 predictCMResult = h2o.nodes[0].predict_confusion_matrix(
                     actual='B.hex',
-                    vactual='C' + str(y),
+                    vactual='C' + str(y+1),
                     predict=predictKey,
                     vpredict='predict',
                     )

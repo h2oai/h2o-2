@@ -2,7 +2,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 get.eval.result <- function(conn, expr) {
-    res =  h2o.__exec2(conn, expr)
+    res =  .h2o.__exec2(conn, expr)
     return(new("H2OParsedData", h2o=conn, key=res$dest_key))
 }
 
@@ -10,9 +10,9 @@ test.op.precedence <- function(conn) {
     a = sample(10)
     b = sample(10)
     c = sample(10)
-    A = as.h2o.key(conn, a, "A")
-    B = as.h2o.key(conn, b, "B")
-    C = as.h2o.key(conn, c, "C")
+    A = as.h2o(conn, a, "A")
+    B = as.h2o(conn, b, "B")
+    C = as.h2o(conn, c, "C")
     s1 = a + b * c
     s2 = a - b - c
     s3 = a ^ 2 ^ 3

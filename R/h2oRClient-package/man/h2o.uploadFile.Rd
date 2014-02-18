@@ -8,7 +8,7 @@ Upload Local Data File
 Uploads a file from the local drive and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.uploadFile(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE)
+h2o.uploadFile(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE, version = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -36,6 +36,9 @@ The complete URL or normalized file path of the file to be imported. Each row of
   \item{silent}{
 (Optional) A logical value indicating whether or not to display an upload progress bar.
 }
+\item{version}{
+  (Optional) If \code{version = 1}, the file will be imported to a ValueArray object. Otherwise, if \code{version = 2}, the file will be imported as a FluidVecs object.
+  }
 }
 
 \details{
@@ -49,26 +52,14 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.importFile}}, \code{\link{h2o.importFolder}}
 }
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-prostate.hex = h2o.uploadFile(localH2O, path = system.file("extdata", 
-+ "prostate.csv", package="h2oRClient"), key = "prostate.hex")
+prostate.hex = h2o.uploadFile(localH2O, path = system.file("extdata", "prostate.csv", package="h2oRClient"), key = "prostate.hex")
 summary(prostate.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -86,6 +86,12 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
+    public DRFModel(DRFModel prior, float[] varimp) {
+      super(prior, varimp);
+      this.mtries = prior.mtries;
+      this.sample_rate = prior.sample_rate;
+      this.seed = prior.seed;
+    }
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
       int ntrees = numTrees();
@@ -115,6 +121,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
     return new DRFModel(model, ktrees, tstats);
+  }
+  protected DRFModel makeModel( DRFModel model, float[] varimp) {
+    return new DRFModel(model, varimp);
   }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 999; min_rows = 1; }
 
@@ -194,10 +203,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null, build_tree_per_node);
     // Compute variable importance if required
     if (classification && importance) {
-      float varimp[] = doVarImp(model, fr);
-      Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(varimp));
-      // Update the model
-      model.varimp = varimp;
+      model = doVarImp(model, fr);
+      Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(model.varimp));
     }
 
     model.unlock(self());       // Update and unlock model
@@ -211,7 +218,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
    * for the correct class in the untouched oob data.
    * The average of this number over all trees in the forest is the raw importance score for variable m.
    * */
-  private float[] doVarImp(final DRFModel model, final Frame f) {
+  private DRFModel doVarImp(final DRFModel model, final Frame f) {
     // Score a dataset as usual but collects properties per tree.
     TreeVotes cx = TreeVotes.varimp(model, f, sample_rate);
     final double[] origAcc = cx.accuracy(); // original accuracy per tree
@@ -248,7 +255,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
     ForkJoinTask.invokeAll(computers);
     // after all varimp contains variable importance of all columns used by a model.
-    return varimp;
+    return makeModel(model, varimp);
   }
 
   /** Fill work columns:

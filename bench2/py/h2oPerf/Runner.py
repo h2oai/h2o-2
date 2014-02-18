@@ -81,6 +81,7 @@ class PerfRunner:
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
             test = self.tests_not_started.pop(0)
+            print "Beginning test " + test.test_name
 
             self.isEC2 = test.aws
             self.xmx = test.heap_bytes_per_node

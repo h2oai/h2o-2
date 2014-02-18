@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10, enable_benchmark_log=True)
+            h2o.build_cloud(1,java_heap_GB=14, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
-            (10001, 3, 'cA', 300), 
+            (100, 3, 'cA', 300), 
             # (10001, 2, 'cA', 300), 
             # (10000, 500, 'cH', 300), 
             # (10000, 1000, 'cI', 300), 

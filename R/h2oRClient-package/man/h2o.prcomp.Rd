@@ -8,19 +8,25 @@ Principal Components Analysis
 Performs principal components analysis on the given data set.
 }
 \usage{
-h2o.prcomp(data, tol = 0, standardize = TRUE)
+h2o.prcomp(data, tol = 0, ignored_cols = "", standardize = TRUE, retx = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{
-An \code{\linkS4class{H2OParsedData}} object on which to run principal components analysis.
-}
+  An \code{\linkS4class{H2OParsedData}} object on which to run principal components analysis.
+  }
   \item{tol}{
-A value indicating the magnitude below which components should be omitted. (Components are omitted if their standard deviations are less than or equal to tol times the standard deviation of the first component.) With the default setting \code{tol = 0}, no components are omitted.
-}
+  (Optional) A value indicating the magnitude below which components should be omitted. (Components are omitted if their standard deviations are less than or equal to tol times the standard deviation of the first component.) With the default setting \code{tol = 0}, no components are omitted.
+  }
+  \item{ignored_cols}{
+  (Optional) A vector of column names or indices indicating the features to ignore when performing PCA. By default, all columns in the dataset are analyzed.
+  }
   \item{standardize}{
-A logical value indicating whether the variables should be shifted to be zero centered and scaled to have unit variance before the analysis takes place.
-}
+  (Optional) A logical value indicating whether the variables should be shifted to be zero centered and scaled to have unit variance before the analysis takes place.
+  }
+  \item{retx}{
+  (Optional) A logical value indicating whether the rotated variables should be returned.
+  }
 }
 \details{
 The calculation is done by a singular value decomposition of the (possibly standardized) data set. 
@@ -31,12 +37,6 @@ An object of class \code{\linkS4class{H2OPCAModel}} with slots key, data, and mo
 \item{sdev }{The standard deviations of the principal components (i.e., the square roots of the eigenvalues of the covariance/correlation matrix).}
 \item{rotation }{The matrix of variable loadings (i.e., a matrix whose columns contain the eigenvectors).}
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
 \note{
 The signs of the columns of the rotation matrix are arbitrary, and so may differ between different programs for PCA.
 }
@@ -45,11 +45,11 @@ The signs of the columns of the rotation matrix are arbitrary, and so may differ
 
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.pcr}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)

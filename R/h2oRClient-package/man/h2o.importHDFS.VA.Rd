@@ -8,7 +8,7 @@
   Imports a HDFS file or set of files in a directory and parses them, returning a list of objects containing the identifying hex keys.
 }
 \usage{
-h2o.importHDFS.VA(object, path, pattern = "", parse = TRUE, header, sep = "", col.names)
+h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -19,8 +19,11 @@ h2o.importHDFS.VA(object, path, pattern = "", parse = TRUE, header, sep = "", co
     The path of the file or folder directory to be imported. If it does not contain an absolute path, the file name is relative to the current working directory.
   }
   \item{pattern}{
-(Optional) Character string containing a regular expression to match file(s) in the folder.
+  (Optional) Character string containing a regular expression to match file(s) in the folder.
   }
+  \item{key}{
+  (Optional) The unique hex key assigned to the imported file. If none is given, a key will automatically be generated based on the file path.
+}
   \item{parse}{
   (Optional) A logical value indicating whether the file should be parsed after import.
   }
@@ -45,33 +48,16 @@ When the path is a directory, if \code{parse = TRUE}, the function returns a lis
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 \code{\link{h2o.importFolder.VA}}, \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importURL.VA}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
-+ promptUpgrade = FALSE)
-covtype.hex = h2o.importHDFS.VA(localH2O, 
-+ path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard/covtype.data", 
-+ parse = TRUE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+covtype.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard/covtype.data", parse = TRUE)
 summary(covtype.hex)
 
-stdfolder.data = h2o.importHDFS.VA(localH2O, 
-+ path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard", 
-+ parse = FALSE)
+stdfolder.data = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard", parse = FALSE)
 stdfolder.parsed = vector("list", length(stdfolder.data))
 for(i in 1:length(stdfolder.data))
   stdfolder.parsed[[i]] = h2o.parseRaw(stdfolder.data[[i]])

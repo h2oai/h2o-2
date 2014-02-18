@@ -214,7 +214,7 @@ public class Env extends Iced {
     _d  = Arrays.copyOf(e._d  ,_sp);
     _fcn= Arrays.copyOf(e._fcn,_sp);
     _tod= e._tod;
-    _display = Arrays.copyOf(e._display,_tod+1);
+    _display = e._display.clone();
     if( cntrefs ) {             // If counting refs
       _refcnt = new IcedHashMap<Vec,IcedInt>();
       _refcnt.putAll(e._refcnt); // Deep copy the existing refs

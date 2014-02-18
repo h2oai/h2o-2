@@ -1449,6 +1449,7 @@ class H2O(object):
 
     # &offset=
     # &view=
+    # FIX! need to have max > 1000? 
     def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False, 
         timeoutSecs=30, useVA=False):
         if beta_features and not useVA:
@@ -2182,18 +2183,22 @@ class H2O(object):
         verboseprint("\nneural_view result:", dump_json(a))
         return a
 
-    def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, **kwargs):
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, numRows=None, numCols=None, **kwargs):
         if beta_features and not useVA:
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': 1000,
+                # h2o won't let me go bigger?
+                # 'max_ncols': 1000,
+                'max_ncols': 1000000,
                 }
         else:
             params_dict = {
                 'key': key,
                 'x': None,
-                'max_column_display': 1000,
+                # h2o won't let me go bigger?
+                # 'max_column_display': 1000,
+                'max_column_display': 1000000,
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
@@ -2203,7 +2208,7 @@ class H2O(object):
         
         # FIX!..not there yet for 2
         # if not beta_features:
-        h2o_cmd.infoFromSummary(a, noPrint=noPrint)
+        h2o_cmd.infoFromSummary(a, noPrint=noPrint, numRows=numRows, numCols=numCols)
         return a
 
     def log_view(self, timeoutSecs=10, **kwargs):

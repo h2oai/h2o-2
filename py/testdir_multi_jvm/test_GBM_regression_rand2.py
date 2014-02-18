@@ -76,7 +76,13 @@ class Basic(unittest.TestCase):
             for trial in range(3):
                 # use this to set any defaults you want if the pick doesn't set
                 print "Regression!"
-                params = {'response': 'C54', 'ignored_cols_by_name': 'C5,C6,C7,C8,C9', 'ntrees': 2, 'classification': 0}
+                params = {
+                    'response': 'C54', 
+                    # 'ignored_cols_by_name': 'C5,C6,C7,C8,C9', 
+                    'ntrees': 2, 
+                    'classification': 0,
+                    'validation': testKey,
+                    }
                 h2o_gbm.pickRandGbmParams(paramsDict, params)
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
@@ -90,6 +96,7 @@ class Basic(unittest.TestCase):
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 
                 gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
+                print "gbmTrainView:", h2o.dump_json(gbmTrainView)
                 # errrs from end of list? is that the last tree?
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast

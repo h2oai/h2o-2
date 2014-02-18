@@ -26,8 +26,7 @@ A table displaying the last 6 rows of an \code{\linkS4class{H2OParsedData} objec
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 tail(australia.hex, 10)

@@ -527,9 +527,9 @@ public class DTree extends Iced {
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be separate).
     @API(help="Testing key for cm and errs") public final Key testKey;
-    // @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cms[/*CM-per-tree*/][][];
+    // Confusion matrix per each generate tree or null
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
-    @API(help="Unscaled variable importance for individual input variables.") public float[] varimp;
+    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
     @API(help="Tree statistics") public final TreeStats treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
@@ -539,9 +539,10 @@ public class DTree extends Iced {
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
       treeStats = null;
+      this.varimp = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, ConfusionMatrix[] cms, TreeStats tstats) {
+    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, float[] varimp) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -552,16 +553,21 @@ public class DTree extends Iced {
       if (errs     != null) this.errs      = errs;     else this.errs      = prior.errs;
       if (cms      != null) this.cms       = cms;      else this.cms       = prior.cms;
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
+      if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
     }
 
     public TreeModel(TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
-      this(prior, append(prior.treeBits, trees), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats);
+      this(prior, append(prior.treeBits, trees), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null);
     }
     public TreeModel(TreeModel prior, DTree[] trees, TreeStats tstats) {
-      this(prior, append(prior.treeBits, trees), null, null, tstats);
+      this(prior, append(prior.treeBits, trees), null, null, tstats, null);
     }
     public TreeModel(TreeModel prior, double err, ConfusionMatrix cm) {
-      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null);
+      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, null);
+    }
+
+    public TreeModel(TreeModel prior, float[] varimp) {
+      this(prior, null, null, null, null, varimp);
     }
 
     private static final CompressedTree[][] append(CompressedTree[][] prior, DTree[] tree ) {
