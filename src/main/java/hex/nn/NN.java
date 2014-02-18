@@ -229,11 +229,15 @@ public class NN extends Job.ValidatedJob {
     source.read_lock(self());
     if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
       validation.read_lock(self());
+    Log.info("Number of chunks of the training data: " + source.anyVec().nChunks());
+    if (validation != null)
+      Log.info("Number of chunks of the validation data: " + validation.anyVec().nChunks());
 
     if (_dinfo == null)
       _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true, ignore_const_cols), 1, true);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.model_info().initializeMembers();
+    //Log.info("Initial model:\n" + model.model_info());
     final long model_size = model.model_info().size();
     Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
     Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
@@ -361,7 +365,8 @@ public class NN extends Job.ValidatedJob {
         nums[i] = fr.vecs()[i].at(row); //wrong: get the FIRST 717 columns (instead of the non-const ones), but doesn't matter here (just want SOME numbers)
       ((Neurons.Input)neurons[0]).setInput(row, nums, 0, null);
       final double[] responses = new double[]{fr.vecs()[p.source.numCols()-1].at(row)};
-      NNTask.step(row, neurons, model_info, true, responses);
+      final long seed = row;
+      NNTask.step(seed, neurons, model_info, true, responses);
     }
 
     // take the trained model_info and build another Neurons[] for testing
