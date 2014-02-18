@@ -133,7 +133,6 @@ public abstract class Neurons {
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
       double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
-      final double delta = r * d;
 
       // TODO finish per-weight acceleration, doesn't help for now
 //        if( _wp != null && d != 0 ) {
@@ -152,10 +151,20 @@ public abstract class Neurons {
 //          _wp[w] = sign ? mult : -mult;
 //        }
 
-      _w[w] += delta;
-      if( _wm != null ) {
-        _w[w] += m * _wm[w];
-        _wm[w] = (float)(delta);
+      if (!params.nesterov_accelerated_gradient) {
+        final double delta = r * d;
+        _w[w] += delta;
+        if( _wm != null ) {
+          _w[w] += m * _wm[w];
+          _wm[w] = (float)(delta);
+        }
+      } else {
+        if( _wm != null ) {
+          _wm[w] *= m;
+          _wm[w] += d;
+          d = _wm[w];
+        }
+        _w[w] += r * d;
       }
       if (params.max_w2 != Double.POSITIVE_INFINITY)
         r2 += _w[w] * _w[w];
@@ -164,11 +173,22 @@ public abstract class Neurons {
       final double scale = Math.sqrt(params.max_w2 / r2);
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
-    final double delta = r * g;
-    _b[u] += delta;
-    if( _bm != null ) {
-      _b[u] += m * _bm[u];
-      _bm[u] = delta;
+
+    if (!params.nesterov_accelerated_gradient) {
+      final double delta = r * g;
+      _b[u] += delta;
+      if( _bm != null ) {
+        _b[u] += m * _bm[u];
+        _bm[u] = delta;
+      }
+    } else {
+      double d = g;
+      if( _bm != null ) {
+        _bm[u] *= m;
+        _bm[u] += d;
+        d = _bm[u];
+      }
+      _b[u] += r * d;
     }
   }
 

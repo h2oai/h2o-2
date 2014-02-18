@@ -104,6 +104,9 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Shuffle training data", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
+  @API(help = "Use Nesterov accelerated gradient", filter = Default.class, json = true)
+  public boolean nesterov_accelerated_gradient = true;
+
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
   }
