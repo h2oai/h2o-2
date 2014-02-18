@@ -18,22 +18,10 @@ Object representing the model built by an H2O algorithm on a FluidVecs dataset.
 \section{Methods}{
 No methods defined with class "H2OModel" in the signature.
 }
-\references{
-%%  ~~put references to the literature/web site here~~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
-\code{\linkS4class{H2OGLMModel}, \linkS4class{H2OKMeansModel}, \linkS4class{H2ODRFModel}, \linkS4class{H2OGBMModel}, \linkS4class{H2OPCAModel}}
+\code{\linkS4class{H2OGLMModel}, \linkS4class{H2OKMeansModel}, \linkS4class{H2ODRFModel}, \linkS4class{H2OGBMModel}, \linkS4class{H2OPCAModel}, \linkS4class{H2ONNModel}}
 }
 \examples{
 showClass("H2OModel")

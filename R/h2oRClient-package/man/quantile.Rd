@@ -17,16 +17,14 @@ A vector describing the percentiles at the given cutoffs for the \code{\linkS4cl
 }
 
 \examples{
-Request quantiles for an H2O parsed data set: 
+# Request quantiles for an H2O parsed data set: 
 
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
-prosPath = system.file("extdata", "prostate.csv", 
- + package="h2oRClient")
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 
-Request quantiles for a subset of columns in an H2O parsed data set 
+# Request quantiles for a subset of columns in an H2O parsed data set 
 quantile(prostate.hex[,3])
 for(i in 1:ncol(prostate.hex))
   quantile(prostate.hex[,i])

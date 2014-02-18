@@ -8,7 +8,7 @@ Parse Raw Data File
 Parses a raw data file, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.parseRaw(data, key = "", header, sep = "", col.names)
+h2o.parseRaw(data, key = "", header, sep = "", col.names, version = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -27,36 +27,28 @@ An \code{\linkS4class{H2ORawData}} object to be parsed.
   \item{col.names}{
 (Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
   }
+  \item{version}{
+  (Optional) If \code{version = 1}, the file will be parsed to a ValueArray object. Otherwise, if \code{version = 2}, the file will be parsed to a FluidVecs object.
+  }
 }
 \details{
 After the raw data file is parsed, it will be automatically deleted from the H2O server.
 }
 \value{
+An object of class \code{\linkS4class{H2ORawData}}, representing the unparsed dataset that was imported.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.uploadFile}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
-+ silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.raw = h2o.importFile(localH2O, path = prosPath, parse = FALSE)
 # Do not modify prostate.csv on disk at this point!

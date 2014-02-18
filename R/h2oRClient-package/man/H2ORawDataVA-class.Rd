@@ -20,24 +20,14 @@ Objects can be created by calls of the form \code{new("H2ORawDataVA", ...)}.
 }
 \section{Methods}{
   \describe{
+    \item{h2o.parseRaw.VA}{\code{signature(data = "H2OParsedDataVA", key = "character", header = "logical" sep = "character", col.names = "H2OParsedDataVA")}: ... }
     \item{show}{\code{signature(object = "H2ORawDataVA")}: ... }
 	 }
 }
-\references{
-%%  ~~put references to the literature/web site here~~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
+\code{\linkS4class{H2OParsedDataVA}}
 }
 \examples{
 showClass("H2ORawDataVA")
