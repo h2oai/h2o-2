@@ -498,7 +498,7 @@ public class NeuralNet extends ValidatedJob {
     Softmax output = (Softmax) ls[ls.length - 1];
     if( output.target() == -1 )
       return false;
-    for (Layer l : ls) l.fprop(false);
+    for (Layer l : ls) l.fprop(-1, false);
     double[] out = ls[ls.length - 1]._a;
     int target = output.target();
     for( int o = 0; o < out.length; o++ ) {
@@ -525,7 +525,7 @@ public class NeuralNet extends ValidatedJob {
   // regression scoring
   static void error(Layer[] ls, Errors e) {
     Linear linear = (Linear) ls[ls.length - 1];
-    for (Layer l : ls) l.fprop(false);
+    for (Layer l : ls) l.fprop(-1, false);
     double[] output = ls[ls.length - 1]._a;
     double[] target = linear.target();
     e.mean_square = 0;
@@ -699,6 +699,19 @@ public class NeuralNet extends ValidatedJob {
         }
       }
     }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      for (int i=0; i<weights.length; ++i)
+        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i]));
+      for (int i=0; i<biases.length; ++i)
+        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
+
+      sb.append("\n");
+      return sb.toString();
+    }
+
     public void toJavaHtml(StringBuilder sb) {
       //DocGen.HTML.title(sb, "The Java Neural Net model is not implemented yet.");
     }
@@ -892,7 +905,7 @@ public class NeuralNet extends ValidatedJob {
         clones[y].init(clones, y, false);
       }
       ((Input) clones[0])._pos = rowInChunk;
-      for (Layer clone : clones) clone.fprop(false);
+      for (Layer clone : clones) clone.fprop(-1, false);
       double[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
       // convert to float

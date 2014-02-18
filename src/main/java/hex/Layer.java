@@ -1,6 +1,5 @@
 package hex;
 
-import junit.framework.Assert;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -65,33 +64,51 @@ public abstract class Layer extends Iced {
   /**
    * Helper class for dropout, only to be used from within a Layer
    */
-  private class Dropout {
+
+  public class Dropout {
     private transient Random _rand;
     private transient byte[] _bits;
 
-    private Dropout(int units) {
+    public Dropout() {
+    }
+
+    @Override
+    public String toString() {
+      String s = "Dropout: " + super.toString();
+      s += "\nRandom: " + _rand.toString();
+      s += "\nbits: ";
+      for (int i=0; i< _bits.length*8; ++i) s += unit_active(i) ? "1":"0";
+      s += "\n";
+      return s;
+    }
+
+    Dropout(int units) {
       _bits = new byte[(units+7)/8];
-      //_rand is left null, user must call Neurons.setSeed() for each training row to create a new _rand
+      _rand = new Random();
     }
 
     // for input layer
-    private void clearSomeInput(Layer previous) {
-      Assert.assertTrue("Must call setSeed() first", _rand != null);
-      assert(previous.isInput());
-      final double rate = ((Input)previous).params.input_dropout_ratio;
-      for( int i = 0; i < previous._a.length; i++ ) {
-        if (_rand.nextFloat() < rate) previous._a[i] = 0;
-      }
+    public void randomlySparsifyActivation(double[] a, double rate, long seed) {
+      if (rate == 0) return;
+      setSeed(seed);
+      for( int i = 0; i < a.length; i++ )
+        if (_rand.nextFloat() < rate) a[i] = 0;
     }
 
     // for hidden layers
-    private void fillBytes() {
-      Assert.assertTrue("Must call setSeed() first", _rand != null);
+    public void fillBytes(long seed) {
+      setSeed(seed);
       _rand.nextBytes(_bits);
     }
 
-    private boolean unit_active(int o) {
+    public boolean unit_active(int o) {
       return (_bits[o / 8] & (1 << (o % 8))) != 0;
+    }
+
+    private void setSeed(long seed) {
+      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
+      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
+      _rand.setSeed(seed);
     }
   }
 
@@ -109,6 +126,11 @@ public abstract class Layer extends Iced {
     _previous = ls[index - 1];
     _input = (Input) ls[0];
 
+    if (this instanceof Maxout || this instanceof TanhDropout ||
+            this instanceof RectifierDropout) {
+      dropout = new Dropout(units);
+    }
+
     if( weights ) {
       _w = new float[units * _previous.units];
       _b = new double[units];
@@ -123,12 +145,13 @@ public abstract class Layer extends Iced {
    *
    // helper to initialize weights
    // adaptive initialization uses prefactor * sqrt(6 / (units_input_layer + units_this_layer))
-   * @param rng random generator to use
+   * @param seed random generator seed to use
    * @param prefactor prefactor for initialization (typical value: 1.0)
    */
   // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
-  void randomize(Random rng, double prefactor) {
+  void randomize(long seed, double prefactor) {
     if (_w == null) return;
+    final Random rng = water.util.Utils.getDeterRNG(seed);
 
     if (params.initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
       final double range = prefactor * Math.sqrt(6. / (_previous.units + units));
@@ -163,10 +186,7 @@ public abstract class Layer extends Iced {
   public void close() {
   }
 
-  protected void setSeed(long seed) {
-  }
-
-  protected abstract void fprop(boolean training);
+  protected abstract void fprop(long seed, boolean training);
 
   protected abstract void bprop();
 
@@ -243,7 +263,16 @@ public abstract class Layer extends Iced {
 
     @Override public void init(Layer[] ls, int index, boolean weights) {
       _a = new double[units];
+      dropout = new Dropout(units);
     }
+
+    public void inputDropout(long seed) {
+      double rate = params.input_dropout_ratio;
+      if (rate == 0 || dropout == null) return;
+      seed += params.seed + 0x1337B4BE;
+      dropout.randomlySparsifyActivation(_a, rate, seed);
+    }
+
 
     @Override protected void bprop() {
       throw new UnsupportedOperationException();
@@ -341,7 +370,7 @@ public abstract class Layer extends Iced {
       }
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       if( _chunks == null )
         _chunks = new Chunk[vecs.length];
       for( int i = 0; i < vecs.length; i++ ) {
@@ -350,6 +379,7 @@ public abstract class Layer extends Iced {
           _chunks[i] = vecs[i].chunk(_pos);
       }
       ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), subs, muls, categoricals_lens, categoricals_mins);
+      if (training) inputDropout(seed);
     }
   }
 
@@ -430,8 +460,9 @@ public abstract class Layer extends Iced {
     /**
      * forward propagation means filling the activation values with all the row's column values
      */
-    @Override protected void fprop(boolean ignored) {
+    @Override protected void fprop(long seed, boolean training) {
       set(_chunks, _a, (int) _pos, _subs, _muls, _categoricals_lens, _categoricals_mins);
+      if (training) inputDropout(seed);
     }
 
     static void set(Chunk[] chunks, double[] a, int row, double[] subs, double[] muls, int[] catLens, int[] catMins) {
@@ -479,11 +510,11 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 4.0f);
+        randomize(params.seed + 0xBAD5EED + index, 4.0f);
       }
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       double max = Float.NEGATIVE_INFINITY;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
@@ -578,11 +609,11 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
+        randomize(params.seed + 0xBAD5EED + index, 1.0f);
       }
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         for( int i = 0; i < _previous._a.length; i++ )
@@ -657,11 +688,11 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
+        randomize(params.seed + 0xBAD5EED + index, 1.0f);
       }
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         if( !training || dropout == null || dropout.unit_active(o) ) {
@@ -700,24 +731,16 @@ public abstract class Layer extends Iced {
       super(units);
     }
     @Override
-    protected void setSeed(long seed) {
-      super.setSeed(seed);
-      seed += params.seed + 0xDA7A;
-      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
-      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
-      if (dropout == null) dropout = createDropout(units);
-      if (dropout._rand == null) dropout._rand = new Random(seed);
-      else dropout._rand.setSeed(seed);
-    }
-    @Override
-    protected void fprop(boolean training) {
+    protected void fprop(long seed, boolean training) {
       if (training) {
-        dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
+        seed += params.seed + 0xDA7A6000;
+        dropout.fillBytes(seed);
+        super.fprop(seed, true);
       }
-      super.fprop(training);
-      if (!training) Utils.div(_a, 2.f);
+      else {
+        super.fprop(seed, false);
+        Utils.div(_a, 2.f);
+      }
     }
   }
 
@@ -738,7 +761,7 @@ public abstract class Layer extends Iced {
       _b = new double[units];
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         for( int i = 0; i < _previous._a.length; i++ )
@@ -776,19 +799,15 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
+        randomize(params.seed + 0xBAD5EED + index, 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
     }
 
-    @Override protected void fprop(boolean training) {
-      if (dropout != null && training) {
-        dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
-      }
-
+    @Override protected void fprop(long seed, boolean training) {
+      if (dropout != null && training)
+        dropout.fillBytes(seed);
       double max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
@@ -806,6 +825,8 @@ public abstract class Layer extends Iced {
       if( max > 1 )
         for( int o = 0; o < _a.length; o++ )
           _a[o] /= max;
+      if (!training && dropout != null)
+        Utils.div(_a, 2.f);
     }
 
     @Override protected void bprop() {
@@ -832,13 +853,13 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       if( weights ) {
-        randomize(water.util.Utils.getDeterRNG(params.seed + 0xBAD5EED + index), 1.0f);
+        randomize(params.seed + 0xBAD5EED + index, 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         if( !training || dropout == null || dropout.unit_active(o) ) {
@@ -870,26 +891,17 @@ public abstract class Layer extends Iced {
       super(units);
     }
     @Override
-    protected void setSeed(long seed) {
-      super.setSeed(seed);
-      seed += params.seed + 0x3C71F1ED;
-      if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
-      if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
-      if (dropout == null) dropout = createDropout(units);
-      if (dropout._rand == null) dropout._rand = new Random(seed);
-      else dropout._rand.setSeed(seed);
-    }
-    @Override
-    protected void fprop(boolean training) {
+    protected void fprop(long seed, boolean training) {
       if (training) {
-        dropout.fillBytes();
-        if (_previous.isInput())
-          dropout.clearSomeInput(_previous);
+        seed += params.seed + 0x3C71F1ED;
+        dropout.fillBytes(seed);
+        super.fprop(seed, true);
       }
-      super.fprop(training);
-      if (!training) Utils.div(_a, 2.f);
+      else {
+        super.fprop(seed, false);
+        Utils.div(_a, 2.f);
+      }
     }
-
   }
 
   public static class RectifierPrime extends Rectifier {
@@ -908,7 +920,7 @@ public abstract class Layer extends Iced {
         _b[i] = 1;
     }
 
-    @Override protected void fprop(boolean training) {
+    @Override protected void fprop(long seed, boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         for( int i = 0; i < _previous._a.length; i++ )

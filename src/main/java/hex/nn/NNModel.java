@@ -231,30 +231,31 @@ public class NNModel extends Model {
 //        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i]));
 //      for (int i=0; i<biases.length; ++i)
 //        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
-//      if (weights_momenta != null) {
-//        for (int i=0; i<weights_momenta.length; ++i)
-//          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i]));
-//      }
-//      if (biases_momenta != null) {
-//        for (int i=0; i<biases_momenta.length; ++i)
-//          sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
-//      }
-//      sb.append("\nunits[]="+Arrays.toString(units));
-//      sb.append("\nprocessed global: "+get_processed_global());
-//      sb.append("\nprocessed local:  "+get_processed_local());
-//      sb.append("\nprocessed total:  " + get_processed_total());
+////      if (weights_momenta != null) {
+////        for (int i=0; i<weights_momenta.length; ++i)
+////          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i]));
+////      }
+////      if (biases_momenta != null) {
+////        for (int i=0; i<biases_momenta.length; ++i)
+////          sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
+////      }
+////      sb.append("\nunits[]="+Arrays.toString(units));
+////      sb.append("\nprocessed global: "+get_processed_global());
+////      sb.append("\nprocessed local:  "+get_processed_local());
+////      sb.append("\nprocessed total:  " + get_processed_total());
+//      sb.append("\n");
       return sb.toString();
     }
     void initializeMembers() {
       randomizeWeights();
       //TODO: determine good/optimal/best initialization scheme for biases
-      //For now, reproduce behavior of old NeuralNet code
       // hidden layers
       for (int i=0; i<parameters.hidden.length; ++i) {
         if (parameters.activation == NN.Activation.Rectifier
                 || parameters.activation == NN.Activation.RectifierWithDropout
                 || parameters.activation == NN.Activation.Maxout) {
-          Arrays.fill(biases[i], 1.);
+          Arrays.fill(biases[i], 1.); //old behavior
+//          Arrays.fill(biases[i], i == 0 ? 0.5 : 1.); //new behavior, might be slightly better
         }
         else if (parameters.activation == NN.Activation.Tanh) {
           Arrays.fill(biases[i], 0.0);
@@ -285,7 +286,7 @@ public class NNModel extends Model {
     }
     void randomizeWeights() {
       for (int i=0; i<weights.length; ++i) {
-        final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD5EED + i);
+        final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD5EED + i+1); //to match NeuralNet behavior
         for( int j = 0; j < weights[i].length; j++ ) {
           if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.UniformAdaptive) {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf

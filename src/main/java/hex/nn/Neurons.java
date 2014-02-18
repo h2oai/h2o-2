@@ -253,7 +253,7 @@ public abstract class Neurons {
       for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
       System.arraycopy(nums, 0, _a, _dinfo.numStart(), nums.length);
       final double rate = params.input_dropout_ratio;
-      if (rate == 0 || seed < 0) return; // seed is set to -1 for testing (no input dropout done there)
+      if (rate == 0 || dropout == null) return;
       seed += params.seed + 0x1337B4BE;
       dropout.randomlySparsifyActivation(_a, rate, seed);
     }

@@ -43,7 +43,7 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
-    seed += model_info().get_processed_total(); //avoid periodicity
+    seed += model_info().get_processed_global(); //avoid periodicity
     ((Neurons.Input)_neurons[0]).setInput(seed, nums, numcats, cats);
     step(seed, _neurons, _output, _training, responses);
   }
@@ -132,9 +132,9 @@ public class NNTask extends FrameTask<NNTask> {
 
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
-  public static void step(long row, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
+  public static void step(long seed, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
     for (int i=1; i<neurons.length-1; ++i) {
-      neurons[i].fprop(row, training);
+      neurons[i].fprop(seed, training);
     }
     if (minfo.get_params().classification) {
       ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
@@ -162,9 +162,9 @@ public class NNTask extends FrameTask<NNTask> {
       /**
        * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
        */
-      //Note: in multi-vm operation, all vms sync their number of processed rows after every reduce() call.
+      //Note: in multi-node operation, all nodes sync their number of processed rows after every reduce() call.
       //That means that the number of processed rows will jump regularly, and then continue to increase in steps of 1.
-      //This is equivalent to saying that each VM thinks that its rows come first in every epoch, which is probably
+      //This is equivalent to saying that each node thinks that its rows comes first in every epoch, which is probably
       //the closest thing to do when trying to match the single-node behavior.
       minfo.add_processed_local(1);
 //      if (minfo.get_processed_local() % 1000 == 0) {

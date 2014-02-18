@@ -61,15 +61,15 @@ public abstract class Trainer {
     }
 
     final void step(long seed) {
-      for (Layer l : _ls) l.setSeed(seed);
-      fprop();
+//      Log.info("step with seed " + seed);
+      fprop(seed);
       for( int i = 1; i < _ls.length - 1; i++ )
         Arrays.fill(_ls[i]._e, 0);
       bprop();
     }
 
-    final void fprop() {
-      for (Layer _l : _ls) _l.fprop(true);
+    final void fprop(long seed) {
+      for (Layer _l : _ls) _l.fprop(seed, true);
     }
 
     final void bprop() {
@@ -175,7 +175,10 @@ public abstract class Trainer {
               if( job != null && (!Job.isRunning(job) || !NeuralNet.running ) )
                 break;
               try {
-                trainer.step(thread_num * _stepsPerThread + input._pos);
+//                long seed = thread_num * _stepsPerThread + input._pos; //BAD
+                long seed = new Random().nextLong(); //GOOD
+//                long seed = thread_num * _stepsPerThread + _processed.get(); //TRY
+                trainer.step(seed);
                 input.move();
                 _processed.incrementAndGet();
               } catch (Exception e) {
@@ -634,7 +637,7 @@ public abstract class Trainer {
         int group = device.getMaxWorkGroupSize();
         Input input = (Input) _ls[0];
         while (true) {
-          input.fprop(true);
+          input.fprop(new Random().nextLong(), true);
           for( int i = 0; i < input._a.length; i++ )
             a[0].getBuffer().put(i, (float)input._a[i]);
           queue.putWriteBuffer(a[0], false);

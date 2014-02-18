@@ -24,7 +24,6 @@ import static water.util.MRUtils.sampleFrame;
 
 public class NNvsNeuralNet extends TestUtil {
   Frame _train, _test;
-  Frame _train2, _test2;
 
   @BeforeClass public static void stall() {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
@@ -54,26 +53,28 @@ public class NNvsNeuralNet extends TestUtil {
     // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
     // Note: Initial weight distributions are copied, but what is tested is the stability behavior.
 
-//    NN.Activation[] activations = { NN.Activation.Rectifier };
-    NN.Activation[] activations = { NN.Activation.RectifierWithDropout };
+    NN.Activation[] activations = { NN.Activation.Tanh };
+//    NN.Activation[] activations = { NN.Activation.RectifierWithDropout };
     NN.Loss[] losses = { NN.Loss.CrossEntropy };
     NN.InitialWeightDistribution[] dists = { NN.InitialWeightDistribution.UniformAdaptive };
-    double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
+    double[] initial_weight_scales = { 0.01 };
     double[] holdout_ratios = { 0.8 };
     int[][] hiddens = { {20,20} };
     double[] rates = { 0.01 };
 
-    String[] files = { "smalldata/mnist/train.csv" };
-    int[] epochs = { 3 };
-    int num_repeats = 10;
+//    String[] files = { "smalldata/mnist/train.csv" };
+//    int[] epochs = { 2 };
 
-//    String[] files = { "smalldata/iris/iris.csv" };
-//    int[] epochs = { 100 };
-//    int num_repeats = 100;
+    String[] files = { "smalldata/iris/iris.csv" };
+    int[] epochs = { 1 };
+
+//    String[] files = { "smalldata/covtype/covtype.20k.data" };
+//    int[] epochs = { 10 };
 
 //    String[] files = { "smalldata/logreg/prostate.csv" };
 //    int[] epochs = { 100 };
-//    int num_repeats = 10;
+
+    int num_repeats = 1;
 
     //set parameters
     double p0 = 0.5;
@@ -81,7 +82,7 @@ public class NNvsNeuralNet extends TestUtil {
     double p1 = 0.9;
     double l1 = 1e-5;
     double l2 = 0;
-    double max_w2 = 20;
+    double max_w2 = 15;
     double input_dropout = 0.3;
     double rate_annealing = 1e-6;
 
@@ -99,6 +100,7 @@ public class NNvsNeuralNet extends TestUtil {
                       double[] b = new double[hidden.length+2];
                       double[] ba = new double[hidden.length+2];
                       double[] bb = new double[hidden.length+2];
+                      long numweights = 0, numbiases = 0;
                       for (int repeat = 0; repeat < num_repeats; ++repeat) {
                         long seed = new Random().nextLong();
                         Log.info("");
@@ -111,10 +113,7 @@ public class NNvsNeuralNet extends TestUtil {
                         Frame frame = ParseDataset2.parse(Key.make(), new Key[]{kfile});
 
                         _train = sampleFrame(frame, (long)(frame.numRows()*holdout_ratio), seed);
-                        _train2 = sampleFrame(frame, (long)(frame.numRows()*holdout_ratio), seed);
-
                         _test = sampleFrame(frame, (long)(frame.numRows()*(1-holdout_ratio)), seed+1);
-                        _test2 = sampleFrame(frame, (long)(frame.numRows()*(1-holdout_ratio)), seed+1);
 
                         if (input_dropout > 0 && activation != NN.Activation.RectifierWithDropout)
                           input_dropout = 0; //old NeuralNet code cannot do input dropout unless RectifierWithDropout is used.
@@ -127,7 +126,6 @@ public class NNvsNeuralNet extends TestUtil {
                           p.source = (Frame)_train.clone();
                           p.response = _train.lastVec();
                           p.ignored_cols = null;
-                          p.ignore_const_cols = true;
                           Frame fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
                           p._dinfo = new FrameTask.DataInfo(fr, 1, true);
                           p.seed = seed;
@@ -141,9 +139,9 @@ public class NNvsNeuralNet extends TestUtil {
                           p.loss = loss;
                           p.l1 = l1;
                           p.l2 = l2;
-                          p.momentum_stable = p1;
                           p.momentum_start = p0;
                           p.momentum_ramp = pR;
+                          p.momentum_stable = p1;
                           p.initial_weight_distribution = dist;
                           p.initial_weight_scale = scale;
                           p.classification = true;
@@ -152,6 +150,9 @@ public class NNvsNeuralNet extends TestUtil {
                           p.fast_mode = true; //to be the same as old NeuralNet code
                           p.sync_samples = 0; //sync once per period
                           p.ignore_const_cols = false; //to be the same as old NeuralNet code
+//                          p.ignore_const_cols = true; //better
+//                          p.shuffle_training_data = true; //better?
+                          p.shuffle_training_data = false; //better?
                           p.exec(); //randomize weights, but don't start training yet
 
                           mymodel = UKV.get(p.dest());
@@ -163,10 +164,11 @@ public class NNvsNeuralNet extends TestUtil {
                         NeuralNetModel refmodel;
                         NeuralNet p = new NeuralNet();
                         {
-                          Vec[] data = Utils.remove(_train2.vecs(), _train2.vecs().length - 1);
-                          Vec labels = _train2.lastVec();
+                          Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
+                          Vec labels = _train.lastVec();
 
                           p.seed = seed;
+                          p.hidden = hidden;
                           p.rate = rate;
                           p.max_w2 = max_w2;
                           p.epochs = epoch;
@@ -190,14 +192,18 @@ public class NNvsNeuralNet extends TestUtil {
                           ls[0] = new Layer.VecsInput(data, null);
                           for (int i=0; i<hidden.length; ++i) {
                             if (activation == NN.Activation.Tanh) {
+                              p.activation = NeuralNet.Activation.Tanh;
                               assert(p.input_dropout_ratio == 0);
                               ls[1+i] = new Layer.Tanh(hidden[i]);
                             } else if (activation == NN.Activation.TanhWithDropout) {
+                              p.activation = Activation.TanhWithDropout;
                               ls[1+i] = new Layer.TanhDropout(hidden[i]);
                             } else if (activation == NN.Activation.Rectifier) {
+                              p.activation = Activation.Rectifier;
                               assert(p.input_dropout_ratio == 0);
                               ls[1+i] = new Layer.Rectifier(hidden[i]);
                             } else if (activation == NN.Activation.RectifierWithDropout) {
+                              p.activation = Activation.RectifierWithDropout;
                               ls[1+i] = new Layer.RectifierDropout(hidden[i]);
                             }
                           }
@@ -205,10 +211,17 @@ public class NNvsNeuralNet extends TestUtil {
                           for (int i = 0; i < ls.length; i++) {
                             ls[i].init(ls, i, p);
                           }
-                          Trainer.Threaded trainer = new Trainer.Threaded(ls, p.epochs, null, -1);
+                          // Debugging
+//                          refmodel = new NeuralNetModel(null, null, _train, ls, p);
+//                          Log.info("Initial model:\n" + refmodel);
 
-                          refmodel = new NeuralNetModel(null, null, _train2, ls, p);
-                          trainer.run();
+//                          Trainer trainer = new Trainer.Threaded(ls, p.epochs, null, 1);
+                          Trainer trainer = new Trainer.Direct(ls, p.epochs, null);
+                          trainer.start();
+                          trainer.join();
+
+                          refmodel = new NeuralNetModel(null, null, _train, ls, p);
+//                          Log.info("Final model:\n" + refmodel);
                         }
 
 
@@ -222,9 +235,11 @@ public class NNvsNeuralNet extends TestUtil {
                             for (int i = 0; i < l._previous._a.length; i++) {
                               a[n] += ref._w[o * l._previous._a.length + i];
                               b[n] += l._w[o * l._previous._a.length + i];
+                              numweights++;
                             }
                             ba[n] += ref._b[o];
                             bb[n] += l._b[o];
+                            numbiases++;
                           }
                         }
 
@@ -252,8 +267,8 @@ public class NNvsNeuralNet extends TestUtil {
                         }
                         // NeuralNet scoring
                         {
-                          final Frame[] adapted = refmodel.adapt(_test2, false);
-                          Vec[] data = Utils.remove(_test2.vecs(), _test2.vecs().length - 1);
+                          final Frame[] adapted = refmodel.adapt(_test, false);
+                          Vec[] data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
                           Vec labels = _test.vecs()[_test.vecs().length - 1];
                           Layer.VecsInput input = (Layer.VecsInput) ls[0];
                           input.vecs = data;
@@ -270,8 +285,6 @@ public class NNvsNeuralNet extends TestUtil {
                         refmodel.delete();
                         _train.delete();
                         _test.delete();
-                        _train2.delete();
-                        _test2.delete();
                         frame.delete();
                       }
                       myerror /= (double)num_repeats;
@@ -288,15 +301,15 @@ public class NNvsNeuralNet extends TestUtil {
                       Log.info("NN        test error " + myerror);
                       compareVal(referror, myerror, abseps, releps);
 
-//                        // mean weights/biases
-//                        for (int n=1; n<hidden.length+2; ++n) {
-//                          Log.info("NeuralNet mean weight for layer " + n + ": " + a[n]);
-//                          Log.info("NN        mean weight for layer " + n + ": " + b[n]);
-//                          Log.info("NeuralNet mean bias for layer " + n + ": " + ba[n]);
-//                          Log.info("NN        mean bias for layer " + n + ": " + bb[n]);
-//                          compareVal(ba[n]/num_repeats, bb[n]/num_repeats, abseps, releps);
-//                          compareVal(a[n]/num_repeats, b[n]/num_repeats, abseps, releps);
-//                        }
+                      // mean weights/biases
+                      for (int n=1; n<hidden.length+2; ++n) {
+                        Log.info("NeuralNet mean weight for layer " + n + ": " + a[n]/numweights);
+                        Log.info("NN        mean weight for layer " + n + ": " + b[n]/numweights);
+                        Log.info("NeuralNet mean bias for layer " + n + ": " + ba[n]/numbiases);
+                        Log.info("NN        mean bias for layer " + n + ": " + bb[n]/numbiases);
+//                        compareVal(ba[n]/num_repeats, bb[n]/num_repeats, abseps, releps);
+//                        compareVal(a[n]/num_repeats, b[n]/num_repeats, abseps, releps);
+                      }
 
                     }
                   }
