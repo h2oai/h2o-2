@@ -622,15 +622,25 @@ h2o.nn <- function(x, y, data, classification=T, activation='Tanh', layers=500, 
 }
 
 # ----------------------- Principal Components Analysis ----------------------------- #
-h2o.prcomp <- function(data, tol=0, ignored_cols = '', standardize=TRUE, retx=FALSE) {
-  if( missing(data) ) stop('Must specify data')
+h2o.prcomp <- function(data, tol=0, ignored_cols = "", standardize=TRUE, retx=FALSE) {
+  if(missing(data)) stop('Must specify data')
   # if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
   if(!is.numeric(tol)) stop('tol must be numeric')
+  if(!is.character(ignored_cols) && !is.numeric(ignored_cols))
+    stop("ignored_cols must be either a character or numeric vector")
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
 
   destKey = .h2o.__uniqID("PCAModel")
+  cc <- colnames(data)
+  if(is.character(ignored_cols) && ignored_cols[1] != "") {
+    if(any(!(ignored_cols %in% cc))) stop(paste(paste(ignored_cols[!(ignored_cols %in% cc)], collapse=','), 'is not a valid column name'))
+  } else {
+    if(any(ignored_cols < 1 | ignored_cols > length(cc))) stop(paste('Out of range explanatory variable', paste(ignored_cols[ignored_cols < 1 | ignored_cols > length(cc)], collapse=',')))
+    ignored_cols <- cc[ignored_cols]
+  }
+  
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_cols = ignored_cols, tolerance=tol, standardize=as.numeric(standardize))
   .h2o.__waitOnJob(data@h2o, res$job_key)
   # while(!.h2o.__isDone(data@h2o, "PCA", res)) { Sys.sleep(1) }

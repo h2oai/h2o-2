@@ -41,13 +41,4 @@ localH2O = h2o.init(ip = "localhost", port = 54321, silentUpgrade = FALSE, promp
 
 # Automatically install H2O R package from server if version mismatch
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = FALSE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-
-# Uninstall and maunually upgrade H2O for R (after unloading)
-detach("package:h2oRClient", unload=TRUE)
-detach("package:h2o", unload=TRUE)
-remove.packages("h2oRClient")
-remove.packages("h2o")
-install.packages("~/Work/h2o/target/R/h2o_2.1.0.99999.tar.gz", repos = NULL, type = "source")
-library(h2o)
 }
-

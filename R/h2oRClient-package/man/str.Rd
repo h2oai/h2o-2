@@ -14,9 +14,6 @@ str(x)
    H2O Parsed data object 
 }
 }
-\details{
-
-}
 \value{
 A table listing summary information including variable names, types (for example enum or number, count of observations and columns.)
 }

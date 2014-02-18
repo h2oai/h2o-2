@@ -402,14 +402,14 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                 h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
 
                 if numRows and (nacnt==numRows):
-                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (colName, stattype)
+                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (colname, stattype)
                 else:
                     if not mins:
                         print h2o.dump_json(column)
-                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colName, nacnt, numRows))
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows))
                     if not maxs:
                         print h2o.dump_json(column)
-                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colName, nacnt, numRows))
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows))
 
             hstart = column['hstart']
             hstep = column['hstep']
