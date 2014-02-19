@@ -1,4 +1,4 @@
-MAX_INSPECT_VIEW = 10000
+.MAX_INSPECT_VIEW = 10000
 
 # Class definitions
 # WARNING: Do NOT touch the env slot! It is used to link garbage collection between R and H2O
@@ -551,7 +551,8 @@ h2o.runif <- function(x, min = 0, max = 1) {
     return(new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE))
 }
 
-setMethod("colnames", "H2OParsedData", function(x) {
+setMethod("colnames", "H2OParsedData", function(x, do.NULL = TRUE, prefix = "col") {
+  if(!do.NULL) stop("Unimplemented: Auto-generated colnames are C1, C2, ...")
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
 })
@@ -652,12 +653,14 @@ setMethod("range", "H2OParsedData", function(x) {
   c(min(temp[1,]), max(temp[2,]))
 })
 
-setMethod("colMeans", "H2OParsedData", function(x) {
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
-  temp = sapply(res$cols, function(x) { x$mean })
-  names(temp) = sapply(res$cols, function(x) { x$name })
-  temp
-})
+# setMethod("colMeans", "H2OParsedData", function(x, na.rm = FALSE, dims = 1) {
+#   if(dims != 1) stop("Unimplemented")
+#   if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
+#   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
+#   temp = sapply(res$cols, function(x) { x$mean })
+#   names(temp) = sapply(res$cols, function(x) { x$name })
+#   temp
+# })
 
 mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
   if(length(x) != 1 || trim != 0) stop("Unimplemented")
@@ -976,10 +979,10 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   }
 })
 
-setMethod("show", "H2OGLMGridVA", function(object) {
+setMethod("show", "H2OGridVA", function(object) {
   print(object@data)
-  cat("GLMGrid Model Key:", object@key, "\n")
-
+  cat("Grid Search Model Key:", object@key, "\n")
+  
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
 })
@@ -1043,7 +1046,7 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   stopifnot(length(n) == 1L)
   n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
   if(n == 0) return(data.frame())
-  if(n > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  if(n > .MAX_INSPECT_VIEW) stop(paste("Cannot view more than", .MAX_INSPECT_VIEW, "rows"))
   
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=0, view=n)
   blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
@@ -1064,7 +1067,7 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   nrx <- nrow(x)
   n <- ifelse(n < 0L, max(nrx + n, 0L), min(n, nrx))
   if(n == 0) return(data.frame())
-  if(n > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  if(n > .MAX_INSPECT_VIEW) stop(paste("Cannot view more than", .MAX_INSPECT_VIEW, "rows"))
   
   idx = seq.int(to = nrx, length.out = n)
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=idx[1], view=length(idx))

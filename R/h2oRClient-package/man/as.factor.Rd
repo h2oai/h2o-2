@@ -14,10 +14,8 @@ Returns the original object of class \code{\linkS4class{H2OParsedData}}, with th
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
-prosPath = system.file("extdata", "prostate.csv", 
- + package="h2oRClient")
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.hex[,4]=as.factor(prostate.hex[,4])
 summary(prostate.hex)

@@ -182,21 +182,10 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{tail}{\code{signature(x = "H2OParsedData")}: ... }
 	 }
 }
-\references{
-%%  ~~put references to the literature/web site here~~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
+\code{\linkS4class{H2ORawData}, \link{h2o.parseRaw}}
 }
 \examples{
 showClass("H2OParsedData")

@@ -13,12 +13,14 @@ h2o.ls(object, pattern)
 \value{Returns a list of hex keys in the current instance of H2O, and their associated sizes in bytes.}
 
 \examples{
-localH2O = h2o.init()
+library(h2o)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 s = runif(nrow(prostate.hex))
 prostate.train = prostate.hex[s <= 0.8,]
 prostate.train = h2o.assign(prostate.train, "prostate.train")
 h2o.ls(localH2O)
+h2o.shutdown(localH2O)
 }
 

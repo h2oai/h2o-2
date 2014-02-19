@@ -6,7 +6,7 @@ REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
 TMP_BUILD_DIR = tmp_build
 ifneq ($(OS),Windows_NT)
 OS := $(shell uname)
-UNAME_P := $(shell uname -p)
+UNAME_P := $(shell uname -p | sed 's/unknown/x86_64/')
 else
 # For windows NT the shell is odd.  Cygwin 'shell uname' returns CYGWIN_NT-6.1-WOW64
 # which is not really what we want.  The normal CMD shell does something else.

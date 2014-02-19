@@ -8,9 +8,8 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1.0e-5, standardize = TRUE, tweedie.p)
+h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1)
 }
-
 \arguments{
   \item{x}{
 A vector containing the names of the predictors in the model.
@@ -38,7 +37,14 @@ A description of the error distribution and corresponding link function to be us
   \item{standardize}{
 (Optional) Logical value indicating whether the data should be standardized (set to mean = 0, variance = 1) before running GLM.
   }
-  \item{tweedie.p}{The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.}
+  \item{tweedie.p}{
+  (Optional) The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.}
+  \item{thresholds}{
+  (Optional) Degree to which to weight the sensitivity (the proportion of correctly classified 1s) and specificity (the proportion of correctly classified 0s). The default option is joint optimization for the overall classification rate. Changing this will alter the confusion matrix and the AUC. Only used if \code{family = "binomial"}.
+  }
+  \item{version}{
+  (Optional) The version of GLM to run. \code{version = 1} corresponds to the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.
+  }
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
@@ -68,18 +74,6 @@ The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 \code{\link{h2o.importFile.VA}}, 
@@ -90,23 +84,18 @@ The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
-+ promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
-prostate.hex = h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/
-+ smalldata/logreg/prostate.csv", key = "prostate.hex")
-h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = 
- + "binomial", nfolds = 10, alpha = 0.5)
+prostate.hex = h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
-h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, 
-+ alpha = 0.1)
+h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, alpha = 0.1)
 
 # Run GLM of IsDepDelayed ~ Distance + Origin + Dest + UniqueCarrier on airlines dataset in HDFS
-airlines.hex =  h2o.importURL.VA(localH2O, 
- + path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
-h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), 
- + y = 'IsDepDelayed', family = 'binomial', data = airlines.hex)
+airlines.hex =  h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
+h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', family = 'binomial', data = airlines.hex)
+h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

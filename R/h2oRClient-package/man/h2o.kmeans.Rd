@@ -5,10 +5,9 @@
 H2O: K-Means Clustering
 }
 \description{
-Performs k-means clustering on an \code{\linkS4class{H2OParsedData} object.
-}}
+Performs k-means clustering on an \code{\linkS4class{H2OParsedData}} object.}
 \usage{
-h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none")
+h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", version = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -30,6 +29,9 @@ The maximum number of iterations allowed.
   \item{init}{
 (Optional) Method by which to select the k initial cluster centroids. Possible values are \code{"none"} for random initialization, \code{"plusplus"} for k-means++ initialization, and \code{"furthest"} for initialization at the furthest point from each successive centroid. See the \href{http://docs.0xdata.com/datascience/kmeans.html}{H2O K-means documentation} for more details.
   }
+  \item{version}{
+  (Optional) The version of k-means clustering to run. \code{version = 1} corresponds to the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.
+  }
 }
 
 \value{
@@ -43,14 +45,13 @@ An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
-prosPath = system.file("extdata", "prostate.csv", 
- + package="h2oRClient")
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
 covPath = system.file("extdata", "covtype.csv", package="h2oRClient")
 covtype.hex = h2o.importFile(localH2O, path = covPath)
 covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
 print(covtype.km)
+h2o.shutdown(localH2O)
 }

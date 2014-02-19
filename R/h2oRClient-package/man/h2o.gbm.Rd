@@ -10,8 +10,7 @@ H2O: Gradient Boosted Machines
 	 on a parsed data set.
 }
 \usage{
-h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 8, 
-+ n.minobsinnode = 10, shrinkage = 0.2)
+h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, validation)
 }
 \arguments{
   \item{x}{
@@ -21,23 +20,28 @@ A vector containing the names or indices of the predictor variables to use in bu
 The name or index of the response variable. If the data does not contain a header, this is the column index number starting at 0, and increasing from left to right. (The response must be either an integer or a categorical variable).
 }
   \item{distribution}{
-The type of GBM model to be produced, classification is "multinomial" (default), "gaussian" is used for regression.
+The type of GBM model to be produced: classification is "multinomial" (default), "gaussian" is used for regression.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{n.trees}{
-Number of trees to grow. Must be a nonnegative integer.
+(Optional) Number of trees to grow. Must be a nonnegative integer.
 }
   \item{interaction.depth}{
-Maximum depth to grow the tree.
+(Optional) Maximum depth to grow the tree.
 }
   \item{n.minobsinnode}{
-Minimum number of rows to assign to teminal nodes.
+(Optional) Minimum number of rows to assign to teminal nodes.
 }
   \item{shrinkage}{
-A learning-rate parameter defining step size reduction.
-}   
+(Optional) A learning-rate parameter defining step size reduction.
+}
+  \item{n.bins}{
+(Optional) Number of bins to use in building histogram.
+}
+  \item{validation}{
+  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
   }
 \value{
 An object of class \code{\linkS4class{H2OGBMModel}} with slots key, data, and model, where the last is a list of the following components:
@@ -62,27 +66,23 @@ Vol.1. N.p.: Springer New York, 2001.
 http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 }
 
-
 \seealso{
 For more information see: http://docs.0xdata.com
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, 
-+ startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
 # Run regression GBM on australia.hex data 
 
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
-independent<- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", 
-+ "maxsoilmoist", "Max_czcs")
-dependent<- "runoffnew"
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, 
-+ n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
+dependent <- "runoffnew"
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
 
 # Run multinomial classification GBM on australia data 
 
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, 
-  interaction.depth = 5, n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, interaction.depth = 5, n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+h2o.shutdown(localH2O)
 }
