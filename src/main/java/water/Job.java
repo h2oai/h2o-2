@@ -334,7 +334,7 @@ public class Job extends Request2 {
   public Job start(final H2OCountedCompleter fjtask) {
     _fjtask = fjtask;
     Futures fs = new Futures();
-    DKV.put(job_key, new Value(job_key, new byte[0]),fs);
+    DKV.put(job_key,this,fs);
     start_time = System.currentTimeMillis();
     new TAtomic<List>() {
       @Override public List atomic(List old) {
