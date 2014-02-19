@@ -15,7 +15,7 @@ import water.fvec.Vec;
 
 // --------------------------------------------------------------------------
 abstract public class AST extends Iced {
-  final transient Type _t;
+  final Type _t;
   AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E ) {
     int x = E._x;
