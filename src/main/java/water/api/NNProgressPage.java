@@ -19,7 +19,7 @@ public class NNProgressPage extends Progress2 {
     Job jjob = Job.findJob(job_key);
     if (jjob ==null) return true;
     NNModel m = UKV.get(jjob.dest());
-    if (m!=null) m.generateHTML("NeuralNet Model", sb);
+    if (m!=null) m.generateHTML("NeuralNet2 Model", sb);
     else DocGen.HTML.paragraph(sb, "Pending...");
     return true;
   }
