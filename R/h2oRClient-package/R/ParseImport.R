@@ -1,18 +1,20 @@
 # Unique methods to H2O
 # H2O client management operations
 
-.readableTime<-function(epochTimeMillis) {
-  days=epochTimeMillis/(24*60*60*1000)
-  hours=(days-trunc(days))*24
-  minutes=(hours-trunc(hours))*60
-  seconds=(minutes-trunc(minutes))*60
-  milliseconds=(seconds-trunc(seconds))*1000
-  durationVector=trunc(c(days,hours,minutes,seconds,milliseconds))
-  names(durationVector)=c("days","hours","minutes","seconds","milliseconds")
-  if(length(durationVector[durationVector>0])>1)
-  {showVec<-durationVector[durationVector>0][1:2]} else {showVec<-durationVector[durationVector>0]}
-  x1=as.numeric(showVec)
-  x2=names(showVec)
+.readableTime <- function(epochTimeMillis) {
+  days = epochTimeMillis/(24*60*60*1000)
+  hours = (days-trunc(days))*24
+  minutes = (hours-trunc(hours))*60
+  seconds = (minutes-trunc(minutes))*60
+  milliseconds = (seconds-trunc(seconds))*1000
+  durationVector = trunc(c(days,hours,minutes,seconds,milliseconds))
+  names(durationVector) = c("days","hours","minutes","seconds","milliseconds")
+  if(length(durationVector[durationVector > 0]) > 1)
+    showVec <- durationVector[durationVector > 0][1:2]
+  else
+    showVec <- durationVector[durationVector > 0]
+  x1 = as.numeric(showVec)
+  x2 = names(showVec)
   return(paste(x1,x2))
 }
 
@@ -35,51 +37,6 @@ h2o.clusterInfo <- function(client) {
   cat("    H2O cluster total memory: ", sprintf("%.2f GB", maxMem), "\n")
   cat("    H2O cluster total cores:  ", numCPU, "\n")
   cat("    H2O cluster healthy:      ", clusterHealth, "\n")  
-}
-
-h2o.startLauncher <- function() {
-  myOS = Sys.info()["sysname"]
-  
-  if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
-  else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
-  myFiles = list.files(verPath)
-  if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
-  # TODO: Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
-  
-  # Get H2O with latest version number
-  # If latest isn't working, maybe go down list to earliest until one executes?
-  fileName = paste(verPath, tail(myFiles, n=1), sep="/")
-  myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
-  launchPath = readChar(fileName, file.info(fileName)$size)
-  if(is.null(launchPath) || launchPath == "")
-    stop(paste("No H2O launcher matching H2O version", myVersion, "found"))
-  
-  if(myOS == "Windows") {
-    tempPath = paste(launchPath, "windows/h2o.bat", sep="/")
-    if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
-    shell.exec(tempPath)
-  }
-  else {
-    tempPath = paste(launchPath, "Contents/MacOS/h2o", sep="/")
-    if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
-    system(paste("bash ", tempPath))
-  }
-}
-
-h2o.checkClient <- function(object) {
-  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-  
-  myURL = paste("http://", object@ip, ":", object@port, sep="")
-  if(!url.exists(myURL)) {
-    print("H2O is not running yet, launching it now.")
-    h2o.startLauncher()
-    invisible(readline("Start H2O, then hit <Return> to continue: "))
-    if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
-  } else { 
-    cat("Successfully connected to", myURL, "\n")
-    if("h2oRClient" %in% rownames(installed.packages()) && (pv=packageVersion("h2oRClient")) != (sv=.h2o.__version(object)))
-      warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
-  }
 }
 
 h2o.ls <- function(object, pattern = "") {
@@ -144,9 +101,9 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
-      if(substr(path, nchar(path), nchar(path)) == "/")
+      if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
-      regPath = paste(path, pattern, sep="/")
+      regPath = paste(path, pattern, sep=.Platform$file.sep)
       srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
       h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names)
@@ -176,9 +133,9 @@ h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TR
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
-      if(substr(path, nchar(path), nchar(path)) == "/")
+      if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
-      regPath = paste(path, pattern, sep="/")
+      regPath = paste(path, pattern, sep=.Platform$file.sep)
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
       h2o.parseRaw.FV(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
@@ -265,9 +222,9 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
   # Return only the files that successfully imported
   if(res$num_succeeded > 0) {
     if(parse) {
-      if(substr(path, nchar(path), nchar(path)) == "/")
+      if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
-      regPath = paste(path, pattern, sep="/")
+      regPath = paste(path, pattern, sep=.Platform$file.sep)
       srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
       h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
@@ -422,15 +379,6 @@ h2o.downloadCSV <- function(data, filename) {
     print(paste('Bad return val', val))
 }
 
-setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })
-setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function(x, value) {
-  res = .h2o.__exec2_dest_key(x@h2o, value@key, x@key); return(x)
-})
-
-setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, value) {
-  res = .h2o.__exec2_dest_key(x@h2o, paste("c(", paste(value, collapse=","), ")", sep=""), x@key); return(x)
-})
-
 # ----------------------------------- Work in Progress --------------------------------- #
 # h2o.push <- function(client, object, key) {
 #   if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
@@ -449,6 +397,15 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, va
 #   }
 # }
 
+# setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })
+# setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function(x, value) {
+#   res = .h2o.__exec2_dest_key(x@h2o, value@key, x@key); return(x)
+# })
+# 
+# setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, value) {
+#   res = .h2o.__exec2_dest_key(x@h2o, paste("c(", paste(value, collapse=","), ")", sep=""), x@key); return(x)
+# })
+
 # ----------------------- Log helper ----------------------- #
 h2o.logAndEcho <- function(conn, message) {
   if (class(conn) != "H2OClient")
@@ -461,34 +418,80 @@ h2o.logAndEcho <- function(conn, message) {
   return (echo_message)
 }
 
-h2o.downloadAllLogs <- function(client, dir_name = ".", file_name = NULL) {
+h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
   if(class(client) != "H2OClient") stop("client must be of class H2OClient")
-  if(!is.character(dir_name)) stop("dir_name must be of class character")
-  if(!is.null(file_name)) {
-    if(!is.character(file_name)) stop("file_name must be of class character")
-    else if(nchar(file_name) == 0) stop("file_name must be a non-empty string")
+  if(!is.character(dirname)) stop("dirname must be of class character")
+  if(!is.null(filename)) {
+    if(!is.character(filename)) stop("filename must be of class character")
+    else if(nchar(filename) == 0) stop("filename must be a non-empty string")
   }
   
   url = paste("http://", client@ip, ":", client@port, "/", .h2o.__DOWNLOAD_LOGS, sep="")
-  if(!file.exists(dir_name)) dir.create(dir_name)
+  if(!file.exists(dirname)) dir.create(dirname)
   
   cat("Downloading H2O logs from server...\n")
   h = basicHeaderGatherer()
   tempfile = getBinaryURL(url, headerfunction = h$update, verbose = TRUE)
   
   # Get filename from HTTP header of response
-  if(is.null(file_name)) {
+  if(is.null(filename)) {
     # temp = strsplit(as.character(Sys.time()), " ")[[1]]
     # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
     # file_name = paste("h2ologs_", myDate, "_", myTime, ".zip", sep="")
     atch = h$value()[["Content-Disposition"]]
     ind = regexpr("filename=", atch)[[1]]
     if(ind == -1) stop("Header corrupted: Expected attachment filename in Content-Disposition")
-    file_name = substr(atch, ind+nchar("filename="), nchar(atch))
+    filename = substr(atch, ind+nchar("filename="), nchar(atch))
   }
-  myPath = paste(normalizePath(dir_name), file_name, sep = "/")
+  myPath = paste(normalizePath(dirname), filename, sep = .Platform$file.sep)
   
   cat("Writing H2O logs to", myPath, "\n")
   # download.file(url, destfile = myPath)
   writeBin(tempfile, myPath)
 }
+
+# ----------------------- Deprecated ----------------------- #
+# h2o.checkClient <- function(object) {
+#   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+#   
+#   myURL = paste("http://", object@ip, ":", object@port, sep="")
+#   if(!url.exists(myURL)) {
+#     print("H2O is not running yet, launching it now.")
+#     h2o.startLauncher()
+#     invisible(readline("Start H2O, then hit <Return> to continue: "))
+#     if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
+#   } else { 
+#     cat("Successfully connected to", myURL, "\n")
+#     if("h2oRClient" %in% rownames(installed.packages()) && (pv=packageVersion("h2oRClient")) != (sv=.h2o.__version(object)))
+#       warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
+#   }
+# }
+# 
+# h2o.startLauncher <- function() {
+#   myOS = Sys.info()["sysname"]
+#   
+#   if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep=.Platform$file.sep)
+#   else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep=.Platform$file.sep)
+#   myFiles = list.files(verPath)
+#   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
+#   # TODO: Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
+#   
+#   # Get H2O with latest version number
+#   # If latest isn't working, maybe go down list to earliest until one executes?
+#   fileName = paste(verPath, tail(myFiles, n=1), sep=.Platform$file.sep)
+#   myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
+#   launchPath = readChar(fileName, file.info(fileName)$size)
+#   if(is.null(launchPath) || launchPath == "")
+#     stop(paste("No H2O launcher matching H2O version", myVersion, "found"))
+#   
+#   if(myOS == "Windows") {
+#     tempPath = paste(launchPath, "windows/h2o.bat", sep=.Platform$file.sep)
+#     if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
+#     shell.exec(tempPath)
+#   }
+#   else {
+#     tempPath = paste(launchPath, "Contents/MacOS/h2o", sep=.Platform$file.sep)
+#     if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
+#     system(paste("bash ", tempPath))
+#   }
+# }

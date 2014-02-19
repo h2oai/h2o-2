@@ -21,4 +21,5 @@ PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
 summary(PSA.outliers)
 head(prostate.hex)
 head(PSA.outliers)
+h2o.shutdown(localH2O)
 }

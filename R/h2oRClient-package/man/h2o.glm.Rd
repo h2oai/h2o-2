@@ -8,7 +8,7 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1.0e-5, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1)
+h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1)
 }
 \arguments{
   \item{x}{
@@ -95,6 +95,7 @@ h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5
 # Run GLM of IsDepDelayed ~ Distance + Origin + Dest + UniqueCarrier on airlines dataset in HDFS
 airlines.hex =  h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
 h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', family = 'binomial', data = airlines.hex)
+h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

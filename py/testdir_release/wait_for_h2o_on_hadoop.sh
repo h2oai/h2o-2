@@ -13,9 +13,10 @@ do
     $REMOTE_SCP $REMOTE_USER:$REMOTE_HOME/h2o_one_node .
     set -e
     COUNT=$((COUNT + 1))
-    if [ $COUNT == 100 ]
+    if [ $COUNT == 20 ]
     then
-        echo "h2o didn't start on hadoop, after waiting 500 secs"
+        echo "ERROR: h2o didn't start on hadoop, after waiting 100 secs"
+        exit 1
     fi
 done
 ls -lt h2o_one_node

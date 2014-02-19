@@ -74,7 +74,6 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
 # Run regression GBM on australia.hex data 
-
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
@@ -82,6 +81,6 @@ dependent <- "runoffnew"
 h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
 
 # Run multinomial classification GBM on australia data 
-
 h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, interaction.depth = 5, n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+h2o.shutdown(localH2O)
 }

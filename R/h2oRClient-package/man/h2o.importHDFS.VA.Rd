@@ -52,15 +52,19 @@ When the path is a directory, if \code{parse = TRUE}, the function returns a lis
 \code{\link{h2o.importFolder.VA}}, \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importURL.VA}}
 }
 \examples{
+## Not run:
+# This is an example of how to import files from HDFS.
+# The user must modify the path to his or her specific HDFS path for this example to run.
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-covtype.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard/covtype.data", parse = TRUE)
-summary(covtype.hex)
 
-stdfolder.data = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard", parse = FALSE)
-stdfolder.parsed = vector("list", length(stdfolder.data))
-for(i in 1:length(stdfolder.data))
-  stdfolder.parsed[[i]] = h2o.parseRaw(stdfolder.data[[i]])
+iris.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_wheader.csv", parse = TRUE)
+summary(iris.hex)
+irisfolder.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_test_train")
+summary(irisfolder.hex)
+h2o.shutdown(localH2O)
+
+## End(Not run)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

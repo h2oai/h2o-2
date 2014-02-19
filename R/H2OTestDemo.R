@@ -5,7 +5,7 @@
 source("H2O_Load.R")
 # library(h2o)
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
-h2o.checkClient(localH2O)
+# h2o.checkClient(localH2O)
 
 # Test using prostate cancer data set
 prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
