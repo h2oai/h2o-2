@@ -55,6 +55,7 @@ australia.hex = h2o.importFile(localH2O, path = ausPath)
 australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)
 print(australia.pca)
 summary(australia.pca)
+h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

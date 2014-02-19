@@ -979,10 +979,10 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   }
 })
 
-setMethod("show", "H2OGLMGridVA", function(object) {
+setMethod("show", "H2OGridVA", function(object) {
   print(object@data)
-  cat("GLMGrid Model Key:", object@key, "\n")
-
+  cat("Grid Search Model Key:", object@key, "\n")
+  
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
 })

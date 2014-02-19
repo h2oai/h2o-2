@@ -55,14 +55,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         y = "is_purchase"
         print "y:", y
         # don't need the intermediate Dicts produced from columnInfoFromInspect
-        if DO_INSPECT:
-            x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)
-            print "x:", x
-        else:
-            x = None
+        x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)
+        print "x:", x
 
         kwargs = {
-            # 'x': x,
             'response': y,
             # 'case_mode': '>',
             # 'case': 0,

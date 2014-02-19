@@ -40,27 +40,27 @@ h2o.clusterInfo <- function(client) {
 h2o.startLauncher <- function() {
   myOS = Sys.info()["sysname"]
   
-  if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
-  else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
+  if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep=.Platform$file.sep)
+  else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep=.Platform$file.sep)
   myFiles = list.files(verPath)
   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
   # TODO: Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
   
   # Get H2O with latest version number
   # If latest isn't working, maybe go down list to earliest until one executes?
-  fileName = paste(verPath, tail(myFiles, n=1), sep="/")
+  fileName = paste(verPath, tail(myFiles, n=1), sep=.Platform$file.sep)
   myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
   launchPath = readChar(fileName, file.info(fileName)$size)
   if(is.null(launchPath) || launchPath == "")
     stop(paste("No H2O launcher matching H2O version", myVersion, "found"))
   
   if(myOS == "Windows") {
-    tempPath = paste(launchPath, "windows/h2o.bat", sep="/")
+    tempPath = paste(launchPath, "windows/h2o.bat", sep=.Platform$file.sep)
     if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
     shell.exec(tempPath)
   }
   else {
-    tempPath = paste(launchPath, "Contents/MacOS/h2o", sep="/")
+    tempPath = paste(launchPath, "Contents/MacOS/h2o", sep=.Platform$file.sep)
     if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
     system(paste("bash ", tempPath))
   }
@@ -144,9 +144,9 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
-      if(substr(path, nchar(path), nchar(path)) == "/")
+      if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
-      regPath = paste(path, pattern, sep="/")
+      regPath = paste(path, pattern, sep=.Platform$file.sep)
       srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
       h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names)
@@ -176,9 +176,9 @@ h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TR
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
-      if(substr(path, nchar(path), nchar(path)) == "/")
+      if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
-      regPath = paste(path, pattern, sep="/")
+      regPath = paste(path, pattern, sep=.Platform$file.sep)
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
       h2o.parseRaw.FV(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
@@ -265,9 +265,9 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
   # Return only the files that successfully imported
   if(res$num_succeeded > 0) {
     if(parse) {
-      if(substr(path, nchar(path), nchar(path)) == "/")
+      if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
-      regPath = paste(path, pattern, sep="/")
+      regPath = paste(path, pattern, sep=.Platform$file.sep)
       srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
       h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
@@ -486,7 +486,7 @@ h2o.downloadAllLogs <- function(client, dir_name = ".", file_name = NULL) {
     if(ind == -1) stop("Header corrupted: Expected attachment filename in Content-Disposition")
     file_name = substr(atch, ind+nchar("filename="), nchar(atch))
   }
-  myPath = paste(normalizePath(dir_name), file_name, sep = "/")
+  myPath = paste(normalizePath(dir_name), file_name, sep = .Platform$file.sep)
   
   cat("Writing H2O logs to", myPath, "\n")
   # download.file(url, destfile = myPath)
