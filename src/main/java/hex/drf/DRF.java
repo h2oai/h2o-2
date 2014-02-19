@@ -60,8 +60,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
     @API(help = "Seed") final long seed;
-    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
-      super(key,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins);
+    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins);
       this.mtries = mtries;
       this.sample_rate = sample_rate;
       this.seed = seed;
@@ -108,6 +108,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
+  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
+    return new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
+  }
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm) {
     return new DRFModel(model, err, cm);
   }
@@ -169,11 +172,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // Out-of-bag trees counter - only one since it is shared via k-trees
   protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
-  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
+  @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], String[] cmDomain, final Timer t_build ) {
     fr.add("OUT_BAG_TREES", response.makeZero());
-
-    DRFModel model = new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
-    model.delete_and_lock(self());
 
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
@@ -187,28 +187,28 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     TreeStats tstats = new TreeStats();
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) {
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, tid==0, validation==null, build_tree_per_node);
+      model = doScoring(model, fr, ktrees, tid, tstats, tid==0, validation==null, build_tree_per_node);
       // At each iteration build K trees (K = nclass = response column domain size)
 
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
+      Timer kb_timer = new Timer();
       ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
-      Log.info(Sys.DRF__, (tid+1) + ". tree was built.");
+      Log.info(Sys.DRF__, (tid+1) + ". tree was built " + kb_timer.toString());
       if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
       tstats.updateBy(ktrees);
     }
     // Final scoring
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null, build_tree_per_node);
+    model = doScoring(model, fr, ktrees, tid, tstats, true, validation==null, build_tree_per_node);
     // Compute variable importance if required
     if (classification && importance) {
       model = doVarImp(model, fr);
       Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(model.varimp));
     }
 
-    model.unlock(self());       // Update and unlock model
-    cleanUp(fr,t_build);        // Shared cleanup
+    return model;
   }
 
   /* From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp

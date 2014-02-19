@@ -34,8 +34,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help = "Learning rate, from 0. to 1.0") final double learn_rate;
-    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {
-      super(key,dataKey,testKey,names,domains,ntrees,max_depth,min_rows,nbins);
+    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins);
       this.learn_rate = learn_rate;
     }
     public GBMModel(DTree.TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
@@ -93,6 +93,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
+  @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
+    return new GBMModel(outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
+  }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm) {
     return new GBMModel(model, err, cm);
   }
@@ -137,10 +140,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, Timer t_build ) {
-
-    GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, max_depth, min_rows, nbins, learn_rate);
-    model.delete_and_lock(self());
+  @Override protected GBMModel buildModel( GBMModel model, final Frame fr, String names[], String domains[][], String[] cmDomain, Timer t_build ) {
 
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
@@ -153,7 +153,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       // During first iteration model contains 0 trees, then 0-trees, then 1-tree,...
       // BUT if validation is not specified model does not participate in voting
       // but on-the-fly computed data are used
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, false, false);
+      model = doScoring(model, fr, ktrees, tid, tstats, false, false, false);
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
@@ -165,17 +165,18 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       new ComputeRes().doAll(fr);
 
       // ESL2, page 387, Step 2b ii, iii, iv
+      Timer kb_timer = new Timer();
       ktrees = buildNextKTrees(fr);
-      Log.info(Sys.GBM__, (tid+1) + ". tree was built.");
+      Log.info(Sys.GBM__, (tid+1) + ". tree was built in " + kb_timer.toString());
       if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
       tstats.updateBy(ktrees);
     }
     // Final scoring
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false, false);
-    model.unlock(self());       // Update and unlock model
-    cleanUp(fr,t_build); // Shared cleanup
+    model = doScoring(model, fr, ktrees, tid, tstats, true, false, false);
+
+    return model;
   }
 
   // --------------------------------------------------------------------------

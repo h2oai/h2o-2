@@ -529,16 +529,18 @@ public class DTree extends Iced {
     @API(help="Testing key for cm and errs") public final Key testKey;
     // Confusion matrix per each generate tree or null
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
+    @API(help="Confusion matrix domain.") public final String[] cmDomain;
     @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
     @API(help="Tree statistics") public final TreeStats treeStats;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey; this.cms = new ConfusionMatrix[0];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
       treeStats = null;
+      this.cmDomain = cmDomain;
       this.varimp = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
@@ -546,8 +548,9 @@ public class DTree extends Iced {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
-      this.min_rows = prior.min_rows;
-      this.nbins = prior.nbins;
+      this.min_rows  = prior.min_rows;
+      this.nbins     = prior.nbins;
+      this.cmDomain  = prior.cmDomain;
 
       if (treeBits != null) this.treeBits  = treeBits; else this.treeBits  = prior.treeBits;
       if (errs     != null) this.errs      = errs;     else this.errs      = prior.errs;
