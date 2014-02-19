@@ -150,7 +150,7 @@ class H2OCloudNode:
             cmd.append(ec2_hdfs_config_file_name)
 
         self.output_file_name = \
-            os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
+            os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out.txt")
         f = open(self.output_file_name, "w")
         self.child = subprocess.Popen(args=cmd,
                                       stdout=f,
@@ -412,7 +412,7 @@ class Test:
                self.ip + ":" + str(self.port)]
         test_short_dir_with_no_slashes = re.sub(r'[\\/]', "_", self.test_short_dir)
         self.output_file_name = \
-            os.path.join(self.output_dir, test_short_dir_with_no_slashes + "_" + self.test_name + ".out")
+            os.path.join(self.output_dir, test_short_dir_with_no_slashes + "_" + self.test_name + ".out.txt")
         f = open(self.output_file_name, "w")
         self.child = subprocess.Popen(args=cmd,
                                       stdout=f,
@@ -733,7 +733,7 @@ class RUnitRunner:
         self._log("")
         self._log("Setting up R H2O package...")
         if (True):
-            out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out")
+            out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out.txt")
             out = open(out_file_name, "w")
             cloud = self.clouds[0]
             port = cloud.get_port()
