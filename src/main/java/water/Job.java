@@ -121,18 +121,22 @@ public class Job extends Request2 {
      */
     @Override protected JsonObject toJSON() {
       JsonObject jo = super.toJSON();
+      if (!jo.has("source")) return jo;
       HashMap<String, int[]> map = new HashMap<String, int[]>();
-      map.put("used_cols", cols); map.put("ignored_cols", ignored_cols);
+      map.put("used_cols", cols);
+      map.put("ignored_cols", ignored_cols);
       for (String key : map.keySet()) {
         int[] val = map.get(key);
-        if (val != null)
+        if (val != null) {
           if(val.length>100) jo.getAsJsonObject("source").addProperty("num_" + key, val.length);
           else if(val.length>0) {
             StringBuilder sb = new StringBuilder();
             for (int c : val) sb.append(c + ",");
             jo.getAsJsonObject("source").addProperty(key, sb.toString().substring(0, sb.length()-1));
+          } else {
+            jo.getAsJsonObject("source").addProperty(key, "N/A");
           }
-        else jo.getAsJsonObject("source").addProperty(key, "N/A");
+        }
       }
       return jo;
     }
