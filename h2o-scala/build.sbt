@@ -31,6 +31,8 @@ libraryDependencies += "org.javassist" % "javassist" % "3.16.1-GA"
 
 libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "1.1.0"
 
+libraryDependencies += "com.github.wookietreiber" %% "scala-chart" % "latest.integration"
+
 libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-library" % v }
 
 libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-compiler" % v }
@@ -61,7 +63,7 @@ unmanagedClasspath in Compile += h2oSources.value
 
 unmanagedClasspath in Runtime += h2oClasses.value
 
-// Setup run 
+// Setup run
 // - Fork in run
 fork in run := true
 
