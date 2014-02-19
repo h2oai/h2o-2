@@ -564,7 +564,7 @@ public class NNModel extends Model {
         sb.append("<td>").append("<b>").append(i+1).append("</b>").append("</td>");
         sb.append("<td>").append("<b>").append(neurons[i].units).append("</b>").append("</td>");
         sb.append("<td>").append(neurons[i].getClass().getSimpleName()).append("</td>");
-        sb.append("<td>").append((i == 0 ? String.format("%g", neurons[i].params.input_dropout_ratio*100) :
+        sb.append("<td>").append((i == 0 ? neurons[i].params.input_dropout_ratio*100 :
                 (neurons[i] instanceof Neurons.TanhDropout || neurons[i] instanceof Neurons.RectifierDropout
                         || neurons[i] instanceof Neurons.MaxoutDropout  ? 50 : 0)) + "%</td>");
         if (i==0) {
