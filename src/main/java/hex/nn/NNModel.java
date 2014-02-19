@@ -4,6 +4,7 @@ import hex.FrameTask.DataInfo;
 import water.*;
 import water.api.ConfusionMatrix;
 import water.api.DocGen;
+import water.api.Inspect2;
 import water.api.Request.API;
 import water.fvec.Frame;
 import water.util.D3Plot;
@@ -210,7 +211,7 @@ public class NNModel extends Model {
         Neurons[] neurons = NNTask.makeNeuronsForTesting(this);
         computeStats();
         sb.append("Status of Hidden and Output Layers:\n");
-        sb.append("#  Units       Activation  Dropout     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
+        sb.append("#  Units       Activation   Dropout     Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
         final String format = "%7g";
         for (int i=0; i<neurons.length; ++i) {
           sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
@@ -494,10 +495,18 @@ public class NNModel extends Model {
     DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
     DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
+    Inspect2 is2 = new Inspect2();
+    DocGen.HTML.paragraph(sb, "Training Data Key: " + _dataKey);
+    if (model_info.parameters.validation != null) {
+      DocGen.HTML.paragraph(sb, "Validation Data Key: " + model_info.parameters.validation._key);
+    }
     DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     model_info.job().toHTML(sb);
-    sb.append("<div class='alert'>Actions: " + water.api.Predict.link(_key, "Score on dataset") + ", " +
+    sb.append("<div class='alert'>Actions: "
+            + is2.link("Inspect training data", _dataKey) + ", "
+            + (model_info().parameters.validation != null ? (is2.link("Inspect validation data", model_info().parameters.validation._key) + ", ") : "")
+            + water.api.Predict.link(_key, "Score on dataset") + ", " +
             NN.link(_dataKey, "Compute new model") + "</div>");
 
     // stats for training and validation
