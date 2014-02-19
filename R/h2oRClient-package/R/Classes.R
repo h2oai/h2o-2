@@ -426,8 +426,8 @@ as.h2o <- function(client, object, key = "") {
   } else {
     tmpf <- tempfile(fileext=".csv")
     write.csv(object, file=tmpf, quote=F, row.names=F)
-    destKey = paste(.TEMP_KEY, ".", pkg.env$temp_count, sep="")
-    pkg.env$temp_count = (pkg.env$temp_count + 1) %% .RESULT_MAX
+    destKey = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
+    .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
     h2f <- h2o.uploadFile(client, tmpf, key=destKey)
     unlink(tmpf)
     return(h2f)

@@ -23,6 +23,9 @@ public class DdplyTest extends TestUtil {
       Frame fr0 = parseFrame(k0,"smalldata/cars.csv");
       checkStr("ddply(cars.hex,c(3),nrow)");
 
+      // More complex multi-return
+      checkStr("ddply(cars.hex,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})");
+
       // A big enough file to distribute across multiple nodes.
       Frame fr1 = parseFrame(k1,"smalldata/unbalanced/orange_small_train.data.zip");
       checkStr("ddply(orange.hex,c(7),nrow)");
