@@ -56,7 +56,7 @@ public class PCA extends ColumnsJob {
     this.standardize = standardize;
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     Frame fr = selectFrame(source);
     Vec[] vecs = fr.vecs();
 
@@ -81,7 +81,7 @@ public class PCA extends ColumnsJob {
     PCAModel myModel = buildModel(dinfo, tsk);
     myModel.delete_and_lock(self());
     myModel.unlock(self());
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected void init() {
