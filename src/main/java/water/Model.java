@@ -81,25 +81,60 @@ public abstract class Model extends Lockable<Model> {
   /** Variable importance of individual variables measured by this model. */
   public VariableImportance varimp() { return null; }
 
-  /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
+  /** Bulk score for given <code>fr<code> frame.
+   * The frame is always adapted to this model.
+   *
+   * @param fr frame to be scored
+   * @return frame holding predicted values
+   *
+   * @see #score(Frame, boolean)
+   */
+  public final Frame score(Frame fr) {
+    return score(fr, true);
+  }
+  /** Bulk score the frame <code>fr</code>, producing a Frame result; the 1st Vec is the
    *  predicted class, the remaining Vecs are the probability distributions.
    *  For Regression (single-class) models, the 1st and only Vec is the
-   *  prediction value.  Also passed in a flag describing how hard we try to
-   *  adapt the frame.  */
-  public Frame score( Frame fr) {
+   *  prediction value.
+   *
+   *  The flat <code>adapt</code>
+   * @param fr frame which should be scored
+   * @param adapt a flag enforcing an adaptation of <code>fr</code> to this model. If flag
+   *        is <code>false</code> scoring code expect that <code>fr</code> is already adapted.
+   * @return a new frame containing a predicted values. For classification it contains a column with
+   *         prediction and distribution for all response classes. For regression it contains only
+   *         one column with predicted values.
+   */
+  public final Frame score(Frame fr, boolean adapt) {
     int ridx = fr.find(_names[_names.length-1]);
-    if(ridx != -1){ // drop the response for scoring!
+    if (ridx != -1) { // drop the response for scoring!
       fr = new Frame(fr);
       fr.remove(ridx);
     }
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
-    Frame[] adaptFrms = adapt(fr,false);
+    Frame[] adaptFrms = adapt ? adapt(fr,false) : null;
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
-    Frame adaptFrm = adaptFrms[0];
+    Frame adaptFrm = adapt ? adaptFrms[0] : fr;
     // Contains only newly created vectors. The frame eases deletion of these vectors.
-    Frame onlyAdaptFrm = adaptFrms[1];
+    Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
+    // Invoke scoring
+    Frame output = scoreImpl(adaptFrm);
+    // Be nice to DKV and delete vectors which i created :-)
+    if (adapt) onlyAdaptFrm.delete();
+    return output;
+  }
+
+  /** Score already adapted frame.
+   *
+   * @param fr
+   * @return
+   */
+  private Frame scoreImpl(Frame adaptFrm) {
+    int ridx = adaptFrm.find(_names[_names.length-1]);
+    assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
+    // Create a new vector for response
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
@@ -134,8 +169,6 @@ public abstract class Model extends Lockable<Model> {
     // Return just the output columns
     int x=_names.length-1, y=adaptFrm.numCols();
     Frame output = adaptFrm.extractFrame(x, y);
-    // Delete manually only vectors which i created :-/
-    onlyAdaptFrm.delete();
     return output;
   }
 
