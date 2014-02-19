@@ -5,9 +5,8 @@ import java.net.URLEncoder;
 import java.util.Date;
 import java.text.ParseException;
 
-import water.DKV;
-import water.Job;
-import water.Key;
+import water.*;
+import water.Job.JobState;
 
 import com.google.gson.*;
 
@@ -34,18 +33,20 @@ public class Jobs extends Request {
       json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].start_time)));
       long end = jobs[i].end_time;
       JsonObject jobResult = new JsonObject();
+      Job job = jobs[i];
 
       boolean cancelled;
-      if(cancelled = (end == Job.CANCELLED_END_TIME)){
-        if(jobs[i].exception != null){
+      if (cancelled = (job.state==JobState.CANCELLED || job.state==JobState.CRASHED)) {
+        if(job.exception != null){
           jobResult.addProperty("exception", "1");
           jobResult.addProperty("val", jobs[i].exception);
         } else {
           jobResult.addProperty("val", "CANCELLED");
         }
-      } else if(end > 0)
+      } else if (job.state==JobState.DONE)
         jobResult.addProperty("val", "OK");
       json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
+      json.addProperty(PROGRESS, job.state==JobState.RUNNING || job.state==JobState.DONE ? jobs[i].progress() : -1);
       json.addProperty(PROGRESS, end == 0 ? (cancelled ? -2 : jobs[i].progress()) : (cancelled ? -2 : -1));
       json.addProperty(CANCELLED, cancelled);
       json.add("result",jobResult);
