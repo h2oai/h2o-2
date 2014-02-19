@@ -77,7 +77,7 @@ public abstract class Layer extends Iced {
 
     Dropout(int units) {
       _bits = new byte[(units+7)/8];
-      _rand = new Random();
+      _rand = new Random(0);
     }
 
     // for input layer
