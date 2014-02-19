@@ -1,6 +1,6 @@
 package water;
 
-import hex.NeuralNetSpiralsTest;
+import hex.*;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -36,6 +36,7 @@ public class JUnitRunner {
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
     tests.remove(NeuralNetSpiralsTest.class);
+    tests.remove(NeuralNetIrisTest.class);
     // Pure JUnit test
 //    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);
