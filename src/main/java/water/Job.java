@@ -315,21 +315,28 @@ public class Job extends Request2 {
   }
 
   static final class List extends Iced {
-    Job[] _jobs = new Job[0];
+    Key[] _jobs = new Key[0];
 
     @Override
     public List clone(){
       List l = new List();
       l._jobs = _jobs.clone();
       for(int i = 0; i < l._jobs.length; ++i)
-        l._jobs[i] = (Job)l._jobs[i].clone();
+        l._jobs[i] = (Key)l._jobs[i].clone();
       return l;
     }
   }
 
   public static Job[] all() {
     List list = UKV.get(LIST);
-    return list != null ? list._jobs : new Job[0];
+    Job[] jobs = new Job[list==null?0:list._jobs.length];
+    int j=0;
+    for( int i=0; i<jobs.length; i++ ) {
+      Job job = UKV.get(list._jobs[i]);
+      if( job != null ) jobs[j++] = job;
+    }
+    if( j<jobs.length ) jobs = Arrays.copyOf(jobs,j);
+    return jobs;
   }
 
   public Job() {
@@ -350,14 +357,14 @@ public class Job extends Request2 {
   public Job start(final H2OCountedCompleter fjtask) {
     _fjtask = fjtask;
     Futures fs = new Futures();
-    DKV.put(job_key, new Value(job_key, new byte[0]),fs);
+    DKV.put(job_key,this,fs);
     start_time = System.currentTimeMillis();
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
-        Job[] jobs = old._jobs;
+        Key[] jobs = old._jobs;
         old._jobs = Arrays.copyOf(jobs, jobs.length + 1);
-        old._jobs[jobs.length] = Job.this;
+        old._jobs[jobs.length] = job_key;
         return old;
       }
     }.invoke(LIST);
@@ -400,12 +407,12 @@ public class Job extends Request2 {
       transient private Job _job;
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
-        Job[] jobs = old._jobs;
+        Key[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].job_key.equals(self()) ) {
-            jobs[i].end_time = CANCELLED_END_TIME;
-            jobs[i].exception = msg;
-            _job = jobs[i];
+          if( jobs[i].equals(self()) ) {
+            _job = Job.this;
+            end_time = CANCELLED_END_TIME;
+            exception = msg;
             break;
           }
         }
@@ -437,11 +444,11 @@ public class Job extends Request2 {
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) return null;
-        Job[] jobs = old._jobs;
+        Key[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].job_key.equals(job_key) ) {
-            if( jobs[i].end_time != CANCELLED_END_TIME )
-              jobs[i].end_time = System.currentTimeMillis();
+          if( jobs[i].equals(job_key) ) {
+            if( end_time != CANCELLED_END_TIME )
+              end_time = System.currentTimeMillis();
             break;
           }
         }
@@ -450,8 +457,9 @@ public class Job extends Request2 {
           long min = Long.MAX_VALUE;
           int n = -1;
           for( int i = 0; i < jobs.length; i++ ) {
-            if( jobs[i].end_time != 0 && jobs[i].start_time < min ) {
-              min = jobs[i].start_time;
+            Job job = UKV.get(jobs[i]);
+            if( job.end_time != 0 && job.start_time < min ) {
+              min = job.start_time;
               n = i;
             }
           }
