@@ -57,10 +57,10 @@ This method should only be used for running GLM. For all other algorithms, pleas
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-myPath = paste(path.package("h2oRClient"), "extdata", sep="/")
-all_files.hex = h2o.importFolder.VA(localH2O, path = myPath)
-for(i in 1:length(all_files.hex))
-  print(summary(all_files.hex[[i]]))
+myPath = system.file("extdata", "prostate_folder", package = "h2oRClient")
+prostate_all.hex = h2o.importFolder.VA(localH2O, path = myPath)
+summary(prostate_all.hex)
+h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -75,5 +75,6 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgra
 # Run PCR on Prostate Data
 prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5, ncomp = 3)
+h2o.shutdown(localH2O)
 }
 
