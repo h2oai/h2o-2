@@ -1,7 +1,6 @@
 package hex;
 
 import hex.Layer.*;
-import hex.rng.H2ORandomRNG;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -70,7 +69,7 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
-  @API(help = "Enable expert mode", filter = Default.class, json = false)
+  @API(help = "Enable expert mode", filter = Default.class, json = true)
   public boolean expert_mode = false;
 
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
@@ -91,16 +90,16 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Number of samples to train with non-distributed mode for improved stability", filter = Default.class, lmin = 0, json = true)
   public long warmup_samples = 0l;
 
-  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
+  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
   public long score_training = 1000l;
 
-  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = false)
+  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
   public long score_validation = 0l;
 
-  @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = false)
+  @API(help = "Minimum interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 2;
 
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = false)
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
 
   @Override public boolean toHTML(StringBuilder sb) {
@@ -216,7 +215,6 @@ public class NeuralNet extends ValidatedJob {
 
   void startTrain() {
     logStart();
-    Utils.setUsedRNGKind(H2ORandomRNG.RNGKind.value("deter"));
     running = true;
 // Vec[] vecs = Utils.append(_train, response);
 // reChunk(vecs);
