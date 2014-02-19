@@ -71,8 +71,8 @@ public class NNModel extends Model {
     public water.api.ConfusionMatrix valid_confusion_matrix;
 
     @Override public String toString() {
-      String s = "Training error: " + String.format("%.2f", (100 * train_err)) + "%";
-      if (validation) s += ", validation error: " + String.format("%.2f", (100 * valid_err)) + "%";
+      String s = "Training misclassification: " + String.format("%.2f", (100 * train_err)) + "%";
+      if (validation) s += ", validation misclassification: " + String.format("%.2f", (100 * valid_err)) + "%";
       return s;
     }
   }
