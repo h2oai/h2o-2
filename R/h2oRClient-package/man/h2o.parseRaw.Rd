@@ -13,7 +13,7 @@ h2o.parseRaw(data, key = "", header, sep = "", col.names, version = 1)
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{
-An \code{\linkS4class{H2ORawData}} object to be parsed.
+An \code{\linkS4class{H2ORawDataVA}} (\code{version = 1}) or \code{\linkS4class{H2ORawData}} (\code{version = 2}) object to be parsed.
 }
   \item{key}{
 (Optional) The hex key assigned to the parsed file.
@@ -25,7 +25,7 @@ An \code{\linkS4class{H2ORawData}} object to be parsed.
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
+(Optional) An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the column header as its first and only row.
   }
   \item{version}{
   (Optional) If \code{version = 1}, the file will be parsed to a ValueArray object. Otherwise, if \code{version = 2}, the file will be parsed to a FluidVecs object.
@@ -35,7 +35,7 @@ An \code{\linkS4class{H2ORawData}} object to be parsed.
 After the raw data file is parsed, it will be automatically deleted from the H2O server.
 }
 \value{
-An object of class \code{\linkS4class{H2ORawData}}, representing the unparsed dataset that was imported.
+An object of class \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}), representing the dataset that was parsed.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -44,7 +44,7 @@ An object of class \code{\linkS4class{H2ORawData}}, representing the unparsed da
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.uploadFile}}
+\code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
 library(h2o)

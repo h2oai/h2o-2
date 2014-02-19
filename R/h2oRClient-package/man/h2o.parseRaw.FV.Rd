@@ -1,19 +1,19 @@
-\name{h2o.parseRaw.VA}
-\alias{h2o.parseRaw.VA}
+\name{h2o.parseRaw.FV}
+\alias{h2o.parseRaw.FV}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Parse Raw Data File to ValueArray
+Parse Raw Data File to FluidVecs
 }
 \description{
-Parses a raw data file to ValueArray data, returning an object containing the identifying hex key.
+Parses a raw data file to FluidVecs data, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.parseRaw.VA(data, key = "", header, sep = "", col.names)
+h2o.parseRaw.FV(data, key = "", header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{
-An \code{\linkS4class{H2ORawDataVA}} object to be parsed.
+An \code{\linkS4class{H2ORawData}} object to be parsed.
 }
   \item{key}{
 (Optional) The hex key assigned to the parsed file.
@@ -25,14 +25,14 @@ An \code{\linkS4class{H2ORawDataVA}} object to be parsed.
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) An \code{\linkS4class{H2OParsedDataVA}} object containing the column header as its first and only row.
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
   }
 }
 \details{
-This method should only be used to parse raw data imported using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}}, or one of its variants. After the raw data file is parsed, it will be automatically deleted from the H2O server.
+This method should only be used to parse raw data imported using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}}, or one of its variants. After the raw data file is parsed, it will be automatically deleted from the H2O server.
 }
 \value{
-An object of class \code{\linkS4class{H2OParsedDataVA}}, representing the parsed ValueArray dataset.
+An object of class \code{\linkS4class{H2OParsedData}}, representing the parsed FluidVecs dataset.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -41,15 +41,15 @@ An object of class \code{\linkS4class{H2OParsedDataVA}}, representing the parsed
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFile.VA}, \link{h2o.importFolder.VA}, \link{h2o.importHDFS.VA}, \link{h2o.importURL.VA}, \link{h2o.uploadFile.VA}}
+\code{\link{h2o.importFile.FV}, \link{h2o.importFolder.FV}, \link{h2o.importHDFS.FV}, \link{h2o.importURL.FV}, \link{h2o.uploadFile.FV}}
 }
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
-prostate.raw = h2o.importFile.VA(localH2O, path = prosPath, parse = FALSE)
+prostate.raw = h2o.importFile.FV(localH2O, path = prosPath, parse = FALSE)
 # Do not modify prostate.csv on disk at this point!
-prostate.hex = h2o.parseRaw.VA(data = prostate.raw, key = "prostate.hex")
+prostate.hex = h2o.parseRaw.FV(data = prostate.raw, key = "prostate.hex")
 # After parsing, it is okay to modify or delete prostate.csv
 h2o.shutdown(localH2O)
 }
