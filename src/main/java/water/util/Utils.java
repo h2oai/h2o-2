@@ -1040,7 +1040,17 @@ public class Utils {
     return s;
   }
 
+  /** Union of given arrays.
+   *
+   * @param a first array
+   * @param b second array
+   * @return union of values in given arrays.
+   *
+   * @precondition a!=null && b!=null
+   * @precondition a && b are sorted
+   */
   public static String[] union(String[] a, String[] b) {
+    assert a!=null && b!=null : "Union expect non-null input!";
     String[] r = new String[a.length+b.length];
     int ia = 0, ib = 0, i = 0;
     while (ia < a.length && ib < b.length) {
