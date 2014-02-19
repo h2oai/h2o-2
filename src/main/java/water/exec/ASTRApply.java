@@ -223,7 +223,10 @@ class ASTddply extends ASTOp {
 
     // Result Frame
     String[] names = new String[cols.length+re._ncols];
-    for( int i = 0; i < cols.length; i++) names[i] = fr._names[cols[i]];
+    for( int i = 0; i < cols.length; i++) {
+      names[i] = fr._names[cols[i]];
+      vres[i]._domain = fr.vecs()[cols[i]]._domain;
+    }
     for( int i = cols.length; i < names.length; i++) names[i] = "C"+(i-cols.length+1);
     Frame res = new Frame(names,vres);
 
