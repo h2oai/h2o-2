@@ -135,11 +135,12 @@ public class NeuralNet extends ValidatedJob {
         //TODO: re-enable this
 // arg.disable("Using MapReduce since cluster size > 1.", inputArgs);
 // mode = ExecutionMode.MapReduce;
-
         //Temporary solution
-        arg.disable("Distributed MapReduce mode is not yet fully supported. Will run in single-node mode, wasting "
-                + (H2O.CLOUD._memary.length - 1) + " cluster node(s).", inputArgs);
-        mode = ExecutionMode.SingleNode;
+        if (mode == ExecutionMode.MapReduce) {
+          arg.disable("Distributed MapReduce mode is not yet fully supported. Will run in single-node mode, wasting "
+                  + (H2O.CLOUD._memary.length - 1) + " cluster node(s).", inputArgs);
+          mode = ExecutionMode.SingleNode;
+        }
       }
     }
     if( arg._name.equals("warmup_samples") && mode == MapReduce && H2O.CLOUD._memary.length > 1) {
