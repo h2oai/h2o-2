@@ -67,7 +67,7 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Job keyProducer, Key dest) {
     JsonObject redir = new JsonObject();
-    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.job_key.toString());
+    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.self().toString());
     redir.addProperty(KEY, dest.toString());
     return Response.redirect(resp, Inspect.class, redir);
   }
