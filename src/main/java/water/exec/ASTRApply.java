@@ -455,10 +455,10 @@ class ASTddply extends ASTOp {
 
       // Inspect the results; figure the result column count
       assert shared_env._sp+1 == env._sp; // Exactly one thing pushed
-      Vec vecs[] = null;
-      if( env.isAry() && (vecs=env.ary(-1).vecs())[0].length() != 1 )
-        throw new IllegalArgumentException("Result of ddply can only return 1 row but instead returned "+vecs[0].length());
-      _ncols = vecs == null ? 1 : vecs.length;
+      Frame fr = null;
+      if( env.isAry() && (fr=env.ary(-1)).numCols() != 1 )
+        throw new IllegalArgumentException("Result of ddply can only return 1 row but instead returned "+fr.numCols());
+      _ncols = fr == null ? 1 : (int)fr.numRows();
 
       // Inject (once-per-node) an array of NewChunks for results.
       // Racily done by all groups on all nodes; first group with results
@@ -478,8 +478,10 @@ class ASTddply extends ASTOp {
 
       // Copy the data into the NewChunks
       for( int i=0; i<_ds.length; i++ ) nchks[i].set_impl(_grpnum,_ds[i]); // The group data
+      Vec vec = fr==null ? null : fr.anyVec();
       for( int i=0; i<_ncols; i++ ) // The group results
-        nchks[_ds.length+i].set_impl(_grpnum,vecs==null ? env.dbl(-1) : vecs[i].at(0));
+        nchks[_ds.length+i].set_impl(_grpnum,fr==null ? env.dbl(-1) : vec.at(i));
+      if( fr != null ) fr.delete();
 
       // No need to return any results here.
       _fr.delete();
@@ -534,8 +536,6 @@ class ASTddply extends ASTOp {
       return vs;
     }
   }
-
-
 
   // Make a NewChunk to hold rows, that has a random Key and is not
   // associated with any Vec.  We'll fold these into a Vec later when we know
