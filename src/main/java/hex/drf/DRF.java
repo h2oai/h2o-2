@@ -146,6 +146,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     Log.info("    mtry computed: " + _mtry);
     Log.info("    sample_rate: " + sample_rate);
     Log.info("    seed: " + _seed);
+    Log.info("    importance: " + importance);
   }
 
   @Override protected Status exec() {
