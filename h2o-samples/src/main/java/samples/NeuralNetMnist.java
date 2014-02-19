@@ -33,6 +33,7 @@ public class NeuralNetMnist extends Job {
     samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.163");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
@@ -42,27 +43,27 @@ public class NeuralNetMnist extends Job {
   protected transient volatile Trainer _trainer;
 
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
+    //same parameters as in test_NN_mnist.py
     Layer[] ls = new Layer[5];
     ls[0] = new VecsInput(data, inputStats);
-    ls[1] = new Layer.RectifierDropout(128);
-    ls[2] = new Layer.RectifierDropout(128);
-    ls[3] = new Layer.RectifierDropout(256);
-
+    ls[1] = new Layer.RectifierDropout(117);
+    ls[2] = new Layer.RectifierDropout(131);
+    ls[3] = new Layer.RectifierDropout(129);
     ls[ls.length-1] = new VecSoftmax(labels, outputStats);
 
     NeuralNet p = new NeuralNet();
-    p.seed = 0xC0FFEE;
-    p.rate = 0.01;
+    p.seed = 98037452452l;
+    p.rate = 0.005;
     p.rate_annealing = 1e-6;
     p.activation = NeuralNet.Activation.RectifierWithDropout;
     p.loss = NeuralNet.Loss.CrossEntropy;
     p.input_dropout_ratio = 0.2;
     p.max_w2 = 15;
-    p.epochs = 10;
+    p.epochs = 2;
     p.l1 = 1e-5;
-    p.l2 = 0;
+    p.l2 = 0.0000001;
     p.momentum_start = 0.5;
-    p.momentum_ramp = 1800000;
+    p.momentum_ramp = 100000;
     p.momentum_stable = 0.99;
     p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
     p.classification = true;
@@ -76,7 +77,7 @@ public class NeuralNetMnist extends Job {
   }
 
   protected void startTraining(Layer[] ls) {
-    double epochs = 10.0;
+    double epochs = 2.0;
 
     // Single-thread SGD
 //    System.out.println("Single-threaded\n");

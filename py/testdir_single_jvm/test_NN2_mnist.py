@@ -24,20 +24,19 @@ class Basic(unittest.TestCase):
     def test_NN_mnist(self):
         #h2b.browseTheCloud()
         h2o.beta_features = True
-        csvPathname_train = 'mnist/mnist_training.csv.gz'
-        csvPathname_test  = 'mnist/mnist_testing.csv.gz'
+        csvPathname_train = 'mnist/train.csv.gz'
+        csvPathname_test  = 'mnist/test.csv.gz'
         hex_key = 'mnist_train.hex'
         validation_key = 'mnist_test.hex'
         timeoutSecs = 30
-        parseResult  = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
-        parseResultV = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
+        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
+        parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
 
         inspect = h2o_cmd.runInspect(None, hex_key)
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
-        #response = inspect['numCols'] - 1
-        response = 0;
+        response = inspect['numCols'] - 1
 
         #Making random id
         identifier = ''.join(random.sample(string.ascii_lowercase + string.digits, 10))
@@ -65,9 +64,10 @@ class Basic(unittest.TestCase):
             'epochs'                       : 2.0,
             'destination_key'              : model_key,
             'validation'                   : validation_key,
+            'score_interval'               : 10000
             }
-        expectedErr = 0.0655 ## expected validation error for the above model
-        relTol = 0.1
+        expectedErr = 0.057 ## expected validation error for the above model
+        relTol = 0.10 ## 10% rel. error tolerance due to Hogwild!
 
         timeoutSecs = 600
         start = time.time()
@@ -108,7 +108,6 @@ class Basic(unittest.TestCase):
             raise Exception("Scored classification error of %s is not within %s %% relative error of %s" %
                             (actualErr, float(relTol)*100, expectedErr))
 
-        h2o.sleep(1000)
         h2o.beta_features = False
 
 if __name__ == '__main__':

@@ -2147,11 +2147,21 @@ class H2O(object):
             'l1'                           : None,
             'l2'                           : None,
             'seed'                         : None,
-            'loss'                         : None,
-            'max_w2'                       : None,
             'initial_weight_distribution'  : None,
             'initial_weight_scale'         : None,
+            'loss'                         : None,
+            'rate_decay'                   : None,
+            'max_w2'                       : None,
             'epochs'                       : None,
+            'score_training_samples'       : None,
+            'score_validation_samples'     : None,
+            'score_interval'               : None,
+            'sync_samples'                 : None,
+            'diagnostics'                  : None,
+            'fast_mode'                    : None,
+            'ignore_const_cols'            : None,
+            'shuffle_training_data'        : None,
+            'nesterov_accelerated_gradient': None
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
@@ -2188,17 +2198,13 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                # h2o won't let me go bigger?
-                # 'max_ncols': 1000,
-                'max_ncols': 1000000,
+                'max_ncols': 1000
                 }
         else:
             params_dict = {
                 'key': key,
                 'x': None,
-                # h2o won't let me go bigger?
-                # 'max_column_display': 1000,
-                'max_column_display': 1000000,
+                'max_column_display': 1000
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)

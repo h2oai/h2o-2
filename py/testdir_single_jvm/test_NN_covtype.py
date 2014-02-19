@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
                 'destination_key'              : model_key,
                 'validation'                   : validation_key,
             }
-            expectedErr = 0.3413 if mode == 'SingleThread' else 0.3 ## expected validation error for the above model
+            expectedErr = 0.35195 if mode == 'SingleThread' else 0.3 ## expected validation error for the above model
 
             timeoutSecs = 600
             start = time.time()
