@@ -90,7 +90,7 @@ public class NN extends Job.ValidatedJob {
   public double score_interval = 2;
 
   @API(help = "Number of training set samples between synchronization (0 for all).", filter = Default.class, lmin = 0, json = true)
-  public long sync_samples = 1000l;
+  public long sync_samples = 10000l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
@@ -191,8 +191,10 @@ public class NN extends Job.ValidatedJob {
 
   @Override public float progress(){
     if(DKV.get(dest()) == null)return 0;
-    NNModel m = DKV.get(dest()).get();
-    return (float)(m.epoch_counter / m.model_info().get_params().epochs);
+    NNModel m = UKV.get(dest());
+    if (m != null && m.model_info()!=null )
+      return (float)(m.epoch_counter / m.model_info().get_params().epochs);
+    return 0;
   }
 
   @Override public Status exec() {
