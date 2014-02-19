@@ -536,6 +536,7 @@ public abstract class Request2 extends Request {
 
   protected JsonObject toJSON() {
     final String json = new String(writeJSON(new AutoBuffer()).buf());
+    if (json.length() == 0) return new JsonObject();
     JsonObject jo = (JsonObject)new JsonParser().parse(json);
     jo.remove("Request2");
     jo.remove("response_info");
@@ -548,7 +549,7 @@ public abstract class Request2 extends Request {
   }
 
   protected void logStart() {
-    Log.info("Building " + this.getClass().getSimpleName() + " model with these parameters:");
+    Log.info("Building H2O " + this.getClass().getSimpleName() + " model with these parameters:");
     for (String s : toString().split("\n")) Log.info(s);
   }
 
