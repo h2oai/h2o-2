@@ -24,11 +24,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "For files that we want to put (for testing put), we can get non-private files"
 
         csvFilename = 'part-00000b'
-        if getpass.getuser()=='kevin':
-            importFolderPath = '/home/hduser/data/'
-        else:
-            importFolderPath = '/mnt/0xcustomer-datasets/c2'
-
+        importFolderPath = '/mnt/0xcustomer-datasets/c2'
         csvPathname = importFolderPath + "/" + csvFilename
 
         # FIX! does 'separator=' take ints or ?? hex format
@@ -53,25 +49,16 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         #summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2)
         # summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2500)
         # can't do more than 1000
-        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
-
-        # Need to update this for new stuff
-        # leave off numCols so we don't check it vs. summary
-        h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numRows=numRows)
-
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], numCols=numCols, numRows=numRows)
 
         keepPattern = "oly_|mt_|b_"
         y = "is_purchase"
         print "y:", y
         # don't need the intermediate Dicts produced from columnInfoFromInspect
-        if DO_INSPECT:
-            x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)
-            print "x:", x
-        else:
-            x = None
+        x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)
+        print "x:", x
 
         kwargs = {
-            # 'x': x,
             'response': y,
             # 'case_mode': '>',
             # 'case': 0,

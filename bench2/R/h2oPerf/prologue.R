@@ -11,7 +11,10 @@
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
 options(echo=F)
-
+source("../../../R/h2oRClient-package/R/Internal.R")
+source("../../../R/h2oRClient-package/R/Algorithms.R")
+source("../../../R/h2oRClient-package/R/Classes.R")
+source("../../../R/h2oRClient-package/R/ParseImport.R")
 #GLOBALS
 aic               <<- "None"
 auc               <<- "None"
@@ -34,12 +37,13 @@ minority_error    <<- "None"
 model             <<- "None"
 model.json        <<- "None"
 null_dev          <<- "None"
+path              <<- "None"
 phase             <<- "None"
 PORT              <<- "None"
 precision         <<- "None"
 predict_type      <<- "None"
 recall            <<- "None"
-.representation   <<- "None"
+.representation   <<- -1
 res_dev           <<- "None"
 response          <<- "None"
 start_time        <<- "None"
@@ -50,8 +54,8 @@ trainData         <<- "None"
 train_data_url    <<- "None"
 
 #Internal.R Extensions:
-h2o.__PAGE_CM <- "2/ConfusionMatrix.json" #actual/vactual, predict/vpredict
-h2o.__GLM_SCORE <- "GLMScore.json" #model_key, key, thresholds
+.h2o.__PAGE_CM <- "2/ConfusionMatrix.json" #actual/vactual, predict/vpredict
+.h2o.__GLM_SCORE <- "GLMScore.json" #model_key, key, thresholds
 
 #"Private" Methods
 .setup<-
@@ -64,24 +68,39 @@ function() {
   .getArgs(commandArgs(trailingOnly = TRUE))
   .h2oSetup()
   .calcPhase()
+  .locateInternal()
   start_time <<- round(System$currentTimeMillis())[[1]]
+}
+
+.locateInternal<-
+function() {
+  for (i in 1:10) {
+    bn <- basename(path)
+    if (bn == "py") {
+      source("../R/h2oPerf/Internal.R")
+      print("SUCCESSFULLY SOURCED INTERNAL R CODE")
+      return(0)
+    }
+    if (bn == "h2o") {
+      stop("Couldn't find Internal.R")
+    }
+  }
 }
 
 h2o.removeAll <-
 function(object) {
-  h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
+  .h2o.__remoteSend(object, .h2o.__PAGE_REMOVEALL)
 }
 
 .calcPhase<-
 function() {
-  path <- normalizePath(basename(R.utils::commandArgs(asValues=TRUE)$"f"))
+  path <<- normalizePath(basename(R.utils::commandArgs(asValues=TRUE)$"f"))
   f <- function(it) {
     return(grepl(it, path))
   }
   pa <- sapply(c("Parse", "Model", "Predict"), f)
   phase <<- tolower(names(pa[pa == TRUE]))
   if(phase == "parse") {
-    h2o.removeAll(h)
     if (file.exists(".RData")) file.remove(".RData")
   }
 }
@@ -141,35 +160,35 @@ function() {
 
 #Import/Parsing
 upload.VA<-
-function() {
-  pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
+function(pkey) {
+  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
   f    <- ifelse(.isTest, testData, trainData)
   h2o.uploadFile.VA(h, path = f, key = pkey)
-  .isTest <<- TRUE
+  #.isTest <<- TRUE
 }
 
 upload.FV<-
-function(f) {
-  pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
+function(pkey) {
+  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
   f    <- ifelse(.isTest, testData, trainData)
   h2o.uploadFile.FV(h, f, key = pkey)
-  .isTest <<- TRUE
+  #.isTest <<- TRUE
 }
 
 hdfs.VA<-
-function(f) {
-  pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
+function(pkey) {
+  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
   f    <- ifelse(.isTest, testData, trainData)
   h2o.importHDFS.VA(h, f, key = pkey)
-  .isTest <<- TRUE
+  #.isTest <<- TRUE
 }
 
 hdfs.FV<-
-function(f) {
-  pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
+function(pkey) {
+  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
   f    <- ifelse(.isTest, testData, trainData)
   h2o.importHDFS.FV(h, f, key = pkey)
-  .isTest <<- TRUE
+  #.isTest <<- TRUE
 }
 
 #Modeling
@@ -182,7 +201,7 @@ function(x, y, distribution='multinomial',
   model <<- h2o.gbm(x = x, y = y, distribution = distribution, data = data, n.trees = n.trees,
           interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode,
           shrinkage = shrinkage, n.bins = n.bins)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_GBMModelView, '_modelKey' = model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_GBMModelView, '_modelKey' = model@key)
 }
 
 runGLM.VA<-
@@ -193,7 +212,7 @@ function(x, y, family, nfolds=10, alpha=0.5, lambda=1.0e-5, epsilon=1.0e-5,
   model <<- h2o.glm.VA(x = x, y = y, data = data, family = family, nfolds = nfolds,
                        alpha = alpha, lambda = lambda, epsilon = epsilon, standardize = standardize,
                        tweedie.p = tweedie.p, thresholds = thresholds)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_INSPECT, key = model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_INSPECT, key = model@key)
 }
 
 runGLM.FV<-
@@ -202,14 +221,14 @@ function(x, y, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
   model <<- h2o.glm.FV(x = x, y = y, data = data, family = family, nfolds = nfolds, alpha = alpha,
                        lambda = lambda, epsilon = epsilon, standardize = standardize, tweedie.p = tweedie.p)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_GLMModelView, '_modelKey'=model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_GLMModelView, '_modelKey'=model@key)
 }
 
 runKMeans.FV<-
 function(centers, cols = '', iter.max = 10, normalize = FALSE) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
   model <<- h2o.kmeans.FV(data = data, centers = centers, cols = cols, iter.max = iter.max, normalize = normalize)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_KM2ModelView, model = model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_KM2ModelView, model = model@key)
   kmeans_k <<- dim(model@model$centers)[1]
   kmeans_withinss <<- model@model$tot.withinss
 }
@@ -218,7 +237,7 @@ runKMeans.VA<-
 function(centers, cols = '', iter.max = 10, normalize = FALSE) {
   data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = TRUE)
   model <<- h2o.kmeans.VA(data = data, centers = centers, cols = cols, iter.max = iter.max, normalize = normalize)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_INSPECT, key = model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_INSPECT, key = model@key)
   kmeans_k <<- dim(model@model$centers)[1]
   kmeans_withinss <<- model@model$tot.withinss
 }
@@ -230,14 +249,14 @@ function(x, y, classification=T, activation='Tanh', layers=500,
   model <<- h2o.nn(x = x, y = y, data = data, classification = classification,
                    activation = activation, layers = layers, rate = rate, 
                    l1_reg = l1_reg, l2_reg = l2_reg, epoch = epoch)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_NNModelView, '_modelKey'=model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_NNModelView, '_modelKey'=model@key)
 }
 
 runPCA<-
 function(tol = 0, standardize = TRUE, retx = FALSE) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
   model <<- h2o.prcomp(data = data, tol = tol, standardize = standardize, retx = retx)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_PCAModelView, '_modelKey'=model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_PCAModelView, '_modelKey'=model@key)
 }
 
 runRF.VA<-
@@ -247,7 +266,7 @@ function(x, y, ntree=50, depth=50, sample.rate=2/3,
   model <<- h2o.randomForest.VA(x = x, y = y, data = data, depth = depth,
                                 sample.rate = sample.rate, classwt = classwt,
                                 nbins = nbins, seed = seed, use_non_local = use_non_local)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_RFVIEW, model_key=model@key, data_key=data@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_RFVIEW, model_key=model@key, data_key=data@key)
 }
 
 runRF.FV<-
@@ -257,7 +276,7 @@ function(x, y, ntree=50, depth=50, nodesize=1,
   model <<- h2o.randomForest.FV(x = x, y = y, data = data, ntrees = ntrees,
                                 depth = depth, nodesize = nodesize,
                                 sample.rate = sample.rate, nbins = nbins, seed = seed)
-  model.json <<- h2o.__remoteSend(h, h2o.__PAGE_DRFModelView, '_modelKey'= model@key)
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DRFModelView, '_modelKey'= model@key)
 }
 
 #Scoring/Predicting
@@ -305,7 +324,7 @@ function(modelType, datatype = "VA") {
 
 .predict<-
 function(model) {
-  res <- h2o.__remoteSend(h, h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
   h2opred <- new("H2OParsedData", h2o = h, key = "h2opreds.hex")
   if (predict_type == "binomial") 
     .calcBinomResults(h2opred)
@@ -317,7 +336,7 @@ function(model) {
 
 .calcBinomResults<-
 function(h2opred) {
-  res <- h2o.__remoteSend(h, h2o.__PAGE_CM, actual = testData@key, 
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
                           vactual = response, predict = h2opred@key,
                           vpredict = "predict")
   .buildcm2(res)
@@ -330,7 +349,7 @@ function(h2opred) {
 
 .calcMultinomResults<-
 function(h2opred) {
-  res <- h2o.__remoteSend(h, h2o.__PAGE_CM, actual = testData@key, 
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
                           vactual = response, predict = h2opred@key,
                           vpredict = "predict")
   .buildcm2(res)
@@ -338,7 +357,7 @@ function(h2opred) {
 
 .calcRegressionResults<-
 function(h2opred) {
-  res <- h2o.__remoteSend(h, h2o.__PAGE_CM, actual = testData@key, 
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
                           vactual = response, predict = h2opred@key,
                           vpredict = "predict")
   aic      <<- -1
@@ -391,16 +410,38 @@ function() {
   }
 }
 
+.build_cm <- function(cm, actual_names = NULL, predict_names = actual_names, transpose = TRUE) {
+  #browser()
+  categories = length(cm)
+  cf_matrix = matrix(unlist(cm), nrow=categories)
+  if(transpose) cf_matrix = t(cf_matrix)
+
+  cf_total = apply(cf_matrix, 2, sum)
+  # cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  cf_error = c(1-diag(cf_matrix)/apply(cf_matrix,1,sum), 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  cf_matrix = rbind(cf_matrix, cf_total)
+  cf_matrix = cbind(cf_matrix, round(cf_error, 3)) 
+
+  if(!is.null(actual_names))
+    dimnames(cf_matrix) = list(Actual = c(actual_names, "Totals"), Predicted = c(predict_names, "Error"))
+  return(cf_matrix)
+}
+
 .buildcm2<-
 function(res) {
   cm <- res$cm
   remove_nth <- length(res$response_domain) + 1
-  cm <- build_cm(cm)[-remove_nth, -remove_nth]
+  cm <- .build_cm(cm)[-remove_nth, -remove_nth]
   confusion_matrix <<- cm
   cm.json <<- res$cm
   levels.json <<- res$response_domain
-  .representation <<- "None"
 }
 
+
+
+
+
 .setup()
-if(file.exists('.RData')) load(".RData")
+if(file.exists('.RData')) {
+   load(".RData")
+}

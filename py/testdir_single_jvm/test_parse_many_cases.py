@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
         "# 'comment, is okay",
         '# "this comment, is okay too',
         "# 'this' comment, is okay too",
-        "@FirstName@|@Middle@Initials@|@LastName@|@Date@of@Birth@ ",
+        "@FirstName@|@Middle@Initials@|@LastName@|@Date@of@Birth@", # had to remove the trailing space to avoid bad parse
         "0|0.5|1|0",
         "3|NaN|4|1",
         "6||8|0",

@@ -22,7 +22,7 @@ This section is for new users, and provides information about how to install and
    Ruser/Rinstall
    Ruser/R_studio
    newuser/ec2
-   developuser/quickstart_scala.rst
+   developuser/ScalaGen/README
 
 .. toctree::
    :maxdepth: 2

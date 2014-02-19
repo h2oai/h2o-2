@@ -16,10 +16,12 @@ h2o.rm(object, keys)
 
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.assign}}, \code{\link{h2o.ls}}
 }
 \examples{
-# Remove an H2O object from the server where H2O is running. 
-localH2O = h2o.init()
+# Remove an H2O object from the server where H2O is running.
+library(h2o)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 s = runif(nrow(prostate.hex))
@@ -29,8 +31,9 @@ h2o.ls(localH2O)
 h2o.rm(object= localH2O, keys= "Last.value.0")
 h2o.ls(localH2O)
 
-#Remove an H2O object from the server and from the R environment
+# Remove an H2O object from the server and from the R environment
 h2o.rm(object= localH2O, keys= "prostate.hex")
 remove(prostate.hex)
+h2o.shutdown(localH2O)
 }
 

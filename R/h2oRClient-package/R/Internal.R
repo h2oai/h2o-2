@@ -1,9 +1,9 @@
 # Hack to get around Exec.json always dumping to same Result.hex key
 # TODO: Need better way to manage temporary/intermediate values in calculations! Right now, overwriting occurs silently
-pkg.env = new.env()
-pkg.env$result_count = 0
-pkg.env$temp_count = 0
-pkg.env$IS_LOGGING = FALSE
+.pkg.env = new.env()
+.pkg.env$result_count = 0
+.pkg.env$temp_count = 0
+.pkg.env$IS_LOGGING = FALSE
 .TEMP_KEY = "Last.value"
 .RESULT_MAX = 200
 .LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
@@ -13,23 +13,23 @@ pkg.env$IS_LOGGING = FALSE
 if(.Platform$OS.type == "windows")
   .myPath = paste(Sys.getenv("APPDATA"), "h2o", sep=.Platform$file.sep)
   
-pkg.env$h2o.__LOG_COMMAND = paste(.myPath, "h2o_commands.log", sep=.Platform$file.sep)
-pkg.env$h2o.__LOG_ERROR = paste(.myPath, "h2o_error_json.log", sep=.Platform$file.sep)
+.pkg.env$h2o.__LOG_COMMAND = paste(.myPath, "h2o_commands.log", sep=.Platform$file.sep)
+.pkg.env$h2o.__LOG_ERROR = paste(.myPath, "h2o_error_json.log", sep=.Platform$file.sep)
 
-h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
-h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
-h2o.__clearLogs        <- function() { unlink(pkg.env$.h2o.__LOG_COMMAND)
-                                       unlink(pkg.env$.h2o.__LOG_ERROR) }
+h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = .pkg.env) }
+h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = .pkg.env) }
+h2o.__clearLogs        <- function() { unlink(.pkg.env$.h2o.__LOG_COMMAND)
+                                       unlink(.pkg.env$.h2o.__LOG_ERROR) }
 h2o.__getLog <- function(type) {
   if(missing(type) || !type %in% c("Command", "Error"))
     stop("type must be either 'Command' or 'Error'")
-  switch(type, Command = pkg.env$h2o.__LOG_COMMAND, Error = pkg.env$h2o.__LOG_ERROR)
+  switch(type, Command = .pkg.env$h2o.__LOG_COMMAND, Error = .pkg.env$h2o.__LOG_ERROR)
 }
 
 h2o.__openLog <- function(type) {
   if(missing(type) || !type %in% c("Command", "Error"))
     stop("type must be either 'Command' or 'Error'")
-  myFile = switch(type, Command = pkg.env$h2o.__LOG_COMMAND, Error = pkg.env$h2o.__LOG_ERROR)
+  myFile = switch(type, Command = .pkg.env$h2o.__LOG_COMMAND, Error = .pkg.env$h2o.__LOG_ERROR)
   
   myOS = Sys.info()["sysname"]
   if(myOS == "Windows") shell.exec(paste("open '", myFile, "'", sep="")) 
@@ -42,7 +42,7 @@ h2o.__changeLog <- function(path, type) {
   myVar = switch(type, Command = "h2o.__LOG_COMMAND", Error = "h2o.__LOG_ERROR")
   myFile = switch(type, Command = "commands.log", Error = "errors.log")
   cmd <- paste(path, myFile, sep = .Platform$file.sep)
-  assign(myVar, cmd, envir = pkg.env)
+  assign(myVar, cmd, envir = .pkg.env)
 }
 
 .h2o.__logIt <- function(m, tmp, commandOrErr, isPost = TRUE) {
@@ -64,7 +64,7 @@ h2o.__changeLog <- function(path, type) {
   if(commandOrErr == "Command")
     h <- paste(h, ifelse(isPost, "POST", "GET"), sep = "\n")
   s <- paste(h, "\n", s)
-  write(s, file = ifelse(commandOrErr == "Command", pkg.env$h2o.__LOG_COMMAND, pkg.env$h2o.__LOG_ERROR), append = TRUE)
+  write(s, file = ifelse(commandOrErr == "Command", .pkg.env$h2o.__LOG_COMMAND, .pkg.env$h2o.__LOG_ERROR), append = TRUE)
 }
 
 # Internal functions & declarations
@@ -144,7 +144,7 @@ h2o.__changeLog <- function(path, type) {
   # Re-enable POST since we found the bug in NanoHTTPD which was causing POST
   # payloads to be dropped.
   #
-  if(pkg.env$IS_LOGGING) {
+  if(.pkg.env$IS_LOGGING) {
     # Log list of parameters sent to H2O
     .h2o.__logIt(myURL, list(...), "Command")
     
@@ -157,7 +157,7 @@ h2o.__changeLog <- function(path, type) {
     hh <- hg$value()
     s <- paste(hh["Date"], "\nHTTP status code: ", hh["status"], "\n ", temp, sep = "")
     s <- paste(s, "\n\n------------------------------------------------------------------\n")
-    write(s, file = pkg.env$h2o.__LOG_COMMAND, append = TRUE)
+    write(s, file = .pkg.env$h2o.__LOG_COMMAND, append = TRUE)
   } else
     temp = postForm(myURL, style = "POST", ...)
   
@@ -177,7 +177,7 @@ h2o.__changeLog <- function(path, type) {
   res = fromJSON(after)
 
   if (!is.null(res$error)) {
-    if(pkg.env$IS_LOGGING) .h2o.__writeToFile(res, pkg.env$h2o.__LOG_ERROR)
+    if(.pkg.env$IS_LOGGING) .h2o.__writeToFile(res, .pkg.env$h2o.__LOG_ERROR)
     stop(paste(myURL," returned the following error:\n", .h2o.__formatError(res$error)))
   }
   res
@@ -318,8 +318,8 @@ h2o.__changeLog <- function(path, type) {
 
 #------------------------------------ Exec2 ------------------------------------#
 .h2o.__exec2 <- function(client, expr) {
-  destKey = paste(.TEMP_KEY, ".", pkg.env$temp_count, sep="")
-  pkg.env$temp_count = (pkg.env$temp_count + 1) %% .RESULT_MAX
+  destKey = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
+  .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
   .h2o.__exec2_dest_key(client, expr, destKey)
   # .h2o.__exec2_dest_key(client, expr, .TEMP_KEY)
 }

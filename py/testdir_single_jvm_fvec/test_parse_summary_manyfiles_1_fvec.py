@@ -51,6 +51,10 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+            self.assertEqual(numCols, 542)
+            self.assertEqual(numRows, 100000)
 
             # gives us some reporting on missing values, constant values, to see if we have x specified well
             # figures out everything from parseResult['destination_key']
@@ -59,8 +63,8 @@ class Basic(unittest.TestCase):
             goodX = h2o_glm.goodXFromColumnInfo(y=54, key=parseResult['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
-            summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360)
-            h2o_cmd.infoFromSummary(summaryResult)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360, 
+                numRows=numRows, numCols=numCols)
 
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"

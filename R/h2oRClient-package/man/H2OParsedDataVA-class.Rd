@@ -49,21 +49,10 @@ Class \code{"\linkS4class{H2OParsedData}"}, directly.
     \item{tail}{\code{signature(x = "H2OParsedDataVA")}: ... }
 	 }
 }
-\references{
-%%  ~~put references to the literature/web site here~~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
+\code{\linkS4class{H2ORawDataVA}, \link{h2o.parseRaw.VA}}
 }
 \examples{
 showClass("H2OParsedDataVA")

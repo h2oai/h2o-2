@@ -12,15 +12,14 @@
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
- + silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.qs = quantile(prostate.hex$PSA)
 PSA.outliers = prostate.hex[prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >= prostate.qs[10],]
 PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
-sum1<- summary(PSA.outliers)
-sum2<- summary(PSA.outliers.df)
+summary(PSA.outliers)
 head(prostate.hex)
 head(PSA.outliers)
+h2o.shutdown(localH2O)
 }

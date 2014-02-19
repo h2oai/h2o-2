@@ -7,7 +7,7 @@
 Runs GLM regression on PCA results, and allows for transformation of test data to match PCA transformations of training data.  
 }
 \usage{
-h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, tweedie.p)
+h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, epsilon = 1e-05, tweedie.p)
 }
 
 \arguments{
@@ -27,20 +27,23 @@ h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, twe
     A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported.
   }
   \item{nfolds}{
-    Number of folds for cross-validation. The default is 10.
+    (Optional) Number of folds for cross-validation. The default is 10.
   }
   \item{alpha}{
-    The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined to be \deqn{P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|]} so \code{alpha=1} is the lasso penalty, while \code{alpha=0} is the ridge penalty.
+    (Optional) The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined to be \deqn{P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|]} so \code{alpha=1} is the lasso penalty, while \code{alpha=0} is the ridge penalty.
   }
   \item{lambda}{
-    The shrinkage parameter, which multiples \eqn{P(\alpha,\beta)} in the objective. The larger \code{lambda} is, the more the coefficients are shrunk toward zero (and each other).
+    (Optional) The shrinkage parameter, which multiples \eqn{P(\alpha,\beta)} in the objective. The larger \code{lambda} is, the more the coefficients are shrunk toward zero (and each other).
+  }
+  \item{epsilon}{
+  (Optional) Number indicating the cutoff for determining if a coefficient is zero.
   }
   \item{tweedie.p}{The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}
   }
 }
 
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+This method standardizes the data, obtains the first \code{ncomp} principal components using PCA (in decreasing order of standard deviation), and then runs GLM with the components as the predictor variables. 
 }
 \value{
   An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:
@@ -62,32 +65,16 @@ h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, twe
   The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
 }
 
-
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.prcomp}, \link{h2o.glm}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE,                    
-  + promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 # Run PCR on Prostate Data
-prostate.hex = h2o.importURL(localH2O, 
- + path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
- + key = "prostate.hex")
-h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, 
- + family = "binomial", 
-nfolds = 10, alpha = 0.5, ncomp = 3)
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5, ncomp = 3)
+h2o.shutdown(localH2O)
 }
 

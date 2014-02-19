@@ -21,17 +21,13 @@ The margin along wich the function should be applied
 The function to be applied by H2O. 
 }
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
 Produces a new vector or array of the output of the applied function. That vector is stored in H2O so that it can be used in subsequent H2O processes. 
 }
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
-+ promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(apply(iris.hex, 1, sum))

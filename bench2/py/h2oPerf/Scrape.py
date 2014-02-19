@@ -295,12 +295,16 @@ class PredictScraper(Scraper):
             flag = False
             for line in f:
                 if flag:
+                    print "---------------------------------"
+                    print line
+                    print "---------------------------------"
                     predict_type = self.__get_predict_type__(line.strip())[0]
                     flag = False
                     break
                 if "PREDICT TYPE" in line and "print" not in line:
                     flag = True
         self.result_type = predict_type
+        print "GOT RESULT TYPE:     " + predict_type
         self.__switch__()
         return None
 
@@ -332,8 +336,10 @@ class PredictScraper(Scraper):
         """ 
         Returns the type: 'parse', 'model', 'predict'
         """
+        print "TYPE CANDIDATE:   " + type_candidate
         types = ['binomial', 'regression', 'multinomial', 'cm']
         rf = type_candidate.lower()
+        print "RETURNING TYPE:    " + str( [t for t in types if t in rf])
         return [t for t in types if t in rf] 
 
     def __switch__(self):
@@ -351,11 +357,16 @@ class PredictScraper(Scraper):
         One important note is that the scrapers in this case handle the
         database insertions.
         """
-        return {'regression' : self.__scrape_regression_result__(),
-                'cm'         : self.__scrape_cm_result__(),
-                'binomial'   : self.__scrape_binomial_result__(),
-                'multinomial': self.__scrape_multinomial_result__(),
-                }[self.result_type]
+        print "SWITCHING TO     " + self.result_type
+        obj =  {'regression' : self.__scrape_regression_result__,
+                'cm'         : self.__scrape_cm_result__,
+                'multinomial': self.__scrape_multinomial_result__,
+                'binomial'   : self.__scrape_binomial_result__,
+                }.get(self.result_type, "bad key")
+
+        if self.result_type in ['multinomial', 'binomial']:
+            self.__scrape_cm_result__()
+        return obj()
 
     def __scrape_regression_result__(self):
         regression_r = ""
@@ -381,7 +392,9 @@ class PredictScraper(Scraper):
                     break
                 if "CM" in line and "print" not in line:
                     flag = True
-        #do the insert
+        self.test_run_cm_result = TableRow("test_run_cm_result", self.perfdb)
+        self.test_run_cm_result.row.update(cm_r["cm_json"])
+        self.test_run_cm_result.update()
 
     def __scrape_binomial_result__(self):
         binomial_r = ""
@@ -410,5 +423,8 @@ class PredictScraper(Scraper):
                     break
                 if "MULTINOMIAL" in line and "print" not in line:
                     flag = True
-        #do the insert
+        for level in multinomial_r["multinomial_result"]:
+            self.test_run_multinomial_classification_result = TableRow("test_run_multinomial_classification_result", self.perfdb)
+            self.test_run_multinomial_classification_result.row.update(level)
+            self.test_run_multinomial_classification_result.update()
 

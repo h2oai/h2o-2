@@ -189,6 +189,7 @@ docs-website: dw_announce dw_1 dw_2 dw_3 dw_4
 
 docs-website-clean:
 	rm -rf h2o-docs/source/developuser/DocGen
+	rm -rf h2o-docs/source/developuser/ScalaGen
 	$(MAKE) -C h2o-docs clean
 endif
 
@@ -206,6 +207,8 @@ dw_1:
 	mkdir -p h2o-docs/source/developuser/DocGen
 	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -jar "$(TOPDIR)/target/h2o.jar" -runClass water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
 	rm -rf $(TMPDIR)
+	mkdir -p h2o-docs/source/developuser/ScalaGen
+	cp -p h2o-scala/README.rst h2o-docs/source/developuser/ScalaGen/README.rst
 
 # If this fails, you might need to do the following:
 #     $ (possibly sudo) easy_install pip
@@ -225,8 +228,6 @@ dw_3:
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
-	mkdir -p $(BUILD_WEBSITE_DIR)/bits/h2o-scala
-	cp -p h2o-scala/README.md $(BUILD_WEBSITE_DIR)/bits/h2o-scala/README.txt
 
 # Note:  to get pdfunite on a mac, try:
 #     $ brew install poppler

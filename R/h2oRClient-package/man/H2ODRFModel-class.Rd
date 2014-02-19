@@ -36,21 +36,10 @@ Class \code{"\linkS4class{H2OModel}"}, directly.
     \item{show}{\code{signature(object = "H2ODRFModel")}: ... }
 	 }
 }
-\references{
-%%  ~~put references to the literature/web site here~~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
+\code{\link{h2o.randomForest}}
 }
 \examples{
 showClass("H2ODRFModel")

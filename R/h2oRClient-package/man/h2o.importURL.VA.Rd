@@ -5,7 +5,7 @@
 Import Data from URL to ValueArray
 }
 \description{
-Imports a file from the URL and parses it, returning an object containing the identifying hex key.
+Imports a file from the URL and parses it to ValueArray data, returning an object containing the identifying hex key.
 }
 \usage{
 h2o.importURL.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names)
@@ -35,7 +35,9 @@ The complete URL of the file to be imported. Each row of data appears as one lin
   }
 }
 \details{
-This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFile}}. WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importURL will automatically parse the file.
+This method is identical to \code{\link{h2o.importURL}} with input parameter \code{version = 1}.
+
+ WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
 If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}.
@@ -45,29 +47,16 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }
-\references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.importFile.VA}, \link{h2o.importFolder.VA}, \link{h2o.importHDFS.VA}, \link{h2o.uploadFile.VA}}
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
- + promptUpgrade = FALSE)
-prostate.hex = h2o.importURL.VA(localH2O, 
- + path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
- + key = "prostate.hex")
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+prostate.hex = h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)
+h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
