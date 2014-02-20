@@ -168,7 +168,7 @@ public class GLM2 extends ModelJob {
     init();
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
-    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, true);
+    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true);
     _dinfo = new DataInfo(fr, 1, standardize);
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search

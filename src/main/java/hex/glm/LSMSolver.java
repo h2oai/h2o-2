@@ -120,7 +120,7 @@ public abstract class LSMSolver extends Iced{
             * Adaptive calculation of Rho is:  lambda*alpha*0.1
             * Temporarily hardcode to same value as GLM1 for testing purposes.
             */
-           GLM1_RHO
+           lambda*alpha
       );
     }
     public ADMMSolver (double lambda, double alpha, double rho) {
@@ -188,11 +188,13 @@ public abstract class LSMSolver extends Iced{
 
     public boolean solve(Gram gram, double [] xy, double yy, double[] z, double objVal) {
       double d = gram._diagAdded;
+      assert d==0;
+
       final int N = xy.length;
       Arrays.fill(z, 0);
-      if(_lambda>0){
+      if( _lambda>0 ) {
         gram.addDiag(_lambda*(1-_alpha)*0.5);
-        if(_alpha > 0)gram.addDiag(_rho);
+        if(_alpha > 0) gram.addDiag(_rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){
         gram.addDiag(_proximalPenalty, true);
@@ -200,22 +202,26 @@ public abstract class LSMSolver extends Iced{
         for(int i = 0; i < xy.length; ++i)
           xy[i] += _proximalPenalty*_wgiven[i];
       }
+
       int attempts = 0;
       long t1 = System.currentTimeMillis();
       Cholesky chol = gram.cholesky(null,true,_id);
-      long t2 = System.currentTimeMillis();
-      Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");
       while(!chol.isSPD() && attempts < 10){
+        double old_rho = _rho;
         if(_rho == 0)_rho = 1e-5;
         else _rho *= 10;
         ++attempts;
-        gram.addDiag(_rho); // try to add L2 penalty to make the Gram issp
+        System.out.println("Cholesky is non-SPD, bumping rho to "+_rho);
+        gram.addDiag(-old_rho + _rho); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
       if(!chol.isSPD()){
         System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
         throw new NonSPDMatrixException(gram);
       }
+      long t2 = System.currentTimeMillis();
+      Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");
+
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
         System.arraycopy(xy, 0, z, 0, xy.length);
         chol.solve(z);
@@ -230,7 +236,7 @@ public abstract class LSMSolver extends Iced{
       for( int i = 0; i < 1000; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
-        for( int j = 0; j < N-1; ++j )xyPrime[j] = xy[j] + _rho * (z[j] - u[j]);
+        for( int j = 0; j < N-1; ++j ) xyPrime[j] = xy[j] + _rho * (z[j] - u[j]);
         xyPrime[N-1] = xy[N-1];
         // updated x
         chol.solve(xyPrime);
@@ -256,7 +262,7 @@ public abstract class LSMSolver extends Iced{
           u_norm += u[j] * u[j];
         }
         z[N-1] = xyPrime[N-1];
-        // compute variables used for stopping criterium
+        // compute variables used for stopping criteria
         r_norm = Math.sqrt(r_norm);
         s_norm = _rho * Math.sqrt(s_norm);
         eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
