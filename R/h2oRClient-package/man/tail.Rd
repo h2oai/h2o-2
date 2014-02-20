@@ -30,5 +30,6 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgra
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 tail(australia.hex, 10)
+h2o.shutdown(localH2O)
 }
 

@@ -15,9 +15,6 @@ h2o.cut(x, breaks)
   \item{x}{An \code{\linkS4class{H2OParsedData}} object with numeric columns.}
   \item{breaks}{A numeric vector of two or more unique cut points.}
 }
-\details{
-This method dispatches on the type of H2O model to select the correct prediction/scoring algorithm. 
-}
 \value{
 A \code{\linkS4class{H2OParsedData}} object containing the factored data with intervals as levels.
 }
