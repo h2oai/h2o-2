@@ -1,6 +1,6 @@
 import unittest, time, sys, random, string
 sys.path.extend(['.','..','py'])
-import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_browse as h2b
+import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
         hex_key = 'covtype.hex'
         validation_key = hex_key
         timeoutSecs = 30
-        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
+        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
         ###No need - use training as validation
         ###parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
         inspect = h2o_cmd.runInspect(None, hex_key)
