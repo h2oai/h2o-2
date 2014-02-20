@@ -238,7 +238,7 @@ public class NN extends Job.ValidatedJob {
       Log.info("Number of chunks of the validation data: " + validation.anyVec().nChunks());
 
     if (_dinfo == null)
-      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, true, ignore_const_cols), 1, true);
+      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols), 1, true);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.model_info().initializeMembers();
     //Log.info("Initial model:\n" + model.model_info());

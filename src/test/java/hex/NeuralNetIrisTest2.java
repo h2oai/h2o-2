@@ -263,8 +263,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                          */
                         final double trainErr = ref._nn.Accuracy(ref._trainData);
                         final double testErr = ref._nn.Accuracy(ref._testData);
-                        final double myTrainErr = mymodel.classificationError(_train, "Final training error:", true, null);
-                        final double myTestErr = mymodel.classificationError(_test,  "Final testing error:",  true, null);
+                        final double myTrainErr = mymodel.calcError(_train, "Final training error:", true, null);
+                        final double myTestErr = mymodel.calcError(_test,  "Final testing error:",  true, null);
                         Log.info("H2O  training error : " + myTrainErr*100 + "%, test error: " + myTestErr*100 + "%");
                         Log.info("REF  training error : " + trainErr*100 + "%, test error: " + testErr*100 + "%");
                         compareVal(trainErr, myTrainErr, abseps, releps);
