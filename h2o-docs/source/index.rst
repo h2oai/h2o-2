@@ -108,5 +108,6 @@ A few more things that you might be interested in...
    misc/license
    misc/troubleshoot
    misc/contactus
+   misc/highavail
 
 
