@@ -494,6 +494,16 @@ class Test:
         """
         return (self.returncode == 0)
 
+    def get_nopass(self):
+        """
+        Some tests are known not to fail and even if they don't pass we don't want
+        to fail the overall regression PASS/FAIL status.
+
+        @return: True if the test has been marked as NOPASS, False otherwise.
+        """
+        nopass = (re.search("NOPASS", self.test_name) is not None)
+        return nopass
+
     def get_completed(self):
         """
         @return: True if the test completed (pass or fail), False otherwise.
@@ -561,6 +571,7 @@ class RUnitRunner:
         self.tests = []
         self.tests_not_started = []
         self.tests_running = []
+        self.regression_passed = False
         self._create_output_dir()
 
         if (use_cloud):
@@ -823,6 +834,7 @@ class RUnitRunner:
         @return: none
         """
         passed = 0
+        nopass_but_tolerate = 0
         failed = 0
         notrun = 0
         total = 0
@@ -830,11 +842,20 @@ class RUnitRunner:
             if (test.get_passed()):
                 passed += 1
             else:
+                if (test.get_nopass()):
+                    nopass_but_tolerate += 1
+
                 if (test.get_completed()):
                     failed += 1
                 else:
                     notrun += 1
             total += 1
+
+        if ((passed + nopass_but_tolerate) == total):
+            self.regression_passed = True
+        else:
+            self.regression_passed = False
+
         end_seconds = time.time()
         delta_seconds = end_seconds - self.start_seconds
         run = total - notrun
@@ -849,6 +870,7 @@ class RUnitRunner:
         self._log("Passed:               " + str(passed))
         self._log("Did not pass:         " + str(failed))
         self._log("Did not complete:     " + str(notrun))
+        self._log("Tolerated NOPASS:     " + str(nopass_but_tolerate))
         self._log("")
         self._log("Total time:           %.2f sec" % delta_seconds)
         if (run > 0):
@@ -873,6 +895,14 @@ class RUnitRunner:
 
         for cloud in self.clouds:
             cloud.terminate()
+
+    def get_regression_passed(self):
+        """
+        Return whether the overall regression passed or not.
+
+        @return: true if the exit value should be 0, false otherwise.
+        """
+        return self.regression_passed
 
     #--------------------------------------------------------------------
     # Private methods below this line.
@@ -1334,6 +1364,9 @@ def main(argv):
         g_runner.stop_clouds()
         g_runner.report_summary()
 
+    # If the overall regression did not pass then exit with a failure status code.
+    if (not g_runner.get_regression_passed()):
+        sys.exit(1)
 
 if __name__ == "__main__":
     main(sys.argv)
