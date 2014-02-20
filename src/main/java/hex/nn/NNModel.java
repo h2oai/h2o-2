@@ -722,14 +722,14 @@ public class NNModel extends Model {
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
 
-    String training = "Number of training set samples for scoring: " + (fulltrain ? "all" : "") + score_train;
+    String training = "Number of training set samples for scoring: " + (fulltrain ? "all " + model_info().data_info()._adaptedFrame.numRows() : score_train);
     if (score_train > 0) {
       if (score_train < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
       if (score_train > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
     }
     DocGen.HTML.section(sb, training);
     if (error.validation) {
-      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all" : "") + score_valid;
+      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " + model_info().get_params().validation.numRows() : score_valid);
       if (score_valid > 0) {
         if (score_valid < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
         if (score_valid > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
