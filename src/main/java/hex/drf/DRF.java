@@ -99,6 +99,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       else { // classification
         float s = sum(p);
         if (s>0) div(p, s); // unify over all classes
+        p[0] = getPrediction(p, data);
       }
       return p;
     }
@@ -109,7 +110,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       if (isClassifier()) {
         bodySb.i().p("float sum = 0;").nl();
         bodySb.i().p("for(int i=1; i<preds.length; i++) sum += preds[i];").nl();
-        bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
+        bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] /= sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
   }
@@ -145,16 +146,17 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     logStart();
     buildModel();
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected Response redirect() {
     return DRFProgressPage.redirect(this, self(), dest());
   }
 
+  @SuppressWarnings("unused")
   @Override protected void init() {
     super.init();
     // Initialize local variables
@@ -371,13 +373,13 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
 
   // Read the 'tree' columns, do model-specific math and put the results in the
-  // ds[] array, and return the sum.  Dividing any ds[] element by the sum
+  // fs[] array, and return the sum.  Dividing any fs[] element by the sum
   // turns the results into a probability distribution.
-  @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
-    double sum=0;
+  @Override protected float score1( Chunk chks[], float fs[/*nclass*/], int row ) {
+    float sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
-      sum+=(ds[k]=chk_tree(chks,k).at0(row));
-    if (_nclass == 1) sum /= chk_oobt(chks).at0(row); // for regression average per trees voted for this row
+      sum+=(fs[k+1]=(float)chk_tree(chks,k).at0(row));
+    if (_nclass == 1) sum /= (float)chk_oobt(chks).at0(row); // for regression average per trees voted for this row
     return sum;
   }
 

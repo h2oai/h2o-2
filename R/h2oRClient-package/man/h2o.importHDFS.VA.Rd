@@ -5,7 +5,7 @@
   Import from HDFS to ValueArray
 }
 \description{
-  Imports a HDFS file or set of files in a directory and parses them, returning a list of objects containing the identifying hex keys.
+  Imports a HDFS file or set of files in a directory and parses them to ValueArray data, returning a object containing the identifying hex key.
 }
 \usage{
 h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
@@ -38,10 +38,14 @@ h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, se
   }
 }
 \details{
-This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFile}}. WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importHDFS will automatically parse the file.
+This method is identical to \code{\link{h2o.importHDFS}} with input parameter \code{version = 1}.
+
+When \code{path} is a directory, this method acts like \code{\link{h2o.importFolder}} and concatenates all data files in the folder into a single ValueArray object.
+
+WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
 }
 \value{
-When the path is a directory, if \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawDataVA}}. When the path is a single file, the same holds, except the function returns a single object rather than a list.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}. 
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -49,7 +53,7 @@ When the path is a directory, if \code{parse = TRUE}, the function returns a lis
 %% ...
 }
 \seealso{
-\code{\link{h2o.importFolder.VA}}, \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importURL.VA}}
+\code{\link{h2o.importFile.VA}, \link{h2o.importFolder.VA}, \link{h2o.importURL.VA}, \link{h2o.uploadFile.VA}}
 }
 \examples{
 ## Not run:
@@ -60,8 +64,8 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgra
 
 iris.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_wheader.csv", parse = TRUE)
 summary(iris.hex)
-irisfolder.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_test_train")
-summary(irisfolder.hex)
+iris_folder.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_test_train")
+summary(iris_folder.hex)
 h2o.shutdown(localH2O)
 
 ## End(Not run)

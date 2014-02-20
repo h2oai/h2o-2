@@ -408,14 +408,12 @@ h2o.downloadCSV <- function(data, filename) {
 
 # ----------------------- Log helper ----------------------- #
 h2o.logAndEcho <- function(conn, message) {
-  if (class(conn) != "H2OClient")
-      stop("conn must be an H2OClient")
-  if (class(message) != "character")
-      stop("message must be a character string")
+  if(class(conn) != "H2OClient") stop("conn must be an H2OClient")
+  if(!is.character(message)) stop("message must be a character string")
   
   res = .h2o.__remoteSend(conn, .h2o.__PAGE_LOG_AND_ECHO, message=message)
   echo_message = res$message
-  return (echo_message)
+  return(echo_message)
 }
 
 h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {

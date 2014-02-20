@@ -16,9 +16,7 @@ public class GBMProgressPage extends Progress2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Job jjob = Job.findJob(job_key);
-    if (jjob ==null) return true;
-    GBMModel m = UKV.get(jjob.dest());
+    GBMModel m = UKV.get(destination_key);
     if (m!=null) m.generateHTML("GBM Model", sb);
     else DocGen.HTML.paragraph(sb, "Pending...");
     return true;

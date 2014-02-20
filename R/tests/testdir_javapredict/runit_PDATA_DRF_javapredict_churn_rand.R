@@ -41,6 +41,12 @@ print(paste("test", test))
 y <- "churn"
 print(paste("y", y))
 
+if (! file.exists(train)) {
+    cat("\n")
+    cat("\n")
+    stop(sprintf("Data file not available (%s).", train))
+}
+
 # Remove Customer_ID because it's the right thing to do when building the model.
 # Remove last_swap because it doesn't parse properly with date format.
 # Remove occu1 because it doesn't parse properly with mixed char/num format.

@@ -8,6 +8,8 @@ to specify, run, and interpret a K-means model in  H\ :sub:`2`\ O.
 Those who have never used H\ :sub:`2`\ O before should see the quick start guide
 for additional instructions on how to run H\ :sub:`2`\ O. 
 
+Interested users can find details on the math behind K Means at: :ref:`KMmath`.
+
 Getting Started
 """""""""""""""
 

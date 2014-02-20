@@ -44,8 +44,9 @@ The complete URL or normalized file path of the file to be imported. Each row of
 \details{
 WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importURL will automatically parse the file.
 }
+
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -54,7 +55,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFile}}, \code{\link{h2o.importFolder}}
+\code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}}
 }
 \examples{
 library(h2o)

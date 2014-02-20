@@ -905,9 +905,9 @@ public class NeuralNet extends ValidatedJob {
       double[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
       // convert to float
-      float[] out2 = new float[out.length];
-      for (int i=0; i<out.length; ++i) out2[i] = (float)out[i];
-      return out2;
+      for (int i=0; i<out.length; ++i) preds[i+1] = (float)out[i];
+      preds[0] = getPrediction(preds, rowInChunk); // Fill in the default class prediction
+      return preds;
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {

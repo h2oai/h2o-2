@@ -197,10 +197,10 @@ public class NN extends Job.ValidatedJob {
     return 0;
   }
 
-  @Override public Status exec() {
+  @Override public JobState exec() {
     initModel();
     buildModel();
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected Response redirect() {
