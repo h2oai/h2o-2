@@ -23,10 +23,8 @@ Returns a logical value indicating whether any of the columns in \code{x} are fa
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
-+ silentUpgrade = TRUE, promptUpgrade = FALSE)
-irisPath = system.file("extdata", "iris_wheader.csv", 
-+ package="h2oRClient")
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+irisPath = system.file("extdata", "iris_wheader.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.anyFactor(iris.hex)
 h2o.shutdown(localH2O)

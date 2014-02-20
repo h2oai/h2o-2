@@ -844,7 +844,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
   result$forest = rf_matrix
 
   class_names = tail(res$'_domains', 1)[[1]]
-  result$confusion = .build_cm(tail(res$cm, 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
+  result$confusion = .build_cm(tail(res$cm, 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
   result$mse = as.numeric(res$errs)
   # result$ntree = res$N
   return(result)

@@ -18,15 +18,20 @@ h2o.__openLog(type)
 \code{\link{h2o.__startLogging}, \link{h2o.__stopLogging}, \link{h2o.__clearLogs}, \link{h2o.__getLogPath}, \link{h2o.__changeLogPath}}
 }
 \examples{
+\dontrun{
+# Skip running this to avoid windows being opened during R CMD check
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+
 h2o.__startLogging()
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 h2o.__stopLogging()
+
 h2o.__openLog("Command")
 h2o.__openLog("Error")
 h2o.shutdown(localH2O)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
