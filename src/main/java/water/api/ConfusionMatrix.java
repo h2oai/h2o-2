@@ -68,12 +68,9 @@ public class ConfusionMatrix extends Request2 {
   @Override public Response serve() {
     Vec va = null,vp = null, avp = null;
     classification = vactual.isInt() && vpredict.isInt();
-    final boolean regression = !vactual.isInt() && !vpredict.isInt();
     // Input handling
     if( vactual==null || vpredict==null )
       throw new IllegalArgumentException("Missing actual or predict!");
-    if (!classification && !regression)
-      throw new IllegalArgumentException("Both arguments must either be floating point or integer.");
     if (vactual.length() != vpredict.length())
       throw new IllegalArgumentException("Both arguments must have the same length!");
 
@@ -98,8 +95,10 @@ public class ConfusionMatrix extends Request2 {
         }
         cm = new CM(domain.length).doAll(va,vp)._cm;
       } else {
-        assert(!vactual.isEnum());
-        assert(!vpredict.isEnum());
+        if (vactual.isEnum())
+          throw new IllegalArgumentException("Actual vector cannot be categorical for regression scoring.");
+        if (vpredict.isEnum())
+          throw new IllegalArgumentException("Predicted vector cannot be categorical for regression scoring.");
         mse = new CM(1).doAll(vactual,vpredict).mse();
       }
       return Response.done(this);
@@ -143,8 +142,8 @@ public class ConfusionMatrix extends Request2 {
         int len = ca._len;
         for( int i=0; i < len; i++ ) {
           if (ca.isNA0(i) || cp.isNA0(i)) continue; //TODO: Improve
-          final float a=ca.at80(i);
-          final float p=cp.at80(i);
+          final double a=ca.at0(i);
+          final double p=cp.at0(i);
           _mse += (p-a)*(p-a);
           _count++;
         }
