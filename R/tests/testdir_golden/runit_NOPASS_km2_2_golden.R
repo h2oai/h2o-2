@@ -11,7 +11,7 @@ dummyR<- read.csv(locate("smalldata/dummydata.csv"), header=T)
 
 #Fit matching R and H2O models for k=2 on simple data
 fitR<- kmeans(dummyR[,2:3], centers=2)
-fitH2O<- h2o.kmeans.FV(dummyH2O, centers=2, cols=c("V1", "V2"))
+fitH2O<- h2o.kmeans.FV(dummyH2O, centers=2, cols=c("C2", "C3"))
 
 # Build a 1 center model because that's the baseline against which K=n >1 will be compared
 fit2H2O<- h2o.kmeans.FV(dummyH2O, centers=1)
@@ -30,3 +30,5 @@ testEnd()
 }
 
 doTest("K Means test on well separated dummy data example", test.km2vanilla.golden)
+
+#see JIRA Pub-386 for failure
