@@ -49,6 +49,10 @@ public class NNModel extends Model {
     public double epoch_counter;
     @API(help = "How many rows the algorithm has processed")
     public long training_samples;
+    @API(help = "Number of training set samples for scoring")
+    public long score_training_samples;
+    @API(help = "Number of validation set samples for scoring")
+    public long score_validation_samples;
     @API(help = "How long the algorithm ran in ms")
     public long training_time_ms;
     @API(help = "Classification error on training data")
@@ -435,9 +439,11 @@ public class NNModel extends Model {
       err.epoch_counter = epoch_counter;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
+      err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
       err.train_err = calcError(ftrain, "Error on training data:", printCM, err.train_confusion_matrix);
       if (err.validation) {
+        err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
         err.valid_err = calcError(ftest, "Error on validation data:", printCM, err.valid_confusion_matrix);
       }
@@ -662,11 +668,13 @@ public class NNModel extends Model {
       DocGen.HTML.section(sb, msg);
       DocGen.HTML.section(sb, "=======================================================================================");
     }
-    long score_valid = model_info().get_params().score_validation_samples;
-    long score_train = model_info().get_params().score_training_samples;
+    long score_valid = error.score_validation_samples;
+    long score_train = error.score_training_samples;
+    final boolean fulltrain = score_train==0 || score_train == model_info().data_info()._adaptedFrame.numRows();
+    final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
     final String cmTitle = "Confusion Matrix on " + (error.validation ?
-            "Validation Data" + (score_valid==0 ? "" : " (~" + score_valid + " samples)")
-            : "Training Data" + (score_train==0 ? "" : " (~" + score_train + " samples)"));
+            "Validation Data" + (fullvalid ? "" : " (" + score_valid + " samples)")
+            : "Training Data" + (fulltrain ? "" : " (" + score_train + " samples)"));
     DocGen.HTML.section(sb, cmTitle);
     if (error.train_confusion_matrix != null) {
       if (error.train_confusion_matrix.cm.length < 100) {
@@ -679,17 +687,17 @@ public class NNModel extends Model {
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
 
-    String training = "Number of training set samples for scoring: " + (score_train == 0 ? "all" : score_train);
+    String training = "Number of training set samples for scoring: " + (fulltrain ? "all" : score_train);
     if (score_train > 0) {
-      if (score_train < 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-      if (score_train > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+      if (score_train < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+      if (score_train > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
     }
     DocGen.HTML.section(sb, training);
     if (error.validation) {
-      String validation = "Number of validation set samples for scoring: " + (score_valid == 0 ? "all" : score_valid);
+      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all" : score_valid);
       if (score_valid > 0) {
-        if (score_valid < 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-        if (score_valid > 10000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+        if (score_valid < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (score_valid > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
       }
       DocGen.HTML.section(sb, validation);
     }
