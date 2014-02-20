@@ -115,10 +115,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     Log.info("    learn_rate: " + learn_rate);
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     logStart();
     buildModel();
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override public int gridParallelism() {
