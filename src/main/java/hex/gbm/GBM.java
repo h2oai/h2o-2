@@ -1,9 +1,5 @@
 package hex.gbm;
 
-import static water.util.Utils.div;
-
-import java.util.Arrays;
-
 import hex.ConfusionMatrix;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
@@ -74,10 +70,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         for(int k=1; k<p.length;k++)
           dsum+=(p[k]=(float)Math.exp(p[k]-maxval));
         div(p,dsum);
+        p[0] = getPrediction(p, data);
       } else { // regression
         // do nothing for regression
       }
-      p[0] = getPrediction(p, data);
       return p;
     }
 
