@@ -148,6 +148,7 @@ public abstract class Neurons {
    * @param m Momentum (as of this moment, in case there is a momentum ramp)
    */
   final void bprop(int u, double g, double r, double m) {
+//    Log.info("bprop(u=" + u + ", g=" + g + ", r=" + r + ", m=" + m);
     double r2 = 0;
     final int off = u * _previous._a.length;
     for( int i = 0; i < _previous._a.length; i++ ) {
@@ -187,7 +188,9 @@ public abstract class Neurons {
           d = _wm[w];
         }
         _w[w] += r * d;
+//        Log.info("w[" + w + "] += " + r + " * " + d + " = " + _w[w]);
       }
+      if (Double.isInfinite(_w[w])) _minfo.set_unstable();
       if (params.max_w2 != Double.POSITIVE_INFINITY)
         r2 += _w[w] * _w[w];
     }
@@ -212,6 +215,7 @@ public abstract class Neurons {
       }
       _b[u] += r * d;
     }
+    if (Double.isInfinite(_b[u])) _minfo.set_unstable();
   }
 
   /**
@@ -507,9 +511,12 @@ public abstract class Neurons {
       int o = 0;
       _a[o] = 0;
       final int off = o * _previous._a.length;
-      for( int i = 0; i < _previous._a.length; i++ )
+      for( int i = 0; i < _previous._a.length; i++ ) {
         _a[o] += _w[off+i] * _previous._a[i];
+//        Log.info("a[" + o + "] +=" + _w[off + i] + " * " + _previous._a[i] + " = " + _a[o]);
+      }
       _a[o] += _b[o];
+//      Log.info("a[" + o + "] +=" + _b[o] + " = " + _a[o]);
     }
     protected void bprop(double target) {
       long processed = _minfo.get_processed_total();
@@ -519,6 +526,7 @@ public abstract class Neurons {
       int u = 0;
 //      if (target == missing_double_value) return;
       double g = target - _a[u];
+//      Log.info("g=" + target + " - " + _a[u] + " = " + g);
       g *= (1 - _a[u]) * _a[u];
       bprop(u, g, r, m);
     }

@@ -22,7 +22,7 @@ import static water.util.MRUtils.sampleFrame;
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   public static DocGen.FieldDoc[] DOC_FIELDS;
-  public static final String DOC_GET = "Neural Network";
+  public static final String DOC_GET = "Neural Network 2";
 
   public DataInfo _dinfo;
 
@@ -62,7 +62,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
-  @API(help = "Enable expert mode", filter = Default.class, json = true)
+  @API(help = "Enable expert mode", filter = Default.class, json = true, gridable = false)
   public boolean expert_mode = false;
 
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
@@ -92,7 +92,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Number of training set samples between synchronization (0 for all).", filter = Default.class, lmin = 0, json = true)
   public long sync_samples = 10000l;
 
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
 
   @API(help = "Enable fast mode (minor approximation in backpropagation)", filter = Default.class, json = true)
@@ -138,10 +138,10 @@ public class NN extends Job.ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
-    if (arg._name.equals("classification")) {
-      classification = true;
-      arg.disable("Regression is not currently supported.");
-    }
+//    if (arg._name.equals("classification")) {
+//      classification = true;
+//      arg.disable("Regression is not currently supported.");
+//    }
 //    if (arg._name.equals("input_dropout_ratio") &&
 //            (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
 //            ) {
@@ -183,7 +183,9 @@ public class NN extends Job.ValidatedJob {
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='NN.query?source=%$key'>%content</a>");
+    NN req = new NN();
+    RString rs = new RString("<a href='" + req.href() + ".query?%key_param=%$key'>%content</a>");
+    rs.replace("key_param", "source");
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
