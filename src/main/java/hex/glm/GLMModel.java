@@ -240,7 +240,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         double response = chunks[chunks.length-1].at0(i);
         if(_model._caseMode != CaseMode.none)
           response = _model._caseMode.isCase(response, _model._caseVal)?1:0;
-        _res.add(response, _model.glm.family == Family.binomial?preds[1]:preds[0]);
+        _res.add(response, _model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
       _res.avg_err /= _res.nobs;
     }
