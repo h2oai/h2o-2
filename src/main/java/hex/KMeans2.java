@@ -354,7 +354,9 @@ public class KMeans2 extends ColumnsJob {
       }
       data(tmp, chunks, rowInChunk, _means, _mults);
       Arrays.fill(preds, 0);
-      preds[closest(cs, tmp, new ClusterDist())._cluster] = 1;
+      int cluster = closest(cs, tmp, new ClusterDist())._cluster;
+      preds[0] = cluster;       // prediction in preds[0]
+      preds[1+cluster] = 1;     // class distribution
       return preds;
     }
 

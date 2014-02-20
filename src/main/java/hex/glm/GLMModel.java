@@ -207,9 +207,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     eta += b[b.length-1]; // add intercept
     double mu = glm.linkInv(eta);
     preds[0] = (float)mu;
-    if(glm.family == Family.binomial){ // threshold
-      if(preds.length > 1)preds[1] = preds[0];
-      preds[0] = preds[0] >= threshold?1:0;
+    if( glm.family == Family.binomial ) { // threshold for prediction
+      preds[0] = (mu >= threshold ? 1 : 0);
+      preds[1] = (float)mu;
+      preds[2] = 1.0f - (float)mu;
     }
     return preds;
   }
@@ -227,7 +228,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank(_lambdaIdx));
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
-      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
+      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?3:1);
       OUTER:
       for(int i = 0; i < nrows; ++i){
         if(chunks[chunks.length-1].isNA0(i))continue;
@@ -262,7 +263,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank());
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
-      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
+      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?3:1);
       OUTER:
       for(int i = 0; i < nrows; ++i){
         if(chunks[chunks.length-1].isNA0(i))continue;

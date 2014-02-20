@@ -331,9 +331,10 @@ public abstract class OldModel extends Lockable<OldModel> {
           float s = (float)OldModel.this.score0(data);
           if( preds.length==1 ) preds[0] = s;
           else {
-            assert preds.length==2;
-            preds[0] = 1-s;
-            preds[1] = s;
+            assert preds.length==3;
+            preds[1] = 1-s;
+            preds[2] = s;
+            preds[0] = getPrediction(preds,data);
           }
           return preds;
         }

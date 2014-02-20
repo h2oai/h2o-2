@@ -562,14 +562,15 @@ public class ConfusionTask extends MRTask {
     int rows = votes.length;
     int validation_rows = 0;
     int cmin = (int) _data._cols[_classcol]._min;
-    int[] ties = new int[_N];
     // Assemble the votes-per-class into predictions & score each row
     cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
+    float preds[] = new float[_N+1];
     for( int row = 0; row < rows; row++ ) { // Iterate over rows
       int[] vi = votes[row];                // Votes for i-th row
+      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
       if(_classWt != null )                 // Apply class weights
-        for( int v = 0; v<_N; v++) vi[v] = (int)(vi[v]*_classWt[v]);
-      int result = Model.getPrediction(vi, ties, row); // Share logic to get a prediction for classifiers (solve ties)
+        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
+      int result = Model.getPrediction(preds, row); // Share logic to get a prediction for classifiers (solve ties)
       if( vi[result]==0 ) { cm._skippedRows++; continue; }// Ignore rows with zero votes
 
       int cclass = alignDataIdx((int) _data.data(bits, row, _classcol) - cmin);

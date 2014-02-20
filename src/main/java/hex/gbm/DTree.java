@@ -610,7 +610,7 @@ public class DTree extends Iced {
       CompressedTree ts[] = treeBits[treeIdx];
       for( int c=0; c<ts.length; c++ )
         if( ts[c] != null )
-          preds[c] += ts[c].score(data);
+          preds[ts.length==1?0:c+1] += ts[c].score(data);
     }
 
     public void generateHTML(String title, StringBuilder sb) {
