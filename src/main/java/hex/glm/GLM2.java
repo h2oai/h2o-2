@@ -49,6 +49,7 @@ public class GLM2 extends ModelJob {
   private double [] _beta;
 
   private boolean _runAllLambdas = true;
+  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
 
 //  @API(help = "Link.", filter = Default.class)
   Link link = Link.identity;
@@ -180,6 +181,13 @@ public class GLM2 extends ModelJob {
         fr.add(fr._names[i], fr.remove(i));
         break;
       }
+    // Force a boolean response
+    if( !response.isEnum() && response.isInt() && family==Family.binomial ) {
+      response = response.toEnum();
+      fr.replace(vecs.length-1,response);
+      _gen_enum=true;
+    }
+
     for(int i = 0; i < vecs.length-1; ++i) // remove constant cols and cols with too many NAs
       if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
     if(!constantOrNAs.isEmpty()){
@@ -193,12 +201,11 @@ public class GLM2 extends ModelJob {
       if(destination_key == null)destination_key = Key.make("GLMGridModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLMGridJob_"+Key.make());
       Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, alpha,n_folds);
-      return GLMGridView.redirect(this,j.destination_key);
+      return GLMGridView.redirect(this,j.dest());
     } else {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
       fork();
-//      return GLMModelView.redirect(this, dest(),job_key);
       return GLMProgress.redirect(this,job_key, dest());
     }
   }

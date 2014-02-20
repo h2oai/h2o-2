@@ -19,7 +19,7 @@ public class GridSearch extends Job {
   public GridSearch(){
 
   }
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
@@ -34,7 +34,7 @@ public class GridSearch extends Job {
         }
       }
     }
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected void onCancelled() {
@@ -96,8 +96,8 @@ public class GridSearch extends Job {
         for( Job job : jobs ) {
           JobInfo info = new JobInfo();
           info._job = job;
-          if(job.destination_key != null){
-            Object value = UKV.get(job.destination_key);
+          if(job.dest() != null){
+            Object value = UKV.get(job.dest());
             info._model = value instanceof Model ? (Model) value : null;
             if( info._model != null ) {
               info._cm = info._model.cm();
@@ -138,18 +138,18 @@ public class GridSearch extends Job {
           if( perf != null )
             sb.append("<td>").append(speed).append("</td>");
           String link = "";
-          if( info._job.start_time != 0 && DKV.get(info._job.destination_key) != null ) {
-            link = info._job.destination_key.toString();
+          if( info._job.start_time != 0 && DKV.get(info._job.dest()) != null ) {
+            link = info._job.dest().toString();
             if( info._model instanceof GBMModel )
-              link = GBMModelView.link(link, info._job.destination_key);
+              link = GBMModelView.link(link, info._job.dest());
             else if( info._model instanceof DRFModel )
-              link = DRFModelView.link(link, info._job.destination_key);
+              link = DRFModelView.link(link, info._job.dest());
             else if( info._model instanceof NeuralNetModel )
-              link = NeuralNetModelView.link(link, info._job.destination_key);
+              link = NeuralNetModelView.link(link, info._job.dest());
             if( info._model instanceof KMeans2Model )
-              link = KMeans2ModelView.link(link, info._job.destination_key);
+              link = KMeans2ModelView.link(link, info._job.dest());
             else
-              link = Inspect.link(link, info._job.destination_key);
+              link = Inspect.link(link, info._job.dest());
           }
           sb.append("<td>").append(link).append("</td>");
 
