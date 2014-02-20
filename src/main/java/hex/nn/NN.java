@@ -190,7 +190,7 @@ public class NN extends Job.ValidatedJob {
   }
 
   @Override public float progress(){
-    if(DKV.get(dest()) == null)return 0;
+    if(UKV.get(dest()) == null)return 0;
     NNModel m = UKV.get(dest());
     if (m != null && m.model_info()!=null )
       return (float)(m.epoch_counter / m.model_info().get_params().epochs);
@@ -207,6 +207,7 @@ public class NN extends Job.ValidatedJob {
     return NNProgressPage.redirect(this, self(), dest());
   }
 
+  private boolean _fakejob;
   void checkParams() {
     if(!classification && loss != Loss.MeanSquare) {
       Log.warn("Setting loss to MeanSquare for regression.");
@@ -217,12 +218,17 @@ public class NN extends Job.ValidatedJob {
       sync_samples = 0;
     }
     // make default job_key and destination_key in case they are missing
-    if (dest() == null) destination_key = Key.make("NN_model");
+    if (dest() == null) {
+      destination_key = Key.make("NN_model");
+    }
     if (self() == null) {
       job_key = Key.make("NN_job");
     }
-    if (DKV.get(self()) == null) {
-      DKV.put(self(), new Value(self(), new byte[0]), null);
+    if (UKV.get(self()) == null) {
+      start_time = System.currentTimeMillis();
+      state      = JobState.RUNNING;
+      UKV.put(self(), this);
+      _fakejob = true;
     }
   }
 
@@ -277,9 +283,6 @@ public class NN extends Job.ValidatedJob {
     //cleanup
     //unlock the model, and training/validation sets
     model.unlock(self());
-    source.unlock(self());
-    if( validation != null && !source._key.equals(validation._key) )
-      validation.unlock(self());
 
     //delete temporary frames
     if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
@@ -287,7 +290,13 @@ public class NN extends Job.ValidatedJob {
     if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
 //    if (_newsource != null && _newsource != source) _newsource.delete();
 
-    UKV.remove(self());
+    // unlock input datasets
+    source.unlock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.unlock(self());
+    if (_fakejob) UKV.remove(job_key);
+    remove(); //remove the job
+
     Log.info("Neural Net training finished.");
     return model;
   }

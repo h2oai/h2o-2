@@ -1,5 +1,7 @@
 package hex;
 
+import water.Model;
+
 import java.text.DecimalFormat;
 import java.util.Random;
 
@@ -711,28 +713,19 @@ public class NeuralNetMLPReference {
 // t-values
         System.arraycopy(testData[i], numInput, tValues, 0, numOutput);
         yValues = this.ComputeOutputs(xValues);
-        int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
+//        int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
 
-        if( tValues[maxIndex] == 1.0 ) // ugly. consider AreEqual(double x, double y)
+        // convert to float and do the same tie-breaking as H2O
+        float[] preds = new float[yValues.length+1];
+        for (int j=0; j<yValues.length; ++j) preds[j+1] = (float)yValues[j];
+        preds[0] = Model.getPrediction(preds, i);
+
+        if( tValues[(int)preds[0]] == 1.0 ) // ugly. consider AreEqual(double x, double y)
           ++numCorrect;
         else
           ++numWrong;
       }
       return (double)numWrong / (numCorrect + numWrong); // ugly 2 - check for divide by zero
-    }
-
-    private static int MaxIndex(double[] vector) // helper for Accuracy()
-    {
-      // index of largest value
-      int bigIndex = 0;
-      double biggestVal = vector[0];
-      for( int i = 0; i < vector.length; ++i ) {
-        if( vector[i] > biggestVal ) {
-          biggestVal = vector[i];
-          bigIndex = i;
-        }
-      }
-      return bigIndex;
     }
   }
 }

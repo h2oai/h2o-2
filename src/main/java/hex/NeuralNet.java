@@ -504,18 +504,14 @@ public class NeuralNet extends ValidatedJob {
       e.mean_square += d * d;
       e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
     }
-    double max = out[0];
-    int idx = 0;
-    for( int o = 1; o < out.length; o++ ) {
-      if( out[o] > max ) {
-        max = out[o];
-        idx = o;
-      }
-    }
+    float[] preds = new float[out.length+1];
+    for (int i=0;i<out.length;++i) preds[i+1] = (float)out[i];
+    preds[0] = Model.getPrediction(preds, (int)output._input._pos);
+
     if( confusion != null ) {
-      if (output.target() != Layer.missing_int_value) confusion[output.target()][idx]++;
+      if (output.target() != Layer.missing_int_value) confusion[output.target()][(int)preds[0]]++;
     }
-    return idx == output.target();
+    return preds[0] == output.target();
   }
 
   // regression scoring
@@ -906,7 +902,7 @@ public class NeuralNet extends ValidatedJob {
       assert out.length == preds.length;
       // convert to float
       for (int i=0; i<out.length; ++i) preds[i+1] = (float)out[i];
-      preds[0] = getPrediction(preds, rowInChunk); // Fill in the default class prediction
+      preds[0] = getPrediction(preds, out);
       return preds;
     }
 

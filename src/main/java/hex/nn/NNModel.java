@@ -465,8 +465,8 @@ public class NNModel extends Model {
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     NNTask.step(-1, neurons, model_info, false, null);
     double[] out = neurons[neurons.length - 1]._a;
-    assert out.length == preds.length;
-    for (int i=0; i<out.length; ++i) preds[i] = (float)out[i];
+    for (int i=0; i<out.length; ++i) preds[i+1] = (float)out[i];
+    preds[0] = getPrediction(preds, data);
     return preds;
   }
 

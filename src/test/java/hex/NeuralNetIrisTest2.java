@@ -7,10 +7,7 @@ import hex.nn.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import water.JUnitRunnerDebug;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+import water.*;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -244,12 +241,12 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
                           // find the label
                           // do the same as H2O here (compare float values and break ties based on row number)
-                          float[] yValues_float = new float[ref_preds.length];
-                          for (int j=0; j<ref_preds.length; ++j) yValues_float[j] = (float)ref_preds[j];
-                          int maxIndex = NeuralNetMLPReference2.NeuralNetwork.MaxIndexWithTieBreaking(yValues_float, i);
+                          float[] preds = new float[ref_preds.length+1];
+                          for (int j=0; j<ref_preds.length; ++j) preds[j+1] = (float)ref_preds[j];
+                          preds[0] = Model.getPrediction(preds, i);
 
                           // compare predicted label
-                          Assert.assertTrue(maxIndex == (int) fpreds.vecs()[0].at(i));
+                          Assert.assertTrue(preds[0] == (int) fpreds.vecs()[0].at(i));
                           // compare predicted probabilities
                           for (int j=0; j<ref_preds.length; ++j) {
                             compareVal((float)(ref_preds[j]), fpreds.vecs()[1+j].at(i), abseps, releps);

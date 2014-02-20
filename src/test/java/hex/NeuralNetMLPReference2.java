@@ -1,6 +1,7 @@
 package hex;
 
 import hex.nn.NN;
+import water.Model;
 
 import java.text.DecimalFormat;
 import java.util.Random;
@@ -715,11 +716,11 @@ public class NeuralNetMLPReference2 {
         //int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
 
         // convert to float and do the same tie-breaking as H2O
-        float[] yValues_float = new float[yValues.length];
-        for (int j=0; j<yValues.length; ++j) yValues_float[j] = (float)yValues[j];
-        int maxIndex = MaxIndexWithTieBreaking(yValues_float, i);
+        float[] preds = new float[yValues.length+1];
+        for (int j=0; j<yValues.length; ++j) preds[j+1] = (float)yValues[j];
+        preds[0] = Model.getPrediction(preds, xValues);
 
-        if( tValues[maxIndex] == 1.0 ) // ugly. consider AreEqual(double x, double y)
+        if( tValues[(int)preds[0]] == 1.0 ) // ugly. consider AreEqual(double x, double y)
           ++numCorrect;
         else
           ++numWrong;
@@ -739,24 +740,6 @@ public class NeuralNetMLPReference2 {
         }
       }
       return bigIndex;
-    }
-
-    static int MaxIndexWithTieBreaking(float[] preds, int row) // helper for Accuracy()
-    {
-      int[] ties = new int[preds.length];
-      int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-      for (int c=1; c<preds.length; c++) {
-        if (preds[best] < preds[c]) {
-          best = c; // take the max index
-          ties[tieCnt=0] = c;
-        } else if (preds[best] == preds[c]) {
-          ties[++tieCnt] = c;
-        }
-      }
-      if (tieCnt >= 1) {
-        best = ties[row % (tieCnt+1)]; // override max decision
-      }
-      return best;
     }
   }
 }
