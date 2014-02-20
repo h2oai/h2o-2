@@ -2,20 +2,22 @@ package hex.gbm;
 
 import hex.ConfusionMatrix;
 import hex.rng.MersenneTwisterRNG;
-
-import java.util.Arrays;
-import java.util.Random;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.Utils;
 
-// Build (distributed) Trees.  Used for both Gradiant Boosted Method and Random
+import java.util.Arrays;
+import java.util.Random;
+
+// Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
 //
 // While this is a wholly H2O-design, we found these papers afterwards that
@@ -30,31 +32,31 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
+  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000, json=true)
   public int ntrees = 50;
 
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000, json=true)
   public int max_depth = 5;
 
-  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1)
+  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1, json=true)
   public int min_rows = 10;
 
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000)
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000, json=true)
   public int nbins = 20;
 
-  @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class)
+  @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class, json=true)
   public boolean score_each_iteration = false;
 
   // Overall prediction Mean Squared Error as I add trees
   transient protected double _errs[];
 
-  @API(help = "Active feature columns")
+//  @API(help = "Active feature columns")
   protected int _ncols;
 
-  @API(help = "Rows in training dataset")
+//  @API(help = "Rows in training dataset")
   protected long _nrows;
 
-  @API(help = "Number of classes")
+//  @API(help = "Number of classes")
   protected int _nclass;
 
   @API(help = "Class distribution")
@@ -83,14 +85,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
     return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
-  }
-
-  @Override protected void logStart() {
-    super.logStart();
-    Log.info("    ntrees: " + ntrees);
-    Log.info("    max_depth: " + max_depth);
-    Log.info("    min_rows: " + min_rows);
-    Log.info("    nbins: " + nbins);
   }
 
   // Verify input parameters

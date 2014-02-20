@@ -1,15 +1,13 @@
 package water.api;
 
 import hex.gbm.GBM.GBMModel;
-import water.*;
-
-import com.google.gson.JsonObject;
+import water.Job;
+import water.Key;
+import water.UKV;
 
 public class GBMProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
-  @Override protected Response jobDone(final Job job, final Key dst) {
-    JsonObject args = new JsonObject();
-    args.addProperty(MODEL_KEY, dst.toString());
+  @Override protected Response jobDone(final Key dst) {
     return GBMModelView.redirect(this, dst);
   }
 

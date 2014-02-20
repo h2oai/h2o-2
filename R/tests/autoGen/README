@@ -61,7 +61,7 @@ Future:
     Classes.R   show    H2OGBMModel             
     Classes.R   show    H2OGBMGrid              
     Classes.R   summary H2OPCAModel             
-    Classes.R   plot    H2OPCAModel             
+    Classes.R   screeplot    H2OPCAModel             
     Classes.R   [   H2OParsedData   
     Classes.R   $   H2OParsedData               
     Classes.R   [<- H2OParsedData               

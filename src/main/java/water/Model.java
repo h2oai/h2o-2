@@ -1,17 +1,26 @@
 package water;
 
-import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
-
-import java.util.*;
-
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.TransfVec;
+import water.fvec.Vec;
+import water.util.JCodeGen;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+
+import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).

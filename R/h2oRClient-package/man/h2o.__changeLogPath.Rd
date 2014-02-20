@@ -11,7 +11,7 @@ Change the file path where H2O R command and error response logs are currently b
 h2o.__changeLogPath(path, type)
 }
 \arguments{
-  \item{path}{A character string indicating the new file path and name where logs should be saved.}
+  \item{path}{A character string indicating the new file path where logs should be saved.}
   \item{type}{Which log file's path to modify. Either \code{"Command"} for POST commands sent between R and H2O, or \code{"Error"} for errors returned by H2O in the HTTP response.}
 }
 
@@ -21,7 +21,7 @@ h2o.__changeLogPath(path, type)
 \examples{
 library(h2o)
 h2o.__getLogPath("Command")
-h2o.__changeLogPath(paste(getwd(), "h2o_commands.log", sep = .Platform$file.sep), "Command")
+h2o.__changeLogPath(getwd(), "Command")
 h2o.__getLogPath("Command")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

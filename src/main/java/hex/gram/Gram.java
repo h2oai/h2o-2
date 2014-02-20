@@ -1,17 +1,19 @@
 package hex.gram;
 
-import hex.FrameTask;
-import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
-
-import java.util.Arrays;
-
-import jsr166y.ForkJoinTask;
-import jsr166y.RecursiveAction;
-import water.*;
-import water.util.Log;
-import water.util.Utils;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
+import hex.FrameTask;
+import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
+import jsr166y.ForkJoinTask;
+import jsr166y.RecursiveAction;
+import water.Futures;
+import water.Iced;
+import water.Job;
+import water.MemoryManager;
+import water.util.Log;
+import water.util.Utils;
+
+import java.util.Arrays;
 
 public final class Gram extends Iced {
   final boolean _hasIntercept;
@@ -420,7 +422,7 @@ public final class Gram extends Iced {
           _XY[i] = MemoryManager.malloc8d(_gram._fullN);
       }
     }
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
+    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
       double w = _isWeighted?responses[responses.length-1]:1;
       _gram.addRow(nums, ncats, cats, w);
       if(_XY != null){

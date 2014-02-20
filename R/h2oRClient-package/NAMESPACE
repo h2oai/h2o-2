@@ -3,11 +3,11 @@ export('h2o.glm', 'h2o.glm.FV', 'h2o.kmeans', 'h2o.randomForest', 'h2o.prcomp', 
        'h2o.nn', 'h2o.predict', 'h2o.importFile', 'h2o.importFolder', 'h2o.uploadFile', 
        'h2o.parseRaw', 'h2o.importFile.VA', 'h2o.importFolder.VA', 'h2o.importHDFS.VA', 
        'h2o.importURL.VA', 'h2o.uploadFile.VA', 'h2o.parseRaw.VA', 'h2o.ls', 'h2o.rm',
-       'summary.H2OParsedData', 'summary.H2OParsedDataVA')
+       'summary.H2OParsedData', 'summary.H2OParsedDataVA', 'screeplot.H2OPCAModel', 'h2o.cut')
 exportMethods(
   "colnames",
   "show",
-  "plot"
+  "levels"
 )
 exportClasses(
   "H2OClient",

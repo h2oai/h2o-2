@@ -3,23 +3,31 @@ package hex.drf;
 import static water.util.Utils.*;
 import hex.ConfusionMatrix;
 import hex.ShuffleTask;
-import hex.gbm.*;
+import hex.gbm.DHistogram;
+import hex.gbm.DTree;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-import java.util.Random;
-
+import hex.gbm.SharedTreeModelBuilder;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static water.util.Utils.*;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
@@ -57,6 +65,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
     @API(help = "Seed") final long seed;
@@ -140,15 +149,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-  @Override protected void logStart() {
-    Log.info("Starting DRF model build...");
-    super.logStart();
-    Log.info("    mtry defined: " + mtries);
-    Log.info("    mtry computed: " + _mtry);
-    Log.info("    sample_rate: " + sample_rate);
-    Log.info("    seed: " + _seed);
-    Log.info("    importance: " + importance);
-  }
 
   @Override protected JobState exec() {
     logStart();

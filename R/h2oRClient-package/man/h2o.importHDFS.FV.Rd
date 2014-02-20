@@ -56,7 +56,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \code{\link{h2o.importFile.FV}, \link{h2o.importFolder.FV}, \link{h2o.importURL.FV}, \link{h2o.uploadFile.FV}}
 }
 \examples{
-## Not run:
+\dontrun{
 # This is an example of how to import files from HDFS.
 # The user must modify the path to his or her specific HDFS path for this example to run.
 library(h2o)
@@ -67,8 +67,7 @@ summary(iris.hex)
 iris_folder.hex = h2o.importHDFS.FV(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_test_train")
 summary(iris_folder.hex)
 h2o.shutdown(localH2O)
-
-## End(Not run)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

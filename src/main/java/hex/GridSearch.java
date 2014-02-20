@@ -146,6 +146,8 @@ public class GridSearch extends Job {
               link = DRFModelView.link(link, info._job.dest());
             else if( info._model instanceof NeuralNetModel )
               link = NeuralNetModelView.link(link, info._job.dest());
+            else if( info._model instanceof hex.nn.NNModel)
+              link = NNModelView.link(link, info._job.dest());
             if( info._model instanceof KMeans2Model )
               link = KMeans2ModelView.link(link, info._job.dest());
             else
@@ -182,7 +184,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final Key dst) {
+    @Override protected Response jobDone(final Key dst) {
       return Response.done(this);
     }
   }

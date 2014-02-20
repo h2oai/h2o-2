@@ -256,6 +256,9 @@ public class Inspect2 extends Request2 {
     return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=-1'>info</a>";
   }
 
+  public String link(String txt,Key k) {
+    return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=0'>" + txt + "</a>";
+  }
 
   private static int viewsz = 100;
 

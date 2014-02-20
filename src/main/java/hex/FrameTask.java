@@ -1,19 +1,27 @@
 package hex;
 
-import hex.glm.GLMParams.CaseMode;
-
-import java.util.Arrays;
-
-import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.*;
 import water.Job.JobCancelledException;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
+import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
   final Job _job;
   double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
+
+  protected float _useFraction = 1.0f;
+  protected long _seed;
+  protected boolean _shuffle = false;
 
   public FrameTask(Job job, DataInfo dinfo) {
     this(job,dinfo,null);
@@ -22,10 +30,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     super(cmp);
     _job = job;
     _dinfo = dinfo;
+    _seed = new Random().nextLong();
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
     _job = ft._job;
+    _useFraction = ft._useFraction;
+    _seed = ft._seed;
+    _shuffle = ft._shuffle;
   }
   public double [] normMul(){return _dinfo._normMul;}
   public double [] normSub(){return _dinfo._normSub;}
@@ -46,17 +58,18 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    *      B,B - ncats = 2, indexes = [0,2]
    *      and so on
    *
+   * @param gid      - global id of this row, in [0,_adaptedFrame.numRows())
    * @param nums     - numeric values of this row
    * @param ncats    - number of passed (non-zero) categoricals
    * @param cats     - indexes of categoricals into the expanded beta-vector.
    * @param response - numeric value for the response
    */
-  protected void processRow(double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
-  protected void processRow(double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
 
   public static class DataInfo extends Iced {
-    public final Frame _adaptedFrame;
+    public Frame _adaptedFrame;
     public final int _responses; // number of responses
     public final boolean _standardize;
     public final int _nums;
@@ -67,7 +80,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public final int _foldId;
     public final int _nfolds;
 
-    private DataInfo(DataInfo dinfo,int foldId, int nfolds){
+    private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       _standardize = dinfo._standardize;
       _responses = dinfo._responses;
       _nums = dinfo._nums;
@@ -87,6 +100,52 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         System.arraycopy(normMul, 0, _normMul, 0, normMul.length);
       }
     }
+
+    /**
+     * Prepare a Frame (with a single response) to be processed by the FrameTask
+     * 1) Place response at the end
+     * 2) (Optionally) Remove rows with constant values or with >20% NaNs
+     * 3) Possibly turn integer categoricals into enums
+     *
+     * @param source A frame to be expanded and sanity checked
+     * @param response (should be part of source)
+     * @param toEnum Whether or not to turn categoricals into enums
+     * @param dropConstantCols Whether or not to drop constant columns
+     * @return Frame to be used by FrameTask
+     */
+    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
+      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      if (ignored_cols != null) fr.remove(ignored_cols);
+      final Vec[] vecs =  fr.vecs();
+      // put response to the end (if not already)
+      for(int i = 0; i < vecs.length-1; ++i) {
+        if(vecs[i] == response){
+          final String n = fr._names[i];
+          if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
+          else fr.add(n, fr.remove(i));
+          break;
+        }
+      }
+      // special case for when response was at the end already
+      if (toEnum && !response.isEnum() && vecs[vecs.length-1] == response) {
+        final String n = fr._names[vecs.length-1];
+        fr.add(n, fr.remove(vecs.length-1).toEnum());
+      }
+      ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+      for(int i = 0; i < vecs.length-1; ++i) {
+        // remove constant cols and cols with too many NAs
+        if( (dropConstantCols && vecs[i].min() == vecs[i].max()) || vecs[i].naCnt() > vecs[i].length()*0.2)
+          constantOrNAs.add(i);
+      }
+      if(!constantOrNAs.isEmpty()){
+        int [] cols = new int[constantOrNAs.size()];
+        for(int i = 0; i < cols.length; ++i)
+          cols[i] = constantOrNAs.get(i);
+        fr.remove(cols);
+      }
+      return fr;
+    }
+
     public DataInfo(Frame fr, int nResponses, boolean standardize){
       _nfolds = _foldId = 0;
       _standardize = standardize;
@@ -132,7 +191,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         names[i+ncats] = fr._names[nums[i]];
         if(standardize){
           _normSub[i] = v.mean();
-          _normMul[i] = 1.0/v.sigma();
+          _normMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
         }
       }
       _adaptedFrame = new Frame(names,vecs2);
@@ -182,16 +241,44 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
-    if(_job != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
-    chunkInit();
+    if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     final int nrows = chunks[0]._len;
+    final long offset = chunks[0]._start;
+    chunkInit();
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);
+    int start = 0;
+    int end = nrows;
+
+    boolean contiguous = false;
+    Random skip_rng = null; //random generator for skipping rows
+    if (_useFraction < 1.0) {
+      skip_rng = water.util.Utils.getDeterRNG(_seed+++0x600D5EED+offset); //change seed to avoid periodicity across epochs
+      if (contiguous) {
+        final int howmany = (int)Math.ceil(_useFraction*nrows);
+        if (howmany > 0) {
+          start = skip_rng.nextInt(nrows - howmany);
+          end = start + howmany;
+        }
+        assert(start < nrows);
+        assert(end <= nrows);
+      }
+    }
+
+    long[] shuf_map = null;
+    if (_shuffle) {
+      shuf_map = new long[end-start];
+      for (int i=0;i<shuf_map.length;++i)
+        shuf_map[i] = start + i;
+      Utils.shuffleArray(shuf_map, _seed+++0xD0650F1E+offset);
+    }
 
     OUTER:
-    for(int r = 0; r < nrows; ++r){
-      if(_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)continue;
+    for(int rr = start; rr < end; ++rr){
+      final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
+      if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+              || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
@@ -207,9 +294,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       for(i = 0; i < _dinfo._responses; ++i)
         response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
       if(outputs != null && outputs.length > 0)
-        processRow(nums, ncats, cats,response,outputs);
+        processRow(offset+r, nums, ncats, cats, response, outputs);
       else
-        processRow(nums, ncats, cats,response);
+        processRow(offset+r, nums, ncats, cats, response);
     }
     chunkDone();
   }

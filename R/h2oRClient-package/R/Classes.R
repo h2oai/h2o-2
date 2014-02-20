@@ -191,7 +191,6 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 
-# setMethod("summary", "H2OPCAModel", function(object) {
 summary.H2OPCAModel <- function(object, ...) {
   # TODO: Save propVar and cumVar from the Java output instead of computing here
   myVar = object@model$sdev^2
@@ -204,10 +203,14 @@ summary.H2OPCAModel <- function(object, ...) {
   print(result)
 }
 
-setMethod("plot", "H2OPCAModel", function(x, y, ...) {
-  barplot(x@model$sdev^2)
-  title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
-})
+screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type = "barplot", main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ...) {
+  if(type == "barplot")
+    barplot(x@model$sdev[1:npcs]^2, main = main, ylab = "Variances", ...)
+  else if(type == "lines")
+    lines(x@model$sdev[1:npcs]^2, main = main, ylab = "Variances", ...)
+  else
+    stop("type must be either 'barplot' or 'lines'")
+}
 
 # i are the rows, j are the columns. These can be vectors of integers or character strings, or a single logical data object
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
@@ -435,15 +438,18 @@ as.h2o <- function(client, object, key = "") {
   }
 }
 
-setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
-setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x, breaks) {
+h2o.cut <- function(x, breaks) {
+  if(missing(x)) stop("Must specify data set")
+  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(missing(breaks) || !is.numeric(breaks)) stop("breaks must be a numeric vector")
+  
   nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
   expr = paste("cut(", x@key, ",", nums, ")", sep="")
   res = .h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
-})
+}
 
 # TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
 h2o.table <- function(x) {
@@ -602,7 +608,7 @@ setMethod("dim", "H2OParsedData", function(x) {
 })
 setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
-setMethod("as.data.frame", "H2OParsedData", function(x) {
+as.data.frame.H2OParsedData <- function(x, ...) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
   n = nchar(ttt)
@@ -632,7 +638,7 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
   # Substitute NAs for blank cells rather than skipping.
   df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
   return(df)
-})
+}
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   numRows = nrow(x)
@@ -675,7 +681,8 @@ h2o.anyFactor <- function(x) {
   as.logical(.h2o.__unop2("any.factor", x))
 }
 
-setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE) {
+# setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE) {
+quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, ...) {
   if(ncol(x) != 1) stop("quantile only operates on a single column")
   if(is.factor(x)) stop("factors are not allowed")
   if(!is.numeric(probs)) stop("probs must be a numeric vector")
@@ -693,7 +700,7 @@ setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.r
   col <- as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res$dest_key))[[1]]
   if(names) names(col) <- paste(100*probs, "%", sep="")
   return(col)
-})
+}
 
 # setMethod("summary", "H2OParsedData", function(object) {
 summary.H2OParsedData <- function(object, ...) {
@@ -768,8 +775,8 @@ setMethod("levels", "H2OParsedData", function(x) {
 # TODO: Need to change ... to environment variables and pass to substitute method,
 #       Can't figure out how to access outside environment from within lapply
 setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
-  if(missing(X) || !class(X) %in% c("H2OParsedData", "H2OParsedDataVA"))
-    stop("X must be a H2O parsed data object")
+ if(missing(X) || !class(X) %in% c("H2OParsedData", "H2OParsedDataVA"))
+   stop("X must be a H2O parsed data object")
   if(missing(MARGIN) || !(length(MARGIN) <= 2 && all(MARGIN %in% c(1,2))))
     stop("MARGIN must be either 1 (rows), 2 (cols), or a vector containing both")
   if(missing(FUN) || !is.function(FUN))
@@ -777,6 +784,7 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   
   myList <- list(...)
   if(length(myList) > 0) {
+    stop("Unimplemented")
     tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "H2OParsedDataVA", "numeric") } )
     if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
     
@@ -830,9 +838,9 @@ str.H2OParsedData <- function(object, ...) {
   }
 }
 
-# str.H2OParsedDataVA <- function(object, ...) {
-#   str(new("H2OParsedData", h2o=object@h2o, key=object@key), ...)
-# }
+str.H2OParsedDataVA <- function(object, ...) {
+  str(new("H2OParsedData", h2o=object@h2o, key=object@key))
+}
 
 # setGeneric("histograms", function(object) { standardGeneric("histograms") })
 # setMethod("histograms", "H2OParsedData", function(object) {

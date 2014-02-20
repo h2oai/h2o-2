@@ -1,6 +1,5 @@
 \name{nrow}
 \alias{nrow}
-
 \title{
 Returns a count of rows for an code{\linkS4class{H2OParsedData} object. 
 }}

@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.Arrays;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -59,15 +60,16 @@ public abstract class Trainer {
       throw new UnsupportedOperationException();
     }
 
-    final void step() {
-      fprop();
+    final void step(long seed) {
+//      Log.info("step with seed " + seed);
+      fprop(seed);
       for( int i = 1; i < _ls.length - 1; i++ )
         Arrays.fill(_ls[i]._e, 0);
       bprop();
     }
 
-    final void fprop() {
-      for (Layer _l : _ls) _l.fprop(true);
+    final void fprop(long seed) {
+      for (Layer _l : _ls) _l.fprop(seed, true);
     }
 
     final void bprop() {
@@ -104,7 +106,7 @@ public abstract class Trainer {
 
       Input input = (Input) _ls[0];
       for( ; _limit == 0 || _processed < _limit; _processed++ ) {
-        step();
+        step(_processed);
         input.move();
         if( _job != null && (!Job.isRunning(_job) || !NeuralNet.running ) )
           break;
@@ -166,13 +168,17 @@ public abstract class Trainer {
         _trainers[t] = new Base(clones);
         final Base trainer = _trainers[t];
 
+        final int thread_num = t;
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
             for( long i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
               if( job != null && (!Job.isRunning(job) || !NeuralNet.running ) )
                 break;
               try {
-                trainer.step();
+//                long seed = thread_num * _stepsPerThread + input._pos; //BAD
+                long seed = new Random().nextLong(); //GOOD
+//                long seed = thread_num * _stepsPerThread + _processed.get(); //TRY
+                trainer.step(seed);
                 input.move();
                 _processed.incrementAndGet();
               } catch (Exception e) {
@@ -424,7 +430,7 @@ public abstract class Trainer {
         }
         Base base = new Base(clones);
         for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
-          base.step();
+          base.step(new Random().nextLong()); //warning: no reproducible seeding
         int chunk = _cs[0].cidx();
         _node.stepped(chunk);
       }
@@ -460,7 +466,7 @@ public abstract class Trainer {
       for( int y = 1; y < _ws.length; y++ ) {
         _wi[y] = ws[y].clone();
         _bi[y] = bs[y].clone();
-        if( ls[y].momentum_start != 0 || ls[y].momentum_stable != 0 ) {
+        if( ls[y].params.momentum_start != 0 || ls[y].params.momentum_stable != 0 ) {
           _wm[y] = new float[ws[y].length];
           _bm[y] = new double[bs[y].length];
         }
@@ -631,7 +637,7 @@ public abstract class Trainer {
         int group = device.getMaxWorkGroupSize();
         Input input = (Input) _ls[0];
         while (true) {
-          input.fprop(true);
+          input.fprop(new Random().nextLong(), true);
           for( int i = 0; i < input._a.length; i++ )
             a[0].getBuffer().put(i, (float)input._a[i]);
           queue.putWriteBuffer(a[0], false);

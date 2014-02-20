@@ -12,7 +12,7 @@ public class NeuralNetViz extends NeuralNetMnist {
 
   protected void startTraining(Layer[] ls) {
     //_trainer = new Trainer.MapReduce(ls, 0, self());
-    _trainer = new Trainer.Threaded(ls, 0, self());
+    _trainer = new Trainer.Threaded(ls, 0, self(), -1);
 
     // Basic visualization of images and weights
     JFrame frame = new JFrame("H2O");

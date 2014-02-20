@@ -117,6 +117,11 @@ public class Utils {
     for (float d: from) result += d;
     return result;
   }
+  public static double sum(double[] from) {
+    double result = 0;
+    for (double d: from) result += d;
+    return result;
+  }
 
   public static String sampleToString(int[] val, int max) {
     if (val == null || val.length < max) return Arrays.toString(val);
@@ -234,9 +239,9 @@ public class Utils {
     return result;
   }
 
-  public static void shuffleArray(long[] a) {
+  public static void shuffleArray(long[] a, long seed) {
     int n = a.length;
-    Random random = new Random();
+    Random random = getDeterRNG(seed);
     random.nextInt();
     for (int i = 0; i < n; i++) {
       int change = i + random.nextInt(n - i);
@@ -902,6 +907,11 @@ public class Utils {
   }
   public static float[] div(float[] nums, float n) {
     assert !Float.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  public static double[] div(double[] nums, double n) {
+    assert !Double.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }

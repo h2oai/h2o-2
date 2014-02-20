@@ -1,21 +1,27 @@
 package water;
 
-import static water.util.Utils.difference;
-import static water.util.Utils.isEmpty;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Arrays;
-
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
-import water.api.*;
+import water.api.Constants;
+import water.api.DocGen;
+import water.api.Progress2;
 import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.*;
+import water.util.Log;
+import water.util.Utils;
 import water.util.Utils.ExpectedExceptionForDebug;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.HashMap;
+
+import static water.util.Utils.difference;
+import static water.util.Utils.isEmpty;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -72,10 +78,6 @@ public class Job extends Request2 {
   public Key self() { return job_key; }
   public Key dest() { return destination_key; }
 
-  protected void logStart() {
-    Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
-  }
-
   public int gridParallelism() {
     return 1;
   }
@@ -87,18 +89,20 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Source frame", required = true, filter = Default.class)
+    @API(help = "Source frame", required = true, filter = Default.class, json = true)
     public Frame source;
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (source == null) {
-        Log.info("    source: null");
+    /**
+     * Annotate the number of columns and rows of the training data set in the job parameter JSON
+     * @return JsonObject annotated with num_cols and num_rows of the training data set
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (source != null) {
+        jo.getAsJsonObject("source").addProperty("num_cols", source.numCols());
+        jo.getAsJsonObject("source").addProperty("num_rows", source.numRows());
       }
-      else {
-        Log.info("    source.numCols(): " + source.numCols());
-        Log.info("    source.numRows(): " + source.numRows());
-      }
+      return jo;
     }
   }
 
@@ -121,19 +125,34 @@ public class Job extends Request2 {
     public int[] ignored_cols_by_name = EMPTY;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (cols == null) {
-        Log.info("    cols: null");
-      } else {
-        Log.info("    cols: " + cols.length + " columns selected");
+    /**
+     * Annotate the used and ignored columns in the job parameter JSON
+     * For both the used and the ignored columns, the following rules apply:
+     * If the number of columns is less or equal than 100, a dense list of used columns is reported.
+     * If the number of columns is greater than 100, the number of columns is reported.
+     * If the number of columns is 0, a "N/A" is reported.
+     * @return JsonObject annotated with used/ignored columns
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (!jo.has("source")) return jo;
+      HashMap<String, int[]> map = new HashMap<String, int[]>();
+      map.put("used_cols", cols);
+      map.put("ignored_cols", ignored_cols);
+      for (String key : map.keySet()) {
+        int[] val = map.get(key);
+        if (val != null) {
+          if(val.length>100) jo.getAsJsonObject("source").addProperty("num_" + key, val.length);
+          else if(val.length>0) {
+            StringBuilder sb = new StringBuilder();
+            for (int c : val) sb.append(c + ",");
+            jo.getAsJsonObject("source").addProperty(key, sb.toString().substring(0, sb.length()-1));
+          } else {
+            jo.getAsJsonObject("source").addProperty(key, "N/A");
+          }
+        }
       }
-
-      if (ignored_cols == null) {
-        Log.info("    ignored_cols: null");
-      } else {
-        Log.info("    ignored_cols: " + ignored_cols.length + " columns ignored");
-      }
+      return jo;
     }
 
     @Override protected void init() {
@@ -193,11 +212,11 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help="Column to use as class", required=true, filter=responseFilter.class)
+    @API(help="Column to use as class", required=true, filter=responseFilter.class, json = true)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
-    @API(help="Do Classification or regression", filter=myClassFilter.class)
+    @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
@@ -212,15 +231,19 @@ public class Job extends Request2 {
       ((FrameKeyMultiVec) c).setResponse((FrameClassVec) r);
     }
 
-    @Override protected void logStart() {
-      super.logStart();
+    /**
+     * Annotate the name of the response column in the job parameter JSON
+     * @return JsonObject annotated with the name of the response column
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
       int idx = source.find(response);
       if( idx == -1 ) {
         Vec vm = response.masterVec();
         if( vm != null ) idx = source.find(vm);
       }
-      Log.info("    response: "+(idx==-1?"null":source._names[idx]));
-      Log.info("    "+(classification ? "classification" : "regression"));
+      jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
+      return jo;
     }
 
     @Override protected void init() {
@@ -251,17 +274,20 @@ public class Job extends Request2 {
     protected transient String[] _names;
     protected transient String _responseName;
 
-    @API(help = "Validation frame", filter = Default.class, mustExist = true)
+    @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (validation == null) {
-        Log.info("    validation: null");
-      } else {
-        Log.info("    validation.numCols(): " + validation.numCols());
-        Log.info("    validation.numRows(): " + validation.numRows());
+    /**
+     * Annotate the number of columns and rows of the validation data set in the job parameter JSON
+     * @return JsonObject annotated with num_cols and num_rows of the validation data set
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (validation != null) {
+        jo.getAsJsonObject("validation").addProperty("num_cols", validation.numCols());
+        jo.getAsJsonObject("validation").addProperty("num_rows", validation.numRows());
       }
+      return jo;
     }
 
     @Override protected void init() {

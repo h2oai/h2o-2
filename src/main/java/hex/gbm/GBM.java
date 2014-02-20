@@ -14,8 +14,15 @@ import water.api.DocGen;
 import water.api.GBMProgressPage;
 import water.fvec.Chunk;
 import water.fvec.Frame;
-import water.util.*;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.Arrays;
+
+import static water.util.Utils.div;
 
 // Gradient Boosted Trees
 //
@@ -24,7 +31,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
+  @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1, json=true)
   public double learn_rate = 0.1;
 
   @API(help = "Grid search parallelism", filter = Default.class, lmax = 4, gridable=false)
@@ -111,12 +118,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
-  }
-
-  @Override protected void logStart() {
-    Log.info("Starting GBM model build...");
-    super.logStart();
-    Log.info("    learn_rate: " + learn_rate);
   }
 
   @Override protected JobState exec() {
