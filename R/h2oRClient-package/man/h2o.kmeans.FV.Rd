@@ -1,18 +1,19 @@
-\name{h2o.kmeans}
-\alias{h2o.kmeans}
+\name{h2o.kmeans.FV}
+\alias{h2o.kmeans.FV}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-H2O: K-Means Clustering
+H2O: K-Means Clustering (FluidVecs)
 }
 \description{
-Performs k-means clustering on a data set.}
+Performs k-means clustering using the FluidVecs implementation on a data set.
+}
 \usage{
-h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", version = 1)
+h2o.kmeans.FV(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{
-An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
+An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{centers}{
 The number of clusters k.
@@ -29,20 +30,17 @@ The number of clusters k.
   \item{init}{
 (Optional) Method by which to select the k initial cluster centroids. Possible values are \code{"none"} for random initialization, \code{"plusplus"} for k-means++ initialization, and \code{"furthest"} for initialization at the furthest point from each successive centroid. See the \href{http://docs.0xdata.com/datascience/kmeans.html}{H2O K-means documentation} for more details.
   }
-  \item{version}{
-  (Optional) The version of k-means clustering to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.
-  }
 }
 
 \details{
 %%  ~~ If necessary, more details than the description above ~~
-IMPORTANT: Currently, to run k-means with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
+IMPORTANT: Currently, to run k-means using the FluidVecs implementation, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
 }
 
 \value{
-An object of class \code{\linkS4class{H2OKMeansModelVA}} (\code{version = 1}) or \code{\linkS4class{H2OKMeansModel}} (\code{version = 2}) with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and model, where the last is a list of the following components:
   \item{centers }{A matrix of cluster centers.}
-  \item{cluster }{A \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
+  \item{cluster }{A \code{\linkS4class{H2OParsedData}} object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
   \item{size }{The number of points in each cluster.}
   \item{withinss }{Vector of within-cluster sum of squares, with one component per cluster.}
   \item{tot.withinss }{Total within-cluster sum of squares, i.e., sum(withinss).}
@@ -50,18 +48,18 @@ An object of class \code{\linkS4class{H2OKMeansModelVA}} (\code{version = 1}) or
 
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
+\code{\link{h2o.importFile.FV}, \link{h2o.importFolder.FV}, \link{h2o.importHDFS.FV}, \link{h2o.importURL.FV}, \link{h2o.uploadFile.FV}}
 }
 
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
-prostate.hex = h2o.importFile(localH2O, path = prosPath)
-h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
+prostate.hex = h2o.importFile.FV(localH2O, path = prosPath)
+h2o.kmeans.FV(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
 covPath = system.file("extdata", "covtype.csv", package="h2oRClient")
-covtype.hex = h2o.importFile(localH2O, path = covPath)
-covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
+covtype.hex = h2o.importFile.FV(localH2O, path = covPath)
+covtype.km = h2o.kmeans.FV(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
 print(covtype.km)
 h2o.shutdown(localH2O)
 }
