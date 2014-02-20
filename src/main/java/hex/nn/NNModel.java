@@ -50,18 +50,31 @@ public class NNModel extends Model {
     public double epoch_counter;
     @API(help = "How many rows the algorithm has processed")
     public long training_samples;
+    @API(help = "How long the algorithm ran in ms")
+    public long training_time_ms;
+
+    //training/validation sets
+    @API(help = "Whether a validation set was provided")
+    boolean validation;
     @API(help = "Number of training set samples for scoring")
     public long score_training_samples;
     @API(help = "Number of validation set samples for scoring")
     public long score_validation_samples;
-    @API(help = "How long the algorithm ran in ms")
-    public long training_time_ms;
+
+    @API(help="Do classification or regression")
+    public boolean classification;
+
+    // classification
+    @API(help = "Confusion matrix on training data")
+    public water.api.ConfusionMatrix train_confusion_matrix;
+    @API(help = "Confusion matrix on validation data")
+    public water.api.ConfusionMatrix valid_confusion_matrix;
     @API(help = "Classification error on training data")
     public double train_err = 1;
-    @API(help = "Whether a validation set was provided")
-    boolean validation;
     @API(help = "Classification error on validation data")
     public double valid_err = 1;
+
+    // regression
     @API(help = "Training MSE")
     public double train_mse = Double.POSITIVE_INFINITY;
     @API(help = "Validation MSE")
@@ -70,15 +83,17 @@ public class NNModel extends Model {
 //    public double train_mce = Double.POSITIVE_INFINITY;
 //    @API(help = "Validation MCE")
 //    public double valid_mce = Double.POSITIVE_INFINITY;
-    @API(help = "Confusion matrix on training data")
-    public water.api.ConfusionMatrix train_confusion_matrix;
-    @API(help = "Confusion matrix on validation data")
-    public water.api.ConfusionMatrix valid_confusion_matrix;
 
     @Override public String toString() {
-      String s = "Training misclassification: " + String.format("%.2f", (100 * train_err)) + "%";
-      if (validation) s += ", validation misclassification: " + String.format("%.2f", (100 * valid_err)) + "%";
-      return s;
+      StringBuilder sb = new StringBuilder();
+      if (classification) {
+        sb.append("Training misclassification: " + String.format("%.2f", (100 * train_err)) + "%");
+        if (validation) sb.append(", validation misclassification: " + String.format("%.2f", (100 * valid_err)) + "%");
+      } else {
+        sb.append("Training MSE: " + train_mse);
+        if (validation) sb.append(", validation MSE: " + valid_mse);
+      }
+      return sb.toString();
     }
   }
 
@@ -436,17 +451,24 @@ public class NNModel extends Model {
       boolean printCM = false;
       // compute errors
       Errors err = new Errors();
+      err.classification = isClassifier();
+      assert(err.classification == model_info().get_params().classification);
       err.training_time_ms = _now - timeStart;
       err.epoch_counter = epoch_counter;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
-      err.train_err = calcError(ftrain, "Error on training data:", printCM, err.train_confusion_matrix);
+      final double trainErr = calcError(ftrain, "Error on training data:", printCM, err.train_confusion_matrix);
+      if (err.classification) err.train_err = trainErr;
+      else err.train_mse = trainErr;
+
       if (err.validation) {
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
-        err.valid_err = calcError(ftest, "Error on validation data:", printCM, err.valid_confusion_matrix);
+        final double validErr = calcError(ftest, "Error on validation data:", printCM, err.valid_confusion_matrix);
+        if (err.classification) err.valid_err = validErr;
+        else err.valid_mse = validErr;
       }
       // enlarge the error array by one, push latest score back
       if (errors == null) {
@@ -465,11 +487,17 @@ public class NNModel extends Model {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
       Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
       keep_running = false;
-    } else if (ftest == null && (model_info().parameters.classification && errors[errors.length-1].train_err == 0) ) {
-      Log.info("Achieved 100% classification accuracy on the training data. We are done here.");
+    } else if (ftest == null &&
+            (model_info().parameters.classification && errors[errors.length-1].train_err == 0)
+        || (!model_info().parameters.classification && errors[errors.length-1].train_mse == 0)
+            ) {
+      Log.info("Achieved 100% modeling accuracy on the training data. We are done here.");
       keep_running = false;
-    } else if (ftest != null && (model_info().parameters.classification && errors[errors.length-1].valid_err == 0) ) {
-      Log.info("Achieved 100% classification accuracy on the validation data. We are done here.");
+    } else if (ftest != null &&
+            (model_info().parameters.classification && errors[errors.length-1].valid_err == 0)
+        || (!model_info().parameters.classification && errors[errors.length-1].valid_mse == 0)
+            ) {
+      Log.info("Achieved 100% modeling accuracy on the validation data. We are done here.");
       keep_running = false;
     }
     update(dest_key); //update model in UKV
@@ -493,7 +521,8 @@ public class NNModel extends Model {
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     NNTask.step(-1, neurons, model_info, false, null);
     double[] out = neurons[neurons.length - 1]._a;
-    for (int i=0; i<out.length; ++i) preds[i+1] = (float)out[i];
+    assert((isClassifier() && preds.length == out.length+1) || (!isClassifier() && preds.length == 1 && out.length == 1));
+    for (int i=0; i<preds.length-1; ++i) preds[i+1] = (float)out[i];
     preds[0] = getPrediction(preds, data);
     return preds;
   }
@@ -674,29 +703,33 @@ public class NNModel extends Model {
     long score_train = error.score_training_samples;
     final boolean fulltrain = score_train==0 || score_train == model_info().data_info()._adaptedFrame.numRows();
     final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
-    final String cmTitle = "Confusion Matrix on " + (error.validation ?
-            "Validation Data" + (fullvalid ? "" : " (" + score_valid + " samples)")
-            : "Training Data" + (fulltrain ? "" : " (" + score_train + " samples)"));
-    DocGen.HTML.section(sb, cmTitle);
-    if (error.train_confusion_matrix != null) {
-      if (error.train_confusion_matrix.cm.length < 100) {
-        if (error.validation && error.valid_confusion_matrix != null) error.valid_confusion_matrix.toHTML(sb);
-        else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
-      } else sb.append("<h5>Not shown here (too large).</h5>");
+    if (isClassifier()) {
+      final String cmTitle = "Confusion Matrix on " + (error.validation ?
+              "Validation Data" + (fullvalid ? "" : " (" + score_valid + " samples)")
+              : "Training Data" + (fulltrain ? "" : " (" + score_train + " samples)"));
+      DocGen.HTML.section(sb, cmTitle);
+      if (error.train_confusion_matrix != null) {
+        if (error.train_confusion_matrix.cm != null && error.train_confusion_matrix.cm.length < 100) {
+          if (error.validation && error.valid_confusion_matrix != null && error.valid_confusion_matrix.cm != null) error.valid_confusion_matrix.toHTML(sb);
+          else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
+        } else {
+          sb.append("<h5>Not shown here (too large).</h5>");
+        }
+      }
+      else sb.append("<h5>Not yet computed.</h5>");
     }
-    else sb.append("<h5>Not yet computed.</h5>");
 
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
 
-    String training = "Number of training set samples for scoring: " + (fulltrain ? "all" : score_train);
+    String training = "Number of training set samples for scoring: " + (fulltrain ? "all" : "") + score_train;
     if (score_train > 0) {
       if (score_train < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
       if (score_train > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
     }
     DocGen.HTML.section(sb, training);
     if (error.validation) {
-      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all" : score_valid);
+      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all" : "") + score_valid;
       if (score_valid > 0) {
         if (score_valid < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
         if (score_valid > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
