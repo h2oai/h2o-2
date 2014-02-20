@@ -28,4 +28,9 @@ public class Cancel extends Request {
     JsonObject response = new JsonObject();
     return Response.redirect(response, Jobs.class, null);
   }
+
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_V1_V2;
+  }
 }

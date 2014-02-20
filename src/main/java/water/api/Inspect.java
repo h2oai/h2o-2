@@ -620,4 +620,9 @@ public class Inspect extends Request {
       return sb.toString();
     }
   }
+
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_V1_V2;
+  }
 }
