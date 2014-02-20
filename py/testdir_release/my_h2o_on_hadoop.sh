@@ -6,6 +6,6 @@ H2O_JAR=../../h2o-downloaded/h2o.jar
 
 hadoop dfs -rmr /user/kevin/hdfsOutputDirName
 
-# first check whether you have mapred permissions?
+echo "You should first check whether you have mapred permissions?"
 hadoop jar $H2O_HADOOP/h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx 8g -nodes 3 -output hdfsOutputDirName -notify h2o-one-node
 
