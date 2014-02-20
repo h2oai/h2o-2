@@ -67,7 +67,7 @@ public class GLMProgressPage extends Request {
     }
     Response r = null;
     // Display HTML setup
-    if(_job.value()== null || DKV.get(_job.value()) == null)
+    if(_job.value()== null || !Job.isRunning(_job.value()))
       r =  Response.done(response);
     else if(p != null)
       r = Response.poll(response,p.progress());

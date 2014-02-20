@@ -192,15 +192,10 @@ echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
 
 #autoGen RUnits
-#!/bin/bash
-
 myR ../../R/tests/Utils/runnerSetupPackage 300
-
 # myR ../../R/tests/testdir_munging/histograms/runit_histograms 1200
 
-
 # sleep 3600
-
 # have to ignore the Rsandbox dirs that got created in the tests directory
 for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
 do
