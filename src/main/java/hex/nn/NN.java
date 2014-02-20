@@ -392,13 +392,13 @@ public class NN extends Job.ValidatedJob {
       Assert.assertEquals(neurons[i]._b, neurons2[i]._b); //same reference (from same model_info)
       for (int j=0; j<neurons[i]._b.length; ++j)
         Assert.assertEquals(neurons[i]._b[j], neurons2[i]._b[j]); //same values
-      Assert.assertNotSame(neurons[i]._a, neurons2[i]._a); //different activation containers
+      Assert.assertNotSame(neurons[i]._a, neurons2[i]._a); //different (non-shared) activation containers
       for (int j=0; j<neurons[i]._a.length; ++j)
-        Assert.assertNotSame(neurons[i]._a[j], neurons2[i]._a[j]); //same activation values
+        Assert.assertNotSame(neurons[i]._a[j], neurons2[i]._a[j]); //local activation values
       if (! (neurons[i] instanceof Neurons.Output) ) {
-        Assert.assertNotSame(neurons[i]._e, neurons2[i]._e);
+        Assert.assertNotSame(neurons[i]._e, neurons2[i]._e); //different error containers
         for (int j=0; j<neurons[i]._e.length; ++j)
-          Assert.assertEquals(neurons[i]._e[j], neurons2[i]._e[j]);
+          Assert.assertEquals(neurons[i]._e[j], neurons2[i]._e[j]); //same values: 0
       }
     }
   }

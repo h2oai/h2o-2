@@ -117,7 +117,7 @@ public class ConfusionMatrix extends Request2 {
     /* @IN */ final int _c_len;
     /* @OUT Classification */ long _cm[][];
     /* @OUT Regression */ public double mse() { return _count > 0 ? _mse/_count : Double.POSITIVE_INFINITY; }
-    /* @OUT Regression Helper */ private double _mse = Double.NaN;
+    /* @OUT Regression Helper */ private double _mse;
     /* @OUT Regression Helper */ private long _count;
     CM(int c_len) { _c_len = c_len;  }
     @Override public void map( Chunk ca, Chunk cp ) {
@@ -153,7 +153,6 @@ public class ConfusionMatrix extends Request2 {
 
     @Override public void reduce( CM cm ) {
       if (_cm != null && cm._cm != null) {
-        assert(_mse == Double.NaN && cm._mse == Double.NaN);
         Utils.add(_cm,cm._cm);
       } else {
         assert(_mse != Double.NaN && cm._mse != Double.NaN);

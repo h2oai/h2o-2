@@ -35,8 +35,7 @@ public class JUnitRunner {
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
-    tests.remove(NeuralNetSpiralsTest.class);
-    tests.remove(NeuralNetIrisTest.class);
+    tests.remove(NNvsNeuralNet.class);
     // Pure JUnit test
 //    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);
