@@ -1,13 +1,13 @@
 package hex.gbm;
 
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
-import static water.util.Utils.append;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Random;
 
 import water.*;
 import water.api.DocGen;
@@ -526,12 +526,12 @@ public class DTree extends Iced {
 
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be separate).
-    @API(help="Testing key for cm and errs") public final Key testKey;
-    // Confusion matrix per each generate tree or null
+    @API(help="Testing key for cm and errs")                                          public final Key testKey;
+    // Confusion matrix per each generated tree or null
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
-    @API(help="Confusion matrix domain.") public final String[] cmDomain;
-    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
-    @API(help="Tree statistics") public final TreeStats treeStats;
+    @API(help="Confusion matrix domain.")                                             public final String[] cmDomain;
+    @API(help="Unscaled variable importance for individual input variables.")         public final float[] varimp;
+    @API(help="Tree statistics")                                                      public final TreeStats treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
