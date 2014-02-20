@@ -163,8 +163,9 @@ public class NNModel extends Model {
     public double[] rms_weight;
 
     @API(help = "Unstable", json = true)
-    private boolean unstable = false;
+    private volatile boolean unstable = false;
     public boolean unstable() { return unstable; }
+    public void set_unstable() { unstable = true; computeStats(); }
 
     @API(help = "Processed samples", json = true)
     private long processed_global;
@@ -521,9 +522,14 @@ public class NNModel extends Model {
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     NNTask.step(-1, neurons, model_info, false, null);
     double[] out = neurons[neurons.length - 1]._a;
-    assert((isClassifier() && preds.length == out.length+1) || (!isClassifier() && preds.length == 1 && out.length == 1));
-    for (int i=0; i<preds.length-1; ++i) preds[i+1] = (float)out[i];
-    preds[0] = getPrediction(preds, data);
+    if (isClassifier()) {
+      assert(preds.length == out.length+1);
+      for (int i=0; i<preds.length-1; ++i) preds[i+1] = (float)out[i];
+      preds[0] = getPrediction(preds, data);
+    } else {
+      assert(preds.length == 1 && out.length == 1);
+      preds[0] = (float)out[0];
+    }
     return preds;
   }
 
