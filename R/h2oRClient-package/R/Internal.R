@@ -20,7 +20,7 @@ h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = .pkg.e
 h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = .pkg.env) }
 h2o.__clearLogs        <- function() { unlink(.pkg.env$.h2o.__LOG_COMMAND)
                                        unlink(.pkg.env$.h2o.__LOG_ERROR) }
-h2o.__getLog <- function(type) {
+h2o.__getLogPath <- function(type) {
   if(missing(type) || !type %in% c("Command", "Error"))
     stop("type must be either 'Command' or 'Error'")
   switch(type, Command = .pkg.env$h2o.__LOG_COMMAND, Error = .pkg.env$h2o.__LOG_ERROR)
@@ -36,7 +36,7 @@ h2o.__openLog <- function(type) {
   else system(paste("open '", myFile, "'", sep=""))
 }
 
-h2o.__changeLog <- function(path, type) {
+h2o.__changeLogPath <- function(path, type) {
   if(missing(type) || !type %in% c("Command", "Error"))
     stop("type must be either 'Command' or 'Error'")
   myVar = switch(type, Command = "h2o.__LOG_COMMAND", Error = "h2o.__LOG_ERROR")

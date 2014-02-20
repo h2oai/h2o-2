@@ -191,7 +191,8 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 
-setMethod("summary", "H2OPCAModel", function(object) {
+# setMethod("summary", "H2OPCAModel", function(object) {
+summary.H2OPCAModel <- function(object, ...) {
   # TODO: Save propVar and cumVar from the Java output instead of computing here
   myVar = object@model$sdev^2
   myProp = myVar/sum(myVar)
@@ -201,7 +202,7 @@ setMethod("summary", "H2OPCAModel", function(object) {
 
   cat("Importance of components:\n")
   print(result)
-})
+}
 
 setMethod("plot", "H2OPCAModel", function(x, y, ...) {
   barplot(x@model$sdev^2)
@@ -448,7 +449,7 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
 h2o.table <- function(x) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
-  if(length(x) > 1 || ncol(x) > 2) stop("Unimplemented")
+  if(ncol(x) > 2) stop("Unimplemented")
   .h2o.__unop2("table", x)
 }
 
@@ -694,24 +695,8 @@ setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.r
   return(col)
 })
 
-setGeneric("histograms", function(object) { standardGeneric("histograms") })
-setMethod("histograms", "H2OParsedData", function(object) {
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key)
-  list.of.bins <- lapply(res$summaries, function(x) {
-    if (x$stats$type == 'Enum') {
-      bins <- NULL
-    } else {
-      counts <- x$hcnt
-      breaks <- seq(x$hstart, by=x$hstep, length.out=length(x$hcnt) + 1)
-      bins <- list(counts,breaks)
-      names(bins) <- cbind('counts', 'breaks')
-    }
-    bins
-  })
-  return(list.of.bins)
-})
-
-setMethod("summary", "H2OParsedData", function(object) {
+# setMethod("summary", "H2OParsedData", function(object) {
+summary.H2OParsedData <- function(object, ...) {
   digits = 12L
   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key)
   cols <- sapply(res$summaries, function(col) {
@@ -754,7 +739,7 @@ setMethod("summary", "H2OParsedData", function(object) {
   rownames(result) <- rep("", 6)
   colnames(result) <- sapply(res$summaries, function(col) col$colname)
   result
-})
+}
 
 setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
   # if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
@@ -818,7 +803,7 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
 })
 
 str.H2OParsedData <- function(object, ...) {
-  if (length(l <- list(...)) && any("give.length" == names(l))) 
+  if (length(l <- list(...)) && any("give.length" == names(l)))
     invisible(NextMethod("str", ...))
   else invisible(NextMethod("str", give.length = FALSE, ...))
   
@@ -845,9 +830,26 @@ str.H2OParsedData <- function(object, ...) {
   }
 }
 
-str.H2OParsedDataVA <- function(object, ...) {
-  str(new("H2OParsedData", h2o=object@h2o, key=object@key), ...)
-}
+# str.H2OParsedDataVA <- function(object, ...) {
+#   str(new("H2OParsedData", h2o=object@h2o, key=object@key), ...)
+# }
+
+# setGeneric("histograms", function(object) { standardGeneric("histograms") })
+# setMethod("histograms", "H2OParsedData", function(object) {
+#   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key)
+#   list.of.bins <- lapply(res$summaries, function(x) {
+#     if (x$stats$type == 'Enum') {
+#       bins <- NULL
+#     } else {
+#       counts <- x$hcnt
+#       breaks <- seq(x$hstart, by=x$hstep, length.out=length(x$hcnt) + 1)
+#       bins <- list(counts,breaks)
+#       names(bins) <- cbind('counts', 'breaks')
+#     }
+#     bins
+#   })
+#   return(list.of.bins)
+# })
 
 #--------------------------------- ValueArray ----------------------------------#
 setMethod("show", "H2ORawDataVA", function(object) {
@@ -1001,7 +1003,8 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   return(x.slice)
 })
 
-setMethod("summary", "H2OParsedDataVA", function(object) {
+# setMethod("summary", "H2OParsedDataVA", function(object) {
+summary.H2OParsedDataVA <- function(object, ...) {
   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY, key=object@key)
   res = res$summary$columns
   result = NULL; cnames = NULL
@@ -1031,4 +1034,4 @@ setMethod("summary", "H2OParsedDataVA", function(object) {
   rownames(result) <- rep("", 6)
   colnames(result) <- cnames
   result
-})
+}

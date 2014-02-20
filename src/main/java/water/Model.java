@@ -150,19 +150,12 @@ public abstract class Model extends Lockable<Model> {
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp [] = new double[_names.length];
-        float preds[] = new float [nclasses()];
-        int   ties [] = new int   [nclasses()];
-        Chunk p = chks[_names.length-1];
-        for( int row=0; row<p._len; row++ ) {
-          float[] out = score0(chks,row,tmp,preds);
-          if( nclasses() > 1 ) {
-            if( Float.isNaN(out[0]) ) p.setNA0(row);
-            else p.set0(row, Model.getPrediction(out, ties, row));
-            for( int c=0; c<nclasses(); c++ )
-              chks[_names.length+c].set0(row,out[c]);
-          } else {
-            p.set0(row,out[0]);
-          }
+        float preds[] = new float [nclasses()==1?1:nclasses()+1];
+        int len = chks[0]._len;
+        for( int row=0; row<len; row++ ) {
+          float p[] = score0(chks,row,tmp,preds);
+          for( int c=0; c<preds.length; c++ )
+            chks[_names.length-1+c].set0(row,p[c]);
         }
       }
     }.doAll(adaptFrm);
@@ -297,7 +290,6 @@ public abstract class Model extends Lockable<Model> {
    *
    * @param colName name of column which is mapped, can be null.
    * @param modelDom
-   * @param dom
    * @param exact
    * @return
    */
@@ -349,63 +341,55 @@ public abstract class Model extends Lockable<Model> {
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 
   /**
-   * Utility function to get a best prediction from an array of class prediction distribution if you know the row number.
-   * It returns index of max value if predicted values are unique.
-   * In the case of tie, the implementation solve it in sudo-random way based on number of row in chunk.
-   *
-   * @param preds an array of prediction distribution. Length of arrays is equal to a number of classes.
-   * @param ties a pre-allocated array to hold class numbers participating in tie
-   * @return the best prediction (index of class)
-   *
-   * @see #getPrediction(double[], int[], int)
-   * @see #getPrediction(int[], int[], int)
+   *  Utility function to get a best prediction from an array of class
+   *  prediction distribution.  It returns index of max value if predicted
+   *  values are unique.  In the case of tie, the implementation solve it in
+   *  psuedo-random way.
+   *  @param preds an array of prediction distribution.  Length of arrays is equal to a number of classes+1.
+   *  @return the best prediction (index of class, zero-based)
    */
-  public static final int getPrediction(float[] preds, int[] ties, int rowInChunk) {
-    assert preds.length == ties.length;
-    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-    for (int c=1; c<preds.length; c++) {
-      if (preds[best] < preds[c]) {
-        best = c; // take the max index
-        ties[tieCnt=0] = c;
+  public static int getPrediction( float[] preds, double data[] ) {
+    int best=1, tieCnt=0;   // Best class; count of ties 
+    for( int c=2; c<preds.length; c++) {
+      if( preds[best] < preds[c] ) {
+        best = c;               // take the max index
+        tieCnt=0;               // No ties
       } else if (preds[best] == preds[c]) {
-        ties[++tieCnt] = c;
+        tieCnt++;               // Ties
       }
     }
-    if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
-    return best;
+    if( tieCnt==0 ) return best-1; // Return zero-based best class
+    // Tie-breaking logic
+    float res = preds[best];    // One of the tied best results
+    long hash = 0;              // hash for tie-breaking
+    if( data != null ) 
+      for( double d : data ) hash ^= Double.doubleToRawLongBits(d);
+    int idx = (int)hash%(tieCnt+1);  // Which of the ties we'd like to keep
+    for( best=1; best<preds.length; best++)
+      if( res == preds[best] && --idx < 0 )
+        return best-1;          // Return best
+    throw H2O.fail();           // Should Not Reach Here
   }
-  // Argh Java needs templates for primitive types
-  public static final int getPrediction(int[] preds, int[] ties, int rowInChunk) {
-    assert preds.length == ties.length;
-    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-    for (int c=1; c<preds.length; c++) {
-      if (preds[best] < preds[c]) {
-        best = c; // take the max index
-        ties[tieCnt=0] = c;
-      } else if (preds[best] == preds[c]) {
-        ties[++tieCnt] = c;
-      }
-    }
-    if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
-    return best;
-  }
- // Argh Java needs templates for primitive types
- public static final int getPrediction(double[] preds, int[] ties, int rowInChunk) {
-   assert preds.length == ties.length;
-   int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-   for (int c=1; c<preds.length; c++) {
-     if (preds[best] < preds[c]) {
-       best = c; // take the max index
-       ties[tieCnt=0] = c;
-     } else if (preds[best] == preds[c]) {
-       ties[++tieCnt] = c;
-     }
-   }
-   if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
-   return best;
- }
 
- static final int solveTie(int[] ties, int tieCnt, int rowInChunk) { return ties[rowInChunk % (tieCnt+1)]; }
+  public static int getPrediction(float[] preds, int row) {
+    int best=1, tieCnt=0;   // Best class; count of ties 
+    for( int c=2; c<preds.length; c++) {
+      if( preds[best] < preds[c] ) {
+        best = c;               // take the max index
+        tieCnt=0;               // No ties
+      } else if (preds[best] == preds[c]) {
+        tieCnt++;               // Ties
+      }
+    }
+    if( tieCnt==0 ) return best-1; // Return zero-based best class
+    // Tie-breaking logic
+    float res = preds[best];    // One of the tied best results
+    int idx = row%(tieCnt+1);   // Which of the ties we'd like to keep
+    for( best=1; best<preds.length; best++)
+      if( res == preds[best] && --idx < 0 )
+        return best-1;          // Return best
+    throw H2O.fail();           // Should Not Reach Here
+  }
 
 
   /** Return a String which is a valid Java program representing a class that
