@@ -3,6 +3,7 @@ package water.api;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
+import hex.nn.NN;
 import water.*;
 import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.*;
@@ -101,6 +102,7 @@ public class Inspect2 extends Request2 {
               DRF.link(skey, "Distributed Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
               GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
+              NN.link(skey, "Neural Net (beta)") +", "+
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV") +
