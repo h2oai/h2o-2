@@ -40,7 +40,7 @@ public class Parse2 extends Parse {
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job_key = ParseDataset2.forkParseDataset(destination_key, keys, setup, delete_on_done.value()).job_key;
+      job_key = ParseDataset2.forkParseDataset(destination_key, keys, setup, delete_on_done.value()).self();
       // Allow the user to specify whether to block synchronously for a response or not.
       if (_blocking.value())
         Job.waitUntilJobEnded(job_key);

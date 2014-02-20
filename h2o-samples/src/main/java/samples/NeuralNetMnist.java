@@ -110,7 +110,7 @@ public class NeuralNetMnist extends Job {
     _trainer.start();
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     final double fraction = 1.0;
     final long seed = 0xC0FFEE;
     load(fraction, seed);
@@ -160,7 +160,7 @@ public class NeuralNetMnist extends Job {
       }
     }, 0, 10);
     startTraining(ls);
-    return Status.Running;
+    return JobState.RUNNING;
   }
 
   // Remaining code was used to shuffle & convert to CSV

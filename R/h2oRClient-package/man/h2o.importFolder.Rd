@@ -2,10 +2,10 @@
 \alias{h2o.importFolder}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Import Local Directory
+Import Local Directory of Data Files
 }
 \description{
-  Imports all the files in the local directory and parses them, returning a list of objects containing the identifying hex keys.
+  Imports all the files in the local directory and parses them, concatenating the data into a single H2O data matrix and returning an object containing the identifying hex key.
 }
 \usage{
   h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1)
@@ -40,13 +40,15 @@
   (Optional) If \code{version = 1}, the folder of files will be imported to a ValueArray object. Otherwise, if \code{version = 2}, the files will be imported as a FluidVecs object.
   }
 }
-\details{
-This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedData}} object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
 
-WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
+\details{
+This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
+
+WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
 }
+
 \value{
-  If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
   %%  ~Describe the value returned
   %%  If it is a LIST, use
   %%  \item{comp1 }{Description of 'comp1'}
@@ -55,7 +57,7 @@ WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until
 }
 \seealso{
   %% ~~objects to See Also as \code{\link{help}}, ~~~
-  \code{\link{h2o.importFile}}
+  \code{\link{h2o.importFile}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
 library(h2o)

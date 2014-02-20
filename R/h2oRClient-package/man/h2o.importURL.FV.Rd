@@ -1,14 +1,14 @@
-\name{h2o.importURL.VA}
-\alias{h2o.importURL.VA}
+\name{h2o.importURL.FV}
+\alias{h2o.importURL.FV}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Import Data from URL to ValueArray
+Import Data from URL to FluidVecs
 }
 \description{
-Imports a file from the URL and parses it to ValueArray data, returning an object containing the identifying hex key.
+Imports a file from the URL and parses it to FluidVecs data, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importURL.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importURL.FV(object, path, key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -31,16 +31,16 @@ The complete URL of the file to be imported. Each row of data appears as one lin
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) An \code{\linkS4class{H2OParsedDataVA}} object containing the column header as its first and only row.
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
   }
 }
 \details{
-This method is identical to \code{\link{h2o.importURL}} with input parameter \code{version = 1}.
+This method is identical to \code{\link{h2o.importURL}} with input parameter \code{version = 2}.
 
  WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -49,12 +49,12 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFile.VA}, \link{h2o.importFolder.VA}, \link{h2o.importHDFS.VA}, \link{h2o.uploadFile.VA}}
+\code{\link{h2o.importFile.FV}, \link{h2o.importFolder.FV}, \link{h2o.importHDFS.FV}, \link{h2o.uploadFile.FV}}
 }
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-prostate.hex = h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importURL.FV(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)
 h2o.shutdown(localH2O)
 }

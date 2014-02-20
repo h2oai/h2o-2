@@ -1,14 +1,14 @@
-\name{h2o.importFolder.VA}
-\alias{h2o.importFolder.VA}
+\name{h2o.importFolder.FV}
+\alias{h2o.importFolder.FV}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Import Local Directory of Data Files to ValueArray
+  Import Local Directory of Data Files to FluidVecs
 }
 \description{
-  Imports all the files in the local directory and parses them, concatenating the data into a single ValueArray and returning an object containing the identifying hex key.
+  Imports all the files in the local directory and parses them, concatenating the data into a single FluidVecs frame and returning an object containing the identifying hex key.
 }
 \usage{
-  h2o.importFolder.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
+  h2o.importFolder.FV(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -34,18 +34,18 @@
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) An \code{\linkS4class{H2OParsedDataVA}} object containing the column header as its first and only row.
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
   }
 }
 \details{
-This method is identical to \code{\link{h2o.importFolder}} with input parameter \code{version = 1}.
+This method is identical to \code{\link{h2o.importFolder}} with input parameter \code{version = 2}.
 
-This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedDataVA}} object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
+This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedData}} object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
 
-WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
+WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
 }
 \value{
-  If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}.
+  If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
   %%  ~Describe the value returned
   %%  If it is a LIST, use
   %%  \item{comp1 }{Description of 'comp1'}
@@ -54,13 +54,13 @@ WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until
 }
 \seealso{
   %% ~~objects to See Also as \code{\link{help}}, ~~~
-  \code{\link{h2o.importFile.VA}, \link{h2o.importHDFS.VA}, \link{h2o.importURL.VA}, \link{h2o.uploadFile.VA}}
+  \code{\link{h2o.importFile.FV}, \link{h2o.importHDFS.FV}, \link{h2o.importURL.FV}, \link{h2o.uploadFile.FV}}
 }
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 myPath = system.file("extdata", "prostate_folder", package = "h2oRClient")
-prostate_all.hex = h2o.importFolder.VA(localH2O, path = myPath)
+prostate_all.hex = h2o.importFolder.FV(localH2O, path = myPath)
 summary(prostate_all.hex)
 h2o.shutdown(localH2O)
 }

@@ -1,14 +1,14 @@
-\name{h2o.importFile}
-\alias{h2o.importFile}
+\name{h2o.importFile.FV}
+\alias{h2o.importFile.FV}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Import Local Data File
+Import Local Data File to FluidVecs
 }
 \description{
-Imports a file from the local path and parses it, returning an object containing the identifying hex key.
+Imports a file from the local path and parses it to FluidVecs data, returning an object containing the identifying hex key. 
 }
 \usage{
-h2o.importFile(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1)
+h2o.importFile.FV(object, path, key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -33,15 +33,14 @@ The path of the file to be imported. Each row of data appears as one line of the
   \item{col.names}{
 (Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
   }
-  \item{version}{
-  (Optional) If \code{version = 1}, the file will be imported to a ValueArray object. Otherwise, if \code{version = 2}, the file will be imported as a FluidVecs object.
-  }
 }
 \details{
+This method is identical to \code{\link{h2o.importFile}} with input parameter \code{version = 2}.
+
 WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -50,13 +49,17 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
+\code{\link{h2o.importFolder.FV}, \link{h2o.importHDFS.FV}, \link{h2o.importURL.FV}, \link{h2o.uploadFile.FV}}
 }
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
-iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
+iris.hex = h2o.importFile.FV(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 h2o.shutdown(localH2O)
 }
+% Add one or more standard keywords, see file 'KEYWORDS' in the
+% R documentation directory.
+\keyword{ ~kwd1 }
+\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

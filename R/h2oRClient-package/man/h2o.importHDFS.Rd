@@ -1,14 +1,14 @@
-\name{h2o.importHDFS.VA}
-\alias{h2o.importHDFS.VA}
+\name{h2o.importHDFS}
+\alias{h2o.importHDFS}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Import from HDFS to ValueArray
+  Import from HDFS
 }
 \description{
-  Imports a HDFS file or set of files in a directory and parses them to ValueArray data, returning a object containing the identifying hex key.
+  Imports a HDFS file or set of files in a directory and parses them, returning a object containing the identifying hex key.
 }
 \usage{
-h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importHDFS(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -34,18 +34,19 @@ h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, se
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) An \code{\linkS4class{H2OParsedDataVA}} object containing the column header as its first and only row.
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
+  }
+  \item{version}{
+  (Optional) If \code{version = 1}, the file will be imported to a ValueArray object. Otherwise, if \code{version = 2}, the file will be imported as a FluidVecs object.
   }
 }
 \details{
-This method is identical to \code{\link{h2o.importHDFS}} with input parameter \code{version = 1}.
-
 When \code{path} is a directory, this method acts like \code{\link{h2o.importFolder}} and concatenates all data files in the folder into a single ValueArray object.
 
 WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
 }
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}. 
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -53,7 +54,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 %% ...
 }
 \seealso{
-\code{\link{h2o.importFile.VA}, \link{h2o.importFolder.VA}, \link{h2o.importURL.VA}, \link{h2o.uploadFile.VA}}
+\code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
 ## Not run:
@@ -62,9 +63,9 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
-iris.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_wheader.csv", parse = TRUE)
+iris.hex = h2o.importHDFS(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_wheader.csv", parse = TRUE)
 summary(iris.hex)
-iris_folder.hex = h2o.importHDFS.VA(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_test_train")
+iris_folder.hex = h2o.importHDFS(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_test_train")
 summary(iris_folder.hex)
 h2o.shutdown(localH2O)
 

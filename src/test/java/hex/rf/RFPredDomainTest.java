@@ -47,7 +47,7 @@ public class RFPredDomainTest extends TestUtil {
     // Load validation dataset
     Key testKey         = loadAndParseFile(testKeyName, testDS);
     ValueArray testData = DKV.get(testKey).get();
-    CMJob cmJob = ConfusionTask.make(model, testData._key, model._features-1, null, false);
+    Job cmJob = ConfusionTask.make(model, testData._key, model._features-1, null, false);
     CMFinal cm = cmJob.get();
     cm.report();
     assertEquals("Error rate", expTestErr, cm.classError(), 0.001);
