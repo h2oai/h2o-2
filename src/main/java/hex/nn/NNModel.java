@@ -568,7 +568,7 @@ public class NNModel extends Model {
 
     model_info.job().toHTML(sb);
     sb.append("<div class='alert'>Actions: "
-            + Cancel.link(jobKey, "Cancel job") + ", "
+            + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Cancel job") + ", " : "")
             + is2.link("Inspect training data", _dataKey) + ", "
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", " +
