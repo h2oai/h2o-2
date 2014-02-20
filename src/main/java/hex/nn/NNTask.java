@@ -6,6 +6,7 @@ import water.H2O.H2OCountedCompleter;
 import water.util.Log;
 
 import java.util.Arrays;
+import java.util.Random;
 
 public class NNTask extends FrameTask<NNTask> {
   final private boolean _training;
@@ -43,7 +44,11 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
-    seed += model_info().get_processed_global(); //avoid periodicity
+    if (H2O.CLOUD.size()==1) {
+      seed += model_info().get_processed_global(); //avoid periodicity
+    } else {
+      seed = new Random().nextLong(); //multi-node: no point in being reproducible - better to be "good" at being random
+    }
     ((Neurons.Input)_neurons[0]).setInput(seed, nums, numcats, cats);
     step(seed, _neurons, _output, _training, responses);
   }
@@ -52,8 +57,15 @@ public class NNTask extends FrameTask<NNTask> {
     if (other._output.get_processed_local() > 0 //other NNTask was active (its model_info should be used for averaging)
             && other._output != _output) //other NNTask worked on a different model_info
     {
-      _output.add(other._output);
-      _chunk_node_count += other._chunk_node_count;
+      // avoid adding remote model info to unprocessed local data, still random
+      // (this can happen if we have no chunks on the master node)
+      if (_output.get_processed_local() == 0) {
+        _output = other._output;
+        _chunk_node_count = other._chunk_node_count;
+      } else {
+        _output.add(other._output);
+        _chunk_node_count += other._chunk_node_count;
+      }
     }
   }
 
