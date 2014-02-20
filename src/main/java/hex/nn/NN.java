@@ -356,7 +356,7 @@ public class NN extends Job.ValidatedJob {
   @Test
   public void test() {
     Key file = NFSFileVec.make(find_test_file("smalldata/mnist/test.csv.gz"));
-    Frame fr = ParseDataset2.parse(Key.make("iris_nn2"), new Key[]{file});
+    Frame fr = ParseDataset2.parse(Key.make("mnist"), new Key[]{file});
     NN p = new NN();
     p.hidden = new int[]{128,128,256};
     p.activation = NN.Activation.RectifierWithDropout;
@@ -401,5 +401,6 @@ public class NN extends Job.ValidatedJob {
           Assert.assertEquals(neurons[i]._e[j], neurons2[i]._e[j]); //same values: 0
       }
     }
+    fr.delete();
   }
 }

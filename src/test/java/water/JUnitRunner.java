@@ -1,6 +1,7 @@
 package water;
 
-import hex.*;
+import hex.NNvsNeuralNet;
+import hex.nn.NN;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -36,6 +37,8 @@ public class JUnitRunner {
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
     tests.remove(NNvsNeuralNet.class);
+    // Leaky
+    tests.remove(NN.class);
     // Pure JUnit test
 //    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);
