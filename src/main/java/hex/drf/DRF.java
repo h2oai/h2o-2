@@ -146,16 +146,17 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     Log.info("    seed: " + _seed);
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     logStart();
     buildModel();
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected Response redirect() {
     return DRFProgressPage.redirect(this, self(), dest());
   }
 
+  @SuppressWarnings("unused")
   @Override protected void init() {
     super.init();
     // Initialize local variables

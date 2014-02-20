@@ -1,46 +1,33 @@
 package water;
 
-import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
-import water.api.Constants;
-import water.api.DocGen;
-import water.api.Progress2;
-import water.api.Request.Validator.NOPValidator;
-import water.api.RequestServer.API_VERSION;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Log;
-import water.util.Utils;
-import water.util.Utils.ExpectedExceptionForDebug;
+import static water.util.Utils.difference;
+import static water.util.Utils.isEmpty;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 
-import static water.util.Utils.difference;
-import static water.util.Utils.isEmpty;
+import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
+import water.api.*;
+import water.api.Request.Validator.NOPValidator;
+import water.api.RequestServer.API_VERSION;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.*;
+import water.util.Utils.ExpectedExceptionForDebug;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  public Job(Key jobKey, Key dstKey){
-   job_key = jobKey;
-   destination_key = dstKey;
-  }
-  public static class JobCancelledException extends RuntimeException {
-    public JobCancelledException(){super("job was cancelled!");}
-    public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
-  }
-  // Global LIST of Jobs key.
+  /** A system key for global list of Job keys. */
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
-  private static final int KEEP_LAST_COUNT = 100;
   public static final long CANCELLED_END_TIME = -1;
   private static final int[] EMPTY = new int[0];
 
   @API(help = "Job key")
-  public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
-
+  protected Key job_key;
   @API(help = "Destination key", filter = Default.class, json = true, validator = DestKeyValidator.class)
   public Key destination_key; // Key holding final value after job is removed
   static class DestKeyValidator extends NOPValidator<Key> {
@@ -49,20 +36,38 @@ public class Job extends Request2 {
         throw new IllegalArgumentException("Key '" + value + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
     }
   }
-
-  @API(help = "Job description")
-  public String description;
-
-  @API(help = "Job start time")
-  public long start_time;
-
-  @API(help = "Job end time")
-  public long end_time;
-
-  @API(help = "Exception")
-  public String exception;
+  @API(help = "Job description") public String   description;
+  @API(help = "Job start time")  public long     start_time;
+  @API(help = "Job end time")    public long     end_time;
+  @API(help = "Exception")       public String   exception;
+  @API(help = "Job state")       public JobState state;
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
+
+  /** Possible job states. */
+  public static enum JobState {
+    RUNNING,   // Job is running
+    CANCELLED, // Job was cancelled by user
+    CRASHED,   // Job crashed, error message/exception is available
+    DONE       // Job was successfully finished
+  }
+
+  public Job(Key jobKey, Key dstKey){
+   job_key = jobKey;
+   destination_key = dstKey;
+  }
+  public Job() {
+    job_key = defaultJobKey();
+    description = getClass().getSimpleName();
+  }
+  /** Private copy constructor used by {@link JobHandle}. */
+  private Job(final Job prior) {
+    this(prior.job_key, prior.destination_key);
+    this.description = prior.description;
+    this.start_time  = prior.start_time;
+    this.end_time    = prior.end_time;
+    this.state       = prior.state;
+  }
 
   public Key self() { return job_key; }
   public Key dest() { return destination_key; }
@@ -75,6 +80,9 @@ public class Job extends Request2 {
     return 1;
   }
 
+  /**
+   *
+   */
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -94,6 +102,9 @@ public class Job extends Request2 {
     }
   }
 
+  /**
+   *
+   */
   public static abstract class ColumnsJob extends FrameJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -175,6 +186,9 @@ public class Job extends Request2 {
     }
   }
 
+  /**
+   *
+   */
   public static abstract class ModelJob extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -201,7 +215,7 @@ public class Job extends Request2 {
     @Override protected void logStart() {
       super.logStart();
       int idx = source.find(response);
-      if( idx == -1 ) { 
+      if( idx == -1 ) {
         Vec vm = response.masterVec();
         if( vm != null ) idx = source.find(vm);
       }
@@ -226,6 +240,9 @@ public class Job extends Request2 {
     }
   }
 
+  /**
+   *
+   */
   public static abstract class ValidatedJob extends ModelJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -269,6 +286,9 @@ public class Job extends Request2 {
     }
   }
 
+  /**
+   *
+   */
   public static abstract class HexJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -316,12 +336,6 @@ public class Job extends Request2 {
     return jobs;
   }
 
-  public Job() {
-    job_key = defaultJobKey();
-//    destination_key = defaultDestKey();
-    description = getClass().getSimpleName();
-  }
-
   protected Key defaultJobKey() {
     // Pinned to self, because it should be almost always updated locally
     return Key.make((byte) 0, Key.JOB, H2O.SELF);
@@ -333,9 +347,12 @@ public class Job extends Request2 {
 
   public Job start(final H2OCountedCompleter fjtask) {
     _fjtask = fjtask;
-    Futures fs = new Futures();
-    DKV.put(job_key,this,fs);
+    //Futures fs = new Futures();
     start_time = System.currentTimeMillis();
+    state      = JobState.RUNNING;
+    // Save the full state of the job
+    UKV.put(self(), this);
+    // Update job list
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
@@ -345,7 +362,6 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
-    fs.blockForPending();
     return this;
   }
   // Overridden for Parse
@@ -373,85 +389,51 @@ public class Job extends Request2 {
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
-//    ex.printStackTrace();
     String stackTrace = sw.toString();
     cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
   }
   public void cancel(final String msg) {
-    DKV.remove(self());
+    state = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    // replace finished job by a job handle
+    replaceByJobHandle();
     DKV.write_barrier();
-    new TAtomic<List>() {
-      transient private Job _job;
-      @Override public List atomic(List old) {
-        if( old == null ) old = new List();
-        Key[] jobs = old._jobs;
-        for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].equals(self()) ) {
-            _job = Job.this;
-            end_time = CANCELLED_END_TIME;
-            exception = msg;
-            break;
-          }
-        }
-        return old;
+    final Job job = this;
+    H2O.submitTask(new H2OCountedCompleter() {
+      @Override public void compute2() {
+        job.onCancelled();
       }
-      @Override public void onSuccess(Value old){
-        if(_job != null){
-          final Job job = _job;
-          H2O.submitTask(new H2OCountedCompleter() {
-            @Override public void compute2() {job.onCancelled();}
-          });
-        }
-      }
-    }.invoke(LIST);
+    });
   }
-  
+
+  /**
+   *
+   */
   protected void onCancelled() {
   }
   // This querys the *current object* for its status.
   // Only valid if you have a Job object that is being updated by somebody.
-  public boolean isCancelled() { return end_time == CANCELLED_END_TIME; }
+  public boolean isCancelled() { return state == JobState.CANCELLED || state == JobState.CRASHED; }
 
   // Check the K/V store to see the Job is still running
-  public static boolean isRunning(Key key) { return DKV.get(key) != null; }
-
-  public void remove() {
-    end_time = System.currentTimeMillis();
-    DKV.remove(job_key);
-    new TAtomic<List>() {
-      @Override public List atomic(List old) {
-        if( old == null ) return null;
-        Key[] jobs = old._jobs;
-        for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].equals(job_key) ) {
-            if( end_time != CANCELLED_END_TIME )
-              end_time = System.currentTimeMillis();
-            break;
-          }
-        }
-        int count = jobs.length;
-        while( count > KEEP_LAST_COUNT ) {
-          long min = Long.MAX_VALUE;
-          int n = -1;
-          for( int i = 0; i < jobs.length; i++ ) {
-            Job job = UKV.get(jobs[i]);
-            if( job.end_time != 0 && job.start_time < min ) {
-              min = job.start_time;
-              n = i;
-            }
-          }
-          if( n < 0 )
-            break;
-          jobs[n] = jobs[--count];
-        }
-        if( count < jobs.length )
-          old._jobs = Arrays.copyOf(jobs, count);
-        return old;
-      }
-    }.fork(LIST);
+  public static boolean isRunning(Key job_key) {
+    Job j = UKV.get(job_key);
+    return j!=null && j.state == JobState.RUNNING;
   }
 
-  /** Finds a job with given key or returns null */
+  /**
+   *
+   */
+  public void remove() {
+    end_time = System.currentTimeMillis();
+    state = state == JobState.RUNNING ? JobState.DONE : state;
+    // Overwrite handle - copy end_time, state, msg
+    replaceByJobHandle();
+  }
+
+  /** Finds a job with given key or returns null
+   * @param key
+   * @return
+   */
   public static final Job findJob(final Key key) {
     Job job = null;
     for( Job current : Job.all() ) {
@@ -506,8 +488,8 @@ public class Job extends Request2 {
       @Override public void compute2() {
         Throwable t = null;
         try {
-          Status status = Job.this.exec();
-          if(status == Status.Done)
+          JobState status = Job.this.exec();
+          if(status == JobState.DONE)
             Job.this.remove();
         } catch (Throwable t_) {
           t = t_;
@@ -528,8 +510,8 @@ public class Job extends Request2 {
   public void invoke() {
     init();
     start(new H2OEmptyCompleter());
-    Status status = exec();
-    if(status == Status.Done)
+    JobState status = exec();
+    if(status == JobState.DONE)
       remove();
   }
 
@@ -538,17 +520,15 @@ public class Job extends Request2 {
    * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
    */
   protected void init() throws IllegalArgumentException {
-    if(destination_key == null)destination_key = defaultDestKey();
+    if (destination_key == null) destination_key = defaultDestKey();
   }
-
-  protected enum Status { Running, Done }
 
   /**
    * Actual job code.
    *
    * @return true if job is done, false if it will still be running after the method returns.
    */
-  protected Status exec() {
+  protected JobState exec() {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 
@@ -706,4 +686,34 @@ public class Job extends Request2 {
     for (int i : idx) if (i<0 || i>source.vecs().length-1) return false;
     return true;
   }
+
+  private JobHandle jobHandle() {
+    return new JobHandle(this);
+  }
+
+  /* Update end_time, state, msg, preserve start_time */
+  private void replaceByJobHandle() {
+    assert state != JobState.RUNNING : "Running job cannot be replaced.";
+    final Job self = this;
+    new TAtomic<Job>() {
+      @Override public Job atomic(Job old) {
+        if( old == null ) return null;
+        JobHandle jh = new JobHandle(self);
+        jh.start_time = old.start_time;
+        return jh;
+      }
+    }.fork(job_key);
+  }
+
+  /** Almost lightweight job handle containing the same content
+   * as pure Job class.
+   */
+  private static class JobHandle extends Job {
+    public JobHandle(final Job job) { super(job); }
+  }
+  public static class JobCancelledException extends RuntimeException {
+    public JobCancelledException(){super("job was cancelled!");}
+    public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
+  }
+
 }

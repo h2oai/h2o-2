@@ -43,7 +43,7 @@ public class KMeans2 extends ColumnsJob {
     description = "K-means";
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     source.read_lock(self());
     String sourceArg = input("source");
     Key sourceKey = null;
@@ -107,7 +107,7 @@ public class KMeans2 extends ColumnsJob {
         clusters = Utils.append(clusters, sampler._sampled);
 
         if( !isRunning(self()) )
-          return Status.Done;
+          return JobState.DONE;
         model.centers = normalize ? denormalize(clusters, vecs) : clusters;
         model.total_within_SS = sqr._sqr;
         model.iterations++;
@@ -154,7 +154,7 @@ public class KMeans2 extends ColumnsJob {
     }
     model.unlock(self());
     source.unlock(self());
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected Response redirect() {

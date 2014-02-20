@@ -103,10 +103,10 @@ public class ConfusionTask extends MRTask {
   /**Apply a model to a dataset to produce a Confusion Matrix.  To support
      incremental & repeated model application, hash the model & data and look
      for that Key to already exist, returning a prior CM if one is available.*/
-  static public CMJob make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
+  static public Job make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
     return make(model, model.size(), datakey, classcol, classWt, computeOOB);
   }
-  static public CMJob make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
+  static public Job make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
     // Create a unique key for CM regarding given RFModel, validation data and parameters
     final Key cmKey = keyForCM(model._key, modelSize, datakey, classcol, computeOOB);
     // Start a new job if CM is not yet computed
@@ -145,7 +145,7 @@ public class ConfusionTask extends MRTask {
       return cmJob;
     } else {
       // We should return Job which is/was computing the CM with given cmKey
-      return (CMJob) Job.findJobByDest(cmKey);
+      return Job.findJobByDest(cmKey);
     }
   }
 

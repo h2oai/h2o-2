@@ -201,7 +201,7 @@ public class GLM2 extends ModelJob {
       if(destination_key == null)destination_key = Key.make("GLMGridModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLMGridJob_"+Key.make());
       Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, alpha,n_folds);
-      return GLMGridView.redirect(this,j.destination_key);
+      return GLMGridView.redirect(this,j.dest());
     } else {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());

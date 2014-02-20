@@ -1,11 +1,11 @@
 \name{h2o.confusionMatrix}
 \alias{h2o.confusionMatrix}
-%- Also NEED an '\alias' for EACH other topic documented here.
+
 \title{
-Build a Confusion Matrix from H2O Predictions
+Build a Confusion Matrix from H2O Classification Predictions 
 }
 \description{
-Constructs a confusion matrix from a column of predicted responses and a column of actual (reference) responses in H2O.
+Constructs a confusion matrix from a column of predicted responses and a column of actual (reference) responses in H2O. Note that confusion matrices describe prediciton errors for classification data only. 
 }
 \usage{
 h2o.confusionMatrix(data, reference)
@@ -23,7 +23,8 @@ Returns a confusion matrix with the actual value counts along the rows and the p
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
++ silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.gbm = h2o.gbm(x = 3:9, y = 2, data = prostate.hex)
