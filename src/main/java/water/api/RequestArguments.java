@@ -335,7 +335,8 @@ public class RequestArguments extends RequestStatics {
       else
         result.replace("ELEMENT",queryElement());
       result.replace("TOOLTIP_DESCRIPTION", queryDescription());
-      result.replace("COMMENT",queryComment());
+      if (!disabled())
+        result.replace("COMMENT",queryComment());
       if (_required)
         result.replace("ASTERISK","<span style='color:#ff0000'>* </span>");
       return result.toString();
