@@ -1,7 +1,7 @@
 library(h2o)
 # myIP = "192.168.1.161"; myPort = 54321
 myIP = "23.22.188.100"; myPort = 54321
-remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE)
 
 # Import airlines dataset to H2O
 # airPath = "hdfs://192.168.1.161/datasets/airlines.clean/earl/original/2007.csv.gz"

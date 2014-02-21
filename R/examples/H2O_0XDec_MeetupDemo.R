@@ -5,7 +5,7 @@ library(h2o)
 #Connecting to remote h2o
  myIP = "192.168.1.162"
  myPort = 54321
- remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+ remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE)
 
 #Parsing in the data file
  #air=h2o.importFile(remoteH2O,"hdfs://192.168.1.161/datasets/airlines_all.csv",key="air")
