@@ -136,12 +136,20 @@ class H2OCloudNode:
         @return: none
         """
 
+        # there is no hdfs currently in ec2, except s3n/hdfs
+        # the core-site.xml provides s3n info
+        # it's possible that we can just always hardware the hdfs version
+        # to match the cdh3 cluster we're hardwiring tests to
+        # i.e. it won't make s3n/s3 break on ec2
+
         cmd = ["java",
                "-Xmx" + self.xmx,
                "-ea",
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
-               "-baseport", str(self.my_base_port)]
+               "-baseport", str(self.my_base_port),
+               "-hdfs_version", "cdh3",
+              ]
 
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
@@ -150,7 +158,7 @@ class H2OCloudNode:
             cmd.append(ec2_hdfs_config_file_name)
 
         self.output_file_name = \
-            os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
+            os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out.txt")
         f = open(self.output_file_name, "w")
         self.child = subprocess.Popen(args=cmd,
                                       stdout=f,
@@ -412,7 +420,7 @@ class Test:
                self.ip + ":" + str(self.port)]
         test_short_dir_with_no_slashes = re.sub(r'[\\/]', "_", self.test_short_dir)
         self.output_file_name = \
-            os.path.join(self.output_dir, test_short_dir_with_no_slashes + "_" + self.test_name + ".out")
+            os.path.join(self.output_dir, test_short_dir_with_no_slashes + "_" + self.test_name + ".out.txt")
         f = open(self.output_file_name, "w")
         self.child = subprocess.Popen(args=cmd,
                                       stdout=f,
@@ -494,6 +502,16 @@ class Test:
         """
         return (self.returncode == 0)
 
+    def get_nopass(self):
+        """
+        Some tests are known not to fail and even if they don't pass we don't want
+        to fail the overall regression PASS/FAIL status.
+
+        @return: True if the test has been marked as NOPASS, False otherwise.
+        """
+        a = re.compile("NOPASS")
+        return a.search(self.test_name)
+
     def get_completed(self):
         """
         @return: True if the test completed (pass or fail), False otherwise.
@@ -561,6 +579,7 @@ class RUnitRunner:
         self.tests = []
         self.tests_not_started = []
         self.tests_running = []
+        self.regression_passed = False
         self._create_output_dir()
 
         if (use_cloud):
@@ -733,7 +752,7 @@ class RUnitRunner:
         self._log("")
         self._log("Setting up R H2O package...")
         if (True):
-            out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out")
+            out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out.txt")
             out = open(out_file_name, "w")
             cloud = self.clouds[0]
             port = cloud.get_port()
@@ -823,18 +842,31 @@ class RUnitRunner:
         @return: none
         """
         passed = 0
+        nopass_but_tolerate = 0
         failed = 0
         notrun = 0
         total = 0
+        trueFailList = []
         for test in self.tests:
             if (test.get_passed()):
                 passed += 1
             else:
+                if (test.get_nopass()):
+                    nopass_but_tolerate += 1
+
                 if (test.get_completed()):
                     failed += 1
+                    if not test.get_nopass():
+                        trueFailList.append(test.test_name)
                 else:
                     notrun += 1
             total += 1
+
+        if ((passed + nopass_but_tolerate) == total):
+            self.regression_passed = True
+        else:
+            self.regression_passed = False
+
         end_seconds = time.time()
         delta_seconds = end_seconds - self.start_seconds
         run = total - notrun
@@ -849,6 +881,7 @@ class RUnitRunner:
         self._log("Passed:               " + str(passed))
         self._log("Did not pass:         " + str(failed))
         self._log("Did not complete:     " + str(notrun))
+        self._log("Tolerated NOPASS:     " + str(nopass_but_tolerate))
         self._log("")
         self._log("Total time:           %.2f sec" % delta_seconds)
         if (run > 0):
@@ -856,6 +889,7 @@ class RUnitRunner:
         else:
             self._log("Time/completed test:  N/A")
         self._log("")
+        self._log("True fail list:      " + ",".join(trueFailList))
 
     def terminate(self):
         """
@@ -873,6 +907,14 @@ class RUnitRunner:
 
         for cloud in self.clouds:
             cloud.terminate()
+
+    def get_regression_passed(self):
+        """
+        Return whether the overall regression passed or not.
+
+        @return: true if the exit value should be 0, false otherwise.
+        """
+        return self.regression_passed
 
     #--------------------------------------------------------------------
     # Private methods below this line.
@@ -1334,6 +1376,9 @@ def main(argv):
         g_runner.stop_clouds()
         g_runner.report_summary()
 
+    # If the overall regression did not pass then exit with a failure status code.
+    if (not g_runner.get_regression_passed()):
+        sys.exit(1)
 
 if __name__ == "__main__":
     main(sys.argv)

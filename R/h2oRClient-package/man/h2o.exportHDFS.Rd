@@ -19,7 +19,7 @@ h2o.exportHDFS(object, path)
 \code{\linkS4class{H2OModel}}
 }
 \examples{
-## Not run:
+\dontrun{
 # This is an example of how to export H2O models to HDFS.
 # The user must modify the path to his or her specific HDFS path for this example to run.
 library(h2o)
@@ -29,8 +29,7 @@ iris.hex = h2o.importFile(localH2O, path = irisPath)
 iris.gbm = h2o.gbm(x = 1:4, y = 5, data = iris.hex)
 h2o.exportHDFS(iris.gbm, path = "hdfs://192.168.1.161/datasets/models")
 h2o.shutdown(localH2O)
-
-## End(Not run)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -1,15 +1,17 @@
 package water.deploy;
 
-import java.io.File;
-import java.io.Serializable;
-import java.util.*;
-
-import water.*;
+import water.Boot;
+import water.H2O;
 import water.H2O.FlatFileEntry;
+import water.TestUtil;
 import water.deploy.VM.Params;
 import water.deploy.VM.Watchdog;
 import water.util.Log;
 import water.util.Utils;
+
+import java.io.File;
+import java.io.Serializable;
+import java.util.*;
 
 /**
  * Deploys and starts a remote cluster.
@@ -30,7 +32,7 @@ public class Cloud {
   public final Set<String> fannedRSyncExcludes = new HashSet<String>();
 
   /** Port for all remote machines. */
-  public static final int PORT = 54321;
+  public static final int PORT = 54423;
   public static final int FORWARDED_LOCAL_PORT = 54321;
   /**
    * To avoid configuring remote machines, a JVM can be sent through rsync with H2O. By default,

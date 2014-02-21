@@ -30,8 +30,7 @@ print(paste("depth", depth))
 nodesize <- sample(10, 1)
 print(paste("nodesize", nodesize))
 
-data_dir = "/tmp/c10"
-# from "/mnt/0xcustomer-datasets/c10"
+data_dir = "/mnt/0xcustomer-datasets/c10"
 train <- paste(data_dir, "churn_train.csv", sep="/")
 print(paste("train", train))
     
@@ -40,6 +39,12 @@ print(paste("test", test))
     
 y <- "churn"
 print(paste("y", y))
+
+if (! file.exists(train)) {
+    cat("\n")
+    cat("\n")
+    stop(sprintf("Data file not available (%s).", train))
+}
 
 # Remove Customer_ID because it's the right thing to do when building the model.
 # Remove last_swap because it doesn't parse properly with date format.

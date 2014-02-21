@@ -1,18 +1,21 @@
 package hex;
 
 import hex.KMeans.Initialization;
-
-import java.util.*;
-
 import water.*;
 import water.Job.ColumnsJob;
-import water.api.*;
+import water.api.DocGen;
+import water.api.Progress2;
+import water.api.Request;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
 import water.util.RString;
 import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Scalable K-Means++ (KMeans||)<br>
@@ -24,26 +27,27 @@ public class KMeans2 extends ColumnsJob {
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
 
-  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses intial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class)
+  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses initial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class, json=true)
   public Initialization initialization = Initialization.None;
 
-  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 1, lmax = 100000)
+  @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int k = 2;
 
-  @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
+  @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int max_iter = 100;
 
-  @API(help = "Whether data should be normalized", filter = Default.class)
+  @API(help = "Whether data should be normalized", filter = Default.class, json=true)
   public boolean normalize;
 
-  @API(help = "Seed for the random number generator", filter = Default.class)
+  @API(help = "Seed for the random number generator", filter = Default.class, json=true)
   public long seed = new Random().nextLong();
 
   public KMeans2() {
     description = "K-means";
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
+    logStart();
     source.read_lock(self());
     String sourceArg = input("source");
     Key sourceKey = null;
@@ -107,7 +111,7 @@ public class KMeans2 extends ColumnsJob {
         clusters = Utils.append(clusters, sampler._sampled);
 
         if( !isRunning(self()) )
-          return Status.Done;
+          return JobState.DONE;
         model.centers = normalize ? denormalize(clusters, vecs) : clusters;
         model.total_within_SS = sqr._sqr;
         model.iterations++;
@@ -154,7 +158,7 @@ public class KMeans2 extends ColumnsJob {
     }
     model.unlock(self());
     source.unlock(self());
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected Response redirect() {
@@ -165,7 +169,7 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @Override protected Response jobDone(Job job, Key dst) {
+    @Override protected Response jobDone(Key dst) {
       return KMeans2ModelView.redirect(this, destination_key);
     }
 
@@ -354,7 +358,9 @@ public class KMeans2 extends ColumnsJob {
       }
       data(tmp, chunks, rowInChunk, _means, _mults);
       Arrays.fill(preds, 0);
-      preds[closest(cs, tmp, new ClusterDist())._cluster] = 1;
+      int cluster = closest(cs, tmp, new ClusterDist())._cluster;
+      preds[0] = cluster;       // prediction in preds[0]
+      preds[1+cluster] = 1;     // class distribution
       return preds;
     }
 

@@ -128,7 +128,8 @@ endif
 	# Build binary for each OS
 	rm -rf $(TMP_BUILD_DIR)
 	mkdir -p $(TMP_BUILD_DIR)
-	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
+	[ -x "`which gnutar 2>/dev/null`" ] || echo 'Note: gnutar not found; package install in R may fail in the next step'
+	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package || echo 'If you got an error like "Dependency foo is not available for package h2oRClient" you need to install the required R package by running R and executing the R command: install.packages("foo")'
 
 ifneq ($(OS),Windows_NT)
 	# rm -rf h2oRClient

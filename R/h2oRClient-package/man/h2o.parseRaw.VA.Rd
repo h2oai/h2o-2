@@ -5,7 +5,7 @@
 Parse Raw Data File to ValueArray
 }
 \description{
-Parses a raw data file, returning an object containing the identifying hex key.
+Parses a raw data file to ValueArray data, returning an object containing the identifying hex key.
 }
 \usage{
 h2o.parseRaw.VA(data, key = "", header, sep = "", col.names)
@@ -32,7 +32,7 @@ An \code{\linkS4class{H2ORawDataVA}} object to be parsed.
 This method should only be used to parse raw data imported using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}}, or one of its variants. After the raw data file is parsed, it will be automatically deleted from the H2O server.
 }
 \value{
-An object of class \code{\linkS4class{H2ORawDataVA}}, representing the unparsed ValueArray dataset that was imported.
+An object of class \code{\linkS4class{H2OParsedDataVA}}, representing the parsed ValueArray dataset.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}

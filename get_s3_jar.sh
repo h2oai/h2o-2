@@ -84,9 +84,10 @@ echo "target/h2o-sources.jar is not touched, so it is out-of-step (but not used)
 # look at some stuff
 ls -ltr ./latest_h2o_jar_version
 cat ./latest_h2o_jar_version
-ls -ltr ./h2o-*$version/h2o.jar 
-ls -ltr target/h2o.jar
-ls -ltr ./h2o-*$version/R/h2o*.tar.gz
 ls -ltr ./h2o-downloaded/R/h2o*.tar.gz
 ls -ltr ./h2o-downloaded/hadoop/h2odriver*.jar
+ls -ltr ./h2o-*$version/h2o.jar 
+ls -ltr ./h2o-*$version/R/h2o*.tar.gz
+ls -ltr target/h2o.jar
+ls -ltr target/R/*
 

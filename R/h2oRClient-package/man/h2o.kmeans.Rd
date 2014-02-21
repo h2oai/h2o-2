@@ -5,14 +5,14 @@
 H2O: K-Means Clustering
 }
 \description{
-Performs k-means clustering on an \code{\linkS4class{H2OParsedData}} object.}
+Performs k-means clustering on a data set.}
 \usage{
 h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", version = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{
-An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
+An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
 }
   \item{centers}{
 The number of clusters k.
@@ -21,7 +21,7 @@ The number of clusters k.
 (Optional) A vector containing the names of the data columns on which k-means runs. If blank, k-means clustering will be run on the entire data set.
 }
   \item{iter.max}{
-The maximum number of iterations allowed.
+(Optional) The maximum number of iterations allowed.
 }
   \item{normalize}{
 (Optional) A logical value indicating whether the data should be normalized before running k-means.
@@ -30,17 +30,27 @@ The maximum number of iterations allowed.
 (Optional) Method by which to select the k initial cluster centroids. Possible values are \code{"none"} for random initialization, \code{"plusplus"} for k-means++ initialization, and \code{"furthest"} for initialization at the furthest point from each successive centroid. See the \href{http://docs.0xdata.com/datascience/kmeans.html}{H2O K-means documentation} for more details.
   }
   \item{version}{
-  (Optional) The version of k-means clustering to run. \code{version = 1} corresponds to the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.
+  (Optional) The version of k-means clustering to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.
   }
 }
 
+\details{
+%%  ~~ If necessary, more details than the description above ~~
+IMPORTANT: Currently, to run k-means with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
+}
+
 \value{
-An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2OKMeansModelVA}} (\code{version = 1}) or \code{\linkS4class{H2OKMeansModel}} (\code{version = 2}) with slots key, data, and model, where the last is a list of the following components:
   \item{centers }{A matrix of cluster centers.}
-  \item{cluster }{A \code{\linkS4class{H2OParsedData}} object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
+  \item{cluster }{A \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
   \item{size }{The number of points in each cluster.}
   \item{withinss }{Vector of within-cluster sum of squares, with one component per cluster.}
   \item{tot.withinss }{Total within-cluster sum of squares, i.e., sum(withinss).}
+}
+
+\seealso{
+%% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 
 \examples{

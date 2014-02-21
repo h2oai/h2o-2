@@ -1,9 +1,5 @@
 package hex.gbm;
 
-import static water.util.Utils.div;
-
-import java.util.Arrays;
-
 import hex.ConfusionMatrix;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
@@ -14,8 +10,15 @@ import water.api.DocGen;
 import water.api.GBMProgressPage;
 import water.fvec.Chunk;
 import water.fvec.Frame;
-import water.util.*;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.Arrays;
+
+import static water.util.Utils.div;
 
 // Gradient Boosted Trees
 //
@@ -24,7 +27,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
+  @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1, json=true)
   public double learn_rate = 0.1;
 
   @API(help = "Grid search parallelism", filter = Default.class, lmax = 4, gridable=false)
@@ -60,13 +63,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // See notes here:  http://www.hongliangjie.com/2011/01/07/logsum/
         float maxval=Float.NEGATIVE_INFINITY;
         float dsum=0;
-        if (nclasses()==2)  p[1] = - p[0];
+        if (nclasses()==2)  p[2] = - p[1];
         // Find a max
         for( float k : p ) maxval = Math.max(maxval,k);
         assert !Float.isInfinite(maxval) : "Something is wrong with GBM trees since returned prediction is " + Arrays.toString(p);
-        for(int k=0; k<p.length;k++)
+        for(int k=1; k<p.length;k++)
           dsum+=(p[k]=(float)Math.exp(p[k]-maxval));
         div(p,dsum);
+        p[0] = getPrediction(p, data);
       } else { // regression
         // do nothing for regression
       }
@@ -86,7 +90,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         }
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) maxval = Math.max(maxval, preds[i]);").nl();
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i] - maxval));").nl();
-        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / dsum;").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] /= dsum;").nl();
       }
     }
   }
@@ -109,16 +113,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return rs.toString();
   }
 
-  @Override protected void logStart() {
-    Log.info("Starting GBM model build...");
-    super.logStart();
-    Log.info("    learn_rate: " + learn_rate);
-  }
-
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     logStart();
     buildModel();
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override public int gridParallelism() {
@@ -200,15 +198,15 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chk_resp(chks);
       if( _nclass > 1 ) {       // Classification
-        double ds[] = new double[_nclass];
+        float fs[] = new float[_nclass+1];
         for( int row=0; row<ys._len; row++ ) {
-          double sum = score0(chks,ds,row);
-          if( Double.isInfinite(sum) ) // Overflow (happens for constant responses)
+          float sum = score1(chks,fs,row);
+          if( Float.isInfinite(sum) ) // Overflow (happens for constant responses)
             for( int k=0; k<_nclass; k++ )
-              chk_work(chks,k).set0(row,Double.isInfinite(ds[k])?1.0f:0.0f);
+              chk_work(chks,k).set0(row,Float.isInfinite(fs[k+1])?1.0f:0.0f);
           else
             for( int k=0; k<_nclass; k++ ) // Save as a probability distribution
-              chk_work(chks,k).set0(row,(float)(ds[k]/sum));
+              chk_work(chks,k).set0(row,fs[k+1]/sum);
         }
       } else {                  // Regression
         Chunk tr = chk_tree(chks,0); // Prior tree sums
@@ -220,21 +218,21 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   }
 
   // Read the 'tree' columns, do model-specific math and put the results in the
-  // ds[] array, and return the sum.  Dividing any ds[] element by the sum
+  // fs[] array, and return the sum.  Dividing any fs[] element by the sum
   // turns the results into a probability distribution.
-  @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
+  @Override protected float score1( Chunk chks[], float fs[/*nclass*/], int row ) {
     if( _nclass == 1 )          // Classification?
-      return chk_tree(chks,0).at0(row);
+      return (float)chk_tree(chks,0).at0(row);
     if( _nclass == 2 ) {        // The Boolean Optimization
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
-      ds[0] = Math.exp(chk_tree(chks,0).at0(row));
-      ds[1] = 1.0/ds[0]; // exp(-d) === 1/d
-      return ds[0]+ds[1];
+      fs[1] = (float)Math.exp(chk_tree(chks,0).at0(row));
+      fs[2] = 1.0f/fs[1]; // exp(-d) === 1/d
+      return fs[1]+fs[2];
     }
-    double sum=0;
+    float sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
-      sum+=(ds[k]=Math.exp(chk_tree(chks,k).at0(row)));
+      sum+=(fs[k+1]=(float)Math.exp(chk_tree(chks,k).at0(row)));
     return sum;
   }
 

@@ -58,6 +58,7 @@ class PerfDB:
         """
         Takes a TableRow object and writes to the db.
         """
+        print "INSERTING INTO TABLE: " + table_row.table_name
         #print "CURRENT TABLE ROW'S ROW:"
         #print table_row.row
         #print "------------------------"

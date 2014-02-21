@@ -2,10 +2,10 @@
 \alias{h2o.importFolder.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Import Local Directory to ValueArray
+  Import Local Directory of Data Files to ValueArray
 }
 \description{
-  Imports all the files in the local directory and parses them, returning a list of objects containing the identifying hex keys.
+  Imports all the files in the local directory and parses them, concatenating the data into a single ValueArray and returning an object containing the identifying hex key.
 }
 \usage{
   h2o.importFolder.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
@@ -38,9 +38,11 @@
   }
 }
 \details{
+This method is identical to \code{\link{h2o.importFolder}} with input parameter \code{version = 1}.
+
 This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedDataVA}} object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
 
-This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFolder}}. WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
+WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
 }
 \value{
   If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}.
@@ -52,7 +54,7 @@ This method should only be used for running GLM. For all other algorithms, pleas
 }
 \seealso{
   %% ~~objects to See Also as \code{\link{help}}, ~~~
-  \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importHDFS.VA}}, \code{\link{h2o.importURL.VA}}
+  \code{\link{h2o.importFile.VA}, \link{h2o.importHDFS.VA}, \link{h2o.importURL.VA}, \link{h2o.uploadFile.VA}}
 }
 \examples{
 library(h2o)

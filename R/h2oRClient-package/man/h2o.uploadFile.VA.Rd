@@ -5,7 +5,7 @@
 Upload Local Data File to ValueArray
 }
 \description{
-Uploads a file from the local drive and parses it, returning an object containing the identifying hex key.
+Uploads a file from the local drive and parses it to ValueArray data, returning an object containing the identifying hex key.
 }
 \usage{
 h2o.uploadFile.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE)
@@ -39,10 +39,12 @@ The complete normalized file path of the file to be imported. Each row of data a
 }
 
 \details{
-This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.uploadFile}}. WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importURL will automatically parse the file.
+This method is identical to \code{\link{h2o.uploadFile}} with input parameter \code{version = 1}.
+
+WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}}, otherwise it returns an object of class \code{\linkS4class{H2ORawDataVA}}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -51,7 +53,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}}, \code{\link{h2o.importURL.VA}}, \code{\link{h2o.importHDFS.VA}}
+\code{\link{h2o.importFile.VA}, \link{h2o.importFolder.VA}, \link{h2o.importHDFS.VA}, \link{h2o.importURL.VA}}
 }
 \examples{
 library(h2o)

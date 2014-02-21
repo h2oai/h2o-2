@@ -38,10 +38,10 @@ The path of the file to be imported. Each row of data appears as one line of the
   }
 }
 \details{
-WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importFile will automatically parse the file.
+WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
 %%  ~Describe the value returned
 %%  If it is a LIST, use
 %%  \item{comp1 }{Description of 'comp1'}
@@ -50,7 +50,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.importFolder}}, \code{\link{h2o.uploadFile}}
+\code{\link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
 library(h2o)
@@ -60,4 +60,3 @@ iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 h2o.shutdown(localH2O)
 }
-

@@ -42,9 +42,9 @@ do
             echo "test is $TEST"
             ;;
         h)
-            echo "-u will use existing"
-            echo "-n will reuse existing download of h2o stuff from s3"
-            echo "-b <BRANCH> will use that branch for download"
+            echo "-u Use existing target/h2o.jar, target/R/*  and existing downloaded hadoop drivers"
+            echo "-n Init target/* from existing download of h2o stuff from s3 (h2o-downloaded)."
+            echo "-b <BRANCH> Use this branch for any s3 download"
             echo "-d <dir> -t <python test> will run a single test"
             exit
             ;;

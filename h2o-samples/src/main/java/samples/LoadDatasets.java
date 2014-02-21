@@ -293,8 +293,8 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./zipcodes");
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     load();
-    return Status.Running;
+    return JobState.RUNNING;
   }
 }

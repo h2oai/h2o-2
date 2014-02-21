@@ -153,7 +153,7 @@ function() {
     l[[length(l) + 1]] <- list(level = level,
                                level_actual_count = level_actual_count,
                                level_predicted_correctly_count = level_predicted_correctly_count,
-                               level_error_rate = level_error_rate)
+                               level_error_rate = ifelse(level_error_rate[[1]] == "NaN", .NaN, level_error_rate[[1]]))
   }
   return(l)
 }

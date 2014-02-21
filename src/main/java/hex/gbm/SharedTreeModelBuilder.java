@@ -2,20 +2,22 @@ package hex.gbm;
 
 import hex.ConfusionMatrix;
 import hex.rng.MersenneTwisterRNG;
-
-import java.util.Arrays;
-import java.util.Random;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.Utils;
 
-// Build (distributed) Trees.  Used for both Gradiant Boosted Method and Random
+import java.util.Arrays;
+import java.util.Random;
+
+// Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
 //
 // While this is a wholly H2O-design, we found these papers afterwards that
@@ -30,31 +32,31 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
+  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000, json=true)
   public int ntrees = 50;
 
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000, json=true)
   public int max_depth = 5;
 
-  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1)
+  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1, json=true)
   public int min_rows = 10;
 
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000)
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000, json=true)
   public int nbins = 20;
 
-  @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class)
+  @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class, json=true)
   public boolean score_each_iteration = false;
 
   // Overall prediction Mean Squared Error as I add trees
   transient protected double _errs[];
 
-  @API(help = "Active feature columns")
+//  @API(help = "Active feature columns")
   protected int _ncols;
 
-  @API(help = "Rows in training dataset")
+//  @API(help = "Rows in training dataset")
   protected long _nrows;
 
-  @API(help = "Number of classes")
+//  @API(help = "Number of classes")
   protected int _nclass;
 
   @API(help = "Class distribution")
@@ -78,14 +80,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
     return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
-  }
-
-  @Override protected void logStart() {
-    super.logStart();
-    Log.info("    ntrees: " + ntrees);
-    Log.info("    max_depth: " + max_depth);
-    Log.info("    min_rows: " + min_rows);
-    Log.info("    nbins: " + nbins);
   }
 
   // Verify input parameters
@@ -571,9 +565,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   // --------------------------------------------------------------------------
   // Read the 'tree' columns, do model-specific math and put the results in the
-  // ds[] array, and return the sum.  Dividing any ds[] element by the sum
+  // fs[] array, and return the sum.  Dividing any fs[] element by the sum
   // turns the results into a probability distribution.
-  protected abstract double score0( Chunk chks[], double ds[/*nclass*/], int row );
+  protected abstract float score1( Chunk chks[], float fs[/*nclass*/], int row );
 
   // Score the *tree* columns, and produce a confusion matrix
   public class Score extends MRTask2<Score> {
@@ -624,21 +618,20 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chk_resp(chks); // Response
       _cm = new long[_nclass][_nclass];
-      double ds[] = new double[_nclass];
-      int ties[] = new int[_nclass];
+      float fs[] = new float[_nclass+1];
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
-        double sum;
+        float sum;
         if( _validation ) {     // Passed in a class distribution from scoring
           for( int i=0; i<_nclass; i++ )
-            ds[i] = chks[i+_ncols+1].at0(row); // Get the class distros
-          if (_nclass > 1 ) sum = 1.0;           // Sum of a distribution is 1.0 for classification
-          else sum = ds[0];                      // Sum is the same as prediction for regression.
-        } else {                // Passed in the model-specific columns
-          sum = score0(chks,ds,row);
+            fs[i+1] = (float)chks[i+_ncols+1].at0(row); // Get the class distros
+          if (_nclass > 1 ) sum = 1.0f; // Sum of a distribution is 1.0 for classification
+          else sum = fs[0];    // Sum is the same as prediction for regression.
+        } else {               // Passed in the model-specific columns
+          sum = score1(chks,fs,row);
         }
-        double err;  int ycls=0;
+        float err;  int ycls=0;
         if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
           if( sum == 0 ) {       // This tree does not predict this row *at all*?
@@ -647,23 +640,23 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
             ycls = (int)ys.at80(row); // Response class from 0 to nclass-1
             if (ycls >= _nclass) continue;
             assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row);
-            err = Double.isInfinite(sum)
-              ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
-              : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
+            err = Float.isInfinite(sum)
+              ? (Float.isInfinite(fs[ycls+1]) ? 0f : 1f)
+              : 1.0f-fs[ycls+1]/sum; // Error: distance from predicting ycls as 1.0
           }
-          assert !Double.isNaN(err) : "ds[cls]="+ds[ycls] + ", sum=" + sum;
+          assert !Double.isNaN(err) : "fs[cls]="+fs[ycls+1] + ", sum=" + sum;
         } else {                // Regression
-          err = ys.at0(row) - sum;
+          err = (float)ys.at0(row) - sum;
         }
         _sum += err*err;               // Squared error
         assert !Double.isNaN(_sum);
-        // Pick highest prob for our prediction.  Count all ties for best.
+        // Pick highest prob for our prediction.
         if (_nclass > 1) { // fill CM only for classification
           if(_nclass == 2) { //binomial classification -> compute AUC, draw ROC
             for(int i = 0; i < _cms.length; ++i)
-              _cms[i].add(ycls, ( (1 - (ds[ycls] / sum) )>= DEFAULT_THRESHOLDS[i])?1:0);
+              _cms[i].add(ycls, ( (1 - (fs[ycls+1] / sum) )>= DEFAULT_THRESHOLDS[i])?1:0);
           }
-          int best = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : Model.getPrediction(ds, ties, row);
+          int best = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : Model.getPrediction(fs, row);
           _cm[ycls][best]++;      // Bump Confusion Matrix also
         }
         _snrows++;
