@@ -155,9 +155,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.ignore_const_cols = false;
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
-                        p.initModel(); //randomize weights, but don't start training yet
+                        NNModel mymodel = p.initModel(); //randomize weights, but don't start training yet
 
-                        NNModel mymodel = UKV.get(p.dest());
                         Neurons[] neurons = NNTask.makeNeuronsForTraining(mymodel.model_info());
 
                         // use the same random weights for the reference implementation
@@ -184,8 +183,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         ref.train((int)p.epochs, rate, p.momentum_stable, loss);
 
                         // Train H2O
-                        mymodel = p.buildModel();
-
+                        mymodel = p.buildModel(mymodel);
 
                         /**
                          * Tolerances (super tight -> expect the same double/float precision math inside both algos)
