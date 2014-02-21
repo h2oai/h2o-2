@@ -3,9 +3,9 @@ source('../findNSourceUtils.R')
 
 test.rdocasdataframe.golden <- function(H2Oserver) {
 	
-#Example from as.data.frame R doc
+# Example from as.data.frame R doc
 
-prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(H2Oserver, path = prosPath)
 prostate.data.frame<- as.data.frame(prostate.hex)
 sum<- summary(prostate.data.frame)

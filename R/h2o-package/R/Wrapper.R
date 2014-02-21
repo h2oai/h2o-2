@@ -1,24 +1,11 @@
-setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
-
-.h2o.__PAGE_RPACKAGE = "RPackage.json"
-.h2o.__PAGE_SHUTDOWN = "Shutdown.json"
-.h2o.__PAGE_CLOUD = "Cloud.json"
-
-setMethod("show", "H2OClient", function(object) {
-  cat("IP Address:", object@ip, "\n")
-  cat("Port      :", object@port, "\n")
-})
-
 # Checks H2O connection and installs H2O R package matching version on server if indicated by user
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
-h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, Xmx = "1g") {
+h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g") {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
-  if(!is.logical(silentUpgrade)) stop("silentUpgrade must be of class logical")
-  if(!is.logical(promptUpgrade)) stop("promptUpgrade must be of class logical")
   if(!is.character(Xmx)) stop("Xmx must be of class character")
   if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   
@@ -28,24 +15,17 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgr
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
-      # h2oWrapper.startLauncher()
-      # invisible(readline("Start H2O, then hit <Return> to continue: "))
       .h2o.startJar(Xmx)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }
   cat("Successfully connected to", myURL, "\n")
-  .h2o.checkPackage(myURL, silentUpgrade, promptUpgrade)
-  
-  if("package:h2oRClient" %in% search())
-    detach("package:h2oRClient", unload=TRUE)
-  if("h2oRClient" %in% installed.packages()[,1])
-    library(h2oRClient)
-  
   H2Oserver = new("H2OClient", ip = ip, port = port)
-  h2o.clusterInfo(H2Oserver)
-  cat("\n")
+  h2o.clusterInfo(H2Oserver); cat("\n")
+  
+  if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o")))
+    stop("Version mismatch! H2O is running version ", verH2O, " but R package is version ", toString(verPkg), "\n")
   return(H2Oserver)
 }
 
@@ -94,65 +74,6 @@ h2o.clusterStatus <- function(client) {
   return(temp[,cnames])
 }
 
-#-------------------------------- Helper Methods --------------------------------#
-# NB: if H2OVersion matches \.99999$ is a development version, so pull package info out of file.  yes this is a hack
-#     but it makes development versions properly prompt upgrade
-.h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
-  h2oWrapper.__formatError <- function(error, prefix="  ") {
-    result = ""
-    items = strsplit(error,"\n")[[1]];
-    for (i in 1:length(items))
-      result = paste(result, prefix, items[i], "\n", sep="")
-    result
-  }
-  
-  temp = postForm(paste(myURL, .h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
-  res = fromJSON(temp)
-  if (!is.null(res$error))
-    stop(paste(myURL," returned the following error:\n", h2oWrapper.__formatError(res$error)))
-
-  H2OVersion = res$version
-  myFile = res$filename
-
-  if( grepl('\\.99999$', H2OVersion) ){
-    H2OVersion <- sub('\\.tar\\.gz$', '', sub('.*_', '', myFile))
-  }
-
-  # sigh. I so wish people would occasionally listen to me; R expects a version to be %d.%d.%d.%d and will ignore anything after
-  myPackages <- installed.packages()[,1]
-  needs_upgrade <- F
-  if( 'h2oRClient' %in% myPackages ){
-    ver <- unclass( packageVersion('h2oRClient') )
-    ver <- paste( ver[[1]], collapse='.' )
-    needs_upgrade <- !(ver == H2OVersion)
-  }
-
-  if("h2oRClient" %in% myPackages && !needs_upgrade )
-    cat("H2O R package and server version", H2OVersion, "match\n")
-  else if(.h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
-    if("h2oRClient" %in% myPackages) {
-      cat("Removing old H2O R package version", toString(packageVersion("h2oRClient")), "\n")
-      if("package:h2oRClient" %in% search())
-        detach("package:h2oRClient", unload=TRUE)
-      remove.packages("h2oRClient")
-    }
-    cat("Downloading and installing H2O R package version", H2OVersion, "\n")
-    install.packages("h2oRClient", repos = c(H2O = paste(myURL, "R", sep = "/"), getOption("repos")))
-  }
-}
-
-# Check if user wants to install H2O R package matching version on server
-# Note: silentUpgrade supercedes promptUpgrade
-.h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
-  if(silentUpgrade) return(TRUE)
-  if(promptUpgrade) {
-    ans = readline(paste("Do you want to install H2O R package version", H2OVersion, "from the server (Y/N)? "))
-    temp = substr(ans, 1, 1)
-    if(temp == "Y" || temp == "y") return(TRUE)
-    else if(temp == "N" || temp == "n") return(FALSE)
-    else stop("Invalid answer! Please enter Y for yes or N for no")
-  } else return(FALSE)
-}
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
@@ -285,3 +206,63 @@ h2o.clusterStatus <- function(client) {
   }
   .startedH2O <<- TRUE
 }
+
+#-------------------------------- Deprecated --------------------------------#
+# NB: if H2OVersion matches \.99999$ is a development version, so pull package info out of file.  yes this is a hack
+#     but it makes development versions properly prompt upgrade
+# .h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
+#   h2oWrapper.__formatError <- function(error, prefix="  ") {
+#     result = ""
+#     items = strsplit(error,"\n")[[1]];
+#     for (i in 1:length(items))
+#       result = paste(result, prefix, items[i], "\n", sep="")
+#     result
+#   }
+#   
+#   temp = postForm(paste(myURL, .h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
+#   res = fromJSON(temp)
+#   if (!is.null(res$error))
+#     stop(paste(myURL," returned the following error:\n", h2oWrapper.__formatError(res$error)))
+#   
+#   H2OVersion = res$version
+#   myFile = res$filename
+#   
+#   if( grepl('\\.99999$', H2OVersion) ){
+#     H2OVersion <- sub('\\.tar\\.gz$', '', sub('.*_', '', myFile))
+#   }
+#   
+#   # sigh. I so wish people would occasionally listen to me; R expects a version to be %d.%d.%d.%d and will ignore anything after
+#   myPackages <- installed.packages()[,1]
+#   needs_upgrade <- F
+#   if( 'h2oRClient' %in% myPackages ){
+#     ver <- unclass( packageVersion('h2oRClient') )
+#     ver <- paste( ver[[1]], collapse='.' )
+#     needs_upgrade <- !(ver == H2OVersion)
+#   }
+#   
+#   if("h2oRClient" %in% myPackages && !needs_upgrade )
+#     cat("H2O R package and server version", H2OVersion, "match\n")
+#   else if(.h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
+#     if("h2oRClient" %in% myPackages) {
+#       cat("Removing old H2O R package version", toString(packageVersion("h2oRClient")), "\n")
+#       if("package:h2oRClient" %in% search())
+#         detach("package:h2oRClient", unload=TRUE)
+#       remove.packages("h2oRClient")
+#     }
+#     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
+#     install.packages("h2oRClient", repos = c(H2O = paste(myURL, "R", sep = "/"), getOption("repos")))
+#   }
+# }
+# 
+# Check if user wants to install H2O R package matching version on server
+# Note: silentUpgrade supercedes promptUpgrade
+# .h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
+#   if(silentUpgrade) return(TRUE)
+#   if(promptUpgrade) {
+#     ans = readline(paste("Do you want to install H2O R package version", H2OVersion, "from the server (Y/N)? "))
+#     temp = substr(ans, 1, 1)
+#     if(temp == "Y" || temp == "y") return(TRUE)
+#     else if(temp == "N" || temp == "n") return(FALSE)
+#     else stop("Invalid answer! Please enter Y for yes or N for no")
+#   } else return(FALSE)
+# }

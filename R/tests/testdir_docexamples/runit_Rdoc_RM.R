@@ -3,7 +3,7 @@ source('../findNSourceUtils.R')
 
 test.rdocRM.golden <- function(H2Oserver) {
 
-prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")	
+prosPath = system.file("extdata", "prostate.csv", package="h2o")	
 prostate.hex = h2o.importFile(H2Oserver, path = prosPath, key = "prostate.hex")
 s = runif(nrow(prostate.hex))
 prostate.train = prostate.hex[s <= 0.8,]

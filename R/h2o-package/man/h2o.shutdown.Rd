@@ -33,7 +33,8 @@ Users must call h2o.shutdown explicitly in order to shut down the local H2O inst
 }
 
 \examples{
-localH2O = h2o.init(ip = "localhost", port = 54321)
+library(h2o)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
