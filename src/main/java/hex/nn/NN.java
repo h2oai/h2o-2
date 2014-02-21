@@ -57,7 +57,7 @@ public class NN extends Job.ValidatedJob {
   public double momentum_stable = 0.99;
 
   @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
-  public double epochs = 10;
+  public double epochs = 1000;
 
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
@@ -246,7 +246,7 @@ public class NN extends Job.ValidatedJob {
       Log.info("Number of chunks of the validation data: " + validation.anyVec().nChunks());
 
     if (_dinfo == null)
-      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols), 1, true);
+      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols), 1, true, !classification);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.model_info().initializeMembers();
     //Log.info("Initial model:\n" + model.model_info());

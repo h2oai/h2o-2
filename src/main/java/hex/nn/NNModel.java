@@ -104,8 +104,16 @@ public class NNModel extends Model {
     water.api.ConfusionMatrix cm = errors[errors.length-1].validation ?
             errors[errors.length-1].valid_confusion_matrix :
             errors[errors.length-1].train_confusion_matrix;
-    if (cm == null) return null;
+    if (cm == null || cm.cm == null) return null;
     return new hex.ConfusionMatrix(cm.cm);
+  }
+
+  @Override
+  public double mse() {
+    if (errors == null) return super.mse();
+    return errors[errors.length-1].validation ?
+            errors[errors.length-1].valid_mse :
+            errors[errors.length-1].train_mse;
   }
 
   // This describes the model, together with the parameters
@@ -528,7 +536,10 @@ public class NNModel extends Model {
       preds[0] = getPrediction(preds, data);
     } else {
       assert(preds.length == 1 && out.length == 1);
-      preds[0] = (float)out[0];
+      if (model_info().data_info()._normRespMul != null)
+        preds[0] = (float)(out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
+      else
+        preds[0] = (float)out[0];
     }
     return preds;
   }
@@ -543,7 +554,7 @@ public class NNModel extends Model {
     CM.vpredict = fpreds.vecs()[0];
     CM.serve();
     StringBuilder sb = new StringBuilder();
-    final double error = CM.toASCII(sb);
+    final double error = CM.toASCII(sb); //either classification error or MSE
     if (printCM) {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
@@ -558,7 +569,7 @@ public class NNModel extends Model {
       return true;
     }
 
-    final String mse_format = "%2.6f";
+    final String mse_format = "%g";
     final String cross_entropy_format = "%2.6f";
 
     DocGen.HTML.title(sb, title);
@@ -626,6 +637,7 @@ public class NNModel extends Model {
       }
     }
 
+    DocGen.HTML.section(sb, "Predicting: " + responseName());
     if (isClassifier()) {
       DocGen.HTML.section(sb, "Training classification error: " + formatPct(error.train_err));
 //      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
@@ -634,9 +646,9 @@ public class NNModel extends Model {
 //        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
       }
     } else {
-      DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, error.train_mse));
+      DocGen.HTML.section(sb, "Training mean squared error: " + String.format(mse_format, error.train_mse));
       if(error.validation) {
-        DocGen.HTML.section(sb, "Validation mean square error: " + String.format(mse_format, error.valid_mse));
+        DocGen.HTML.section(sb, "Validation mean squared error: " + String.format(mse_format, error.valid_mse));
       }
     }
     if (error.training_time_ms > 0)
