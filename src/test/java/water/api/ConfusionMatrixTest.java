@@ -271,7 +271,7 @@ public class ConfusionMatrixTest extends TestUtil {
     try {
       ConfusionMatrix cm = computeCM(v1, v2);
       // -- DEBUG --
-      if (true) {
+      if (false) {
         System.err.println(Arrays.toString(cm.actual_domain));
         System.err.println(Arrays.toString(cm.predicted_domain));
         for (int i=0; i<cm.cm.length; i++)
