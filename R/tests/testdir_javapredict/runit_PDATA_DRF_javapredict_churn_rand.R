@@ -30,8 +30,7 @@ print(paste("depth", depth))
 nodesize <- sample(10, 1)
 print(paste("nodesize", nodesize))
 
-data_dir = "/tmp/c10"
-# from "/mnt/0xcustomer-datasets/c10"
+data_dir = "/mnt/0xcustomer-datasets/c10"
 train <- paste(data_dir, "churn_train.csv", sep="/")
 print(paste("train", train))
     
