@@ -231,15 +231,15 @@ dw_3:
 PDFLATEX=$(shell which pdflatex)
 PDFUNITE=$(shell which pdfunite)
 dw_4:
-ifeq ($(PDFLATEX),)
-	@echo pdflatex not found, skipping...
-else
-ifeq ($(PDFUNITE),)
-	@echo pdfunite not found, skipping...
-else
-	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
-endif
-endif
+# ifeq ($(PDFLATEX),)
+#	@echo pdflatex not found, skipping...
+# else
+# ifeq ($(PDFUNITE),)
+# 	@echo pdfunite not found, skipping...
+# else
+#	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
+# endif
+# endif
 
 #
 # Set appropriately for your data size to quickly try out H2O.
