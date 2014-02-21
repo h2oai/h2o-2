@@ -838,6 +838,7 @@ class RUnitRunner:
         failed = 0
         notrun = 0
         total = 0
+        failedList = []
         for test in self.tests:
             if (test.get_passed()):
                 passed += 1
@@ -847,6 +848,7 @@ class RUnitRunner:
 
                 if (test.get_completed()):
                     failed += 1
+                    failedList.append(test.test_name)
                 else:
                     notrun += 1
             total += 1
@@ -878,6 +880,7 @@ class RUnitRunner:
         else:
             self._log("Time/completed test:  N/A")
         self._log("")
+        self._log("Failed list:          " + ",".join(failedList))
 
     def terminate(self):
         """
