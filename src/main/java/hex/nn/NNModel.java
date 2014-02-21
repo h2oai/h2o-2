@@ -617,21 +617,21 @@ public class NNModel extends Model {
         }
       } else {
         // Plot training MSE
-        float[] err = new float[errors.length];
-        float[] samples = new float[errors.length];
+        float[] err = new float[errors.length-1];
+        float[] samples = new float[errors.length-1];
         for (int i=0; i<err.length; ++i) {
-          err[i] = (float)errors[i].train_mse;
-          samples[i] = errors[i].training_samples;
+          err[i] = (float)errors[i+1].train_mse;
+          samples[i] = errors[i+1].training_samples;
         }
-        new D3Plot(samples, err, "training samples", "mean squared error",
+        new D3Plot(samples, err, "training samples", "MSE",
                 "Regression Error on Training Set").generate(sb);
 
         // Plot validation MSE
         if (model_info.parameters.validation != null) {
           for (int i=0; i<err.length; ++i) {
-            err[i] = (float)errors[i].valid_mse;
+            err[i] = (float)errors[i+1].valid_mse;
           }
-          new D3Plot(samples, err, "training samples", "mean squared error",
+          new D3Plot(samples, err, "training samples", "MSE",
                   "Regression Error on Validation Set").generate(sb);
         }
       }
