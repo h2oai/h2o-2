@@ -113,6 +113,9 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Stopping criterion for regression error (negative number for none)", filter = Default.class, json = true, gridable = false)
   public double regression_stop = 1e-6;
 
+  @API(help = "Quiet mode - print less output", filter = Default.class, json = true, gridable = false)
+  public boolean quiet_mode = false;
+
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
   }
@@ -311,7 +314,7 @@ public class NN extends Job.ValidatedJob {
     if (_fakejob) UKV.remove(job_key);
     remove(); //remove the job
 
-    Log.info("Neural Net training finished.");
+    Log.info("Finished training the Neural Net model.");
     return model;
   }
 
