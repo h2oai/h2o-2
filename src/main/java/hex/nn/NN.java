@@ -419,5 +419,6 @@ public class NN extends Job.ValidatedJob {
       }
     }
     fr.delete();
+    model_info.delete(); //delete adaptedFrame inside of dinfo
   }
 }

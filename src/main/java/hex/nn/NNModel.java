@@ -39,7 +39,7 @@ public class NNModel extends Model {
 
   @Override public void delete() {
     super.delete();
-    model_info.cleanUp();
+    model_info.delete();
   }
 
   public static class Errors extends Iced {
@@ -249,9 +249,9 @@ public class NNModel extends Model {
         for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
       }
     }
-    public void cleanUp() {
+    public void delete() {
       // ugly: whoever made data_info should also clean this up... but sometimes it was made by Weaver from UKV!
-      UKV.remove(data_info()._adaptedFrame.lastVec()._key);
+      if (data_info()._adaptedFrame.lastVec()._key!=null) UKV.remove(data_info()._adaptedFrame.lastVec()._key);
     }
 
     @Override public String toString() {
