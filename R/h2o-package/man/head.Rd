@@ -1,9 +1,9 @@
 \name{head}
 \alias{head}
-\title{Obtains the first rows of an H2O parsed data object
+\title{Return the First Rows of an H2O Dataset
 }
 \description{
-Obtains the first rows of an H2O parsed data object
+Returns the first rows of an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
 head(x, ...)
@@ -16,7 +16,7 @@ head(x, ...)
 }
 }
 
-\value{ The first 6 rows of an H2O parsed data frame, unless the number of rows is otherwise specified to be N, in which case the first N rows are returned.
+\value{ The first 6 rows of an \code{\linkS4class{H2OParsedData}} object, unless the number of rows is otherwise specified to be N, in which case the first N rows are returned.
 }
 
 \examples{

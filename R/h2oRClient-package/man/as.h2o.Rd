@@ -34,7 +34,7 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgra
 data(iris)
 summary(iris)
 iris.r <- iris
-iris.h2o <- as.h2o(localH2O, iris.r, key="iris.h2o")
+iris.h2o <- as.h2o(localH2O, iris.r, key = "iris.h2o")
 class(iris.h2o)
 h2o.shutdown(localH2O)
 }

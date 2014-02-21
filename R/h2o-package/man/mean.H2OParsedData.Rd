@@ -1,7 +1,7 @@
 \name{mean.H2OParsedData}
 \alias{mean.H2OParsedData}
 \title{
-Arithmetic Mean of H2O Data Set
+Arithmetic Mean of H2O Dataset
 }
 \description{
 \code{mean.H2OParsedData}, a method for the \code{\link{mean}} generic. Calculate the mean of each numeric column in a H2O dataset. 

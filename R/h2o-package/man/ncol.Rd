@@ -1,20 +1,20 @@
 \name{ncol}
 \alias{ncol}
 \title{
-Returns a count of the number of columns in an code{\linkS4class{H2OParsedData} object. 
-}}
+Number of Columns of a H2O Dataset  
+}
 \description{
-Returns a count of the number of columns in an code{\linkS4class{H2OParsedData} object.
-}}
+Returns a count of the number of columns in an \code{\linkS4class{H2OParsedData}} object.
+}
 \usage{
 ncol(x)
 }
 
 \arguments{
-  \item{x}{H2O parsed data object}
+  \item{x}{An \code{\linkS4class{H2OParsedData}} object.}
 }
 
-\value{ An integer for the number of columns in an H2O parsed data object.}
+\value{ An integer count of the number of columns.}
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)

@@ -32,4 +32,3 @@ australia.hex = h2o.importFile(localH2O, path = ausPath)
 tail(australia.hex, 10)
 h2o.shutdown(localH2O)
 }
-

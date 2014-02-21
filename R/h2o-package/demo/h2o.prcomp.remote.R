@@ -11,7 +11,7 @@ summary(australia.hex)
 
 australia.pca = h2o.prcomp(australia.hex)
 print(australia.pca)
-plot(australia.pca)
+screeplot(australia.pca)
 
 australia.pca2 = h2o.prcomp(australia.hex, tol = 0.5, standardize = FALSE)
 print(australia.pca2)

@@ -1,28 +1,27 @@
 \name{tail}
 \alias{tail}
-
 \title{
-Obtains the last rows of an \code{\linkS4class{H2OParsedData} object.
-}}
+Return the Last Rows of an H2O Dataset
+}
 \description{
-Obtains the last rows of an \code{\linkS4class{H2OParsedData} object.
-}}
+Returns the last rows of an \code{\linkS4class{H2OParsedData}} object.
+}
 \usage{
 tail(x, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
-An \code{\linkS4class{H2OParsedData} object.
-}}
+An \code{\linkS4class{H2OParsedData}} object.
+}
   \item{\dots}{
 The number of rows to be returned (the default count is 6).
 }
 }
 
 \value{
-A table displaying the last 6 rows of an \code{\linkS4class{H2OParsedData} object, unless the number of rows is otherwise specified to be N, in which case the last N rows are returned.
-}}
+A table displaying the last 6 rows of an \code{\linkS4class{H2OParsedData}} object, unless the number of rows is otherwise specified to be N, in which case the last N rows are returned.
+}
 
 \examples{
 library(h2o)

@@ -2,16 +2,16 @@
 \alias{sd}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Standard deviation of a numeric column. 
+Standard Deviation of a Numeric Column of H2O Data
 }
 \description{
-Calculates the standard deviation of a column of continuious real valued data. 
+Calculates the standard deviation of a \code{\linkS4class{H2OParsedData}} column of continuous real valued data. 
 }
 \usage{
 sd(x, na.rm = FALSE)
 }
 \arguments{
-  \item{x}{An H2O parsed data object containing numeric data. 
+  \item{x}{An \code{\linkS4class{H2OParsedData}} object containing numeric data. 
 }
   \item{na.rm}{Logical value where FALSE does not remove NA's in the calculation and TRUE removes NA's in the calculation. 
 }

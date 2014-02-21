@@ -1,20 +1,19 @@
 \name{nrow}
 \alias{nrow}
 \title{
-Returns a count of rows for an code{\linkS4class{H2OParsedData} object. 
-}}
+Number of Rows of a H2O Dataset
+}
 \description{
-Returns a count of rows for an code{\linkS4class{H2OParsedData} object
-}}
+Returns a count of the number of rows in an \code{\linkS4class{H2OParsedData}} object.
+}
 \usage{
 nrow(x)
 }
 \arguments{
-  \item{x}{code{\linkS4class{H2OParsedData} object
-}}
+  \item{x}{An \code{\linkS4class{H2OParsedData}} object.
 }
-\value{ An integer count of the number of rows 
 }
+\value{ An integer count of the number of rows.}
 
 \examples{
 library(h2o)
