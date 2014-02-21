@@ -1,6 +1,17 @@
 import h2o_cmd, h2o, h2o_util
 import re, random, math
 
+def pickRandNNParams(paramDict, params):
+    randomGroupSize = random.randint(1,len(paramDict))
+    for i in range(randomGroupSize):
+        randomKey = random.choice(paramDict.keys())
+        randomV = paramDict[randomKey]
+        randomValue = random.choice(randomV)
+        params[randomKey] = randomValue
+
+    return
+
+
 ## Check that the last scored validation error is within a certain relative error of the expected result
 def checkLastValidationError(self, model, rows, expectedErr, relTol, **kwargs):
 
