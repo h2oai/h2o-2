@@ -501,8 +501,8 @@ class Test:
 
         @return: True if the test has been marked as NOPASS, False otherwise.
         """
-        nopass = (re.search("NOPASS", self.test_name) is not None)
-        return nopass
+        a = re.compile("NOPASS")
+        return a.search(self.test_name)
 
     def get_completed(self):
         """
@@ -838,7 +838,7 @@ class RUnitRunner:
         failed = 0
         notrun = 0
         total = 0
-        failedList = []
+        trueFailList = []
         for test in self.tests:
             if (test.get_passed()):
                 passed += 1
@@ -848,7 +848,8 @@ class RUnitRunner:
 
                 if (test.get_completed()):
                     failed += 1
-                    failedList.append(test.test_name)
+                    if not test.get_nopass():
+                        trueFailList.append(test.test_name)
                 else:
                     notrun += 1
             total += 1
@@ -880,7 +881,7 @@ class RUnitRunner:
         else:
             self._log("Time/completed test:  N/A")
         self._log("")
-        self._log("Failed list:          " + ",".join(failedList))
+        self._log("True fail list:      " + ",".join(trueFailList))
 
     def terminate(self):
         """
