@@ -526,8 +526,6 @@ public abstract class Neurons {
       int u = 0;
 //      if (target == missing_double_value) return;
       double g = target - _a[u];
-//      Log.info("g=" + target + " - " + _a[u] + " = " + g);
-      g *= (1 - _a[u]) * _a[u];
       bprop(u, g, r, m);
     }
   }

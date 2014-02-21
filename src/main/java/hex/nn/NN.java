@@ -57,7 +57,7 @@ public class NN extends Job.ValidatedJob {
   public double momentum_stable = 0.99;
 
   @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
-  public double epochs = 10;
+  public double epochs = 1000;
 
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
@@ -107,6 +107,12 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Use Nesterov accelerated gradient", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
 
+  @API(help = "Stopping criterion for classification error fraction (negative number for none)", filter = Default.class, json = true, gridable = false)
+  public double classification_stop = 0;
+
+  @API(help = "Stopping criterion for regression error (negative number for none)", filter = Default.class, json = true, gridable = false)
+  public double regression_stop = 1e-6;
+
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
   }
@@ -155,6 +161,12 @@ public class NN extends Job.ValidatedJob {
     if(arg._name.equals("loss") && !classification) {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
+    }
+    if(arg._name.equals("classification_stop") && !classification) {
+      arg.disable("Only for classification.", inputArgs);
+    }
+    if(arg._name.equals("regression_stop") && classification) {
+      arg.disable("Only for regression.", inputArgs);
     }
     if (arg._name.equals("score_validation_samples") && validation == null) {
       arg.disable("Only if a validation set is specified.");
@@ -246,7 +258,7 @@ public class NN extends Job.ValidatedJob {
       Log.info("Number of chunks of the validation data: " + validation.anyVec().nChunks());
 
     if (_dinfo == null)
-      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols), 1, true);
+      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols), 1, true, !classification);
     NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
     model.model_info().initializeMembers();
     //Log.info("Initial model:\n" + model.model_info());

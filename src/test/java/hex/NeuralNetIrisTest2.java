@@ -153,6 +153,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.sync_samples = 100000; //sync once per period
                         p.ignore_const_cols = false;
                         p.shuffle_training_data = false;
+                        p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
                         p.initModel(); //randomize weights, but don't start training yet
 
                         NNModel mymodel = UKV.get(p.dest());
