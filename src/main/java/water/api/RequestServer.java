@@ -153,7 +153,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMProgressPage());
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
-    registerRequest(new RPackage.RDownload());
     registerRequest(new NeuralNetModelView());
     registerRequest(new NeuralNetProgressPage());
     registerRequest(new NNModelView());
@@ -169,7 +168,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PutValue());
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
-    registerRequest(new RPackage());
     registerRequest(new RReaderProgress());
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
