@@ -48,8 +48,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
       NN.Activation[] activations = { NN.Activation.Tanh, NN.Activation.Rectifier };
       NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
       NN.InitialWeightDistribution[] dists = {
-              NN.InitialWeightDistribution.Normal,
-              NN.InitialWeightDistribution.Uniform,
+//              NN.InitialWeightDistribution.Normal,
+//              NN.InitialWeightDistribution.Uniform,
               NN.InitialWeightDistribution.UniformAdaptive
       };
       double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
@@ -146,6 +146,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.classification = true;
                         p.diagnostics = true;
                         p.validation = null;
+                        p.quiet_mode = true;
                         p.fast_mode = false; //to be the same as reference
 //                      p.fast_mode = true; //to be the same as old NeuralNet code
                         p.nesterov_accelerated_gradient = false; //to be the same as reference

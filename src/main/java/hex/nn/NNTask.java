@@ -74,8 +74,8 @@ public class NNTask extends FrameTask<NNTask> {
   @Override protected void postGlobal(){
     if (H2O.CLOUD.size() > 1) {
       long now = System.currentTimeMillis();
-      if (_chunk_node_count < H2O.CLOUD.size() && (now - _lastWarn > 5000) && _warnCount < 10) {
-        Log.info("Synchronizing across " + _chunk_node_count + " H2O node(s).");
+      if (_chunk_node_count < H2O.CLOUD.size() && (now - _lastWarn > 5000) && _warnCount < 3) {
+//        Log.info("Synchronizing across " + _chunk_node_count + " H2O node(s).");
         Log.warn(H2O.CLOUD.size() - _chunk_node_count + " node(s) (out of " + H2O.CLOUD.size()
                 + ") are not contributing to model updates. Consider using a larger training dataset (or fewer H2O nodes).");
         _lastWarn = now;
