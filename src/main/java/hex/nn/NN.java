@@ -107,10 +107,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Use Nesterov accelerated gradient", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
 
-  @API(help = "Stopping criterion for classification error", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for classification error fraction (negative number for none)", filter = Default.class, json = true, gridable = false)
   public double classification_stop = 0;
 
-  @API(help = "Stopping criterion for regression error", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for regression error (negative number for none)", filter = Default.class, json = true, gridable = false)
   public double regression_stop = 1e-6;
 
   public enum InitialWeightDistribution {
@@ -161,6 +161,12 @@ public class NN extends Job.ValidatedJob {
     if(arg._name.equals("loss") && !classification) {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
+    }
+    if(arg._name.equals("classification_stop") && !classification) {
+      arg.disable("Only for classification.", inputArgs);
+    }
+    if(arg._name.equals("regression_stop") && classification) {
+      arg.disable("Only for regression.", inputArgs);
     }
     if (arg._name.equals("score_validation_samples") && validation == null) {
       arg.disable("Only if a validation set is specified.");
