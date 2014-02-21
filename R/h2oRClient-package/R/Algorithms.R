@@ -53,7 +53,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   if(params$distribution == "multinomial") {
     # temp = matrix(unlist(res$cm), nrow = length(res$cm))
     # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-    mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
+    mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
   }
   return(mySum)
 }
@@ -69,7 +69,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   
   if(result$params$distribution == "multinomial") {
     class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(tail(res$cm, 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
+    result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
   } else
     result$classification <- F
@@ -826,7 +826,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
 
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-  mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
+  mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
   return(mySum)
 }
 
