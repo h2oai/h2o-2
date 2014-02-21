@@ -136,12 +136,19 @@ class H2OCloudNode:
         @return: none
         """
 
+        # there is no hdfs currently in ec2, except s3n/hdfs
+        # the core-site.xml provides s3n info
+        # it's possible that we can just always hardware the hdfs version
+        # to match the cdh3 cluster we're hardwiring tests to
+        # i.e. it won't make s3n/s3 break on ec2
+
         cmd = ["java",
                "-Xmx" + self.xmx,
                "-ea",
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
-               "-baseport", str(self.my_base_port)]
+               "-baseport", str(self.my_base_port),
+               "-hdfs_version", "cdh3"]
 
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
@@ -501,8 +508,8 @@ class Test:
 
         @return: True if the test has been marked as NOPASS, False otherwise.
         """
-        nopass = (re.search("NOPASS", self.test_name) is not None)
-        return nopass
+        a = re.compile("NOPASS")
+        return a.search(self.test_name)
 
     def get_completed(self):
         """
@@ -838,6 +845,7 @@ class RUnitRunner:
         failed = 0
         notrun = 0
         total = 0
+        true_fail_list = []
         for test in self.tests:
             if (test.get_passed()):
                 passed += 1
@@ -847,6 +855,8 @@ class RUnitRunner:
 
                 if (test.get_completed()):
                     failed += 1
+                    if (not test.get_nopass()):
+                        true_fail_list.append(test.test_name)
                 else:
                     notrun += 1
             total += 1
@@ -877,6 +887,8 @@ class RUnitRunner:
             self._log("Time/completed test:  %.2f sec" % (delta_seconds / run))
         else:
             self._log("Time/completed test:  N/A")
+        self._log("")
+        self._log("True fail list:       " + ",".join(true_fail_list))
         self._log("")
 
     def terminate(self):

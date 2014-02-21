@@ -12,7 +12,20 @@ TEST_ROOT_DIR <- ".."
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source(paste(TEST_ROOT_DIR, "findNSourceUtils.R"  , sep="/"))
     
-    
+# Check if we are running inside the 0xdata network by seeing if we can touch
+# the cdh3 namenode. (we're not using it though..using automount to the nas)
+# stay consistent with the check we use for hdfs tests
+# Note this should fail on home networks, since 176 is not likely to exist
+# also should fail in ec2.
+running_inside_hexdata = url.exists("http://192.168.1.176:80", timeout=1)
+
+if (running_inside_hexdata) {
+    # cdh3 cluster
+    hdfs_name_node = "192.168.1.176"
+} else {
+    stop("Not running on 0xdata internal network. Assume no access to /mnt/0xcustomer-datasets.")
+}
+
 #----------------------------------------------------------------------
 # Parameters for the test.
 #----------------------------------------------------------------------
@@ -30,8 +43,7 @@ print(paste("depth", depth))
 nodesize <- sample(10, 1)
 print(paste("nodesize", nodesize))
 
-data_dir = "/tmp/c10"
-# from "/mnt/0xcustomer-datasets/c10"
+data_dir = "/mnt/0xcustomer-datasets/c10"
 train <- paste(data_dir, "churn_train.csv", sep="/")
 print(paste("train", train))
     

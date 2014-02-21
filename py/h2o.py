@@ -1603,6 +1603,8 @@ class H2O(object):
                 'mtries': None,
                 'sample_rate': None,
                 'seed': None,
+                'build_tree_per_node': None,
+                'score_each_iteration': None,
                 }
             if 'model_key' in kwargs:
                 kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -2161,10 +2163,10 @@ class H2O(object):
             'fast_mode'                    : None,
             'ignore_const_cols'            : None,
             'shuffle_training_data'        : None,
-            'nesterov_accelerated_gradient': None
+            'nesterov_accelerated_gradient': None,
         }
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net2', print_params)
         if 'validation' not in kwargs:
             kwargs['validation'] = data_key
 
