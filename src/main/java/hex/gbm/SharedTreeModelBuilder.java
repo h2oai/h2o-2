@@ -602,10 +602,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       if (_nclass>1) { // Classification
         for( int i=0; i<_nclass; i++ ) // Distribution of response classes
           adapValidation.add("ClassDist"+i,res.vecs()[i+1]);
-        adapValidation.add("Prediction",res.vecs()[0]); // Predicted values
-      } else { // Regression
-        adapValidation.add("Prediction",res.vecs()[0]);
       }
+      adapValidation.add("Prediction",res.vecs()[0]);
       // Compute a CM & MSE
       doAll(adapValidation, build_tree_per_node);
       // Remove the extra adapted Vecs
@@ -625,9 +623,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         float sum;
         if( _validation ) {     // Passed in a class distribution from scoring
           for( int i=0; i<_nclass; i++ )
-            fs[i+1] = (float)chks[i+_ncols+1].at0(row); // Get the class distros
+            fs[i+1] = (float)chk_tree(chks,i).at0(row); // Get the class distros
           if (_nclass > 1 ) sum = 1.0f; // Sum of a distribution is 1.0 for classification
-          else sum = fs[0];    // Sum is the same as prediction for regression.
+          else sum = fs[1];    // Sum is the same as prediction for regression.
         } else {               // Passed in the model-specific columns
           sum = score1(chks,fs,row);
         }

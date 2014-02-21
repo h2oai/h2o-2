@@ -148,8 +148,7 @@ class H2OCloudNode:
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port),
-               "-hdfs_version", "cdh3",
-              ]
+               "-hdfs_version", "cdh3"]
 
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
@@ -846,7 +845,7 @@ class RUnitRunner:
         failed = 0
         notrun = 0
         total = 0
-        trueFailList = []
+        true_fail_list = []
         for test in self.tests:
             if (test.get_passed()):
                 passed += 1
@@ -856,8 +855,8 @@ class RUnitRunner:
 
                 if (test.get_completed()):
                     failed += 1
-                    if not test.get_nopass():
-                        trueFailList.append(test.test_name)
+                    if (not test.get_nopass()):
+                        true_fail_list.append(test.test_name)
                 else:
                     notrun += 1
             total += 1
@@ -889,7 +888,8 @@ class RUnitRunner:
         else:
             self._log("Time/completed test:  N/A")
         self._log("")
-        self._log("True fail list:      " + ",".join(trueFailList))
+        self._log("True fail list:       " + ",".join(true_fail_list))
+        self._log("")
 
     def terminate(self):
         """
