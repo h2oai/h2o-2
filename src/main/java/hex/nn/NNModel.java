@@ -449,15 +449,16 @@ public class NNModel extends Model {
     final long samples = model_info().get_processed_total();
     if (sinceLastPrint > model_info().parameters.score_interval*1000) {
       _timeLastPrintStart = _now;
-      Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
-              + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
+      if (!model_info().get_params().quiet_mode)
+        Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
+                + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+                + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
     if( !keep_running || sinceLastScore > model_info().parameters.score_interval*1000) {
-      Log.info("Scoring the model.");
+      final boolean printme = !model_info().get_params().quiet_mode;
+      if (printme) Log.info("Scoring the model.");
       _timeLastScoreStart = _now;
-      boolean printCM = false;
       // compute errors
       Errors err = new Errors();
       err.classification = isClassifier();
@@ -468,14 +469,14 @@ public class NNModel extends Model {
       err.training_samples = model_info().get_processed_total();
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
-      final double trainErr = calcError(ftrain, "Error on training data:", printCM, err.train_confusion_matrix);
+      final double trainErr = calcError(ftrain, "Error on training data:", printme, err.train_confusion_matrix);
       if (err.classification) err.train_err = trainErr;
       else err.train_mse = trainErr;
 
       if (err.validation) {
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
-        final double validErr = calcError(ftest, "Error on validation data:", printCM, err.valid_confusion_matrix);
+        final double validErr = calcError(ftest, "Error on validation data:", printme, err.valid_confusion_matrix);
         if (err.classification) err.valid_err = validErr;
         else err.valid_mse = validErr;
       }
@@ -488,9 +489,11 @@ public class NNModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
-      // print the freshly scored model to ASCII
-      for (String s : toString().split("\n")) Log.info(s);
-      Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
+      if (printme) {
+        // print the freshly scored model to ASCII
+        for (String s : toString().split("\n")) Log.info(s);
+        Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
+      }
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");

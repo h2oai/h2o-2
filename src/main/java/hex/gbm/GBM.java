@@ -223,7 +223,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   // turns the results into a probability distribution.
   @Override protected float score1( Chunk chks[], float fs[/*nclass*/], int row ) {
     if( _nclass == 1 )          // Classification?
-      return (float)chk_tree(chks,0).at0(row);
+      return (float)chk_tree(chks,0).at0(row); // Regression.
     if( _nclass == 2 ) {        // The Boolean Optimization
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
