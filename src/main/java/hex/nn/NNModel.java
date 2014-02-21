@@ -497,14 +497,14 @@ public class NNModel extends Model {
       Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
       keep_running = false;
     } else if (ftest == null &&
-            (model_info().parameters.classification && errors[errors.length-1].train_err == 0)
-        || (!model_info().parameters.classification && errors[errors.length-1].train_mse == 0)
+            (model_info().get_params().classification && errors[errors.length-1].train_err <= model_info().get_params().classification_stop)
+        || (!model_info().get_params().classification && errors[errors.length-1].train_mse <= model_info().get_params().regression_stop)
             ) {
       Log.info("Achieved 100% modeling accuracy on the training data. We are done here.");
       keep_running = false;
     } else if (ftest != null &&
-            (model_info().parameters.classification && errors[errors.length-1].valid_err == 0)
-        || (!model_info().parameters.classification && errors[errors.length-1].valid_mse == 0)
+            (model_info().get_params().classification && errors[errors.length-1].valid_err <= model_info().get_params().classification_stop)
+        || (!model_info().get_params().classification && errors[errors.length-1].valid_mse <= model_info().get_params().regression_stop)
             ) {
       Log.info("Achieved 100% modeling accuracy on the validation data. We are done here.");
       keep_running = false;

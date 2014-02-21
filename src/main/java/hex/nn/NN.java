@@ -107,6 +107,12 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Use Nesterov accelerated gradient", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
 
+  @API(help = "Stopping criterion for classification error", filter = Default.class, json = true, gridable = false)
+  public double classification_stop = 0;
+
+  @API(help = "Stopping criterion for regression error", filter = Default.class, json = true, gridable = false)
+  public double regression_stop = 1e-6;
+
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
   }
