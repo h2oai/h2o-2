@@ -299,24 +299,24 @@ public abstract class Model extends Lockable<Model> {
    *
    * @param colName name of column which is mapped, can be null.
    * @param modelDom
-   * @param exact
+   * @param logNonExactMapping
    * @return
    */
-  public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean exact) {
+  public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean logNonExactMapping) {
     int emap[] = new int[modelDom.length];
     boolean bmap[] = new boolean[modelDom.length];
     HashMap<String,Integer> md = new HashMap<String, Integer>();
     for( int i = 0; i < colDom.length; i++) md.put(colDom[i], i);
     for( int i = 0; i < modelDom.length; i++) {
       Integer I = md.get(modelDom[i]);
-      if (I == null && exact)
+      if (I == null && logNonExactMapping)
         Log.warn(Sys.SCORM, "Column "+colName+" was trained with factor '"+modelDom[i]+"' which DOES NOT appear in column data");
       if (I!=null) {
         emap[i] = I;
         bmap[i] = true;
       }
     }
-    if (exact) { // Inform about additional values in column domain which do not appear in model domain
+    if (logNonExactMapping) { // Inform about additional values in column domain which do not appear in model domain
       for (int i=0; i<colDom.length; i++) {
         boolean found = false;
         for (int j=0; j<emap.length; j++)
@@ -358,7 +358,7 @@ public abstract class Model extends Lockable<Model> {
    *  @return the best prediction (index of class, zero-based)
    */
   public static int getPrediction( float[] preds, double data[] ) {
-    int best=1, tieCnt=0;   // Best class; count of ties 
+    int best=1, tieCnt=0;   // Best class; count of ties
     for( int c=2; c<preds.length; c++) {
       if( preds[best] < preds[c] ) {
         best = c;               // take the max index
@@ -371,7 +371,7 @@ public abstract class Model extends Lockable<Model> {
     // Tie-breaking logic
     float res = preds[best];    // One of the tied best results
     long hash = 0;              // hash for tie-breaking
-    if( data != null ) 
+    if( data != null )
       for( double d : data ) hash ^= Double.doubleToRawLongBits(d);
     int idx = (int)hash%(tieCnt+1);  // Which of the ties we'd like to keep
     for( best=1; best<preds.length; best++)
@@ -381,7 +381,7 @@ public abstract class Model extends Lockable<Model> {
   }
 
   public static int getPrediction(float[] preds, int row) {
-    int best=1, tieCnt=0;   // Best class; count of ties 
+    int best=1, tieCnt=0;   // Best class; count of ties
     for( int c=2; c<preds.length; c++) {
       if( preds[best] < preds[c] ) {
         best = c;               // take the max index
