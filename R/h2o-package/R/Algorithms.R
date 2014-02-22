@@ -718,7 +718,7 @@ h2o.randomForest <- function(x, y, data, ntree = 50, depth = 50, sample.rate = 2
     h2o.randomForest.VA(x, y, data, ntree, depth, sample.rate, classwt, nbins, seed, use_non_local)
   } else if(version == 2) {
     if(!is.null(classwt)) stop("classwt not supported under FluidVecs")
-    h2o.randomForest.FV(x, y, data, ntree, depth, nodesize, sample.rate, nbins, seed, validation)
+    h2o.randomForest.FV(x, y, data, ntree, depth, sample.rate, nbins, seed, validation, nodesize)
   } else
     stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
@@ -781,23 +781,23 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed=-1, validation) {
+h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, nbins=100, seed=-1, validation, nodesize=1) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
   if(!is.numeric(depth)) stop('depth must be a number')
   if( any(depth < 1) ) stop('depth must be >= 1')
-  if(!is.numeric(nodesize)) stop('nodesize must be a number')
-  if( any(nodesize < 1) ) stop('nodesize must be >= 1')
   if(!is.numeric(sample.rate)) stop('sample.rate must be a number')
   if( any(sample.rate < 0 || sample.rate > 1) ) stop('sample.rate must be between 0 and 1')
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
-
+  
   if(missing(validation)) validation = data
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
+  if(!is.numeric(nodesize)) stop('nodesize must be a number')
+  if( any(nodesize < 1) ) stop('nodesize must be >= 1')
   
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')

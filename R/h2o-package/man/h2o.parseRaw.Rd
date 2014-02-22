@@ -1,6 +1,7 @@
 \name{h2o.parseRaw}
 \alias{h2o.parseRaw}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\alias{h2o.parseRaw.VA}
+\alias{h2o.parseRaw.FV}
 \title{
 Parse Raw Data File
 }
@@ -8,7 +9,14 @@ Parse Raw Data File
 Parses a raw data file, returning an object containing the identifying hex key.
 }
 \usage{
+## Default method:
 h2o.parseRaw(data, key = "", header, sep = "", col.names, version = 1)
+
+## Import to a ValueArray object:
+h2o.parseRaw.VA(data, key = "", header, sep = "", col.names)
+
+## Import to a FluidVecs object:
+h2o.parseRaw.FV(data, key = "", header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -25,22 +33,19 @@ An \code{\linkS4class{H2ORawDataVA}} (\code{version = 1}) or \code{\linkS4class{
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the column header as its first and only row.
+(Optional) A \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing a single delimited line with the column names for the file.
   }
   \item{version}{
   (Optional) If \code{version = 1}, the file will be parsed to a ValueArray object. Otherwise, if \code{version = 2}, the file will be parsed to a FluidVecs object.
   }
 }
 \details{
+Calling the method with \code{version = 1} is equivalent to \code{h2o.parseRaw.VA}, and \code{version = 2} is equivalent to \code{h2o.parseRaw.FV}. \code{h2o.parseRaw.VA} should only be used to parse raw data imported using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}}, or one of its variants. Similarly, \code{h2o.parseRaw.FV} should only be used to parse raw data imported using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}}, or one of its variants.
+
 After the raw data file is parsed, it will be automatically deleted from the H2O server.
 }
 \value{
 An object of class \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}), representing the dataset that was parsed.
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~

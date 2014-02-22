@@ -1,6 +1,7 @@
 \name{h2o.importFile}
 \alias{h2o.importFile}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\alias{h2o.importFile.VA}
+\alias{h2o.importFile.FV}
 \title{
 Import Local Data File
 }
@@ -8,7 +9,14 @@ Import Local Data File
 Imports a file from the local path and parses it, returning an object containing the identifying hex key.
 }
 \usage{
+## Default method:
 h2o.importFile(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1)
+
+## Import to a ValueArray object:
+h2o.importFile.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names)
+
+## Import to a FluidVecs object:
+h2o.importFile.FV(object, path, key = "", parse = TRUE, header, sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -31,25 +39,21 @@ The path of the file to be imported. Each row of data appears as one line of the
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) An \code{\linkS4class{H2OParsedData}} object containing the column header as its first and only row.
+(Optional) A \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing a single delimited line with the column names for the file.
   }
   \item{version}{
   (Optional) If \code{version = 1}, the file will be imported to a ValueArray object. Otherwise, if \code{version = 2}, the file will be imported as a FluidVecs object.
   }
 }
 \details{
+Calling the method with \code{version = 1} is equivalent to \code{h2o.importFile.VA}, and \code{version = 2} is equivalent to \code{h2o.importFile.FV}.
+
 WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
 }
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2ORawDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
 }
 \seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
 \code{\link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
@@ -57,6 +61,9 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
+class(iris.hex)
 summary(iris.hex)
+iris.fv = h2o.importFile(localH2O, path = irisPath, key = "iris.fv", version = 2)
+class(iris.fv)
 h2o.shutdown(localH2O)
 }

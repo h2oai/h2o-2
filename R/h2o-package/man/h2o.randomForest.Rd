@@ -1,6 +1,7 @@
 \name{h2o.randomForest}
 \alias{h2o.randomForest}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\alias{h2o.randomForest.VA}
+\alias{h2o.randomForest.FV}
 \title{
 H2O: Random Forest
 }
@@ -8,7 +9,14 @@ H2O: Random Forest
 Performs random forest classification on a data set.
 }
 \usage{
+## Default method:
 h2o.randomForest(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, validation, nodesize = 1, use_non_local = TRUE, version = 1)
+
+## Import to a ValueArray object:
+h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, use_non_local = TRUE)
+
+## Import to a FluidVecs object:
+h2o.randomForest.FV(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, nbins = 100, seed = -1, validation, nodesize = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -53,8 +61,7 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
 }
 
 \details{
-%%  ~~ If necessary, more details than the description above ~~
-IMPORTANT: Currently, to run random forest with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
+IMPORTANT: Currently, to run k-means with \code{version = 1}, you must import data to a ValueArray object using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}} or one of its variants. To run with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
 }
 
 \value{
@@ -75,8 +82,8 @@ h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100)
 
 # Run an RF model on covtype data
 covPath = system.file("extdata", "covtype.csv", package="h2o")
-covtype.hex = h2o.importFile(localH2O, path = covPath, key = "covtype.hex")
-h2o.randomForest(y = "Cover_Type",  x = setdiff(colnames(covtype.hex), c("Cover_Type", "Aspect", "Hillshade_9am")), data = covtype.hex, ntree = 50, depth = 150)
+covtype.hex = h2o.importFile(localH2O, path = covPath, key = "covtype.hex", version = 2)
+h2o.randomForest(y = "Cover_Type",  x = setdiff(colnames(covtype.hex), c("Cover_Type", "Aspect", "Hillshade_9am")), data = covtype.hex, ntree = 50, depth = 150, version = 2)
 h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -1,13 +1,20 @@
 \name{h2o.kmeans}
 \alias{h2o.kmeans}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\alias{h2o.kmeans.VA}
+\alias{h2o.kmeans.FV}
 \title{
 H2O: K-Means Clustering
 }
-\description{
-Performs k-means clustering on a data set.}
+\description{Performs k-means clustering on a data set.}
 \usage{
+## Default method:
 h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 1)
+
+## Import to a ValueArray object:
+h2o.kmeans.VA(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0)
+
+## Import to a FluidVecs object:
+h2o.kmeans.FV(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -38,8 +45,7 @@ The number of clusters k.
 }
 
 \details{
-%%  ~~ If necessary, more details than the description above ~~
-IMPORTANT: Currently, to run k-means with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
+IMPORTANT: Currently, to run k-means with \code{version = 1}, you must import data to a ValueArray object using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}} or one of its variants. To run with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
 }
 
 \value{
@@ -62,9 +68,9 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
+
 covPath = system.file("extdata", "covtype.csv", package="h2o")
-covtype.hex = h2o.importFile(localH2O, path = covPath)
-covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
-print(covtype.km)
+covtype.hex = h2o.importFile(localH2O, path = covPath, version = 2)
+h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3), version = 2)
 h2o.shutdown(localH2O)
 }

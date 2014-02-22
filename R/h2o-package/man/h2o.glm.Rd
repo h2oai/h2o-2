@@ -1,6 +1,7 @@
 \name{h2o.glm}
 \alias{h2o.glm}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\alias{h2o.glm.VA}
+\alias{h2o.glm.FV}
 \title{
 H2O: Generalized Linear Models
 }
@@ -8,7 +9,14 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
+## Default method:
 h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1)
+
+## Import to a ValueArray object:
+h2o.glm.VA(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA)))
+
+## Import to a FluidVecs object:
+h2o.glm.FV(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)))
 }
 \arguments{
   \item{x}{
@@ -48,8 +56,7 @@ A description of the error distribution and corresponding link function to be us
   }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
-IMPORTANT: Currently, to run GLM with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
+IMPORTANT: Currently, to run GLM with \code{version = 1}, you must import data to a ValueArray object using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}} or one of its variants. To run with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
 }
 \value{
 An object of class \code{\linkS4class{H2OGLMModelVA}} (\code{version = 1}) or \code{\linkS4class{H2OGLMModel}} (\code{version = 2}) with slots key, data, model and xval. The slot model is a list of the following components:
@@ -69,11 +76,6 @@ An object of class \code{\linkS4class{H2OGLMModelVA}} (\code{version = 1}) or \c
 \item{threshold }{Best threshold.}
 \item{confusion }{Confusion matrix.}
 The slot xval is a list of \code{\linkS4class{H2OGLMModel}} or \code{\linkS4class{H2OGLMModelVA}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
@@ -91,8 +93,8 @@ myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, alpha = 0.1)
 
 # Run GLM of IsDepDelayed ~ Distance + Origin + Dest + UniqueCarrier on airlines dataset in HDFS
-airlines.hex =  h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
-h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', family = 'binomial', data = airlines.hex)
+airlines.hex =  h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip", version = 2)
+h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', family = 'binomial', data = airlines.hex, version = 2)
 h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
