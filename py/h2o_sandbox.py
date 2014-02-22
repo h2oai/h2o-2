@@ -87,6 +87,9 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
+                        ('Error on training data' in line) or
+                        ('Error on validation data' in line) or
+                        ('Act/Prd' in line) or
                         ('water.DException' in line) or
                         # the manyfiles data has eRRr in a warning about test/train data
                         ('WARN SCORM' in line) or
