@@ -89,7 +89,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
-    Request.addToNavbar(registerRequest(new NN()),          "Neural Network2 (Beta)",     "Model");
+    Request.addToNavbar(registerRequest(new NN()),          "NN (Beta)",                  "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
