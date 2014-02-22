@@ -11,7 +11,7 @@ public class ParseTime extends TestUtil {
 
   // Parse click & query times from a subset of kaggle bestbuy data
   @Test public void testTimeParse1() {
-    Frame fr = parseFromH2OFolder("smalldata/test/test_time.csv");
+    Frame fr = parseFrame(null,"smalldata/test/test_time.csv");
     Frame fr2 = fr.subframe(new String[]{"click_time","query_time"});
     double[][] exp = new double[][] {
       d(1314945892533L, 1314945839752L ),
@@ -45,7 +45,7 @@ public class ParseTime extends TestUtil {
       d(1500  ,  129625200000L, 1247641200000L, 1247641200000L, 0 ),
       d(15000 , 1296028800000L, 1254294000000L, 1254294000000L, 2 ),
     };
-    ParserTest2.testParsed(TestUtil.parseFromH2OFolder("smalldata/jira/v-11.csv"),exp,exp.length);
+    ParserTest2.testParsed(TestUtil.parseFrame(null,"smalldata/jira/v-11.csv"),exp,exp.length);
   }
 
   void runTests(){

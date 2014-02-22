@@ -605,7 +605,7 @@ public class ParserTest2 extends TestUtil {
       d( +.6e102,  +.7e102,  +.8e102, 0),
       d( -.6e102,  -.7e102,  -.8e102, 1)
     };
-    testParsed(TestUtil.parseFromH2OFolder("smalldata/test/test_parse_mix.csv"),exp,exp.length);
+    testParsed(TestUtil.parseFrame(null,"smalldata/test/test_parse_mix.csv"),exp,exp.length);
   }
 
   void runTests(){
