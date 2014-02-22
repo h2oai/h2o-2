@@ -537,7 +537,7 @@ public class NNModel extends Model {
     CM.serve();
     StringBuilder sb = new StringBuilder();
     final double error = CM.toASCII(sb); //either classification error or MSE
-    if (printCM && CM.cm.length < 30) {
+    if (printCM && (CM.cm==null || CM.cm.length < 30)) {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
