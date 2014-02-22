@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 1;
+  public static final int NODES = 3;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
@@ -42,7 +42,7 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       // tests = JUnitRunner.all();
-      tests.add(NNvsNeuralNet.class); //only passes for NODES=1, not clear why
+//      tests.add(NNvsNeuralNet.class); //only passes for NODES=1, not clear why
       tests.add(NeuralNetSpiralsTest.class); //compare NeuralNet vs reference
       tests.add(NeuralNetIrisTest.class); //compare NeuralNet vs reference
       tests.add(NeuralNetSpiralsTest2.class); //compare NN vs reference

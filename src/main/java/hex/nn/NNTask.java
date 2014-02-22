@@ -12,27 +12,26 @@ public class NNTask extends FrameTask<NNTask> {
   final private boolean _training;
   private NNModel.NNModelInfo _input;
   NNModel.NNModelInfo _output;
-  public NNModel.NNModelInfo model_info() { return _output; }
+  final public NNModel.NNModelInfo model_info() { return _output; }
 
   transient Neurons[] _neurons;
 
   int _chunk_node_count = 1;
 
-  public NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, boolean shuffle){this(dinfo,input,training,fraction,shuffle,null);}
-  private NNTask(DataInfo dinfo, NNModel.NNModelInfo input, boolean training, float fraction, boolean shuffle, H2OCountedCompleter cmp){
-    super(input.job(),dinfo,cmp);
+  public NNTask(NNModel.NNModelInfo input, boolean training, float fraction){this(input,training,fraction,null);}
+  private NNTask(NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
+    super(input.job(),input.data_info(),cmp);
     _training=training;
     _input=input;
     _useFraction=fraction;
     _seed=_input.get_params().seed;
-    _shuffle = shuffle;
+    _shuffle = _input.get_params().shuffle_training_data;
     assert(_output == null);
   }
 
   // transfer ownership from input to output (which will be worked on)
   @Override protected void setupLocal(){
     _output = _input; //faster, good enough in this case (since the input was freshly deserialized by the Weaver)
-//    _output = new NNModel.NNModelInfo(_input); //"correct" - but not needed
     _input = null;
     _output.set_processed_local(0l);
   }
