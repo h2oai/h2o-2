@@ -74,7 +74,8 @@ default: nightly_build_stuff
 
 nightly_build_stuff:
 	@echo PROJECT_VERSION is $(PROJECT_VERSION)
-	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION) 1> /dev/null
+	@mkdir -p target/logs
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) docs-website PROJECT_VERSION=$(PROJECT_VERSION)
 	@echo
@@ -84,7 +85,7 @@ build:
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
 	@echo
-	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/version_build.log
 
 	@echo
 	@echo "PHASE: Building H2O..."
@@ -94,7 +95,7 @@ build:
 	@echo
 	@echo "PHASE: Building hadoop driver..."
 	@echo
-	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/hadoop_build.log
 
 	@echo
 	@echo "PHASE: Building Shalala..."
@@ -104,12 +105,12 @@ build:
 	@echo
 	@echo "PHASE: Building R package..."
 	@echo
-	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/r_build.log
 
 	@echo
 	@echo "PHASE: Building zip package..."
 	@echo
-	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/package_build.log
 
 BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 BUILD_HASH=$(shell git log -1 --format="%H")
@@ -153,7 +154,7 @@ build_package:
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)/ec2
 	cp -p ec2/*.py ec2/*.sh ec2/README.txt target/h2o-$(PROJECT_VERSION)/ec2
-	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
+	(cd target; zip -q -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci
 	cp -rp ci target

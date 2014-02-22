@@ -42,8 +42,16 @@ ifeq ($(PDFLATEX),)
 else
 	-R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
-	mkdir -p h2o-package/inst/java/
-	cp -f ../target/h2o.jar h2o-package/inst/java/h2o.jar
+	rm -rf h2o-package/inst/java
+	mkdir -p h2o-package/inst/java/tmp
+	cp -f ../target/h2o.jar h2o-package/inst/java/tmp/h2o_full.jar
+	(cd h2o-package/inst/java/tmp && jar xf h2o_full.jar)
+	(cd h2o-package/inst/java/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
+	(cd h2o-package/inst/java/tmp && rm -f h2o_full.jar)
+	(cd h2o-package/inst/java/tmp && cp META-INF/MANIFEST.MF ..)
+	(cd h2o-package/inst/java/tmp && rm -fr META-INF)
+	(cd h2o-package/inst/java/tmp && jar cfm ../h2o.jar ../MANIFEST.MF *)
+	rm -rf h2o-package/inst/java/tmp
 	R CMD build h2o-package
 
 	# Create file with description of all packages
@@ -63,8 +71,8 @@ endif
 	R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2o-package || echo 'If you got an error like "Dependency foo is not available for package h2o" you need to install the required R package by running R and executing the R command: install.packages("foo")'
 
 ifneq ($(OS),Windows_NT)
-	tar zxvf $(H2O_R_PKG_FILE)
-	zip -r $(H2O_R_WINDOWS_FILE) h2o
+	tar zxf $(H2O_R_PKG_FILE)
+	zip -q -r $(H2O_R_WINDOWS_FILE) h2o
 	rm -rf h2o
 
 	# Create repo subdirectory for MacOSX
@@ -95,7 +103,7 @@ clean:
 	rm -f h2o-package/DESCRIPTION
 	rm -f h2o-package/h2o_package.pdf
 	rm -f h2o-package/man/h2o-package.Rd
-	rm -f h2o-package/inst/java/h2o.jar
+	rm -fr h2o-package/inst/java
 	rm -f h2o_*.tar.gz
 	rm -f h2o_*.tgz
 	rm -f h2o_*.zip
