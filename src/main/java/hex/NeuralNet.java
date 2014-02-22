@@ -506,7 +506,7 @@ public class NeuralNet extends ValidatedJob {
     }
     float[] preds = new float[out.length+1];
     for (int i=0;i<out.length;++i) preds[i+1] = (float)out[i];
-    preds[0] = Model.getPrediction(preds, (int)output._input._pos);
+    preds[0] = Model.getPrediction(preds, ls[0]._a);
 
     if( confusion != null ) {
       if (output.target() != Layer.missing_int_value) confusion[output.target()][(int)preds[0]]++;
