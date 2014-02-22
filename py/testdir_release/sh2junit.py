@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import sys, psutil, os, stat, tempfile, argparse, time
+import sys, psutil, os, stat, tempfile, argparse, time, datetime
 sys.path.extend(['.','..','../..','py'])
 import h2o_sandbox
 
@@ -58,14 +58,14 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
         content += '            <error type="Error in h2o logs" message="Error in h2o logs"></error>\n'
     content += '            <system-out>\n'
     content += '<![CDATA[\n'
-    content += 'spawn stdout**********************************************************\n'
+    content += 'spawn stdout' + str(datetime.datetime.now()) + '**********************************************************\n'
     content += out
     content += ']]>\n'
     content += '            </system-out>\n'
 
     content += '            <system-err>\n'
     content += '<![CDATA[\n'
-    content += 'spawn stderr**********************************************************\n'
+    content += 'spawn stderr' + str(datetime.datetime.now()) + '**********************************************************\n'
     content += err
     if sandboxErrorMessage:
         content += 'spawn errors from sandbox log parsing*********************************\n'

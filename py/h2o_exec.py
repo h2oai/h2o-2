@@ -3,10 +3,15 @@ import h2o, h2o_cmd, sys
 import time, random, re
 import h2o_browse as h2b
 
-def checkForBadFP(value, name='min_value', nanOkay=False):
+def checkForBadFP(value, name='min_value', nanOkay=False, json=None):
+    # if we passed the json, dump it for debug
     if 'Infinity' in str(value):
+        if json:
+            print h2o.dump_json(json)
         raise Exception("Infinity in inspected %s can't be good for: %s" % (str(value), name))
     if 'NaN' in str(value) and not nanOkay:
+        if json:
+            print h2o.dump_json(json)
         raise Exception("NaN in inspected %s can't be good for: %s" % (str(value), name))
 
 def checkScalarResult(resultInspect, resultKey):
@@ -45,7 +50,7 @@ def checkScalarResult(resultInspect, resultKey):
         scalar = resultInspect0['scalar']
         if scalar is None:
             raise Exception("both cols and scalar are null: %s %s" % (cols, scalar))
-        checkForBadFP(scalar)
+        checkForBadFP(scalar, json=resultInspect0)
         return scalar
 
     metaDict = cols[0]
@@ -55,7 +60,7 @@ def checkScalarResult(resultInspect, resultKey):
     min_value = metaDict['min']
     stype = metaDict['type']
     # if it's an enum col, it's okay for min to be NaN ..
-    checkForBadFP(min_value, nanOkay=stype=='Enum')
+    checkForBadFP(min_value, nanOkay=stype=='Enum', json=metaDict)
 
 
     # do a VA inspect to see if the fvec to va converter works
