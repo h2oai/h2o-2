@@ -88,7 +88,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
-    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
+    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
     Request.addToNavbar(registerRequest(new NN()),          "NN (Beta)",                  "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
@@ -96,7 +96,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",                     "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",               "Score");
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
-    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (Beta)",   "Score");
+    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (deprecated)","Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
     Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
