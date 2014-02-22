@@ -204,26 +204,31 @@ printenv | grep H2OWrapperDir
 myR ../../R/tests/Utils/runnerSetupPackage 300
 # myR ../../R/tests/testdir_munging/histograms/runit_histograms 1200
 
-# sleep 3600
-# have to ignore the Rsandbox dirs that got created in the tests directory
-for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
-do
-    if [ -d $test ];
-    then
-        continue
-    fi  
-    testName=$(basename $test)
-    testDir=$(dirname $test)
-    testDirParent=$(dirname $testDir)
-    if [ $(basename $testDirParent) != "tests" ];
-    then
-        testDirName=$(basename $testDirParent)/$(basename $testDir)
-    else
-        testDirName=$(basename $testDir)
-    fi  
-    myR $testDirName/$testName 300
-    sleep 180
-done
+# these are used to run a single test (from the command line -d -t)
+if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
+then
+    # have to ignore the Rsandbox dirs that got created in the tests directory
+    for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
+    do
+        if [ -d $test ];
+        then
+            continue
+        fi  
+        testName=$(basename $test)
+        testDir=$(dirname $test)
+        testDirParent=$(dirname $testDir)
+        if [ $(basename $testDirParent) != "tests" ];
+        then
+            testDirName=$(basename $testDirParent)/$(basename $testDir)
+        else
+            testDirName=$(basename $testDir)
+        fi  
+        myR $testDirName/$testName 300
+        sleep 180
+    done
+else
+    myR $TESTDIR/$TEST 300
+fi
 
 # airlines is failing summary. put it last
 #myR $single/runit_libR_airlines 120

@@ -398,7 +398,7 @@ h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALS
 }
 
 # -------------------------- ValueArray -------------------------- #
-h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none") {
+h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", mySeed=0) {
   if(missing(data) ) stop('Must specify data')
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
@@ -428,7 +428,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
   cols_ind <- cols_ind - 1
   myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = cols_ind, initialization = myInit)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = cols_ind, initialization = myInit, seed=mySeed)
   job_key = res$response$redirect_request_args$job
   destKey = res$destination_key
 
@@ -456,7 +456,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE, init = "none") {
+h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE, init = "none", mySeed=0) {
   if( missing(data) ) stop('Must specify data')
   # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
@@ -484,7 +484,7 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10, normalize = FALSE
   myIgnore <- ifelse(cols == '' || length(temp) == 0, '', paste(temp, sep=','))
   myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization = myInit)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization = myInit, seed=mySeed)
   params = list(cols=ifelse(cols == "", cc, cols), centers=centers, iter.max=iter.max, normalize=normalize, init = myInit)
   
   if(length(centers) == 1 && length(iter.max) == 1) {

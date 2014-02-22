@@ -48,8 +48,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
       NN.Activation[] activations = { NN.Activation.Tanh, NN.Activation.Rectifier };
       NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
       NN.InitialWeightDistribution[] dists = {
-              NN.InitialWeightDistribution.Normal,
-              NN.InitialWeightDistribution.Uniform,
+//              NN.InitialWeightDistribution.Normal,
+//              NN.InitialWeightDistribution.Uniform,
               NN.InitialWeightDistribution.UniformAdaptive
       };
       double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
@@ -146,6 +146,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.classification = true;
                         p.diagnostics = true;
                         p.validation = null;
+                        p.quiet_mode = true;
                         p.fast_mode = false; //to be the same as reference
 //                      p.fast_mode = true; //to be the same as old NeuralNet code
                         p.nesterov_accelerated_gradient = false; //to be the same as reference
@@ -154,9 +155,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.ignore_const_cols = false;
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
-                        p.initModel(); //randomize weights, but don't start training yet
+                        NNModel mymodel = p.initModel(); //randomize weights, but don't start training yet
 
-                        NNModel mymodel = UKV.get(p.dest());
                         Neurons[] neurons = NNTask.makeNeuronsForTraining(mymodel.model_info());
 
                         // use the same random weights for the reference implementation
@@ -183,8 +183,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         ref.train((int)p.epochs, rate, p.momentum_stable, loss);
 
                         // Train H2O
-                        mymodel = p.buildModel();
-
+                        mymodel = p.buildModel(mymodel);
 
                         /**
                          * Tolerances (super tight -> expect the same double/float precision math inside both algos)
