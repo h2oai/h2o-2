@@ -152,6 +152,8 @@ mySetup() {
 }
 
 myR() {
+    # we change dir, but return it to what it was, on the return
+    pushd .
     # these are hardwired in the config json used above for the cloud
     # CLOUD_IP=
     # CLOUD_PORT=
@@ -180,26 +182,30 @@ myR() {
     ls $H2OWrapperDir/h2o*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
-    rScript=$H2O_R_HOME/tests/$1.R
+    # test paths are always relative to tests
+    testDir=$(dirname $1)
+    shdir=$H2O_R_HOME/tests/$testDir
+    testName=$(basename $1)
+    rScript=$testName.R
     echo $rScript
-    echo "Running this cmd:"
+    echo "Will run this cmd in $shdir"
     cmd="R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
     echo $cmd
 
     # don't fail on errors, since we want to check the logs in case that has more info!
     set +e
-    # everything after -- is positional. grabbed by argparse.REMAINDER
-    basen=`basename "$1"`
-    echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout $timeout -- $cmd || true
+    # executes the $cmd in the target dir, but the logs stay in sandbox here
+    # -dir is optional
+    ./sh2junit.py -shdir $shdir -name $testName -timeout $timeout -- $cmd || true
 
     # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
     # think of h2o.check_sandbox_for_errors()
-    rm -f -r sandbox/$1
-    mkdir -p sandbox/$1
-    cp -f sandbox/*log sandbox/$1
+    # rm -f -r sandbox/$1
+    # mkdir -p sandbox/$1
+    # cp -f sandbox/*log sandbox/$1
     # rm -f sandbox/*log
     set -e
+    popd
 }
 
 H2O_R_HOME=../../R
@@ -223,22 +229,13 @@ myR ../../R/tests/Utils/runnerSetupPackage 300
 if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
 then
     # have to ignore the Rsandbox dirs that got created in the tests directory
-    for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
+    for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox|/results/' | grep 'runit.*\.[rR]' | sed -e 's!\.[rR]$!!');
     do
-        if [ -d $test ];
-        then
-            continue
-        fi  
         testName=$(basename $test)
         testDir=$(dirname $test)
         testDirParent=$(dirname $testDir)
-        if [ $(basename $testDirParent) != "tests" ];
-        then
-            testDirName=$(basename $testDirParent)/$(basename $testDir)
-        else
-            testDirName=$(basename $testDir)
-        fi  
-        myR $testDirName/$testName 300
+        testDirName=$(basename $testDir)
+        myR $test 300
         sleep 180
     done
 else
