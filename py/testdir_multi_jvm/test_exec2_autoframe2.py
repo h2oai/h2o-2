@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(3)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
 
@@ -22,10 +22,11 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec2_covtype_cols(self):
-        h2o.beta_features = True
+    def test_exec2_autoframe(self):
+        h2o.beta_features = False
         csvPathname = 'standard/covtype.data'
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', 
+            hex_key='c.hex', timeoutSecs=10, doSummary=False)
         print "\nParse key is:", parseResult['destination_key']
 
         ### h2b.browseTheCloud()

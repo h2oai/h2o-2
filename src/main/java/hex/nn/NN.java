@@ -2,29 +2,25 @@ package hex.nn;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import junit.framework.Assert;
-import org.junit.Test;
-import water.*;
+import water.H2O;
+import water.Job;
+import water.Key;
+import water.UKV;
 import water.api.DocGen;
 import water.api.NNProgressPage;
 import water.api.RequestServer;
 import water.fvec.Frame;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
 import water.util.Log;
 import water.util.RString;
 
 import java.util.Random;
 
-import static water.TestUtil.find_test_file;
 import static water.util.MRUtils.sampleFrame;
 
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network 2";
-
-  public DataInfo _dinfo;
 
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
@@ -89,31 +85,31 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Shortest interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 2;
 
-  @API(help = "Number of training set samples between synchronization (0 for all).", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Number of training set samples between multi-node synchronization (0 for all).", filter = Default.class, lmin = 0, json = true)
   public long sync_samples = 10000l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
 
-  @API(help = "Enable fast mode (minor approximation in backpropagation)", filter = Default.class, json = true)
+  @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
 
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
-  @API(help = "Shuffle training data", filter = Default.class, json = true)
+  @API(help = "Enable periodic shuffling of training data (can increase stochastic gradient descent performance)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
-  @API(help = "Use Nesterov accelerated gradient", filter = Default.class, json = true)
+  @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
 
-  @API(help = "Stopping criterion for classification error fraction (negative number for none)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for classification error fraction (negative number to disable)", filter = Default.class, json = true, gridable = false)
   public double classification_stop = 0;
 
-  @API(help = "Stopping criterion for regression error (negative number for none)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for regression error (negative number to disable)", filter = Default.class, json = true, gridable = false)
   public double regression_stop = 1e-6;
 
-  @API(help = "Quiet mode - print less output", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
   public boolean quiet_mode = false;
 
   public enum InitialWeightDistribution {
@@ -147,15 +143,6 @@ public class NN extends Job.ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
-//    if (arg._name.equals("classification")) {
-//      classification = true;
-//      arg.disable("Regression is not currently supported.");
-//    }
-//    if (arg._name.equals("input_dropout_ratio") &&
-//            (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
-//            ) {
-//      arg.disable("Only with Dropout.", inputArgs);
-//    }
     if(arg._name.equals("initial_weight_scale") &&
             (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
@@ -172,20 +159,29 @@ public class NN extends Job.ValidatedJob {
       arg.disable("Only for regression.", inputArgs);
     }
     if (arg._name.equals("score_validation_samples") && validation == null) {
-      arg.disable("Only if a validation set is specified.");
+      arg.disable("Only if a validation set is specified.", inputArgs);
     }
     if (arg._name.equals("sync_samples") && H2O.CLOUD.size() == 1) {
       sync_samples = 0; //sync once per epoch on a single node
-      arg.disable("Only for multi-node operation.");
+      arg.disable("Only for multi-node operation.", inputArgs);
     }
     if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
-            || arg._name.equals("score_training_samples") || arg._name.equals("score_validation_samples")
-            || arg._name.equals("initial_weight_distribution") || arg._name.equals("initial_weight_scale")
-            || arg._name.equals("score_interval") || arg._name.equals("diagnostics")
-            || arg._name.equals("rate_decay") || arg._name.equals("sync_samples")
+            || arg._name.equals("score_training_samples")
+            || arg._name.equals("score_validation_samples")
+            || arg._name.equals("initial_weight_distribution")
+            || arg._name.equals("initial_weight_scale")
+            || arg._name.equals("score_interval")
+            || arg._name.equals("diagnostics")
+            || arg._name.equals("rate_decay")
+            || arg._name.equals("sync_samples")
             || arg._name.equals("fast_mode")
+            || arg._name.equals("ignore_const_cols")
+            || arg._name.equals("shuffle_training_data")
+            || arg._name.equals("nesterov_accelerated_gradient") || arg._name.equals("classification_stop")
+            || arg._name.equals("regression_stop")
+            || arg._name.equals("quiet_mode")
             ) {
-      if (!expert_mode) arg.disable("Only in expert mode.");
+      if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
   }
 
@@ -215,8 +211,8 @@ public class NN extends Job.ValidatedJob {
   }
 
   @Override public JobState exec() {
-    initModel();
-    buildModel();
+    buildModel(initModel());
+    delete();
     return JobState.DONE;
   }
 
@@ -236,10 +232,10 @@ public class NN extends Job.ValidatedJob {
     }
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
-      destination_key = Key.make("NN_model");
+      destination_key = Key.make();
     }
     if (self() == null) {
-      job_key = Key.make("NN_job");
+      job_key = Key.make();
     }
     if (UKV.get(self()) == null) {
       start_time = System.currentTimeMillis();
@@ -249,37 +245,44 @@ public class NN extends Job.ValidatedJob {
     }
   }
 
-  public void initModel() {
+  public final NNModel initModel() {
     checkParams();
+    lock_data();
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
+    final NNModel model = new NNModel(dest(), self(), source._key, dinfo, this);
+    unlock_data();
+    model.model_info().initializeMembers();
+    return model;
+  }
+
+  public final NNModel buildModel(NNModel model) {
+    lock_data();
     logStart();
-    // Lock the input datasets against deletes
-    source.read_lock(self());
-    if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
-      validation.read_lock(self());
     Log.info("Number of chunks of the training data: " + source.anyVec().nChunks());
     if (validation != null)
       Log.info("Number of chunks of the validation data: " + validation.anyVec().nChunks());
+    if (model == null) {
+      model = UKV.get(dest());
+    }
+    model.write_lock(self());
+    Log.info("Initial model:\n" + model.model_info());
 
-    if (_dinfo == null)
-      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols), 1, true, !classification);
-    NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
-    model.model_info().initializeMembers();
-    //Log.info("Initial model:\n" + model.model_info());
     final long model_size = model.model_info().size();
     Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
     Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
-    model.delete_and_lock(self());
-  }
 
-  public NNModel buildModel() {
-    final NNModel model = UKV.get(dest());
-    final Frame[] valid_adapted = validation == null ? null : model.adapt(validation, false);
-    Frame train = _dinfo._adaptedFrame;
-    Frame valid = validation == null ? null : valid_adapted[0];
-
-    // Optionally downsample data for scoring
+    final Frame train = model.model_info().data_info()._adaptedFrame;
     Frame trainScoreFrame = sampleFrame(train, score_training_samples, seed);
-    Frame validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
+
+    Frame[] valid_adapted = null;
+    Frame valid = null;
+    Frame validScoreFrame = null;
+    if (validation != null) {
+      valid_adapted = model.adapt(validation, false);
+      valid = valid_adapted[0];
+      validScoreFrame = valid != validation ? sampleFrame(valid, score_validation_samples, seed+1) : null;
+    }
 
     if (sync_samples > train.numRows()) {
       Log.warn("Setting sync_samples (" + sync_samples
@@ -290,52 +293,54 @@ public class NN extends Job.ValidatedJob {
 
     Log.info("Starting to train the Neural Net model.");
     long timeStart = System.currentTimeMillis();
-    //main loop
-    do {
-//      shuffle();
-      NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction, shuffle_training_data).doAll(train);
-      model.set_model_info(nntask.model_info());
-    } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self()));
 
-    //cleanup
-    //unlock the model, and training/validation sets
+    //main loop
+    do model.set_model_info(new NNTask(model.model_info(), true /*train*/, sync_fraction).doAll(train).model_info());
+    while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self()));
     model.unlock(self());
 
-    //delete temporary frames
+    //clean up
     if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
     if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
 //    if (_newsource != null && _newsource != source) _newsource.delete();
-
-    // unlock input datasets
-    source.unlock(self());
-    if( validation != null && !source._key.equals(validation._key) )
-      validation.unlock(self());
-    if (_fakejob) UKV.remove(job_key);
-    remove(); //remove the job
-
+    unlock_data();
     Log.info("Finished training the Neural Net model.");
     return model;
   }
 
+  private void lock_data() {
+    // Lock the input datasets against deletes
+    source.read_lock(self());
+    if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
+      validation.read_lock(self());
+  }
+
+  private void unlock_data() {
+    source.unlock(self());
+    if( validation != null && !source._key.equals(validation._key) )
+      validation.unlock(self());
+  }
+
+  public void delete() {
+    if (_fakejob) UKV.remove(job_key);
+    remove();
+  }
+
   /*
   long _iter = 0;
-  Frame _newsource = null;
-  private void shuffle() {
-    if (!shuffle_training_data) return;
-    Log.info("Shuffling.");
-    _newsource = shuffleAndBalance(source, seed+_iter++, shuffle_training_data);
-    Vec resp = _newsource.vecs()[resp_pos];
-    _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(_newsource, resp, ignored_cols, true, ignore_const_cols), 1, true);
-    Log.info("Shuffling done.");
+  private void reBalance(Frame fr) {
+    shuffleAndBalance(fr, seed+_iter++, shuffle_training_data);
+    fr.reloadVecs();
+    Log.info("Number of chunks of " + fr.toString() + ": " + fr.anyVec().nChunks());
   }
 
   // master node collects all rows, and distributes them across the cluster - slow
-  private static Frame shuffleAndBalance(Frame fr, long seed, final boolean shuffle) {
+  private static void shuffleAndBalance(Frame fr, long seed, final boolean shuffle) {
     int cores = 0;
     for( H2ONode node : H2O.CLOUD._memary )
       cores += node._heartbeat._num_cpus;
-    final int splits = 4*cores;
+    final int splits = cores;
 
     long[] idx = null;
     if (shuffle) {
@@ -365,59 +370,6 @@ public class NN extends Job.ValidatedJob {
         vecs[v] = t;
       }
     }
-    return new Frame(fr.names(), vecs);
   }
   */
-
-
-  @Test
-  public void test() {
-    Key file = NFSFileVec.make(find_test_file("smalldata/mnist/test.csv.gz"));
-    Frame fr = ParseDataset2.parse(Key.make("mnist"), new Key[]{file});
-    NN p = new NN();
-    p.hidden = new int[]{128,128,256};
-    p.activation = NN.Activation.RectifierWithDropout;
-    p.input_dropout_ratio = 0.4;
-    p.validation = null;
-    p.source = fr;
-    p.response = fr.lastVec();
-    p.ignored_cols = null;
-    p.ignore_const_cols = true;
-
-    DataInfo dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols), 1, true);
-    NNModel.NNModelInfo model_info = new NNModel.NNModelInfo(p, dinfo);
-
-    Neurons[] neurons  = NNTask.makeNeuronsForTraining(model_info);
-    //dropout training for 100 rows - just to populate the weights/biases a bit
-    for (long row = 0; row < 100; ++row) {
-      double[] nums = new double[dinfo._nums];
-      for (int i=0; i<dinfo._nums; ++i)
-        nums[i] = fr.vecs()[i].at(row); //wrong: get the FIRST 717 columns (instead of the non-const ones), but doesn't matter here (just want SOME numbers)
-      ((Neurons.Input)neurons[0]).setInput(row, nums, 0, null);
-      final double[] responses = new double[]{fr.vecs()[p.source.numCols()-1].at(row)};
-      final long seed = row;
-      NNTask.step(seed, neurons, model_info, true, responses);
-    }
-
-    // take the trained model_info and build another Neurons[] for testing
-    Neurons[] neurons2 = NNTask.makeNeuronsForTesting(model_info);
-
-    for (int i=1; i<neurons.length-1; ++i) {
-      Assert.assertEquals(neurons[i]._w, neurons2[i]._w); //same reference (from same model_info)
-      for (int j=0; j<neurons[i]._w.length; ++j)
-        Assert.assertEquals(neurons[i]._w[j], neurons2[i]._w[j]); //same values
-      Assert.assertEquals(neurons[i]._b, neurons2[i]._b); //same reference (from same model_info)
-      for (int j=0; j<neurons[i]._b.length; ++j)
-        Assert.assertEquals(neurons[i]._b[j], neurons2[i]._b[j]); //same values
-      Assert.assertNotSame(neurons[i]._a, neurons2[i]._a); //different (non-shared) activation containers
-      for (int j=0; j<neurons[i]._a.length; ++j)
-        Assert.assertNotSame(neurons[i]._a[j], neurons2[i]._a[j]); //local activation values
-      if (! (neurons[i] instanceof Neurons.Output) ) {
-        Assert.assertNotSame(neurons[i]._e, neurons2[i]._e); //different error containers
-        for (int j=0; j<neurons[i]._e.length; ++j)
-          Assert.assertEquals(neurons[i]._e[j], neurons2[i]._e[j]); //same values: 0
-      }
-    }
-    fr.delete();
-  }
 }

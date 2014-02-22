@@ -17,6 +17,7 @@ NO_DOWNLOAD=0
 USE_EXISTING=0
 BRANCH=master
 TESTDIR=
+TEST=
 while getopts hunb:d:t: flag
 do
     case $flag in

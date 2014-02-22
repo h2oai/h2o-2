@@ -43,7 +43,7 @@ then
     # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
     # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
     # CLOUD_IP=192.168.1.161
-    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    python ../four_hour_cloud.py -cj pytest_config-jenkins-164.json &
     # make sure this matches what's in the json!
     CLOUD_IP=192.168.1.164
     CLOUD_PORT=54355
@@ -116,8 +116,30 @@ mySetup() {
     .libPaths()
     myPackages = rownames(installed.packages())
     if("h2o" %in% myPackages) {
+      # detach("package:h2o", unload=TRUE) 
       remove.packages("h2o")
     }
+    if("h2oRClient" %in% myPackages) {
+      # detach("package:h2oRClient", unload=TRUE) 
+      remove.packages("h2oRClient")
+    }
+    # what packages did the h2o_master_test need?
+    install.packages("Rcurl")
+    install.packages("rjson")
+    install.packages("statmod")
+    install.packages("testthat")
+    install.packages("bitops")
+    install.packages("tools")
+    install.packages("LiblineaR")
+    install.packages("gdata")
+    install.packages("caTools")
+    install.packages("gplots")
+    install.packages("ROCR")
+    install.packages("digest")
+    # install.packages("h2o")
+    # install.packages("h2oRClient")
+    # install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
+    # library(h2o)
 !
 
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
@@ -126,7 +148,7 @@ mySetup() {
     # everything after -- is positional. grabbed by argparse.REMAINDER
     basen=`basename "$1"`
     echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout 30 -- $cmd
+    ./sh2junit.py -name $basen -timeout 180 -- $cmd
 }
 
 myR() {
@@ -151,6 +173,8 @@ myR() {
     # this is where we downloaded to. 
     # notice no version number
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
+
+    echo "FIX!  we don't need H2OWrapperDir stuff any more???"
     export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
     echo "H2OWrapperDir should be $H2OWrapperDir"
     ls $H2OWrapperDir/h2o*.tar.gz
@@ -195,26 +219,31 @@ printenv | grep H2OWrapperDir
 myR ../../R/tests/Utils/runnerSetupPackage 300
 # myR ../../R/tests/testdir_munging/histograms/runit_histograms 1200
 
-# sleep 3600
-# have to ignore the Rsandbox dirs that got created in the tests directory
-for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
-do
-    if [ -d $test ];
-    then
-        continue
-    fi  
-    testName=$(basename $test)
-    testDir=$(dirname $test)
-    testDirParent=$(dirname $testDir)
-    if [ $(basename $testDirParent) != "tests" ];
-    then
-        testDirName=$(basename $testDirParent)/$(basename $testDir)
-    else
-        testDirName=$(basename $testDir)
-    fi  
-    myR $testDirName/$testName 300
-    sleep 180
-done
+# these are used to run a single test (from the command line -d -t)
+if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
+then
+    # have to ignore the Rsandbox dirs that got created in the tests directory
+    for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
+    do
+        if [ -d $test ];
+        then
+            continue
+        fi  
+        testName=$(basename $test)
+        testDir=$(dirname $test)
+        testDirParent=$(dirname $testDir)
+        if [ $(basename $testDirParent) != "tests" ];
+        then
+            testDirName=$(basename $testDirParent)/$(basename $testDir)
+        else
+            testDirName=$(basename $testDir)
+        fi  
+        myR $testDirName/$testName 300
+        sleep 180
+    done
+else
+    myR $TESTDIR/$TEST 300
+fi
 
 # airlines is failing summary. put it last
 #myR $single/runit_libR_airlines 120

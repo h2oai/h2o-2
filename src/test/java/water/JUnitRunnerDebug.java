@@ -2,7 +2,6 @@ package water;
 
 import hex.*;
 import hex.nn.Dropout;
-import hex.nn.NN;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -49,7 +48,6 @@ public class JUnitRunnerDebug {
       tests.add(NeuralNetSpiralsTest2.class); //compare NN vs reference
       tests.add(NeuralNetIrisTest2.class); //compare NN vs reference
       tests.add(Dropout.class); //test NN Dropput
-      tests.add(NN.class); //test NN
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}

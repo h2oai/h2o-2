@@ -39,7 +39,7 @@ public class NNModel extends Model {
 
   @Override public void delete() {
     super.delete();
-    model_info.cleanUp();
+    model_info.delete();
   }
 
   public static class Errors extends Iced {
@@ -220,27 +220,6 @@ public class NNModel extends Model {
       rms_weight = new double[units.length];
     }
 
-    public NNModelInfo(NNModelInfo other) {
-      this(other.parameters, other.data_info());
-      set_processed_local(other.get_processed_local());
-      set_processed_global(other.get_processed_global());
-      for (int i=0; i<other.weights.length; ++i)
-        weights[i] = other.weights[i].clone();
-      for (int i=0; i<other.biases.length; ++i)
-        biases[i] = other.biases[i].clone();
-      if (has_momenta()) {
-        for (int i=0; i<other.weights_momenta.length; ++i)
-          weights_momenta[i] = other.weights_momenta[i].clone();
-        for (int i=0; i<other.biases_momenta.length; ++i)
-          biases_momenta[i] = other.biases_momenta[i].clone();
-      }
-      mean_bias = other.mean_bias.clone();
-      rms_bias = other.rms_bias.clone();
-      mean_weight = other.mean_weight.clone();
-      rms_weight = other.rms_weight.clone();
-      unstable = other.unstable;
-    }
-
     protected void createMomenta() {
       if (has_momenta() && weights_momenta == null) {
         weights_momenta = new float[weights.length][];
@@ -249,9 +228,9 @@ public class NNModel extends Model {
         for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
       }
     }
-    public void cleanUp() {
+    public void delete() {
       // ugly: whoever made data_info should also clean this up... but sometimes it was made by Weaver from UKV!
-      UKV.remove(data_info()._adaptedFrame.lastVec()._key);
+      if (data_info()._adaptedFrame.lastVec()._key!=null) UKV.remove(data_info()._adaptedFrame.lastVec()._key);
     }
 
     @Override public String toString() {
@@ -436,10 +415,10 @@ public class NNModel extends Model {
    * @param ftrain potentially downsampled training data for scoring
    * @param ftest  potentially downsampled validation data for scoring
    * @param timeStart start time in milliseconds, used to report training speed
-   * @param dest_key where to store the model with the diagnostics in it
+   * @param job_key key of the owning job
    * @return true if model building is ongoing
    */
-  boolean doDiagnostics(Frame ftrain, Frame ftest, long timeStart, Key dest_key) {
+  boolean doDiagnostics(Frame ftrain, Frame ftest, long timeStart, Key job_key) {
     epoch_counter = (float)model_info().get_processed_total()/model_info().data_info._adaptedFrame.numRows();
     run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().parameters.epochs);
@@ -512,7 +491,7 @@ public class NNModel extends Model {
       Log.info("Achieved 100% modeling accuracy on the validation data. We are done here.");
       keep_running = false;
     }
-    update(dest_key); //update model in UKV
+    update(job_key);
 //    System.out.println(this);
     return keep_running;
   }
@@ -558,7 +537,7 @@ public class NNModel extends Model {
     CM.serve();
     StringBuilder sb = new StringBuilder();
     final double error = CM.toASCII(sb); //either classification error or MSE
-    if (printCM) {
+    if (printCM && CM.cm.length < 30) {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
@@ -743,18 +722,16 @@ public class NNModel extends Model {
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
 
-    String training = "Number of training set samples for scoring: " + (fulltrain ? "all " + model_info().data_info()._adaptedFrame.numRows() : score_train);
-    if (score_train > 0) {
-      if (score_train < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-      if (score_train > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
-    }
+    final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
+    String training = "Number of training set samples for scoring: " + (fulltrain ? "all " : "") + pts;
+    if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+    if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
     DocGen.HTML.section(sb, training);
     if (error.validation) {
-      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " + model_info().get_params().validation.numRows() : score_valid);
-      if (score_valid > 0) {
-        if (score_valid < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-        if (score_valid > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
-      }
+      final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
+      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " : "") + pts;
+      if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+      if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
       DocGen.HTML.section(sb, validation);
     }
 

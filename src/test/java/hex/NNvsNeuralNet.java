@@ -152,8 +152,6 @@ public class NNvsNeuralNet extends TestUtil {
                             p.source = (Frame)_train.clone();
                             p.response = _train.lastVec();
                             p.ignored_cols = null;
-                            Frame fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
-                            p._dinfo = new FrameTask.DataInfo(fr, 1, true);
                             p.seed = seed;
                             p.hidden = hidden;
                             p.rate = rate;
@@ -173,13 +171,14 @@ public class NNvsNeuralNet extends TestUtil {
                             p.classification = true;
                             p.diagnostics = true;
                             p.validation = null;
+                            p.quiet_mode = true;
                             p.fast_mode = true; //same as old NeuralNet code
                             p.sync_samples = 0; //sync once per period
                             p.ignore_const_cols = false; //same as old NeuralNet code
                             p.shuffle_training_data = false; //same as old NeuralNet code
-//                          p.ignore_const_cols = true; //better results
-//                          p.shuffle_training_data = true; //better results
-                            p.exec(); //randomize weights, but don't start training yet
+                            p.nesterov_accelerated_gradient = true; //same as old NeuralNet code
+                            p.classification_stop = -1; //don't stop early -> need to compare against old NeuralNet code, which doesn't stop either
+                            p.exec();
 
                             mymodel = UKV.get(p.dest());
                             neurons = NNTask.makeNeuronsForTesting(mymodel.model_info());
@@ -278,7 +277,6 @@ public class NNvsNeuralNet extends TestUtil {
                            */
                           // NN scoring
                           {
-
                             Frame fpreds = mymodel.score(_train); //[0] is label, [1]...[4] are the probabilities
                             water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
                             CM.actual = _train;

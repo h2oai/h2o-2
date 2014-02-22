@@ -19,8 +19,7 @@ initList = [
 if 1==0:
     exprListFull = [
     ]
-
-else
+else:
     exprListFull = [
         'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
         'cct.hex=runif(r.hex);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',

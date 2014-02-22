@@ -7,7 +7,10 @@ import hex.nn.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import water.*;
+import water.JUnitRunnerDebug;
+import water.Key;
+import water.Model;
+import water.TestUtil;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -85,6 +88,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         Random rand;
 
                         int trial = 0;
+                        FrameTask.DataInfo dinfo;
                         do {
                           Log.info("Trial #" + ++trial);
                           if (_train != null) _train.delete();
@@ -118,10 +122,10 @@ public class NeuralNetIrisTest2 extends TestUtil {
                           p.ignored_cols = null;
                           p.ignore_const_cols = true;
                           fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
-                          p._dinfo = new FrameTask.DataInfo(fr, 1, true);
+                          dinfo = new FrameTask.DataInfo(fr, 1, true);
                         }
                         // must have all output classes in training data (since that's what the reference implementation has hardcoded)
-                        while (p._dinfo._adaptedFrame.lastVec().domain().length < 3);
+                        while (dinfo._adaptedFrame.lastVec().domain().length < 3);
 
                         // use the same seed for the reference implementation
                         NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
@@ -155,9 +159,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.ignore_const_cols = false;
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
-                        p.initModel(); //randomize weights, but don't start training yet
+                        NNModel mymodel = p.initModel(); //randomize weights, but don't start training yet
 
-                        NNModel mymodel = UKV.get(p.dest());
                         Neurons[] neurons = NNTask.makeNeuronsForTraining(mymodel.model_info());
 
                         // use the same random weights for the reference implementation
@@ -184,8 +187,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         ref.train((int)p.epochs, rate, p.momentum_stable, loss);
 
                         // Train H2O
-                        mymodel = p.buildModel();
-
+                        mymodel = p.buildModel(mymodel);
 
                         /**
                          * Tolerances (super tight -> expect the same double/float precision math inside both algos)
@@ -276,6 +278,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         _test.delete();
                         frame.delete();
                         fr.delete();
+                        p.delete();
 
                         num_runs++;
                         Log.info("Parameters combination " + num_runs + ": PASS");
