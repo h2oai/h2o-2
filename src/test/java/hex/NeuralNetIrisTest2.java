@@ -278,6 +278,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         _test.delete();
                         frame.delete();
                         fr.delete();
+                        p.delete();
 
                         num_runs++;
                         Log.info("Parameters combination " + num_runs + ": PASS");
