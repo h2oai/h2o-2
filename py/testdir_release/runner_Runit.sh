@@ -116,8 +116,15 @@ mySetup() {
     .libPaths()
     myPackages = rownames(installed.packages())
     if("h2o" %in% myPackages) {
+      detach("package:h2o", unload=TRUE) 
       remove.packages("h2o")
     }
+    if("h2oRClient" %in% myPackages) {
+      detach("package:h2oRClient", unload=TRUE) 
+      remove.packages("h2oRClient")
+    }
+    install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
+    library(h2o)
 !
 
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
@@ -151,6 +158,8 @@ myR() {
     # this is where we downloaded to. 
     # notice no version number
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
+
+    echo "FIX!  we don't need H2OWrapperDir stuff any more???"
     export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
     echo "H2OWrapperDir should be $H2OWrapperDir"
     ls $H2OWrapperDir/h2o*.tar.gz
