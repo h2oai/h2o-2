@@ -99,6 +99,11 @@ endif
 	R CMD REMOVE -l $(TMP_BUILD_DIR) h2o
 	rm -rf $(TMP_BUILD_DIR)
 
+check:
+	find h2o-package -name .DS_Store | xargs rm -f
+	R CMD CHECK h2o-package
+	curl -v http://localhost:54321/Shutdown.json
+
 clean:
 	rm -f h2o-package/DESCRIPTION
 	rm -f h2o-package/h2o_package.pdf
