@@ -220,27 +220,6 @@ public class NNModel extends Model {
       rms_weight = new double[units.length];
     }
 
-    public NNModelInfo(NNModelInfo other) {
-      this(other.parameters, other.data_info());
-      set_processed_local(other.get_processed_local());
-      set_processed_global(other.get_processed_global());
-      for (int i=0; i<other.weights.length; ++i)
-        weights[i] = other.weights[i].clone();
-      for (int i=0; i<other.biases.length; ++i)
-        biases[i] = other.biases[i].clone();
-      if (has_momenta()) {
-        for (int i=0; i<other.weights_momenta.length; ++i)
-          weights_momenta[i] = other.weights_momenta[i].clone();
-        for (int i=0; i<other.biases_momenta.length; ++i)
-          biases_momenta[i] = other.biases_momenta[i].clone();
-      }
-      mean_bias = other.mean_bias.clone();
-      rms_bias = other.rms_bias.clone();
-      mean_weight = other.mean_weight.clone();
-      rms_weight = other.rms_weight.clone();
-      unstable = other.unstable;
-    }
-
     protected void createMomenta() {
       if (has_momenta() && weights_momenta == null) {
         weights_momenta = new float[weights.length][];
@@ -558,7 +537,7 @@ public class NNModel extends Model {
     CM.serve();
     StringBuilder sb = new StringBuilder();
     final double error = CM.toASCII(sb); //either classification error or MSE
-    if (printCM) {
+    if (printCM && CM.cm.length < 30) {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
