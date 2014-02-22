@@ -80,33 +80,32 @@ nightly_build_stuff:
 	@echo
 	@echo Build completed successfully.
 
-MILLIS_SINCE_EPOCH = $(shell date '+%s')
-
 build:
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
 	@echo
 	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION)
+
 	@echo
 	@echo "PHASE: Building H2O..."
 	@echo
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
-	@echo
-	@echo "PHASE: Building Shalala..."
-	@echo
-	$(MAKE) -C h2o-scala PROJECT_VERSION=$(PROJECT_VERSION)
-	@echo
-	@echo "PHASE: Building R package..."
-	@echo
-	$(MAKE) -C R build_rh2o PROJECT_VERSION=$(PROJECT_VERSION)
+
 	@echo
 	@echo "PHASE: Building hadoop driver..."
 	@echo
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
+
 	@echo
-	@echo "PHASE: Building launcher..."
+	@echo "PHASE: Building Shalala..."
 	@echo
-	$(MAKE) -C launcher build PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) -C h2o-scala PROJECT_VERSION=$(PROJECT_VERSION)
+
+	@echo
+	@echo "PHASE: Building R package..."
+	@echo
+	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION)
+
 	@echo
 	@echo "PHASE: Building zip package..."
 	@echo
@@ -177,7 +176,7 @@ docs-website: dw_announce
 
 docs-website-clean:
 else
-docs-website: dw_announce dw_1 dw_2 dw_3 dw_4
+docs-website: dw_announce dw_1 dw_2 dw_3
 
 docs-website-clean:
 	rm -rf h2o-docs/source/developuser/DocGen
@@ -220,22 +219,6 @@ dw_3:
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
-
-# Note:  to get pdfunite on a mac, try:
-#     $ brew install poppler
-#
-PDFLATEX=$(shell which pdflatex)
-PDFUNITE=$(shell which pdfunite)
-dw_4:
-# ifeq ($(PDFLATEX),)
-#	@echo pdflatex not found, skipping...
-# else
-# ifeq ($(PDFUNITE),)
-# 	@echo pdfunite not found, skipping...
-# else
-#	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
-# endif
-# endif
 
 #
 # Set appropriately for your data size to quickly try out H2O.
