@@ -123,22 +123,41 @@ mySetup() {
       # detach("package:h2oRClient", unload=TRUE) 
       remove.packages("h2oRClient")
     }
+
+    # make the install conditional. Don't install if it's already there
+    usePackage <- function(p) {
+        if (!is.element(p, installed.packages()[,1]))
+            install.packages(p, dep = TRUE)
+        require(p, character.only = TRUE)
+    }
+
     # what packages did the h2o_master_test need?
-    install.packages("Rcurl")
-    install.packages("rjson")
-    install.packages("statmod")
-    install.packages("testthat")
-    install.packages("bitops")
-    install.packages("tools")
-    install.packages("LiblineaR")
-    install.packages("gdata")
-    install.packages("caTools")
-    install.packages("gplots")
-    install.packages("ROCR")
-    install.packages("digest")
-    # install.packages("h2o")
-    # install.packages("h2oRClient")
-    # install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
+    usePackage("Rcurl")
+    usePackage("rjson")
+    usePackage("statmod")
+    usePackage("testthat")
+    usePackage("bitops")
+    usePackage("tools")
+    usePackage("LiblineaR")
+    usePackage("gdata")
+    usePackage("caTools")
+    usePackage("gplots")
+    usePackage("ROCR")
+    usePackage("digest")
+
+    # these came from source('../findNSourceUtils.R')
+    usePackage("glmnet")
+    usePackage("Matrix")
+    usePackage("survival")
+    usePackage("gbm")
+    # usePackage("splines")
+    usePackage("lattice")
+    # usePackage("parallel")
+    usePackage("RUnit")
+
+    # usePackage("h2o")
+    # usePackage("h2oRClient")
+    # usePackage("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
     # library(h2o)
 !
 
@@ -146,9 +165,9 @@ mySetup() {
     echo "Running this cmd:"
     echo $cmd
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    basen=`basename "$1"`
-    echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout 180 -- $cmd
+    testName=`basename "$1"`
+    # it's gotten long now because of all the installs
+    ./sh2junit.py -name $testName -timeout 300 -- $cmd
 }
 
 myR() {
