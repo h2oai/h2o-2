@@ -108,3 +108,4 @@ clean:
 	rm -f h2o_*.tgz
 	rm -f h2o_*.zip
 	rm -rf h2o
+	rm -rf h2oRClient-package

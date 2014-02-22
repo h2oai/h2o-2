@@ -220,6 +220,7 @@ dw_3:
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
+	cp -p R/h2o-package/h2o_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2o_package.pdf
 
 #
 # Set appropriately for your data size to quickly try out H2O.
