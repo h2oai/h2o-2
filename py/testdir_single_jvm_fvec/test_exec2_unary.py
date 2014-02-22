@@ -19,8 +19,7 @@ initList = [
 if 1==0:
     exprListFull = [
     ]
-
-else
+else:
     exprListFull = [
         'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
         'cct.hex=runif(r.hex);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',
@@ -241,7 +240,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec2_operators(self):
+    def test_exec2_unary(self):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         csvPathname = 'airlines/year2013.csv'

@@ -6,7 +6,6 @@ import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.URL;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -14,8 +13,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.*;
 
-
+import org.joda.time.DateTime;
 import sun.misc.Unsafe;
+
 import water.*;
 import water.api.DocGen.FieldDoc;
 import water.nbhm.UtilUnsafe;
@@ -673,35 +673,44 @@ public class Utils {
 
   // So I just brutally parse "dd-MMM-yy".
   public static final byte MMS[][][] = new byte[][][] {
-    {"jan".getBytes(),null},
-    {"feb".getBytes(),null},
-    {"mar".getBytes(),null},
-    {"apr".getBytes(),null},
-    {"may".getBytes(),null},
-    {"jun".getBytes(),"june".getBytes()},
-    {"jul".getBytes(),"july".getBytes()},
-    {"aug".getBytes(),null},
-    {"sep".getBytes(),"sept".getBytes()},
-    {"oct".getBytes(),null},
-    {"nov".getBytes(),null},
-    {"dec".getBytes(),null}
+    {"jan".getBytes(),"january"  .getBytes()},
+    {"feb".getBytes(),"february" .getBytes()},
+    {"mar".getBytes(),"march"    .getBytes()},
+    {"apr".getBytes(),"april"    .getBytes()},
+    {"may".getBytes(),"may"      .getBytes()},
+    {"jun".getBytes(),"june"     .getBytes()},
+    {"jul".getBytes(),"july"     .getBytes()},
+    {"aug".getBytes(),"august"   .getBytes()},
+    {"sep".getBytes(),"september".getBytes()},
+    {"oct".getBytes(),"october"  .getBytes()},
+    {"nov".getBytes(),"november" .getBytes()},
+    {"dec".getBytes(),"december" .getBytes()}
   };
+  
+  // Time parse patterns
+  public static final String TIME_PARSE[] = { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss.SSS", "dd-MMM-yy" };
 
+  // Returns:
+  //  - not a time parse: Long.MIN_VALUE 
+  //  - time parse via pattern X: time in msecs since Jan 1, 1970, shifted left by 1 byte, OR'd with X
+  public static long encodeTimePat(long tcode, int tpat ) { return (tcode<<8)|tpat; }
+  public static long decodeTime(long tcode ) { return tcode>>8; }
+  public static int  decodePat (long tcode ) { return ((int)tcode&0xFF); }
   public static long attemptTimeParse( ValueString str ) {
-    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
+    long t0 = attemptTimeParse_01(str); // "yyyy-MM-dd" and that plus " HH:mm:ss.SSS"
     if( t0 != Long.MIN_VALUE ) return t0;
-    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
-    if( t1 != Long.MIN_VALUE ) return t1;
+    long t2 = attemptTimeParse_2 (str); // "dd-MMM-yy"
+    if( t2 != Long.MIN_VALUE ) return t2;
     return Long.MIN_VALUE;
   }
   // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
-  private static long attemptTimeParse_0( ValueString str ) {
+  private static long attemptTimeParse_01( ValueString str ) {
     final byte[] buf = str.get_buf();
     int i=str.get_off();
     final int end = i+str.get_length();
     while( i < end && buf[i] == ' ' ) i++;
     if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 19 ) return Long.MIN_VALUE;
+    if( (end-i) != 10 && (end-i) < 19 ) return Long.MIN_VALUE;
     int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
     yy = digit(yy,buf[i++]);
     yy = digit(yy,buf[i++]);
@@ -716,6 +725,8 @@ public class Utils {
     dd = digit(dd,buf[i++]);
     dd = digit(dd,buf[i++]);
     if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( i==end )
+      return encodeTimePat(new DateTime(yy,MM,dd,0,0,0).getMillis(),0);
     if( buf[i++] != ' ' ) return Long.MIN_VALUE;
     HH = digit(HH,buf[i++]);
     HH = digit(HH,buf[i++]);
@@ -737,10 +748,10 @@ public class Utils {
     }
     if( i<end && buf[i] == '"' ) i++;
     if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
+    return encodeTimePat(new DateTime(yy,MM,dd,HH,mm,ss).getMillis()+SS,1);
   }
 
-  private static long attemptTimeParse_1( ValueString str ) {
+  private static long attemptTimeParse_2( ValueString str ) {
     final byte[] buf = str.get_buf();
     int i=str.get_off();
     final int end = i+str.get_length();
@@ -758,22 +769,28 @@ public class Utils {
       INNER: for( int k=0; k<mms.length; k++ ) {
         mm = mms[k];
         if( mm == null ) continue;
+        if( i+mm.length >= end ) continue INNER;
         for( int j=0; j<mm.length; j++ )
           if( mm[j] != Character.toLowerCase(buf[i+j]) )
             continue INNER;
-        break OUTER;
+        if( buf[i+mm.length] == '-' ) break OUTER;
       }
     }
     if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
     i += mm.length;             // Skip month bytes
     MM++;                       // 1-based month
     if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    yy = digit(yy,buf[i++]);    // 2-digit year
     yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy += 2000;                 // Y2K bug
+    if( end-i>=2 && buf[i] != '"' ) {
+      yy = digit(yy,buf[i++]);  // 4-digit year
+      yy = digit(yy,buf[i++]);
+    } else {
+      yy += 2000;               // Y2K bug
+    }
     if( i<end && buf[i] == '"' ) i++;
     if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
+    return encodeTimePat(new DateTime(yy,MM,dd,0,0,0).getMillis(),2);
   }
 
   /** Returns a mapping of given domain to values (0, ... max(dom)).

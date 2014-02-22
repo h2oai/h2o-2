@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import sys, psutil, os, stat, tempfile, argparse, time
+import sys, psutil, os, stat, tempfile, argparse, time, datetime
 sys.path.extend(['.','..','../..','py'])
 import h2o_sandbox
 
@@ -15,6 +15,7 @@ import h2o_sandbox
 
 print "Assumes ./sandbox already exists in current dir. Created by cloud building?"
 def sandbox_tmp_file(prefix='', suffix=''):
+    # this gives absolute path, good!
     fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir='./sandbox')
     # make sure the file now exists
     # os.open(path, 'a').close()
@@ -57,14 +58,14 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
         content += '            <error type="Error in h2o logs" message="Error in h2o logs"></error>\n'
     content += '            <system-out>\n'
     content += '<![CDATA[\n'
-    content += 'spawn stdout**********************************************************\n'
+    content += 'spawn stdout' + str(datetime.datetime.now()) + '**********************************************************\n'
     content += out
     content += ']]>\n'
     content += '            </system-out>\n'
 
     content += '            <system-err>\n'
     content += '<![CDATA[\n'
-    content += 'spawn stderr**********************************************************\n'
+    content += 'spawn stderr' + str(datetime.datetime.now()) + '**********************************************************\n'
     content += err
     if sandboxErrorMessage:
         content += 'spawn errors from sandbox log parsing*********************************\n'
@@ -138,19 +139,29 @@ def rc_if_exists_and_done(ps):
     return (rc, error)
 
 #**************************************************************************
-def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
+def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, shdir=None, **kwargs):
     # split by arbitrary strings of whitespace characters (space, tab, newline, return, formfeed)
     print "cmd_string:", cmd_string
     cmdList = cmd_string.split()
+    # these are absolute paths
     outfd, outpath = sandbox_tmp_file(prefix=name + '.stdout.', suffix='.log')
     errfd, errpath = sandbox_tmp_file(prefix=name + '.stderr.', suffix='.log')
+
+    # make outpath and errpath full paths, so we can redirect
     print "outpath:", outpath
     print "errpath:", errpath
 
     start = time.time()
     print "psutil.Popen:", cmdList, outpath, errpath
     import subprocess
+    # start the process in the target dir, if desired
+    if shdir:
+        currentDir = os.getcwd()
+        os.chdir(shdir)
     ps = psutil.Popen(cmdList, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+    if shdir:
+        os.chdir(currentDir)
+
     comment = 'PID %d, stdout %s, stderr %s' % (
         ps.pid, os.path.basename(outpath), os.path.basename(errpath))
     print "spawn_cmd", cmd_string, comment
@@ -301,6 +312,7 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
 #**************************************************************************
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('-shdir', type=str, default=None, help='executes the $cmd in the target dir, but the logs stay in sandbox here')
     parser.add_argument('-name', type=str, default='NoName', help='used to help name the xml/stdout/stderr logs created')
     parser.add_argument('-timeout', type=int, default=5, help='secs timeout for the shell subprocess. Fail if timeout')
     parser.add_argument('-cmd', '--cmd_string', type=str, default=None, help="cmd string to pass to shell subprocess. Better to just use'--' to start the cmd (everything after that is sucked in)")
@@ -322,5 +334,5 @@ if __name__ == "__main__":
             # placeholder for test
             cmd_string = '/bin/ls'
         
-    sh2junit(name=args.name, cmd_string=cmd_string, timeout=args.timeout)
+    sh2junit(name=args.name, cmd_string=cmd_string, timeout=args.timeout, shdir=args.shdir)
 
