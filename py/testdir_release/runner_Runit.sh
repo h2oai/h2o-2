@@ -123,6 +123,21 @@ mySetup() {
       # detach("package:h2oRClient", unload=TRUE) 
       remove.packages("h2oRClient")
     }
+    # what packages did the h2o_master_test need?
+    install.packages("Rcurl")
+    install.packages("rjson")
+    install.packages("statmod")
+    install.packages("testthat")
+    install.packages("bitops")
+    install.packages("tools")
+    install.packages("LiblineaR")
+    install.packages("gdata")
+    install.packages("caTools")
+    install.packages("gplots")
+    install.packages("ROCR")
+    install.packages("digest")
+    # install.packages("h2o")
+    # install.packages("h2oRClient")
     # install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
     # library(h2o)
 !
@@ -133,7 +148,7 @@ mySetup() {
     # everything after -- is positional. grabbed by argparse.REMAINDER
     basen=`basename "$1"`
     echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout 30 -- $cmd
+    ./sh2junit.py -name $basen -timeout 180 -- $cmd
 }
 
 myR() {
