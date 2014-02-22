@@ -116,15 +116,15 @@ mySetup() {
     .libPaths()
     myPackages = rownames(installed.packages())
     if("h2o" %in% myPackages) {
-      detach("package:h2o", unload=TRUE) 
+      # detach("package:h2o", unload=TRUE) 
       remove.packages("h2o")
     }
     if("h2oRClient" %in% myPackages) {
-      detach("package:h2oRClient", unload=TRUE) 
+      # detach("package:h2oRClient", unload=TRUE) 
       remove.packages("h2oRClient")
     }
-    install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
-    library(h2o)
+    # install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
+    # library(h2o)
 !
 
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
