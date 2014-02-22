@@ -7,7 +7,7 @@
 Applies a function over an H2O parsed data object (an array).
 }
 \usage{
-apply(X, MARGIN, FUN, ...)
+apply(X, MARGIN, FUN, \dots)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -20,7 +20,7 @@ The margin along wich the function should be applied
   \item{FUN}{
 The function to be applied by H2O. 
 }
-  \item{...}{
+  \item{\dots}{
 Optional arguments to FUN. (Currently unimplemented).
   }
 }

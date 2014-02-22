@@ -640,7 +640,7 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   return(df)
 }
 
-setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
+head.H2OParsedData <- function(x, n = 6L, ...) {
   numRows = nrow(x)
   stopifnot(length(n) == 1L)
   n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
@@ -653,9 +653,9 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
   }
   return(x.slice)
-})
+}
 
-setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
+tail.H2OParsedData <- function(x, n = 6L, ...) {
   stopifnot(length(n) == 1L)
   nrx <- nrow(x)
   n <- ifelse(n < 0L, max(nrx + n, 0L), min(n, nrx))
@@ -670,7 +670,7 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
   }
   return(x.slice)
-})
+}
 
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
@@ -967,7 +967,7 @@ setMethod("dim", "H2OParsedDataVA", function(x) {
 
 setMethod("length", "H2OParsedData", function(x) { ncol(x) })
 
-setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
+head.H2OParsedDataVA <- function(x, n = 6L, ...) {
   numRows = nrow(x)
   stopifnot(length(n) == 1L)
   n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
@@ -986,9 +986,9 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
   }
   return(x.slice)
-})
+}
 
-setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
+tail.H2OParsedDataVA <- function(x, n = 6L, ...) {
   stopifnot(length(n) == 1L)
   nrx <- nrow(x)
   n <- ifelse(n < 0L, max(nrx + n, 0L), min(n, nrx))
@@ -1009,9 +1009,8 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
   }
   return(x.slice)
-})
+}
 
-# setMethod("summary", "H2OParsedDataVA", function(object) {
 summary.H2OParsedDataVA <- function(object, ...) {
   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY, key=object@key)
   res = res$summary$columns

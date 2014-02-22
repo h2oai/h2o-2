@@ -31,7 +31,7 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
-australia.hex[,9]<- ifelse(australia.hex[,3]<279.9,1,0)
+australia.hex[,9] <- ifelse(australia.hex[,3] < 279.9, 1, 0)
 summary(australia.hex)
 h2o.shutdown(localH2O)
 }

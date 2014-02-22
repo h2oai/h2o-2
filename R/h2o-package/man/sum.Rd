@@ -8,10 +8,10 @@ Sum of Numeric Values
 Calculates the sum of all the values present in its arguments. This method extends the \code{\link{sum}} generic to deal with \code{\linkS4class{H2OParsedData}} objects.
 }
 \usage{
-sum(..., na.rm = FALSE)
+sum(\dots, na.rm = FALSE)
 }
 \arguments{
-  \item{...}{Numeric, complex, logical or \code{\linkS4class{H2OParsedData}} arguments. 
+  \item{\dots}{Numeric, complex, logical or \code{\linkS4class{H2OParsedData}} arguments. 
   }
   \item{na.rm}{Logical value where FALSE does not remove NA's in the calculation and TRUE removes NA's in the calculation.
   }

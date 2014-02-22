@@ -98,11 +98,7 @@ build:
 	@echo
 	@echo "PHASE: Building R package..."
 	@echo
-# ifeq ($(BUILD_NUMBER),99999)
-#	$(MAKE) -C R build_rh2o PROJECT_VERSION=$(PROJECT_VERSION).$(MILLIS_SINCE_EPOCH)
-# else
 	$(MAKE) -C R build_rh2o PROJECT_VERSION=$(PROJECT_VERSION)
-# endif
 	@echo
 	@echo "PHASE: Building hadoop driver..."
 	@echo

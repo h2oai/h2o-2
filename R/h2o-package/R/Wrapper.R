@@ -202,7 +202,7 @@ h2o.clusterStatus <- function(client) {
                stderr=stderr,
                wait=FALSE)
   if (rc != 0) {
-    stop(sprintf("Failed to exec %s with return code=%s", jar_file,as.character(rc)))
+    stop(sprintf("Failed to exec %s with return code=%s", jar_file, as.character(rc)))
   }
   .startedH2O <<- TRUE
 }

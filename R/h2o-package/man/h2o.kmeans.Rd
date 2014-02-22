@@ -7,7 +7,7 @@ H2O: K-Means Clustering
 \description{
 Performs k-means clustering on a data set.}
 \usage{
-h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", version = 1)
+h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -28,6 +28,9 @@ The number of clusters k.
 }
   \item{init}{
 (Optional) Method by which to select the k initial cluster centroids. Possible values are \code{"none"} for random initialization, \code{"plusplus"} for k-means++ initialization, and \code{"furthest"} for initialization at the furthest point from each successive centroid. See the \href{http://docs.0xdata.com/datascience/kmeans.html}{H2O K-means documentation} for more details.
+  }
+  \item{seed}{
+  (Optional) Random seed used to initialize the cluster centroids.
   }
   \item{version}{
   (Optional) The version of k-means clustering to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.

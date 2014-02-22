@@ -24,16 +24,12 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
-s = runif(nrow(prostate.hex))
-prostate.train = prostate.hex[s <= 0.8,]
-prostate.train = h2o.assign(prostate.train, "prostate.train")
-h2o.ls(localH2O)
-h2o.rm(object= localH2O, keys= "Last.value.0")
-h2o.ls(localH2O)
 
 # Remove an H2O object from the server and from the R environment
-h2o.rm(object= localH2O, keys= "prostate.hex")
+h2o.ls(localH2O)
+h2o.rm(object = localH2O, keys = "prostate.hex")
 remove(prostate.hex)
+h2o.ls(localH2O)
 h2o.shutdown(localH2O)
 }
 
