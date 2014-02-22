@@ -82,9 +82,10 @@ h2o.clusterStatus <- function(client) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
   
   # installing RCurl requires curl and curl-config, which is typically separately installed
-  if(!("RCurl" %in% installed.packages()[,1])) {
+  rcurl_package_is_installed = length(find.package("RCurl", quiet = TRUE)) > 0
+  if(!rcurl_package_is_installed) {
     if(.Platform$OS.type == "unix") {
-      packageStartupMessage("Checking libcurl version...")
+      # packageStartupMessage("Checking libcurl version...")
       curl_path <- Sys.which("curl-config")
       if(curl_path[[1]] == '' || system2(curl_path, args = "--version") != 0)
         stop("libcurl not found! Please install libcurl (version 7.14.0 or higher) from http://curl.haxx.se. On Linux systems, 
