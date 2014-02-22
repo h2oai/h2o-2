@@ -28,8 +28,7 @@ required in R for most examples to work.**
 ::
 
   library(h2o)
-  localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
-     silentUpgrade = TRUE, promptUpgrade = FALSE)
+  localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
 
 In this tutorial you can find information on: 
@@ -60,7 +59,7 @@ Getting Started
 ::
 
   library(h2o)
-  localH2O<- h2o.init(ip = "localhost", port = 54321)
+  localH2O <- h2o.init(ip = "localhost", port = 54321)
 
 Users may see a response message in R indicating that the instance of
 H2O running is a different version than that of the corresponding H2O
@@ -82,8 +81,7 @@ to automatically install.
 ::
 
   library(h2o)
-  localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
-       silentUpgrade = TRUE, promptUpgrade = FALSE)
+  localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
   h2o.checkClient(localH2O)
 
 Importing Data
@@ -96,7 +94,7 @@ Importing Data
 
 ::
 
-  irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
+  irisPath = system.file("extdata", "iris.csv", package="h2o")
   iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
   summary(iris.hex)
 
@@ -115,7 +113,7 @@ Data Manipulation
 
 ::
  
-   prosPath<- system.file("extdata", "prostate.csv", package="h2oRClient")
+   prosPath <- system.file("extdata", "prostate.csv", package="h2o")
    prostate.hex = h2o.importFile(localH2O, path = prosPath)
    prostate.data.frame<- as.data.frame(prostate.hex)
    summary(prostate.data.frame)
@@ -130,9 +128,9 @@ Data Manipulation
 
 ::
 
-  prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
   prostate.hex = h2o.importFile(localH2O, path = prosPath)
-  prostate.hex[,4]=as.factor(prostate.hex[,4])
+  prostate.hex[,4] = as.factor(prostate.hex[,4])
   summary(prostate.hex)
 
 
@@ -147,7 +145,7 @@ Data Manipulation
 
 ::
  
-  prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
   prostate.hex = h2o.importFile(localH2O, path = prosPath)
   prostate.qs = quantile(prostate.hex$PSA)
   PSA.outliers = prostate.hex[prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >=   prostate.qs[10],]
@@ -165,7 +163,7 @@ Data Manipulation
 
 ::
 
-  prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
   prostate.hex = h2o.importFile(localH2O, path = prosPath)
   quantile(prostate.hex)
 
@@ -180,7 +178,7 @@ Data Manipulation
 
 ::
 
-   prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+   prosPath = system.file("extdata", "prostate.csv", package="h2o")
    prostate.hex = h2o.importFile(localH2O, path = prosPath)
    summary(prostate.hex)
    summary(prostate.hex$GLEASON)
@@ -196,10 +194,10 @@ Running Models
 
 ::
   
-  ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
+  ausPath = system.file("extdata", "australia.csv", package="h2o")
   australia.hex = h2o.importFile(localH2O, path = ausPath)
-  independent<- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
-  dependent<- "runoffnew"
+  independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
+  dependent <- "runoffnew"
   h2o.gbm(y = dependent, x = independent, data = australia.hex,
   n.trees = 10, interaction.depth = 3, 
      n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
@@ -245,10 +243,10 @@ Running Models
 
 ::
 
-  prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
   prostate.hex = h2o.importFile(localH2O, path = prosPath)
   h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
-  covPath = system.file("extdata", "covtype.csv", package="h2oRClient")
+  covPath = system.file("extdata", "covtype.csv", package="h2o")
   covtype.hex = h2o.importFile(localH2O, path = covPath)
   covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
   print(covtype.km)
@@ -263,7 +261,7 @@ Running Models
 
 ::
 
-  ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
+  ausPath = system.file("extdata", "australia.csv", package="h2o")
   australia.hex = h2o.importFile(localH2O, path = ausPath)
   australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)
   print(australia.pca)
@@ -316,7 +314,7 @@ Obtaining Predictions
 
 ::
   
-  covPath = system.file("extdata", "covtype.csv", package="h2oRClient")
+  covPath = system.file("extdata", "covtype.csv", package="h2o")
   covtype.hex = h2o.importFile(localH2O, path = covPath)
   covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
   covtype.clusters = h2o.predict(object = covtype.km, newdata = covtype.hex)
@@ -347,7 +345,7 @@ Other Useful Functions
 ::
   
   localH2O = h2o.init()
-  prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
   prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
   s = runif(nrow(prostate.hex))
   prostate.train = prostate.hex[s <= 0.8,]

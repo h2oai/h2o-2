@@ -253,7 +253,7 @@ public class RequestServer extends NanoHTTPD {
       // On Jenkins, this command sticks his own R version's number
       // into the package that gets built.
       //
-      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
+      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2o-package
       //
       String versionOfRThatJenkinsUsed = "3.0";
 
