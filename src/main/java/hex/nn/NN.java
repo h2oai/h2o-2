@@ -22,8 +22,6 @@ public class NN extends Job.ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network 2";
 
-  public DataInfo _dinfo;
-
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
 
@@ -214,6 +212,7 @@ public class NN extends Job.ValidatedJob {
 
   @Override public JobState exec() {
     buildModel(initModel());
+    delete();
     return JobState.DONE;
   }
 
@@ -246,39 +245,44 @@ public class NN extends Job.ValidatedJob {
     }
   }
 
-  public NNModel initModel() {
+  public final NNModel initModel() {
     checkParams();
-    lock();
-    if (_dinfo == null)
-      _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols), 1, true, !classification);
-    NNModel model = new NNModel(dest(), self(), source._key, _dinfo, this);
+    lock_data();
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
+    final NNModel model = new NNModel(dest(), self(), source._key, dinfo, this);
+    unlock_data();
     model.model_info().initializeMembers();
-    //Log.info("Initial model:\n" + model.model_info());
-    unlock();
     return model;
   }
 
-  public NNModel buildModel(NNModel model) {
+  public final NNModel buildModel(NNModel model) {
+    lock_data();
     logStart();
-    lock();
     Log.info("Number of chunks of the training data: " + source.anyVec().nChunks());
     if (validation != null)
       Log.info("Number of chunks of the validation data: " + validation.anyVec().nChunks());
-    if (model == null) model = UKV.get(dest());
+    if (model == null) {
+      model = UKV.get(dest());
+    }
+    model.write_lock(self());
+    Log.info("Initial model:\n" + model.model_info());
 
     final long model_size = model.model_info().size();
     Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
     Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
 
-    model.delete_and_lock(self()); //claim ownership of the model
-
-    final Frame[] valid_adapted = validation == null ? null : model.adapt(validation, false);
-    Frame train = _dinfo._adaptedFrame;
-    Frame valid = validation == null ? null : valid_adapted[0];
-
-    // Optionally downsample data for scoring
+    final Frame train = model.model_info().data_info()._adaptedFrame;
     Frame trainScoreFrame = sampleFrame(train, score_training_samples, seed);
-    Frame validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
+
+    Frame[] valid_adapted = null;
+    Frame valid = null;
+    Frame validScoreFrame = null;
+    if (validation != null) {
+      valid_adapted = model.adapt(validation, false);
+      valid = valid_adapted[0];
+      validScoreFrame = valid != validation ? sampleFrame(valid, score_validation_samples, seed+1) : null;
+    }
 
     if (sync_samples > train.numRows()) {
       Log.warn("Setting sync_samples (" + sync_samples
@@ -289,64 +293,54 @@ public class NN extends Job.ValidatedJob {
 
     Log.info("Starting to train the Neural Net model.");
     long timeStart = System.currentTimeMillis();
+
     //main loop
-    do {
-//      shuffle();
-      NNTask nntask = new NNTask(_dinfo, model.model_info(), true, sync_fraction, shuffle_training_data).doAll(train);
-      model.set_model_info(nntask.model_info());
-    } while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self()));
+    do model.set_model_info(new NNTask(model.model_info(), true /*train*/, sync_fraction).doAll(train).model_info());
+    while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self()));
+    model.unlock(self());
 
-    model.unlock(self()); //release model ownership
-
-    //delete temporary frames
+    //clean up
     if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
     if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
     if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
 //    if (_newsource != null && _newsource != source) _newsource.delete();
-
-    unlock();
-    delete();
-
+    unlock_data();
     Log.info("Finished training the Neural Net model.");
     return model;
   }
 
-  private void lock() {
+  private void lock_data() {
     // Lock the input datasets against deletes
     source.read_lock(self());
     if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
       validation.read_lock(self());
   }
 
-  private void unlock() {
+  private void unlock_data() {
     source.unlock(self());
     if( validation != null && !source._key.equals(validation._key) )
       validation.unlock(self());
   }
 
-  private void delete() {
+  public void delete() {
     if (_fakejob) UKV.remove(job_key);
     remove();
   }
 
   /*
   long _iter = 0;
-  Frame _newsource = null;
-  private void shuffle() {
-    if (!shuffle_training_data) return;
-    Log.info("Shuffling.");
-    _newsource = shuffleAndBalance(source, seed+_iter++, shuffle_training_data);
-    Vec resp = _newsource.vecs()[resp_pos];
-    _dinfo = new FrameTask.DataInfo(FrameTask.DataInfo.prepareFrame(_newsource, resp, ignored_cols, true, ignore_const_cols), 1, true);
-    Log.info("Shuffling done.");
+  private void reBalance(Frame fr) {
+    shuffleAndBalance(fr, seed+_iter++, shuffle_training_data);
+    fr.reloadVecs();
+    Log.info("Number of chunks of " + fr.toString() + ": " + fr.anyVec().nChunks());
   }
 
   // master node collects all rows, and distributes them across the cluster - slow
-  private static Frame shuffleAndBalance(Frame fr, long seed, final boolean shuffle) {
+  private static void shuffleAndBalance(Frame fr, long seed, final boolean shuffle) {
     int cores = 0;
     for( H2ONode node : H2O.CLOUD._memary )
       cores += node._heartbeat._num_cpus;
-    final int splits = 4*cores;
+    final int splits = cores;
 
     long[] idx = null;
     if (shuffle) {
@@ -376,8 +370,6 @@ public class NN extends Job.ValidatedJob {
         vecs[v] = t;
       }
     }
-    return new Frame(fr.names(), vecs);
   }
   */
-
 }

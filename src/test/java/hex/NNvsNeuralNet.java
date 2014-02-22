@@ -152,8 +152,6 @@ public class NNvsNeuralNet extends TestUtil {
                             p.source = (Frame)_train.clone();
                             p.response = _train.lastVec();
                             p.ignored_cols = null;
-                            Frame fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
-                            p._dinfo = new FrameTask.DataInfo(fr, 1, true);
                             p.seed = seed;
                             p.hidden = hidden;
                             p.rate = rate;

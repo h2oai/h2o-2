@@ -7,7 +7,10 @@ import hex.nn.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import water.*;
+import water.JUnitRunnerDebug;
+import water.Key;
+import water.Model;
+import water.TestUtil;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -85,6 +88,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         Random rand;
 
                         int trial = 0;
+                        FrameTask.DataInfo dinfo;
                         do {
                           Log.info("Trial #" + ++trial);
                           if (_train != null) _train.delete();
@@ -118,10 +122,10 @@ public class NeuralNetIrisTest2 extends TestUtil {
                           p.ignored_cols = null;
                           p.ignore_const_cols = true;
                           fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
-                          p._dinfo = new FrameTask.DataInfo(fr, 1, true);
+                          dinfo = new FrameTask.DataInfo(fr, 1, true);
                         }
                         // must have all output classes in training data (since that's what the reference implementation has hardcoded)
-                        while (p._dinfo._adaptedFrame.lastVec().domain().length < 3);
+                        while (dinfo._adaptedFrame.lastVec().domain().length < 3);
 
                         // use the same seed for the reference implementation
                         NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
@@ -274,6 +278,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         _test.delete();
                         frame.delete();
                         fr.delete();
+                        p.delete();
 
                         num_runs++;
                         Log.info("Parameters combination " + num_runs + ": PASS");
