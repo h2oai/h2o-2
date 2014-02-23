@@ -133,9 +133,10 @@ class Basic(unittest.TestCase):
             updateList= [ 
                 {'alpha': 0.5, 'lambda': 1e-4},
                 {'alpha': 0.25, 'lambda': 1e-6},
-                {'alpha': 0.0, 'lambda': 1e-8},
-                {'alpha': 0.5, 'lambda': 0.0},
-                {'alpha': 0.0, 'lambda': 0.0},
+                {'alpha': 0.0, 'lambda': 1e-12},
+                {'alpha': 0.5, 'lambda': 1e-12},
+                {'alpha': 0.0, 'lambda': 1e-12},
+                {'alpha': 0.0, 'lambda': 0},
             ]
 
             # Try each one

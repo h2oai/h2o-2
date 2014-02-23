@@ -10,6 +10,7 @@ def random_enum(randChars, maxEnumSize):
 
 ONE_RATIO = 100
 ENUM_RANGE = 20
+GAUSS_ENUMS = True
 def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=ENUM_RANGE):
     # okay to have duplicates?
     enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
@@ -18,13 +19,23 @@ def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=ENUM_RANGE):
 
 def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, SEED='12345678', 
         colSepChar=",", rowSepChar="\n"):
+    enumRange = len(enumList)
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
     for row in range(rowCount):
         rowData = []
         for col in range(colCount):
-            ri = random.choice(enumList)
-            rowData.append(ri)
+            if GAUSS_ENUMS:
+                # truncated gaussian distribution, from the enumList
+                value = None
+                while not value:
+                    value = int(random.gauss(enumRange/2, enumRange/4))
+                    if  value < 0 or value >= enumRange:
+                        value = None
+                rowData.append(enumList[value])
+            else:
+                value = random.choice(enumList)
+                rowData.append(value)
 
         # output column
         # ri = r1.randint(0,1)
@@ -90,7 +101,7 @@ class Basic(unittest.TestCase):
             csvScoreFilename = 'syn_enums_score_' + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvScorePathname = SYNDATASETS_DIR + '/' + csvScoreFilename
 
-            enumList = create_enum_list(listSize=10)
+            enumList = create_enum_list()
             # use half of the enums for creating the scoring dataset
             enumListForScore = random.sample(enumList,5)
 
