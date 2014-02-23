@@ -14,6 +14,7 @@ GAUSS_ENUMS = True
 def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=ENUM_RANGE):
     # okay to have duplicates?
     enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
+    # enumList = [random_enum(randChars, maxEnumSize) for i in range(listSize)]
     return enumList
 
 
