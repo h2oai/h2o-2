@@ -622,7 +622,7 @@ public class DTree extends Iced {
       DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
       generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_key,"Predict!"));
-      String[] domain = _domains[_domains.length-1]; // Domain of response col
+      String[] domain = cmDomain; // Domain of response col
 
       // Generate a display using the last scored Model.  Not all models are
       // scored immediately (since scoring can be a big part of model building).

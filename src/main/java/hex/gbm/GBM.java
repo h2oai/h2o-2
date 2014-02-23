@@ -151,7 +151,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       // During first iteration model contains 0 trees, then 0-trees, then 1-tree,...
       // BUT if validation is not specified model does not participate in voting
       // but on-the-fly computed data are used
-      model = doScoring(model, fr, ktrees, tid, tstats, false, false, false);
+      model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, false, false, false);
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
@@ -172,7 +172,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       tstats.updateBy(ktrees);
     }
     // Final scoring
-    model = doScoring(model, fr, ktrees, tid, tstats, true, false, false);
+    model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, true, false, false);
 
     return model;
   }
