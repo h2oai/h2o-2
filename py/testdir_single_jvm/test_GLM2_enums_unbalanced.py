@@ -117,6 +117,7 @@ class Basic(unittest.TestCase):
             y = colCount
             modelKey = 'glm_model'
             kwargs = {
+                'standardize': 0,
                 'destination_key': modelKey,
                 'response': 'C' + str(y+1), 
                 'max_iter': 200, 
