@@ -147,7 +147,7 @@ class Basic(unittest.TestCase):
         # first glm1
         h2o.beta_features = False
         kwargs = {
-            'standardize': 1,
+            'standardize': 0,
             # 'y': 'C' + str(y),
             'y': y,
             'family': 'binomial',
@@ -159,7 +159,7 @@ class Basic(unittest.TestCase):
         kwargs.update({'case_mode': '=', 'case': 1})
 
         kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
-#        kwargs.update({'alpha': 0.0, 'lambda': 0})
+        kwargs.update({'alpha': 0.0, 'lambda': 1e-4})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         # bad model (auc=0.5)
         # kwargs.update({'alpha': 0.0, 'lambda': 0.0})
@@ -168,13 +168,13 @@ class Basic(unittest.TestCase):
         # hack. fix bad 'family' ('link' is bad too)..so h2o_glm.py works right
         glm['GLMModel']['GLMParams']['family'] = 'binomial'
         print "glm1 end on ", csvPathname, 'took', time.time() - start, 'seconds'
-        (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+        (warnings, coefficients1, intercept1) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
         #**************************************************************************
         # then glm2
         h2o.beta_features = True
         kwargs = {
-            'standardize': 1,
+            'standardize': 0,
             'classification': 1,
             # 'response': 'C' + str(y),
             'response': y,
@@ -192,10 +192,8 @@ class Basic(unittest.TestCase):
             kwargs.update({'case_mode': '=', 'case_val': 1})
             aHack = {'destination_key': 'covtype.data.hex'}
 
-        if DO_SWAP_LAMBA_ALPHA:
-            kwargs.update({'alpha': 1e-5, 'lambda': 0.5})
-        else:
-            kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
+        kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
+        kwargs.update({'alpha': 0, 'lambda': 1e-4})
 
 #        kwargs.update({'alpha': 0.0, 'lambda': 0})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
@@ -214,7 +212,7 @@ class Basic(unittest.TestCase):
 
         # coefficients is a list.
         C34 = coefficients[34]
-        C34expected = 3.541
+        C34expected = coefficients1[34]
         print "C34 pct delta:", "%0.2f" % (100.0 * (abs(C34) - abs(C34expected))/abs(C34expected))
         self.assertAlmostEqual(C34, C34expected, delta=0.001*C34expected, msg='coefficient 34 %s is too different from %s' % (C34, C34expected))
 
@@ -222,7 +220,7 @@ class Basic(unittest.TestCase):
         aucExpected = 0.8428
         self.assertAlmostEqual(auc, aucExpected, delta=0.001, msg='auc %s is too different from %s' % (auc, aucExpected))
 
-        interceptExpected = -16.603
+        interceptExpected = intercept1
         print "intercept pct delta:", 100.0 * (abs(intercept) - abs(interceptExpected))/abs(interceptExpected)
         self.assertAlmostEqual(intercept, interceptExpected, delta=0.01, msg='intercept %s is too different from %s' % (intercept, interceptExpected))
 

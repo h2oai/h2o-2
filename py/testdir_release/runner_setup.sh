@@ -83,7 +83,8 @@ echo "Setting PATH and showing java/python versions"
 date
 export PATH="/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin"
 echo "Checking python/java links and revs first"
-echo "JAVA_HOME: $JAVA_HOME"
+# JAVA_HOME might not exist. no need to check?
+# echo "JAVA_HOME: $JAVA_HOME"
 which java
 java -version
 which javac
