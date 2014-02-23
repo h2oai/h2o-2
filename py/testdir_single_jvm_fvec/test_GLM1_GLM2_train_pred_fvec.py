@@ -5,7 +5,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_glm, h2o_exec as h2e
 print "Comparing GLM1 and GLM2 on covtype, with different alpha/lamba combinations"
 print "Will also compare predicts, but having gotten that far without miscompare on training"
 USE_EXEC = False
-DO_SWAP_LAMBA_ALPHA = False
+TRY_ALPHA = 0.0
+TRY_LAMBDA = 1e-4
 # translate provides the mapping between original and predicted
 # since GLM is binomial, We predict 0 for 0 and 1 for > 0
 def compare_csv_last_col(csvPathname, msg, translate=None, skipHeader=False):
@@ -52,8 +53,14 @@ class Basic(unittest.TestCase):
 
         trees = 15
         timeoutSecs = 120
-        csvPathname = 'standard/covtype.data'
-        hexKey = 'covtype.data.hex'
+
+        if 1==0:
+            csvPathname = 'standard/covtype.data'
+            hexKey = 'covtype.data.hex'
+        
+        if 1==1:
+            csvPathname = 'standard/covtype.shuffled.10pct.data'
+            hexKey = 'covtype.shuffled.10pct.data.hex'
 
         predictHexKey = 'predict.hex'
         predictCsv = 'predict.csv'
@@ -129,10 +136,14 @@ class Basic(unittest.TestCase):
 
         #*************************************************************************
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
+
         # do the binomial conversion with Exec2, for both training and test (h2o won't work otherwise)
         trainKey = parseResult['destination_key']
         y = 54
         CLASS=1
+
+        # just to check. are there any NA/constant cols?
+        ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
         # does GLM2 take more iterations?
         max_iter = 50
@@ -140,6 +151,7 @@ class Basic(unittest.TestCase):
         #**************************************************************************
         # first glm1
         h2o.beta_features = False
+        # try ignoring the constant col to see if it makes a diff
         kwargs = {
             'standardize': 0,
             # 'y': 'C' + str(y),
@@ -160,14 +172,12 @@ class Basic(unittest.TestCase):
         else:
             # since we're not using predict, we can use case_mode/val to get the binomial output class
             kwargs.update({'case_mode': '=', 'case': 1})
-            aHack = {'destination_key': 'covtype.data.hex'}
+            aHack = {'destination_key': hexKey}
         
         timeoutSecs = 120
         kwargs.update({'case_mode': '=', 'case': 1})
 
-        kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
-        kwargs.update({'alpha': 0.0, 'lambda': 1e-4})
-        kwargs.update({'alpha': 0.0, 'lambda': 0})
+        kwargs.update({'alpha': TRY_ALPHA, 'lambda': TRY_LAMBDA})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         # bad model (auc=0.5)
         # kwargs.update({'alpha': 0.0, 'lambda': 0.0})
@@ -177,6 +187,7 @@ class Basic(unittest.TestCase):
         glm['GLMModel']['GLMParams']['family'] = 'binomial'
         print "glm1 end on ", csvPathname, 'took', time.time() - start, 'seconds'
         (warnings, coefficients1, intercept1) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+        iterations1 = glm['GLMModel']['iterations']
         err1 = glm['GLMModel']['validations'][0]['err']
         classErr1 = glm['GLMModel']['validations'][0]['classErr']
         auc1 = glm['GLMModel']['validations'][0]['auc']
@@ -187,6 +198,7 @@ class Basic(unittest.TestCase):
         # then glm2
         h2o.beta_features = True
         kwargs = {
+            # 'ignored_cols': 'C29',
             'standardize': 0,
             'classification': 1,
             # 'response': 'C' + str(y),
@@ -209,11 +221,9 @@ class Basic(unittest.TestCase):
         else:
             # since we're not using predict, we can use case_mode/val to get the binomial output class
             kwargs.update({'case_mode': '=', 'case_val': 1})
-            bHack = {'destination_key': 'covtype.data.hex'}
+            bHack = {'destination_key': hexKey}
 
-        kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
-        kwargs.update({'alpha': 0, 'lambda': 1e-4})
-        kwargs.update({'alpha': 0.0, 'lambda': 0})
+        kwargs.update({'alpha': TRY_ALPHA, 'lambda': TRY_LAMBDA})
 
 #        kwargs.update({'alpha': 0.0, 'lambda': 0})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
@@ -231,6 +241,17 @@ class Basic(unittest.TestCase):
         avg_err = glm['glm_model']['submodels'][0]['validation']['avg_err']
         auc = glm['glm_model']['submodels'][0]['validation']['auc']
         best_threshold = glm['glm_model']['submodels'][0]['validation']['best_threshold']
+        iteration = glm['glm_model']['submodels'][0]['iteration']
+        resDev = glm['glm_model']['submodels'][0]['validation']['residual_deviance']
+        nullDev = glm['glm_model']['submodels'][0]['validation']['null_deviance']
+
+        nullDevExpected = nullDev1
+        self.assertAlmostEqual(nullDev, nullDevExpected, delta=2, 
+            msg='GLM2 nullDev %s is too different from GLM1 %s' % (nullDev, nullDevExpected))
+
+        iterationExpected = iterations1
+        self.assertAlmostEqual(iteration, iterationExpected, delta=2, 
+            msg='GLM2 iteration %s is too different from GLM1 %s' % (iteration, iterationExpected))
 
         # coefficients is a list.
         coeff0 = coefficients[0]
