@@ -124,10 +124,10 @@ if (distance < 0) {
     source(paste(path, "tests/Utils/glmR.R", sep = ""))
     source(paste(path, "tests/Utils/gbmR.R", sep = ""))
     source(paste(path, "tests/Utils/utilsR.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/Algorithms.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/Classes.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/Internal.R", sep = ""))
+    source(paste(path, "h2o-package/R/Algorithms.R", sep = ""))
+    source(paste(path, "h2o-package/R/Classes.R", sep = ""))
+    source(paste(path, "h2o-package/R/ParseImport.R", sep = ""))
+    source(paste(path, "h2o-package/R/Internal.R", sep = ""))
 } else {
     distance <- calcPath(getwd(), "tests")
     dots     <- genDots(distance)
@@ -140,10 +140,10 @@ if (distance < 0) {
     #rdots is the calculated path to the R source files...
     rdots <- ifelse(dots == "./", "../", paste("../", dots, sep = ""))
 
-    source(paste(rdots, "h2oRClient-package/R/Algorithms.R", sep = ""))
-    source(paste(rdots, "h2oRClient-package/R/Classes.R", sep = ""))
-    source(paste(rdots, "h2oRClient-package/R/ParseImport.R", sep = ""))
-    source(paste(rdots, "h2oRClient-package/R/Internal.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/Algorithms.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/Classes.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/ParseImport.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/Internal.R", sep = ""))
 }
 sandbox()
 #This random seed is overwritten by any seed set in a test

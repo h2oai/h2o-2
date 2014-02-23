@@ -142,6 +142,7 @@ Installing Hadoop on a Mac
  ::
 
 		$ /usr/local/Cellar/hadoop/1.2.1/bin/start-all.sh
+
 or
 
  ::

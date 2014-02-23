@@ -446,7 +446,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     assert (_phase == Pass.TWO);
     Column[] cols = new Column[_ncolumns];
     int off = 0;
-    Log.info("Parse result for " + _job.dest() + ":");
+    Log.info("Parse result for " + _job.dest() + " (" + Long.toString(_numRows) + " rows):");
     for( int i = 0; i < cols.length; ++i) {
       cols[i] = new Column();
       cols[i]._n = _numRows - _invalidValues[i];
@@ -469,9 +469,11 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         String typeStr = String.format("%s", (isCategorical ? "categorical" : "numeric"));
         String minStr = String.format("min(%f)", _min[i]);
         String maxStr = String.format("max(%f)", _max[i]);
+        long numNAs = _invalidValues[i];
+        String naStr = (numNAs > 0) ? String.format("na(%d)", numNAs) : "";
         String isConstantStr = isConstant ? "constant" : "";
         String numLevelsStr = isCategorical ? String.format("numLevels(%d)", _colDomains[i].length) : "";
-        Log.info(String.format("    %-8s %15s %20s %20s %11s %16s", CStr, typeStr, minStr, maxStr, isConstantStr, numLevelsStr));
+        Log.info(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
       }
       catch (Exception _) {}
 

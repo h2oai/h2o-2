@@ -11,10 +11,10 @@
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
 options(echo=F)
-source("../../../R/h2oRClient-package/R/Internal.R")
-source("../../../R/h2oRClient-package/R/Algorithms.R")
-source("../../../R/h2oRClient-package/R/Classes.R")
-source("../../../R/h2oRClient-package/R/ParseImport.R")
+source("../../../R/h2o-package/R/Internal.R")
+source("../../../R/h2o-package/R/Algorithms.R")
+source("../../../R/h2o-package/R/Classes.R")
+source("../../../R/h2o-package/R/ParseImport.R")
 #GLOBALS
 aic               <<- "None"
 auc               <<- "None"
@@ -152,8 +152,7 @@ function() {
   library(h2o)
   h <<- h2o.init(ip            = IP,
                 port           = PORT,
-                startH2O       = FALSE, 
-                silentUpgrade  = TRUE)
+                startH2O       = FALSE)
 }
 
 #"Public" Methods
