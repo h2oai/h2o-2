@@ -102,10 +102,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
 
-  @API(help = "Stopping criterion for classification error fraction (negative number to disable)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for classification error fraction (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
   public double classification_stop = 0;
 
-  @API(help = "Stopping criterion for regression error (negative number to disable)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for regression error (MSE) (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
   public double regression_stop = 1e-6;
 
   @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
