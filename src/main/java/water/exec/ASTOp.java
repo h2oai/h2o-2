@@ -1,6 +1,8 @@
 package water.exec;
 
 import java.util.*;
+import org.joda.time.DateTime;
+import org.joda.time.MutableDateTime;
 
 import water.*;
 import water.fvec.*;
@@ -101,6 +103,16 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTCosh());
     putPrefix(new ASTSinh());
     putPrefix(new ASTTanh());
+
+    // Time extractions, to and from msec since the Unix Epoch
+    putPrefix(new ASTYear  ());
+    putPrefix(new ASTMonth ());
+    putPrefix(new ASTDay   ());
+    putPrefix(new ASTHour  ());
+    putPrefix(new ASTMinute());
+    putPrefix(new ASTSecond());
+    putPrefix(new ASTMillis());
+
 
     // More generic reducers
     putPrefix(new ASTMin ());
@@ -473,6 +485,59 @@ class ASTScale extends ASTUniPrefixOp {
   }
 }
 
+// ----
+abstract class ASTTimeOp extends ASTOp {
+  static Type[] newsig() {
+    Type t1 = Type.dblary();
+    return new Type[]{t1,t1};
+  }
+  ASTTimeOp() { super(VARS1,newsig(),OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); }
+  abstract long op( MutableDateTime dt );
+  @Override void apply(Env env, int argcnt) {
+    // Single instance of MDT for the single call
+    if( !env.isAry() ) {        // Single point
+      double d = env.popDbl();
+      if( !Double.isNaN(d) ) d = op(new MutableDateTime((long)d));
+      env.poppush(d);
+      return;
+    }
+    // Whole column call
+    Frame fr = env.popAry();
+    String skey = env.key();
+    final ASTTimeOp uni = this;  // Final 'this' so can use in closure
+    Frame fr2 = new MRTask2() {
+        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+          MutableDateTime dt = new MutableDateTime(0);
+          for( int i=0; i<nchks.length; i++ ) {
+            NewChunk n =nchks[i];
+            Chunk c = chks[i];
+            int rlen = c._len;
+            for( int r=0; r<rlen; r++ ) {
+              double d = c.at0(r);
+              if( !Double.isNaN(d) ) {
+                dt.setMillis((long)d);
+                d = uni.op(dt);
+              }
+              n.addNum(d);
+            }
+          }
+        }
+      }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
+    env.subRef(fr,skey);
+    env.pop();                  // Pop self
+    env.push(fr2);
+  }
+}
+
+class ASTYear  extends ASTTimeOp { String opStr(){ return "year" ; } ASTOp make() {return new ASTYear  ();} long op(MutableDateTime dt) { return dt.getYear();}}
+class ASTMonth extends ASTTimeOp { String opStr(){ return "month"; } ASTOp make() {return new ASTMonth ();} long op(MutableDateTime dt) { return dt.getMonthOfYear();}}
+class ASTDay   extends ASTTimeOp { String opStr(){ return "day"  ; } ASTOp make() {return new ASTDay   ();} long op(MutableDateTime dt) { return dt.getDayOfMonth();}}
+class ASTHour  extends ASTTimeOp { String opStr(){ return "hour" ; } ASTOp make() {return new ASTHour  ();} long op(MutableDateTime dt) { return dt.getHourOfDay();}}
+class ASTMinute extends ASTTimeOp { String opStr(){return "minute";} ASTOp make() {return new ASTMinute();} long op(MutableDateTime dt) { return dt.getMinuteOfHour();}}
+class ASTSecond extends ASTTimeOp { String opStr(){return "second";} ASTOp make() {return new ASTSecond();} long op(MutableDateTime dt) { return dt.getSecondOfMinute();}}
+class ASTMillis extends ASTTimeOp { String opStr(){return "millis";} ASTOp make() {return new ASTMillis();} long op(MutableDateTime dt) { return dt.getMillisOfSecond();}}
+
+// ----
 // Class of things that will auto-expand across arrays in a 2-to-1 way:
 // applying 2 things (from an array or scalar to array or scalar) producing an
 // array or scalar result.
