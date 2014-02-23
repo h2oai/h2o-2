@@ -24,7 +24,6 @@ public class NNTask extends FrameTask<NNTask> {
     _training=training;
     _input=input;
     _useFraction=fraction;
-    _seed=_input.get_params().seed;
     _shuffle = _input.get_params().shuffle_training_data;
     assert(_output == null);
   }

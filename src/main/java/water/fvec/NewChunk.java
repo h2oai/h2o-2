@@ -28,6 +28,7 @@ public class NewChunk extends Chunk {
   int _naCnt=-1;                // Count of NA's   appended
   int _strCnt;                  // Count of Enum's appended
   int _nzCnt;                   // Count of non-zero's appended
+  final int _timCnt[] = new int[water.util.Utils.TIME_PARSE.length]; // Count of successful time parses
 
   public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
@@ -65,11 +66,14 @@ public class NewChunk extends Chunk {
       _nzCnt=nzs;  _strCnt=ss;  _naCnt=nas;
     }
     // Now run heuristic for type
-    if(_naCnt == _len2)
+    if(_naCnt == _len2)          // All NAs ==> NA Chunk
       return AppendableVec.NA;
     if(_strCnt > 0 && _strCnt + _naCnt == _len2)
-      return AppendableVec.ENUM;
-    return AppendableVec.NUMBER;
+      return AppendableVec.ENUM; // All are Strings+NAs ==> Enum Chunk
+    // Larger of time & numbers
+    int timCnt=0; for( int t : _timCnt ) timCnt+=t;
+    int nums = _len2-_naCnt-timCnt;
+    return timCnt >= nums ? AppendableVec.TIME : AppendableVec.NUMBER;
   }
   protected final boolean isNA(int idx) {
     return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE) : Double.isNaN(_ds[idx]);
@@ -185,11 +189,12 @@ public class NewChunk extends Chunk {
     byte mode = type();
     if( mode==AppendableVec.NA ) // ALL NAs, nothing to do
       return new C0DChunk(Double.NaN,_len);
+    boolean rerun=false;
     for( int i=0; i<_len; i++ )
       if( mode==AppendableVec.ENUM   && !isEnum(i) ||
           mode==AppendableVec.NUMBER &&  isEnum(i) )
-        setNA_impl(i);
-    _naCnt = -1;  type();    // Re-run rollups after dropping all numbers/enums
+        { setNA_impl(i); rerun = true; }  // Smack any mismatched string/numbers
+    if( rerun ) { _naCnt = -1;  type(); } // Re-run rollups after dropping all numbers/enums
 
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.

@@ -64,7 +64,7 @@ public class NeuralNetMnist2 extends Job {
     p.source = trainf;
     p.response = trainf.lastVec();
     p.ignored_cols = null;
-    p.sync_samples = 120000;
+    p.mini_batch = 60000;
     p.score_interval = 600;
 
     p.fast_mode = true; //to match old NeuralNet behavior

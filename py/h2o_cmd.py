@@ -297,8 +297,8 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
             missingValuesDict[k] = c[keyNA]
             printMsg = True
 
-        if c['min'] == c['max']:
-            msg += (" constant value: %s" % c['min'])
+        if c['min']==c['max'] and c['type']!='enum':
+            msg += (" constant value (min=max): %s" % c['min'])
             constantValuesDict[k] = c['min']
             printMsg = True
 
