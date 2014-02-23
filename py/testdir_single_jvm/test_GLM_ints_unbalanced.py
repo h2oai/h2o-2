@@ -70,11 +70,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_GLM_ints_unbalanced(self):
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         n = 2000
