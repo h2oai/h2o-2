@@ -34,7 +34,7 @@ then
     echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
     echo "okay to ls the top level here...no secret info..do all the machines we might be using"
 
-    for mr in 161 164
+    for mr in 161 164 180
     do
         ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
             'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
@@ -43,9 +43,9 @@ then
     # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
     # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
     # CLOUD_IP=192.168.1.161
-    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    python ../four_hour_cloud.py -cj pytest_config-jenkins-180.json &
     # make sure this matches what's in the json!
-    CLOUD_IP=192.168.1.164
+    CLOUD_IP=192.168.1.180
     CLOUD_PORT=54355
 else
     if [[ $USER == "kevin" ]]
@@ -116,20 +116,63 @@ mySetup() {
     .libPaths()
     myPackages = rownames(installed.packages())
     if("h2o" %in% myPackages) {
+      # detach("package:h2o", unload=TRUE) 
       remove.packages("h2o")
     }
+    if("h2oRClient" %in% myPackages) {
+      # detach("package:h2oRClient", unload=TRUE) 
+      remove.packages("h2oRClient")
+    }
+
+    # make the install conditional. Don't install if it's already there
+    usePackage <- function(p) {
+        if (!is.element(p, installed.packages()[,1]))
+            install.packages(p, dep = TRUE)
+        require(p, character.only = TRUE)
+    }
+
+    # what packages did the h2o_master_test need?
+    usePackage("Rcurl")
+    usePackage("rjson")
+    usePackage("statmod")
+    usePackage("testthat")
+    usePackage("bitops")
+    usePackage("tools")
+    usePackage("LiblineaR")
+    usePackage("gdata")
+    usePackage("caTools")
+    usePackage("gplots")
+    usePackage("ROCR")
+    usePackage("digest")
+
+    # these came from source('../findNSourceUtils.R')
+    usePackage("glmnet")
+    usePackage("Matrix")
+    usePackage("survival")
+    usePackage("gbm")
+    # usePackage("splines")
+    usePackage("lattice")
+    # usePackage("parallel")
+    usePackage("RUnit")
+
+    # usePackage("h2o")
+    # usePackage("h2oRClient")
+    # usePackage("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
+    # library(h2o)
 !
 
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
     echo "Running this cmd:"
     echo $cmd
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    basen=`basename "$1"`
-    echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout 30 -- $cmd
+    testName=`basename "$1"`
+    # it's gotten long now because of all the installs
+    ./sh2junit.py -name $testName -timeout 300 -- $cmd
 }
 
 myR() {
+    # we change dir, but return it to what it was, on the return
+    pushd .
     # these are hardwired in the config json used above for the cloud
     # CLOUD_IP=
     # CLOUD_PORT=
@@ -151,31 +194,37 @@ myR() {
     # this is where we downloaded to. 
     # notice no version number
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
+
+    echo "FIX!  we don't need H2OWrapperDir stuff any more???"
     export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
     echo "H2OWrapperDir should be $H2OWrapperDir"
     ls $H2OWrapperDir/h2o*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
-    rScript=$H2O_R_HOME/tests/$1.R
+    # test paths are always relative to tests
+    testDir=$(dirname $1)
+    shdir=$H2O_R_HOME/tests/$testDir
+    testName=$(basename $1)
+    rScript=$testName.R
     echo $rScript
-    echo "Running this cmd:"
+    echo "Will run this cmd in $shdir"
     cmd="R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
     echo $cmd
 
     # don't fail on errors, since we want to check the logs in case that has more info!
     set +e
-    # everything after -- is positional. grabbed by argparse.REMAINDER
-    basen=`basename "$1"`
-    echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout $timeout -- $cmd || true
+    # executes the $cmd in the target dir, but the logs stay in sandbox here
+    # -dir is optional
+    ./sh2junit.py -shdir $shdir -name $testName -timeout $timeout -- $cmd || true
 
     # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
     # think of h2o.check_sandbox_for_errors()
-    rm -f -r sandbox/$1
-    mkdir -p sandbox/$1
-    cp -f sandbox/*log sandbox/$1
+    # rm -f -r sandbox/$1
+    # mkdir -p sandbox/$1
+    # cp -f sandbox/*log sandbox/$1
     # rm -f sandbox/*log
     set -e
+    popd
 }
 
 H2O_R_HOME=../../R
@@ -199,22 +248,13 @@ myR ../../R/tests/Utils/runnerSetupPackage 300
 if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
 then
     # have to ignore the Rsandbox dirs that got created in the tests directory
-    for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
+    for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox|/results/' | grep 'runit.*\.[rR]' | sed -e 's!\.[rR]$!!');
     do
-        if [ -d $test ];
-        then
-            continue
-        fi  
         testName=$(basename $test)
         testDir=$(dirname $test)
         testDirParent=$(dirname $testDir)
-        if [ $(basename $testDirParent) != "tests" ];
-        then
-            testDirName=$(basename $testDirParent)/$(basename $testDir)
-        else
-            testDirName=$(basename $testDir)
-        fi  
-        myR $testDirName/$testName 300
+        testDirName=$(basename $testDir)
+        myR $test 300
         sleep 180
     done
 else

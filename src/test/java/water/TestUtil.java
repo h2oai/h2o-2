@@ -364,14 +364,14 @@ public class TestUtil {
   }
 
   public static Frame parseFrame(Key okey, String path) {
-    return parseFrame(okey, new File(path));
+    return parseFrame(okey, find_test_file(path));
   }
 
   public static Frame parseFrame(Key okey, File file) {
     if( !file.exists() )
       throw new RuntimeException("File not found " + file);
     if(okey == null)
-        okey = Key.make(file.getName());
+      okey = Key.make(file.getName());
     Key fkey = NFSFileVec.make(file);
     return ParseDataset2.parse(okey, new Key[] { fkey });
   }

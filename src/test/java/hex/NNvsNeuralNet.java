@@ -152,8 +152,6 @@ public class NNvsNeuralNet extends TestUtil {
                             p.source = (Frame)_train.clone();
                             p.response = _train.lastVec();
                             p.ignored_cols = null;
-                            Frame fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
-                            p._dinfo = new FrameTask.DataInfo(fr, 1, true);
                             p.seed = seed;
                             p.hidden = hidden;
                             p.rate = rate;
@@ -175,7 +173,7 @@ public class NNvsNeuralNet extends TestUtil {
                             p.validation = null;
                             p.quiet_mode = true;
                             p.fast_mode = true; //same as old NeuralNet code
-                            p.sync_samples = 0; //sync once per period
+                            p.mini_batch = 0; //sync once per period
                             p.ignore_const_cols = false; //same as old NeuralNet code
                             p.shuffle_training_data = false; //same as old NeuralNet code
                             p.nesterov_accelerated_gradient = true; //same as old NeuralNet code

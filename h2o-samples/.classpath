@@ -6,5 +6,6 @@
 	<classpathentry kind="lib" path="/h2o/lib/jets3t/commons-httpclient-3.1.jar" sourcepath="/h2o/lib/jets3t/commons-httpclient-3.1-sources.jar"/>
 	<classpathentry kind="lib" path="/h2o/lib/gson/gson-2.2.2.jar" sourcepath="/h2o/lib/gson/gson-2.2.2-sources.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/joda-time-2.3"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
