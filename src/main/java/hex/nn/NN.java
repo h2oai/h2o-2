@@ -19,7 +19,7 @@ import static water.util.MRUtils.sampleFrame;
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   public static DocGen.FieldDoc[] DOC_FIELDS;
-  public static final String DOC_GET = "Neural Network 2";
+  public static final String DOC_GET = "NN";
 
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
@@ -27,7 +27,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double input_dropout_ratio = 0.0;
 
-  @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class, json = true)
+  @API(help = "Hidden layer sizes (e.g. 100,100). Grid search: (10,10), (20,20,20)", filter = Default.class, json = true)
   public int[] hidden = new int[] { 200, 200 };
 
   @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
@@ -36,10 +36,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double rate_annealing = 1 / 1e6;
 
-  @API(help = "L1 regularization, can add stability", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "L1 regularization, can add stability and improve generalization", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double l1 = 0.0;
 
-  @API(help = "L2 regularization, can add stability", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "L2 regularization, can add stability and improve generalization", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double l2 = 0.0;
 
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
@@ -54,10 +54,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
   public double epochs = 10;
 
-  @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
+  @API(help = "Seed for random numbers (reproducible results for small datasets (single chunk) only, cf. Hogwild!)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
-  @API(help = "Enable expert mode", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
   public boolean expert_mode = false;
 
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
@@ -72,7 +72,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
   public double rate_decay = 1.0;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class, json = true)
+  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
   public double max_w2 = Double.POSITIVE_INFINITY;
 
   @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
@@ -82,9 +82,9 @@ public class NN extends Job.ValidatedJob {
   public long score_validation_samples = 0l;
 
   @API(help = "Shortest interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
-  public double score_interval = 2;
+  public double score_interval = 5;
 
-  @API(help = "Number of rows per SGD mini-batch (0 for entire epoch).", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Number of training samples per mini-batch (0 for entire epoch).", filter = Default.class, lmin = 0, json = true)
   public long mini_batch = 10000l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
@@ -102,10 +102,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
 
-  @API(help = "Stopping criterion for classification error fraction (negative number to disable)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for classification error fraction (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
   public double classification_stop = 0;
 
-  @API(help = "Stopping criterion for regression error (negative number to disable)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Stopping criterion for regression error (MSE) (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
   public double regression_stop = 1e-6;
 
   @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
@@ -217,6 +217,9 @@ public class NN extends Job.ValidatedJob {
 
   private boolean _fakejob;
   void checkParams() {
+    if (source.numCols() <= 1)
+      throw new IllegalArgumentException("Training data must have at least 2 features (incl. response).");
+
     if(!classification && loss != Loss.MeanSquare) {
       Log.warn("Setting loss to MeanSquare for regression.");
       loss = Loss.MeanSquare;
