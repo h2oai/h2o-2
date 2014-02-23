@@ -967,7 +967,7 @@ class H2O(object):
         for e in ['error', 'Error', 'errors', 'Errors']:
             # error can be null (python None). This happens in exec2
             if e in rjson and rjson[e]:
-                verboseprint(dump_json(rjson))
+                print "rjson:", dump_json(rjson)
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
                     # well, we print it..so not totally ignore. test can look at rjson returned

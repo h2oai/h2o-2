@@ -5,8 +5,9 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_glm, h2o_exec as h2e
 print "Comparing GLM1 and GLM2 on covtype, with different alpha/lamba combinations"
 print "Will also compare predicts, but having gotten that far without miscompare on training"
 USE_EXEC = False
-TRY_ALPHA = 0.0
+TRY_ALPHA = 0.5
 TRY_LAMBDA = 1e-4
+FAMILY = 'gaussian'
 # translate provides the mapping between original and predicted
 # since GLM is binomial, We predict 0 for 0 and 1 for > 0
 def compare_csv_last_col(csvPathname, msg, translate=None, skipHeader=False):
@@ -47,7 +48,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_predict3_fvec(self):
+    def test_GLM1_GLM2_train_pred_fvec(self):
         h2o.beta_features = False
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -136,6 +137,7 @@ class Basic(unittest.TestCase):
 
         #*************************************************************************
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
+        h2o_cmd.runSummary(key=hexKey)
 
         # do the binomial conversion with Exec2, for both training and test (h2o won't work otherwise)
         trainKey = parseResult['destination_key']
@@ -156,7 +158,7 @@ class Basic(unittest.TestCase):
             'standardize': 0,
             # 'y': 'C' + str(y),
             'y': 'C' + str(y+1),
-            'family': 'binomial',
+            'family': FAMILY,
             'n_folds': 1,
             'max_iter': max_iter,
             'beta_epsilon': 1e-3}
@@ -166,12 +168,14 @@ class Basic(unittest.TestCase):
             execExpr="A.hex=%s" % trainKey
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
             # class 1=1, all else 0
-            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            if FAMILY == 'binomial':
+                execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
+                h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
             aHack = {'destination_key': 'A.hex'}
         else:
             # since we're not using predict, we can use case_mode/val to get the binomial output class
-            kwargs.update({'case_mode': '=', 'case': 1})
+            if FAMILY == 'binomial':
+                kwargs.update({'case_mode': '=', 'case': 1})
             aHack = {'destination_key': hexKey}
         
         timeoutSecs = 120
@@ -184,15 +188,17 @@ class Basic(unittest.TestCase):
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **kwargs)
         # hack. fix bad 'family' ('link' is bad too)..so h2o_glm.py works right
-        glm['GLMModel']['GLMParams']['family'] = 'binomial'
+        glm['GLMModel']['GLMParams']['family'] = FAMILY
         print "glm1 end on ", csvPathname, 'took', time.time() - start, 'seconds'
         (warnings, coefficients1, intercept1) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
         iterations1 = glm['GLMModel']['iterations']
         err1 = glm['GLMModel']['validations'][0]['err']
-        classErr1 = glm['GLMModel']['validations'][0]['classErr']
-        auc1 = glm['GLMModel']['validations'][0]['auc']
         nullDev1 = glm['GLMModel']['validations'][0]['nullDev']
         resDev1 = glm['GLMModel']['validations'][0]['resDev']
+
+        if FAMILY == 'binomial':
+            classErr1 = glm['GLMModel']['validations'][0]['classErr']
+            auc1 = glm['GLMModel']['validations'][0]['auc']
 
         #**************************************************************************
         # then glm2
@@ -215,12 +221,14 @@ class Basic(unittest.TestCase):
             execExpr="B.hex=%s" % trainKey
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
             # class 1=1, all else 0
-            execExpr="B.hex[,%s]=(B.hex[,%s]==%s)" % (y+1, y+1, CLASS)
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            if FAMILY == 'binomial':
+                execExpr="B.hex[,%s]=(B.hex[,%s]==%s)" % (y+1, y+1, CLASS)
+                h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
             bHack = {'destination_key': 'B.hex'}
         else:
             # since we're not using predict, we can use case_mode/val to get the binomial output class
-            kwargs.update({'case_mode': '=', 'case_val': 1})
+            if FAMILY == 'binomial':
+                kwargs.update({'case_mode': '=', 'case_val': 1})
             bHack = {'destination_key': hexKey}
 
         kwargs.update({'alpha': TRY_ALPHA, 'lambda': TRY_LAMBDA})
@@ -239,11 +247,12 @@ class Basic(unittest.TestCase):
 
         modelKey = glm['glm_model']['_key']
         avg_err = glm['glm_model']['submodels'][0]['validation']['avg_err']
-        auc = glm['glm_model']['submodels'][0]['validation']['auc']
         best_threshold = glm['glm_model']['submodels'][0]['validation']['best_threshold']
         iteration = glm['glm_model']['submodels'][0]['iteration']
         resDev = glm['glm_model']['submodels'][0]['validation']['residual_deviance']
         nullDev = glm['glm_model']['submodels'][0]['validation']['null_deviance']
+        if FAMILY == 'binomial':
+            auc = glm['glm_model']['submodels'][0]['validation']['auc']
 
         nullDevExpected = nullDev1
         self.assertAlmostEqual(nullDev, nullDevExpected, delta=2, 
@@ -268,9 +277,10 @@ class Basic(unittest.TestCase):
 
         # compare to known values GLM1 got for class 1 case, with these parameters
         # aucExpected = 0.8428
-        aucExpected = auc1
-        self.assertAlmostEqual(auc, aucExpected, delta=0.001, 
-            msg='GLM2 auc %s is too different from GLM1 %s' % (auc, aucExpected))
+        if FAMILY == 'binomial':
+            aucExpected = auc1
+            self.assertAlmostEqual(auc, aucExpected, delta=0.001, 
+                msg='GLM2 auc %s is too different from GLM1 %s' % (auc, aucExpected))
 
         interceptExpected = intercept1
         print "intercept pct delta:", 100.0 * (abs(intercept) - abs(interceptExpected))/abs(interceptExpected)
