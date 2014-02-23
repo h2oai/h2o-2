@@ -68,7 +68,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   result$params = params
   
   if(result$params$distribution == "multinomial") {
-    class_names = tail(res$'_domains', 1)[[1]]
+    class_names = res$'cmDomain' #tail(res$'_domains', 1)[[1]]
     result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
   } else
@@ -844,7 +844,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
 
-  class_names = tail(res$'_domains', 1)[[1]]
+  class_names = res$'cmDomain' #tail(res$'_domains', 1)[[1]]
   result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   result$mse = as.numeric(res$errs)
   # result$ntree = res$N
