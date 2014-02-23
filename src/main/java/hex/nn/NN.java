@@ -2,7 +2,6 @@ package hex.nn;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import water.H2O;
 import water.Job;
 import water.Key;
 import water.UKV;
@@ -31,7 +30,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class, json = true)
   public int[] hidden = new int[] { 200, 200 };
 
-  @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double rate = .005;
 
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
@@ -46,14 +45,14 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_start = .5;
 
-  @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 1, json = true)
   public long momentum_ramp = 1000000;
 
   @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_stable = 0.99;
 
-  @API(help = "How many times the dataset should be iterated (streamed), can be less than 1.0", filter = Default.class, dmin = 0, json = true)
-  public double epochs = 1000;
+  @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
+  public double epochs = 10;
 
   @API(help = "Seed for random numbers (reproducible results for single-threaded only, cf. Hogwild)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
@@ -85,8 +84,8 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Shortest interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 2;
 
-  @API(help = "Number of training set samples between multi-node synchronization (0 for all).", filter = Default.class, lmin = 0, json = true)
-  public long sync_samples = 10000l;
+  @API(help = "Number of rows per SGD mini-batch (0 for entire epoch).", filter = Default.class, lmin = 0, json = true)
+  public long mini_batch = 10000l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
@@ -161,10 +160,6 @@ public class NN extends Job.ValidatedJob {
     if (arg._name.equals("score_validation_samples") && validation == null) {
       arg.disable("Only if a validation set is specified.", inputArgs);
     }
-    if (arg._name.equals("sync_samples") && H2O.CLOUD.size() == 1) {
-      sync_samples = 0; //sync once per epoch on a single node
-      arg.disable("Only for multi-node operation.", inputArgs);
-    }
     if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
             || arg._name.equals("score_training_samples")
             || arg._name.equals("score_validation_samples")
@@ -173,7 +168,7 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("score_interval")
             || arg._name.equals("diagnostics")
             || arg._name.equals("rate_decay")
-            || arg._name.equals("sync_samples")
+            || arg._name.equals("mini_batch")
             || arg._name.equals("fast_mode")
             || arg._name.equals("ignore_const_cols")
             || arg._name.equals("shuffle_training_data")
@@ -226,10 +221,6 @@ public class NN extends Job.ValidatedJob {
       Log.warn("Setting loss to MeanSquare for regression.");
       loss = Loss.MeanSquare;
     }
-    if (H2O.CLOUD.size() == 1 && sync_samples != 0) {
-      Log.warn("Setting sync_samples to 0 for single-node operation.");
-      sync_samples = 0;
-    }
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
       destination_key = Key.make();
@@ -266,7 +257,7 @@ public class NN extends Job.ValidatedJob {
       model = UKV.get(dest());
     }
     model.write_lock(self());
-    Log.info("Initial model:\n" + model.model_info());
+    if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
 
     final long model_size = model.model_info().size();
     Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
@@ -284,12 +275,12 @@ public class NN extends Job.ValidatedJob {
       validScoreFrame = valid != validation ? sampleFrame(valid, score_validation_samples, seed+1) : null;
     }
 
-    if (sync_samples > train.numRows()) {
-      Log.warn("Setting sync_samples (" + sync_samples
-              + ") to the number of rows of the training data (" + (sync_samples=train.numRows()) + ").");
+    if (mini_batch > train.numRows()) {
+      Log.warn("Setting mini_batch (" + mini_batch
+              + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");
     }
     // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
-    final float sync_fraction = sync_samples == 0l ? 1.0f : (float)sync_samples / train.numRows();
+    final float sync_fraction = mini_batch == 0l ? 1.0f : (float)mini_batch / train.numRows();
 
     Log.info("Starting to train the Neural Net model.");
     long timeStart = System.currentTimeMillis();
