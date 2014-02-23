@@ -87,11 +87,11 @@ public class NNModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (classification) {
-        sb.append("Training misclassification: " + String.format("%.2f", (100 * train_err)) + "%");
-        if (validation) sb.append(", validation misclassification: " + String.format("%.2f", (100 * valid_err)) + "%");
+        sb.append("Error on training data (misclassification): " + String.format("%.2f", (100 * train_err)) + "%");
+        if (validation) sb.append("\nError on validation data (misclassification): " + String.format("%.2f", (100 * valid_err)) + "%");
       } else {
-        sb.append("Training MSE: " + train_mse);
-        if (validation) sb.append(", validation MSE: " + valid_mse);
+        sb.append("Error on training data (MSE): " + train_mse);
+        if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
       }
       return sb.toString();
     }
@@ -236,34 +236,36 @@ public class NNModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (parameters.diagnostics) {
-        Neurons[] neurons = NNTask.makeNeuronsForTesting(this);
         computeStats();
-        sb.append("Status of Neuron Layers:\n");
-        sb.append("#  Units         Type      Dropout      Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
-        final String format = "%7g";
-        for (int i=0; i<neurons.length; ++i) {
-          sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
-                  + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
-          if (i == 0) {
-            sb.append("  " + String.format("%.5g", neurons[i].params.input_dropout_ratio*100) + "%\n");
-            continue;
+        if (!parameters.quiet_mode) {
+          Neurons[] neurons = NNTask.makeNeuronsForTesting(this);
+          sb.append("Status of Neuron Layers:\n");
+          sb.append("#  Units         Type      Dropout      Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
+          final String format = "%7g";
+          for (int i=0; i<neurons.length; ++i) {
+            sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
+                    + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
+            if (i == 0) {
+              sb.append("  " + String.format("%.5g", neurons[i].params.input_dropout_ratio*100) + "%\n");
+              continue;
+            }
+            else if (i < neurons.length-1) {
+              sb.append( neurons[i] instanceof Neurons.TanhDropout
+                      || neurons[i] instanceof Neurons.RectifierDropout
+                      || neurons[i] instanceof Neurons.MaxoutDropout ? "    50%   " : "     0%   ");
+            } else {
+              sb.append("          ");
+            }
+            sb.append(
+                    " " + String.format("%10g", neurons[i].rate(get_processed_total()))
+                            + " " + String.format("%5f", neurons[i].params.l1)
+                            + " " + String.format("%5f", neurons[i].params.l2)
+                            + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))
+                            + " (" + String.format(format, mean_weight[i])
+                            + ", " + String.format(format, rms_weight[i]) + ")"
+                            + " (" + String.format(format, mean_bias[i])
+                            + ", " + String.format(format, rms_bias[i]) + ")\n");
           }
-          else if (i < neurons.length-1) {
-            sb.append( neurons[i] instanceof Neurons.TanhDropout
-                    || neurons[i] instanceof Neurons.RectifierDropout
-                    || neurons[i] instanceof Neurons.MaxoutDropout ? "    50%   " : "     0%   ");
-          } else {
-            sb.append("          ");
-          }
-          sb.append(
-                  " " + String.format("%10g", neurons[i].rate(get_processed_total()))
-                  + " " + String.format("%5f", neurons[i].params.l1)
-                  + " " + String.format("%5f", neurons[i].params.l2)
-                  + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))
-                  + " (" + String.format(format, mean_weight[i])
-                  + ", " + String.format(format, rms_weight[i]) + ")"
-                  + " (" + String.format(format, mean_bias[i])
-                  + ", " + String.format(format, rms_bias[i]) + ")\n");
         }
       }
 
@@ -418,7 +420,7 @@ public class NNModel extends Model {
    * @param job_key key of the owning job
    * @return true if model building is ongoing
    */
-  boolean doDiagnostics(Frame ftrain, Frame ftest, long timeStart, Key job_key) {
+  boolean doScoring(Frame ftrain, Frame ftest, long timeStart, Key job_key) {
     epoch_counter = (float)model_info().get_processed_total()/model_info().data_info._adaptedFrame.numRows();
     run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().parameters.epochs);
@@ -428,10 +430,9 @@ public class NNModel extends Model {
     final long samples = model_info().get_processed_total();
     if (sinceLastPrint > model_info().parameters.score_interval*1000) {
       _timeLastPrintStart = _now;
-      if (!model_info().get_params().quiet_mode)
-        Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
-                + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-                + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
+      Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
+              + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+              + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
     if( !keep_running || sinceLastScore > model_info().parameters.score_interval*1000) {
@@ -448,14 +449,14 @@ public class NNModel extends Model {
       err.training_samples = model_info().get_processed_total();
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
-      final double trainErr = calcError(ftrain, "Error on training data:", printme, err.train_confusion_matrix);
+      final double trainErr = calcError(ftrain, "Scoring on training data:", printme, err.train_confusion_matrix);
       if (err.classification) err.train_err = trainErr;
       else err.train_mse = trainErr;
 
       if (err.validation) {
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
-        final double validErr = calcError(ftest, "Error on validation data:", printme, err.valid_confusion_matrix);
+        final double validErr = calcError(ftest, "Scoring on validation data:", printme, err.valid_confusion_matrix);
         if (err.classification) err.valid_err = validErr;
         else err.valid_mse = validErr;
       }
@@ -468,11 +469,9 @@ public class NNModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
-      if (printme) {
-        // print the freshly scored model to ASCII
-        for (String s : toString().split("\n")) Log.info(s);
-        Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
-      }
+      // print the freshly scored model to ASCII
+      for (String s : toString().split("\n")) Log.info(s);
+      if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -482,13 +481,13 @@ public class NNModel extends Model {
             (model_info().get_params().classification && errors[errors.length-1].train_err <= model_info().get_params().classification_stop)
         || (!model_info().get_params().classification && errors[errors.length-1].train_mse <= model_info().get_params().regression_stop)
             ) {
-      Log.info("Achieved 100% modeling accuracy on the training data. We are done here.");
+      Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
       keep_running = false;
     } else if (ftest != null &&
             (model_info().get_params().classification && errors[errors.length-1].valid_err <= model_info().get_params().classification_stop)
         || (!model_info().get_params().classification && errors[errors.length-1].valid_mse <= model_info().get_params().regression_stop)
             ) {
-      Log.info("Achieved 100% modeling accuracy on the validation data. We are done here.");
+      Log.info("Achieved requested predictive accuracy on the validation data. Model building completed.");
       keep_running = false;
     }
     update(job_key);
@@ -537,7 +536,7 @@ public class NNModel extends Model {
     CM.serve();
     StringBuilder sb = new StringBuilder();
     final double error = CM.toASCII(sb); //either classification error or MSE
-    if (printCM && (CM.cm==null || CM.cm.length < 30)) {
+    if (printCM && (CM.cm==null || CM.cm.length < 20)) {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }

@@ -2158,7 +2158,7 @@ class H2O(object):
             'score_training_samples'       : None,
             'score_validation_samples'     : None,
             'score_interval'               : None,
-            'sync_samples'                 : None,
+            'mini_batch'                   : None,
             'diagnostics'                  : None,
             'fast_mode'                    : None,
             'ignore_const_cols'            : None,
