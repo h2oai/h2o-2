@@ -171,6 +171,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _responses = nResponses;
       final Vec [] vecs = fr.vecs();
       final int n = vecs.length-_responses;
+      if (n < 1) throw new IllegalArgumentException("Training data must have at least one column.");
       int [] nums = MemoryManager.malloc4(n);
       int [] cats = MemoryManager.malloc4(n);
       int nnums = 0, ncats = 0;

@@ -431,7 +431,7 @@ public class NNModel extends Model {
     if (sinceLastPrint > model_info().parameters.score_interval*1000) {
       _timeLastPrintStart = _now;
       Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
-              + " processed " + samples + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+              + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
               + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
