@@ -287,7 +287,7 @@ public class NN extends Job.ValidatedJob {
 
     //main loop
     do model.set_model_info(new NNTask(model.model_info(), true /*train*/, sync_fraction).doAll(train).model_info());
-    while (model.doDiagnostics(trainScoreFrame, validScoreFrame, timeStart, self()));
+    while (model.doScoring(trainScoreFrame, validScoreFrame, timeStart, self()));
     model.unlock(self());
 
     //clean up
