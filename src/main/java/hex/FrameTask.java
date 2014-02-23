@@ -23,7 +23,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   // size of the expanded vector of parameters
 
   protected float _useFraction = 1.0f;
-  protected long _seed;
   protected boolean _shuffle = false;
 
   public FrameTask(Job job, DataInfo dinfo) {
@@ -33,13 +32,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     super(cmp);
     _job = job;
     _dinfo = dinfo;
-    _seed = new Random().nextLong();
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
     _job = ft._job;
     _useFraction = ft._useFraction;
-    _seed = ft._seed;
     _shuffle = ft._shuffle;
   }
   public final double [] normMul(){return _dinfo._normMul;}
@@ -289,7 +286,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     boolean contiguous = false;
     Random skip_rng = null; //random generator for skipping rows
     if (_useFraction < 1.0) {
-      skip_rng = water.util.Utils.getDeterRNG(_seed+++0x600D5EED+offset); //change seed to avoid periodicity across epochs
+      skip_rng = water.util.Utils.getDeterRNG(new Random().nextLong());
       if (contiguous) {
         final int howmany = (int)Math.ceil(_useFraction*nrows);
         if (howmany > 0) {
@@ -306,7 +303,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       shuf_map = new long[end-start];
       for (int i=0;i<shuf_map.length;++i)
         shuf_map[i] = start + i;
-      Utils.shuffleArray(shuf_map, _seed+++0xD0650F1E+offset);
+      Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
 
     OUTER:
