@@ -87,11 +87,11 @@ public class NNModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (classification) {
-        sb.append("Training misclassification: " + String.format("%.2f", (100 * train_err)) + "%");
-        if (validation) sb.append(", validation misclassification: " + String.format("%.2f", (100 * valid_err)) + "%");
+        sb.append("Error on training data (misclassification): " + String.format("%.2f", (100 * train_err)) + "%");
+        if (validation) sb.append("\nError on validation data (misclassification): " + String.format("%.2f", (100 * valid_err)) + "%");
       } else {
-        sb.append("Training MSE: " + train_mse);
-        if (validation) sb.append(", validation MSE: " + valid_mse);
+        sb.append("Error on training data (MSE): " + train_mse);
+        if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
       }
       return sb.toString();
     }
