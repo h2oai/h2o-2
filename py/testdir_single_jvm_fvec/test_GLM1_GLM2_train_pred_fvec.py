@@ -2,6 +2,8 @@ import unittest, time, sys, csv
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_glm, h2o_exec as h2e
 
+print "Comparing GLM1 and GLM2 on covtype, with different alpha/lamba combinations"
+print "Will also compare predicts, but having gotten that far without miscompare on training"
 USE_EXEC = False
 DO_SWAP_LAMBA_ALPHA = False
 # translate provides the mapping between original and predicted
@@ -130,15 +132,7 @@ class Basic(unittest.TestCase):
         # do the binomial conversion with Exec2, for both training and test (h2o won't work otherwise)
         trainKey = parseResult['destination_key']
         y = 54
-
-
-        if USE_EXEC:
-            CLASS=1
-            execExpr="A.hex=%s" % trainKey
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-            # class 1=1, all else 0
-            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+        CLASS=1
 
         # does GLM2 take more iterations?
         max_iter = 50
@@ -149,26 +143,45 @@ class Basic(unittest.TestCase):
         kwargs = {
             'standardize': 0,
             # 'y': 'C' + str(y),
-            'y': y,
+            'y': 'C' + str(y+1),
             'family': 'binomial',
             'n_folds': 1,
             'max_iter': max_iter,
             'beta_epsilon': 1e-3}
+
+        if USE_EXEC:
+            # maybe go back to simpler exec here. this was from when Exec failed unless this was used
+            execExpr="A.hex=%s" % trainKey
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            # class 1=1, all else 0
+            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            aHack = {'destination_key': 'A.hex'}
+        else:
+            # since we're not using predict, we can use case_mode/val to get the binomial output class
+            kwargs.update({'case_mode': '=', 'case': 1})
+            aHack = {'destination_key': 'covtype.data.hex'}
         
         timeoutSecs = 120
         kwargs.update({'case_mode': '=', 'case': 1})
 
         kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
         kwargs.update({'alpha': 0.0, 'lambda': 1e-4})
+        kwargs.update({'alpha': 0.0, 'lambda': 0})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         # bad model (auc=0.5)
         # kwargs.update({'alpha': 0.0, 'lambda': 0.0})
         start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **kwargs)
         # hack. fix bad 'family' ('link' is bad too)..so h2o_glm.py works right
         glm['GLMModel']['GLMParams']['family'] = 'binomial'
         print "glm1 end on ", csvPathname, 'took', time.time() - start, 'seconds'
         (warnings, coefficients1, intercept1) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+        err1 = glm['GLMModel']['validations'][0]['err']
+        classErr1 = glm['GLMModel']['validations'][0]['classErr']
+        auc1 = glm['GLMModel']['validations'][0]['auc']
+        nullDev1 = glm['GLMModel']['validations'][0]['nullDev']
+        resDev1 = glm['GLMModel']['validations'][0]['resDev']
 
         #**************************************************************************
         # then glm2
@@ -177,7 +190,7 @@ class Basic(unittest.TestCase):
             'standardize': 0,
             'classification': 1,
             # 'response': 'C' + str(y),
-            'response': y,
+            'response': 'C' + str(y+1),
             'family': 'binomial',
             'n_folds': 1,
             'max_iter': max_iter,
@@ -186,14 +199,21 @@ class Basic(unittest.TestCase):
         timeoutSecs = 120
 
         if USE_EXEC:
-            aHack = {'destination_key': 'A.hex'}
+            # maybe go back to simpler exec here. this was from when Exec failed unless this was used
+            execExpr="B.hex=%s" % trainKey
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            # class 1=1, all else 0
+            execExpr="B.hex[,%s]=(B.hex[,%s]==%s)" % (y+1, y+1, CLASS)
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            bHack = {'destination_key': 'B.hex'}
         else:
             # since we're not using predict, we can use case_mode/val to get the binomial output class
             kwargs.update({'case_mode': '=', 'case_val': 1})
-            aHack = {'destination_key': 'covtype.data.hex'}
+            bHack = {'destination_key': 'covtype.data.hex'}
 
         kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
         kwargs.update({'alpha': 0, 'lambda': 1e-4})
+        kwargs.update({'alpha': 0.0, 'lambda': 0})
 
 #        kwargs.update({'alpha': 0.0, 'lambda': 0})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
@@ -201,35 +221,49 @@ class Basic(unittest.TestCase):
         # bad model (auc=0.5)
         # kwargs.update({'alpha': 0.0, 'lambda': 0.0})
         start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=bHack, timeoutSecs=timeoutSecs, **kwargs)
         print "glm2 end on ", csvPathname, 'took', time.time() - start, 'seconds'
         (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+
         #**************************************************************************
 
+        modelKey = glm['glm_model']['_key']
         avg_err = glm['glm_model']['submodels'][0]['validation']['avg_err']
         auc = glm['glm_model']['submodels'][0]['validation']['auc']
         best_threshold = glm['glm_model']['submodels'][0]['validation']['best_threshold']
 
         # coefficients is a list.
-        C34 = coefficients[34]
-        C34expected = coefficients1[34]
-        print "C34 pct delta:", "%0.2f" % (100.0 * (abs(C34) - abs(C34expected))/abs(C34expected))
-        self.assertAlmostEqual(C34, C34expected, delta=0.001*C34expected, msg='coefficient 34 %s is too different from %s' % (C34, C34expected))
+        coeff0 = coefficients[0]
+        coeff0expected = coefficients1[0]
+        print "coeff0 pct delta:", "%0.2f" % (100.0 * (abs(coeff0) - abs(coeff0expected))/abs(coeff0expected))
+        self.assertAlmostEqual(coeff0, coeff0expected, delta=0.001*coeff0expected, 
+            msg='GLM2 coefficient 0 %s is too different from GLM1 %s' % (coeff0, coeff0expected))
+
+        coeff34 = coefficients[34]
+        coeff34expected = coefficients1[34]
+        print "coeff34 pct delta:", "%0.2f" % (100.0 * (abs(coeff34) - abs(coeff34expected))/abs(coeff34expected))
+        self.assertAlmostEqual(coeff34, coeff34expected, delta=0.001*coeff34expected, 
+            msg='GLM2 coefficient 34 %s is too different from GLM1 %s' % (coeff34, coeff34expected))
 
         # compare to known values GLM1 got for class 1 case, with these parameters
-        aucExpected = 0.8428
-        self.assertAlmostEqual(auc, aucExpected, delta=0.001, msg='auc %s is too different from %s' % (auc, aucExpected))
+        # aucExpected = 0.8428
+        aucExpected = auc1
+        self.assertAlmostEqual(auc, aucExpected, delta=0.001, 
+            msg='GLM2 auc %s is too different from GLM1 %s' % (auc, aucExpected))
 
         interceptExpected = intercept1
         print "intercept pct delta:", 100.0 * (abs(intercept) - abs(interceptExpected))/abs(interceptExpected)
-        self.assertAlmostEqual(intercept, interceptExpected, delta=0.01, msg='intercept %s is too different from %s' % (intercept, interceptExpected))
+        self.assertAlmostEqual(intercept, interceptExpected, delta=0.01, 
+            msg='GLM2 intercept %s is too different from GLM1 %s' % (intercept, interceptExpected))
 
-        avg_errExpected = 0.2463
-        self.assertAlmostEqual(avg_err, avg_errExpected, delta=0.01*avg_errExpected, msg='avg_err %s is too different from %s' % (avg_err, avg_errExpected))
+        # avg_errExpected = 0.2463
+        avg_errExpected = err1
+        self.assertAlmostEqual(avg_err, avg_errExpected, delta=0.01*avg_errExpected, 
+            msg='GLM2 avg_err %s is too different from GLM1 %s' % (avg_err, avg_errExpected))
 
-        self.assertAlmostEqual(best_threshold, 0.35, delta=0.01*best_threshold, msg='best_threshold %s is too different from %s' % (best_threshold, 0.35))
+        self.assertAlmostEqual(best_threshold, 0.35, delta=0.01*best_threshold, 
+            msg='GLM2 best_threshold %s is too different from GLM1 %s' % (best_threshold, 0.35))
 
-        modelKey = glm['glm_model']['_key']
         predict_and_compare_csvs(model_key=modelKey)
 
 if __name__ == '__main__':
