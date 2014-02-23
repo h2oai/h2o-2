@@ -48,7 +48,7 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       p.validation = null;
       p.score_interval = 10;
       p.ignored_cols = null;
-      p.sync_samples = 0;
+      p.mini_batch = 0; //sync once per period
       p.quiet_mode = true;
       p.fast_mode = true; //same as old NeuralNet code
       p.ignore_const_cols = false; //same as old NeuralNet code

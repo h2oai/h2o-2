@@ -155,7 +155,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
 //                      p.fast_mode = true; //to be the same as old NeuralNet code
                         p.nesterov_accelerated_gradient = false; //to be the same as reference
 //                        p.nesterov_accelerated_gradient = true; //to be the same as old NeuralNet code
-                        p.sync_samples = 100000; //sync once per period
+                        p.mini_batch = 0; //sync once per period
                         p.ignore_const_cols = false;
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
