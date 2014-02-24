@@ -6,14 +6,22 @@ print "Comparing GLM1 and GLM2 on covtype, with different alpha/lamba combinatio
 print "Will also compare predicts, but having gotten that far without miscompare on training"
 USE_EXEC = False
 
-DO_FAIL_CANCEL = False
-if DO_FAIL_CANCEL:
-    TRY_ALPHA = 0.5
-    TRY_LAMBDA = 1e-4
-else:
-    TRY_ALPHA = 0
-    TRY_LAMBDA = 0
+MAX_ITER= 50
+# 'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
+LSM_SOLVER = 'GenGradient'
+LSM_SOLVER = 'ADMM'
+LSM_SOLVER = None
+
+# too little
+TRY_ALPHA = 0
+TRY_LAMBDA = 1e-12
+# ok
+TRY_ALPHA = 0
+TRY_LAMBDA = 1e-8
 FAMILY = 'binomial'
+
+STANDARDIZE = 0
+BETA_EPSILON = 1e-3
 # translate provides the mapping between original and predicted
 # since GLM is binomial, We predict 0 for 0 and 1 for > 0
 def compare_csv_last_col(csvPathname, msg, translate=None, skipHeader=False):
@@ -162,21 +170,20 @@ class Basic(unittest.TestCase):
         # just to check. are there any NA/constant cols?
         ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
-        # does GLM2 take more iterations?
-        max_iter = 50
 
         #**************************************************************************
         # first glm1
         h2o.beta_features = False
         # try ignoring the constant col to see if it makes a diff
         kwargs = {
-            'standardize': 0,
+            'lsm_solver': LSM_SOLVER,
+            'standardize': STANDARDIZE,
             # 'y': 'C' + str(y),
             'y': 'C' + str(y+1),
             'family': FAMILY,
             'n_folds': 1,
-            'max_iter': max_iter,
-            'beta_epsilon': 1e-3}
+            'max_iter': MAX_ITER,
+            'beta_epsilon': BETA_EPSILON}
 
         if USE_EXEC:
             # maybe go back to simpler exec here. this was from when Exec failed unless this was used
@@ -220,14 +227,14 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         kwargs = {
             # 'ignored_cols': 'C29',
-            'standardize': 0,
+            'standardize': STANDARDIZE,
             'classification': 1 if FAMILY=='binomial' else 0,
             # 'response': 'C' + str(y),
             'response': 'C' + str(y+1),
             'family': FAMILY,
             'n_folds': 1,
-            'max_iter': max_iter,
-            'beta_epsilon': 1e-3}
+            'max_iter': MAX_ITER,
+            'beta_epsilon': BETA_EPSILON}
 
         timeoutSecs = 120
 
@@ -268,6 +275,9 @@ class Basic(unittest.TestCase):
         nullDev = glm['glm_model']['submodels'][0]['validation']['null_deviance']
         if FAMILY == 'binomial':
             auc = glm['glm_model']['submodels'][0]['validation']['auc']
+
+        self.assertLess(iterations1, MAX_ITER-1, msg="GLM1: Too many iterations, didn't converge %s" % iterations1)
+        self.assertLess(iteration, MAX_ITER-1, msg="GLM2: Too many iterations, didn't converge %s" % iteration)
 
         nullDevExpected = nullDev1
         self.assertAlmostEqual(nullDev, nullDevExpected, delta=2, 
