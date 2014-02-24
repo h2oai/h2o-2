@@ -22,6 +22,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
   }
   cat("Successfully connected to", myURL, "\n")
   H2Oserver = new("H2OClient", ip = ip, port = port)
+  Sys.sleep(1)    # Give cluster time to come up
   h2o.clusterInfo(H2Oserver); cat("\n")
   
   if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o")))
@@ -49,6 +50,13 @@ h2o.shutdown <- function(client, prompt = TRUE) {
 }
 
 # ----------------------- Diagnostics ----------------------- #
+
+
+#****TODO: This isn't really a cluster status... it's a node status check for the node we're connected to.
+#This is possibly confusing because this can come back without warning,
+#but if a user tries to do any remoteSend, they will get a "cloud sick warning"
+#Suggest cribbing the code from Internal.R that checks cloud status (or just call it here?)
+
 h2o.clusterStatus <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
