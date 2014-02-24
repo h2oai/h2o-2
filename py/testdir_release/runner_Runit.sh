@@ -94,80 +94,14 @@ echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 mySetup() {
     # we setup .Renviron and delete the old local library if it exists
     # then make the R_LIB_USERS dir
-    which R
-    R --version
-    # don't always remove..other users may have stuff he doesn't want to re-install
-    if [[ $USER == "jenkins" ]]
-    then 
-        echo "Rebuilding ~/.Renviron and ~/.Rprofile for $USER"
-        # Set CRAN mirror to a default location
-        rm -f ~/.Renviron
-        rm -f ~/.Rprofile
-        echo "options(repos = \"http://cran.stat.ucla.edu\")" > ~/.Rprofile
-        echo "R_LIBS_USER=\"~/.Rlibrary\"" > ~/.Renviron
-        rm -f -r ~/.Rlibrary
-        mkdir -p ~/.Rlibrary
-    fi
-
-    # removing .Rlibrary should have removed h2oWrapper
-    # but maybe it was installed in another library (site library)
-    # make sure it's removed, so the install installs the new (latest) one
-    cat <<!  > /tmp/libPaths.cmd
-    .libPaths()
-    myPackages = rownames(installed.packages())
-    if("h2o" %in% myPackages) {
-      # detach("package:h2o", unload=TRUE) 
-      remove.packages("h2o")
-    }
-    if("h2oRClient" %in% myPackages) {
-      # detach("package:h2oRClient", unload=TRUE) 
-      remove.packages("h2oRClient")
-    }
-
-    # make the install conditional. Don't install if it's already there
-    usePackage <- function(p) {
-        if (!is.element(p, installed.packages()[,1]))
-            install.packages(p, dep = TRUE)
-        require(p, character.only = TRUE)
-    }
-
-    # what packages did the h2o_master_test need?
-    usePackage("Rcurl")
-    usePackage("rjson")
-    usePackage("statmod")
-    usePackage("testthat")
-    usePackage("bitops")
-    usePackage("tools")
-    usePackage("LiblineaR")
-    usePackage("gdata")
-    usePackage("caTools")
-    usePackage("gplots")
-    usePackage("ROCR")
-    usePackage("digest")
-
-    # these came from source('../findNSourceUtils.R')
-    usePackage("glmnet")
-    usePackage("Matrix")
-    usePackage("survival")
-    usePackage("gbm")
-    # usePackage("splines")
-    usePackage("lattice")
-    # usePackage("parallel")
-    usePackage("RUnit")
-
-    # usePackage("h2o")
-    # usePackage("h2oRClient")
-    # usePackage("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
-    # library(h2o)
-!
-
+    # creates /tmp/libPaths.cmd
+    rm -f /tmp/libPaths.cmd
+    ./Rsetup.sh
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
     echo "Running this cmd:"
     echo $cmd
-    # everything after -- is positional. grabbed by argparse.REMAINDER
-    testName=`basename "$1"`
     # it's gotten long now because of all the installs
-    ./sh2junit.py -name $testName -timeout 300 -- $cmd
+    ./sh2junit.py -name 'libPaths' -timeout 300 -- $cmd
 }
 
 myR() {
@@ -217,12 +151,6 @@ myR() {
     # -dir is optional
     ./sh2junit.py -shdir $shdir -name $testName -timeout $timeout -- $cmd || true
 
-    # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
-    # think of h2o.check_sandbox_for_errors()
-    # rm -f -r sandbox/$1
-    # mkdir -p sandbox/$1
-    # cp -f sandbox/*log sandbox/$1
-    # rm -f sandbox/*log
     set -e
     popd
 }
@@ -233,7 +161,7 @@ echo "Okay to run h2oWrapper.R every time for now"
 #***********************************************************************
 # This is the list of tests
 #***********************************************************************
-mySetup libPaths
+mySetup 
 
 # can be slow if it had to reinstall all packages?
 export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
@@ -250,10 +178,6 @@ then
     # have to ignore the Rsandbox dirs that got created in the tests directory
     for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox|/results/' | grep 'runit.*\.[rR]' | sed -e 's!\.[rR]$!!');
     do
-        testName=$(basename $test)
-        testDir=$(dirname $test)
-        testDirParent=$(dirname $testDir)
-        testDirName=$(basename $testDir)
         myR $test 300
         sleep 180
     done

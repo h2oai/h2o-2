@@ -224,7 +224,7 @@ public class Vec extends Iced {
   /** Whether or not this column parsed as a time, and if so what pattern was used. */
   public final boolean isTime(){ return _time>=0; }
   public final int timeMode(){ return _time; }
-  public final String timeParse(){ return Utils.TIME_PARSE[_time]; }
+  public final String timeParse(){ return ParseTime.TIME_PARSE[_time]; }
 
   /** Map the integer value for a enum/factor/categorical to it's String.
    *  Error if it is not an ENUM.  */

@@ -8,7 +8,7 @@ import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
 import water.util.Log;
-import water.util.Utils;
+import water.fvec.ParseTime;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -894,10 +894,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         ++_colIdx;
         // If this is a yet unspecified but non-numeric column, attempt a time-parse
         if( _colTypes[colIdx] == UCOL &&
-            Utils.attemptTimeParse(str) != Long.MIN_VALUE )
+            ParseTime.attemptTimeParse(str) != Long.MIN_VALUE )
           _colTypes[colIdx] = TCOL; // Passed a time-parse, so assume a time-column
         if( _colTypes[colIdx] == TCOL ) {
-          long time = Utils.attemptTimeParse(str);
+          long time = ParseTime.attemptTimeParse(str);
           if( time != Long.MIN_VALUE ) {
             if(time < _min[colIdx])_min[colIdx] = time;
             if(time > _max[colIdx])_max[colIdx] = time;
@@ -930,7 +930,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         } else if( _colTypes[colIdx] == LONG ) {
           ++_colIdx;
           // Times are strings with a numeric column type of LONG
-          long time = Utils.attemptTimeParse(str);
+          long time = ParseTime.attemptTimeParse(str);
           _ab.put8(time);
           // Update sigma
           if( !Double.isNaN(_mean[colIdx])) {

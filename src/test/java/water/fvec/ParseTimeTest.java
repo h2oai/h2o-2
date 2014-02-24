@@ -4,7 +4,7 @@ import org.junit.Test;
 import water.TestUtil;
 import water.Key;
 
-public class ParseTime extends TestUtil {
+public class ParseTimeTest extends TestUtil {
   private double[] d(double... ds) { return ds; }
   private String[] s(String...ss) { return ss; }
   private final double NaN = Double.NaN;
