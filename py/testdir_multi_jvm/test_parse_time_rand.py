@@ -2,12 +2,26 @@ import unittest, random, time, sys, string
 sys.path.extend(['.','..','py'])
 import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_browse as h2b
 
+print "Not sure if we'll need quotes around these time formats"
+
+def a0(epochTime): return time.asctime(epochTime)
+def a1(epochTime): return time.strftime("%c", epochTime)
+def a2(epochTime): return time.strftime("%x", epochTime)
+def a3(epochTime): return time.strftime("%X", epochTime)
+def a4(epochTime): return time.strftime("%X %x", epochTime)
+def a5(epochTime): return time.strftime("%x %X", epochTime)
+
+timeFormatFuncList = [
+    a0, a1, a2, a3, a4, a5
+]
+
 def getRandomDate():
     epochSecs = random.randint(0,2000000000)
     epochTime = time.gmtime(epochSecs)
-    a = time.asctime(epochTime)
-    # print a
-    return a
+    a = random.randint(0,len(timeFormatFuncList)-1)
+    # randomly pick one of the ways to format the random time
+    b = timeFormatFuncList[a](epochTime)
+    return b
 
 def rand_rowData(colCount=6):
     a = [getRandomDate() for fields in range(colCount)]
@@ -21,8 +35,8 @@ def rand_rowData(colCount=6):
     upCol = random.randint(0,colCount-1)
     a[upCol] = a[upCol].upper()
     
-    # put a little white space in!
-    b = ", ".join(map(str,a))
+    b = ",".join(map(str,a))
+    print b
     return b
 
 def rand_header(colCount=6):
@@ -55,6 +69,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
+            pass
             h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
