@@ -643,16 +643,16 @@ public final class ParseDataset2 extends Job {
           addInvalidCol(colIdx);
           return;
         }
-        if(_ctypes[colIdx] == UCOL && Utils.attemptTimeParse(str) > 0)
+        if(_ctypes[colIdx] == UCOL && ParseTime.attemptTimeParse(str) > 0)
           _ctypes[colIdx] = TCOL;
         if(_ctypes[colIdx] == TCOL){
-          long l = Utils.attemptTimeParse(str);
+          long l = ParseTime.attemptTimeParse(str);
           if( l == Long.MIN_VALUE ) addInvalidCol(colIdx);
           else {
-            int time_pat = Utils.decodePat(l); // Get time pattern
-            l = Utils.decodeTime(l);           // Get time
-            addNumCol(colIdx, l, 0);           // Record time in msec
-            _nvs[_col]._timCnt[time_pat]++;    // Count histo of time parse patterns
+            int time_pat = ParseTime.decodePat(l); // Get time pattern
+            l = ParseTime.decodeTime(l);           // Get time
+            addNumCol(colIdx, l, 0);               // Record time in msec
+            _nvs[_col]._timCnt[time_pat]++; // Count histo of time parse patterns
           }
         } else if(!_enums[_col = colIdx].isKilled()) {
           // store enum id into exponent, so that it will be interpreted as NA if compressing as numcol.

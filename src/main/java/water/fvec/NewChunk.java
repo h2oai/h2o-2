@@ -28,7 +28,7 @@ public class NewChunk extends Chunk {
   int _naCnt=-1;                // Count of NA's   appended
   int _strCnt;                  // Count of Enum's appended
   int _nzCnt;                   // Count of non-zero's appended
-  final int _timCnt[] = new int[water.util.Utils.TIME_PARSE.length]; // Count of successful time parses
+  final int _timCnt[] = new int[ParseTime.TIME_PARSE.length]; // Count of successful time parses
 
   public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 

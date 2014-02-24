@@ -25,7 +25,7 @@ public class AppendableVec extends Vec {
   byte [] _chunkTypes;
   long _naCnt;
   long _strCnt;
-  final long _timCnt[] = new long[Utils.TIME_PARSE.length];
+  final long _timCnt[] = new long[ParseTime.TIME_PARSE.length];
   long _totalCnt;
 
   public AppendableVec( String keyName ) {
