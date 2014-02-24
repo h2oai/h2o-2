@@ -345,7 +345,7 @@ public class Inspect extends Request {
           + NN.link(key, NN.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
-          + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
+          + GLMScore.link(KEY, key, "0.0", "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
         + "</div>"
         + "<p><b><font size=+1>"
           + cols + " columns"
