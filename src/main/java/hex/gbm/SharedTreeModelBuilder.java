@@ -202,7 +202,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
     model.delete_and_lock(self());
     // Prepare adapted validation dataset if it is necessary for classification  (we do not need to care about regression)
-    if (validation!=null && _nclass > 1) {
+    if (validation!=null) {
       Frame[] av = model.adapt(validation, false);
       _adaptedValidation     = av[0]; // adapted validation data for model
       _toDeleteFrame         = av[1]; // only adapted vectors which need to be deleted
@@ -221,6 +221,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     try {
       // Compute the model
       model = buildModel(model, fr, names, domains, cmDomain, bm_timer);
+    //} catch (Throwable t) { t.printStackTrace();
     } finally {
       model.unlock(self());  // Update and unlock model
       cleanUp(fr,bm_timer);  // Shared cleanup
@@ -661,8 +662,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     public Score doIt(Model model, Frame fr, Frame adaptedValidation, Vec adaptedValidationResponse, int[][] modelTransf, String[] cmDomain, boolean oob, boolean build_tree_per_node) {
       assert !oob || adaptedValidation==null : "Validation frame cannot be specified if oob validation is demanded!"; // oob => validation==null
       assert _nclass == 1 || cmDomain != null ;
-
-      System.err.println("CM domain: " + Arrays.toString(cmDomain));
 
       _cmlen = _nclass > 1 ? cmDomain.length : 1;
       _oob = oob;
