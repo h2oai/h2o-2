@@ -209,9 +209,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _validAdapted = true;
       // Do I need to perform additional adaptation of response?
       if (_validMap!=null) {
+        assert _modelMap != null : "Model response transformation should exist if validation response transformation exists!";
         String vr = model.responseName();
-        _adaptedValidationResponse = validation.vec(vr).makeTransf(_validMap); // Add an original response adapted to CM domain
+        Vec tmp = validation.vec(vr).toEnum();
+        _adaptedValidationResponse = tmp.makeTransf(_validMap); // Add an original response adapted to CM domain
         _toDeleteFrame.add("__dummy__validation_response__", _adaptedValidationResponse); // Add the created vector to a clean-up list
+        _toDeleteFrame.add("__dummy__validation_enum_response__", tmp);
       }
     }
 
