@@ -697,10 +697,12 @@ public class Utils {
   public static long decodeTime(long tcode ) { return tcode>>8; }
   public static int  decodePat (long tcode ) { return ((int)tcode&0xFF); }
   public static long attemptTimeParse( ValueString str ) {
-    long t0 = attemptTimeParse_01(str); // "yyyy-MM-dd" and that plus " HH:mm:ss.SSS"
-    if( t0 != Long.MIN_VALUE ) return t0;
-    long t2 = attemptTimeParse_2 (str); // "dd-MMM-yy"
-    if( t2 != Long.MIN_VALUE ) return t2;
+    try {
+      long t0 = attemptTimeParse_01(str); // "yyyy-MM-dd" and that plus " HH:mm:ss.SSS"
+      if( t0 != Long.MIN_VALUE ) return t0;
+      long t2 = attemptTimeParse_2 (str); // "dd-MMM-yy"
+      if( t2 != Long.MIN_VALUE ) return t2;
+    } catch( org.joda.time.IllegalFieldValueException _ ) { }
     return Long.MIN_VALUE;
   }
   // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
