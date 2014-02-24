@@ -42,6 +42,7 @@ public class Job extends Request2 {
         throw new IllegalArgumentException("Key '" + value + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
     }
   }
+  // FIXME: all these fields should be private or at least protected
   @API(help = "Job description") public String   description;
   @API(help = "Job start time")  public long     start_time;
   @API(help = "Job end time")    public long     end_time;
@@ -73,6 +74,7 @@ public class Job extends Request2 {
     this.start_time  = prior.start_time;
     this.end_time    = prior.end_time;
     this.state       = prior.state;
+    this.exception   = prior.exception;
   }
 
   public Key self() { return job_key; }
@@ -420,6 +422,7 @@ public class Job extends Request2 {
   }
   public void cancel(final String msg) {
     state = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    exception = msg;
     // replace finished job by a job handle
     replaceByJobHandle();
     DKV.write_barrier();
@@ -439,6 +442,10 @@ public class Job extends Request2 {
   // This querys the *current object* for its status.
   // Only valid if you have a Job object that is being updated by somebody.
   public boolean isCancelled() { return state == JobState.CANCELLED || state == JobState.CRASHED; }
+
+  public boolean isCrashed() { return state == JobState.CRASHED; }
+
+  public boolean isDone() { return state == JobState.DONE; }
 
   // Check the K/V store to see the Job is still running
   public static boolean isRunning(Key job_key) {
@@ -460,14 +467,8 @@ public class Job extends Request2 {
    * @param key
    * @return
    */
-  public static final Job findJob(final Key key) {
-    Job job = null;
-    for( Job current : Job.all() ) {
-      if( current.self().equals(key) ) {
-        job = current;
-        break;
-      }
-    }
+  public static final Job findJob(final Key jobkey) {
+    Job job = UKV.get(jobkey);
     return job;
   }
 
