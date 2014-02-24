@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromInspect(inspect, parseResult['destination_key'])
 
             summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
-            h2o_cmd.infoFromSummary(summaryResult)
+            # h2o_cmd.infoFromSummary(summaryResult)
 
             trees = 2
             start = time.time()

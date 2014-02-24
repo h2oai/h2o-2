@@ -297,8 +297,8 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
             missingValuesDict[k] = c[keyNA]
             printMsg = True
 
-        if c['min'] == c['max']:
-            msg += (" constant value: %s" % c['min'])
+        if c['min']==c['max'] and c['type']!='enum':
+            msg += (" constant value (min=max): %s" % c['min'])
             constantValuesDict[k] = c['min']
             printMsg = True
 
@@ -328,6 +328,9 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
 def infoFromInspect(inspect, csvPathname):
+    if not inspect:
+        raise Exception("inspect is empty for infoFromInspect")
+
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
@@ -370,6 +373,8 @@ def infoFromInspect(inspect, csvPathname):
 # while we're at it, let's cross check numCols
 # if we don't pass these extra params, just ignore
 def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
+    if not summaryResult:
+        raise Exception("summaryResult is empty for infoFromSummary")
     if h2o.beta_features:
         # names = summaryResult['names']
         # means = summaryResult['means']

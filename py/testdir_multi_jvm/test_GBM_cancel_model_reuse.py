@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + csvFilename 
             
             ### h2o.beta_features = False
-
+            print "FIX! is this guy getting cancelled because he's reusing a key name? but it should be okay?"
             (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=50)
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key='c.hex', 
                 timeoutSecs=500, noPoll=False, doSummary=False) # can't do summary until parse result is correct json
@@ -112,7 +112,8 @@ class Basic(unittest.TestCase):
                 for j in range(5):
                     # FIX! apparently we can't reuse a model key after a cancel
                     kwargs['destination_key'] = 'GBMBad' + str(j)
-                    GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+                    # rjson error in poll_url: Job was cancelled by user!
+                    GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, ignoreH2oError=True, **kwargs)
                     jobids.append(GBMFirstResult['job_key'])
                     h2o.check_sandbox_for_errors()
                     
@@ -121,6 +122,7 @@ class Basic(unittest.TestCase):
                 #     h2o.nodes[0].jobs_cancel(key=j)
 
                 h2o_jobs.cancelAllJobs()
+                # am I getting a subsequent parse job cancelled?
                 h2o_jobs.showAllJobs()
 
             if DELETE_KEYS:

@@ -3,6 +3,14 @@ import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json
 import h2o
 
+
+# http://en.wikipedia.org/wiki/Relative_difference
+# http://stackoverflow.com/questions/4028889/floating-point-equality-in-python
+def approx_equal(a, b, tol):
+    c = abs(a-b) / max(abs(a), abs(b))
+    print "actual relative diff: %s allowed relative diff: %s" % (c, tol)
+    return c < tol
+
 def cleanseInfNan(value):
     # change the strings returned in h2o json to the IEEE number values
     translate = {

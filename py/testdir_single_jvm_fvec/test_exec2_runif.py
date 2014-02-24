@@ -52,16 +52,16 @@ class Basic(unittest.TestCase):
             h2o.check_sandbox_for_errors()
 
         rSummary = h2o_cmd.runSummary(key='r0.hex', cols='0')
-        h2o_cmd.infoFromSummary(rSummary)
+        # h2o_cmd.infoFromSummary(rSummary)
 
         rSummary = h2o_cmd.runSummary(key='s0.hex', cols='0')
-        h2o_cmd.infoFromSummary(rSummary)
+        # h2o_cmd.infoFromSummary(rSummary)
 
         sSummary = h2o_cmd.runSummary(key='s1.hex', cols='0')
-        h2o_cmd.infoFromSummary(sSummary)
+        # h2o_cmd.infoFromSummary(sSummary)
 
         sSummary = h2o_cmd.runSummary(key='s2.hex', cols='0')
-        h2o_cmd.infoFromSummary(sSummary)
+        # h2o_cmd.infoFromSummary(sSummary)
 
         # since there are no NAs in covtype, r.hex and s.hex should be identical?
         if 1==0:

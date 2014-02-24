@@ -12,7 +12,7 @@ sessionInfo()
 
 # standard preamble to connect to h2o
 library( h2o )
-h2o <- h2o.init(ip=ip, port=port, silentUpgrade=T, startH2O=F)
+h2o <- h2o.init(ip=ip, port=port, startH2O=F)
 
 
 #PATH TO DATA ON COMPUTER: (USE h2o.importFile):/.../CliffDemo/airlines.1987.2013.05p.csv.zip)

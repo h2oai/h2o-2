@@ -35,9 +35,7 @@ following commands to the R console:
 ::
 
    detach("package:h2o", unload=TRUE) 
-   detach("package:h2oRClient", unload=TRUE) 
    remove.packages("h2o") 
-   remove.packages("h2oRClient") 
 
 
 Note: users may get warnings of the type "Error in
@@ -67,7 +65,7 @@ If there is no running instance of  H\ :sub:`2`\ O prior to using
 the command "h2o.init()",  H\ :sub:`2`\ O in R will start an instance
 automatically for the user. 
 
-Note that in the call "localH2O<- h2o.init()" the h2o.init object is
+Note that in the call "localH2O <- h2o.init()" the h2o.init object is
 being named localH2O in the R environment for use later in model
 specification. Entering the call exactly as it is written below assumes the
 user wishes to connect to IP localhost and port: 54321.
@@ -75,7 +73,7 @@ user wishes to connect to IP localhost and port: 54321.
 ::
 
   library(h2o)
-  localH2O<- h2o.init()
+  localH2O <- h2o.init()
 
 
 Users who wish to specify a connection
@@ -88,16 +86,7 @@ environment.
 ::
 
   library(h2o)
-  localH2O = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE, silentUpgrade = TRUE) 
-
-The h2o.init() call *may* return output similar to the following:
-
-**Do you want to install H2O R package 2.1.0.99999.1389130748 from the
-server (Y/N)?**
-
-Respond Y or YES. This is the mechanism by which the revision of the H\ :sub:`2`\ O R 
-package and the H\ :sub:`2`\ O instance running on the server are verified as matching 
-and compatible. 
+  localH2O = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE) 
 
 
 **STEP 5: Upgrading Packages**

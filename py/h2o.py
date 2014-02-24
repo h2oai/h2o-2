@@ -967,7 +967,7 @@ class H2O(object):
         for e in ['error', 'Error', 'errors', 'Errors']:
             # error can be null (python None). This happens in exec2
             if e in rjson and rjson[e]:
-                verboseprint(dump_json(rjson))
+                print "rjson:", dump_json(rjson)
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
                     # well, we print it..so not totally ignore. test can look at rjson returned
@@ -1092,19 +1092,6 @@ class H2O(object):
 
                 if response_info['status'] != 'done':
                     redirect_url = response_info['redirect_url']
-                    # HACK: these are missing the "2/" prefix for now
-                    # 'KMeans2Progress' in str(redirect_url) or
-                    # 'GLMModelView' in str(redirect_url) or
-###                     if 'PCAProgressPage' in str(redirect_url):
-###                         if "2/" not in str(redirect_url):
-###                             print "Hacking in the 2/ prefix..need to fix h2o?"
-###                             redirect_url = "2/" + redirect_url
-###                     if  'DRFProgressPage' in str(redirect_url):
-###                         if "2/" not in str(redirect_url):
-###                             # already has a leading /?
-###                             print "Hacking in the 2/ prefix..need to fix h2o?"
-###                             redirect_url = "2" + redirect_url
-
                     if redirect_url:
                         url = self.__url(redirect_url)
                         params = None

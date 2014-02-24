@@ -33,9 +33,7 @@ Simply enter the following:
 ::
 
    detach("package:h2o", unload=TRUE) 
-   detach("package:h2oRClient", unload=TRUE) 
    remove.packages("h2o") 
-   remove.packages("h2oRClient") 
 
 
 Note: users may get warnings of the type "Error in
@@ -77,7 +75,7 @@ Get R Studio talking to your instance of H\ :sub:`2`\ O by typing in the call:
 
 ::
 
-  >localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+  >localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
 Your IP and port may be different, depending on whether you are running H\ :sub:`2`\ O from your computer or a server. If you are running on a server, where it says IP enter the IP address of the server, and the appropriate port number. In the picture below the IP number is everything before the colon, and the port number is the 5 digit string after the colon.
 

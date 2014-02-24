@@ -2,7 +2,7 @@ H2O in R
 ------------
 
 
-These instructions assume you are using R 2.14.0 or later.  
+These instructions assume you are using R 2.13.0 or later.  
 
 **STEP 1**
 
@@ -20,7 +20,7 @@ Start an instance of H2O. If you have questions about how to do this see the not
 
 In the R console install the package by entering the following command at the prompt:
 
-  >install.packages("<unzipped h2o directory>/R/h2o_1.0.3.tar.gz", repos = NULL, type = "source")
+  >install.packages("h2o", repos = c("<unzipped h2o directory>/R", getOption("repos")))
   
 
 This returns output similar to the following:
@@ -51,39 +51,17 @@ http://docs.0xdata.com/Ruser/R_studio.html and looking for the section for RStud
 
 **STEP 5**
 
-Install dependencies for the R package by calling 
-
-
-  >h2o.installDepPkgs()
-
-Which returns
-
-
-  Loading required package: bitops
-  Loading required package: MASS
-  Loading required package: cluster
-  Loading required package: mclust
-  Package 'mclust' version 4.2
-  Loading required package: flexmix
-  Loading required package: lattice
-  
-
-
-**STEP 6**
-
-
-  >localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+  >localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
 
 
-**STEP 7** 
+**STEP 6** 
 
 Here is an example of using the above object in an H2O call in R
 
 
 
-  >irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
-  
+  >irisPath = system.file("extdata", "iris.csv", package="h2o")
   >iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
   >summary(iris.hex)
 

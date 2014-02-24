@@ -30,7 +30,8 @@ else:
         # doesn't work
         # ';;',
         'r1.hex[,1]=r1.hex[,1]==1.0',
-        'r1.hex[1,]=r1.hex[1,]==1.0',
+        # unsupported
+        # 'r1.hex[1,]=r1.hex[1,]==1.0',
         'b.hex=runif(r3.hex[,1])',
         'b.hex=runif(r3.hex[1,])',
 
