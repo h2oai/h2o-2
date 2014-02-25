@@ -1,9 +1,10 @@
 package water.fvec;
 
 import java.util.UUID;
-
+import java.util.Arrays;
 import water.*;
 import water.util.Utils;
+import water.nbhm.NonBlockingHashMapLong;
 import static water.util.Utils.seq;
 
 /**
@@ -163,8 +164,10 @@ public class Vec extends Iced {
    * @return
    * @see Vec#makeTransf(int[], int[], String[])
    */
-  Vec makeSimpleTransf(int[] values, String[] domain) {
-    return makeTransf(values, null, domain);
+  Vec makeSimpleTransf(long[] values, String[] domain) {
+    int is[] = new int[values.length];
+    for( int i=0; i<values.length; i++ ) is[i] = (int)values[i];
+    return makeTransf(is, null, domain);
   }
   /** This Vec does not have dependent hidden Vec it uses.
    *
@@ -249,7 +252,7 @@ public class Vec extends Iced {
   public Vec toEnum() {
     if( isEnum() ) return this.makeIdentityTransf(); // Make an identity transformation of this vector
     if( !isInt() ) throw new IllegalArgumentException("Enum conversion only works on integer columns");
-    int[] domain;
+    long[] domain;
     String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
     if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column domain is too large to be represented as an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
     return this.makeSimpleTransf(domain, sdomain);
@@ -687,35 +690,32 @@ public class Vec extends Iced {
 
   /** Collect numeric domain of given vector */
   public static class CollectDomain extends MRTask2<CollectDomain> {
-    final int _nclass;
-    final int _ymin;
-    byte _dom[]; // Shared between all instances of this tasks since each instance is doing a simple write.
-
-    @Override protected void setupLocal() { _dom = new byte[_nclass]; }
-
-    public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
+    transient NonBlockingHashMapLong<Object> _uniques;
+    @Override protected void setupLocal() { _uniques = new NonBlockingHashMapLong(); }
+    public CollectDomain(Vec v) { }
     @Override public void map(Chunk ys) {
-      for( int row=0; row<ys._len; row++ ) {
-        if (ys.isNA0(row))
-          continue;
-        int ycls = (int)ys.at80(row)-_ymin;
-        if( _dom[ycls] == 0 ) _dom[ycls] = 1; // Only write to shared array
-      }
+      for( int row=0; row<ys._len; row++ )
+        if( !ys.isNA0(row) ) 
+          _uniques.put(ys.at80(row),"");
     }
 
-    @Override public void reduce(CollectDomain mrt) { Utils.or(this._dom, mrt._dom); }
+    @Override public void reduce(CollectDomain mrt) { 
+      if( _uniques == mrt._uniques ) return;
+      _uniques.putAll(mrt._uniques);
+    }
 
     /** Returns exact numeric domain of given vector computed by this task.
      * The domain is always sorted. Hence:
      *    domain()[0] - minimal domain value
      *    domain()[domain().length-1] - maximal domain value
      */
-    public int[] domain() {
-      int cnt = 0;
-      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) cnt++;
-      int[] dom = new int[cnt];
-      cnt=0;
-      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) dom[cnt++] = i+_ymin;
+    public long[] domain() {
+      long[] dom = new long[_uniques.size()];
+      NonBlockingHashMapLong.IteratorLong i=(NonBlockingHashMapLong.IteratorLong)_uniques.keySet().iterator();
+      int j=0;
+      while( i.hasNext() )
+        dom[j++] = i.nextLong();
+      Arrays.sort(dom);
       return dom;
     }
   }
