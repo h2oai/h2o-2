@@ -186,6 +186,7 @@ public class Parse extends Request {
       if( sep > 0 ) n = n.substring(sep+1);
       int dot = n.lastIndexOf('.');
       if( dot > 0 ) n = n.substring(0, dot);
+      if( !Character.isLetter(n.charAt(0)) ) n = "X"+n;
       int i = 0;
       String res = n + Extensions.HEX;
       Key k = Key.make(res);
