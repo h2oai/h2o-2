@@ -73,6 +73,7 @@ public class Exec2 {
         frAuto.remove(0,fr2.numCols());
         frAuto.delete();
         fr2.delete_and_lock(null).unlock(null);
+        DKV.get(k);             // Pull it locally again
       }
     }
     for( Key k : H2O.localKeySet() ) { // Add Frames to parser's namespace
