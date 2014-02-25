@@ -53,7 +53,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   if(params$distribution == "multinomial") {
     # temp = matrix(unlist(res$cm), nrow = length(res$cm))
     # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-    mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
+    mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
   }
   return(mySum)
 }
@@ -68,8 +68,8 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   result$params = params
   
   if(result$params$distribution == "multinomial") {
-    class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(tail(res$cm, 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
+    class_names = res$'cmDomain' #tail(res$'_domains', 1)[[1]]
+    result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
   } else
     result$classification <- F
@@ -781,7 +781,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, nbins=100, seed=-1, validation, nodesize=1) {
+h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed=-1, importance = FALSE, validation) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
@@ -792,7 +792,8 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
-  
+  if(!is.logical(importance)) stop("importance be logical (TRUE or FALSE)')")
+
   if(missing(validation)) validation = data
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
@@ -801,7 +802,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance))
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins)
   
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
@@ -827,7 +828,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-  mySum$prediction_error = tail(res$cm, 1)[[1]]$'_predErr'
+  mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
   return(mySum)
 }
 
@@ -845,8 +846,8 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
 
-  class_names = tail(res$'_domains', 1)[[1]]
-  result$confusion = .build_cm(tail(res$cm, 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
+  class_names = res$'cmDomain' #tail(res$'_domains', 1)[[1]]
+  result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   result$mse = as.numeric(res$errs)
   # result$ntree = res$N
   return(result)
