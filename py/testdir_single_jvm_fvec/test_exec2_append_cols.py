@@ -61,7 +61,6 @@ class Basic(unittest.TestCase):
         print "\ns.hex" \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
-
         
 
         h2o.check_sandbox_for_errors()
