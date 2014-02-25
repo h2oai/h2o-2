@@ -537,43 +537,55 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
 }
 
 # ------------------------------- Neural Network ------------------------------------ #
-h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', layers=500, rate=0.01, l1_reg=1e-4, l2_reg=0.0010, epoch=100, validation) {
+h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=as.numeric(NA), layers=500, rate=0.01, annealing_rate=1e-6, l1_reg=1e-4, l2_reg=0.0010, mom_start=0.5, mom_ramp=1e6, mom_stable=0.99, epochs=100, validation) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.logical(classification)) stop('classification must be true or false')
   if(!is.character(activation)) stop('activation must be [Tanh, Rectifier, Maxout]')
   if(!(activation %in% c('Tanh', 'Rectifier', 'Maxout')))
     stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier, Maxout] are supported"))
+  if(!is.numeric(dropout)) stop("dropout ratio must be numeric")
+  if(!is.na(dropout) && any(dropout < 0 | dropout > 1)) stop("dropout ratio must be in [0,1]")
   if(!is.numeric(layers)) stop('layers must be numeric')
   if( any(layers < 1) ) stop('layers must be >= 1')
   if(!is.numeric(rate)) stop('rate must be numeric')
   if( any(rate < 0) ) stop('rate must be >= 1')
+  if(!is.numeric(annealing_rate)) stop("annealing_rate must be numeric")
+  if(any(annealing_rate < 0)) stop("annealing_rate must be >= 1")
+  
   if(!is.numeric(l1_reg)) stop('l1_reg must be numeric')
   if( any(l1_reg < 0) ) stop('l1_reg must be >= 0')
   if(!is.numeric(l2_reg)) stop('l2_reg must be numeric')
   if( any(l2_reg < 0) ) stop('l2_reg must be >= 0')
-  if(!is.numeric(epoch)) stop('epoch must be numeric')
-  if( any(epoch < 0) ) stop('epoch must be >= 1')
+  if(!is.numeric(mom_start)) stop("mom_start must be numeric")
+  if(any(mom_start < 0 | mom_start > 1)) stop("mom_start must be in [0,1]")
+  if(!is.numeric(mom_ramp)) stop("mom_ramp must be numeric")
+  if(any(mom_ramp < 1)) stop("mom_ramp must be >= 1")
+  if(!is.numeric(mom_stable)) stop("mom_stable must be numeric")
+  if(any(mom_stable < 0 | mom_stable > 1)) stop("mom_stable must be in [0,1]")
+  if(!is.numeric(epochs)) stop('epochs must be numeric')
+  if( any(epochs < 0) ) stop('epochs must be >= 1')
 
   if(missing(validation)) validation = data
-  # if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
+  if(!is.na(dropout)) activation = paste(activation, "WithDropout", sep = "")
   
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NN, source=data@key, response=args$y, ignored_cols=args$x_ignore,
-                         classification=as.numeric(classification), activation=activation, rate=rate,
-                         hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
-  params = list(x=args$x, y=args$y, classification=classification, activation=activation, rate=rate, layers=layers, l1_reg=l1_reg, l2_reg=l2_reg, epoch=epoch)
+                         classification=as.numeric(classification), input_dropout_ratio=ifelse(any(is.na(dropout)), "", dropout), activation=activation, rate=rate, 
+                         rate_annealing=annealing_rate, hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, momentum_start=mom_start, momentum_ramp=mom_ramp, 
+                         momentum_stable=mom_stable, epochs=epochs, validation=validation@key)
+  # params = list(x=args$x, y=args$y, classification=classification, activation=activation, dropout=dropout, rate=rate, annealing_rate=annealing_rate, layers=layers, l1_reg=l1_reg, l2_reg=l2_reg, mom_start=mom_start, mom_ramp=mom_ramp, mom_stable=mom_stable, epochs=epochs)
   
-  if(length(rate) == 1 && length(l1_reg) == 1 && length(l2_reg) == 1 && length(epoch) == 1) {
+  if(length(dropout) == 1 && length(rate) == 1 && length(annealing_rate) == 1 && length(l1_reg) == 1 && length(l2_reg) == 1 && length(mom_start) == 1 && length(mom_ramp) == 1 && length(mom_stable) == 1 && length(epochs) == 1) {
     .h2o.__waitOnJob(data@h2o, res$job_key)
-    # while(!.h2o.__isDone(data@h2o, "NN", res)) { Sys.sleep(1) }
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NNModelView, '_modelKey'=res$destination_key)
 
-    result = .h2o.__getNNResults(res2$neuralnet_model, params)
+    # result = .h2o.__getNNResults(res2$neuralnet_model, params)
+    result = .h2o.__getNNResults(res2$neuralnet_model)
     new("H2ONNModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
-    # .h2o.gridsearch.internal("NN", data, res$job_key, res$destination_key, validation)
-    .h2o.gridsearch.internal("NN", data, res, validation, params)
+    # .h2o.gridsearch.internal("NN", data, res, validation, params)
+    .h2o.gridsearch.internal("NN", data, res, validation)
   }
 }
 
@@ -593,20 +605,32 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', layers=50
   mySum$l2_reg = resP$l2
   mySum$epochs = resP$epochs
 
+  # TODO: Need grid search to report prediction error in JSON
   # temp = matrix(unlist(res$confusion_matrix), nrow = length(res$confusion_matrix))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
   return(mySum)
 }
 
-.h2o.__getNNResults <- function(res, params) {
+.h2o.__getNNResults <- function(res, params = list()) {
   result = list()
-  params$rate = res$parameters$rate
-  params$l1_reg = res$parameters$l1
-  params$l2_reg = res$parameters$l2
-  params$epoch = res$parameters$epochs
+#   model_params = res$model_info$parameters
+#   params$activation = model_params$activation
+#   params$rate = model_params$rate
+#   params$annealing_rate = model_params$rate_annealing
+#   params$l1_reg = model_params$l1
+#   params$l2_reg = model_params$l2
+#   params$mom_start = model_params$momentum_start
+#   params$mom_ramp = model_params$momentum_ramp
+#   params$mom_stable = model_params$momentum_stable
+#   params$epochs = model_params$epochs
   
-  result$params = params
-  # class_names = tail(res$'_domains', 1)[[1]]
+  # result$params = params
+  model_params = res$model_info$parameters
+  model_params$Request2 = NULL; model_params$response_info = NULL
+  model_params$'source' = NULL; model_params$validation = NULL
+  result$params = unlist(model_params, recursive = FALSE)
+  result$params = lapply(result$params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
+                                                      else return(x) })
   errs = tail(res$errors, 1)[[1]]
   confusion = errs$valid_confusion_matrix
   
@@ -709,14 +733,15 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, validation, nodesize = 1, use_non_local = TRUE, version = 1) {
+h2o.randomForest <- function(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, use_non_local = TRUE, version = 1) {
   if(version == 1) {
     if(!missing(validation)) stop("validation not supported under ValueArray")
     if(nodesize != 1) stop("Random forest under ValueArray only runs on a single node")
+    if(importance) stop("variable importance not supported under ValueArray")
     h2o.randomForest.VA(x, y, data, ntree, depth, sample.rate, classwt, nbins, seed, use_non_local)
   } else if(version == 2) {
     if(!is.null(classwt)) stop("classwt not supported under FluidVecs")
-    h2o.randomForest.FV(x, y, data, ntree, depth, sample.rate, nbins, seed, validation, nodesize)
+    h2o.randomForest.FV(x, y, data, ntree, depth, sample.rate, nbins, seed, importance, validation, nodesize)
   } else
     stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
@@ -779,7 +804,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, seed=-1, importance = FALSE, validation) {
+h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, validation, nodesize=1) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
@@ -790,7 +815,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
-  if(!is.logical(importance)) stop("importance be logical (TRUE or FALSE)')")
+  if(!is.logical(importance)) stop("importance must be logical (TRUE or FALSE)')")
 
   if(missing(validation)) validation = data
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
