@@ -461,8 +461,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if( missing(data) ) stop('Must specify data')
   # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
-  if(h2o.anyFactor(data)) stop("Unimplemented: K-means can only model on numeric data")
-
+  
   if( missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be a positive integer')
   if( any(centers < 1) ) stop("centers must be an integer greater than 0")
@@ -481,7 +480,8 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
     cols <- cc[ cols ]
   }
   if( any(!cols %in% cc) ) stop("Invalid column names: ", paste(cols[which(!cols %in% cc)], collapse=", "))
-
+  if(h2o.anyFactor(data[,cols])) stop("Unimplemented: K-means can only model on numeric data")
+  
   temp = setdiff(cc, cols)
   myIgnore <- ifelse(cols == '' || length(temp) == 0, '', paste(temp, sep=','))
   myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
@@ -532,7 +532,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
   result$tot.withinss <- res$total_within_SS
   result$betweenss <- res$between_cluster_SS
   result$size <- res$size
-  # result$size = res2$summaries[[1]]$hcnt
+  result$iter <- res$iterations
   return(result)
 }
 
@@ -541,8 +541,9 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', layers=50
   args <- .verify_dataxy(data, x, y)
 
   if(!is.logical(classification)) stop('classification must be true or false')
-  if(!is.character(activation)) stop('activation must be [Tanh, Rectifier]')
-  if(!(activation %in% c('Tanh', 'Rectifier')) ) stop(paste('invalid activation', activation))
+  if(!is.character(activation)) stop('activation must be [Tanh, Rectifier, Maxout]')
+  if(!(activation %in% c('Tanh', 'Rectifier', 'Maxout')))
+    stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier, Maxout] are supported"))
   if(!is.numeric(layers)) stop('layers must be numeric')
   if( any(layers < 1) ) stop('layers must be >= 1')
   if(!is.numeric(rate)) stop('rate must be numeric')
@@ -558,12 +559,7 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', layers=50
   # if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
   
-  if(!(activation %in% c('Tanh', 'Rectifier')) )
-    stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier] are supported"))
-  if(!(classification %in% c(0, 1)) )
-    stop(paste(classification, "is not a valid classification index; only [0,1] are supported"))
-
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NN, source=data@key, response=args$y, ignored_cols=args$x_ignore,
                          classification=as.numeric(classification), activation=activation, rate=rate,
                          hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
   params = list(x=args$x, y=args$y, classification=classification, activation=activation, rate=rate, layers=layers, l1_reg=l1_reg, l2_reg=l2_reg, epoch=epoch)
@@ -597,8 +593,8 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', layers=50
   mySum$l2_reg = resP$l2
   mySum$epochs = resP$epochs
 
-  temp = matrix(unlist(res$confusion_matrix), nrow = length(res$confusion_matrix))
-  mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  # temp = matrix(unlist(res$confusion_matrix), nrow = length(res$confusion_matrix))
+  # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
   return(mySum)
 }
 
@@ -610,16 +606,18 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', layers=50
   params$epoch = res$parameters$epochs
   
   result$params = params
-  class_names = tail(res$'_domains', 1)[[1]]
-  result$confusion = .build_cm(res$confusion_matrix, class_names)
-  nn_train = tail(res$training_errors,1)[[1]]
-  nn_valid = tail(res$validation_errors,1)[[1]]
-  result$train_class_error = nn_train$classification
-  result$train_sqr_error = nn_train$mean_square
-  result$train_cross_entropy = nn_train$cross_entropy
-  result$valid_class_error = nn_valid$classification
-  result$valid_sqr_error = nn_valid$mean_square
-  result$valid_cross_entropy = nn_valid$cross_entropy
+  # class_names = tail(res$'_domains', 1)[[1]]
+  errs = tail(res$errors, 1)[[1]]
+  confusion = errs$valid_confusion_matrix
+  
+  # BUG: Why is the confusion matrix returning an extra row and column with all zeroes?
+  cm = confusion$cm[-length(confusion$cm)]
+  cm = lapply(cm, function(x) { x[-length(x)] })
+  result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+  result$train_class_error = errs$train_err
+  result$train_sqr_error = errs$train_mse
+  result$valid_class_error = errs$valid_err
+  result$valid_sqr_error = errs$valid_mse
   return(result)
 }
 
