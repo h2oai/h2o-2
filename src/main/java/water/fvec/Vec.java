@@ -704,17 +704,31 @@ public class Vec extends Iced {
       _uniques.putAll(mrt._uniques);
     }
 
+    @Override public AutoBuffer write( AutoBuffer ab ) {
+      super.write(ab);
+      return ab.putA8(_uniques==null ? null : _uniques.keySetLong());
+    }
+    
+    @Override public CollectDomain read( AutoBuffer ab ) {
+      super.read(ab);
+      assert _uniques == null || _uniques.size()==0;
+      long ls[] = ab.getA8();
+      _uniques = new NonBlockingHashMapLong();
+      if( ls != null ) for( long l : ls ) _uniques.put(l,"");
+      return this;
+    }
+    @Override public void copyOver(DTask that) {
+      super.copyOver(that);
+      _uniques = ((CollectDomain)that)._uniques;
+    }
+    
     /** Returns exact numeric domain of given vector computed by this task.
      * The domain is always sorted. Hence:
      *    domain()[0] - minimal domain value
      *    domain()[domain().length-1] - maximal domain value
      */
     public long[] domain() {
-      long[] dom = new long[_uniques.size()];
-      NonBlockingHashMapLong.IteratorLong i=(NonBlockingHashMapLong.IteratorLong)_uniques.keySet().iterator();
-      int j=0;
-      while( i.hasNext() )
-        dom[j++] = i.nextLong();
+      long[] dom = _uniques.keySetLong();
       Arrays.sort(dom);
       return dom;
     }
