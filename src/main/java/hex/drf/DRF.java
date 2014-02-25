@@ -58,29 +58,36 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+    @API(help = "Model parameters")
+    public final DRF parameters;    // This is used purely for printing values out.
+
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
     @API(help = "Seed") final long seed;
-    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
+    public DRFModel(DRF params, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins);
+      this.parameters = params;
       this.mtries = mtries;
       this.sample_rate = sample_rate;
       this.seed = seed;
     }
-    public DRFModel(DRFModel prior, DTree[] trees, TreeStats tstats) {
+    public DRFModel(DRF params, DRFModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
+      this.parameters = params;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-    public DRFModel(DRFModel prior, double err, ConfusionMatrix cm) {
+    public DRFModel(DRF params, DRFModel prior, double err, ConfusionMatrix cm) {
       super(prior, err, cm);
+      this.parameters = params;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-    public DRFModel(DRFModel prior, float[] varimp) {
+    public DRFModel(DRF params, DRFModel prior, float[] varimp) {
       super(prior, varimp);
+      this.parameters = params;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
@@ -111,16 +118,16 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
   @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
+    return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
   }
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm) {
-    return new DRFModel(model, err, cm);
+    return new DRFModel(this, model, err, cm);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
-    return new DRFModel(model, ktrees, tstats);
+    return new DRFModel(this, model, ktrees, tstats);
   }
   protected DRFModel makeModel( DRFModel model, float[] varimp) {
-    return new DRFModel(model, varimp);
+    return new DRFModel(this, model, varimp);
   }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 999; min_rows = 1; }
 
