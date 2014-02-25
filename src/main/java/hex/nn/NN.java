@@ -10,6 +10,7 @@ import water.api.NNProgressPage;
 import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Log;
+import water.util.MRUtils;
 import water.util.RString;
 
 import java.util.Random;
@@ -96,6 +97,9 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
+  @API(help = "Force load balancing to increase speed for small datasets (<200MB/node)", filter = Default.class, json = true)
+  public boolean force_load_balance = true;
+
   @API(help = "Enable periodic shuffling of training data (can increase stochastic gradient descent performance)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
@@ -171,8 +175,10 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("mini_batch")
             || arg._name.equals("fast_mode")
             || arg._name.equals("ignore_const_cols")
+            || arg._name.equals("force_load_balance")
             || arg._name.equals("shuffle_training_data")
-            || arg._name.equals("nesterov_accelerated_gradient") || arg._name.equals("classification_stop")
+            || arg._name.equals("nesterov_accelerated_gradient")
+            || arg._name.equals("classification_stop")
             || arg._name.equals("regression_stop")
             || arg._name.equals("quiet_mode")
             ) {
@@ -240,67 +246,83 @@ public class NN extends Job.ValidatedJob {
   }
 
   public final NNModel initModel() {
-    checkParams();
-    lock_data();
-    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
-    final NNModel model = new NNModel(dest(), self(), source._key, dinfo, this);
-    unlock_data();
-    model.model_info().initializeMembers();
-    return model;
+    try {
+      lock_data();
+      checkParams();
+      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
+      final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
+      final NNModel model = new NNModel(dest(), self(), source._key, dinfo, this);
+      model.model_info().initializeMembers();
+      return model;
+    }
+    finally {
+      unlock_data();
+    }
   }
 
   public final NNModel buildModel(NNModel model) {
-    lock_data();
-    logStart();
-    Log.info("Number of chunks of the training data: " + source.anyVec().nChunks());
-    if (validation != null)
-      Log.info("Number of chunks of the validation data: " + validation.anyVec().nChunks());
-    if (model == null) {
-      model = UKV.get(dest());
-    }
-    model.write_lock(self());
-    if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
-
-    final long model_size = model.model_info().size();
-    Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
-    Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
-
-    final Frame train = model.model_info().data_info()._adaptedFrame;
-    Frame trainScoreFrame = sampleFrame(train, score_training_samples, seed);
-
     Frame[] valid_adapted = null;
-    Frame valid = null;
-    Frame validScoreFrame = null;
-    if (validation != null) {
-      valid_adapted = model.adapt(validation, false);
-      valid = valid_adapted[0];
-      validScoreFrame = valid != validation ? sampleFrame(valid, score_validation_samples, seed+1) : null;
+    Frame valid = null, validScoreFrame = null;
+    Frame train = null, trainScoreFrame = null;
+    try {
+      lock_data();
+      logStart();
+      if (model == null) {
+        model = UKV.get(dest());
+      }
+      model.write_lock(self());
+      final long model_size = model.model_info().size();
+      Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
+      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
+      train = reBalance(model.model_info().data_info()._adaptedFrame, seed);
+      trainScoreFrame = sampleFrame(train, score_training_samples, seed);
+      Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
+      if (validation != null) {
+        valid_adapted = model.adapt(validation, false);
+        valid = reBalance(valid_adapted[0], seed+1);
+        validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
+        Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
+      }
+      if (mini_batch > train.numRows()) {
+        Log.warn("Setting mini_batch (" + mini_batch
+                + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");
+      }
+      // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
+      final float sync_fraction = mini_batch == 0l ? 1.0f : (float)mini_batch / train.numRows();
+
+      if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
+
+      Log.info("Starting to train the Neural Net model.");
+      long timeStart = System.currentTimeMillis();
+
+      //main loop
+      long iter = 0;
+      Frame newtrain = new Frame(train);
+      do {
+        model.set_model_info(new NNTask(model.model_info(), sync_fraction).doAll(newtrain).model_info());
+        if (++iter % 10 != 0 && shuffle_training_data) {
+          Frame newtrain2 = reBalance(newtrain, seed+iter);
+          if (newtrain != newtrain2) {
+            newtrain.delete();
+            newtrain = newtrain2;
+            trainScoreFrame = sampleFrame(newtrain, score_training_samples, seed+iter+0xDADDAAAA);
+          }
+        }
+      }
+      while (model.doScoring(trainScoreFrame, validScoreFrame, timeStart, self()));
+
+      Log.info("Finished training the Neural Net model.");
+      return model;
     }
-
-    if (mini_batch > train.numRows()) {
-      Log.warn("Setting mini_batch (" + mini_batch
-              + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");
-    }
-    // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
-    final float sync_fraction = mini_batch == 0l ? 1.0f : (float)mini_batch / train.numRows();
-
-    Log.info("Starting to train the Neural Net model.");
-    long timeStart = System.currentTimeMillis();
-
-    //main loop
-    do model.set_model_info(new NNTask(model.model_info(), true /*train*/, sync_fraction).doAll(train).model_info());
-    while (model.doScoring(trainScoreFrame, validScoreFrame, timeStart, self()));
-    model.unlock(self());
-
-    //clean up
-    if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
-    if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
-    if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
+    finally {
+      model.unlock(self());
+      //clean up
+      if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
+      if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
+      if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
 //    if (_newsource != null && _newsource != source) _newsource.delete();
-    unlock_data();
-    Log.info("Finished training the Neural Net model.");
-    return model;
+      unlock_data();
+    }
   }
 
   private void lock_data() {
@@ -321,49 +343,8 @@ public class NN extends Job.ValidatedJob {
     remove();
   }
 
-  /*
-  long _iter = 0;
-  private void reBalance(Frame fr) {
-    shuffleAndBalance(fr, seed+_iter++, shuffle_training_data);
-    fr.reloadVecs();
-    Log.info("Number of chunks of " + fr.toString() + ": " + fr.anyVec().nChunks());
+  private Frame reBalance(final Frame fr, long seed) {
+    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
   }
 
-  // master node collects all rows, and distributes them across the cluster - slow
-  private static void shuffleAndBalance(Frame fr, long seed, final boolean shuffle) {
-    int cores = 0;
-    for( H2ONode node : H2O.CLOUD._memary )
-      cores += node._heartbeat._num_cpus;
-    final int splits = cores;
-
-    long[] idx = null;
-    if (shuffle) {
-      idx = new long[(int)fr.numRows()]; //HACK: int instead of of long
-      for (int r=0; r<idx.length; ++r) idx[r] = r;
-      Utils.shuffleArray(idx, seed);
-    }
-
-    Vec[] vecs = fr.vecs();
-    if( vecs[0].nChunks() < splits || shuffle ) {
-      Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
-      for( int v = 0; v < vecs.length; v++ ) {
-        AppendableVec vec = new AppendableVec(keys[v]);
-        final long rows = fr.numRows();
-        for( int split = 0; split < splits; split++ ) {
-          long off = rows * split / splits;
-          long lim = rows * (split + 1) / splits;
-          NewChunk chunk = new NewChunk(vec, split);
-          for( long r = off; r < lim; r++ ) {
-            if (shuffle) chunk.addNum(fr.vecs()[v].at(idx[(int)r]));
-            else chunk.addNum(fr.vecs()[v].at(r));
-          }
-          chunk.close(split, null);
-        }
-        Vec t = vec.close(null);
-        t._domain = vecs[v]._domain;
-        vecs[v] = t;
-      }
-    }
-  }
-  */
 }
