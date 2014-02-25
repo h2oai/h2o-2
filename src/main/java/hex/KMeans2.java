@@ -199,7 +199,7 @@ public class KMeans2 extends ColumnsJob {
 
     @Override public boolean toHTML(StringBuilder sb) {
       if( model != null ) {
-        model._params.makeJsonBox(sb);
+        model.parameters.makeJsonBox(sb);
         DocGen.HTML.section(sb, "Cluster Centers: "); //"Total Within Cluster Sum of Squares: " + model.total_within_SS);
         table(sb, "Clusters", model._names, model.centers);
         double[][] rows = new double[model.within_cluster_variances.length][1];
@@ -291,7 +291,8 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    private transient final KMeans2 _params;    // This is used purely for printing values out.
+    @API(help = "Model parameters")
+    private final KMeans2 parameters;    // This is used purely for printing values out.
 
     @API(help = "Cluster centers, always denormalized")
     public double[][] centers;
@@ -335,7 +336,7 @@ public class KMeans2 extends ColumnsJob {
 
     public KMeans2Model(KMeans2 params, Key selfKey, Key dataKey, String names[], String domains[][]) {
       super(selfKey, dataKey, names, domains);
-      _params = params;
+      parameters = params;
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
 
