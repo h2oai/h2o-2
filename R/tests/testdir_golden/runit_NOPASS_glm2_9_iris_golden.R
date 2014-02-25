@@ -11,12 +11,14 @@ irisR<- read.csv(locate("../smalldata/iris/iris.csv"), header=T)
 
 
 #fit R model in glmnet with regularization
+#as originally written, this model is not valid. when modeling a multiclass DV as the class col in iris you must use mulitnomial
 x<- as.matrix(irisR[,1:4])
 y<- as.matrix(irisR[,5])
-fitR<- glmnet(x, y, family="gaussian", nlambda=1, alpha=1, lambda=2)
+fitR<- glmnet(x, y, family="multinomial", nlambda=1, alpha=1, lambda=2)
 
 #fit corresponding H2O model
-fitH2O<- h2o.glm.FV(x=c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"), y="response", family="gaussian", nfolds=0, alpha=1, lambda=2, data=irisH2O)
+# there is no corresponding H2O model because there is no multinomial class model in H2O 
+fitH2O<- h2o.glm.FV(x=c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"), y="response", family="...", nfolds=0, alpha=1, lambda=2, data=irisH2O)
 
 #test that R coefficients and basic descriptives are equal
 Rcoeffs<- sort(as.matrix(coefficients(fitR)))
