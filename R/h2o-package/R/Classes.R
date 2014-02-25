@@ -143,6 +143,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
   cat("\n\nCluster means:\n"); print(model$centers)
   cat("\nClustering vector:\n"); print(summary(model$cluster))
   cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
+  cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
   cat("\nAvailable components:\n\n"); print(names(model))
 })
 
@@ -153,10 +154,8 @@ setMethod("show", "H2ONNModel", function(object) {
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
   cat("\nTraining mean square error:", model$train_sqr_error)
-  cat("\nTraining cross entropy:", model$train_cross_entropy)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
-  cat("\nValidation cross entropy:", model$valid_cross_entropy)
   cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
