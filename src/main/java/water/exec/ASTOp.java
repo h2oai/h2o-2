@@ -1106,8 +1106,8 @@ class ASTTable extends ASTOp {
     for (int i = 0; i < ncol; i++) if (!fr.vecs()[i].isInt())
       throw new IllegalArgumentException("table only applies to integer vectors.");
     String[][] domains = new String[ncol][];  // the domain names to display as row and col names
-                                              // if vec does not have original domain, use levels returned by CoolectDomain
-    int[][] levels = new int[ncol][];
+                                              // if vec does not have original domain, use levels returned by CollectDomain
+    long[][] levels = new long[ncol][];
     for (int i = 0; i < ncol; i++) {
       Vec v = fr.vecs()[i];
       levels[i] = new Vec.CollectDomain(v).doAll(new Frame(v)).domain();
@@ -1135,25 +1135,27 @@ class ASTTable extends ASTOp {
       c.close(0, null);
       vecs[level1+1] = v.close(null);
       if (ncol>1) {
-        colnames[level1+1] = domains[1]==null? Integer.toString(levels[1][level1]) : domains[1][levels[1][level1]];
+        colnames[level1+1] = domains[1]==null? Long.toString(levels[1][level1]) : domains[1][(int)(levels[1][level1])];
       }
     }
     env.pop(2);
     env.push(new Frame(colnames, vecs));
   }
   private static class Tabularize extends MRTask2<Tabularize> {
-    public final int[][]  _domains;
+    public final long[][]  _domains;
     public long[][] _counts;
 
-    public Tabularize(int[][] dom) { super(); _domains=dom; }
+    public Tabularize(long[][] dom) { super(); _domains=dom; }
     @Override public void map(Chunk[] cs) {
       assert cs.length == _domains.length;
       _counts = _domains.length==1? new long[1][] : new long[_domains[1].length][];
       for (int i=0; i < _counts.length; i++) _counts[i] = new long[_domains[0].length];
       for (int i=0; i < cs[0]._len; i++) {
-        int level0, level1;
-        if (cs[0].isNA0(i)) continue; else level0 = Arrays.binarySearch(_domains[0],(int)cs[0].at80(i));
-        assert 0 <= level0 && level0 < _domains[0].length;
+        if (cs[0].isNA0(i)) continue; 
+        long ds[] = _domains[0];
+        int level0 = Arrays.binarySearch(ds,cs[0].at80(i));
+        assert 0 <= level0 && level0 < ds.length : "l0="+level0+", len0="+ds.length+", min="+ds[0]+", max="+ds[ds.length-1];
+        int level1;
         if (cs.length>1) {
           if (cs[1].isNA0(i)) continue; else level1 = Arrays.binarySearch(_domains[1],(int)cs[1].at80(i));
           assert 0 <= level1 && level1 < _domains[1].length;
