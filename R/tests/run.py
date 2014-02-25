@@ -888,7 +888,7 @@ class RUnitRunner:
         else:
             self._log("Time/completed test:  N/A")
         self._log("")
-        self._log("True fail list:       " + ",".join(true_fail_list))
+        self._log("True fail list:       " + ", ".join(true_fail_list))
         self._log("")
 
     def terminate(self):
