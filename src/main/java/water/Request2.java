@@ -54,12 +54,12 @@ public abstract class Request2 extends Request {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if( v == null && _mustExist )
-        throw new IllegalArgumentException("Key '" + input + "' does not exist!");
+        throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       if( _type != null ) {
         if( v != null && !compatible(_type, v.get()) )
-          throw new IllegalArgumentException(input + ":" + errors()[0]);
+          throw new H2OIllegalArgumentException(this, input + ":" + errors()[0]);
         if( v == null && _required )
-          throw new IllegalArgumentException("Key '" + input + "' does not exist!");
+          throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       }
       return k;
     }
