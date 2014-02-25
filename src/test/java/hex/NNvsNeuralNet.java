@@ -178,6 +178,7 @@ public class NNvsNeuralNet extends TestUtil {
                             p.shuffle_training_data = false; //same as old NeuralNet code
                             p.nesterov_accelerated_gradient = true; //same as old NeuralNet code
                             p.classification_stop = -1; //don't stop early -> need to compare against old NeuralNet code, which doesn't stop either
+                            p.force_load_balance = false; //keep 1 chunk for reproducibility
                             p.exec();
 
                             mymodel = UKV.get(p.dest());

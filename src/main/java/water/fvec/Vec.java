@@ -77,9 +77,10 @@ public class Vec extends Iced {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
+    _time = -1;                 // not-a-time
   }
 
-  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; assert group()==v.group(); }
+  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; _time = -1; assert group()==v.group(); }
 
   // A 1-element Vec
   public Vec( Key key, double d ) {

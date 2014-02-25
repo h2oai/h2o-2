@@ -191,8 +191,7 @@ public class NNModel extends Model {
     // package local helpers
     final int[] units; //number of neurons per layer, extracted from parameters and from datainfo
 
-//    public NNModelInfo(NN params, int num_input, int num_output) {
-    public NNModelInfo(NN params, DataInfo dinfo) {
+    public NNModelInfo(final NN params, final DataInfo dinfo) {
       data_info = dinfo; //should be deep_clone()?
       final int num_input = dinfo.fullN();
       final int num_output = params.classification ? dinfo._adaptedFrame.lastVec().domain().length : 1;
