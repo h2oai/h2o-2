@@ -1,13 +1,13 @@
 package hex.gbm;
 
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
-import static water.util.Utils.append;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Random;
 
 import water.*;
 import water.api.DocGen;
@@ -526,19 +526,21 @@ public class DTree extends Iced {
 
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be separate).
-    @API(help="Testing key for cm and errs") public final Key testKey;
-    // Confusion matrix per each generate tree or null
+    @API(help="Testing key for cm and errs")                                          public final Key testKey;
+    // Confusion matrix per each generated tree or null
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
-    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
-    @API(help="Tree statistics") public final TreeStats treeStats;
+    @API(help="Confusion matrix domain.")                                             public final String[]        cmDomain;
+    @API(help="Unscaled variable importance for individual input variables.")         public final float []        varimp;
+    @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey; this.cms = new ConfusionMatrix[0];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
       treeStats = null;
+      this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
       this.varimp = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
@@ -546,8 +548,9 @@ public class DTree extends Iced {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
-      this.min_rows = prior.min_rows;
-      this.nbins = prior.nbins;
+      this.min_rows  = prior.min_rows;
+      this.nbins     = prior.nbins;
+      this.cmDomain  = prior.cmDomain;
 
       if (treeBits != null) this.treeBits  = treeBits; else this.treeBits  = prior.treeBits;
       if (errs     != null) this.errs      = errs;     else this.errs      = prior.errs;
@@ -619,7 +622,7 @@ public class DTree extends Iced {
       DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
       generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_key,"Predict!"));
-      String[] domain = _domains[_domains.length-1]; // Domain of response col
+      String[] domain = cmDomain; // Domain of response col
 
       // Generate a display using the last scored Model.  Not all models are
       // scored immediately (since scoring can be a big part of model building).

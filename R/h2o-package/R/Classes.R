@@ -975,12 +975,15 @@ head.H2OParsedDataVA <- function(x, n = 6L, ...) {
   if(n > .MAX_INSPECT_VIEW) stop(paste("Cannot view more than", .MAX_INSPECT_VIEW, "rows"))
   
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=0, view=n)
+  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key)
   blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
-  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
+  nums = sapply(res2$levels, is.null)   # Must stop R from coercing all columns with "NA" to factors, confusing rbind if it is actually numeric
+  
+  temp = lapply(res$rows, function(y) { y$row = NULL; na_num = (y[nums] == "NA"); y[nums][na_num] = as.numeric(NA);
+                                        tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
-
-  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key = x@key)
+  
   for(i in 1:ncol(x)) {
     if(!is.null(res2$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
@@ -997,13 +1000,16 @@ tail.H2OParsedDataVA <- function(x, n = 6L, ...) {
   
   idx = seq.int(to = nrx, length.out = n)
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=idx[1], view=length(idx))
+  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key)
   blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
-  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
+  nums = sapply(res2$levels, is.null)   # Must stop R from coercing all columns with "NA" to factors, confusing rbind if it is actually numeric
+  
+  temp = lapply(res$rows, function(y) { y$row = NULL; na_num = (y[nums] == "NA"); y[nums][na_num] = as.numeric(NA);
+                                        tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res2$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
