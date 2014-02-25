@@ -18,10 +18,10 @@ public class NNTask extends FrameTask<NNTask> {
 
   int _chunk_node_count = 1;
 
-  public NNTask(NNModel.NNModelInfo input, boolean training, float fraction){this(input,training,fraction,null);}
-  private NNTask(NNModel.NNModelInfo input, boolean training, float fraction, H2OCountedCompleter cmp){
+  public NNTask(NNModel.NNModelInfo input, float fraction){this(input,fraction,null);}
+  private NNTask(NNModel.NNModelInfo input, float fraction, H2OCountedCompleter cmp){
     super(input.job(),input.data_info(),cmp);
-    _training=training;
+    _training=true;
     _input=input;
     _useFraction=fraction;
     _shuffle = _input.get_params().shuffle_training_data;

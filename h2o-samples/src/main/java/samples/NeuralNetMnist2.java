@@ -20,9 +20,10 @@ public class NeuralNetMnist2 extends Job {
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
-    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
-//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162");
-//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
+    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162");
 //    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
@@ -31,9 +32,9 @@ public class NeuralNetMnist2 extends Job {
     //long seed = 0xC0FFEE;
     long seed = new Random().nextLong();
     double fraction = 1.0;
-    Frame trainf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/train10x.csv"), (long)(600000*fraction), seed);
-//    Frame trainf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv"), (long)(60000*fraction), seed);
-    Frame testf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv"), (long)(10000*fraction), seed+1);
+//    Frame trainf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/train10x.csv"), (long)(600000*fraction), seed);
+    Frame trainf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz"), (long)(60000*fraction), seed);
+    Frame testf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz"), (long)(10000*fraction), seed+1);
     Log.info("Done.");
 
     NN p = new NN();
@@ -47,7 +48,7 @@ public class NeuralNetMnist2 extends Job {
     p.loss = NN.Loss.CrossEntropy;
     p.input_dropout_ratio = 0.2;
     p.max_w2 = 15;
-    p.epochs = 10;
+    p.epochs = 10000;
     p.l1 = 1e-5;
     p.l2 = 0;
     p.momentum_start = 0.5;
@@ -64,12 +65,14 @@ public class NeuralNetMnist2 extends Job {
     p.source = trainf;
     p.response = trainf.lastVec();
     p.ignored_cols = null;
-    p.mini_batch = 60000;
-    p.score_interval = 600;
+    p.mini_batch = 240000;
+    p.score_interval = 60;
 
     p.fast_mode = true; //to match old NeuralNet behavior
     p.ignore_const_cols = true;
-    p.shuffle_training_data = true;
+    p.shuffle_training_data = false;
+    p.force_load_balance = true;
+    p.quiet_mode = false;
     return p.exec();
   }
 }
