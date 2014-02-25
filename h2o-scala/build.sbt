@@ -31,11 +31,14 @@ libraryDependencies += "org.javassist" % "javassist" % "3.16.1-GA"
 
 libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "1.1.0"
 
+libraryDependencies += "joda-time" % "joda-time" % "2.3"
+
 libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-library" % v }
 
 libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-compiler" % v }
 
 libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "jline" % v }
+
 
 // Test dependencies
 libraryDependencies += "org.specs2" %% "specs2" % "2.2.3" % "test"
