@@ -165,8 +165,10 @@ mySetup
 
 # can be slow if it had to reinstall all packages?
 export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
-echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
-printenv | grep H2OWrapperDir
+
+# FIX! if we assume we're always running with a local build, we shouldn't load from here
+# echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
+# printenv | grep H2OWrapperDir
 
 #autoGen RUnits
 myR ../../R/tests/Utils/runnerSetupPackage 300

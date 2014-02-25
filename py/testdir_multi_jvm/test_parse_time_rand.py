@@ -73,11 +73,11 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
-        # h2b.browseTheCloud()
+        h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
-        # h2o.sleep(3600)
+        h2o.sleep(3600)
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_time(self):
@@ -110,7 +110,7 @@ class Basic(unittest.TestCase):
             print summaryResult
             h2o_cmd.infoFromSummary(summaryResult)
             (missingValuesDictA, constantValuesDictA, enumSizeDictA, colTypeDictA, colNameDictA) = \
-                h2o_cmd.columnInfoFromInspect(hex_key)
+                h2o_cmd.columnInfoFromInspect(hex_key, exceptionOnMissingValues=False)
 
 
             if constantValuesDictA or enumSizeDictA:
@@ -139,7 +139,7 @@ class Basic(unittest.TestCase):
             summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=100,
                 numCols=numColsB, numRows=numRowsB, noPrint=True)
             (missingValuesDictB, constantValuesDictB, enumSizeDictB, colTypeDictB, colNameDictB) = \
-                h2o_cmd.columnInfoFromInspect(hex_key)
+                h2o_cmd.columnInfoFromInspect(hex_key, exceptionOnMissingValues=False)
             if constantValuesDictB or enumSizeDictB:
                 raise Exception("Should be empty?  constantValuesDictB %s enumSizeDictB %s" % (constantValuesDictB, enumSizeDictB))
 
