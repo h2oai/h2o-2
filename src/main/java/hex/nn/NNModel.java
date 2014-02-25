@@ -566,7 +566,7 @@ public class NNModel extends Model {
 
     model_info.job().toHTML(sb);
     sb.append("<div class='alert'>Actions: "
-            + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Cancel job") + ", " : "")
+            + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Stop training") + ", " : "")
             + is2.link("Inspect training data", _dataKey) + ", "
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", " +
@@ -721,14 +721,18 @@ public class NNModel extends Model {
     sb.append("<h3>" + "Progress" + "</h3>");
     sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
 
-    final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
-    String training = "Number of training set samples for scoring: " + (fulltrain ? "all " : "") + pts;
-    if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-    if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
-    DocGen.HTML.section(sb, training);
+    // training
+    {
+      final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
+      String training = "Number of training set samples for scoring: " + (fulltrain ? "all " : "") + pts;
+      if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+      if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+      DocGen.HTML.section(sb, training);
+    }
+    // validation
     if (error.validation) {
       final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
-      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " : "") + pts;
+      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
       if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
       if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
       DocGen.HTML.section(sb, validation);
