@@ -375,7 +375,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
     result$auc = as.numeric(valid$auc)
 
     # Construct confusion matrix
-    cm_ind = trunc(100*result$best_threshold) + 2
+    cm_ind = trunc(100*result$best_threshold) + 1
     temp = data.frame(t(sapply(valid$'_cms'[[cm_ind]]$'_arr', c)))
     temp[,3] = c(temp[1,2], temp[2,1])/apply(temp, 1, sum)
     temp[3,] = c(temp[2,1], temp[1,2], 0)/apply(temp, 2, sum)
@@ -846,7 +846,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, nodesize=1, samp
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
 
-  class_names = res$'cmDomain' #tail(res$'_domains', 1)[[1]]
+  class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
   result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   result$mse = as.numeric(res$errs)
   # result$ntree = res$N
