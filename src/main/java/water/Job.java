@@ -1,5 +1,7 @@
 package water;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.api.Constants;
@@ -16,6 +18,7 @@ import water.util.Utils.ExpectedExceptionForDebug;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import static water.util.Utils.difference;
 import static water.util.Utils.isEmpty;
@@ -24,23 +27,13 @@ public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  public Job(Key jobKey, Key dstKey){
-   job_key = jobKey;
-   destination_key = dstKey;
-  }
-  public static class JobCancelledException extends RuntimeException {
-    public JobCancelledException(){super("job was cancelled!");}
-    public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
-  }
-  // Global LIST of Jobs key.
+  /** A system key for global list of Job keys. */
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
-  private static final int KEEP_LAST_COUNT = 100;
   public static final long CANCELLED_END_TIME = -1;
   private static final int[] EMPTY = new int[0];
 
   @API(help = "Job key")
-  public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
-
+  protected Key job_key;
   @API(help = "Destination key", filter = Default.class, json = true, validator = DestKeyValidator.class)
   public Key destination_key; // Key holding final value after job is removed
   static class DestKeyValidator extends NOPValidator<Key> {
@@ -49,51 +42,75 @@ public class Job extends Request2 {
         throw new IllegalArgumentException("Key '" + value + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
     }
   }
-
-  @API(help = "Job description")
-  public String description;
-
-  @API(help = "Job start time")
-  public long start_time;
-
-  @API(help = "Job end time")
-  public long end_time;
-
-  @API(help = "Exception")
-  public String exception;
+  // FIXME: all these fields should be private or at least protected
+  @API(help = "Job description") public String   description;
+  @API(help = "Job start time")  public long     start_time;
+  @API(help = "Job end time")    public long     end_time;
+  @API(help = "Exception")       public String   exception;
+  @API(help = "Job state")       public JobState state;
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
+  /** Possible job states. */
+  public static enum JobState {
+    RUNNING,   // Job is running
+    CANCELLED, // Job was cancelled by user
+    CRASHED,   // Job crashed, error message/exception is available
+    DONE       // Job was successfully finished
+  }
+
+  public Job(Key jobKey, Key dstKey){
+   job_key = jobKey;
+   destination_key = dstKey;
+  }
+  public Job() {
+    job_key = defaultJobKey();
+    description = getClass().getSimpleName();
+  }
+  /** Private copy constructor used by {@link JobHandle}. */
+  private Job(final Job prior) {
+    this(prior.job_key, prior.destination_key);
+    this.description = prior.description;
+    this.start_time  = prior.start_time;
+    this.end_time    = prior.end_time;
+    this.state       = prior.state;
+    this.exception   = prior.exception;
+  }
+
   public Key self() { return job_key; }
   public Key dest() { return destination_key; }
-
-  protected void logStart() {
-    Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
-  }
 
   public int gridParallelism() {
     return 1;
   }
 
+  /**
+   *
+   */
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Source frame", required = true, filter = Default.class)
+    @API(help = "Source frame", required = true, filter = Default.class, json = true)
     public Frame source;
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (source == null) {
-        Log.info("    source: null");
+    /**
+     * Annotate the number of columns and rows of the training data set in the job parameter JSON
+     * @return JsonObject annotated with num_cols and num_rows of the training data set
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (source != null) {
+        jo.getAsJsonObject("source").addProperty("num_cols", source.numCols());
+        jo.getAsJsonObject("source").addProperty("num_rows", source.numRows());
       }
-      else {
-        Log.info("    source.numCols(): " + source.numCols());
-        Log.info("    source.numRows(): " + source.numRows());
-      }
+      return jo;
     }
   }
 
+  /**
+   *
+   */
   public static abstract class ColumnsJob extends FrameJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -110,19 +127,34 @@ public class Job extends Request2 {
     public int[] ignored_cols_by_name = EMPTY;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (cols == null) {
-        Log.info("    cols: null");
-      } else {
-        Log.info("    cols: " + cols.length + " columns selected");
+    /**
+     * Annotate the used and ignored columns in the job parameter JSON
+     * For both the used and the ignored columns, the following rules apply:
+     * If the number of columns is less or equal than 100, a dense list of used columns is reported.
+     * If the number of columns is greater than 100, the number of columns is reported.
+     * If the number of columns is 0, a "N/A" is reported.
+     * @return JsonObject annotated with used/ignored columns
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (!jo.has("source")) return jo;
+      HashMap<String, int[]> map = new HashMap<String, int[]>();
+      map.put("used_cols", cols);
+      map.put("ignored_cols", ignored_cols);
+      for (String key : map.keySet()) {
+        int[] val = map.get(key);
+        if (val != null) {
+          if(val.length>100) jo.getAsJsonObject("source").addProperty("num_" + key, val.length);
+          else if(val.length>0) {
+            StringBuilder sb = new StringBuilder();
+            for (int c : val) sb.append(c + ",");
+            jo.getAsJsonObject("source").addProperty(key, sb.toString().substring(0, sb.length()-1));
+          } else {
+            jo.getAsJsonObject("source").addProperty(key, "N/A");
+          }
+        }
       }
-
-      if (ignored_cols == null) {
-        Log.info("    ignored_cols: null");
-      } else {
-        Log.info("    ignored_cols: " + ignored_cols.length + " columns ignored");
-      }
+      return jo;
     }
 
     @Override protected void init() {
@@ -175,15 +207,18 @@ public class Job extends Request2 {
     }
   }
 
+  /**
+   *
+   */
   public static abstract class ModelJob extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help="Column to use as class", required=true, filter=responseFilter.class)
+    @API(help="Column to use as class", required=true, filter=responseFilter.class, json = true)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
-    @API(help="Do Classification or regression", filter=myClassFilter.class)
+    @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
@@ -198,15 +233,19 @@ public class Job extends Request2 {
       ((FrameKeyMultiVec) c).setResponse((FrameClassVec) r);
     }
 
-    @Override protected void logStart() {
-      super.logStart();
+    /**
+     * Annotate the name of the response column in the job parameter JSON
+     * @return JsonObject annotated with the name of the response column
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
       int idx = source.find(response);
-      if( idx == -1 ) { 
+      if( idx == -1 ) {
         Vec vm = response.masterVec();
         if( vm != null ) idx = source.find(vm);
       }
-      Log.info("    response: "+(idx==-1?"null":source._names[idx]));
-      Log.info("    "+(classification ? "classification" : "regression"));
+      jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
+      return jo;
     }
 
     @Override protected void init() {
@@ -226,6 +265,9 @@ public class Job extends Request2 {
     }
   }
 
+  /**
+   *
+   */
   public static abstract class ValidatedJob extends ModelJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -234,17 +276,20 @@ public class Job extends Request2 {
     protected transient String[] _names;
     protected transient String _responseName;
 
-    @API(help = "Validation frame", filter = Default.class, mustExist = true)
+    @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
 
-    @Override protected void logStart() {
-      super.logStart();
-      if (validation == null) {
-        Log.info("    validation: null");
-      } else {
-        Log.info("    validation.numCols(): " + validation.numCols());
-        Log.info("    validation.numRows(): " + validation.numRows());
+    /**
+     * Annotate the number of columns and rows of the validation data set in the job parameter JSON
+     * @return JsonObject annotated with num_cols and num_rows of the validation data set
+     */
+    @Override protected JsonObject toJSON() {
+      JsonObject jo = super.toJSON();
+      if (validation != null) {
+        jo.getAsJsonObject("validation").addProperty("num_cols", validation.numCols());
+        jo.getAsJsonObject("validation").addProperty("num_rows", validation.numRows());
       }
+      return jo;
     }
 
     @Override protected void init() {
@@ -269,6 +314,9 @@ public class Job extends Request2 {
     }
   }
 
+  /**
+   *
+   */
   public static abstract class HexJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -292,27 +340,28 @@ public class Job extends Request2 {
   }
 
   static final class List extends Iced {
-    Job[] _jobs = new Job[0];
+    Key[] _jobs = new Key[0];
 
     @Override
     public List clone(){
       List l = new List();
       l._jobs = _jobs.clone();
       for(int i = 0; i < l._jobs.length; ++i)
-        l._jobs[i] = (Job)l._jobs[i].clone();
+        l._jobs[i] = (Key)l._jobs[i].clone();
       return l;
     }
   }
 
   public static Job[] all() {
     List list = UKV.get(LIST);
-    return list != null ? list._jobs : new Job[0];
-  }
-
-  public Job() {
-    job_key = defaultJobKey();
-//    destination_key = defaultDestKey();
-    description = getClass().getSimpleName();
+    Job[] jobs = new Job[list==null?0:list._jobs.length];
+    int j=0;
+    for( int i=0; i<jobs.length; i++ ) {
+      Job job = UKV.get(list._jobs[i]);
+      if( job != null ) jobs[j++] = job;
+    }
+    if( j<jobs.length ) jobs = Arrays.copyOf(jobs,j);
+    return jobs;
   }
 
   protected Key defaultJobKey() {
@@ -326,19 +375,21 @@ public class Job extends Request2 {
 
   public Job start(final H2OCountedCompleter fjtask) {
     _fjtask = fjtask;
-    Futures fs = new Futures();
-    DKV.put(job_key, new Value(job_key, new byte[0]),fs);
+    //Futures fs = new Futures();
     start_time = System.currentTimeMillis();
+    state      = JobState.RUNNING;
+    // Save the full state of the job
+    UKV.put(self(), this);
+    // Update job list
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
-        Job[] jobs = old._jobs;
+        Key[] jobs = old._jobs;
         old._jobs = Arrays.copyOf(jobs, jobs.length + 1);
-        old._jobs[jobs.length] = Job.this;
+        old._jobs[jobs.length] = job_key;
         return old;
       }
     }.invoke(LIST);
-    fs.blockForPending();
     return this;
   }
   // Overridden for Parse
@@ -366,92 +417,75 @@ public class Job extends Request2 {
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
-//    ex.printStackTrace();
     String stackTrace = sw.toString();
     cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
   }
   public void cancel(final String msg) {
-    DKV.remove(self());
+    state = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    exception = msg;
+    // replace finished job by a job handle
+    replaceByJobHandle();
     DKV.write_barrier();
-    new TAtomic<List>() {
-      transient private Job _job;
-      @Override public List atomic(List old) {
-        if( old == null ) old = new List();
-        Job[] jobs = old._jobs;
-        for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].job_key.equals(self()) ) {
-            jobs[i].end_time = CANCELLED_END_TIME;
-            jobs[i].exception = msg;
-            _job = jobs[i];
-            break;
-          }
-        }
-        return old;
+    final Job job = this;
+    H2O.submitTask(new H2OCountedCompleter() {
+      @Override public void compute2() {
+        job.onCancelled();
       }
-      @Override public void onSuccess(Value old){
-        if(_job != null){
-          final Job job = _job;
-          H2O.submitTask(new H2OCountedCompleter() {
-            @Override public void compute2() {job.onCancelled();}
-          });
-        }
-      }
-    }.invoke(LIST);
+    });
   }
-  
+
+  /**
+   * Callback which is called after job cancellation (by user, by exception).
+   */
   protected void onCancelled() {
   }
+
   // This querys the *current object* for its status.
   // Only valid if you have a Job object that is being updated by somebody.
-  public boolean isCancelled() { return end_time == CANCELLED_END_TIME; }
-
-  // Check the K/V store to see the Job is still running
-  public static boolean isRunning(Key key) { return DKV.get(key) != null; }
-
-  public void remove() {
-    end_time = System.currentTimeMillis();
-    DKV.remove(job_key);
-    new TAtomic<List>() {
-      @Override public List atomic(List old) {
-        if( old == null ) return null;
-        Job[] jobs = old._jobs;
-        for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].job_key.equals(job_key) ) {
-            if( jobs[i].end_time != CANCELLED_END_TIME )
-              jobs[i].end_time = System.currentTimeMillis();
-            break;
-          }
-        }
-        int count = jobs.length;
-        while( count > KEEP_LAST_COUNT ) {
-          long min = Long.MAX_VALUE;
-          int n = -1;
-          for( int i = 0; i < jobs.length; i++ ) {
-            if( jobs[i].end_time != 0 && jobs[i].start_time < min ) {
-              min = jobs[i].start_time;
-              n = i;
-            }
-          }
-          if( n < 0 )
-            break;
-          jobs[n] = jobs[--count];
-        }
-        if( count < jobs.length )
-          old._jobs = Arrays.copyOf(jobs, count);
-        return old;
-      }
-    }.fork(LIST);
+  public boolean isCancelled() {
+    return state == JobState.CANCELLED || state == JobState.CRASHED;
   }
 
-  /** Finds a job with given key or returns null */
-  public static final Job findJob(final Key key) {
-    Job job = null;
-    for( Job current : Job.all() ) {
-      if( current.self().equals(key) ) {
-        job = current;
-        break;
-      }
-    }
+  public boolean isCrashed() { return state == JobState.CRASHED; }
+
+  public boolean isDone() { return state == JobState.DONE; }
+
+
+  /** Check if given job is running.
+   *
+   * @param job_key job key
+   * @return true if job is still running else returns false.
+   */
+  public static boolean isRunning(Key job_key) {
+    Job j = UKV.get(job_key);
+    return j!=null && j.state == JobState.RUNNING;
+  }
+  /**
+   * Returns true if job is not running.
+   * The job can be cancelled, crashed, or already done.
+   *
+   * @param jobkey job identification key
+   * @return true if job is done, cancelled, or crashed, else false
+   */
+  public static boolean isEnded(Key jobkey) { return !isRunning(jobkey); }
+
+  /**
+   * Marks job as finished and records job end time.
+   */
+  public void remove() {
+    end_time = System.currentTimeMillis();
+    state = state == JobState.RUNNING ? JobState.DONE : state;
+    // Overwrite handle - copy end_time, state, msg
+    replaceByJobHandle();
+  }
+
+  /** Finds a job with given key or returns null.
+   *
+   * @param key job key
+   * @return returns a job with given job key or null if a job is not found.
+   */
+  public static final Job findJob(final Key jobkey) {
+    Job job = UKV.get(jobkey);
     return job;
   }
 
@@ -467,7 +501,8 @@ public class Job extends Request2 {
     return job;
   }
 
-  /** Returns job execution time in milliseconds */
+  /** Returns job execution time in milliseconds.
+   * If job is not running then returns job execution time. */
   public final long runTimeMs() {
     long until = end_time != 0 ? end_time : System.currentTimeMillis();
     return until - start_time;
@@ -479,8 +514,6 @@ public class Job extends Request2 {
   /** Value of the described speed criteria: msecs/frob */
   public long speedValue() { return 0; }
 
-  // If job is a request
-
   @Override protected Response serve() {
     fork();
     return redirect();
@@ -490,16 +523,21 @@ public class Job extends Request2 {
     return Progress2.redirect(this, job_key, destination_key);
   }
 
-  //
 
+  /**
+   * Forks computation of this job.
+   *
+   * <p>The call does not block.</p>
+   * @return always returns this job.
+   */
   public Job fork() {
     init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
         Throwable t = null;
         try {
-          Status status = Job.this.exec();
-          if(status == Status.Done)
+          JobState status = Job.this.exec();
+          if(status == JobState.DONE)
             Job.this.remove();
         } catch (Throwable t_) {
           t = t_;
@@ -520,64 +558,31 @@ public class Job extends Request2 {
   public void invoke() {
     init();
     start(new H2OEmptyCompleter());
-    Status status = exec();
-    if(status == Status.Done)
+    JobState status = exec();
+    if(status == JobState.DONE)
       remove();
   }
 
   /**
    * Invoked before job runs. This is the place to checks arguments are valid or throw
    * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
+   *
+   * @throws IllegalArgumentException throws the exception if initialization fails to ensure
+   * correct job runtime environment.
    */
   protected void init() throws IllegalArgumentException {
-    if(destination_key == null)destination_key = defaultDestKey();
+    if (destination_key == null) destination_key = defaultDestKey();
   }
-
-  protected enum Status { Running, Done }
 
   /**
    * Actual job code.
    *
    * @return true if job is done, false if it will still be running after the method returns.
    */
-  protected Status exec() {
+  protected JobState exec() {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 
-  public static boolean isJobEnded(Key jobkey) {
-    boolean done = false;
-
-    Job[] jobs = Job.all();
-    boolean found = false;
-    for (int i = jobs.length - 1; i >= 0; i--) {
-      if (jobs[i].job_key == null) {
-        continue;
-      }
-
-      if (! jobs[i].job_key.equals(jobkey)) {
-        continue;
-      }
-
-      // This is the job we are looking for.
-      found = true;
-
-      if (jobs[i].end_time > 0) {
-        done = true;
-      }
-
-      if (jobs[i].isCancelled()) {
-        done = true;
-      }
-
-      break;
-    }
-
-    if (! found) {
-      done = true;
-    }
-
-    return done;
-  }
 
   /**
    * Block synchronously waiting for a job to end, success or not.
@@ -586,7 +591,7 @@ public class Job extends Request2 {
    */
   public static void waitUntilJobEnded(Key jobkey, int pollingIntervalMillis) {
     while (true) {
-      if (isJobEnded(jobkey)) {
+      if (Job.isEnded(jobkey)) {
         return;
       }
 
@@ -698,4 +703,34 @@ public class Job extends Request2 {
     for (int i : idx) if (i<0 || i>source.vecs().length-1) return false;
     return true;
   }
+
+  private JobHandle jobHandle() {
+    return new JobHandle(this);
+  }
+
+  /* Update end_time, state, msg, preserve start_time */
+  private void replaceByJobHandle() {
+    assert state != JobState.RUNNING : "Running job cannot be replaced.";
+    final Job self = this;
+    new TAtomic<Job>() {
+      @Override public Job atomic(Job old) {
+        if( old == null ) return null;
+        JobHandle jh = new JobHandle(self);
+        jh.start_time = old.start_time;
+        return jh;
+      }
+    }.fork(job_key);
+  }
+
+  /** Almost lightweight job handle containing the same content
+   * as pure Job class.
+   */
+  private static class JobHandle extends Job {
+    public JobHandle(final Job job) { super(job); }
+  }
+  public static class JobCancelledException extends RuntimeException {
+    public JobCancelledException(){super("job was cancelled!");}
+    public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
+  }
+
 }

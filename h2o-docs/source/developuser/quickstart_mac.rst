@@ -60,7 +60,7 @@ Downloading and Building H\ :sub:`2`\ O
 
   $ git clone https://github.com/0xdata/h2o.git
 
-9. Build H\ :sub:`2`\ O from source. After the build finishes, some JUnit tests will run automatically.
+9. Build H\ :sub:`2`\ O from source. After the build finishes, some JUnit tests will run automatically.  Note that if you normally compile a different way, e.g. with an IDE, you may not have built the Hadoop driver jars that you create when building with make:
 
  ::
 
@@ -86,7 +86,11 @@ Installing Hadoop on a Mac
 
 12. Configure Hadoop (modify the file paths or version number if applicable): 
 
- Modify ``/usr/local/Cellar/hadoop/1.2.1/libexec/conf/core-site.xml`` to contain the following:
+ Note:
+ In Hadoop 1.x these files are found in, e.g., ``/usr/local/Cellar/hadoop/1.2.1/libexec/conf/``.
+ In Hadoop 2.x these files are found in, e.g., ``/usr/local/Cellar/hadoop/2.2.0/libexec/etc/hadoop/``.
+
+ Modify ``core-site.xml`` to contain the following:
 
  ::
 
@@ -96,8 +100,8 @@ Installing Hadoop on a Mac
 				<value>hdfs://localhost:8020</value>
 			</property>
 		</configuration>
-	
- Modify ``/usr/local/Cellar/hadoop/1.2.1/libexec/conf/mapred-site.xml`` to contain the following:
+
+ Modify ``mapred-site.xml`` to contain the following (NOTE: you may need to create the file from mapred-site.xml.template):
 
  ::
 
@@ -112,7 +116,7 @@ Installing Hadoop on a Mac
 		</property>
 	</configuration>
 	
- Modify ``/usr/local/Cellar/hadoop/1.2.1/libexec/conf/hdfs-site.xml`` to contain the following:
+ Modify ``hdfs-site.xml`` to contain the following:
 
  ::
 
@@ -123,18 +127,28 @@ Installing Hadoop on a Mac
 		</property>
 	</configuration>
 
-13. Optional: Enable password-less SSH from localhost to localhost for convenience
+13. Optional: Enable password-less SSH from localhost to localhost for convenience.  
+
+ First enable remote login in the system sharing control panel, and then:
 
  ::
 
+		$ brew install ssh-copy-id
 		$ ssh-keygen
 		$ ssh-copy-id -i ~/.ssh/id_rsa.pub localhost
 
-14. Start Hadoop MapReduce services
+14. Start Hadoop MapReduce services, e.g.:
 
  ::
 
 		$ /usr/local/Cellar/hadoop/1.2.1/bin/start-all.sh
+
+or
+
+ ::
+
+		$ /usr/local/Cellar/hadoop/2.2.0/sbin/start-dfs.sh
+		$ /usr/local/Cellar/hadoop/2.2.0/sbin/start-yarn.sh
 
 15. Verify that Hadoop is up and running by checking the output of ``jps`` (look for NameNode, DataNode, JobTracker, TaskTracker)
 
@@ -148,7 +162,7 @@ Installing Hadoop on a Mac
 		81655 DataNode
 		81928 TaskTracker
 
-16. Format HDFS and leave the safe mode
+16. Format HDFS and leave the safe mode.
 	
  ::
 		

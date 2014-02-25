@@ -48,7 +48,10 @@ class Test:
 
         self.parse_process = RProc(self.test_dir, self.test_short_dir, self.output_dir, self.parse_file, self.perfdb)
         self.model_process = RProc(self.test_dir, self.test_short_dir, self.output_dir, self.model_file, self.perfdb)
-        self.predict_process = RProc(self.test_dir, self.test_short_dir, self.output_dir, self.predict_file, self.perfdb)
+        if predict_file:
+            self.predict_process = RProc(self.test_dir, self.test_short_dir, self.output_dir, self.predict_file, self.perfdb)
+        else:
+            self.predict_process = None
 
     def __parse_config__(self):
         cfg = ConfigParser.RawConfigParser()
@@ -96,7 +99,7 @@ class Test:
         self.model_process.block()
         self.model_process.scrape_phase()
 
-        if self.predict_file:
+        if self.predict_process:
             self.predict_process.start(self.ip, self.port)
             self.predict_process.block()
             self.predict_process.scrape_phase()

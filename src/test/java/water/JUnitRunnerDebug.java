@@ -1,5 +1,7 @@
 package water;
 
+import hex.*;
+import hex.nn.Dropout;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -40,8 +42,12 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       // tests = JUnitRunner.all();
-      tests.add(hex.NeuralNetSpiralsTest.class);
-      tests.add(hex.NeuralNetIrisTest.class);
+//      tests.add(NNvsNeuralNet.class); //only passes for NODES=1, not clear why
+      tests.add(NeuralNetSpiralsTest.class); //compare NeuralNet vs reference
+      tests.add(NeuralNetIrisTest.class); //compare NeuralNet vs reference
+      tests.add(NeuralNetSpiralsTest2.class); //compare NN vs reference
+      tests.add(NeuralNetIrisTest2.class); //compare NN vs reference
+      tests.add(Dropout.class); //test NN Dropput
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}

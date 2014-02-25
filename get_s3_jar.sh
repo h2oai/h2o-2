@@ -67,7 +67,8 @@ cp -f ./h2o*$version/h2o.jar target/h2o.jar
 cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
 
 echo "copying the downloaded R dir to  target/R"
-rm -f -r target/R
+echo "HACK. leave target/R contents in there from a make. need PACKAGES .."
+# rm -f -r target/R
 cp -f -r ./h2o*$version/R target/R
 
 # this is the one we point the R tests to. but we want a generic, no version name for them (like h2o/target)
@@ -84,9 +85,10 @@ echo "target/h2o-sources.jar is not touched, so it is out-of-step (but not used)
 # look at some stuff
 ls -ltr ./latest_h2o_jar_version
 cat ./latest_h2o_jar_version
-ls -ltr ./h2o-*$version/h2o.jar 
-ls -ltr target/h2o.jar
-ls -ltr ./h2o-*$version/R/h2o*.tar.gz
 ls -ltr ./h2o-downloaded/R/h2o*.tar.gz
 ls -ltr ./h2o-downloaded/hadoop/h2odriver*.jar
+ls -ltr ./h2o-*$version/h2o.jar 
+ls -ltr ./h2o-*$version/R/h2o*.tar.gz
+ls -ltr target/h2o.jar
+ls -ltr target/R/*
 

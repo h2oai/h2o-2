@@ -128,7 +128,7 @@ Installation of H2O directly from an R package repository
 <tr>
 <td align="center">Any</td>
 <td align="left">
-<span class="mycomment"># The following four commands remove any previously installed H2O packages for R.</span>
+<span class="mycomment"># The following two commands remove any previously installed H2O packages for R.</span>
 <br>
 <span class="mycomment"># These commands might give error output if H2O is not currently loaded or was not previously installed.</span>
 <br>
@@ -136,11 +136,7 @@ Installation of H2O directly from an R package repository
 <br>
 detach("package:h2o", unload=TRUE)
 <br>
-detach("package:h2oRClient", unload=TRUE)
-<br>
 remove.packages("h2o")
-<br>
-remove.packages("h2oRClient")
 <br>
 <br>
 <span class="mycomment"># Next, we download, install and initialize the H2O package for R.</span>
@@ -149,7 +145,7 @@ install.packages("h2o", repos=(c("<script type="text/javascript">var url = locat
 <br>
 library(h2o)
 <br>
-localH2O = h2o.init(silentUpgrade=TRUE)
+localH2O = h2o.init()
 <br>
 <br>
 <span class="mycomment"># Finally, let's run a demo to see H2O at work.</span>
@@ -181,7 +177,7 @@ Documentation
 <tr>
 <td align="center">R documentation</td>
 <td>R user documentation available for this version.</td>
-<td align="center"><a href="docs-website/bits/h2oRjoin.pdf" id="ddocr">H2O SUBST_PROJECT_VERSION R Package PDF</a></td>
+<td align="center"><a href="docs-website/bits/h2o_package.pdf" id="ddocr">H2O SUBST_PROJECT_VERSION R Package PDF</a></td>
 </tr>
 <tr>
 <td align="center">Javadoc</td>

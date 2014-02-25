@@ -2,7 +2,6 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
@@ -15,6 +14,7 @@ import hex.glm.GLM2;
 import hex.glm.GLMGridView;
 import hex.glm.GLMModelView;
 import hex.glm.GLMProgress;
+import hex.nn.NN;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
@@ -88,14 +88,15 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
-    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
+    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
+    Request.addToNavbar(registerRequest(new NN()),          "NN (Beta)",                  "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",                     "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",               "Score");
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
-    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (Beta)",   "Score");
+    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (deprecated)","Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
     Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
@@ -152,9 +153,10 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMProgressPage());
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
-    registerRequest(new RPackage.RDownload());
     registerRequest(new NeuralNetModelView());
     registerRequest(new NeuralNetProgressPage());
+    registerRequest(new NNModelView());
+    registerRequest(new NNProgressPage());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
     registerRequest(new PCAProgressPage());
@@ -166,7 +168,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PutValue());
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
-    registerRequest(new RPackage());
     registerRequest(new RReaderProgress());
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
@@ -197,7 +198,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMModelView());
     registerRequest(new GLMGridView());
 //    registerRequest(new GLMValidationView());
-    registerRequest(new FrameSplit());
     registerRequest(new LaunchJar());
     Request.initializeNavBar();
   }
@@ -253,7 +253,7 @@ public class RequestServer extends NanoHTTPD {
       // On Jenkins, this command sticks his own R version's number
       // into the package that gets built.
       //
-      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
+      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2o-package
       //
       String versionOfRThatJenkinsUsed = "3.0";
 

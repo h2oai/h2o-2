@@ -50,7 +50,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _caseMode = cm;
       _caseVal = cval;
     }
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
+    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
       double response = responses[0];
       if(_caseMode != CaseMode.none) response = _caseMode.isCase(response,_caseVal)?1:0;
       _ymu += response;
@@ -91,7 +91,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     @Override public void chunkInit(){
       _z = MemoryManager.malloc8d(_n);
     }
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
+    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
       double w = (responses[0] - _ymu) * _gPrimeMu;
       for( int i = 0; i < ncats; ++i ) _z[cats[i]] += w;
       final int numStart = _dinfo.numStart();
@@ -137,7 +137,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _caseVal = cval;
     }
 
-    @Override public final void processRow(final double [] nums, final int ncats, final int [] cats, double [] responses){
+    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       double y = responses[0];
       if(_caseMode != CaseMode.none)y = _caseMode.isCase(y, _caseVal)?1:0;
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";

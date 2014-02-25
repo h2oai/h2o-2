@@ -1,17 +1,26 @@
 package water;
 
-import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
-
-import java.util.*;
-
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.TransfVec;
+import water.fvec.Vec;
+import water.util.JCodeGen;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+
+import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -81,25 +90,60 @@ public abstract class Model extends Lockable<Model> {
   /** Variable importance of individual variables measured by this model. */
   public VariableImportance varimp() { return null; }
 
-  /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
+  /** Bulk score for given <code>fr<code> frame.
+   * The frame is always adapted to this model.
+   *
+   * @param fr frame to be scored
+   * @return frame holding predicted values
+   *
+   * @see #score(Frame, boolean)
+   */
+  public final Frame score(Frame fr) {
+    return score(fr, true);
+  }
+  /** Bulk score the frame <code>fr</code>, producing a Frame result; the 1st Vec is the
    *  predicted class, the remaining Vecs are the probability distributions.
    *  For Regression (single-class) models, the 1st and only Vec is the
-   *  prediction value.  Also passed in a flag describing how hard we try to
-   *  adapt the frame.  */
-  public Frame score( Frame fr) {
+   *  prediction value.
+   *
+   *  The flat <code>adapt</code>
+   * @param fr frame which should be scored
+   * @param adapt a flag enforcing an adaptation of <code>fr</code> to this model. If flag
+   *        is <code>false</code> scoring code expect that <code>fr</code> is already adapted.
+   * @return a new frame containing a predicted values. For classification it contains a column with
+   *         prediction and distribution for all response classes. For regression it contains only
+   *         one column with predicted values.
+   */
+  public final Frame score(Frame fr, boolean adapt) {
     int ridx = fr.find(_names[_names.length-1]);
-    if(ridx != -1){ // drop the response for scoring!
+    if (ridx != -1) { // drop the response for scoring!
       fr = new Frame(fr);
       fr.remove(ridx);
     }
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
-    Frame[] adaptFrms = adapt(fr,false);
+    Frame[] adaptFrms = adapt ? adapt(fr,false) : null;
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
-    Frame adaptFrm = adaptFrms[0];
+    Frame adaptFrm = adapt ? adaptFrms[0] : fr;
     // Contains only newly created vectors. The frame eases deletion of these vectors.
-    Frame onlyAdaptFrm = adaptFrms[1];
+    Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
+    // Invoke scoring
+    Frame output = scoreImpl(adaptFrm);
+    // Be nice to DKV and delete vectors which i created :-)
+    if (adapt) onlyAdaptFrm.delete();
+    return output;
+  }
+
+  /** Score already adapted frame.
+   *
+   * @param fr
+   * @return
+   */
+  private Frame scoreImpl(Frame adaptFrm) {
+    int ridx = adaptFrm.find(_names[_names.length-1]);
+    assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
+    // Create a new vector for response
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
@@ -115,27 +159,18 @@ public abstract class Model extends Lockable<Model> {
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp [] = new double[_names.length];
-        float preds[] = new float [nclasses()];
-        int   ties [] = new int   [nclasses()];
-        Chunk p = chks[_names.length-1];
-        for( int row=0; row<p._len; row++ ) {
-          float[] out = score0(chks,row,tmp,preds);
-          if( nclasses() > 1 ) {
-            if( Float.isNaN(out[0]) ) p.setNA0(row);
-            else p.set0(row, Model.getPrediction(out, ties, row));
-            for( int c=0; c<nclasses(); c++ )
-              chks[_names.length+c].set0(row,out[c]);
-          } else {
-            p.set0(row,out[0]);
-          }
+        float preds[] = new float [nclasses()==1?1:nclasses()+1];
+        int len = chks[0]._len;
+        for( int row=0; row<len; row++ ) {
+          float p[] = score0(chks,row,tmp,preds);
+          for( int c=0; c<preds.length; c++ )
+            chks[_names.length-1+c].set0(row,p[c]);
         }
       }
     }.doAll(adaptFrm);
     // Return just the output columns
     int x=_names.length-1, y=adaptFrm.numCols();
     Frame output = adaptFrm.extractFrame(x, y);
-    // Delete manually only vectors which i created :-/
-    onlyAdaptFrm.delete();
     return output;
   }
 
@@ -264,25 +299,24 @@ public abstract class Model extends Lockable<Model> {
    *
    * @param colName name of column which is mapped, can be null.
    * @param modelDom
-   * @param dom
-   * @param exact
+   * @param logNonExactMapping
    * @return
    */
-  public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean exact) {
+  public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean logNonExactMapping) {
     int emap[] = new int[modelDom.length];
     boolean bmap[] = new boolean[modelDom.length];
     HashMap<String,Integer> md = new HashMap<String, Integer>();
     for( int i = 0; i < colDom.length; i++) md.put(colDom[i], i);
     for( int i = 0; i < modelDom.length; i++) {
       Integer I = md.get(modelDom[i]);
-      if (I == null && exact)
+      if (I == null && logNonExactMapping)
         Log.warn(Sys.SCORM, "Column "+colName+" was trained with factor '"+modelDom[i]+"' which DOES NOT appear in column data");
       if (I!=null) {
         emap[i] = I;
         bmap[i] = true;
       }
     }
-    if (exact) { // Inform about additional values in column domain which do not appear in model domain
+    if (logNonExactMapping) { // Inform about additional values in column domain which do not appear in model domain
       for (int i=0; i<colDom.length; i++) {
         boolean found = false;
         for (int j=0; j<emap.length; j++)
@@ -316,63 +350,55 @@ public abstract class Model extends Lockable<Model> {
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 
   /**
-   * Utility function to get a best prediction from an array of class prediction distribution if you know the row number.
-   * It returns index of max value if predicted values are unique.
-   * In the case of tie, the implementation solve it in sudo-random way based on number of row in chunk.
-   *
-   * @param preds an array of prediction distribution. Length of arrays is equal to a number of classes.
-   * @param ties a pre-allocated array to hold class numbers participating in tie
-   * @return the best prediction (index of class)
-   *
-   * @see #getPrediction(double[], int[], int)
-   * @see #getPrediction(int[], int[], int)
+   *  Utility function to get a best prediction from an array of class
+   *  prediction distribution.  It returns index of max value if predicted
+   *  values are unique.  In the case of tie, the implementation solve it in
+   *  psuedo-random way.
+   *  @param preds an array of prediction distribution.  Length of arrays is equal to a number of classes+1.
+   *  @return the best prediction (index of class, zero-based)
    */
-  public static final int getPrediction(float[] preds, int[] ties, int rowInChunk) {
-    assert preds.length == ties.length;
-    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-    for (int c=1; c<preds.length; c++) {
-      if (preds[best] < preds[c]) {
-        best = c; // take the max index
-        ties[tieCnt=0] = c;
+  public static int getPrediction( float[] preds, double data[] ) {
+    int best=1, tieCnt=0;   // Best class; count of ties
+    for( int c=2; c<preds.length; c++) {
+      if( preds[best] < preds[c] ) {
+        best = c;               // take the max index
+        tieCnt=0;               // No ties
       } else if (preds[best] == preds[c]) {
-        ties[++tieCnt] = c;
+        tieCnt++;               // Ties
       }
     }
-    if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
-    return best;
+    if( tieCnt==0 ) return best-1; // Return zero-based best class
+    // Tie-breaking logic
+    float res = preds[best];    // One of the tied best results
+    long hash = 0;              // hash for tie-breaking
+    if( data != null )
+      for( double d : data ) hash ^= Double.doubleToRawLongBits(d);
+    int idx = (int)hash%(tieCnt+1);  // Which of the ties we'd like to keep
+    for( best=1; best<preds.length; best++)
+      if( res == preds[best] && --idx < 0 )
+        return best-1;          // Return best
+    throw H2O.fail();           // Should Not Reach Here
   }
-  // Argh Java needs templates for primitive types
-  public static final int getPrediction(int[] preds, int[] ties, int rowInChunk) {
-    assert preds.length == ties.length;
-    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-    for (int c=1; c<preds.length; c++) {
-      if (preds[best] < preds[c]) {
-        best = c; // take the max index
-        ties[tieCnt=0] = c;
-      } else if (preds[best] == preds[c]) {
-        ties[++tieCnt] = c;
-      }
-    }
-    if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
-    return best;
-  }
- // Argh Java needs templates for primitive types
- public static final int getPrediction(double[] preds, int[] ties, int rowInChunk) {
-   assert preds.length == ties.length;
-   int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-   for (int c=1; c<preds.length; c++) {
-     if (preds[best] < preds[c]) {
-       best = c; // take the max index
-       ties[tieCnt=0] = c;
-     } else if (preds[best] == preds[c]) {
-       ties[++tieCnt] = c;
-     }
-   }
-   if (tieCnt >= 1) best = solveTie(ties, tieCnt, rowInChunk); // override max decision
-   return best;
- }
 
- static final int solveTie(int[] ties, int tieCnt, int rowInChunk) { return ties[rowInChunk % (tieCnt+1)]; }
+  public static int getPrediction(float[] preds, int row) {
+    int best=1, tieCnt=0;   // Best class; count of ties
+    for( int c=2; c<preds.length; c++) {
+      if( preds[best] < preds[c] ) {
+        best = c;               // take the max index
+        tieCnt=0;               // No ties
+      } else if (preds[best] == preds[c]) {
+        tieCnt++;               // Ties
+      }
+    }
+    if( tieCnt==0 ) return best-1; // Return zero-based best class
+    // Tie-breaking logic
+    float res = preds[best];    // One of the tied best results
+    int idx = row%(tieCnt+1);   // Which of the ties we'd like to keep
+    for( best=1; best<preds.length; best++)
+      if( res == preds[best] && --idx < 0 )
+        return best-1;          // Return best
+    throw H2O.fail();           // Should Not Reach Here
+  }
 
 
   /** Return a String which is a valid Java program representing a class that

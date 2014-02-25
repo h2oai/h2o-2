@@ -2,7 +2,7 @@ H2O in R
 ------------
 
 
-These instructions assume you are using R 2.14.0 or later.  
+These instructions assume you are using R 2.13.0 or later.  
 
 **STEP 1**
 
@@ -10,80 +10,52 @@ The download package can be obtained by clicking on the button "Download H2O" at
 
 Unzip the downloaded h2o zip file
 
-**STEP 2**
+
+**STEP 2: Console Users and Studio Users should follow the same steps: **
+
+In the R console install the package by 
+
+1. Visiting http://0xdata.com/downloadtable/
+2. Choosing the version of H2O appropriate for their environment 
+3. Copy and pasting the R command shown below the downloadable zip file on the download page for the version of their choice into their R console. 
+
+
+Correctly following the above steps will return output similar to the following: 
+
+trying URL 'http://s3.amazonaws.com/h2o-release/h2o/master/1247/R/bin/macosx/contrib/3.0/h2o_2.3.0.1247.tgz'
+Content type 'application/x-tar; charset=binary' length 36702378 bytes (35.0 Mb)
+opened URL
+==================================================
+downloaded 35.0 Mb
+
+
+**STEP 3**
 
 Start an instance of H2O. If you have questions about how to do this see the notes provided at the bottom of the page for staring from a zip file. 
 
+If users choose to not start an instance of H2O prior to attempting to connect to H2O through R, an instance will be started automatically for them at ip: localhost, port: 54321.
+
 *Users should be aware that in order for H2O to successfully run through R, an instance of H2O must also simultaneously be running. If the instance of H2O is stopped, the R program will no longer run, and work done will be lost.* 
-
-**STEP 3: Console Users**
-
-In the R console install the package by entering the following command at the prompt:
-
-  >install.packages("<unzipped h2o directory>/R/h2o_1.0.3.tar.gz", repos = NULL, type = "source")
-  
-
-This returns output similar to the following:
-
-
-
-   * installing *source* package 'h2o' ...
-   ** R
-   ** preparing package for lazy loading
-   ** help
-   *** installing help indices
-   ** building package indices
-   ** testing if installed package can be loaded
-   * DONE (h2o)
-
-**STEP 3: R Studio Users** 
-
-R Studio users can find information on running H2O through R studio by going to 
-http://docs.0xdata.com/Ruser/R_studio.html and looking for the section for RStudio
-
 
 
 **STEP 4** 
 
+call the H2O package in the R environment, start the connection between R and H2O at ip: localhost and port: 54321
 
 
   >library(h2o)
 
-**STEP 5**
-
-Install dependencies for the R package by calling 
-
-
-  >h2o.installDepPkgs()
-
-Which returns
-
-
-  Loading required package: bitops
-  Loading required package: MASS
-  Loading required package: cluster
-  Loading required package: mclust
-  Package 'mclust' version 4.2
-  Loading required package: flexmix
-  Loading required package: lattice
-  
-
-
-**STEP 6**
-
-
-  >localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+  >localH2O = h2o.init()
 
 
 
-**STEP 7** 
+**STEP 6** 
 
 Here is an example of using the above object in an H2O call in R
 
 
 
-  >irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
-  
+  >irisPath = system.file("extdata", "iris.csv", package="h2o")
   >iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
   >summary(iris.hex)
 
@@ -138,16 +110,22 @@ Useful Notes
 """"""""""""   
 
 First time users may need to download and install Java
-in order to run H2O. The program is available free on the web, 
+in order to run H2O. H2O currently supports any Java beyond Java 6. 
+The program is available free on the web, 
 and can be quickly installed. Even though you will use Java to 
 run H2O, no programming is necessary. 
 
-In the Java command entered the term -Xmx1g was used. Xmx is the
+In the Java command entered to run H2O:
+
+java -Xmx1g -jar h2o.jar
+
+the term -Xmx1g was used. Xmx is the
 amount of memory given to H2O.  If your data set is large,
 give H2O more memory (for example, -Xmx4g gives H2O four gigabytes of
 memory).  For best performance, Xmx should be 4x the size of your
 data, but never more than the total amount of memory on your
-computer.
+computer. For larger data sets, running on a server or service 
+with more memory available for computing is recommended. 
 
 
 

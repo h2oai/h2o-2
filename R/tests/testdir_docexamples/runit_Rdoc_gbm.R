@@ -4,7 +4,7 @@ source('../findNSourceUtils.R')
 test.RdocGBM.golden <- function(H2Oserver) {
 	
 
-ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
+ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(H2Oserver, path = ausPath)
 independent<- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
 dependent<- "runoffnew"

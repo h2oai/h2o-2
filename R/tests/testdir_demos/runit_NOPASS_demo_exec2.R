@@ -8,7 +8,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.exec2.demo <- function(conn) {
-  prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
   Log.info(paste("Importing", prosPath))
   prostate.hex = h2o.importFile(conn, path = prosPath, key = "prostate.hex")
   

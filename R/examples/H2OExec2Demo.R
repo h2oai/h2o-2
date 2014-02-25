@@ -1,9 +1,9 @@
 library(h2o)
 myIP = "127.0.0.1"; myPort = 54321
-localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE)
 
 # Import prostate file to H2O
-prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 
 # Print out basic summary

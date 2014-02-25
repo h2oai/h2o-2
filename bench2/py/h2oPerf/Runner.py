@@ -72,7 +72,7 @@ class PerfRunner:
         """
         if (self.terminated):
             return
-        
+
         num_tests = len(self.tests)
         self.__log__("")
         self.__log__("Starting {} tests...".format(num_tests))

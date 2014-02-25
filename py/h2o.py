@@ -967,7 +967,7 @@ class H2O(object):
         for e in ['error', 'Error', 'errors', 'Errors']:
             # error can be null (python None). This happens in exec2
             if e in rjson and rjson[e]:
-                verboseprint(dump_json(rjson))
+                print "rjson:", dump_json(rjson)
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
                     # well, we print it..so not totally ignore. test can look at rjson returned
@@ -1092,19 +1092,6 @@ class H2O(object):
 
                 if response_info['status'] != 'done':
                     redirect_url = response_info['redirect_url']
-                    # HACK: these are missing the "2/" prefix for now
-                    # 'KMeans2Progress' in str(redirect_url) or
-                    # 'GLMModelView' in str(redirect_url) or
-###                     if 'PCAProgressPage' in str(redirect_url):
-###                         if "2/" not in str(redirect_url):
-###                             print "Hacking in the 2/ prefix..need to fix h2o?"
-###                             redirect_url = "2/" + redirect_url
-###                     if  'DRFProgressPage' in str(redirect_url):
-###                         if "2/" not in str(redirect_url):
-###                             # already has a leading /?
-###                             print "Hacking in the 2/ prefix..need to fix h2o?"
-###                             redirect_url = "2" + redirect_url
-
                     if redirect_url:
                         url = self.__url(redirect_url)
                         params = None
@@ -1603,6 +1590,8 @@ class H2O(object):
                 'mtries': None,
                 'sample_rate': None,
                 'seed': None,
+                'build_tree_per_node': None,
+                'score_each_iteration': None,
                 }
             if 'model_key' in kwargs:
                 kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -2079,7 +2068,7 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def neural_net(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+    def neural_net(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
@@ -2127,6 +2116,62 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
+    def neural_net2(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': data_key,
+            'ignored_cols'                 : None,
+            'validation'                   : None,
+            'classification'               : None,
+            'response'                     : None,
+            'activation'                   : None,
+            'input_dropout_ratio'          : None,
+            'hidden'                       : None,
+            'rate'                         : None,
+            'rate_annealing'               : None,
+            'momentum_start'               : None,
+            'momentum_ramp'                : None,
+            'momentum_stable'              : None,
+            'l1'                           : None,
+            'l2'                           : None,
+            'seed'                         : None,
+            'initial_weight_distribution'  : None,
+            'initial_weight_scale'         : None,
+            'loss'                         : None,
+            'rate_decay'                   : None,
+            'max_w2'                       : None,
+            'epochs'                       : None,
+            'score_training_samples'       : None,
+            'score_validation_samples'     : None,
+            'score_interval'               : None,
+            'mini_batch'                   : None,
+            'diagnostics'                  : None,
+            'fast_mode'                    : None,
+            'ignore_const_cols'            : None,
+            'shuffle_training_data'        : None,
+            'nesterov_accelerated_gradient': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net2', print_params)
+        if 'validation' not in kwargs:
+            kwargs['validation'] = data_key
+
+        start = time.time()
+        a = self.__do_json_request('2/NN.json',timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nneural_net result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
     def neural_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             'destination_key': model_key,
@@ -2142,17 +2187,13 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                # h2o won't let me go bigger?
-                # 'max_ncols': 1000,
-                'max_ncols': 1000000,
+                'max_ncols': 1000
                 }
         else:
             params_dict = {
                 'key': key,
                 'x': None,
-                # h2o won't let me go bigger?
-                # 'max_column_display': 1000,
-                'max_column_display': 1000000,
+                'max_column_display': 1000
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)

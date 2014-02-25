@@ -15,6 +15,8 @@ import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
+import hex.nn.NN;
+import hex.nn.NNModel;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.rf.RFModel;
@@ -67,7 +69,7 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Job keyProducer, Key dest) {
     JsonObject redir = new JsonObject();
-    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.job_key.toString());
+    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.self().toString());
     redir.addProperty(KEY, dest.toString());
     return Response.redirect(resp, Inspect.class, redir);
   }
@@ -163,6 +165,8 @@ public class Inspect extends Request {
 //      return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
       return NeuralNetModelView.redirect(this, key);
+    if(f instanceof NNModel)
+      return NNModelView.redirect(this, key);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
@@ -336,11 +340,12 @@ public class Inspect extends Request {
           + RF.link(key, "Single Node Random Forest") + ", "
           + DRF.link(key, "Distributed Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
-          + KMeans.link(key, "KMeans") + ", or "
-          + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
+          + KMeans.link(key, "KMeans") + ", "
+          + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
+          + NN.link(key, NN.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
-          + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
+          + GLMScore.link(KEY, key, "0.0", "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
         + "</div>"
         + "<p><b><font size=+1>"
           + cols + " columns"
@@ -616,5 +621,10 @@ public class Inspect extends Request {
       sb.append(footer(array));
       return sb.toString();
     }
+  }
+
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_V1_V2;
   }
 }

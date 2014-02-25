@@ -130,12 +130,11 @@ function(ipPort) {
   h2o.installDepPkgs()      # Install R package dependencies
   h2o.init(ip            = ipPort[[1]], 
            port          = ipPort[[2]], 
-           startH2O      = FALSE, 
-           silentUpgrade = TRUE)
-  #source("../../h2oRClient-package/R/Algorithms.R")
-  #source("../../h2oRClient-package/R/Classes.R")
-  #source("../../h2oRClient-package/R/ParseImport.R")
-  #source("../../h2oRClient-package/R/Internal.R")
+           startH2O      = FALSE)
+  #source("../../h2o-package/R/Algorithms.R")
+  #source("../../h2o-package/R/Classes.R")
+  #source("../../h2o-package/R/ParseImport.R")
+  #source("../../h2o-package/R/Internal.R")
   #sandbox()
 }
 

@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             hex_key = csvDirname + "_" + str(trial) + ".hex"
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
-                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
+                timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120, doSummary=False)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -50,6 +50,10 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
+            num_rows = inspect['num_rows']
+            num_cols = inspect['num_cols']
+            self.assertEqual(num_cols, 542)
+            self.assertEqual(num_rows, 100000)
 
             # gives us some reporting on missing values, constant values, to see if we have x specified well
             # figures out everything from parseResult['destination_key']
@@ -58,8 +62,9 @@ class Basic(unittest.TestCase):
             goodX = h2o_glm.goodXFromColumnInfo(y=54, key=parseResult['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
-            summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360)
-            h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
+            # pass numRows, so we know when na cnt means row is all na's
+            summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360, 
+                numCols=num_cols, numRows=num_rows)
 
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"

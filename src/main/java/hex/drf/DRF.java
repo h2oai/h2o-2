@@ -57,11 +57,12 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
     @API(help = "Seed") final long seed;
-    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
-      super(key,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins);
+    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins);
       this.mtries = mtries;
       this.sample_rate = sample_rate;
       this.seed = seed;
@@ -91,6 +92,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       else { // classification
         float s = sum(p);
         if (s>0) div(p, s); // unify over all classes
+        p[0] = getPrediction(p, data);
       }
       return p;
     }
@@ -101,13 +103,16 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       if (isClassifier()) {
         bodySb.i().p("float sum = 0;").nl();
         bodySb.i().p("for(int i=1; i<preds.length; i++) sum += preds[i];").nl();
-        bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
+        bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] /= sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
+  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
+    return new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
+  }
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm) {
     return new DRFModel(model, err, cm);
   }
@@ -136,25 +141,18 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-  @Override protected void logStart() {
-    Log.info("Starting DRF model build...");
-    super.logStart();
-    Log.info("    mtry defined: " + mtries);
-    Log.info("    mtry computed: " + _mtry);
-    Log.info("    sample_rate: " + sample_rate);
-    Log.info("    seed: " + _seed);
-  }
 
-  @Override protected Status exec() {
+  @Override protected JobState exec() {
     logStart();
     buildModel();
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected Response redirect() {
     return DRFProgressPage.redirect(this, self(), dest());
   }
 
+  @SuppressWarnings("unused")
   @Override protected void init() {
     super.init();
     // Initialize local variables
@@ -169,11 +167,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // Out-of-bag trees counter - only one since it is shared via k-trees
   protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
-  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
+  @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], String[] cmDomain, final Timer t_build ) {
     fr.add("OUT_BAG_TREES", response.makeZero());
-
-    DRFModel model = new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
-    model.delete_and_lock(self());
 
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
@@ -187,28 +182,28 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     TreeStats tstats = new TreeStats();
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) {
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, tid==0, validation==null, build_tree_per_node);
+      model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, tid==0, validation==null, build_tree_per_node);
       // At each iteration build K trees (K = nclass = response column domain size)
 
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
+      Timer kb_timer = new Timer();
       ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
-      Log.info(Sys.DRF__, (tid+1) + ". tree was built.");
+      Log.info(Sys.DRF__, (tid+1) + ". tree was built " + kb_timer.toString());
       if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
       tstats.updateBy(ktrees);
     }
     // Final scoring
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null, build_tree_per_node);
+    model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, true, validation==null, build_tree_per_node);
     // Compute variable importance if required
     if (classification && importance) {
       model = doVarImp(model, fr);
       Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(model.varimp));
     }
 
-    model.unlock(self());       // Update and unlock model
-    cleanUp(fr,t_build);        // Shared cleanup
+    return model;
   }
 
   /* From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp
@@ -371,13 +366,13 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
 
   // Read the 'tree' columns, do model-specific math and put the results in the
-  // ds[] array, and return the sum.  Dividing any ds[] element by the sum
+  // fs[] array, and return the sum.  Dividing any fs[] element by the sum
   // turns the results into a probability distribution.
-  @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
-    double sum=0;
+  @Override protected float score1( Chunk chks[], float fs[/*nclass*/], int row ) {
+    float sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
-      sum+=(ds[k]=chk_tree(chks,k).at0(row));
-    if (_nclass == 1) sum /= chk_oobt(chks).at0(row); // for regression average per trees voted for this row
+      sum+=(fs[k+1]=(float)chk_tree(chks,k).at0(row));
+    if (_nclass == 1) sum /= (float)chk_oobt(chks).at0(row); // for regression average per trees voted for this row
     return sum;
   }
 

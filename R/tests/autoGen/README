@@ -44,7 +44,6 @@ Future:
     Internal.R  h2o.__exec2_dest_key    No direct test              
     Internal.R  h2o.__unop2 No direct test              
     Internal.R  h2o.__binop2    No direct test              
-    ParseImport.R   h2o.startLauncher   unimpl              
     ParseImport.R   h2o.importURL                   
     ParseImport.R   h2o.importHDFS                  
     Classes.R   initialize  H2ORawData              
@@ -62,7 +61,7 @@ Future:
     Classes.R   show    H2OGBMModel             
     Classes.R   show    H2OGBMGrid              
     Classes.R   summary H2OPCAModel             
-    Classes.R   plot    H2OPCAModel             
+    Classes.R   screeplot    H2OPCAModel             
     Classes.R   [   H2OParsedData   
     Classes.R   $   H2OParsedData               
     Classes.R   [<- H2OParsedData               

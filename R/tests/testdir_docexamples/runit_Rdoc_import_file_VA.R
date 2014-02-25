@@ -4,7 +4,7 @@ source('../findNSourceUtils.R')
 test.rdocimportfileVA.golden <- function(H2Oserver) {
 
 
-irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
+irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile.VA(H2Oserver, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 

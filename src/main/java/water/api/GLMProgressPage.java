@@ -67,7 +67,7 @@ public class GLMProgressPage extends Request {
     }
     Response r = null;
     // Display HTML setup
-    if(_job.value()== null || DKV.get(_job.value()) == null)
+    if(_job.value()== null || !Job.isRunning(_job.value()))
       r =  Response.done(response);
     else if(p != null)
       r = Response.poll(response,p.progress());
@@ -92,7 +92,7 @@ public class GLMProgressPage extends Request {
     private void modelHTML( GLMModel m, JsonObject json, StringBuilder sb ) {
       switch(m.status()){
       case Done:
-        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._key,m._vals[0].bestThreshold(), "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
+        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._key,"0:1:0.01"/*m._vals[0].bestThreshold()*/, "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
         break;
       case ComputingModel:
       case ComputingValidation:
