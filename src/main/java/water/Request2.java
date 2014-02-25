@@ -553,7 +553,7 @@ public abstract class Request2 extends Request {
     for (String s : toString().split("\n")) Log.info(s);
   }
 
-  protected boolean makeJsonBox(StringBuilder sb) {
+  public boolean makeJsonBox(StringBuilder sb) {
     sb.append("<div class='pull-right'><a href='#' onclick='$(\"#params\").toggleClass(\"hide\");'"
             + " class='btn btn-inverse btn-mini'>Model Parameters</a></div><div class='hide' id='params'>"
             + "<pre><code class=\"language-json\">");
