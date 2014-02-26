@@ -471,6 +471,30 @@ public class Inspect extends Request {
 
       JsonObject row = new JsonObject();
 
+      row.addProperty(ROW,TO_ENUM);
+      String k = _va._key.toString();
+      for( int i = 0; i < _max_columns; i++ ) {
+        if(_va._cols[i].isFloat()) {
+          row.addProperty(_va._cols[i]._name, "");
+          continue;
+        }
+        if(_va._cols[i].isEnum()) {
+          row.addProperty(_va._cols[i]._name, "");
+          continue;
+        }
+
+
+        //TODO: Logic for going Enum -> Int. Needs the button below: (btn2)
+        //String btn2 = "<a href='ToInt2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
+        //+ "<button type='submit' class='btn btn-success'>As Integer</button>";
+
+
+        String btn = "<a href='ToEnum.html?src_key=" + k+ "&column_index=" + (i+1)  + "'>"
+                + "<button type='submit' class='btn btn-success'>As Factor</button>";
+        row.addProperty(_va._cols[i]._name, btn);
+      }
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
       row.addProperty(ROW, TYPE);
       for( int i = 0; i < _max_columns; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? ColType.Enum.toString() : _va._cols[i].isFloat() ? ColType.Real.toString() : ColType.Int.toString());

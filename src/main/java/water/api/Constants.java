@@ -50,7 +50,9 @@ public class Constants extends Iced {
   public static final String CLOUD_UPTIME_MILLIS   = "cloud_uptime_millis";
   public static final String CLUSTERS              = "clusters";
   public static final String COEFFICIENTS          = "coefficients";
+  public static final String COL_INDEX             = "col_index";
   public static final String COLS                  = "cols";
+  public static final String COLUMN_NAME           = "col_name";
   public static final String COLUMNS_DISPLAY       = "max_column_display";
   public static final String CONSENSUS             = "consensus";
   public static final String CONTENTS              = "contents";
@@ -167,6 +169,7 @@ public class Constants extends Iced {
   public static final String TCPS_DUTY             = "tcp_duty_cycle";
   public static final String TIME                  = "time";
   public static final String TOT_MEM               = "tot_mem" + Suffixes.BYTES;
+  public static final String TO_ENUM                = "to_enum";
   public static final String TREE_COUNT            = "number_built";
   public static final String TREE_DEPTH            = "depth";
   public static final String TREE_LEAVES           = "leaves";
