@@ -669,7 +669,7 @@ public class Utils {
     for (int i=0; i<dom.length; i++) result[dom[i]-min] = i;
     return result;
   }
-  public static String[] toStringMap(int[] dom) {
+  public static String[] toStringMap(long[] dom) {
     String[] result = new String[dom.length];
     for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
     return result;

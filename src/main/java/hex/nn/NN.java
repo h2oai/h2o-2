@@ -2,6 +2,7 @@ package hex.nn;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
+import water.H2O;
 import water.Job;
 import water.Key;
 import water.UKV;
@@ -17,6 +18,9 @@ import java.util.Random;
 
 import static water.util.MRUtils.sampleFrame;
 
+/**
+ * NN - Neural Net implementation based on MRTask2
+ */
 public class NN extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   public static DocGen.FieldDoc[] DOC_FIELDS;
@@ -86,7 +90,7 @@ public class NN extends Job.ValidatedJob {
   public double score_interval = 5;
 
   @API(help = "Number of training samples per mini-batch (0 for entire epoch).", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 10000l;
+  public long mini_batch = 0l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
@@ -97,10 +101,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
-  @API(help = "Force load balancing to increase speed for small datasets (<200MB/node)", filter = Default.class, json = true)
-  public boolean force_load_balance = true;
+  @API(help = "Force extra load balancing to increase training speed for small datasets (beta)", filter = Default.class, json = true)
+  public boolean force_load_balance = false;
 
-  @API(help = "Enable periodic shuffling of training data (can increase stochastic gradient descent performance)", filter = Default.class, json = true)
+  @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
   @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
@@ -114,6 +118,9 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
   public boolean quiet_mode = false;
+
+  @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
+  public int max_confusion_matrix_size = 20;
 
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
@@ -158,9 +165,18 @@ public class NN extends Job.ValidatedJob {
     if(arg._name.equals("classification_stop") && !classification) {
       arg.disable("Only for classification.", inputArgs);
     }
+    if (expert_mode && arg._name.equals("force_load_balance") && H2O.CLOUD.size()>1) {
+      force_load_balance = false;
+      arg.disable("Only for single-node operation.");
+    }
+
     if(arg._name.equals("regression_stop") && classification) {
       arg.disable("Only for regression.", inputArgs);
     }
+    if(arg._name.equals("max_confusion_matrix_size") && !classification) {
+      arg.disable("Only for classification.", inputArgs);
+    }
+
     if (arg._name.equals("score_validation_samples") && validation == null) {
       arg.disable("Only if a validation set is specified.", inputArgs);
     }
@@ -207,12 +223,12 @@ public class NN extends Job.ValidatedJob {
     if(UKV.get(dest()) == null)return 0;
     NNModel m = UKV.get(dest());
     if (m != null && m.model_info()!=null )
-      return (float)(m.epoch_counter / m.model_info().get_params().epochs);
+      return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
     return 0;
   }
 
   @Override public JobState exec() {
-    buildModel(initModel());
+    trainModel(initModel());
     delete();
     return JobState.DONE;
   }
@@ -222,7 +238,7 @@ public class NN extends Job.ValidatedJob {
   }
 
   private boolean _fakejob;
-  void checkParams() {
+  private void checkParams() {
     if (source.numCols() <= 1)
       throw new IllegalArgumentException("Training data must have at least 2 features (incl. response).");
 
@@ -245,6 +261,10 @@ public class NN extends Job.ValidatedJob {
     }
   }
 
+  /**
+   * Create an initial NN model, typically to be trained by trainModel(model)
+   * @return Randomly initialized model
+   */
   public final NNModel initModel() {
     try {
       lock_data();
@@ -260,7 +280,12 @@ public class NN extends Job.ValidatedJob {
     }
   }
 
-  public final NNModel buildModel(NNModel model) {
+  /**
+   * Train a NN model
+   * @param model Input model (e.g., from initModel(), or from a previous training run)
+   * @return Trained model
+   */
+  public final NNModel trainModel(NNModel model) {
     Frame[] valid_adapted = null;
     Frame valid = null, validScoreFrame = null;
     Frame train = null, trainScoreFrame = null;
@@ -273,7 +298,7 @@ public class NN extends Job.ValidatedJob {
       model.write_lock(self());
       final long model_size = model.model_info().size();
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
-      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
+//      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = reBalance(model.model_info().data_info()._adaptedFrame, seed);
       trainScoreFrame = sampleFrame(train, score_training_samples, seed);
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
@@ -296,53 +321,57 @@ public class NN extends Job.ValidatedJob {
       long timeStart = System.currentTimeMillis();
 
       //main loop
-      long iter = 0;
-      Frame newtrain = new Frame(train);
-      do {
-        model.set_model_info(new NNTask(model.model_info(), sync_fraction).doAll(newtrain).model_info());
-        if (++iter % 10 != 0 && shuffle_training_data) {
-          Frame newtrain2 = reBalance(newtrain, seed+iter);
-          if (newtrain != newtrain2) {
-            newtrain.delete();
-            newtrain = newtrain2;
-            trainScoreFrame = sampleFrame(newtrain, score_training_samples, seed+iter+0xDADDAAAA);
-          }
-        }
-      }
+      do model.set_model_info(new NNTask(model.model_info(), sync_fraction).doAll(train).model_info());
       while (model.doScoring(trainScoreFrame, validScoreFrame, timeStart, self()));
 
       Log.info("Finished training the Neural Net model.");
       return model;
     }
+    catch(Exception ex) {
+      Log.err("Caught exception:\n" + ex.getStackTrace());
+      return model != null ? model : (NNModel)UKV.get(dest());
+    }
     finally {
       model.unlock(self());
-      //clean up
       if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
       if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
       if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
-//    if (_newsource != null && _newsource != source) _newsource.delete();
       unlock_data();
     }
   }
 
+  /**
+   * Lock the input datasets against deletes
+   */
   private void lock_data() {
-    // Lock the input datasets against deletes
     source.read_lock(self());
     if( validation != null && source._key != null && validation._key !=null && !source._key.equals(validation._key) )
       validation.read_lock(self());
   }
 
+  /**
+   * Release the lock for the input datasets
+   */
   private void unlock_data() {
     source.unlock(self());
     if( validation != null && !source._key.equals(validation._key) )
       validation.unlock(self());
   }
 
+  /**
+   * Delete job related keys
+   */
   public void delete() {
     if (_fakejob) UKV.remove(job_key);
     remove();
   }
 
+  /**
+   * Rebalance a frame for load balancing
+   * @param fr Input frame
+   * @param seed RNG seed
+   * @return Frame that can be load-balanced (and shuffled), depending on whether force_load_balance and shuffle_training_data are set
+   */
   private Frame reBalance(final Frame fr, long seed) {
     return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
   }

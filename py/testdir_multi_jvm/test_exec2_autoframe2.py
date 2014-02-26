@@ -24,8 +24,8 @@ class Basic(unittest.TestCase):
 
     def test_exec2_autoframe(self):
         h2o.beta_features = False
-        csvPathname = 'standard/covtype.data'
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', 
+        csvPathname = 'iris/iris.csv'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', 
             hex_key='c.hex', timeoutSecs=10, doSummary=False)
         print "\nParse key is:", parseResult['destination_key']
 
@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
         # passes with suffix, fails without?
         # suffix = ""
         suffix = ".hex"
-        for i in range(54):
+        for i in range(5):
             # try the funky c(6) thing like  R, instead of just 6
             execExpr = "Result" + str(i) + suffix + " = c.hex[,c(" + str(i+1) + ")]"
             print "execExpr:", execExpr
@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs=4)
 
         h2o.check_sandbox_for_errors()
-        print "exec end on ", "covtype.data" , 'took', time.time() - start, 'seconds'
+        print "exec end on ", "iris.csv" , 'took', time.time() - start, 'seconds'
 
 
 if __name__ == '__main__':
