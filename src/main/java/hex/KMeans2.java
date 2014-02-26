@@ -63,7 +63,7 @@ public class KMeans2 extends ColumnsJob {
       domain[i] = "Cluster " + i;
     String[] namesResp = Utils.append(names, "response");
     String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
-    KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    KMeans2Model model = new KMeans2Model(this, destination_key, sourceKey, namesResp, domaiResp);
     model.delete_and_lock(self());
     model.k = k; model.normalized = normalize; model.max_iter = max_iter;
 
@@ -199,6 +199,7 @@ public class KMeans2 extends ColumnsJob {
 
     @Override public boolean toHTML(StringBuilder sb) {
       if( model != null ) {
+        model.parameters.makeJsonBox(sb);
         DocGen.HTML.section(sb, "Cluster Centers: "); //"Total Within Cluster Sum of Squares: " + model.total_within_SS);
         table(sb, "Clusters", model._names, model.centers);
         double[][] rows = new double[model.within_cluster_variances.length][1];
@@ -290,6 +291,9 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Model parameters")
+    private final KMeans2 parameters;    // This is used purely for printing values out.
+
     @API(help = "Cluster centers, always denormalized")
     public double[][] centers;
 
@@ -330,8 +334,9 @@ public class KMeans2 extends ColumnsJob {
     private transient double[][] _normClust;
     private transient double[] _means, _mults;
 
-    public KMeans2Model(Key selfKey, Key dataKey, String names[], String domains[][]) {
+    public KMeans2Model(KMeans2 params, Key selfKey, Key dataKey, String names[], String domains[][]) {
       super(selfKey, dataKey, names, domains);
+      parameters = params;
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
 

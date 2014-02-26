@@ -42,6 +42,7 @@ public class Job extends Request2 {
         throw new IllegalArgumentException("Key '" + value + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
     }
   }
+  // FIXME: all these fields should be private or at least protected
   @API(help = "Job description") public String   description;
   @API(help = "Job start time")  public long     start_time;
   @API(help = "Job end time")    public long     end_time;
@@ -73,6 +74,7 @@ public class Job extends Request2 {
     this.start_time  = prior.start_time;
     this.end_time    = prior.end_time;
     this.state       = prior.state;
+    this.exception   = prior.exception;
   }
 
   public Key self() { return job_key; }
@@ -420,6 +422,7 @@ public class Job extends Request2 {
   }
   public void cancel(final String msg) {
     state = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    exception = msg;
     // replace finished job by a job handle
     replaceByJobHandle();
     DKV.write_barrier();
@@ -432,22 +435,42 @@ public class Job extends Request2 {
   }
 
   /**
-   *
+   * Callback which is called after job cancellation (by user, by exception).
    */
   protected void onCancelled() {
   }
+
   // This querys the *current object* for its status.
   // Only valid if you have a Job object that is being updated by somebody.
-  public boolean isCancelled() { return state == JobState.CANCELLED || state == JobState.CRASHED; }
+  public boolean isCancelled() {
+    return state == JobState.CANCELLED || state == JobState.CRASHED;
+  }
 
-  // Check the K/V store to see the Job is still running
+  public boolean isCrashed() { return state == JobState.CRASHED; }
+
+  public boolean isDone() { return state == JobState.DONE; }
+
+
+  /** Check if given job is running.
+   *
+   * @param job_key job key
+   * @return true if job is still running else returns false.
+   */
   public static boolean isRunning(Key job_key) {
     Job j = UKV.get(job_key);
     return j!=null && j.state == JobState.RUNNING;
   }
+  /**
+   * Returns true if job is not running.
+   * The job can be cancelled, crashed, or already done.
+   *
+   * @param jobkey job identification key
+   * @return true if job is done, cancelled, or crashed, else false
+   */
+  public static boolean isEnded(Key jobkey) { return !isRunning(jobkey); }
 
   /**
-   *
+   * Marks job as finished and records job end time.
    */
   public void remove() {
     end_time = System.currentTimeMillis();
@@ -456,18 +479,13 @@ public class Job extends Request2 {
     replaceByJobHandle();
   }
 
-  /** Finds a job with given key or returns null
-   * @param key
-   * @return
+  /** Finds a job with given key or returns null.
+   *
+   * @param key job key
+   * @return returns a job with given job key or null if a job is not found.
    */
-  public static final Job findJob(final Key key) {
-    Job job = null;
-    for( Job current : Job.all() ) {
-      if( current.self().equals(key) ) {
-        job = current;
-        break;
-      }
-    }
+  public static final Job findJob(final Key jobkey) {
+    Job job = UKV.get(jobkey);
     return job;
   }
 
@@ -483,7 +501,8 @@ public class Job extends Request2 {
     return job;
   }
 
-  /** Returns job execution time in milliseconds */
+  /** Returns job execution time in milliseconds.
+   * If job is not running then returns job execution time. */
   public final long runTimeMs() {
     long until = end_time != 0 ? end_time : System.currentTimeMillis();
     return until - start_time;
@@ -495,8 +514,6 @@ public class Job extends Request2 {
   /** Value of the described speed criteria: msecs/frob */
   public long speedValue() { return 0; }
 
-  // If job is a request
-
   @Override protected Response serve() {
     fork();
     return redirect();
@@ -506,8 +523,13 @@ public class Job extends Request2 {
     return Progress2.redirect(this, job_key, destination_key);
   }
 
-  //
 
+  /**
+   * Forks computation of this job.
+   *
+   * <p>The call does not block.</p>
+   * @return always returns this job.
+   */
   public Job fork() {
     init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
@@ -544,6 +566,9 @@ public class Job extends Request2 {
   /**
    * Invoked before job runs. This is the place to checks arguments are valid or throw
    * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
+   *
+   * @throws IllegalArgumentException throws the exception if initialization fails to ensure
+   * correct job runtime environment.
    */
   protected void init() throws IllegalArgumentException {
     if (destination_key == null) destination_key = defaultDestKey();
@@ -558,40 +583,6 @@ public class Job extends Request2 {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 
-  public static boolean isJobEnded(Key jobkey) {
-    boolean done = false;
-
-    Job[] jobs = Job.all();
-    boolean found = false;
-    for (int i = jobs.length - 1; i >= 0; i--) {
-      if (jobs[i].job_key == null) {
-        continue;
-      }
-
-      if (! jobs[i].job_key.equals(jobkey)) {
-        continue;
-      }
-
-      // This is the job we are looking for.
-      found = true;
-
-      if (jobs[i].end_time > 0) {
-        done = true;
-      }
-
-      if (jobs[i].isCancelled()) {
-        done = true;
-      }
-
-      break;
-    }
-
-    if (! found) {
-      done = true;
-    }
-
-    return done;
-  }
 
   /**
    * Block synchronously waiting for a job to end, success or not.
@@ -600,7 +591,7 @@ public class Job extends Request2 {
    */
   public static void waitUntilJobEnded(Key jobkey, int pollingIntervalMillis) {
     while (true) {
-      if (isJobEnded(jobkey)) {
+      if (Job.isEnded(jobkey)) {
         return;
       }
 

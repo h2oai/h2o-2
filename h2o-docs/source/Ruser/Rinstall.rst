@@ -21,9 +21,11 @@ reccomended.
 Start an instance of H\ :sub:`2`\ O. For help with this see 
 :ref:`GettingStartedFromaZipFile`
 
-Users should be aware that in order for H\ :sub:`2`\ O to successfully
-run through R, an instance of H\ :sub:`2`\ O must also simultaneously
-be running. If the instance of H\ :sub:`2`\ O is stopped, the R
+If users do not start an instance of H\ :sub:`2`\ O, one will be
+started automatically for them at localhost: 54321 (see **STEP 4** for
+more detail). 
+
+If the instance of H\ :sub:`2`\ O is stopped, the R
 program will no longer run, and work done will be lost. 
 
 **STEP 3:**
@@ -45,14 +47,20 @@ warnings can safely be ignored.
 
 **STEP 4:**
 
-Install the H\ :sub:`2`\ O package, and the H\ :sub:`2`\ O client
-package via the  H\ :sub:`2`\ O cran. This repository functions
-exactly like the R repository, but is maintained by  H\ :sub:`2`\ O. 
+Install the H\ :sub:`2`\ O package via the H\ :sub:`2`\ O
+repository. This repository functions exactly like the R repository,
+but is maintained by  H\ :sub:`2`\ O. 
 
-::
+**DO NOT CUT AND PASTE THIS CALL INTO R**
+The call shown below is specifically for the jacobi/2 build, which may
+be older than the build you would like to use. Your call should look
+similar to this, and you can find an exact command to copy and paste
+by going to H\ :sub:`2`\ O available downloads at 
+`http://0xdata.com/downloadtable
+<http://0xdata.com/downloadtable/>`_ and selecting the correct version
+there. 
 
-  install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-jacobi/2/R", getOption("repos"))))
- 
+  `install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-jacobi/2/R", getOption("repos"))))` 
   
 
 **STEP 4:**
@@ -63,12 +71,11 @@ package, and establish a connection to a running instance of  H\
 
 If there is no running instance of  H\ :sub:`2`\ O prior to using
 the command "h2o.init()",  H\ :sub:`2`\ O in R will start an instance
-automatically for the user. 
+automatically for the user at localhost:54321, and the user will be
+notified. If you would like to connect to an instance at an IP and
+port other than localhost:54321, these details must be specified as
+arguments in the R call. 
 
-Note that in the call "localH2O <- h2o.init()" the h2o.init object is
-being named localH2O in the R environment for use later in model
-specification. Entering the call exactly as it is written below assumes the
-user wishes to connect to IP localhost and port: 54321.
 
 ::
 
@@ -77,7 +84,7 @@ user wishes to connect to IP localhost and port: 54321.
 
 
 Users who wish to specify a connection
-with a server (rather than localhost at port 54321) must explicity
+with a server (other than localhost at port 54321) must explicity
 state the IP address and port number in the h2o.init call. 
 An example is given below, but **do not cut and paste**; users should
 specify the IP and port number appropriate to their specific

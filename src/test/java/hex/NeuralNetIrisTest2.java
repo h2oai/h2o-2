@@ -159,6 +159,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.ignore_const_cols = false;
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
+                        p.force_load_balance = false; //keep just 1 chunk for reproducibility
                         NNModel mymodel = p.initModel(); //randomize weights, but don't start training yet
 
                         Neurons[] neurons = NNTask.makeNeuronsForTraining(mymodel.model_info());

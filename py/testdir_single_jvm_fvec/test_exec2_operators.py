@@ -29,12 +29,18 @@ initList = [
 # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
 
 exprListFull = [
+    "ddply(r1.hex,c(3),nrow)",
+    # More complex multi-return
+    "ddply(r1.hex,,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
+    "ddply(r1.hex,c(7),nrow)",
+
     "s1=c(1); s2=c(2); s3=c(3); s4=c(4); s5=s1+s2+s3+s4;"
     "s.hex = r.hex[!is.na(r.hex[,13]),]",
     "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
     "s.hex = r.hex[!is.na(r.hex[,13]),]",
     'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
     'cct.hex=runif(r.hex);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',
+    #******************************************************************************
 
     # says you can't use col 0
     # 'r1.hex[,0] = r1.hex[,0] * r2.hex[,1]',

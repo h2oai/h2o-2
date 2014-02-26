@@ -12,10 +12,10 @@ print(iris.gbm.h2o)
 
 heading("Downloading Java prediction model code from H2O")
 model_key <- iris.gbm.h2o@key
-tmpdir_name <- sprintf("tmp_model_%s", as.character(Sys.getpid()))
+tmpdir_name <- sprintf("%s/results/tmp_model_%s", TEST_ROOT_DIR, as.character(Sys.getpid()))
 cmd <- sprintf("rm -fr %s", tmpdir_name)
 safeSystem(cmd)
-cmd <- sprintf("mkdir %s", tmpdir_name)
+cmd <- sprintf("mkdir -p %s", tmpdir_name)
 safeSystem(cmd)
 cmd <- sprintf("curl -o %s/%s.java http://%s:%d/2/GBMModelView.java?_modelKey=%s", tmpdir_name, model_key, myIP, myPort, model_key)
 safeSystem(cmd)

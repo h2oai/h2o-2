@@ -1,5 +1,3 @@
-.MAX_INSPECT_VIEW = 10000
-
 # Class definitions
 # WARNING: Do NOT touch the env slot! It is used to link garbage collection between R and H2O
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
@@ -143,6 +141,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
   cat("\n\nCluster means:\n"); print(model$centers)
   cat("\nClustering vector:\n"); print(summary(model$cluster))
   cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
+  cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
   cat("\nAvailable components:\n\n"); print(names(model))
 })
 
@@ -153,10 +152,8 @@ setMethod("show", "H2ONNModel", function(object) {
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
   cat("\nTraining mean square error:", model$train_sqr_error)
-  cat("\nTraining cross entropy:", model$train_cross_entropy)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
-  cat("\nValidation cross entropy:", model$valid_cross_entropy)
   cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
@@ -647,7 +644,9 @@ head.H2OParsedData <- function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   x.slice = as.data.frame(x[seq_len(n),])
-  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key)
+  if(ncol(x) > .MAX_INSPECT_COL_VIEW)
+    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -664,7 +663,10 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
   idx = seq.int(to = nrx, length.out = n)
   x.slice = as.data.frame(x[idx,])
   rownames(x.slice) = idx
-  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key)
+  
+  if(ncol(x) > .MAX_INSPECT_COL_VIEW)
+    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
   for(i in 1:ncol(x)) {
     if(!is.null(res$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
@@ -683,7 +685,7 @@ h2o.anyFactor <- function(x) {
 
 # setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE) {
 quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, ...) {
-  if(ncol(x) != 1) stop("quantile only operates on a single column")
+  if((numCols = ncol(x)) != 1) stop("quantile only operates on a single column")
   if(is.factor(x)) stop("factors are not allowed")
   if(!is.numeric(probs)) stop("probs must be a numeric vector")
   if(any(probs < 0 | probs > 1)) stop("probs must fall in the range of [0,1]")
@@ -695,7 +697,9 @@ quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, na
   
   res = .h2o.__exec2(x@h2o, expr)
   # col <- as.numeric(strsplit(res$result, "\n")[[1]][-1])
-  # res2 = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=res$dest_key, view=res$num_rows)
+  # if(numCols > .MAX_INSPECT_COL_VIEW)
+  #   warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  # res2 = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=res$dest_key, view=res$num_rows, max_column_display=.Machine$integer.max)
   # col <- sapply(res2$rows, function(x) { x[[2]] })
   col <- as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res$dest_key))[[1]]
   if(names) names(col) <- paste(100*probs, "%", sep="")
@@ -705,7 +709,9 @@ quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, na
 # setMethod("summary", "H2OParsedData", function(object) {
 summary.H2OParsedData <- function(object, ...) {
   digits = 12L
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key)
+  if(ncol(object) > .MAX_INSPECT_COL_VIEW)
+    warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key, max_ncols=.Machine$integer.max)
   cols <- sapply(res$summaries, function(col) {
     if(col$stats$type != 'Enum') { # numeric column
       if(is.null(col$stats$mins) || length(col$stats$mins) == 0) col$stats$mins = NaN
@@ -817,14 +823,16 @@ str.H2OParsedData <- function(object, ...) {
   
   if(class(object) != "H2OParsedData")
     stop("object must be of class H2OParsedData")
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT, key = object@key)
+  if(ncol(object) > .MAX_INSPECT_COL_VIEW)
+    warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT, key=object@key, max_column_display=.Machine$integer.max)
   cat("\nH2O dataset '", object@key, "':\t", res$num_rows, " obs. of  ", (p <- res$num_cols), 
       " variable", if(p != 1) "s", if(p > 0) ":", "\n", sep = "")
   
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
   rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
-  res2 = .h2o.__remoteSend(object@h2o, .h2o.__HACK_LEVELS2, source = object@key)
+  res2 = .h2o.__remoteSend(object@h2o, .h2o.__HACK_LEVELS2, source = object@key, max_ncols = .Machine$integer.max)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
@@ -844,7 +852,9 @@ str.H2OParsedDataVA <- function(object, ...) {
 
 # setGeneric("histograms", function(object) { standardGeneric("histograms") })
 # setMethod("histograms", "H2OParsedData", function(object) {
-#   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key)
+#   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
+#     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+#   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key, max_ncols=.Machine$integer.max)
 #   list.of.bins <- lapply(res$summaries, function(x) {
 #     if (x$stats$type == 'Enum') {
 #       bins <- NULL
@@ -936,7 +946,9 @@ setMethod("show", "H2ORFModelVA", function(object) {
 })
 
 setMethod("colnames", "H2OParsedDataVA", function(x) {
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key)
+  if(ncol(x) > .MAX_INSPECT_COL_VIEW)
+    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, max_column_display=.Machine$integer.max)
   unlist(lapply(res$cols, function(y) y$name))
 })
 
@@ -972,15 +984,20 @@ head.H2OParsedDataVA <- function(x, n = 6L, ...) {
   stopifnot(length(n) == 1L)
   n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
   if(n == 0) return(data.frame())
-  if(n > .MAX_INSPECT_VIEW) stop(paste("Cannot view more than", .MAX_INSPECT_VIEW, "rows"))
+  if(n > .MAX_INSPECT_ROW_VIEW) stop(paste("Cannot view more than", .MAX_INSPECT_ROW_VIEW, "rows"))
+  if(ncol(x) > .MAX_INSPECT_COL_VIEW)
+    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=0, view=n)
+  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=0, view=n, max_column_display=.Machine$integer.max)
+  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
   blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
-  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
+  nums = sapply(res2$levels, is.null)   # Must stop R from coercing all columns with "NA" to factors, confusing rbind if it is actually numeric
+  
+  temp = lapply(res$rows, function(y) { y$row = NULL; na_num = (y[nums] == "NA"); y[nums][na_num] = as.numeric(NA);
+                                        tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
-
-  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key = x@key)
+  
   for(i in 1:ncol(x)) {
     if(!is.null(res2$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
@@ -993,17 +1010,22 @@ tail.H2OParsedDataVA <- function(x, n = 6L, ...) {
   nrx <- nrow(x)
   n <- ifelse(n < 0L, max(nrx + n, 0L), min(n, nrx))
   if(n == 0) return(data.frame())
-  if(n > .MAX_INSPECT_VIEW) stop(paste("Cannot view more than", .MAX_INSPECT_VIEW, "rows"))
+  if(n > .MAX_INSPECT_ROW_VIEW) stop(paste("Cannot view more than", .MAX_INSPECT_ROW_VIEW, "rows"))
+  if(ncol(x) > .MAX_INSPECT_COL_VIEW)
+    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   
   idx = seq.int(to = nrx, length.out = n)
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=idx[1], view=length(idx))
+  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key, offset=idx[1], view=length(idx), max_column_display=.Machine$integer.max)
+  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
   blanks = sapply(res$cols, function(y) { nchar(y$name) == 0 })   # Must stop R from auto-renaming cols with no name
-  temp = lapply(res$rows, function(y) { y$row = NULL; tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
+  nums = sapply(res2$levels, is.null)   # Must stop R from coercing all columns with "NA" to factors, confusing rbind if it is actually numeric
+  
+  temp = lapply(res$rows, function(y) { y$row = NULL; na_num = (y[nums] == "NA"); y[nums][na_num] = as.numeric(NA);
+                                        tmp = as.data.frame(y); names(tmp)[blanks] = ""; return(tmp) })
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-  res2 = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key = x@key)
   for(i in 1:ncol(x)) {
     if(!is.null(res2$levels[[i]]))
       x.slice[,i] <- factor(x.slice[,i], levels = res2$levels[[i]])
@@ -1012,7 +1034,9 @@ tail.H2OParsedDataVA <- function(x, n = 6L, ...) {
 }
 
 summary.H2OParsedDataVA <- function(object, ...) {
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY, key=object@key)
+  if(ncol(object) > .MAX_INSPECT_COL_VIEW)
+    warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY, key=object@key, max_column_display=.Machine$integer.max)
   res = res$summary$columns
   result = NULL; cnames = NULL
   for(i in 1:length(res)) {

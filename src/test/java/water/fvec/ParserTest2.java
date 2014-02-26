@@ -642,8 +642,8 @@ public class ParserTest2 extends TestUtil {
       n.start();
     }
     H2O.waitForCloudSize(nnodes);
-    new ParserTest2().runTests();
-    new ParseTime  ().runTests();
+    new ParserTest2  ().runTests();
+    new ParseTimeTest().runTests();
     System.out.println("DONE!");
   }
 }

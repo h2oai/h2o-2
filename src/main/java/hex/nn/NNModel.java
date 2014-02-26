@@ -191,8 +191,7 @@ public class NNModel extends Model {
     // package local helpers
     final int[] units; //number of neurons per layer, extracted from parameters and from datainfo
 
-//    public NNModelInfo(NN params, int num_input, int num_output) {
-    public NNModelInfo(NN params, DataInfo dinfo) {
+    public NNModelInfo(final NN params, final DataInfo dinfo) {
       data_info = dinfo; //should be deep_clone()?
       final int num_input = dinfo.fullN();
       final int num_output = params.classification ? dinfo._adaptedFrame.lastVec().domain().length : 1;
@@ -553,87 +552,35 @@ public class NNModel extends Model {
     final String mse_format = "%g";
     final String cross_entropy_format = "%2.6f";
 
+    // stats for training and validation
+    final Errors error = errors[errors.length - 1];
+
     DocGen.HTML.title(sb, title);
-    DocGen.HTML.paragraph(sb, "Model type: " + (model_info().parameters.classification ? " Classification" : " Regression"));
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
     DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
-    Inspect2 is2 = new Inspect2();
-    DocGen.HTML.paragraph(sb, "Training Data Key: " + _dataKey);
-    if (model_info.parameters.validation != null) {
-      DocGen.HTML.paragraph(sb, "Validation Data Key: " + model_info.parameters.validation._key);
-    }
+    DocGen.HTML.paragraph(sb, "Model type: " + (model_info().parameters.classification ? " Classification" : " Regression") + ", predicting: " + responseName());
     DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     model_info.job().toHTML(sb);
+    Inspect2 is2 = new Inspect2();
     sb.append("<div class='alert'>Actions: "
-            + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Cancel job") + ", " : "")
-            + is2.link("Inspect training data", _dataKey) + ", "
-            + (model_info().parameters.validation != null ? (is2.link("Inspect validation data", model_info().parameters.validation._key) + ", ") : "")
+            + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Stop training") + ", " : "")
+            + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
+            + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", " +
             NN.link(_dataKey, "Compute new model") + "</div>");
 
-    // stats for training and validation
-    final Errors error = errors[errors.length - 1];
-    assert(error != null);
-
-    if (errors.length > 1) {
-      if (isClassifier()) {
-        // Plot training error
-        float[] err = new float[errors.length];
-        float[] samples = new float[errors.length];
-        for (int i=0; i<err.length; ++i) {
-          err[i] = (float)errors[i].train_err;
-          samples[i] = errors[i].training_samples;
-        }
-        new D3Plot(samples, err, "training samples", "classification error",
-                "Classification Error on Training Set").generate(sb);
-
-        // Plot validation error
-        if (model_info.parameters.validation != null) {
-          for (int i=0; i<err.length; ++i) {
-            err[i] = (float)errors[i].valid_err;
-          }
-          new D3Plot(samples, err, "training samples", "classification error",
-                  "Classification Error on Validation Set").generate(sb);
-        }
-      } else {
-        // Plot training MSE
-        float[] err = new float[errors.length-1];
-        float[] samples = new float[errors.length-1];
-        for (int i=0; i<err.length; ++i) {
-          err[i] = (float)errors[i+1].train_mse;
-          samples[i] = errors[i+1].training_samples;
-        }
-        new D3Plot(samples, err, "training samples", "MSE",
-                "Regression Error on Training Set").generate(sb);
-
-        // Plot validation MSE
-        if (model_info.parameters.validation != null) {
-          for (int i=0; i<err.length; ++i) {
-            err[i] = (float)errors[i+1].valid_mse;
-          }
-          new D3Plot(samples, err, "training samples", "MSE",
-                  "Regression Error on Validation Set").generate(sb);
-        }
-      }
+    if (model_info.unstable()) {
+      final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
+              + " Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+      DocGen.HTML.section(sb, "=======================================================================================");
+      DocGen.HTML.section(sb, msg);
+      DocGen.HTML.section(sb, "=======================================================================================");
     }
 
-    DocGen.HTML.section(sb, "Predicting: " + responseName());
-    if (isClassifier()) {
-      DocGen.HTML.section(sb, "Training classification error: " + formatPct(error.train_err));
-//      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
-      if(error.validation) {
-        DocGen.HTML.section(sb, "Validation classification error: " + formatPct(error.valid_err));
-//        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
-      }
-    } else {
-      DocGen.HTML.section(sb, "Training mean squared error: " + String.format(mse_format, error.train_mse));
-      if(error.validation) {
-        DocGen.HTML.section(sb, "Validation mean squared error: " + String.format(mse_format, error.valid_mse));
-      }
-    }
-    if (error.training_time_ms > 0)
-      DocGen.HTML.section(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
+    final double progress = model_info.get_params().progress();
+    DocGen.HTML.title(sb, "Progress");
+
     if (model_info.parameters != null && model_info.parameters.diagnostics) {
       DocGen.HTML.section(sb, "Status of Neuron Layers");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
@@ -679,7 +626,7 @@ public class NNModel extends Model {
         }
 
         sb.append("<td>").append(String.format("%.5g", neurons[i].rate(error.training_samples))).append("</td>");
-       sb.append("<td>").append(neurons[i].params.l1).append("</td>");
+        sb.append("<td>").append(neurons[i].params.l1).append("</td>");
         sb.append("<td>").append(neurons[i].params.l2).append("</td>");
         final String format = "%g";
         sb.append("<td>").append(String.format("%.5f", neurons[i].momentum(error.training_samples))).append("</td>");
@@ -691,24 +638,39 @@ public class NNModel extends Model {
       }
       sb.append("</table>");
     }
-    if (model_info.unstable()) {
-      final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
-              + " Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
-      DocGen.HTML.section(sb, "=======================================================================================");
-      DocGen.HTML.section(sb, msg);
-      DocGen.HTML.section(sb, "=======================================================================================");
+
+    if (isClassifier()) {
+      DocGen.HTML.section(sb, "Classification error on training data: " + formatPct(error.train_err));
+//      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
+      if(error.validation) {
+        DocGen.HTML.section(sb, "Classification error on validation data: " + formatPct(error.valid_err));
+//        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
+      }
+    } else {
+      DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
+      if(error.validation) {
+        DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
+      }
     }
+    if (error.training_time_ms > 0) {
+      DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
+      DocGen.HTML.paragraph(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
+      DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(error.training_time_ms, true));
+      if (!model_info.get_params().isDone())
+        DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(error.training_time_ms*(1-progress)/progress), true));
+    }
+
     long score_valid = error.score_validation_samples;
     long score_train = error.score_training_samples;
     final boolean fulltrain = score_train==0 || score_train == model_info().data_info()._adaptedFrame.numRows();
     final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
     if (isClassifier()) {
-      final String cmTitle = "Confusion Matrix on " + (error.validation ?
-              "Validation Data" + (fullvalid ? "" : " (" + score_valid + " samples)")
-              : "Training Data" + (fulltrain ? "" : " (" + score_train + " samples)"));
-      DocGen.HTML.section(sb, cmTitle);
+      final String cmTitle = "<br/>Confusion Matrix reported on " + (error.validation ?
+              "Validation Data" + (fullvalid ? "" : " (" + score_valid + " samples)") + ":"
+              : "Training Data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":");
+      DocGen.HTML.paragraph(sb, cmTitle);
       if (error.train_confusion_matrix != null) {
-        if (error.train_confusion_matrix.cm != null && error.train_confusion_matrix.cm.length < 100) {
+        if (error.train_confusion_matrix.cm != null && error.train_confusion_matrix.cm.length < 30) {
           if (error.validation && error.valid_confusion_matrix != null && error.valid_confusion_matrix.cm != null) error.valid_confusion_matrix.toHTML(sb);
           else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
         } else {
@@ -718,20 +680,63 @@ public class NNModel extends Model {
       else sb.append("<h5>Not yet computed.</h5>");
     }
 
-    sb.append("<h3>" + "Progress" + "</h3>");
-    sb.append("<h4>" + "Epochs: " + String.format("%.3f", epoch_counter) + "</h4>");
-
-    final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
-    String training = "Number of training set samples for scoring: " + (fulltrain ? "all " : "") + pts;
-    if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-    if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
-    DocGen.HTML.section(sb, training);
+    DocGen.HTML.title(sb, "Scoring history");
+    // training
+    {
+      final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
+      String training = "Number of training set samples for scoring: " + (fulltrain ? "all " : "") + pts;
+      if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+      if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+      DocGen.HTML.paragraph(sb, training);
+    }
+    // validation
     if (error.validation) {
       final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
-      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " : "") + pts;
+      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
       if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
       if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
-      DocGen.HTML.section(sb, validation);
+      DocGen.HTML.paragraph(sb, validation);
+    }
+    if (errors.length > 1) {
+      if (isClassifier()) {
+        // Plot training error
+        float[] err = new float[errors.length];
+        float[] samples = new float[errors.length];
+        for (int i=0; i<err.length; ++i) {
+          err[i] = (float)errors[i].train_err;
+          samples[i] = errors[i].training_samples;
+        }
+        new D3Plot(samples, err, "training samples", "classification error",
+                "classification error on training data").generate(sb);
+
+        // Plot validation error
+        if (model_info.parameters.validation != null) {
+          for (int i=0; i<err.length; ++i) {
+            err[i] = (float)errors[i].valid_err;
+          }
+          new D3Plot(samples, err, "training samples", "classification error",
+                  "classification error on validation set").generate(sb);
+        }
+      } else {
+        // Plot training MSE
+        float[] err = new float[errors.length-1];
+        float[] samples = new float[errors.length-1];
+        for (int i=0; i<err.length; ++i) {
+          err[i] = (float)errors[i+1].train_mse;
+          samples[i] = errors[i+1].training_samples;
+        }
+        new D3Plot(samples, err, "training samples", "MSE",
+                "regression error on training data").generate(sb);
+
+        // Plot validation MSE
+        if (model_info.parameters.validation != null) {
+          for (int i=0; i<err.length; ++i) {
+            err[i] = (float)errors[i+1].valid_mse;
+          }
+          new D3Plot(samples, err, "training samples", "MSE",
+                  "regression error on validation data").generate(sb);
+        }
+      }
     }
 
 //    String training = "Number of training set samples for scoring: " + error.score_training;

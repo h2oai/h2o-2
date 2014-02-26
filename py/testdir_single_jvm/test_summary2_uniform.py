@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 
-DO_SCIPY_COMPARE = True
+DO_SCIPY_COMPARE = False
 
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
@@ -51,9 +51,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
     expectedRange = (expectedMax - expectedMin) + 1
     for i in range(rowCount):
         rowData = []
-        ri = expectedMin + (i % expectedRange)
+        ri = expectedMin + (random.uniform(0,1) * expectedRange)
         for j in range(colCount):
-            # ri = r1.randint(expectedMin, expectedMax)
             rowData.append(ri)
 
         rowDataCsv = ",".join(map(str,rowData))
@@ -79,7 +78,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary2_percentile2(self):
+    def test_summary2_uniform(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (500000, 2, 'cD', 300, 0, 9), # expectedMin/Max must cause 10 values
@@ -143,20 +142,20 @@ class Basic(unittest.TestCase):
 
                 for b in hcnt:
                     e = .1 * rowCount
-                    self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
-                        msg="Bins not right. b: %s e: %s" % (b, e))
+                    # self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
+                    #     msg="Bins not right. b: %s e: %s" % (b, e))
 
                 print "pctile:", pctile
                 print "maxs:", maxs
-                self.assertEqual(maxs[0], expectedMax)
+                self.assertAlmostEqual(maxs[0], expectedMax+1, delta=0.1)
                 print "mins:", mins
-                self.assertEqual(mins[0], expectedMin)
+                self.assertAlmostEqual(mins[0], expectedMin, delta=0.1)
 
                 for v in pctile:
                     self.assertTrue(v >= expectedMin, 
                         "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
-                    self.assertTrue(v <= expectedMax, 
-                        "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
+                    self.assertTrue(v <= (expectedMax+1), 
+                        "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax+1))
             
                 eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
                 if expectedMin==1:

@@ -2,8 +2,7 @@ import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
-
-DO_SCIPY_COMPARE = True
+DO_SCIPY_COMPARE = False
 
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
@@ -11,8 +10,8 @@ def generate_scipy_comparison(csvPathname):
 
     dataset = loadtxt(
         open(csvPathname, 'r'),
-        delimiter=',',
-        dtype='int16');
+        delimiter=',');
+        # dtype='int16');
 
     print "csv read for training, done"
     # we're going to strip just the last column for percentile work
@@ -28,7 +27,9 @@ def generate_scipy_comparison(csvPathname):
         print "n_features:", n_features
 
         # get the end
-        target = [x[-1] for x in dataset]
+        # target = [x[-1] for x in dataset]
+        # get the 2nd col
+        target = [x[1] for x in dataset]
 
         print "histogram of target"
         from scipy import histogram
@@ -43,23 +44,6 @@ def generate_scipy_comparison(csvPathname):
     print "scipy per:", per
     a = stats.scoreatpercentile(dataset, per=per)
     print "scipy percentiles:", a
-
-def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
-    r1 = random.Random(SEED)
-    dsf = open(csvPathname, "w+")
-
-    expectedRange = (expectedMax - expectedMin) + 1
-    for i in range(rowCount):
-        rowData = []
-        ri = expectedMin + (i % expectedRange)
-        for j in range(colCount):
-            # ri = r1.randint(expectedMin, expectedMax)
-            rowData.append(ri)
-
-        rowDataCsv = ",".join(map(str,rowData))
-        dsf.write(rowDataCsv + "\n")
-
-    dsf.close()
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -79,12 +63,13 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary2_percentile2(self):
+    def test_summary2_uniform(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (500000, 2, 'cD', 300, 0, 9), # expectedMin/Max must cause 10 values
-            (500000, 2, 'cE', 300, 1, 10), # expectedMin/Max must cause 10 values
-            (500000, 2, 'cF', 300, 2, 11), # expectedMin/Max must cause 10 values
+            ("runif.csv",  "A", 0, 100),
+            ("runifA.csv", "B", 0, 100),
+            ("runifB.csv", "C", 0, 100),
+            ("runifC.csv", "D", 0, 100),
         ]
 
         timeoutSecs = 10
@@ -93,21 +78,14 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         x = 0
-        for (rowCount, colCount, hex_key, timeoutSecs, expectedMin, expectedMax) in tryList:
-            SEEDPERFILE = random.randint(0, sys.maxint)
-            x += 1
-
-            csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
-            csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-
-            print "Creating random", csvPathname
-            legalValues = {}
-            for x in range(expectedMin, expectedMax):
-                legalValues[x] = x
-        
-            write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
+        timeoutSecs = 60
+        for (csvFilename, hex_key, expectedMin, expectedMax) in tryList:
             h2o.beta_features = False
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+
+            csvPathname = csvFilename
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, 
+                schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -115,10 +93,12 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
+            numRows = inspect["num_rows"]
+            numCols = inspect["num_cols"]
+
             h2o.beta_features = True
-            summaryResult = h2o_cmd.runSummary(key=hex_key, cols=0, max_ncols=1)
-            if h2o.verbose:
-                print "summaryResult:", h2o.dump_json(summaryResult)
+            summaryResult = h2o_cmd.runSummary(key=hex_key)
+            h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             summaries = summaryResult['summaries']
             for column in summaries:
@@ -141,37 +121,46 @@ class Basic(unittest.TestCase):
                 hbrk = column['hbrk']
                 hcnt = column['hcnt']
 
+                
+                print csvFilename, "colname:", colname, "pctile:", pctile
+                print "pct:", pct
+                print ""
+                
+
                 for b in hcnt:
-                    e = .1 * rowCount
-                    self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
-                        msg="Bins not right. b: %s e: %s" % (b, e))
+                    e = .1 * numRows
+                    # self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
+                    #     msg="Bins not right. b: %s e: %s" % (b, e))
 
-                print "pctile:", pctile
-                print "maxs:", maxs
-                self.assertEqual(maxs[0], expectedMax)
-                print "mins:", mins
-                self.assertEqual(mins[0], expectedMin)
+                if 1==0:
+                    print "pctile:", pctile
+                    print "maxs:", maxs
+                    self.assertAlmostEqual(maxs[0], expectedMax, delta=0.2)
+                    print "mins:", mins
+                    self.assertAlmostEqual(mins[0], expectedMin, delta=0.2)
 
-                for v in pctile:
-                    self.assertTrue(v >= expectedMin, 
-                        "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
-                    self.assertTrue(v <= expectedMax, 
-                        "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
-            
-                eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
-                if expectedMin==1:
-                    eV = eV1
-                elif expectedMin==0:
-                    eV = [e-1 for e in eV1]
-                elif expectedMin==2:
-                    eV = [e+1 for e in eV1]
-                else:
-                    raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
+                    
+                    for v in pctile:
+                        self.assertTrue(v >= expectedMin, 
+                            "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
+                        self.assertTrue(v <= expectedMax, 
+                            "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
+                
+                    eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
+                    if expectedMin==1:
+                        eV = eV1
+                    elif expectedMin==0:
+                        eV = [e-1 for e in eV1]
+                    elif expectedMin==2:
+                        eV = [e+1 for e in eV1]
+                    else:
+                        raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
 
             trial += 1
 
             if DO_SCIPY_COMPARE:
-                generate_scipy_comparison(csvPathname)
+                csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
+                generate_scipy_comparison(csvPathname1)
 
 if __name__ == '__main__':
     h2o.unit_main()
