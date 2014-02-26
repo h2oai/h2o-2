@@ -422,12 +422,12 @@ public class NNModel extends Model {
   boolean doScoring(Frame ftrain, Frame ftest, long timeStart, Key job_key) {
     epoch_counter = (float)model_info().get_processed_total()/model_info().data_info._adaptedFrame.numRows();
     run_time = (System.currentTimeMillis()-start_time);
-    boolean keep_running = (epoch_counter < model_info().parameters.epochs);
+    boolean keep_running = (epoch_counter < model_info().get_params().epochs);
     _now = System.currentTimeMillis();
     final long sinceLastScore = _now-_timeLastScoreStart;
     final long sinceLastPrint = _now-_timeLastPrintStart;
     final long samples = model_info().get_processed_total();
-    if (sinceLastPrint > model_info().parameters.score_interval*1000) {
+    if (sinceLastPrint > model_info().get_params().score_interval*1000) {
       _timeLastPrintStart = _now;
       Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
               + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
@@ -435,8 +435,8 @@ public class NNModel extends Model {
     }
     // this is potentially slow - only do every so often
     if( !keep_running ||
-            (sinceLastScore > model_info().parameters.score_interval*1000 //don't score too often
-        &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
+            (sinceLastScore > model_info().get_params().score_interval*1000 //don't score too often
+        &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
       final boolean printme = !model_info().get_params().quiet_mode;
       if (printme) Log.info("Scoring the model.");
       _timeLastScoreStart = _now;
@@ -536,7 +536,7 @@ public class NNModel extends Model {
   }
 
   public double calcError(Frame ftest, String label, boolean printCM, ConfusionMatrix CM) {
-    Frame fpreds = score(ftest, false);
+    final Frame fpreds = score(ftest, false);
     if (CM == null) CM = new ConfusionMatrix();
     CM.actual = ftest;
     CM.vactual = ftest.lastVec();
@@ -549,7 +549,13 @@ public class NNModel extends Model {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
-    fpreds.delete();
+
+    //hack to work around a temporary slowdown...
+//    fpreds.delete(); //slow!?
+    Thread thread = new Thread() { @Override public void run() { fpreds.delete(); } };
+    thread.setDaemon(true);
+    thread.start();
+
     return error;
   }
 
@@ -686,7 +692,8 @@ public class NNModel extends Model {
         }
       }
       else if (model_info.units[model_info.units.length-1] > model_info().get_params().max_confusion_matrix_size) {
-        sb.append(" Not shown here (too large).");
+        sb.append(" Not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
+                + ") is greater than the specified limit of " + model_info().get_params().max_confusion_matrix_size + ".");
       }
       else {
         sb.append(" Not yet computed.");
