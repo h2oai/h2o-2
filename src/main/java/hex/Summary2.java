@@ -264,7 +264,12 @@ public class Summary2 extends Iced {
       computeMajorities();
     } else {
       _pctile = new double[DEFAULT_PERCENTILES.length];
-      if (_samples != null) {
+      // kbn. was
+      // if (_samples != null) {
+      // never take this choice (summary1 didn't?
+      // means (like R) we can have quantiles with values not in the dataset..ok?
+      // ok since approximation? not okay if we did exact. Sampled sort is not good enough?
+      if (1==0) { 
         Arrays.sort(_samples);
         // Compute percentiles for numeric data
         for (int i = 0; i < _pctile.length; i++)
@@ -524,7 +529,12 @@ public class Summary2 extends Iced {
         s  += bc;
         k++;
       }
-      qtiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
+      // kbn. change so we get estimate at the threshold, not midpoint of bin.
+      // I think this matches what R wants for a threshold. But probably doesn't match
+      // what a binned quantile wants. (should we produce both?)
+      qtiles[j] = _mins[0] + k*_binsz;
+      // was, I think for midpoint estimation of the bin implied by the thresholds
+      // qtiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
     }
   }
   // Compute majority categories for enums only
