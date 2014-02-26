@@ -1,8 +1,14 @@
 import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util
 
 DO_SCIPY_COMPARE = False
+
+def twoDecimals(l): 
+    if isinstance(l, list):
+        return ["%.2f" % v for v in l] 
+    else:
+        return "%.2f" % l
 
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
@@ -63,13 +69,32 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary2_uniform(self):
+    def test_summary2_unifiles(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            ("runif.csv",  "A", 0, 100),
-            ("runifA.csv", "B", 0, 100),
-            ("runifB.csv", "C", 0, 100),
-            ("runifC.csv", "D", 0, 100),
+            # colname, (min, 25th, 50th, 75th, max)
+            ('runif.csv', 'x.hex', [
+                ('' ,  1.00, 5002.00, 10002.00, 15002.00, 20000.00),
+                ('D', -5000.00, -3731.95, -2445.89, -1185.58, 99.90),
+                ('E', -99997.52, -49086.55, 1613.54, 50737.49, 99995.68),
+                ('F', -1.00, -0.49, 0.01, 0.50, 1.00),
+            ]),
+
+            ('runifA.csv', 'A.hex', [
+                ('',  1.00, 26.51, 52.00, 77.00, 100.00),
+                ('x', -99.72, -39.38, 4.62, 54.96, 91.73),
+            ]),
+
+            ('runifB.csv', 'B.hex', [
+                ('',  1.00, 2502.00, 5002.00, 7502.00, 10000.00),
+                ('x', -100.00, -50.26, 0.85, 51.26, 99.97),
+            ]),
+
+            ('runifC.csv', 'C.hex', [
+                ('',  1.00, 25002.00, 50002.00, 75002.00, 100000.00),
+                ('x', -100.00, -50.45, -1.18, 49.28, 100.00),
+            ]),
+
         ]
 
         timeoutSecs = 10
@@ -79,7 +104,7 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (csvFilename, hex_key, expectedMin, expectedMax) in tryList:
+        for (csvFilename, hex_key, expectedCols) in tryList:
             h2o.beta_features = False
 
             csvPathname = csvFilename
@@ -101,60 +126,67 @@ class Basic(unittest.TestCase):
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             summaries = summaryResult['summaries']
-            for column in summaries:
+            for expected, column in zip(expectedCols, summaries):
+                # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
                 colname = column['colname']
+                self.assertEqual(colname, expected[0])
+
                 coltype = column['type']
                 nacnt = column['nacnt']
 
                 stats = column['stats']
                 stattype= stats['type']
+
+                # FIX! we should compare mean and sd to expected?
                 mean = stats['mean']
                 sd = stats['sd']
+
+                print "colname:", colname, "mean (2 places): %s", twoDecimals(mean)
+                print "colname:", colname, "std dev. (2 places): %s", twoDecimals(sd)
+
                 zeros = stats['zeros']
                 mins = stats['mins']
+                h2o_util.assertApproxEqual(mins[1], expected[1], rel=0.01, msg='min is not approx. expected')
+
                 maxs = stats['maxs']
+                h2o_util.assertApproxEqual(maxs[5], expected[5], rel=0.01, msg='max is not approx. expected')
+
                 pct = stats['pct']
+                # the thresholds h2o used, should match what we expected
+                expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+
                 pctile = stats['pctile']
+                h2o_util.assertApproxEqual(maxs[2], expected[2], rel=0.01, msg='25th percentile is not approx. expected')
+                h2o_util.assertApproxEqual(maxs[3], expected[3], rel=0.01, msg='50th percentile (median) is not approx. expected')
+                h2o_util.assertApproxEqual(maxs[4], expected[4], rel=0.01, msg='75th percentile is not approx. expected')
 
                 hstart = column['hstart']
                 hstep = column['hstep']
                 hbrk = column['hbrk']
                 hcnt = column['hcnt']
 
-                
-                print csvFilename, "colname:", colname, "pctile:", pctile
                 print "pct:", pct
                 print ""
-                
 
                 for b in hcnt:
+                    # should we be able to check for a uniform distribution in the files?
                     e = .1 * numRows
                     # self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
                     #     msg="Bins not right. b: %s e: %s" % (b, e))
 
-                if 1==0:
-                    print "pctile:", pctile
-                    print "maxs:", maxs
-                    self.assertAlmostEqual(maxs[0], expectedMax, delta=0.2)
-                    print "mins:", mins
-                    self.assertAlmostEqual(mins[0], expectedMin, delta=0.2)
+    
+                pt = twoDecimals(pctile)
+                mx = twoDecimals(maxs)
+                mn = twoDecimals(mins)
+                print "colname:", colname, "pctile (2 places):", pt
+                print "colname:", colname, "maxs: (2 places):", mx
+                print "colname:", colname, "mins: (2 places):", mn
 
-                    
-                    for v in pctile:
-                        self.assertTrue(v >= expectedMin, 
-                            "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
-                        self.assertTrue(v <= expectedMax, 
-                            "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
-                
-                    eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
-                    if expectedMin==1:
-                        eV = eV1
-                    elif expectedMin==0:
-                        eV = [e-1 for e in eV1]
-                    elif expectedMin==2:
-                        eV = [e+1 for e in eV1]
-                    else:
-                        raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
+                # FIX! we should do an exec and compare using the exec quantile too
+                compareActual = mn[0], pt[3], pt[5], pt[7], mx[0]
+                print "min/25/50/75/max colname:", colname, "(2 places):", compareActual
+                print "maxs colname:", colname, "(2 places):", mx
+                print "mins colname:", colname, "(2 places):", mn
 
             trial += 1
 
