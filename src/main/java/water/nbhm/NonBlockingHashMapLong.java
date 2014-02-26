@@ -1122,6 +1122,15 @@ public class NonBlockingHashMapLong<TypeV>
     };
   }
 
+  /** Keys as a long array.  Array may be zero-padded if keys are concurrently deleted. */
+  public long[] keySetLong() {
+    long[] dom = new long[size()];
+    IteratorLong i=(IteratorLong)keySet().iterator();
+    int j=0;
+    while( j < dom.length && i.hasNext() )
+      dom[j++] = i.nextLong();
+    return dom;
+  }
 
   // --- entrySet ------------------------------------------------------------
   // Warning: Each call to 'next' in this iterator constructs a new Long and a

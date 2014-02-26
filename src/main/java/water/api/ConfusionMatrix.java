@@ -174,11 +174,11 @@ public class ConfusionMatrix extends Request2 {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     if (classification) {
-      DocGen.HTML.title(sb,"Confusion Matrix");
+      DocGen.HTML.section(sb,"Confusion Matrix");
       if( cm == null ) return true;
     }
     else {
-      DocGen.HTML.title(sb,"Mean Squared Error");
+      DocGen.HTML.section(sb,"Mean Squared Error");
       if( mse == Double.NaN ) return true;
     }
 
