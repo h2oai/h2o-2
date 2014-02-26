@@ -1,4 +1,4 @@
-H\ :sub:`2`\ O installation in R Console For Developers Using Git
+H\ :sub:`2`\ O + R Console For Developers Using Git
 ------------------------------------------------------------------
 
 
@@ -16,8 +16,8 @@ from Github visit :ref:`QuickstartGit`
 
 **STEP 2**
 
-Start an instance of H\ :sub:`2`\ O (in this example, on local host
-with 3 gigs of memory, and assuming you are in your h2o directory).
+Start an instance of H\ :sub:`2`\ O (in this example, on localhost
+with 3 gigs of memory, and assuming you are in a local h2o directory).
 
 ::
 
@@ -102,7 +102,7 @@ calls as shown on their index pages, but should not cut and paste the
 calls included below as examples. 
 
 **DO NOT CUT AND PASTE THIS CALL INTO R**
-The call shown below is specifically for the build, and specific users
+The call shown below is specifically for the build, and specific user's
 file path in use when this example was written, which may not match
 your build or configuration. 
 
