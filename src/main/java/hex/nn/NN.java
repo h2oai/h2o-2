@@ -90,7 +90,7 @@ public class NN extends Job.ValidatedJob {
   public double score_interval = 5;
 
   @API(help = "Number of training samples per mini-batch (0 for entire epoch).", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 10000l;
+  public long mini_batch = 0l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
