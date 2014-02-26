@@ -264,7 +264,12 @@ public class Summary2 extends Iced {
       computeMajorities();
     } else {
       _pctile = new double[DEFAULT_PERCENTILES.length];
-      if (_samples != null) {
+      // kbn. was
+      // if (_samples != null) {
+      // never take this choice (summary1 didn't?
+      // means (like R) we can have quantiles with values not in the dataset..ok?
+      // ok since approximation? not okay if we did exact. Sampled sort is not good enough?
+      if (1==0) { 
         Arrays.sort(_samples);
         // Compute percentiles for numeric data
         for (int i = 0; i < _pctile.length; i++)
@@ -516,6 +521,7 @@ public class Summary2 extends Iced {
     if( hcnt.length == 0 ) return;
     int k = 0;
     long s = 0;
+    double addFromLastBin = 0;
     assert _gprows==htot();
     for(int j = 0; j < thres.length; ++j) {
       final double s1 = thres[j]*_gprows;
@@ -524,8 +530,47 @@ public class Summary2 extends Iced {
         s  += bc;
         k++;
       }
-      qtiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
+
+      // kbn. add a % of the last bin.
+      // Our quanttiles threshold is 1% or 99% at the ends..
+      // Not aligned to the bin thresholds (can be as small as 10 bins?)
+      // Best would be: histogram at greater granularity than the smallest threshold step?
+      addFromLastBin = 0;
+      if ( s1 > s ) {
+        assert hcnt[k]!=0; // s1 > s implies it
+        // kbn: assume linear distribution within a bin
+        // ah! the edge cases don't have linear distribution.
+
+        // kbn: we start with min. So it's just at the max size the bin overreaches
+        // so we really should do max-start of bin, and then get percentage of that
+        // This avoids gettings values that are too big for the 99% qtile
+        // if max is was before this bin, hcnt[k] should be 0
+        
+        double binRange = _binsz; // normal case. linear distribution assumed.
+        if ( k == (hcnt.length-1) ) {
+            binRange = _maxs[0] - (_mins[0] + k*_binsz); // non-linear distribution in last bin!
+            if ( binRange < 0 ) {
+                binRange = 0;
+            }
+            // can be 0?
+        }
+
+        double pctOfLastBin = (s1 - s) / hcnt[k];
+        addFromLastBin = pctOfLastBin * binRange;
+        if( !(addFromLastBin <= _binsz) )
+          Log.warn("Summary2, unexpectedly large offset: "+addFromLastBin+" > "+_binsz);
+        
+      }
+
+      // kbn. change so we get estimate at the threshold, not midpoint of bin.
+      // I think this matches what R wants for a threshold. Probably doesn't match
+      // what a binned quantile wants. (should we produce both?)
+      // k-1: cuz didn't fully eat the k bin
+      qtiles[j] = _mins[0] + k*_binsz + addFromLastBin;
+      // was this for midpoint estimation of the bin implied by the thresholds?
+      // qtiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
     }
+    // System.out.println("_maxs[0]"+_maxs[0]+"qtiles[thres.length-1]:"+qtiles[thres.length-1]+" addFromLastBin:"+addFromLastBin+" k:"+k+" _binsz:"+_binsz+" hcnt[k]:"+hcnt[k]+"\n");
   }
   // Compute majority categories for enums only
   public void computeMajorities() {

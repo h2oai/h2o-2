@@ -1,9 +1,10 @@
 #!/bin/bash
+echo "Checking that you have R, and the R version"
 which R
-R --version
+R --version | egrep -i '(version|platform)'
+echo ""
 # don't always remove..other users may have stuff he doesn't want to re-install
-if [[ $USER == "jenkins" ]]
-then 
+cat <<!  > /tmp/init_R_stuff.sh
     echo "Rebuilding ~/.Renviron and ~/.Rprofile for $USER"
     # Set CRAN mirror to a default location
     rm -f ~/.Renviron
@@ -12,6 +13,19 @@ then
     echo "R_LIBS_USER=\"~/.Rlibrary\"" > ~/.Renviron
     rm -f -r ~/.Rlibrary
     mkdir -p ~/.Rlibrary
+!
+chmod +x /tmp/init_R_stuff.sh
+
+if [[ $USER == "jenkins" ]]
+then 
+    sh -x /tmp/init_R_stuff.sh
+else
+    echo "To remove and recreate your .Renviron/.Rprofile/.Rlibrary like jenkins, enter the next line at the command prompt"
+    echo ""
+    echo "    /tmp/init_R_stuff.sh"
+    echo ""
+    echo "Otherwise, I did nothing here, except create /tmp/init_R_stuff.sh"
+    echo ""
 fi
 
 # removing .Rlibrary should have removed h2oWrapper
@@ -66,7 +80,14 @@ usePackage("RUnit")
 # library(h2o)
 !
 # if Jenkins is running this, doing execute it..he'll execute it to logs for stdout/stderr
-if [[ $USER != "jenkins" ]]
+if [[ $USER == "jenkins" ]]
 then
     R -f /tmp/libPaths.cmd
+else
+    echo "If you want to setup R packages the RUnit tests use, like jenkins would..then enter the next line at the command prompt"
+    echo "Doesn't cover h2o package. Okay for the Runit test to handle that"
+    echo ""
+    echo "    R -f /tmp/libPaths.cmd"
+    echo ""
+    echo "Otherwise, I did nothing here, except create /tmp/libPaths.cmd"
 fi

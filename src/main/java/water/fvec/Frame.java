@@ -36,11 +36,7 @@ public class Frame extends Lockable<Frame> {
       if( DKV.get(k)==null )    // If not already in KV, put it there
         DKV.put(k,vecs[i]);
     }
-    Vec v0 = anyVec();
-    if( v0 == null ) return;
-    VectorGroup grp = v0.group();
-    for( int i=0; i<vecs.length; i++ )
-      assert grp.equals(vecs[i].group()) : "Vector " + vecs[i] + " has different vector group!";
+    assert checkCompatible();
   }
   public Vec vec(String name){
     Vec [] vecs = vecs();
@@ -311,8 +307,9 @@ public class Frame extends Lockable<Frame> {
 
   /** Check that the vectors are all compatible.  All Vecs have their content
    *  sharded using same number of rows per chunk.  */
-  public void checkCompatible( ) {
+  public boolean checkCompatible( ) {
     Vec v0 = anyVec();
+    if( v0 == null ) return true;
     int nchunks = v0.nChunks();
     for( Vec vec : vecs() ) {
       if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
@@ -326,6 +323,15 @@ public class Frame extends Lockable<Frame> {
         if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
           throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
     }
+    // For larger Frames, verify that the layout is compatible - else we'll be
+    // endlessly cache-missing the data around the cluster, pulling copies
+    // local everywhere.
+    if( v0.length() > 1e4 ) {
+      VectorGroup grp = v0.group();
+      for( Vec vec : vecs() )
+        assert grp.equals(vec.group()) : "Vector " + vec + " has different vector group!";
+    }
+    return true;
   }
 
   public void closeAppendables() {closeAppendables(new Futures()).blockForPending(); }

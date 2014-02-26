@@ -5,10 +5,8 @@ test.glm2glmnetreg.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing iris data...") 
-irisH2O<- h2o.uploadFile(H2Oserver, locate("../smalldata/iris/iris2.csv"), key="irisH2O")
+irisH2O<- h2o.uploadFile(H2Oserver, locate("../smalldata/iris/iris_num.csv"), key="irisH2O")
 irisR<- read.csv(locate("../smalldata/iris/iris.csv"), header=T)
-
-
 
 #fit R model in glmnet with regularization
 #as originally written, this model is not valid. when modeling a multiclass DV as the class col in iris you must use mulitnomial
@@ -17,8 +15,7 @@ y<- as.matrix(irisR[,5])
 fitR<- glmnet(x, y, family="multinomial", nlambda=1, alpha=1, lambda=2)
 
 #fit corresponding H2O model
-# there is no corresponding H2O model because there is no multinomial class model in H2O 
-fitH2O<- h2o.glm.FV(x=c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"), y="response", family="...", nfolds=0, alpha=1, lambda=2, data=irisH2O)
+fitH2O<- h2o.glm.FV(x=c("C1", "C2", "C3", "C4"), y="C5", family="gaussian", nfolds=0, alpha=1, lambda=2, data=irisH2O)
 
 #test that R coefficients and basic descriptives are equal
 Rcoeffs<- sort(as.matrix(coefficients(fitR)))
