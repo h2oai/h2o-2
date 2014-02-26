@@ -29,6 +29,17 @@ initList = [
 # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
 
 exprListFull = [
+    # this is supposed to work on vendavo branch?
+    # "apply(r1.hex, 1, function(x) { x+1 })",
+    # fails if row based ..okay if col base
+    # "apply(r1.hex, 1, function(x) { mean(x) })",
+    # "apply(r1.hex, 1, function(x) { sd(x) })",
+    # "apply(r1.hex, 1, function(x) { sd(x)/mean(x) })",
+
+    "apply(r1.hex, 2, function(x) { mean(x) })",
+    "apply(r1.hex, 2, function(x) { sd(x) })",
+    "apply(r1.hex, 2, function(x) { sd(x)/mean(x) })",
+
     "ddply(r1.hex,c(3),nrow)",
     # More complex multi-return
     "ddply(r1.hex,,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
@@ -289,7 +300,9 @@ class Basic(unittest.TestCase):
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
         start = time.time()
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30)
+        # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30)
+        for execExpr in exprList:
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=30)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'
