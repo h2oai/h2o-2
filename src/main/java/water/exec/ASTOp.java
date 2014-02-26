@@ -530,7 +530,7 @@ abstract class ASTTimeOp extends ASTOp {
 }
 
 class ASTYear  extends ASTTimeOp { String opStr(){ return "year" ; } ASTOp make() {return new ASTYear  ();} long op(MutableDateTime dt) { return dt.getYear();}}
-class ASTMonth extends ASTTimeOp { String opStr(){ return "month"; } ASTOp make() {return new ASTMonth ();} long op(MutableDateTime dt) { return dt.getMonthOfYear();}}
+class ASTMonth extends ASTTimeOp { String opStr(){ return "month"; } ASTOp make() {return new ASTMonth ();} long op(MutableDateTime dt) { return dt.getMonthOfYear()-1;}}
 class ASTDay   extends ASTTimeOp { String opStr(){ return "day"  ; } ASTOp make() {return new ASTDay   ();} long op(MutableDateTime dt) { return dt.getDayOfMonth();}}
 class ASTHour  extends ASTTimeOp { String opStr(){ return "hour" ; } ASTOp make() {return new ASTHour  ();} long op(MutableDateTime dt) { return dt.getHourOfDay();}}
 class ASTMinute extends ASTTimeOp { String opStr(){return "minute";} ASTOp make() {return new ASTMinute();} long op(MutableDateTime dt) { return dt.getMinuteOfHour();}}

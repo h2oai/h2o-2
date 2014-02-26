@@ -3,6 +3,7 @@ package water.parser;
 import java.util.*;
 
 import water.*;
+import water.fvec.ParseTime;
 
 public class CsvParser extends CustomParser {
 
@@ -578,11 +579,14 @@ NEXT_CHAR:
   }
 
   private static boolean allStrings(String [] line){
-    for( String s : line )
+    ValueString str = new ValueString();
+    for( String s : line ) {
       try {
         Double.parseDouble(s);
         return false;       // Number in 1st row guesses: No Column Header
       } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
+      if( ParseTime.attemptTimeParse(str.setTo(s)) != Long.MIN_VALUE ) return false;
+    }
     return true;
   }
   // simple heuristic to determine if we have headers:
