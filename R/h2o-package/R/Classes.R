@@ -340,7 +340,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = .h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
-  return(x)
+  return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
@@ -358,7 +358,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   
   if(is.na(idx))
     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_SETCOLNAMES2, source=x@key, cols=numCols, comma_separated_list=name)
-  return(x)
+  return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
