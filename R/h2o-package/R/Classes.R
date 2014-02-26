@@ -413,7 +413,7 @@ setMethod("log", "H2OParsedData", function(x) { .h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { .h2o.__unop2("exp", x) })
 setMethod("is.na", "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
 
-as.h2o <- function(client, object, key = "") {
+as.h2o <- function(client, object, key = "", header, sep = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")
   if(!is.character(key)) stop("key must be of class character")
@@ -428,7 +428,7 @@ as.h2o <- function(client, object, key = "") {
   } else {
     tmpf <- tempfile(fileext=".csv")
     write.csv(object, file=tmpf, quote=F, row.names=F)
-    h2f <- h2o.uploadFile(client, tmpf, key=key)
+    h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
     unlink(tmpf)
     return(h2f)
   }
