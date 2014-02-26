@@ -1,8 +1,8 @@
 package water.api.dsl.util;
 
-import water.Iced;
-
 import java.util.Random;
+
+import water.Iced;
 
 /**
  * Wraps an value, with a random int (Used in reservoir sampling)
@@ -33,11 +33,11 @@ public class SampleItem extends Iced implements Comparable<SampleItem> {
     @Override
     public int compareTo(SampleItem that) {
         if(this == that) {
-          return(0);
+          return 0;
         }else if(that == null ) {
-          return(1);
+          return 1;
         }else {
-          return( java.lang.Integer.compare(this.randomOrder,that.randomOrder) );
+          return this.randomOrder - that.randomOrder ;
         }
     }
 
