@@ -107,6 +107,7 @@ public class RequestQueries extends RequestArguments {
           + "  query_submit('.query', event.data, null);\n"
           + "}\n"
           + "function query_submit(requestType, specArg, specValue) {\n"
+          + "  query_refresh(window.event)"
           + "  if (typeof(requestType) === 'undefined')\n"
           + "    requestType='.html';\n"
           + "  var request = {};\n"
