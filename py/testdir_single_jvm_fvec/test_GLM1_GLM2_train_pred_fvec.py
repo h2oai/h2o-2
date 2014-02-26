@@ -292,14 +292,14 @@ class Basic(unittest.TestCase):
         coeff0 = coefficients[0]
         coeff0Expected = coefficients1[0]
         print "coeff0 pct delta:", "%0.3f" % (100.0 * (abs(coeff0) - abs(coeff0Expected))/abs(coeff0Expected))
-        self.assertTrue(h2o_util.approx_equal(coeff0, coeff0Expected, 0.01),
+        self.assertTrue(h2o_util.fp_approx_equal(coeff0, coeff0Expected, rel=0.01),
             msg='GLM2 coefficient 0 %s is too different from GLM1 %s' % (coeff0, coeff0Expected))
 
         
         coeff2 = coefficients[2]
         coeff2Expected = coefficients1[2]
         print "coeff2 pct delta:", "%0.3f" % (100.0 * (abs(coeff2) - abs(coeff2Expected))/abs(coeff2Expected))
-        self.assertTrue(h2o_util.approx_equal(coeff2, coeff2Expected, 0.01),
+        self.assertTrue(h2o_util.fp_approx_equal(coeff2, coeff2Expected, rel=0.01),
             msg='GLM2 coefficient 2 %s is too different from GLM1 %s' % (coeff2, coeff2Expected))
 
         # compare to known values GLM1 got for class 1 case, with these parameters
@@ -311,7 +311,7 @@ class Basic(unittest.TestCase):
 
         interceptExpected = intercept1
         print "intercept pct delta:", 100.0 * (abs(intercept) - abs(interceptExpected))/abs(interceptExpected)
-        self.assertTrue(h2o_util.approx_equal(intercept, interceptExpected, 0.01),
+        self.assertTrue(h2o_util.fp_approx_equal(intercept, interceptExpected, rel=0.01),
             msg='GLM2 intercept %s is too different from GLM1 %s' % (intercept, interceptExpected))
 
         # avg_errExpected = 0.2463

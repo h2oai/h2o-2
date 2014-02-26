@@ -340,7 +340,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = .h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
-  return(x)
+  return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
@@ -358,7 +358,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   
   if(is.na(idx))
     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_SETCOLNAMES2, source=x@key, cols=numCols, comma_separated_list=name)
-  return(x)
+  return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
@@ -413,7 +413,7 @@ setMethod("log", "H2OParsedData", function(x) { .h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { .h2o.__unop2("exp", x) })
 setMethod("is.na", "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
 
-as.h2o <- function(client, object, key = "") {
+as.h2o <- function(client, object, key = "", header, sep = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")
   if(!is.character(key)) stop("key must be of class character")
@@ -428,7 +428,7 @@ as.h2o <- function(client, object, key = "") {
   } else {
     tmpf <- tempfile(fileext=".csv")
     write.csv(object, file=tmpf, quote=F, row.names=F)
-    h2f <- h2o.uploadFile(client, tmpf, key=key)
+    h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
     unlink(tmpf)
     return(h2f)
   }

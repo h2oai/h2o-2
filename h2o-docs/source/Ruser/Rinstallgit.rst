@@ -1,10 +1,10 @@
-H\ :sub:`2`\ O installation in R Console For Developers Using Git
+H\ :sub:`2`\ O + R Console For Developers Using Git
 ------------------------------------------------------------------
 
 
 These instructions assume you are using R  2.14.0 or later, and are a
 developer who is using a local build of H\ :sub: `2`\ O from Github.
-If you have downloaded an  H\ :sub: `2`\ O jar file from available downloads at 
+If the version in use is from available downloads at 
 `http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_
 please close these instructions and visit :ref:`Rfromdownload`
 
@@ -16,8 +16,8 @@ from Github visit :ref:`QuickstartGit`
 
 **STEP 2**
 
-Start an instance of H\ :sub:`2`\ O (in this example, on local host
-with 3 gigs of memory, and assuming you are in your h2o directory).
+Start an instance of H\ :sub:`2`\ O (in this example, on localhost
+with 3 gigs of memory, and assuming you are in a local h2o directory).
 
 ::
 
@@ -79,52 +79,18 @@ following:
 
 **STEP 4:**
 
-Open your preferred R interface (R console, or R Studio). 
-First, uninstall all prior versions of the h2o package by running the 
-following calls in your R console: 
-
-::
-
-   detach("package:h2o", unload=TRUE) 
-   remove.packages("h2o") 
-
-
-Note: users may get warnings of the type "Error in
-detatch("package:h2o", unload = TRUE): invalid 'name' argument. 
-This tells users that there is no  H\ :sub:`2`\ O package to uninstall. These
-warnings can safely be ignored.  
+Cut and paste the instructions into the R concole or R Studio as shown
+in the index page displayed when command in **STEP 3** is run. 
+ 
+  
 
 **STEP 5:**
 
-Install the H\ :sub:`2`\ O package according to the instructions shown
-on the index page opened in **Step 3**. Users can cut and paste the
-calls as shown on their index pages, but should not cut and paste the
-calls included below as examples. 
-
-**DO NOT CUT AND PASTE THIS CALL INTO R**
-The call shown below is specifically for the build, and specific users
-file path in use when this example was written, which may not match
-your build or configuration. 
-
-  `install.packages("h2o", repos=(c("file:///Users/Tom/Work/h2o/target/R", getOption("repos"))))` 
-  
-
-**STEP 6:**
-
-Once the  H\ :sub:`2`\ O R package has been installed, call the
-package, and establish a connection to a running instance of  H\
-:sub:`2`\ O. 
 
 If there is no running instance of  H\ :sub:`2`\ O prior to using
 the command "h2o.init()",  H\ :sub:`2`\ O in R will start an instance
 automatically for the user at localhost:54321, and the user will be
 notified.  
-
-::
-
-  library(h2o)
-  localH2O <- h2o.init()
-
 
 Users who wish to specify a connection
 with a server (other than localhost at port 54321) must explicity
@@ -139,5 +105,3 @@ environment.
   localH2O = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE) 
 
 
-
- *End*
