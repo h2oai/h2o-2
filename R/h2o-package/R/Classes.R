@@ -417,18 +417,17 @@ as.h2o <- function(client, object, key = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")
   if(!is.character(key)) stop("key must be of class character")
+  if(missing(key) || nchar(key) == 0) {
+    key = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
+    .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
+  }
   
   if(is.numeric(object) && is.vector(object)) {
-    res <- .h2o.__exec2(client, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""))
+    res <- .h2o.__exec2_dest_key(client, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""), key)
     return(new("H2OParsedData", h2o=client, key=res$dest_key))
   } else {
     tmpf <- tempfile(fileext=".csv")
     write.csv(object, file=tmpf, quote=F, row.names=F)
-    
-    if(missing(key) || nchar(key) == 0) {
-      key = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
-      .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
-    }
     h2f <- h2o.uploadFile(client, tmpf, key=key)
     unlink(tmpf)
     return(h2f)
