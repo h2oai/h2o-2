@@ -5,7 +5,7 @@ import water.*;
 public abstract class LinearRegression {
 
   static public JsonObject run( ValueArray ary, int colA, int colB ) {
-      return( exec(ary,colA,colB).toJson() );
+      return exec(ary,colA,colB).toJson();
   }
   static public LRResult exec( ValueArray ary, int colA, int colB ) {
     // Pass 1: compute sums & sums-of-squares
@@ -60,7 +60,7 @@ public abstract class LinearRegression {
                                    lr2._YYbar,
                                    lr3._rss,
                                    lr3._ssr );
-      return( result );
+      return result;
   }
 
   public static class CalcSumsTask extends MRTask {
@@ -69,6 +69,7 @@ public abstract class LinearRegression {
     long _rows; // Rows used
     double _sumX,_sumY,_sumX2; // Sum of X's, Y's, X^2's
 
+    @Override
     public void map( Key key ) {
       assert key.home();
       // Get the root ValueArray for the metadata
@@ -106,6 +107,7 @@ public abstract class LinearRegression {
       }
     }
 
+    @Override
     public void reduce( DRemoteTask rt ) {
       CalcSumsTask lr1 = (CalcSumsTask)rt;
       _sumX += lr1._sumX ;
@@ -121,6 +123,7 @@ public abstract class LinearRegression {
     int _colA, _colB; // Which columns to work on
     double _Xbar, _Ybar, _XXbar, _YYbar, _XYbar;
 
+    @Override
     public void map( Key key ) {
       assert key.home();
       // Get the root ValueArray for the metadata
@@ -160,6 +163,7 @@ public abstract class LinearRegression {
       }
     }
 
+    @Override
     public void reduce( DRemoteTask rt ) {
       CalcSquareErrorsTasks lr2 = (CalcSquareErrorsTasks)rt;
       _XXbar += lr2._XXbar;
@@ -176,6 +180,7 @@ public abstract class LinearRegression {
     double _beta0, _beta1;
     double _rss, _ssr;
 
+    @Override
     public void map( Key key ) {
       assert key.home();
       // Get the root ValueArray for the metadata
@@ -216,13 +221,14 @@ public abstract class LinearRegression {
       }
     }
 
+    @Override
     public void reduce( DRemoteTask rt ) {
       CalcRegressionTask lr3 = (CalcRegressionTask)rt;
       _rss += lr3._rss;
       _ssr += lr3._ssr;
     }
   }
-  public static class LRResult{
+  public static class LRResult extends Iced {
       public final String key;
       public final String colA;
       public final String colB;
@@ -309,7 +315,7 @@ public abstract class LinearRegression {
           res.addProperty("SSTO", ssto);
           res.addProperty("SSE", sse);
           res.addProperty("SSR", ssr);
-          return( res );
+          return res ;
       }
   }
 }
