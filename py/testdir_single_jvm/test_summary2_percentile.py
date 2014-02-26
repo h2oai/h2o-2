@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
-            legalValues = {0, 1} # set. http://docs.python.org/2/library/stdtypes.html#set
+            legalValues = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10} # set. http://docs.python.org/2/library/stdtypes.html#set
             expectedMin = min(legalValues)
             expectedMax = max(legalValues)
             expectedUnique = (expectedMax - expectedMin) + 1
@@ -102,8 +102,8 @@ class Basic(unittest.TestCase):
                     self.assertIn(int(b), legalValues)
                 self.assertEqual(len(hbrk), len(legalValues))
 
-                self.assertAlmostEqual(hcnt[0], 0.5 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(hcnt[1], 0.5 * rowCount, delta=.01*rowCount)
+                # self.assertAlmostEqual(hcnt[0], 0.5 * rowCount, delta=.01*rowCount)
+                # self.assertAlmostEqual(hcnt[1], 0.5 * rowCount, delta=.01*rowCount)
 
                 print "pctile:", pctile
                 print "maxs:", maxs
