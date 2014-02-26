@@ -557,7 +557,8 @@ public class Summary2 extends Iced {
 
         double pctOfLastBin = (s1 - s) / hcnt[k];
         addFromLastBin = pctOfLastBin * binRange;
-        assert addFromLastBin <= _binsz;
+        if( !(addFromLastBin <= _binsz) )
+          Log.warn("Summary2, unexpectedly large offset: "+addFromLastBin+" > "+_binsz);
         
       }
 
