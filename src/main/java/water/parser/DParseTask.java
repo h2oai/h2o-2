@@ -899,6 +899,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         if( _colTypes[colIdx] == TCOL ) {
           long time = ParseTime.attemptTimeParse(str);
           if( time != Long.MIN_VALUE ) {
+            time = ParseTime.decodeTime(time); // Get time
             if(time < _min[colIdx])_min[colIdx] = time;
             if(time > _max[colIdx])_max[colIdx] = time;
             _mean[colIdx] += time;
@@ -931,6 +932,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           ++_colIdx;
           // Times are strings with a numeric column type of LONG
           long time = ParseTime.attemptTimeParse(str);
+          time = ParseTime.decodeTime(time); // Get time
           _ab.put8(time);
           // Update sigma
           if( !Double.isNaN(_mean[colIdx])) {
