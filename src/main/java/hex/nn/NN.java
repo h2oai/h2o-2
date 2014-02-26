@@ -2,6 +2,7 @@ package hex.nn;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
+import water.H2O;
 import water.Job;
 import water.Key;
 import water.UKV;
@@ -97,7 +98,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
-  @API(help = "Force load balancing to increase speed for small datasets (<200MB/node)", filter = Default.class, json = true)
+  @API(help = "Force extra load balancing to increase training speed for small datasets", filter = Default.class, json = true)
   public boolean force_load_balance = true;
 
   @API(help = "Enable periodic shuffling of training data (can increase stochastic gradient descent performance)", filter = Default.class, json = true)
@@ -158,6 +159,11 @@ public class NN extends Job.ValidatedJob {
     if(arg._name.equals("classification_stop") && !classification) {
       arg.disable("Only for classification.", inputArgs);
     }
+    if (expert_mode && arg._name.equals("force_load_balance") && H2O.CLOUD.size()>1) {
+      force_load_balance = false;
+      arg.disable("Only for single-node operation.");
+    }
+
     if(arg._name.equals("regression_stop") && classification) {
       arg.disable("Only for regression.", inputArgs);
     }
@@ -207,7 +213,7 @@ public class NN extends Job.ValidatedJob {
     if(UKV.get(dest()) == null)return 0;
     NNModel m = UKV.get(dest());
     if (m != null && m.model_info()!=null )
-      return (float)(m.epoch_counter / m.model_info().get_params().epochs);
+      return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
     return 0;
   }
 
@@ -273,7 +279,7 @@ public class NN extends Job.ValidatedJob {
       model.write_lock(self());
       final long model_size = model.model_info().size();
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
-      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
+//      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = reBalance(model.model_info().data_info()._adaptedFrame, seed);
       trainScoreFrame = sampleFrame(train, score_training_samples, seed);
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
