@@ -188,7 +188,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         ref.train((int)p.epochs, rate, p.momentum_stable, loss);
 
                         // Train H2O
-                        mymodel = p.buildModel(mymodel);
+                        mymodel = p.trainModel(mymodel);
 
                         /**
                          * Tolerances (super tight -> expect the same double/float precision math inside both algos)
