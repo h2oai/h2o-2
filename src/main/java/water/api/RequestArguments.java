@@ -594,7 +594,13 @@ public class RequestArguments extends RequestStatics {
         T v = defaultValue();
         value = (v == null) ? "" : v.toString();
       }
+      if (_name == "path" || _name == "key" || _name == "source" || _name == "data_key" || _name == "source_key" || _name == "model_key" || _name == "thresholds" || _name == "model") {
       return "<input autocomplete=\"off\"" + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
+      } else {
+        return "<input " + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
+      }
+
+
     }
 
     /** JS refresh is a default jQuery hook to the change() method.
