@@ -536,8 +536,7 @@ public class NNModel extends Model {
   }
 
   public double calcError(Frame ftest, String label, boolean printCM, ConfusionMatrix CM) {
-    Frame fpreds;
-    fpreds = score(ftest);
+    Frame fpreds = score(ftest, false);
     if (CM == null) CM = new ConfusionMatrix();
     CM.actual = ftest;
     CM.vactual = ftest.lastVec();

@@ -328,11 +328,11 @@ public class NN extends Job.ValidatedJob {
       return model;
     }
     catch(Exception ex) {
-      Log.err("Caught exception:\n" + ex.getStackTrace());
-      return model != null ? model : (NNModel)UKV.get(dest());
+      ex.printStackTrace();
+      throw new RuntimeException(ex);
     }
     finally {
-      model.unlock(self());
+      if (model != null) model.unlock(self());
       if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
       if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
       if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
