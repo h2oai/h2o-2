@@ -459,6 +459,14 @@ public class NNModel extends Model {
         if (err.classification) err.valid_err = validErr;
         else err.valid_mse = validErr;
       }
+
+      // only keep confusion matrices for the last step if there are fewer than specified number of output classes
+      if (err.train_confusion_matrix.cm != null
+              && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
+        err.train_confusion_matrix = null;
+        err.valid_confusion_matrix = null;
+      }
+
       // enlarge the error array by one, push latest score back
       if (errors == null) {
          errors = new Errors[]{err};
@@ -535,7 +543,7 @@ public class NNModel extends Model {
     CM.serve();
     StringBuilder sb = new StringBuilder();
     final double error = CM.toASCII(sb); //either classification error or MSE
-    if (printCM && (CM.cm==null || CM.cm.length < 20)) {
+    if (printCM && (CM.cm==null || CM.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
@@ -665,26 +673,30 @@ public class NNModel extends Model {
     final boolean fulltrain = score_train==0 || score_train == model_info().data_info()._adaptedFrame.numRows();
     final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
     if (isClassifier()) {
-      final String cmTitle = "<br/>Confusion Matrix reported on " + (error.validation ?
-              "Validation Data" + (fullvalid ? "" : " (" + score_valid + " samples)") + ":"
-              : "Training Data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":");
-      DocGen.HTML.paragraph(sb, cmTitle);
+      final String cmTitle = "<br/>Confusion matrix reported on " + (error.validation ?
+              "validation data" + (fullvalid ? "" : " (" + score_valid + " samples)") + ":"
+              : "training data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":");
+      sb.append("<h5>" + cmTitle);
       if (error.train_confusion_matrix != null) {
-        if (error.train_confusion_matrix.cm != null && error.train_confusion_matrix.cm.length < 30) {
+        if (error.train_confusion_matrix.cm != null && error.train_confusion_matrix.cm.length <= model_info().get_params().max_confusion_matrix_size) {
           if (error.validation && error.valid_confusion_matrix != null && error.valid_confusion_matrix.cm != null) error.valid_confusion_matrix.toHTML(sb);
           else if (error.train_confusion_matrix != null) error.train_confusion_matrix.toHTML(sb);
-        } else {
-          sb.append("<h5>Not shown here (too large).</h5>");
         }
       }
-      else sb.append("<h5>Not yet computed.</h5>");
+      else if (model_info.units[model_info.units.length-1] > model_info().get_params().max_confusion_matrix_size) {
+        sb.append(" Not shown here (too large).");
+      }
+      else {
+        sb.append(" Not yet computed.");
+      }
+      sb.append("</h5>");
     }
 
     DocGen.HTML.title(sb, "Scoring history");
     // training
     {
       final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
-      String training = "Number of training set samples for scoring: " + (fulltrain ? "all " : "") + pts;
+      String training = "Number of training data samples for scoring: " + (fulltrain ? "all " : "") + pts;
       if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
       if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
       DocGen.HTML.paragraph(sb, training);
@@ -692,7 +704,7 @@ public class NNModel extends Model {
     // validation
     if (error.validation) {
       final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
-      String validation = "Number of validation set samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
+      String validation = "Number of validation data samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
       if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
       if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
       DocGen.HTML.paragraph(sb, validation);

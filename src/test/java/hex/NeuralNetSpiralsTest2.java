@@ -2,7 +2,7 @@ package hex;
 
 import hex.nn.NN;
 import hex.nn.NNModel;
-import org.junit.Assert;
+import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
@@ -33,7 +33,7 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       p.seed = new Random().nextLong();
       p.rate = 0.007;
       p.rate_annealing = 0;
-      p.epochs = 20000;
+      p.epochs = 30000;
       p.hidden = new int[]{100};
       p.activation = NN.Activation.Tanh;
       p.max_w2 = Double.MAX_VALUE;
@@ -60,8 +60,9 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       p.expert_mode = true;
       p.score_training_samples = 1000;
       p.score_validation_samples = 10000;
-      p.shuffle_training_data = true;
-      p.force_load_balance = true; //make it multi-threaded
+      p.shuffle_training_data = false;
+      //p.force_load_balance = true; //make it multi-threaded
+      p.force_load_balance = false; //make it single-threaded (1 chunk)
       p.destination_key = dest;
       p.exec();
     }
