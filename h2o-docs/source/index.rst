@@ -21,6 +21,7 @@ This section is for new users, and provides information about how to install and
    deployment/multinode
    Ruser/Rinstall
    Ruser/R_studio
+   Ruser/Rinstallgit
    newuser/ec2
    developuser/ScalaGen/README
 

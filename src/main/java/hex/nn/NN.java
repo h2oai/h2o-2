@@ -86,10 +86,13 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
   public long score_validation_samples = 0l;
 
-  @API(help = "Shortest interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Minimum time (in seconds) between scoring (scoring can happen after training a mini-batch)", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 5;
 
-  @API(help = "Number of training samples per mini-batch (0 for entire epoch).", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double score_duty_cycle = 0.1;
+
+  @API(help = "Number of training samples per mini-batch, after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
   public long mini_batch = 0l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
@@ -189,6 +192,7 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("diagnostics")
             || arg._name.equals("rate_decay")
             || arg._name.equals("mini_batch")
+            || arg._name.equals("score_duty_cycle")
             || arg._name.equals("fast_mode")
             || arg._name.equals("ignore_const_cols")
             || arg._name.equals("force_load_balance")
@@ -197,6 +201,7 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("classification_stop")
             || arg._name.equals("regression_stop")
             || arg._name.equals("quiet_mode")
+            || arg._name.equals("max_confusion_matrix_size")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
