@@ -410,7 +410,7 @@ public class NNModel extends Model {
     errors[0].validation = (params.validation != null);
   }
 
-  transient long _now, _timeLastScoreStart, _timeLastPrintStart;
+  transient long _now, _timeLastScoreStart, _timeLastScoreEnd, _timeLastPrintStart;
   /**
    *
    * @param ftrain potentially downsampled training data for scoring
@@ -434,7 +434,9 @@ public class NNModel extends Model {
               + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
-    if( !keep_running || sinceLastScore > model_info().parameters.score_interval*1000) {
+    if( !keep_running ||
+            (sinceLastScore > model_info().parameters.score_interval*1000 //don't score too often
+        &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       final boolean printme = !model_info().get_params().quiet_mode;
       if (printme) Log.info("Scoring the model.");
       _timeLastScoreStart = _now;
@@ -476,6 +478,7 @@ public class NNModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
+      _timeLastScoreEnd = System.currentTimeMillis();
       // print the freshly scored model to ASCII
       for (String s : toString().split("\n")) Log.info(s);
       if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
@@ -693,23 +696,23 @@ public class NNModel extends Model {
     }
 
     DocGen.HTML.title(sb, "Scoring history");
-    // training
-    {
-      final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
-      String training = "Number of training data samples for scoring: " + (fulltrain ? "all " : "") + pts;
-      if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-      if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
-      DocGen.HTML.paragraph(sb, training);
-    }
-    // validation
-    if (error.validation) {
-      final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
-      String validation = "Number of validation data samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
-      if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-      if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
-      DocGen.HTML.paragraph(sb, validation);
-    }
     if (errors.length > 1) {
+      // training
+      {
+        final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
+        String training = "Number of training data samples for scoring: " + (fulltrain ? "all " : "") + pts;
+        if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+        DocGen.HTML.paragraph(sb, training);
+      }
+      // validation
+      if (error.validation) {
+        final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
+        String validation = "Number of validation data samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
+        if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+        DocGen.HTML.paragraph(sb, validation);
+      }
       if (isClassifier()) {
         // Plot training error
         float[] err = new float[errors.length];
