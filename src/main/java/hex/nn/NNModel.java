@@ -97,6 +97,16 @@ public class NNModel extends Model {
     }
   }
 
+  final private static class ConfMat extends hex.ConfusionMatrix {
+    final private double _err;
+    public ConfMat(double err) {
+      super(null);
+      _err=err;
+    }
+    @Override public double err() { return _err; }
+    @Override public double[] classErr() { return null; }
+  }
+
   /** for grid search error reporting */
   @Override
   public hex.ConfusionMatrix cm() {
@@ -104,7 +114,11 @@ public class NNModel extends Model {
     water.api.ConfusionMatrix cm = errors[errors.length-1].validation ?
             errors[errors.length-1].valid_confusion_matrix :
             errors[errors.length-1].train_confusion_matrix;
-    if (cm == null || cm.cm == null) return null;
+    if (cm == null || cm.cm == null) {
+      return new ConfMat(errors[errors.length-1].validation ?
+              errors[errors.length-1].valid_err :
+              errors[errors.length-1].train_err);
+    }
     return new hex.ConfusionMatrix(cm.cm);
   }
 
@@ -549,13 +563,7 @@ public class NNModel extends Model {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
-
-    //hack to work around a temporary slowdown...
-//    fpreds.delete(); //slow!?
-    Thread thread = new Thread() { @Override public void run() { fpreds.delete(); } };
-    thread.setDaemon(true);
-    thread.start();
-
+    fpreds.delete();
     return error;
   }
 
