@@ -355,7 +355,7 @@ public class Summary2 extends Iced {
       int tried = 0;
       int BIN_GOAL = 21;
       while ( tried < 3 && nbin < BIN_GOAL) { 
-        if ( tried > 0 ) binszTry = binszTry / (BIN_GOAL / nbin); // decrease bin size by ratio
+        if ( tried > 0 ) binszTry = binszTry / ((BIN_GOAL + 0.0)/ nbin); // decrease bin size by ratio. coerce fp div
         nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/binszTry)/1000000L) + 1;
         // Log.info("Summary hueristic "+tried+" nbin: "+nbin+" binszTry: "+binszTry+" _max2: "+stat0._max2+" _start: "+_start);
         assert nbin > 0;
