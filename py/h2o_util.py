@@ -82,7 +82,7 @@ def approx_equal(x, y, *args, **kwargs):
 # note this can take 'tol' and 'rel' parms for the float case
 def assertApproxEqual(x, y, msg='', **kwargs):
     if not approx_equal(x, y, msg=msg, **kwargs):
-        m = msg + '. h2o_util.assertApproxEqual failed comparing %s and %s. %s' % (x, y, kwargs)
+        m = msg + '. h2o_util.assertApproxEqual failed comparing %s and %s. %s.' % (x, y, kwargs)
         raise Exception(m)
 
 def cleanseInfNan(value):

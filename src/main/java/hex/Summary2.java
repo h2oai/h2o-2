@@ -559,6 +559,8 @@ public class Summary2 extends Iced {
         addFromLastBin = pctOfLastBin * binRange;
         if( !(addFromLastBin <= _binsz) )
           Log.warn("Summary2, unexpectedly large offset: "+addFromLastBin+" > "+_binsz);
+      // see how many bins are used for this column. affects accuracy.
+      Log.info("Summary2 quantiles created from hcnt.length: "+hcnt.length+" bins");
         
       }
 
