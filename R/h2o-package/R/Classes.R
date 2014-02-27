@@ -1069,10 +1069,17 @@ summary.H2OParsedDataVA <- function(object, ...) {
                                paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))
     }
     else if(res[[i]]$type == "enum") {
+      rhist = res[[i]]$histogram
+      len = min(length(rhist$bins), 6)
+      top.ix = sort.int(rhist$bins, decreasing=T, index.return=T)$ix[1:len]
+
+      counts = rhist$bins[top.ix]
+      if(is.null(rhist$bin_names)) domains = top.ix[1:len] else domains = rhist$bin_names[top.ix]
+      nspace = max(nchar(domains)) - nchar(domains)
+
       col = matrix(rep("", 6), ncol=1)
-      len = length(res[[i]]$histogram$bins)
-      for(j in 1:min(6,len))
-        col[j] = paste(res[[i]]$histogram$bin_names[len-j+1], ": ", res[[i]]$histogram$bins[len-j+1], sep="")
+      for(j in 1:len)
+        col[j] = paste(domains[j], paste(rep(" ", nspace[j]), collapse = ""), ":", counts[j], sep="")
       result = cbind(result, col)
     }
   }
