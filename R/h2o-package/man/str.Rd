@@ -1,6 +1,5 @@
 \name{str}
 \alias{str.H2OParsedData}
-\alias{str.H2OParsedDataVA}
 \title{
 Display the Structure of a H2O Dataset
 }
@@ -9,7 +8,6 @@ A method for the \code{\link{str}} generic. Obtain information about H2O parsed 
 }
 \usage{
 \method{str}{H2OParsedData}(object, ...)
-\method{str}{H2OParsedDataVA}(object, ...)
 }
 \arguments{
   \item{object}{An \code{\linkS4class{H2OParsedData}} object.}

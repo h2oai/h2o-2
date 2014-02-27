@@ -357,8 +357,11 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
     result$params$family = .h2o.__getFamily(model$glm$family, model$glm$link)
   
   result$coefficients = as.numeric(unlist(submod$beta))
-  result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
   names(result$coefficients) = model$coefficients_names
+  if(params$standardize) {
+    result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
+    names(result$normalized_coefficients) = model$coefficients_names
+  }
   result$rank = valid$'_rank'
   result$iter = submod$iteration
 
