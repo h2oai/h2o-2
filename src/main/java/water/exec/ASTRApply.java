@@ -82,8 +82,7 @@ class ASTRApply extends ASTOp {
       final double[] rowout = op.map(env,rowin,null);
       final Env env0 = env;
       MRTask2 mrt = new MRTask2() {
-        @Override
-        public void map(Chunk[] cs, NewChunk[] ncs) {
+        @Override public void map(Chunk[] cs, NewChunk[] ncs) {
           for (int i = 0; i < cs[0]._len; i++) {
             for (int c = 0; c < cs.length; c++) rowin[c] = cs[c].at0(i);
             op.map(env0, rowin, rowout);

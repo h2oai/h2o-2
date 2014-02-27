@@ -262,10 +262,11 @@ public abstract class ASTOp extends AST {
     return null;
   }
 
-  double[] map(Env env, double[] in, double[] out) { H2O.unimpl(); return null; }
-
   @Override void exec(Env env) { env.push(this); }
+  // Standard column-wise function application
   abstract void apply(Env env, int argcnt);
+  // Special row-wise 'apply'
+  double[] map(Env env, double[] in, double[] out) { throw H2O.unimpl(); }
 }
 
 abstract class ASTUniOp extends ASTOp {
@@ -1088,6 +1089,13 @@ class ASTMean extends ASTOp {
     double ave = fr.vecs()[0].mean();
     env.pop();
     env.poppush(ave);
+  }
+  @Override double[] map(Env env, double[] in, double[] out) {
+    if (out == null || out.length < 1) out = new double[1];
+    double s = 0;  int cnt=0;
+    for (double v : in) if( !Double.isNaN(v) ) { s+=v; cnt++; }
+    out[0] = s/cnt;
+    return out;
   }
 }
 
