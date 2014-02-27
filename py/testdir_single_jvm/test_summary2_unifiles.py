@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b
 
 DO_TRY_SCIPY = False
 
@@ -70,13 +70,17 @@ class Basic(unittest.TestCase):
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
+        h2o.beta_features = True # to get the browser page special tab
         if (localhost):
             h2o.build_cloud(node_count=1, base_port=54327)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.beta_features = False
+        # h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
+        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_summary2_unifiles(self):
