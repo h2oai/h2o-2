@@ -353,8 +353,9 @@ public class Summary2 extends Iced {
       int nbin = 0;
       // could it take more than 1 iteration due to the weird eqn for nbin?
       int tried = 0;
-      while ( tried < 3 && nbin < 20 ) { 
-        if ( tried > 0 ) binszTry = binszTry / (20.0 / nbin); // decrease bin size by ratio
+      int BIN_GOAL = 21;
+      while ( tried < 3 && nbin < BIN_GOAL) { 
+        if ( tried > 0 ) binszTry = binszTry / (BIN_GOAL / nbin); // decrease bin size by ratio
         nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/binszTry)/1000000L) + 1;
         // Log.info("Summary hueristic "+tried+" nbin: "+nbin+" binszTry: "+binszTry+" _max2: "+stat0._max2+" _start: "+_start);
         assert nbin > 0;
