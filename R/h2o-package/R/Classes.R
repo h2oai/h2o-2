@@ -106,7 +106,9 @@ setMethod("show", "H2OGLMModel", function(object) {
 
   model = object@model
   cat("Coefficients:\n"); print(round(model$coefficients,5))
-  cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+  if(!is.null(model$normalized_coefficients)) {
+    cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+  }
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
