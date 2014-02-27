@@ -169,7 +169,7 @@ function build_src_jar() {
 
 function build_imodel_jar() {
     echo "creating imodel jar file... ${IMODEL_JAR_FILE}"
-    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel"
+    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel" -C "${CLASSES}" "water/util/ModelUtils.class"
     [ -d "$CLASSES/resources/" ] || mkdir -p "$CLASSES/resources/"
     cp "${IMODEL_JAR_FILE}" "$CLASSES/resources/"
 }

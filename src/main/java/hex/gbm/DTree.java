@@ -1000,7 +1000,7 @@ public class DTree extends Iced {
     /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
     protected void toJavaFillPreds0(SB bodySb) {
       // Pick max index as a prediction
-      if (isClassifier()) bodySb.i().p("preds[0] = maxIndex(preds,1)-1;").nl();
+      if (isClassifier()) bodySb.i().p("preds[0] = water.util.ModelUtils.getPrediction(preds,data);").nl();
       else bodySb.i().p("preds[0] = preds[1];").nl();
     }
 
