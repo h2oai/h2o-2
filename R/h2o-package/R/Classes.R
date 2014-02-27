@@ -633,6 +633,23 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   
   # Substitute NAs for blank cells rather than skipping.
   df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
+  
+  if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
+    stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
+  if(x.ncol > .MAX_INSPECT_COL_VIEW)
+    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  
+  # Set the correct factor levels for each column
+  if(class(x) == "H2OParsedDataVA")
+    res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
+  else
+    res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
+  for(i in 1:df.ncol) {
+    if(!is.null(res$levels[[i]]))
+      df[,i] <- factor(df[,i], levels = res$levels[[i]])
+    else if(!is.numeric(df[,i]))
+      df[,i] <- as.numeric(df[,i])
+  }
   return(df)
 }
 
@@ -643,13 +660,13 @@ head.H2OParsedData <- function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   x.slice = as.data.frame(x[seq_len(n),])
-  if(ncol(x) > .MAX_INSPECT_COL_VIEW)
-    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
-  for(i in 1:ncol(x)) {
-    if(!is.null(res$levels[[i]]))
-      x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
-  }
+#   if(ncol(x) > .MAX_INSPECT_COL_VIEW)
+#     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+#   res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
+#   for(i in 1:ncol(x)) {
+#     if(!is.null(res$levels[[i]]))
+#       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
+#   }
   return(x.slice)
 }
 
@@ -663,13 +680,13 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
   x.slice = as.data.frame(x[idx,])
   rownames(x.slice) = idx
   
-  if(ncol(x) > .MAX_INSPECT_COL_VIEW)
-    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
-  for(i in 1:ncol(x)) {
-    if(!is.null(res$levels[[i]]))
-      x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
-  }
+#   if(ncol(x) > .MAX_INSPECT_COL_VIEW)
+#     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+#   res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
+#   for(i in 1:ncol(x)) {
+#     if(!is.null(res$levels[[i]]))
+#       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
+#   }
   return(x.slice)
 }
 
@@ -682,7 +699,6 @@ h2o.anyFactor <- function(x) {
   as.logical(.h2o.__unop2("any.factor", x))
 }
 
-# setMethod("quantile", "H2OParsedData", function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE) {
 quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, ...) {
   if((numCols = ncol(x)) != 1) stop("quantile only operates on a single column")
   if(is.factor(x)) stop("factors are not allowed")
@@ -820,8 +836,6 @@ str.H2OParsedData <- function(object, ...) {
     invisible(NextMethod("str", ...))
   else invisible(NextMethod("str", give.length = FALSE, ...))
   
-  if(class(object) != "H2OParsedData")
-    stop("object must be of class H2OParsedData")
   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT, key=object@key, max_column_display=.Machine$integer.max)
@@ -831,7 +845,11 @@ str.H2OParsedData <- function(object, ...) {
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
   rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
-  res2 = .h2o.__remoteSend(object@h2o, .h2o.__HACK_LEVELS2, source = object@key, max_ncols = .Machine$integer.max)
+  
+  if(class(object) == "H2OParsedDataVA")
+    res2 = .h2o.__remoteSend(object@h2o, .h2o.__HACK_LEVELS, key=object@key, max_column_display=.Machine$integer.max)
+  else
+    res2 = .h2o.__remoteSend(object@h2o, .h2o.__HACK_LEVELS2, source=object@key, max_ncols=.Machine$integer.max)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
@@ -843,10 +861,6 @@ str.H2OParsedData <- function(object, ...) {
       cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
     }
   }
-}
-
-str.H2OParsedDataVA <- function(object, ...) {
-  str(new("H2OParsedData", h2o=object@h2o, key=object@key))
 }
 
 # setGeneric("histograms", function(object) { standardGeneric("histograms") })

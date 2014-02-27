@@ -359,6 +359,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
   result$coefficients = as.numeric(unlist(submod$beta))
   result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
   names(result$coefficients) = model$coefficients_names
+  # names(result$normalized_coefficients) = model$coefficients_names
   result$rank = valid$'_rank'
   result$iter = submod$iteration
 

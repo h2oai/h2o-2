@@ -3,7 +3,7 @@ myIP = "127.0.0.1"; myPort = 54321
 localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE)
 
 # Import prostate file to H2O
-prosPath = system.file("extdata", "prostate.csv", package="h2o")
+prosPath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 
 # Print out basic summary
@@ -35,10 +35,10 @@ prostate.qs = quantile(prostate.hex$PSA, probs = c(0.05, 0.1, 0.25, 0.5, 0.75, 0
 print(prostate.qs)
 
 # Note: Right now, assignment must be done manually with h2o.assign!
-PSA.outliers = prostate.hex[prostate.hex$PSA <= prostate.qs["5%"] | prostate.hex$PSA >= prostate.qs["95%"],]
+temp = prostate.hex[prostate.hex$PSA <= prostate.qs["5%"] | prostate.hex$PSA >= prostate.qs["95%"],]
 # PSA.outliers.ind = prostate.hex$PSA <= prostate.qs["5%"] | prostate.hex$PSA >= prostate.qs["95%"]
 # PSA.outliers = prostate.hex[PSA.outliers.ind,]
-PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
+PSA.outliers = h2o.assign(temp, "PSA.outliers")
 nrow(PSA.outliers)
 head(PSA.outliers)
 tail(PSA.outliers)
@@ -51,7 +51,7 @@ nrow(prostate.trim)
 
 # Construct test and training sets
 s = runif(nrow(prostate.hex))
-# s = h2o.runif(prostate.hex, min = 0, max = 1)
+# s = h2o.runif(prostate.hex, min = 0, max = 1)     # Use if number of rows too large for R to handle
 prostate.train = prostate.hex[s <= 0.8,]
 prostate.train = h2o.assign(prostate.train, "prostate.train")
 prostate.test = prostate.hex[s > 0.8,]
