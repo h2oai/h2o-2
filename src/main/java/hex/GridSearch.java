@@ -158,7 +158,7 @@ public class GridSearch extends Job {
           String pct = "", f1 = "";
           if( info._cm != null ) {
             pct = String.format("%.2f", 100 * info._error) + "%";
-            if( info._cm._arr.length == 2 )
+            if( info._cm._arr != null && info._cm._arr.length == 2 )
               f1 = String.format("%.2f", info._cm.precisionAndRecall());
           } else pct = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(pct).append("</b></td>");
