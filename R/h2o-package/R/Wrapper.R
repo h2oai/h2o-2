@@ -2,7 +2,7 @@
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
-h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g") {
+h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g", beta=F) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
@@ -15,7 +15,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
-      .h2o.startJar(Xmx)
+      .h2o.startJar(Xmx, beta)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
@@ -172,7 +172,7 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
-.h2o.startJar <- function(memory = "1g") {
+.h2o.startJar <- function(memory = "1g", beta=F) {
   command <- Sys.which("java")
   #
   # TODO: tmp files should be user-independent
@@ -198,6 +198,7 @@ h2o.clusterStatus <- function(client) {
             "-ip", "127.0.0.1",
             "-port", "54321"
             )
+  if( beta ) args <- c(args, '-beta')
   cat("\n")
   cat(        "Note:  In case of errors look at the following log files:\n")
   cat(sprintf("           %s\n", stdout))
