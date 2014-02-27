@@ -18,7 +18,7 @@ source('../findNSourceUtils.R')
 
 data.frame.type.test <- function(conn) {
    #Do VA
-   iris.VA <- h2o.uploadFile.VA(conn, locate("smalldata/iris/iris.csv"))
+   iris.VA <- h2o.uploadFile.VA(conn, locate("smalldata/iris/iris2.csv"))
    df.iris.VA <- as.data.frame(iris.VA)
 
    #Check each column:
@@ -35,9 +35,12 @@ data.frame.type.test <- function(conn) {
    print(typeof(df.iris.VA[,4]))
    print(typeof(df.iris.VA[,5]))
 
+   print(levels(df.iris.VA[,5]))
+   print(levels(iris[,5]))
+   expect_that(levels(df.iris.VA[,5]), equals(levels(iris[,5])))
 
    #Do FV
-   iris.FV <- h2o.uploadFile.FV(conn, locate("smalldata/iris/iris.csv"))
+   iris.FV <- h2o.uploadFile.FV(conn, locate("smalldata/iris/iris2.csv"))
    df.iris.FV <- as.data.frame(iris.VA)
 
    #Check each column:
@@ -47,6 +50,9 @@ data.frame.type.test <- function(conn) {
    expect_that(typeof(df.iris.FV[,3]), equals("double"))
    expect_that(typeof(df.iris.FV[,4]), equals("double"))
    expect_that(class(df.iris.FV[,5]), equals("factor"))
+
+   #Check levels:
+   expect_that(levels(df.iris.FV[,5]), equals(levels(iris[,5])))
 
    #Check on prostate data now...
    #Do VA
@@ -80,7 +86,7 @@ data.frame.type.test <- function(conn) {
    expect_that(typeof(df.prostate.FV[,8]), equals("double"))
    expect_that(typeof(df.prostate.FV[,9]), equals("integer"))
 
-    testEnd()
+   testEnd()
 }
 
 doTest("Type check data frame", data.frame.type.test)
