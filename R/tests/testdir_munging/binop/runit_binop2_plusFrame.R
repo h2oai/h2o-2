@@ -33,7 +33,9 @@ test.plus.onFrame <- function(conn) {
   colRange <- dd$RANGE
 
   Log.info(paste("Importing ", dataName, " data..."))
-  hex <- h2o.uploadFile(conn, locate(dataSet[[1]]$PATHS[1]), paste("r", gsub('-','_',dataName),".hex", sep = ""))
+  hex <- h2o.uploadFile.FV(conn, locate(dataSet[[1]]$PATHS[1]), paste("r", gsub('-','_',dataName),".hex", sep = ""))
+  originalDataType <- class(hex)
+  hexOrig <- hex
   anyEnum <- FALSE
   if(any(dd$TYPES == "enum")) anyEnum <- TRUE
 
@@ -68,7 +70,10 @@ test.plus.onFrame <- function(conn) {
   fivePlusAsData <- 5 + as.data.frame(hex[1:6,])
   print(fivePlusAsData)
   #expect_that(fivePlusHexHead, equals(fivePlusAsData))
-  expect_that(as.data.frame(fivePlusAsData), equals(as.data.frame(fivePlusHexHead)))
+  Log.info("Are NAs being treated properly???")
+  fPHH <- as.data.frame(fivePlusHexHead)
+  print(fPHH)
+  expect_that(fivePlusAsData, equals(fPHH))
 
 
   Log.info("Checking left and right: ")
@@ -88,9 +93,9 @@ test.plus.onFrame <- function(conn) {
   expect_that(as.data.frame(hexPlusFive), equals(as.data.frame(fivePlusHex)))
 
   Log.info("Try to add two frames: hex + hex")
+  hd <- as.data.frame(hex)
   hexPlusHex <- hex + hex
   print(head(hexPlusHex))
-  hd <- as.data.frame(hex)
   hdPlushd <- hd + hd
   print(head(hdPlushd))
   expect_that(hd + hd, equals(as.data.frame(hexPlusHex)))
