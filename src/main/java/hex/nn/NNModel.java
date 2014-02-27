@@ -549,13 +549,7 @@ public class NNModel extends Model {
       Log.info(label);
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
-
-    //hack to work around a temporary slowdown...
-//    fpreds.delete(); //slow!?
-    Thread thread = new Thread() { @Override public void run() { fpreds.delete(); } };
-    thread.setDaemon(true);
-    thread.start();
-
+    fpreds.delete();
     return error;
   }
 
