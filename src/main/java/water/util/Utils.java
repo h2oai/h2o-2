@@ -52,6 +52,30 @@ public class Utils {
       if (from[i]>from[result]) result = i;
     return result;
   }
+  public static float maxValue(float[] from) {
+    float result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
+    return result;
+  }
+  public static float minValue(float[] from) {
+    float result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<result) result = from[i];
+    return result;
+  }
+  public static long maxValue(long[] from) {
+    long result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
+    return result;
+  }
+  public static long minValue(long[] from) {
+    long result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<result) result = from[i];
+    return result;
+  }
 
   /**
    * Compare two numbers to see if they are within one ulp of the smaller decade.
@@ -105,17 +129,22 @@ public class Utils {
     return Double.longBitsToDouble(sum);
   }
 
-  public static int sum(int[] from) {
+  public static long sum(final long[] from) {
+    long result = 0;
+    for (long d: from) result += d;
+    return result;
+  }
+  public static int sum(final int[] from) {
     int result = 0;
     for (int d: from) result += d;
     return result;
   }
-  public static float sum(float[] from) {
+  public static float sum(final float[] from) {
     float result = 0;
     for (float d: from) result += d;
     return result;
   }
-  public static double sum(double[] from) {
+  public static double sum(final double[] from) {
     double result = 0;
     for (double d: from) result += d;
     return result;
@@ -782,17 +811,27 @@ public class Utils {
     return sum/nums.length;
   }
   public static float[] div(float[] nums, int n) {
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
     return nums;
   }
   public static float[] div(float[] nums, float n) {
     assert !Float.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
     return nums;
   }
   public static double[] div(double[] nums, double n) {
     assert !Double.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
+    return nums;
+  }
+  public static float[] mult(float[] nums, float n) {
+    assert !Float.isInfinite(n) : "Trying to multiply " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] *= n;
+    return nums;
+  }
+  public static double[] mult(double[] nums, double n) {
+    assert !Double.isInfinite(n) : "Trying to multiply " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] *= n;
     return nums;
   }
   /**
