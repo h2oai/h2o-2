@@ -17,11 +17,18 @@
   #Track upload, import, and import HDFS
   #Track VA v FV
 
+.libPaths(c("~/.libR/", .libPaths()))
 options(echo=F)
-source("../../../R/h2o-package/R/Internal.R")
-source("../../../R/h2o-package/R/Algorithms.R")
-source("../../../R/h2o-package/R/Classes.R")
-source("../../../R/h2o-package/R/ParseImport.R")
+#source("../../../R/h2o-package/R/Internal.R")
+#source("../../../R/h2o-package/R/Algorithms.R")
+#source("../../../R/h2o-package/R/Classes.R")
+#source("../../../R/h2o-package/R/ParseImport.R")
+
+source("../../../../../h2o/R/h2o-package/R/Internal.R")
+source("../../../../../h2o/R/h2o-package/R/Algorithms.R")
+source("../../../../../h2o/R/h2o-package/R/Classes.R")
+source("../../../../../h2o/R/h2o-package/R/ParseImport.R")
+
 #GLOBALS
 aic               <<- "None"
 auc               <<- "None"
