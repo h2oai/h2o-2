@@ -1,12 +1,15 @@
 package water;
 
 import com.google.gson.JsonObject;
+
 import java.util.Arrays;
 import water.ValueArray.Column;
 import water.api.Constants;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Frame;
+
+import static water.util.ModelUtils.getPrediction;
 
 /**
  * A Model models reality (hopefully).

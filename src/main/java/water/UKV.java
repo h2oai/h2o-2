@@ -1,6 +1,5 @@
 package water;
 
-import water.fvec.Frame;
 import water.fvec.Vec;
 
 /**
@@ -32,9 +31,11 @@ public abstract class UKV {
   // Recursively remove, gathering all the pending remote key-deletes
   static public void remove( Key key ) { remove(key,new Futures()).blockForPending(); }
   static public Futures remove( Key key, Futures fs ) {
-    Value val = DKV.get(key,32,H2O.GET_KEY_PRIORITY); // Get the existing Value, if any
-    assert val==null || !val.isLockable();
-    if( val != null && val.isVec() ) ((Vec  )val.get()).remove(fs);
+    if( key.isVec() ) {
+      Value val = DKV.get(key);
+      if (val == null) return fs;
+      ((Vec)val.get()).remove(fs);
+    }
     DKV.remove(key,fs);
     return fs;
   }

@@ -212,26 +212,7 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
 
             # v2
             (resultExec, result) = exec_expr(h2o.nodes[execNode], execExpr, None, timeoutSecs)
-            print "\nexecResult:", h2o.dump_json(execResultInspect)
-            execResultKey = resultExec[0]['key']
-
-            # v2: Exec2 'apply' can have no key field? (null) maybe just use keyX then
-            if execResultKey:
-                resultInspect = h2o_cmd.runInspect(None, execResultKey)
-            else:
-                resultInspect = h2o_cmd.runInspect(None, keyX)
-            ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-
-            # min is keyword. shouldn't use.
-            if incrementingResult: # a col will have a single min
-                min_value = checkScalarResult(resultExec, resultKey)
-                h2o.verboseprint("min_value: ", min_value, "col:", colX)
-                print "min_value: ", min_value, "col:", colX
-            else:
-                min_value = None
-
-            sys.stdout.write('.')
-            sys.stdout.flush()
+            print "\nexecResult:", h2o.dump_json(resultExec)
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             # slows things down to check every iteration, but good for isolation
@@ -240,7 +221,7 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
                     "Found errors in sandbox stdout or stderr, on trial #%s." % trial)
 
         print "Column #", colX, "completed\n"
-        colResultList.append(min_value)
+        colResultList.append(result)
 
     return colResultList
 

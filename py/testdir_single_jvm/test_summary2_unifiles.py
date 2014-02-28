@@ -1,17 +1,28 @@
 import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b
 
-DO_SCIPY_COMPARE = False
+DO_TRY_SCIPY = False
 
-def generate_scipy_comparison(csvPathname):
+def twoDecimals(l): 
+    if isinstance(l, list):
+        return ["%.2f" % v for v in l] 
+    else:
+        return "%.2f" % l
+
+# have to match the csv file?
+# dtype=['string', 'float');
+def generate_scipy_comparison(csvPathname, dtype):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
-    from numpy import loadtxt, genfromtxt, savetxt
+    # from numpy import loadtxt, genfromtxt, savetxt
+    import numpy as np
+    import scipy as sp
 
-    dataset = loadtxt(
+    dataset = np.genfromtxt(
         open(csvPathname, 'r'),
-        delimiter=',');
-        # dtype='int16');
+        delimiter=',',
+        skip_header=1,
+        dtype=None); # guess!
 
     print "csv read for training, done"
     # we're going to strip just the last column for percentile work
@@ -22,28 +33,33 @@ def generate_scipy_comparison(csvPathname):
     # data is last column
     # drop the output
     print dataset.shape
-    if 1==1:
+    target = [x[1] for x in dataset]
+    # we may have read it in as a string. coerce to number
+    targetFP = np.array(target, np.float)
+
+    if 1==0:
         n_features = len(dataset[0]) - 1;
         print "n_features:", n_features
 
         # get the end
         # target = [x[-1] for x in dataset]
         # get the 2nd col
-        target = [x[1] for x in dataset]
 
         print "histogram of target"
-        from scipy import histogram
-        print histogram(target, bins=NUMCLASSES)
+        print target
+        print sp.histogram(target, bins=NUMCLASSES)
 
         print target[0]
         print target[1]
 
-    from scipy import stats
     thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
-    per = [100 * t for t in thresholds]
-    print "scipy per:", per
-    a = stats.scoreatpercentile(dataset, per=per)
-    print "scipy percentiles:", a
+    # per = [100 * t for t in thresholds]
+    per = [1 * t for t in thresholds]
+    print "sp per:", per
+    from scipy import stats
+    # a = stats.scoreatpercentile(target, per=per)
+    a = stats.mstats.mquantiles(targetFP, prob=per)
+    print "sp percentiles:", a
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -54,23 +70,83 @@ class Basic(unittest.TestCase):
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
+        h2o.beta_features = True # to get the browser page special tab
         if (localhost):
             h2o.build_cloud(node_count=1, base_port=54327)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.beta_features = False
+        # h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
+        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_summary2_uniform(self):
+    def test_summary2_unifiles(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
+
+        # old with 20 bins
         tryList = [
-            ("runif.csv",  "A", 0, 100),
-            ("runifA.csv", "B", 0, 100),
-            ("runifB.csv", "C", 0, 100),
-            ("runifC.csv", "D", 0, 100),
+            # colname, (min, 25th, 50th, 75th, max)
+            ('runif.csv', 'x.hex', [
+                ('' ,  1.00, 5000.0, 10000.0, 15000.0, 20000.00),
+                ('D', -5000.00, -3750.0, -2445, -1200.0, 99),
+                ('E', -100000.0, -50000.0, 1613.0, 50000.0, 100000.0),
+                ('F', -1.00, -0.48, 0.0087, 0.50, 1.00),
+            ], ['string', 'float', 'float', 'float'],
+            ),
+
+            ('runifA.csv', 'A.hex', [
+                ('',  1.00, 26.00, 51.00, 76.00, 100.0),
+                ('x', -99.0, -43.0, 6.90, 58.00, 91.7),
+            ], ['string', 'float'],
+            ),
+
+            ('runifB.csv', 'B.hex', [
+                ('',  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
+                ('x', -100.00, -50.0, 0.85, 51.7, 100,00),
+            ], ['string', 'float'],
+            ),
+
+            ('runifC.csv', 'C.hex', [
+                ('',  1.00, 25002.00, 50002.00, 75002.00, 100000.00),
+                ('x', -100.00, -50.45, -1.18, 49.28, 100.00),
+            ], ['string', 'float'],
+            ),
+
         ]
+        # new with 1000 bins. copy expected from R
+        tryList = [
+            # colname, (min, 25th, 50th, 75th, max)
+            ('runif.csv', 'x.hex', [
+                ('' ,  1.00, 5000.0, 10000.0, 15000.0, 20000.00),
+                ('D', -5000.00, -3735.0, -2443, -1187.0, 99.8),
+                ('E', -100000.0, -49208.0, 1783.8, 50621.9, 100000.0),
+                ('F', -1.00, -0.4886, 0.00868, 0.5048, 1.00),
+            ], ['string', 'float', 'float', 'float'],
+            ),
+
+            ('runifA.csv', 'A.hex', [
+                ('',  1.00, 26.00, 51.00, 76.00, 100.0),
+                ('x', -99.0, -44.7, 7.80, 58.00, 91.7),
+            ], ['string', 'float'],
+            ),
+
+            ('runifB.csv', 'B.hex', [
+                ('',  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
+                ('x', -100.00, -50.0, 0.987, 51.7, 100,00),
+            ], ['string', 'float'],
+            ),
+
+            ('runifC.csv', 'C.hex', [
+                ('',  1.00, 25002.00, 50002.00, 75002.00, 100000.00),
+                ('x', -100.00, -50.45, -1.135, 49.28, 100.00),
+            ], ['string', 'float'],
+            ),
+
+        ]
+
 
         timeoutSecs = 10
         trial = 1
@@ -79,7 +155,7 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (csvFilename, hex_key, expectedMin, expectedMax) in tryList:
+        for (csvFilename, hex_key, expectedCols, dtype) in tryList:
             h2o.beta_features = False
 
             csvPathname = csvFilename
@@ -101,66 +177,81 @@ class Basic(unittest.TestCase):
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             summaries = summaryResult['summaries']
-            for column in summaries:
+            for expected, column in zip(expectedCols, summaries):
+
+                # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
                 colname = column['colname']
+                self.assertEqual(colname, expected[0])
+
                 coltype = column['type']
                 nacnt = column['nacnt']
 
                 stats = column['stats']
                 stattype= stats['type']
+
+                # FIX! we should compare mean and sd to expected?
                 mean = stats['mean']
                 sd = stats['sd']
+
+                print "colname:", colname, "mean (2 places): %s", twoDecimals(mean)
+                print "colname:", colname, "std dev. (2 places): %s", twoDecimals(sd)
+
                 zeros = stats['zeros']
+
                 mins = stats['mins']
+
+                # estimate of error bounds
+                maxDelta = ((expected[5] - expected[1])/20.0) / 2.0
+                maxDelta = 1.05 * maxDelta
+                # should be tighter now?
+                maxDelta = 0.5 * maxDelta
+                h2o_util.assertApproxEqual(mins[0], expected[1], rel=0.008, msg='min is not approx. expected')
+
                 maxs = stats['maxs']
+                h2o_util.assertApproxEqual(maxs[0], expected[5], rel=0.008, msg='max is not approx. expected')
+
                 pct = stats['pct']
+                # the thresholds h2o used, should match what we expected
+                expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+
                 pctile = stats['pctile']
+                h2o_util.assertApproxEqual(pctile[3], expected[2], rel=maxDelta, msg='25th percentile is not approx. expected')
+                h2o_util.assertApproxEqual(pctile[5], expected[3], rel=maxDelta, msg='50th percentile (median) is not approx. expected')
+                h2o_util.assertApproxEqual(pctile[7], expected[4], rel=maxDelta, msg='75th percentile is not approx. expected')
 
                 hstart = column['hstart']
                 hstep = column['hstep']
                 hbrk = column['hbrk']
                 hcnt = column['hcnt']
 
-                
-                print csvFilename, "colname:", colname, "pctile:", pctile
                 print "pct:", pct
                 print ""
-                
 
                 for b in hcnt:
+                    # should we be able to check for a uniform distribution in the files?
                     e = .1 * numRows
                     # self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
                     #     msg="Bins not right. b: %s e: %s" % (b, e))
 
-                if 1==0:
-                    print "pctile:", pctile
-                    print "maxs:", maxs
-                    self.assertAlmostEqual(maxs[0], expectedMax, delta=0.2)
-                    print "mins:", mins
-                    self.assertAlmostEqual(mins[0], expectedMin, delta=0.2)
+    
+                pt = twoDecimals(pctile)
+                mx = twoDecimals(maxs)
+                mn = twoDecimals(mins)
+                print "colname:", colname, "pctile (2 places):", pt
+                print "colname:", colname, "maxs: (2 places):", mx
+                print "colname:", colname, "mins: (2 places):", mn
 
-                    
-                    for v in pctile:
-                        self.assertTrue(v >= expectedMin, 
-                            "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
-                        self.assertTrue(v <= expectedMax, 
-                            "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
-                
-                    eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
-                    if expectedMin==1:
-                        eV = eV1
-                    elif expectedMin==0:
-                        eV = [e-1 for e in eV1]
-                    elif expectedMin==2:
-                        eV = [e+1 for e in eV1]
-                    else:
-                        raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
+                # FIX! we should do an exec and compare using the exec quantile too
+                compareActual = mn[0], pt[3], pt[5], pt[7], mx[0]
+                print "min/25/50/75/max colname:", colname, "(2 places):", compareActual
+                print "maxs colname:", colname, "(2 places):", mx
+                print "mins colname:", colname, "(2 places):", mn
 
             trial += 1
 
-            if DO_SCIPY_COMPARE:
+            if DO_TRY_SCIPY:
                 csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
-                generate_scipy_comparison(csvPathname1)
+                generate_scipy_comparison(csvPathname1, dtype=dtype)
 
 if __name__ == '__main__':
     h2o.unit_main()

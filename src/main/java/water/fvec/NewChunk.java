@@ -229,6 +229,7 @@ public class NewChunk extends Chunk {
     boolean first = true;
     double min = _len2==_len ?  Double.MAX_VALUE : 0;
     double max = _len2==_len ? -Double.MAX_VALUE : 0;
+    int p10iLength = DParseTask.powers10i.length;
 
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) continue;
@@ -249,19 +250,20 @@ public class NewChunk extends Chunk {
         lemin = lemax = l;
         continue;
       }
-      // Remove any trailing zeros / powers-of-10
-      if(overflow || (overflow = (Math.abs(xmin-x)) >=10))continue;
       // Track largest/smallest values at xmin scale.  Note overflow.
       if( x < xmin ) {
+        if( overflow || (overflow = ((xmin-x) >=p10iLength)) ) continue;
         lemin *= DParseTask.pow10i(xmin-x);
         lemax *= DParseTask.pow10i(xmin-x);
         xmin = x;               // Smaller xmin
       }
       // *this* value, as a long scaled at the smallest scale
+      if( overflow || (overflow = ((x-xmin) >=p10iLength)) ) continue;
       long le = l*DParseTask.pow10i(x-xmin);
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
+
     if(_len2 != _len){ // sparse? compare xmin/lemin/lemax with 0
       lemin = Math.min(0, lemin);
       lemax = Math.max(0, lemax);
@@ -304,7 +306,7 @@ public class NewChunk extends Chunk {
     // uniform, so we scale up the largest lmax by the largest scale we need
     // and if that fits in a byte/short - then it's worth compressing.  Other
     // wise we just flip to a float or double representation.
-    if(overflow || fpoint && floatOverflow || -35 > xmin || xmin > 35)
+    if( overflow || (fpoint && floatOverflow) || -35 > xmin || xmin > 35 )
       return chunkD();
     if( fpoint ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?

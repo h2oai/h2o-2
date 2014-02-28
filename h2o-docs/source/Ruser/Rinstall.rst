@@ -1,7 +1,7 @@
+.. _Rfromdownload:
 
-
-H\ :sub:`2`\ O installation in R Console
-------------------------------------------
+H\ :sub:`2`\ O installation in R Console From Download Table
+-------------------------------------------------------------
 
 
 These instructions assume you are using R  2.14.0 or later.  

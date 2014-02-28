@@ -99,7 +99,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       else { // classification
         float s = sum(p);
         if (s>0) div(p, s); // unify over all classes
-        p[0] = getPrediction(p, data);
+        p[0] = ModelUtils.getPrediction(p, data);
       }
       return p;
     }

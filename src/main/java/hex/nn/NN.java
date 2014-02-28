@@ -17,6 +17,7 @@ import water.util.RString;
 import java.util.Random;
 
 import static water.util.MRUtils.sampleFrame;
+import static water.util.MRUtils.sampleFrameStratified;
 
 /**
  * NN - Neural Net implementation based on MRTask2
@@ -86,10 +87,13 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
   public long score_validation_samples = 0l;
 
-  @API(help = "Shortest interval (in seconds) between scoring", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Minimum time (in seconds) between scoring (scoring can happen after training a mini-batch)", filter = Default.class, dmin = 0, json = true)
   public double score_interval = 5;
 
-  @API(help = "Number of training samples per mini-batch (0 for entire epoch).", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double score_duty_cycle = 0.1;
+
+  @API(help = "Number of training samples per mini-batch, after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
   public long mini_batch = 0l;
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
@@ -97,6 +101,12 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
+
+  @API(help = "Balance class counts via over/under-sampling with replacement (can increase predictive accuracy for imbalanced datasets)", filter = Default.class, json = true, gridable = false)
+  public boolean balance_classes = false;
+
+  @API(help = "Maximum growth factor (relative size) of datasets after balancing classes (especially when oversampling rare minority classes)", filter = Default.class, json = true, dmin=1, dmax=1e6, gridable = false)
+  public float max_balance_growth = 5.0f;
 
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
@@ -162,25 +172,33 @@ public class NN extends Job.ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
-    if(arg._name.equals("classification_stop") && !classification) {
-      arg.disable("Only for classification.", inputArgs);
-    }
     if (expert_mode && arg._name.equals("force_load_balance") && H2O.CLOUD.size()>1) {
       force_load_balance = false;
       arg.disable("Only for single-node operation.");
     }
 
-    if(arg._name.equals("regression_stop") && classification) {
-      arg.disable("Only for regression.", inputArgs);
+    if (classification) {
+      if(arg._name.equals("regression_stop")) {
+        arg.disable("Only for regression.", inputArgs);
+      }
+      if(arg._name.equals("max_balance_growth") && !balance_classes) {
+        arg.disable("Requires imbalanced.", inputArgs);
+      }
     }
-    if(arg._name.equals("max_confusion_matrix_size") && !classification) {
-      arg.disable("Only for classification.", inputArgs);
+    else {
+      if(arg._name.equals("classification_stop")
+              || arg._name.equals("max_confusion_matrix_size")
+              || arg._name.equals("max_balance_growth")
+              || arg._name.equals("balance_classes")) {
+        arg.disable("Only for classification.", inputArgs);
+      }
     }
-
     if (arg._name.equals("score_validation_samples") && validation == null) {
       arg.disable("Only if a validation set is specified.", inputArgs);
     }
-    if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
+    if (arg._name.equals("loss")
+            || arg._name.equals("max_w2")
+            || arg._name.equals("warmup_samples")
             || arg._name.equals("score_training_samples")
             || arg._name.equals("score_validation_samples")
             || arg._name.equals("initial_weight_distribution")
@@ -189,7 +207,10 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("diagnostics")
             || arg._name.equals("rate_decay")
             || arg._name.equals("mini_batch")
+            || arg._name.equals("score_duty_cycle")
             || arg._name.equals("fast_mode")
+            || arg._name.equals("balance_classes")
+            || arg._name.equals("max_balance_growth")
             || arg._name.equals("ignore_const_cols")
             || arg._name.equals("force_load_balance")
             || arg._name.equals("shuffle_training_data")
@@ -197,6 +218,7 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("classification_stop")
             || arg._name.equals("regression_stop")
             || arg._name.equals("quiet_mode")
+            || arg._name.equals("max_confusion_matrix_size")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
@@ -299,12 +321,25 @@ public class NN extends Job.ValidatedJob {
       final long model_size = model.model_info().size();
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
-      train = reBalance(model.model_info().data_info()._adaptedFrame, seed);
+      train = model.model_info().data_info()._adaptedFrame;
+      train = reBalance(train, seed);
+      float[] trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
+      if (classification && balance_classes) {
+        train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors,
+                train.numRows(), (long)(max_balance_growth*train.numRows()), seed, false);
+        model.setClassSamplingFactors(trainSamplingFactors);
+      }
       trainScoreFrame = sampleFrame(train, score_training_samples, seed);
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
+      float[] validSamplingFactors = null;
       if (validation != null) {
         valid_adapted = model.adapt(validation, false);
         valid = reBalance(valid_adapted[0], seed+1);
+        validSamplingFactors = new float[valid.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
+        if (classification && balance_classes) {
+          valid = sampleFrameStratified(valid, valid.lastVec(), validSamplingFactors,
+                  valid.numRows(), (long)(max_balance_growth*valid.numRows()), seed+1, false);
+        }
         validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
@@ -335,7 +370,7 @@ public class NN extends Job.ValidatedJob {
       if (model != null) model.unlock(self());
       if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
       if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
-      if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
+      if (validation != null && valid_adapted != null && valid_adapted.length > 1 ) valid_adapted[1].delete(); //just deleted the adapted frames for validation
       unlock_data();
     }
   }

@@ -97,12 +97,25 @@ then
     # myPy c8 test_c8_rf_airlines_hdfs.py
     myPy c9 test_c9b_GBM_airlines_hdfs.py
 
-    # If this one fails, fail this script so the bash dies 
-    # We don't want to hang waiting for the cloud to terminate.
-    myPy shutdown test_shutdown.py
+    myPy c1 test_c1_fvec.py
+    myPy c2 test_c2_fvec.py
+    myPy c3 test_c3_fvec.py
+    myPy c4 test_c4_four_billion_rows_fvec.py
+    # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
+    myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
+    # myPy c5 test_c5_KMeans_sphere_67MB_fvec.py
+    # myPy c6 test_c6_hdfs_fvec.py
+    # myPy c6 test_c6_maprfs_fvec.py
+    myPy c7 test_c7_fvec.py
+    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
+    myPy c10 test_c10_glm_fvec.py
 else
     myPy $TESTDIR $TEST
 fi
+
+# If this one fails, fail this script so the bash dies 
+# We don't want to hang waiting for the cloud to terminate.
+myPy shutdown test_shutdown.py
 
 if ps -p $CLOUD_PID > /dev/null
 then

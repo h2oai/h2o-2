@@ -169,7 +169,7 @@ function build_src_jar() {
 
 function build_imodel_jar() {
     echo "creating imodel jar file... ${IMODEL_JAR_FILE}"
-    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel"
+    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel" -C "${CLASSES}" "water/util/ModelUtils.class"
     [ -d "$CLASSES/resources/" ] || mkdir -p "$CLASSES/resources/"
     cp "${IMODEL_JAR_FILE}" "$CLASSES/resources/"
 }
@@ -211,6 +211,7 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_imodel_jar
 build_jar
+cp "target/h2o.jar" "PerformanceFrameWork/perf-target/"
 build_src_jar
 build_samples
 if [ "$1" = "build" ]; then exit 0; fi

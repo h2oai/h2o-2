@@ -15,7 +15,7 @@ def define_params():
         'hidden'                       : [None, 0, '200,200'],
         'rate'                         : [None, 0, 0.005, 0.010],
         'rate_annealing'               : [None, 0, 1e-6, 1e-4],
-        'momentum_start'               : [None, 0, 1],
+        'momentum_start'               : [None, 0, 0.1, 0.5, 0.9999],
         'momentum_ramp'                : [None, 0, 10000, 1000000],
         'momentum_stable'              : [None, 0, 0.9, 0.8],
         'max_w2'                       : [None, 0, 5, 10, 'Infinity'],

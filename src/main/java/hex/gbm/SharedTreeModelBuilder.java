@@ -12,10 +12,13 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.MRUtils;
 import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
+
+import static water.util.ModelUtils.getPrediction;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
@@ -155,7 +158,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
-    _distribution = _nclass > 1 ? new ClassDist(_nclass).doAll(response)._ys : null;
+    _distribution = _nclass > 1 ? new MRUtils.ClassDist(_nclass).doAll(response).dist() : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -609,20 +612,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract DTree.DecidedNode makeDecided( DTree.UndecidedNode udn, DHistogram hs[] );
 
   // --------------------------------------------------------------------------
-  private static class ClassDist extends MRTask2<ClassDist> {
-    ClassDist(int nclass) { _nclass = nclass; }
-    final int _nclass;
-    long _ys[];
-    @Override public void map(Chunk ys) {
-      _ys = new long[_nclass];
-      for( int i=0; i<ys._len; i++ )
-        if( !ys.isNA0(i) )
-          _ys[(int)ys.at80(i)]++;
-    }
-    @Override public void reduce( ClassDist that ) { Utils.add(_ys,that._ys); }
-  }
-
-  // --------------------------------------------------------------------------
   // Read the 'tree' columns, do model-specific math and put the results in the
   // fs[] array, and return the sum.  Dividing any fs[] element by the sum
   // turns the results into a probability distribution.
@@ -745,7 +734,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
             for(int i = 0; i < _cms.length; ++i)
               _cms[i].add(yact, ( (1 - (fs[yact+1] / sum) )>= DEFAULT_THRESHOLDS[i])?1:0);
           }
-          int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : Model.getPrediction(fs, row);
+          int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
           _cm[yact][ypred]++;      // actual v. predicted
         }
         _snrows++;

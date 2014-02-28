@@ -19,6 +19,7 @@ import water.util.Utils;
 import java.util.Arrays;
 
 import static water.util.Utils.div;
+import static water.util.ModelUtils.getPrediction;
 
 // Gradient Boosted Trees
 //
@@ -65,7 +66,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         float dsum=0;
         if (nclasses()==2)  p[2] = - p[1];
         // Find a max
-        for( float k : p ) maxval = Math.max(maxval,k);
+        for( int k=1; k<p.length; k++) maxval = Math.max(maxval,p[k]);
         assert !Float.isInfinite(maxval) : "Something is wrong with GBM trees since returned prediction is " + Arrays.toString(p);
         for(int k=1; k<p.length;k++)
           dsum+=(p[k]=(float)Math.exp(p[k]-maxval));
@@ -90,7 +91,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         }
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) maxval = Math.max(maxval, preds[i]);").nl();
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i] - maxval));").nl();
-        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] /= dsum;").nl();
+        bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = preds[i] / dsum;").nl();
       }
     }
   }

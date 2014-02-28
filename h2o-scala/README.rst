@@ -87,7 +87,7 @@ Examples
 
   f("year")      // year of production
 
-  f(*, 0::2::7)  // year,number of cylinders and year
+  f(*, 0::2::7::Nil)  // year,number of cylinders and year
 
   f(7) map Sub(1000) // Subtract 1000 from year column
 
