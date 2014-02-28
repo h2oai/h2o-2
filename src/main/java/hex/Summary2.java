@@ -363,8 +363,7 @@ public class Summary2 extends Iced {
       }
       _binsz = binszTry;
         
-      // weird. got 14 bins with just 2 tries. disable assert for now.
-      // assert nbin >= 19 : nbin+" too few bins";
+      // assert nbin >= BIN_GOAL : nbin+" too few bins";
       assert nbin <= MAX_HIST_SZ : nbin+" too many bins";
       hcnt = new long[nbin];
     } else { // vec does not contain finite numbers
@@ -559,12 +558,12 @@ public class Summary2 extends Iced {
       if ( s1 > s ) {
         assert hcnt[k]!=0; // s1 > s implies it
         // kbn: assume linear distribution within a bin
-        // ah! the edge cases don't have linear distribution.
+        // Last bin doesn't have linear distribution, Max value truncates the bin.
 
-        // kbn: we start with min. So it's just at the max size the bin overreaches
-        // so we really should do max-start of bin, and then get percentage of that
-        // This avoids gettings values that are too big for the 99% qtile
-        // if max is was before this bin, hcnt[k] should be 0
+        // kbn: Start with min. it's just the last bin that overreaches.
+        // Calc max-start of bin, and then get percentage of that
+        // Avoids gettings values that are too big for the 99% qtile
+        // if max somehow ended up before this bin, hcnt[k] should be 0
         double binRange = _binsz; // normal case. linear distribution assumed.
         if ( k == (hcnt.length-1) ) {
             binRange = _maxs[0] - (_mins[0] + k*_binsz); // non-linear distribution in last bin!
