@@ -17,6 +17,7 @@
   #Track upload, import, and import HDFS
   #Track VA v FV
 
+
 .libPaths(c("~/.libR/", .libPaths()))
 options(echo=F)
 #source("../../../R/h2o-package/R/Internal.R")
@@ -28,6 +29,7 @@ source("../../../../../h2o/R/h2o-package/R/Internal.R")
 source("../../../../../h2o/R/h2o-package/R/Algorithms.R")
 source("../../../../../h2o/R/h2o-package/R/Classes.R")
 source("../../../../../h2o/R/h2o-package/R/ParseImport.R")
+
 
 #GLOBALS
 aic               <<- "None"
@@ -174,7 +176,7 @@ function() {
 #Import/Parsing
 upload.VA<-
 function(pkey, dataPath) {
-  h2o.uploadFile.VA(h, path = f, key = pkey)
+  h2o.uploadFile.VA(h, path = dataPath, key = pkey)
 }
 
 upload.FV<-

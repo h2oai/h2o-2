@@ -5,13 +5,13 @@ Holds functions for passing between query/results page
 */
 
 //submit the query and redirect to the results page
-function query_submit(test,machine,question,num_builds,phase) {
+function query_submit(test,question,num_builds,phase) {
   var data = new Array();
   data[0] = test;
-  data[1] = machine;
-  data[2] = question;
-  data[3] = num_builds;
-  data[4] = phase;
+//  data[1] = machine;
+  data[1] = question;
+  data[2] = num_builds;
+  data[3] = phase;
   document.query.query.value = data;
   document.query.submit();
 

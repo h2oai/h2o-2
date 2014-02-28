@@ -63,15 +63,17 @@
                   </div>
                 </dd>
             </dl>
+<!--
             <dl class="dl-horizontal">
                 <dt style="padding-top:3px">
                 <span rel="tooltip" title data-placement="left">Machines: </span>
                 <dd>
-                  <div class="container" style="float:left;">  <!--"control-group inline" style="display: inline-block" -->
+                  <div class="container" style="float:left;">
                       <input id = 'machine' class="typeahead" type="text" data-provide="typeahead" autocomplete="off" placeholder="e.g. 2">
                   </div>
                 </dd>
             </dl>
+-->
             <dl class="dl-horizontal">
                 <dt style="padding-top:3px">
                 <span rel="tooltip" title data-placement="left">Question: </span>
@@ -97,7 +99,6 @@
                 </dd>
             </dl>
             <button class="btn btn-primary" onclick="query_submit($('#test').val(), 
-                                                                  $('#machine').val(), 
                                                                   $('#question').val(), 
                                                                   $('#num_builds').val(), 
                                                                   $('#phase_select').val()
