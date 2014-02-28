@@ -636,22 +636,22 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   # Substitute NAs for blank cells rather than skipping.
   df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
   
-  if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
-    stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
-  if(x.ncol > .MAX_INSPECT_COL_VIEW)
-    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  
-  # Set the correct factor levels for each column
-  if(class(x) == "H2OParsedDataVA")
-    res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
-  else
-    res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
-  for(i in 1:df.ncol) {
-    if(!is.null(res$levels[[i]]))
-      df[,i] <- factor(df[,i], levels = res$levels[[i]])
-    else if(!is.numeric(df[,i]))
-      df[,i] <- as.numeric(df[,i])
-  }
+#   if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
+#     stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
+#   if(x.ncol > .MAX_INSPECT_COL_VIEW)
+#     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+#   
+#   # Set the correct factor levels for each column
+#   if(class(x) == "H2OParsedDataVA")
+#     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
+#   else
+#     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
+#   for(i in 1:df.ncol) {
+#     if(!is.null(res$levels[[i]]))
+#       df[,i] <- factor(df[,i], levels = res$levels[[i]])
+#     else if(!is.numeric(df[,i]))
+#       df[,i] <- as.numeric(df[,i])
+#   }
   return(df)
 }
 
