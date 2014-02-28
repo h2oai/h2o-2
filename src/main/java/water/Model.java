@@ -175,8 +175,7 @@ public abstract class Model extends Lockable<Model> {
     }.doAll(adaptFrm);
     // Return just the output columns
     int x=_names.length-1, y=adaptFrm.numCols();
-    Frame output = adaptFrm.extractFrame(x, y);
-    return output;
+    return adaptFrm.extractFrame(x, y);
   }
 
   /** Single row scoring, on a compatible Frame.  */
@@ -235,9 +234,9 @@ public abstract class Model extends Lockable<Model> {
       String ms[] = _domains[c];  // Model enum
       String ds[] =  domains[c];  // Data  enum
       if( ms == ds ) { // Domains trivially equal?
-      } else if( ms == null && ds != null ) {
+      } else if( ms == null ) {
         throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) numeric, was passed a categorical");
-      } else if( ms != null && ds == null ) {
+      } else if( ds == null ) {
         if( exact )
           throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) categorical, was passed a numeric");
         throw H2O.unimpl();     // Attempt an asEnum?
@@ -280,7 +279,7 @@ public abstract class Model extends Lockable<Model> {
 
     for( int c=0; c<map.length; c++ ) // Iterate over columns
       if(map[c] != null) { // Column needs adaptation
-        Vec adaptedVec = null;
+        Vec adaptedVec;
         if (toEnum[c]) { // Vector was flipped to column already, compose transformation
           adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], vfr.domains()[c], false);
         } else adaptedVec = frvecs[c].makeTransf(map[c]);
@@ -466,8 +465,8 @@ public abstract class Model extends Lockable<Model> {
     return sb.i(1).p("};").nl();
   }
   // Override in subclasses to provide some top-level model-specific goodness
-  protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; };
-  protected void toJavaInit(CtClass ct) { };
+  protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; }
+  protected void toJavaInit(CtClass ct) { }
   // Override in subclasses to provide some inside 'predict' call goodness
   // Method returns code which should be appended into generated top level class after
   // predit method.
@@ -491,7 +490,7 @@ public abstract class Model extends Lockable<Model> {
     return ccsb;
   }
 
-  protected String toJavaDefaultMaxIters() { return "-1"; };
+  protected String toJavaDefaultMaxIters() { return "-1"; }
 
   private static final String TOJAVA_MAP =
     "\n"+
