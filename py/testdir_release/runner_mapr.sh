@@ -121,6 +121,7 @@ myPy() {
 
 # do first
 myPy c6 test_c6_maprfs.py
+myPy c6 test_c6_maprfs_fvec.py
 # myPy c5 test_c5_KMeans_sphere15_180GB.py
 # don't run this until we know whether 0xcustomer permissions also exist for the hadoop job
 # myPy c1 test_c1_rel.py

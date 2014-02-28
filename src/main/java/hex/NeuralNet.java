@@ -9,10 +9,7 @@ import water.api.DocGen;
 import water.api.NeuralNetProgressPage;
 import water.api.RequestServer;
 import water.fvec.*;
-import water.util.D3Plot;
-import water.util.Log;
-import water.util.RString;
-import water.util.Utils;
+import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -268,7 +265,7 @@ public class NeuralNet extends ValidatedJob {
     NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls, this);
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
-    
+
     model.delete_and_lock(self());
 
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
@@ -506,7 +503,7 @@ public class NeuralNet extends ValidatedJob {
     }
     float[] preds = new float[out.length+1];
     for (int i=0;i<out.length;++i) preds[i+1] = (float)out[i];
-    preds[0] = Model.getPrediction(preds, ls[0]._a);
+    preds[0] = ModelUtils.getPrediction(preds, ls[0]._a);
 
     if( confusion != null ) {
       if (output.target() != Layer.missing_int_value) confusion[output.target()][(int)preds[0]]++;
@@ -902,7 +899,7 @@ public class NeuralNet extends ValidatedJob {
       assert out.length == preds.length;
       // convert to float
       for (int i=0; i<out.length; ++i) preds[i+1] = (float)out[i];
-      preds[0] = getPrediction(preds, out);
+      preds[0] = ModelUtils.getPrediction(preds, out);
       return preds;
     }
 

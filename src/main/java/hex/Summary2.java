@@ -341,6 +341,7 @@ public class Summary2 extends Iced {
 
       // tweak for integers
       if (d < 1. && vec.isInt()) d = 1.;
+<<<<<<< HEAD
       double binszTry = d;
       _start = binszTry * Math.floor(stat0._min2/binszTry);
       // kbn. ugly doing it twice, but need nbin * _binsz to fully cover the needed min/max range.
@@ -365,6 +366,12 @@ public class Summary2 extends Iced {
         
       // assert nbin >= BIN_GOAL : nbin+" too few bins";
       assert nbin <= MAX_HIST_SZ : nbin+" too many bins";
+=======
+      _binsz = d;
+      _start = _binsz * Math.floor(stat0._min2/_binsz);
+      int nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
+      assert nbin > 0;
+>>>>>>> c90df35312899fc35011c650a5c8dd29e05404fd
       hcnt = new long[nbin];
     } else { // vec does not contain finite numbers
       _start = vec.min();
@@ -550,8 +557,9 @@ public class Summary2 extends Iced {
         s  += bc;
         k++;
       }
+
       // kbn. add a % of the last bin.
-      // Our quantiles threshold is 1% or 99% at the ends..
+      // Our quanttiles threshold is 1% or 99% at the ends..
       // Not aligned to the bin thresholds (can be as small as 10 bins?)
       // Best would be: histogram at greater granularity than the smallest threshold step?
       addFromLastBin = 0;
@@ -560,10 +568,18 @@ public class Summary2 extends Iced {
         // kbn: assume linear distribution within a bin
         // Last bin doesn't have linear distribution, Max value truncates the bin.
 
+<<<<<<< HEAD
         // kbn: Start with min. it's just the last bin that overreaches.
         // Calc max-start of bin, and then get percentage of that
         // Avoids gettings values that are too big for the 99% qtile
         // if max somehow ended up before this bin, hcnt[k] should be 0
+=======
+        // kbn: we start with min. So it's just at the max size the bin overreaches
+        // so we really should do max-start of bin, and then get percentage of that
+        // This avoids gettings values that are too big for the 99% qtile
+        // if max is was before this bin, hcnt[k] should be 0
+        
+>>>>>>> c90df35312899fc35011c650a5c8dd29e05404fd
         double binRange = _binsz; // normal case. linear distribution assumed.
         if ( k == (hcnt.length-1) ) {
             binRange = _maxs[0] - (_mins[0] + k*_binsz); // non-linear distribution in last bin!
@@ -577,8 +593,6 @@ public class Summary2 extends Iced {
         addFromLastBin = pctOfLastBin * binRange;
         if( !(addFromLastBin <= _binsz) )
           Log.warn("Summary2, unexpectedly large offset: "+addFromLastBin+" > "+_binsz);
-      // how many bins are used for this column? affects accuracy.
-      // Log.info("Summary2 quantiles created from hcnt.length: "+hcnt.length+" bins");
         
       }
 

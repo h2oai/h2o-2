@@ -415,6 +415,24 @@ setMethod("log", "H2OParsedData", function(x) { .h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { .h2o.__unop2("exp", x) })
 setMethod("is.na", "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
 
+# TODO: s4 year, month impls as well?
+h2o.year <- function(x){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
+  .h2o.__unop2('year', x)
+}
+
+h2o.month <- function(x){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
+  .h2o.__unop2('month', x)
+}
+
+year <- function(x) UseMethod('year', x)
+year.H2OParsedData <- h2o.year
+month <- function(x) UseMethod('month', x)
+month.H2OParsedData <- h2o.month
+
 as.h2o <- function(client, object, key = "", header, sep = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")
@@ -455,6 +473,64 @@ h2o.table <- function(x) {
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(ncol(x) > 2) stop("Unimplemented")
   .h2o.__unop2("table", x)
+}
+
+h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
+  if( missing(.data) ) stop('must specify .data')
+  if( !(class(.data) %in% c('H2OParsedData', 'H2OParsedDataVA')) ) stop('.data must be an h2o data object')
+  if( missing(.variables) ) stop('must specify .variables')
+  if( missing(.fun) ) stop('must specify .fun')
+
+  mm <- match.call()
+
+  # we accept eg .(col1, col2), c('col1', 'col2'), 1:2, c(1,2)
+  # as column names.  This is a bit complicated
+  if( class(.variables) == 'character'){
+    vars <- .variables
+    idx <- match(vars, colnames(.data))
+  } else if( class(.variables) == 'H2Oquoted' ){
+    vars <- as.character(.variables)
+    idx <- match(vars, colnames(.data))
+  } else if( class(.variables) == 'quoted' ){ # plyr overwrote our . fn
+    vars <- names(.variables)
+    idx <- match(vars, colnames(.data))
+  } else if( class(.variables) == 'integer' ){
+    vars <- .variables
+    idx <- .variables
+  } else if( class(.variables) == 'numeric' ){   # this will happen eg c(1,2,3)
+    vars <- .variables
+    idx <- as.integer(variables)
+  }
+
+  bad <- is.na(idx) | idx < 1 | idx > ncol(.data)
+  if( any(bad) ) stop( sprintf('can\'t recognize .variables %s', paste(vars[bad], sep=',')) )
+
+  fun_name <- mm[[ '.fun' ]]
+  exec_cmd <- sprintf('ddply(%s,c(%s),%s)', .data@key, paste(idx, collapse=','), as.character(fun_name))
+  res <- .h2o.__exec2(.data@h2o, exec_cmd)
+  new('H2OParsedData', h2o=.data@h2o, key=res$dest_key)
+}
+ddply <- h2o.ddply
+
+# TODO: how to avoid masking plyr?
+. <- function(...) {
+  mm <- match.call()
+  mm <- mm[-1]
+  structure( as.list(mm), class='H2Oquoted')
+}
+
+h2o.addFunction <- function(object, fun, name){
+  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
+  if( missing(fun) ) stop('must specify fun')
+  if( !missing(name) ){
+  if( class(name) != 'character' ) stop('name must be a name')
+    fun_name <- name
+  } else {
+    fun_name <- match.call()[['fun']]
+  }
+  src <- paste(deparse(fun), collapse='\n')
+  exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
+  res <- .h2o.__exec2(object, exec_cmd)
 }
 
 h2o.runif <- function(x, min = 0, max = 1) {
@@ -604,10 +680,11 @@ setMethod("dim", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
   as.numeric(c(res$numRows, res$numCols))
 })
+
 setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), sep='')
   ttt <- getURL(url)
   n = nchar(ttt)
 
@@ -636,22 +713,22 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   # Substitute NAs for blank cells rather than skipping.
   df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
   
-  if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
-    stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
-  if(x.ncol > .MAX_INSPECT_COL_VIEW)
-    warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  
-  # Set the correct factor levels for each column
-  if(class(x) == "H2OParsedDataVA")
-    res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
-  else
-    res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
-  for(i in 1:df.ncol) {
-    if(!is.null(res$levels[[i]]))
-      df[,i] <- factor(df[,i], levels = res$levels[[i]])
-    else if(!is.numeric(df[,i]))
-      df[,i] <- as.numeric(df[,i])
-  }
+#   if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
+#     stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
+#   if(x.ncol > .MAX_INSPECT_COL_VIEW)
+#     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+#   
+#   # Set the correct factor levels for each column
+#   if(class(x) == "H2OParsedDataVA")
+#     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
+#   else
+#     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
+#   for(i in 1:df.ncol) {
+#     if(!is.null(res$levels[[i]]))
+#       df[,i] <- factor(df[,i], levels = res$levels[[i]])
+#     else if(!is.numeric(df[,i]))
+#       df[,i] <- as.numeric(df[,i])
+#   }
   return(df)
 }
 
@@ -1069,10 +1146,17 @@ summary.H2OParsedDataVA <- function(object, ...) {
                                paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))
     }
     else if(res[[i]]$type == "enum") {
+      rhist = res[[i]]$histogram
+      len = min(length(rhist$bins), 6)
+      top.ix = sort.int(rhist$bins, decreasing=T, index.return=T)$ix[1:len]
+
+      counts = rhist$bins[top.ix]
+      if(is.null(rhist$bin_names)) domains = top.ix[1:len] else domains = rhist$bin_names[top.ix]
+      nspace = max(nchar(domains)) - nchar(domains)
+
       col = matrix(rep("", 6), ncol=1)
-      len = length(res[[i]]$histogram$bins)
-      for(j in 1:min(6,len))
-        col[j] = paste(res[[i]]$histogram$bin_names[len-j+1], ": ", res[[i]]$histogram$bins[len-j+1], sep="")
+      for(j in 1:len)
+        col[j] = paste(domains[j], paste(rep(" ", nspace[j]), collapse = ""), ":", counts[j], sep="")
       result = cbind(result, col)
     }
   }

@@ -42,7 +42,7 @@ test.binop2.pipe <- function(conn) {
   Log.info("Selecting a column")
   col <- sample(colnames[colTypes != "enum"], 1)
   col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col))
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col+1, sep = "", collapse = ""))
 
   if(length(colnames(hex)) == 1) {
     Log.info(paste("Using column: ", colnames(hex)))

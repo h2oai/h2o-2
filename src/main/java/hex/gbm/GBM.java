@@ -19,6 +19,7 @@ import water.util.Utils;
 import java.util.Arrays;
 
 import static water.util.Utils.div;
+import static water.util.ModelUtils.getPrediction;
 
 // Gradient Boosted Trees
 //

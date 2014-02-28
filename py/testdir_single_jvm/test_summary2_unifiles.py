@@ -85,6 +85,8 @@ class Basic(unittest.TestCase):
 
     def test_summary2_unifiles(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
+
+        # old with 20 bins
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
             ('cars.csv', 'c.hex', [
@@ -118,8 +120,43 @@ class Basic(unittest.TestCase):
                 ('x', -100.00, -50.45, -1.13, 49.28, 100.00),
             ],
             ),
-
         ]
+        # new with 1000 bins. copy expected from R
+        tryList = [
+            ('cars.csv', 'c.hex', [
+                ('name', None),
+                ('economy (mpg)', None),
+                ('cylinders', None),
+            ],
+            ),
+            # colname, (min, 25th, 50th, 75th, max)
+            ('runif.csv', 'x.hex', [
+                ('' ,  1.00, 5000.0, 10000.0, 15000.0, 20000.00),
+                ('D', -5000.00, -3735.0, -2443, -1187.0, 99.8),
+                ('E', -100000.0, -49208.0, 1783.8, 50621.9, 100000.0),
+                ('F', -1.00, -0.4886, 0.00868, 0.5048, 1.00),
+            ],
+            ),
+
+            ('runifA.csv', 'A.hex', [
+                ('',  1.00, 25.00, 50.00, 75.00, 100.0),
+                ('x', -99.0, -44.7, 7.43, 58.00, 91.7),
+            ],
+            ),
+
+            ('runifB.csv', 'B.hex', [
+                ('',  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
+                ('x', -100.00, -50.0, 0.987, 51.7, 100,00),
+            ],
+            ),
+
+            ('runifC.csv', 'C.hex', [
+                ('',  1.00, 25002.00, 50002.00, 75002.00, 100000.00),
+                ('x', -100.00, -50.45, -1.135, 49.28, 100.00),
+            ],
+            ),
+        ]
+
 
         timeoutSecs = 10
         trial = 1
@@ -153,6 +190,7 @@ class Basic(unittest.TestCase):
             summaries = summaryResult['summaries']
 
             for expected, column in zip(expectedCols, summaries):
+
                 # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
                 colname = column['colname']
                 if expected:
