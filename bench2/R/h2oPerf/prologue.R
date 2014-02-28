@@ -10,6 +10,13 @@
 #                                                        # 
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
+
+
+
+#TODO list:
+  #Track upload, import, and import HDFS
+  #Track VA v FV
+
 options(echo=F)
 source("../../../R/h2o-package/R/Internal.R")
 source("../../../R/h2o-package/R/Algorithms.R")
@@ -159,35 +166,33 @@ function() {
 
 #Import/Parsing
 upload.VA<-
-function(pkey) {
-  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
-  f    <- ifelse(.isTest, testData, trainData)
+function(pkey, dataPath) {
   h2o.uploadFile.VA(h, path = f, key = pkey)
-  #.isTest <<- TRUE
 }
 
 upload.FV<-
-function(pkey) {
-  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
-  f    <- ifelse(.isTest, testData, trainData)
-  h2o.uploadFile.FV(h, f, key = pkey)
-  #.isTest <<- TRUE
+function(pkey, dataPath) {
+  h2o.uploadFile.FV(h, dataPath, key = pkey)
+}
+
+import.VA<-
+function(pkey, dataPath) {
+  h2o.importFile.VA(h, dataPath, key = pkey)
+}
+
+import.FV<-
+function(pkey, dataPath) {
+  h2o.importFile.FV(h, dataPath, key = pkey)
 }
 
 hdfs.VA<-
-function(pkey) {
-  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
-  f    <- ifelse(.isTest, testData, trainData)
-  h2o.importHDFS.VA(h, f, key = pkey)
-  #.isTest <<- TRUE
+function(pkey, dataPath) {
+  h2o.importHDFS.VA(h, dataPath, key = pkey)
 }
 
 hdfs.FV<-
-function(pkey) {
-  #pkey <- ifelse(.isTest, "test.hex", "parsed.hex")
-  f    <- ifelse(.isTest, testData, trainData)
-  h2o.importHDFS.FV(h, f, key = pkey)
-  #.isTest <<- TRUE
+function(pkey, dataPath) {
+  h2o.importHDFS.FV(h, dataPath, key = pkey)
 }
 
 #Modeling
