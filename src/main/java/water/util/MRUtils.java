@@ -152,25 +152,21 @@ public class MRUtils {
    * Stratified sampling for classifiers
    * @param fr Input frame
    * @param label Label vector (must be enum)
-   * @param minrows Minimum number of rows in the returned frame, should be (much) greater than the number of classes
    * @param maxrows Maximum number of rows in the returned frame, must be > minrows
    * @param seed RNG seed for sampling
    * @param sampling_ratios Optional: array containing the requested sampling ratios per class (in order of domains), will be overwritten if it contains all 0s
    * @return Sampled frame, with approximately the same number of samples from each class (or given by the requested sampling ratios)
    */
-  public static Frame sampleFrameStratified(final Frame fr, Vec label, float[] sampling_ratios, long minrows, long maxrows, final long seed, final boolean debug) {
+  public static Frame sampleFrameStratified(final Frame fr, Vec label, float[] sampling_ratios, long maxrows, final long seed, final boolean debug) {
     if (fr == null) return null;
     assert(label.isEnum());
-    assert(maxrows >= minrows);
-    assert(maxrows >= fr.numRows());
 
-    // create sampling_ratios (fill existing array if not null)
+    // create sampling_ratios for class balance with max. maxrows rows (fill existing array if not null)
     if (sampling_ratios == null || (Utils.minValue(sampling_ratios) == 0 && Utils.maxValue(sampling_ratios) == 0)) {
       long[] dist = new ClassDist(label).doAll(label).dist();
       assert(dist.length > 0);
-      assert(minrows >= dist.length);
+      Log.info("Stratified sampling of data set containing " + fr.numRows() + " rows from " + dist.length + " classes.");
       if (debug) {
-        Log.info("Before stratified sampling: " + fr.numRows() + " rows.");
         for (int i=0; i<dist.length;++i) {
           Log.info("Class " + label.domain(i) + ": count: " + dist[i] + " prior: " + (float)dist[i]/fr.numRows());
         }
@@ -182,16 +178,27 @@ public class MRUtils {
       }
       assert(sampling_ratios.length == dist.length);
       for (int i=0; i<dist.length;++i) {
-        sampling_ratios[i] = ((float)fr.numRows() / label.domain().length) / dist[i] ;
+        sampling_ratios[i] = ((float)fr.numRows() / label.domain().length) / dist[i]; // prior^-1 / num_classes
       }
 
-      float inv_scale = Utils.minValue(sampling_ratios); //minority class determines upscaling factor
-      long numrows = (long)((float)fr.numRows() / inv_scale + 0.5f); //number of total rows if full upsampling is done
-      if (debug) Log.info("Full class balance via oversampling requires approx. " + numrows + " rows.");
-      numrows = Math.min(maxrows, numrows); // at most maxrows
-      numrows = Math.max(minrows, numrows); // at least minrows
-      Utils.mult(sampling_ratios, (float)numrows/fr.numRows()); //adjust the sampling_ratios by the global rescaling factor
-      Log.info("Doing stratified sampling to obtain class balance with " + numrows + " total rows.");
+      final float inv_scale = Utils.minValue(sampling_ratios); //majority class has lowest required oversampling factor to achieve balance
+      Utils.div(sampling_ratios, inv_scale); //want sampling_ratio 1.0 for majority class (no downsampling)
+
+      final long numrows = (long)((float)fr.numRows() / inv_scale + 0.5f);
+      assert(numrows >= fr.numRows()); //balance cannot require downsampling
+      final long actualnumrows = Math.min(maxrows, numrows); //cap #rows at maxrows
+      Log.info("Balancing class counts by sampling to a total of " + String.format("%,d", actualnumrows) + " rows.");
+
+      if (actualnumrows != numrows) {
+        Utils.mult(sampling_ratios, (float)actualnumrows/numrows); //adjust the sampling_ratios by the global rescaling factor
+        if (debug)
+          Log.info("Downsampling majority class by " + (float)actualnumrows/numrows
+                  + " to limit number of rows to " + String.format("%,d", maxrows));
+      }
+      Log.info("Majority class (" + label.domain()[Utils.minIndex(sampling_ratios)].toString()
+              + ") sampling ratio: " + Utils.minValue(sampling_ratios));
+      Log.info("Minority class (" + label.domain()[Utils.maxIndex(sampling_ratios)].toString()
+              + ") sampling ratio: " + Utils.maxValue(sampling_ratios));
     }
 
     return sampleFrameStratified(fr, label, sampling_ratios, seed, debug);
@@ -218,7 +225,7 @@ public class MRUtils {
       public void map(Chunk[] cs, NewChunk[] ncs) {
         final Random rng = getDeterRNG(seed + cs[0].cidx());
         for (int r = 0; r < cs[0]._len; r++) {
-          int label = (int)cs[labelidx].at80(r);
+          final int label = (int)cs[labelidx].at80(r);
           assert(sampling_ratios.length > label && label >= 0);
           final int sampling_reps = Utils.getPoisson(sampling_ratios[label], rng);
           for (int i = 0; i < ncs.length; i++) {

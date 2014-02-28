@@ -52,6 +52,18 @@ public class Utils {
       if (from[i]>from[result]) result = i;
     return result;
   }
+  public static int minIndex(int[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
+  public static int minIndex(float[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
   public static float maxValue(float[] from) {
     float result = from[0];
     for (int i = 1; i<from.length; ++i)
