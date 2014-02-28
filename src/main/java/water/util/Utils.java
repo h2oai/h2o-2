@@ -1021,4 +1021,22 @@ public class Utils {
     }
     return new int[][] { pvals, pindx };
   }
+
+  /**
+   * Poisson-distributed RNG
+   * @param lambda Lambda parameter
+   * @return Poisson-distributed random number in [0,inf)
+   */
+  public static int getPoisson(double lambda, Random rng) {
+    double L = Math.exp(-lambda);
+    double p = 1.0;
+    int k = 0;
+    if (rng == null) rng = new Random();
+    do {
+      k++;
+      p *= rng.nextDouble();
+    } while (p > L);
+    return k - 1;
+  }
+
 }
