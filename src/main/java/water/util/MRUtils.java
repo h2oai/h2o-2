@@ -225,6 +225,7 @@ public class MRUtils {
       public void map(Chunk[] cs, NewChunk[] ncs) {
         final Random rng = getDeterRNG(seed + cs[0].cidx());
         for (int r = 0; r < cs[0]._len; r++) {
+          if (cs[labelidx].isNA0(r)) continue; //skip missing labels
           final int label = (int)cs[labelidx].at80(r);
           assert(sampling_ratios.length > label && label >= 0);
           final int sampling_reps = Utils.getPoisson(sampling_ratios[label], rng);
