@@ -97,13 +97,16 @@ class TableRow:
         self.table_name = table_name
         self.column_names = self.perfdb_connection.colnames(table_name)
         self.row = dict((el,"") for el in self.column_names)
+        self.test_run_id = self.perfdb_connection.this_test_run_id
         if (table_name + "_id") not in self.row.keys():
             self.pk = self.perfdb_connection.this_test_run_id
-            self.row['test_run_id'] = self.pk
+            #self.row['test_run_id'] = self.pk
         else:
             self.pk = self.perfdb_connection.get_table_pk(table_name)
-            self.row['test_run_id'] = self.perfdb_connection.this_test_run_id
+            #self.row['test_run_id'] = self.perfdb_connection.this_test_run_id
             self.row[table_name + "_id"] = int(self.pk) + 1
+
+        self.row['test_run_id'] = self.test_run_id
 
     def update(self, commit = False):
         """

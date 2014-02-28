@@ -3,9 +3,9 @@ $(document).ready(function() {
    source: function (query, process) {
      $.ajax({
        url: '../prototype/php/search.php',
-      type: 'POST',
+      type: 'GET',
       dataType: 'JSON',
-      data: 'id=test' + '&query=' + query,
+      data: 'id=test_name' + '&query=' + query + '&table=test_run',
       success: function(data) {
         process(data);
       }
@@ -14,6 +14,7 @@ $(document).ready(function() {
   });
 });
 
+/*
 $(document).ready(function() {
   $('#machine').typeahead({
     source: function (query, process) {
@@ -21,7 +22,7 @@ $(document).ready(function() {
         url: '../prototype/php/search.php',
         type: 'POST',
         dataType: 'JSON',
-        data: 'id=machine' + '&query=' + query,
+        data: 'id=machine' + '&query=' + query + '&table=,
         success: function(data) {
           process(data);
         }
@@ -29,15 +30,16 @@ $(document).ready(function() {
     }
   });
 });
+*/
 
 $(document).ready(function() {
   $('#question').typeahead({
     source: function (query, process) {
       $.ajax({
         url: '../prototype/php/search.php',
-        type: 'POST',
+        type: 'GET',
         dataType: 'JSON',
-        data: 'id=question' + '&query=' + query,
+        data: 'id=question' + '&query=' + query + '&table=perf_questions',
         success: function(data) {
           process(data);
         }

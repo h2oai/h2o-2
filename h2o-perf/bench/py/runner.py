@@ -37,7 +37,7 @@ def main(argv):
                         os.path.dirname(test_root_output_dir), "tests")
 
     h2o_jar = os.path.abspath(
-                  os.path.join(test_root_dir, "..", "..", "target", "h2o.jar"))
+                  os.path.join(test_root_dir, "..", "..", "perf-target", "h2o.jar"))
 
     if not os.path.exists(h2o_jar):
         print("")

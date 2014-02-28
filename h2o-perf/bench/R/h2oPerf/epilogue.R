@@ -131,7 +131,7 @@ function() {
 function() {
   r <- list(binomial_result = 
                 list(auc = ifelse(auc == "NaN", .Nan, auc),
-                     precision_ = ifelse(precision[[1]] == "NaN", .NaN, precision[[1]]),
+                     preccision = ifelse(precision[[1]] == "NaN", .NaN, precision[[1]]),
                      recall = ifelse(recall[[1]] == "NaN", .NaN, recall[[1]]),
                      error_rate = ifelse(error_rate[[1]] == "NaN", .NaN, error_rate[[1]]),
                      minority_error_rate = ifelse(minority_error_rate[[1]] == "NaN", .NaN, minority_error_rate[[1]])))

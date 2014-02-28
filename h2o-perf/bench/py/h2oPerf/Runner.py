@@ -98,7 +98,7 @@ class PerfRunner:
             self.cloud.append(cloud)
             PerfUtils.start_cloud(self, test.remote_hosts)
             test.port = self.cloud[0].get_port()
-
+            
             test.test_run = TableRow("test_run", self.perfdb)
             test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
             test.do_test()
@@ -107,6 +107,7 @@ class PerfRunner:
             test.test_run.row['test_name'] = test.test_name
             test.test_run.update(True)
             PerfUtils.stop_cloud(self, test.remote_hosts)
+            self.perfdb.this_test_run_id += 1
 
     def __get_instance_type__(self):
         return "localhost"

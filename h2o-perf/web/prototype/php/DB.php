@@ -1,8 +1,10 @@
 <?php
 
+ ini_set('display_errors','On');
+ error_reporting(E_ALL);
   //connect to the database (possibly don't use this tableName)
 
-  $host = "localhost:3306";
+  $host = "localhost";
   $user = "spencer";
   $pass = "spencer";
 
@@ -14,7 +16,7 @@
     {   
     echo "Failed to connect to MySQL: " . mysqli_connect_error();
     }
-  
+
   function fetch_records($records) {
     $arr = array();
     $res = $records->get_result();
@@ -35,7 +37,7 @@
     return $arr;
   }
 
-  #TODO: Make this functional
+  #TODO: Hook this up...
   function perform_query($q, $bind, $bind_types) {
     $res = mysqli_prepare($con, $q);
     if(count($bind) > 0) {

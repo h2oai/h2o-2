@@ -38,7 +38,8 @@ function makeTable(json, svg) {
 
 //show the num_builds input field when the question is appropriate
 function showNum() {
-  if ($('#question').val() === "last N") {
+  // returns -1 if "last N" is not a substring (and hence does not display the field)
+  if ($('#question').val().indexOf("last N") != -1) {
     document.getElementById("num_builds_text").style["display"] = "inline-block";
     document.getElementById("num_builds_div").style["display"] = "inline-block";
   } else {
