@@ -709,7 +709,7 @@ public class NNModel extends Model {
           sb.append("</h5>");
           error.valid_confusion_matrix.toHTML(sb);
         } else if (smallenough) sb.append(" Not yet computed.</h5>");
-        else sb.append("Too large." + "</h5>");
+        else sb.append(" Too large." + "</h5>");
       }
     }
 
