@@ -211,7 +211,7 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_imodel_jar
 build_jar
-cp "target/h2o.jar" "PerformanceFrameWork/target/"
+cp "target/h2o.jar" "PerformanceFrameWork/perf-target/"
 build_src_jar
 build_samples
 if [ "$1" = "build" ]; then exit 0; fi
