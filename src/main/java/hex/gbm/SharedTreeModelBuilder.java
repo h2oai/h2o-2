@@ -18,6 +18,8 @@ import water.util.Utils;
 import java.util.Arrays;
 import java.util.Random;
 
+import static water.util.ModelUtils.getPrediction;
+
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
 //
@@ -732,7 +734,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
             for(int i = 0; i < _cms.length; ++i)
               _cms[i].add(yact, ( (1 - (fs[yact+1] / sum) )>= DEFAULT_THRESHOLDS[i])?1:0);
           }
-          int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : Model.getPrediction(fs, row);
+          int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
           _cm[yact][ypred]++;      // actual v. predicted
         }
         _snrows++;

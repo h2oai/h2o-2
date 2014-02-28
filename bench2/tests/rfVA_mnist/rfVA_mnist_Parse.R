@@ -1,11 +1,12 @@
 source("../../R/h2oPerf/prologue.R")
 
-data_source <<- "smalldata"
-trainData   <<- "~/master/h2o/smalldata/mnist/train.csv.gz"
-response <<- "C785"
-upload.VA("parsed.hex")
+data_source <<- "home-0xdiag-datasets"
 
-testData    <<- "~/master/h2o/smalldata/mnist/test.csv.gz"
-upload.VA("test.hex")
+trainData   <<-  "/home/0xdiag/datasets/mnist/mnist8m/mnist8m-train-1.csv"
+response <<- "C1"
+upload.VA("parsed.hex", trainData)
+
+testData    <<-  "/home/0xdiag/datasets/mnist/mnist8m/mnist8m-test-1.csv"
+upload.VA("test.hex", testData)
 
 source("../../R/h2oPerf/epilogue.R")

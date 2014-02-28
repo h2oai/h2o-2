@@ -1043,6 +1043,16 @@ class H2O(object):
             params={"value": value, "key": key, "replication_factor": repl},
             extraComment = str(value) + "," + str(key) + "," + str(repl))
 
+    # {"Request2":0,"response_info":i
+    # {"h2o":"pytest-kevin-4530","node":"/192.168.0.37:54321","time":0,"status":"done","redirect_url":null},
+    # "levels":[null,null,null,null]}
+    # FIX! what is this for? R uses it. Get one per col? maybe something about enums
+    def levels(self, source=None):
+        return self.__do_json_request(
+            '2/Levels2.json',
+            params={"source": key, },
+            )
+
     def put_file(self, f, key=None, timeoutSecs=60):
         if key is None:
             key = os.path.basename(f)

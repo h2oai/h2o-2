@@ -6,7 +6,7 @@
 #                                                        # 
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
-.NaN = -999999991
+.NaN = -1
 end_time <<- round(System$currentTimeMillis())[[1]]
 correct_pass <<- 1
 time_pass <<- 1

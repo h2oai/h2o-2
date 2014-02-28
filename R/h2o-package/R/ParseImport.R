@@ -259,7 +259,7 @@ h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep 
   if(!is.logical(silent)) stop("silent must be of class logical")
   
   url = paste("http://", object@ip, ":", object@port, "/PostFile.json", sep="")
-  url = paste(url, "?key=", path, sep="")
+  url = paste(url, "?key=", URLencode(path), sep="")
   if(file.exists(h2o.__getLogPath("Command"))) .h2o.__logIt(url, NULL, "Command")
   if(silent)
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
@@ -278,7 +278,7 @@ h2o.uploadFile.FV <- function(object, path, key = "", parse = TRUE, header, sep 
   if(!is.logical(silent)) stop("silent must be of class logical")
   
   url = paste("http://", object@ip, ":", object@port, "/2/PostFile.json", sep="")
-  url = paste(url, "?key=", path, sep="")
+  url = paste(url, "?key=", URLencode(path), sep="")
   if(file.exists(h2o.__getLogPath("Command"))) .h2o.__logIt(url, NULL, "Command")
   if(silent)
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))

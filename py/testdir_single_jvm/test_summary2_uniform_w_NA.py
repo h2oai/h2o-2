@@ -4,6 +4,9 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
 
 DO_TRY_SCIPY = False
 
+print "Same as test_summary2_uniform.py except for every data row,"
+print "5 rows of synthetic NA rows are added. results should be the same for quantiles"
+
 def twoDecimals(l): 
     if isinstance(l, list):
         return ["%.2f" % v for v in l] 
@@ -71,9 +74,17 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
         ri = expectedMin + (random.uniform(0,1) * expectedRange)
         for j in range(colCount):
             rowData.append(ri)
-
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
+
+        # add 5 rows of NAs, for every row of valid dat
+        rowData = []
+        for j in range(colCount):
+            # this shouldn't be h2o parsed as an enum?...NA is special?
+            rowData.append('NA')
+        rowDataCsv = ",".join(map(str,rowData))
+        for k in range(5):
+            dsf.write(rowDataCsv + "\n")
 
     dsf.close()
 
@@ -95,7 +106,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary2_uniform(self):
+    def test_summary2_uniform_w_NA(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
@@ -148,7 +159,7 @@ class Basic(unittest.TestCase):
             numCols = inspect["num_cols"]
 
             h2o.beta_features = True
-            summaryResult = h2o_cmd.runSummary(key=hex_key)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, noPrint=False)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             # only one column

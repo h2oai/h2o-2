@@ -8,9 +8,7 @@ import water.api.DocGen;
 import water.api.Inspect2;
 import water.api.Request.API;
 import water.fvec.Frame;
-import water.util.D3Plot;
-import water.util.Log;
-import water.util.Utils;
+import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -538,7 +536,7 @@ public class NNModel extends Model {
     if (isClassifier()) {
       assert(preds.length == out.length+1);
       for (int i=0; i<preds.length-1; ++i) preds[i+1] = (float)out[i];
-      preds[0] = getPrediction(preds, data);
+      preds[0] = ModelUtils.getPrediction(preds, data);
     } else {
       assert(preds.length == 1 && out.length == 1);
       if (model_info().data_info()._normRespMul != null)

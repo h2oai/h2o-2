@@ -19,6 +19,8 @@ import water.util.Utils;
 
 import java.util.Random;
 
+import static water.util.ModelUtils.getPrediction;
+
 public class NeuralNetIrisTest2 extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
   Frame _train, _test;
@@ -248,7 +250,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                           // do the same as H2O here (compare float values and break ties based on row number)
                           float[] preds = new float[ref_preds.length+1];
                           for (int j=0; j<ref_preds.length; ++j) preds[j+1] = (float)ref_preds[j];
-                          preds[0] = Model.getPrediction(preds, i);
+                          preds[0] = getPrediction(preds, i);
 
                           // compare predicted label
                           Assert.assertTrue(preds[0] == (int) fpreds.vecs()[0].at(i));
