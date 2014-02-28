@@ -531,6 +531,7 @@ public class DTree extends Iced {
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
     @API(help="Confusion matrix domain.")                                             public final String[]        cmDomain;
     @API(help="Unscaled variable importance for individual input variables.")         public final float []        varimp;
+    @API(help="Standard deviation of variable importance for input variables.")       public final float []        varimpSD;
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
@@ -542,9 +543,10 @@ public class DTree extends Iced {
       treeStats = null;
       this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
       this.varimp = null;
+      this.varimpSD = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, float[] varimp) {
+    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, float[] varimp, float[] varimpSD) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -557,20 +559,21 @@ public class DTree extends Iced {
       if (cms      != null) this.cms       = cms;      else this.cms       = prior.cms;
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
+      if (varimpSD != null) this.varimpSD  = varimpSD; else this.varimpSD  = prior.varimpSD;
     }
 
     public TreeModel(TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
-      this(prior, append(prior.treeBits, trees), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null);
+      this(prior, append(prior.treeBits, trees), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null, null);
     }
     public TreeModel(TreeModel prior, DTree[] trees, TreeStats tstats) {
-      this(prior, append(prior.treeBits, trees), null, null, tstats, null);
+      this(prior, append(prior.treeBits, trees), null, null, tstats, null, null);
     }
     public TreeModel(TreeModel prior, double err, ConfusionMatrix cm) {
-      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, null);
+      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, null, null);
     }
 
-    public TreeModel(TreeModel prior, float[] varimp) {
-      this(prior, null, null, null, null, varimp);
+    public TreeModel(TreeModel prior, float[] varimp, float[] varimpSD) {
+      this(prior, null, null, null, null, varimp, varimpSD);
     }
 
     private static final CompressedTree[][] append(CompressedTree[][] prior, DTree[] tree ) {
@@ -732,7 +735,11 @@ public class DTree extends Iced {
       sb.append("</tr>");
       sb.append("<tr><th class='warning'>Mean Decrease Accuracy</th>");
       for( int i=0; i<varimp.length; i++ )
-        sb.append(String.format("<td>%5.3f</td>",varimp[i]));
+        sb.append(String.format("<td>%5.4f</td>",varimp[i]));
+      sb.append("</tr>");
+      sb.append("<tr><th class='warning'>SD</th>");
+      for( int i=0; i<varimpSD.length; i++ )
+        sb.append(String.format("<td>%5.4f</td>",varimpSD[i]));
       sb.append("</tr>");
       DocGen.HTML.arrayTail(sb);
       // Generate a graph - horrible code
@@ -829,6 +836,7 @@ public class DTree extends Iced {
       }
 
       private float scoreLeaf( AutoBuffer ab ) { return ab.get4f(); }
+
       public Random rngForChunk( int cidx ) {
         Random rand = createRNG(_seed);
         // Argh - needs polishment
