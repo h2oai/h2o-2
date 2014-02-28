@@ -248,6 +248,9 @@ public class MRUtils {
       return sampleFrameStratified(fr, label, sampling_ratios, seed+1, debug);
     }
 
+    // shuffle intra-chunk
+    r = shuffleFramePerChunk(r, seed+0x580FF13);
+
     return r;
   }
 }
