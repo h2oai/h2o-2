@@ -72,6 +72,7 @@ public class Expr2Test extends TestUtil {
       checkStr("x=mean");         // Assign x to the built-in fcn mean
       checkStr("x=mean=3",3);     // Assign x & id mean with 3; "mean" here is not related to any built-in fcn
       checkStr("x=mean(c(3))",3); // Assign x to the result of running fcn mean(3)
+      checkStr("x=mean(c(\n3))",3); // Assign x to the result of running fcn mean(3)
       checkStr("x=mean+3","Arg 'x' typed as dblary but passed dbl(ary)\n"+"x=mean+3\n"+"  ^-----^\n");       // Error: "mean" is a function; cannot add a function and a number
       checkStr("apply(c(1,2,3),,nrow)","Missing argument\napply(c(1,2,3),,nrow)\n               ^\n");
 
@@ -81,7 +82,7 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[2,+]","Must be scalar or array\n"+"h.hex[2,+]\n"+"        ^-^\n");   // Function not allowed
       checkStr("h.hex[2+4,-4]");// Select row 6, all-cols but 4
       checkStr("h.hex[1,-1]; h.hex[2,-2]; h.hex[3,-3]");// Partial results are freed
-      checkStr("h.hex[2+3,h.hex]","Selector must be a single column: {pclass,name,sex,age,sibsp,parch,ticket,fare,cabin,embarked,boat,body,home.dest,survived}, 1.1 KB\n" +
+      checkStr("h.hex[2+3,h.hex]","Selector must be a single column: {pclass,name,sex,age,sibsp,parch,ticket,fare,cabin,embarked,boat,body,home.dest,survived}, 1.2 KB\n" +
               "Chunk starts: {0,}"); // Error: col selector has too many columns
       checkStr("h.hex[2,]");    // Row 2 all cols
       checkStr("h.hex[,3]");    // Col 3 all rows
@@ -141,10 +142,10 @@ public class Expr2Test extends TestUtil {
       checkStr("T||F&&F",1);    // Evals as T|(F&F)==1 not as (T|F)&F==0
 
       // User functions
-      checkStr("function(=){x+1}(2)");
-      checkStr("function(x,=){x+1}(2)");
-      checkStr("function(x,<-){x+1}(2)");
-      checkStr("function(x,x){x+1}(2)");
+      checkStr("function(=){x+1}(2)","Invalid var\nfunction(=){x+1}(2)\n         ^\n");
+      checkStr("function(x,=){x+1}(2)","Invalid var\nfunction(x,=){x+1}(2)\n           ^\n");
+      checkStr("function(x,<-){x+1}(2)","Invalid var\nfunction(x,<-){x+1}(2)\n           ^\n");
+      checkStr("function(x,x){x+1}(2)","Repeated argument\nfunction(x,x){x+1}(2)\n           ^^\n");
       checkStr("function(x,y,z){x[]}(h.hex,1,2)");
       checkStr("function(x){x[]}(2)");
       checkStr("function(x){x+1}(2)",3);
@@ -182,7 +183,7 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){h.hex})","apply requires that ary fun(ary x) return 1 column");
       checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
-      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",183.96); // Row-wise apply on mean
+      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",184.96); // Row-wise apply on mean
 
       // Conditional selection; 
       checkStr("ifelse(0,1,2)",2);
@@ -242,6 +243,20 @@ public class Expr2Test extends TestUtil {
       checkStr("ddply(h.hex,NA,sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,NA,3),sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,99,3),sum)","Column 99 out of range for frame columns 17");
+
+      // Newlines as statement-ends
+      checkStr("3*4+5*6",42);
+      checkStr("(h.hex[1,1]=2)",2);
+      checkStr("(h.hex[1,1]=2\n)",2);
+      checkStr("(h.hex[1,1]\n=2)",2);
+      checkStr("function(){x=1.23;(x=4.5)\n}()",4.5);
+      checkStr("function(){x=1.23;x=\n4.5\n}()",4.5);
+      checkStr("x=3\nfunction()x=1.23\nx",3);
+      checkStr("x=3\nfunction(){(x=1.23)}\nx",3);
+      checkStr("1.23\n-4",-4);
+      checkStr("1.23 +\n-4",-2.77);
+      checkStr("x=3;3*-x",-9);  // *- is not a token
+      checkStr("x=3;3\n*\n-\nx",3); // Each of '3' and '*' and '-' and 'x' is a standalone statement
 
       // Cleanup testing temps
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope
