@@ -82,7 +82,7 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[2,+]","Must be scalar or array\n"+"h.hex[2,+]\n"+"        ^-^\n");   // Function not allowed
       checkStr("h.hex[2+4,-4]");// Select row 6, all-cols but 4
       checkStr("h.hex[1,-1]; h.hex[2,-2]; h.hex[3,-3]");// Partial results are freed
-      checkStr("h.hex[2+3,h.hex]","Selector must be a single column: {pclass,name,sex,age,sibsp,parch,ticket,fare,cabin,embarked,boat,body,home.dest,survived}, 1.2 KB\n" +
+      checkStr("h.hex[2+3,h.hex]","Selector must be a single column: {pclass,name,sex,age,sibsp,parch,ticket,fare,cabin,embarked,boat,body,home.dest,survived}, 1.1 KB\n" +
               "Chunk starts: {0,}"); // Error: col selector has too many columns
       checkStr("h.hex[2,]");    // Row 2 all cols
       checkStr("h.hex[,3]");    // Col 3 all rows
@@ -183,7 +183,7 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){h.hex})","apply requires that ary fun(ary x) return 1 column");
       checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
-      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",184.96); // Row-wise apply on mean
+      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",183.96); // Row-wise apply on mean
 
       // Conditional selection; 
       checkStr("ifelse(0,1,2)",2);
