@@ -146,11 +146,12 @@ public class Exec2 {
   // (basically treat newline as the statement-end character ';' which does not
   // match c)
   boolean peek(char c, boolean EOS) {
-    if( _x ==_buf.length ) return false;
-    while( isWS(_buf[_x]) && (!EOS || _buf[_x]!='\n') )
-      if( ++_x ==_buf.length ) return false;
-    if( _buf[_x]!=c ) return false;
-    _x++;
+    char d;
+    while( _x < _buf.length && isWS(_buf[_x]) && _buf[_x]!='\n' ) _x++;
+    int nx=_x;
+    if( !EOS ) while( nx < _buf.length && isWS(_buf[nx]) ) nx++;
+    if( nx==_buf.length || _buf[nx]!=c ) return false;
+    _x=nx+1;
     return true;
   }
   // Same as peek, but throw if char not found.  Always newlines are treated as whitespace
@@ -168,7 +169,7 @@ public class Exec2 {
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
-  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';'; }
+  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';' || c=='$'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
     return c=='.' || c==':' || c=='\\' || isDigit(c) || isLetter(c);
