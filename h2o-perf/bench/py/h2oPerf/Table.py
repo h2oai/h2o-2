@@ -10,9 +10,13 @@ class PerfDB:
     and hence this object begins and commits/rolls back transactions.
     """
     def __init__(self):
-        self.db = MySQLdb.connect(host = "localhost",#PerfDBHost,
-                                 user = "spencer",#PerfDBUser,
-                                 passwd = "spencer",#PerfDBPass,
+        db_host = '192.168.1.171'
+        self.host = db_host
+        if( socket.gethostbyname_ex(socket.gethostname())[2][0] == db_host):
+            self.host = "localhost"
+        self.db = MySQLdb.connect(host = self.host,
+                                 user = "spencer",
+                                 passwd = "spencer",
                                  db = "PerfDB",
                                  port = 3306)
         self.cursor = self.db.cursor()
