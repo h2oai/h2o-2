@@ -18,7 +18,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
         a = h2o.nodes[0].jobs_admin(timeoutSecs=10)
         busy = False
         for j in a['jobs']:
-            if j['end_time'] == '':
+            if j['end_time']=='' and not (j['cancelled'] or (j['result'].get('val', None)=='CANCELLED')):
                 busy = True
                 h2o.verboseprint("Still busy")
                 break
@@ -74,7 +74,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
 
         time.sleep(retryDelaySecs)
         if ((time.time() - start) > timeoutSecs):
-            raise Exception("Timeout while polling in pollAnyBusy: %s seconds" % timeoutSecs)
+            raise Exception("Timeout while polling in pollStatsWhileBusy: %s seconds" % timeoutSecs)
     
 
     # now print man 
@@ -111,7 +111,7 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
         jobs = a['jobs']
         busy = 0
         for j in jobs:
-            cancelled = j['cancelled']
+            cancelled = j['cancelled'] or (j['result'].get('val', None)=='CANCELLED')
             description = j['description']
             destination_key = j['destination_key']
             end_time = j['end_time']
@@ -140,7 +140,8 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
                 print ("Continuing so maybe a json response will give more info")
                 
             ### h2o.verboseprint(j)
-            if end_time == '':
+            # don't include cancelled jobs here
+            elif end_time=='' and not cancelled:
                 if not pattern: 
                     # always print progress if busy job (no pattern used
                     print "time:", time.strftime("%I:%M:%S"), "progress:",  progress, destination_key

@@ -36,11 +36,7 @@ public class Frame extends Lockable<Frame> {
       if( DKV.get(k)==null )    // If not already in KV, put it there
         DKV.put(k,vecs[i]);
     }
-    Vec v0 = anyVec();
-    if( v0 == null ) return;
-    VectorGroup grp = v0.group();
-    for( int i=0; i<vecs.length; i++ )
-      assert grp.equals(vecs[i].group()) : "Vector " + vecs[i] + " has different vector group!";
+    assert checkCompatible();
   }
   public Vec vec(String name){
     Vec [] vecs = vecs();
@@ -311,8 +307,9 @@ public class Frame extends Lockable<Frame> {
 
   /** Check that the vectors are all compatible.  All Vecs have their content
    *  sharded using same number of rows per chunk.  */
-  public void checkCompatible( ) {
+  public boolean checkCompatible( ) {
     Vec v0 = anyVec();
+    if( v0 == null ) return true;
     int nchunks = v0.nChunks();
     for( Vec vec : vecs() ) {
       if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
@@ -326,6 +323,15 @@ public class Frame extends Lockable<Frame> {
         if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
           throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
     }
+    // For larger Frames, verify that the layout is compatible - else we'll be
+    // endlessly cache-missing the data around the cluster, pulling copies
+    // local everywhere.
+    if( v0.length() > 1e4 ) {
+      VectorGroup grp = v0.group();
+      for( Vec vec : vecs() )
+        assert grp.equals(vec.group()) : "Vector " + vec + " has different vector group!";
+    }
+    return true;
   }
 
   public void closeAppendables() {closeAppendables(new Futures()).blockForPending(); }
@@ -494,9 +500,10 @@ public class Frame extends Lockable<Frame> {
 
     CSVStream(boolean headers) {
       StringBuilder sb = new StringBuilder();
+      Vec vs[] = vecs();
       if( headers ) {
         sb.append('"' + _names[0] + '"');
-        for(int i = 1; i < _vecs.length; i++)
+        for(int i = 1; i < vs.length; i++)
           sb.append(',').append('"' + _names[i] + '"');
         sb.append('\n');
       }
@@ -508,12 +515,13 @@ public class Frame extends Lockable<Frame> {
         if(_row == numRows())
           return 0;
         StringBuilder sb = new StringBuilder();
-        for( int i = 0; i < _vecs.length; i++ ) {
+        Vec vs[] = vecs();
+        for( int i = 0; i < vs.length; i++ ) {
           if(i > 0) sb.append(',');
-          if(!_vecs[i].isNA(_row)) {
-            if(_vecs[i].isEnum()) sb.append('"' + _vecs[i]._domain[(int) _vecs[i].at8(_row)] + '"');
-            else if(_vecs[i].isInt()) sb.append(_vecs[i].at8(_row));
-            else sb.append(_vecs[i].at(_row));
+          if(!vs[i].isNA(_row)) {
+            if(vs[i].isEnum()) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
+            else if(vs[i].isInt()) sb.append(vs[i].at8(_row));
+            else sb.append(vs[i].at(_row));
           }
         }
         sb.append('\n');
@@ -577,7 +585,7 @@ public class Frame extends Lockable<Frame> {
         }
 
         cols = new long[(int)n];
-        Vec v = fr._vecs[0];
+        Vec v = fr.anyVec();
         for (long i = 0; i < v.length(); i++) {
           cols[(int)i] = v.at8(i);
         }

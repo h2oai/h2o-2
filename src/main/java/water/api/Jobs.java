@@ -1,14 +1,17 @@
 package water.api;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import water.DKV;
+import water.Job;
+import water.Job.JobState;
+import water.Key;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.Date;
 import java.text.ParseException;
-
-import water.*;
-import water.Job.JobState;
-
-import com.google.gson.*;
+import java.util.Date;
 
 public class Jobs extends Request {
   Jobs() {
@@ -169,5 +172,10 @@ public class Jobs extends Request {
           + "</div>" //
         + "</div>";
     // @formatter:on
+  }
+
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_V1_V2;
   }
 }

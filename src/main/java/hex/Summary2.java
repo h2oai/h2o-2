@@ -40,6 +40,7 @@ public class Summary2 extends Iced {
   final transient String[]   _domain;
   final transient double     _start;
   final transient double     _binsz;
+  final transient double     _binsz2;    // 2nd finer grained histogram used for quantile estimates for numerics
   transient int              _len1;      /* Size of filled elements in a chunk. */
   transient double[]         _pctile;
 
@@ -96,6 +97,9 @@ public class Summary2 extends Iced {
   @API(help="histogram bin step") public double    hstep;
   @API(help="histogram headers" ) public String[]  hbrk;
   @API(help="histogram bin values") public long[]  hcnt;
+  public long[]  hcnt2; // finer histogram. not visible
+  public double[]  hcnt2_min; // min actual for each bin
+  public double[]  hcnt2_max; // max actual for each bin
 
   public static class BasicStat extends Iced {
     public long _len;   /* length of vec */
@@ -264,7 +268,12 @@ public class Summary2 extends Iced {
       computeMajorities();
     } else {
       _pctile = new double[DEFAULT_PERCENTILES.length];
-      if (_samples != null) {
+      // kbn. was
+      // if (_samples != null) {
+      // never take this choice (summary1 didn't?
+      // means (like R) we can have quantiles with values not in the dataset..ok?
+      // ok since approximation? not okay if we did exact. Sampled sort is not good enough?
+      if (1==0) { 
         Arrays.sort(_samples);
         // Compute percentiles for numeric data
         for (int i = 0; i < _pctile.length; i++)
@@ -320,10 +329,15 @@ public class Summary2 extends Iced {
       _mins = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
       _maxs = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
     }
+
     if( vec.isEnum() && _domain.length < MAX_HIST_SZ ) {
       _start = 0;
       _binsz = 1;
+      _binsz2 = 1;
       hcnt = new long[_domain.length];
+      hcnt2 = new long[_domain.length];
+      hcnt2_min = new double[_domain.length];
+      hcnt2_max = new double[_domain.length];
     } else if (!Double.isNaN(stat0._min2)) {
       // guard against improper parse (date type) or zero c._sigma
       long N = _stat0._len - stat0._nas - stat0._nans - stat0._pinfs - stat0._ninfs;
@@ -339,12 +353,27 @@ public class Summary2 extends Iced {
       _binsz = d;
       _start = _binsz * Math.floor(stat0._min2/_binsz);
       int nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
+
+      // create a 2nd finer grained historam for quantile estimates. 1000 bins
+      // okay if it is approx. 1000 bins (+-1)
+      _binsz2 = _binsz / (1000.0 / nbin);
+      int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz2)/1000000L) + 1;
+      // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
+      
       assert nbin > 0;
+      assert nbin2 > 0;
       hcnt = new long[nbin];
+      hcnt2 = new long[nbin2];
+      hcnt2_min = new double[nbin2];
+      hcnt2_max = new double[nbin2];
     } else { // vec does not contain finite numbers
       _start = vec.min();
       _binsz = Double.POSITIVE_INFINITY;
+      _binsz2 = Double.POSITIVE_INFINITY;
       hcnt = new long[1];
+      hcnt2 = new long[1];
+      hcnt2_min = new double[1];
+      hcnt2_max = new double[1];
     }
   }
 
@@ -427,9 +456,45 @@ public class Summary2 extends Iced {
           }
         }
       }
+      // update the finer histogram (used for quantile estimates on numerics)
+      long binIdx2;
+      if (hcnt2.length == 1) {
+        binIdx2 = 0;
+      }
+      else if (val == Double.NEGATIVE_INFINITY) {
+        binIdx2 = 0;
+      }
+      else if (val == Double.POSITIVE_INFINITY) {
+        binIdx2 = hcnt2.length-1;
+      }
+      else {
+        binIdx2 = Math.round(((val - _start) * 1000000.0) / _binsz2) / 1000000;
+      }
+
+      int binIdx2Int = (int) binIdx2;
+      if (binIdx2Int >= hcnt2.length) assert false;
+
+      if (hcnt2[binIdx2Int] == 0) {
+        // Log.info("New init: "+val+" for index "+binIdx2Int);
+        hcnt2_min[binIdx2Int] = val;
+        hcnt2_max[binIdx2Int] = val;
+      }
+      else {
+        if (val < hcnt2_min[binIdx2Int]) {
+            // Log.info("New min: "+val+" for index "+binIdx2Int);
+            hcnt2_min[binIdx2Int] = val;
+        }
+        if (val > hcnt2_max[binIdx2Int]) {
+            // Log.info("New max: "+val+" for index "+binIdx2Int);
+            hcnt2_max[binIdx2Int] = val;
+        }
+      }
+      ++hcnt2[binIdx2Int];
+            
+    
     }
 
-    // update histogram
+    // update the histogram the browser/json returns
     long binIdx;
     if (hcnt.length == 1) {
       binIdx = 0;
@@ -454,15 +519,50 @@ public class Summary2 extends Iced {
   public Summary2 add(Summary2 other) {
     if (hcnt != null)
       Utils.add(hcnt, other.hcnt);
+    if (hcnt2 != null)
+      Utils.add(hcnt2, other.hcnt2);
+
     _gprows += other._gprows;
+
     // merge samples
     double merged[] = new double[_samples.length+other._samples.length];
     System.arraycopy(_samples,0,merged,0,_samples.length);
     System.arraycopy(other._samples,0,merged,_samples.length,other._samples.length);
     _samples = merged;
     if (_type == T_ENUM) return this;
-    double[] ds = MemoryManager.malloc8d(_mins.length);
+
+    // merge hcnt2 per-bin mins
+    // don't care about possible min/max ==/overlap for hcnt2
+    double[] ds = MemoryManager.malloc8d(hcnt2_min.length);
     int i = 0, j = 0;
+    for (int k = 0; k < ds.length; k++)
+      if (hcnt2_min[i] < other.hcnt2_min[j])
+        ds[k] = hcnt2_min[i++];
+      else if (Double.isNaN(other.hcnt2_min[j]))
+        ds[k] = hcnt2_min[i++];
+      else {            // _min[i] >= other._min[j]
+        if (hcnt2_min[i] == other.hcnt2_min[j]) i++;
+        ds[k] = other.hcnt2_min[j++];
+      }
+    System.arraycopy(ds,0,hcnt2_min,0,ds.length);
+
+    // merge hcnt2 per-bin mins
+    ds = MemoryManager.malloc8d(hcnt2_max.length);
+    i = 0; j = 0;
+    for (int k = 0; k < ds.length; k++)
+      if (hcnt2_max[i] < other.hcnt2_max[j])
+        ds[k] = hcnt2_max[i++];
+      else if (Double.isNaN(other.hcnt2_max[j]))
+        ds[k] = hcnt2_max[i++];
+      else {            // _max[i] >= other._max[j]
+        if (hcnt2_max[i] == other.hcnt2_max[j]) i++;
+        ds[k] = other.hcnt2_max[j++];
+      }
+    System.arraycopy(ds,0,hcnt2_max,0,ds.length);
+
+    // merge hcnt mins
+    ds = MemoryManager.malloc8d(_mins.length);
+    i = 0; j = 0;
     for (int k = 0; k < ds.length; k++)
       if (_mins[i] < other._mins[j])
         ds[k] = _mins[i++];
@@ -478,7 +578,7 @@ public class Summary2 extends Iced {
     for (j = _maxs.length - 1; Double.isNaN(other._maxs[j]); j--) if (j == 0) {j--; break;}
 
     ds = MemoryManager.malloc8d(i + j + 2);
-    // merge two maxs, meanwhile deduplicating
+    // merge hcnt maxs, also deduplicating against mins?
     int k = 0, ii = 0, jj = 0;
     while (ii <= i && jj <= j) {
       if (_maxs[ii] < other._maxs[jj])
@@ -493,7 +593,6 @@ public class Summary2 extends Iced {
     }
     while (ii <= i) ds[k++] = _maxs[ii++];
     while (jj <= j) ds[k++] = other._maxs[jj++];
-
     System.arraycopy(ds,Math.max(0, k - _maxs.length),_maxs,0,Math.min(k,_maxs.length));
     for (int t = k; t < _maxs.length; t++) _maxs[t] = Double.NaN;
     return this;
@@ -512,20 +611,110 @@ public class Summary2 extends Iced {
     for (int i = 0; i < hcnt.length; i++) cnt+=hcnt[i];
     return cnt;
   }
+  private int htot2() { // same but for the finer histogram
+    int cnt = 0;
+    for (int i = 0; i < hcnt2.length; i++) cnt+=hcnt2[i];
+    return cnt;
+  }
   private void approxQuantiles(double[] qtiles, double[] thres){
+    // not called for enums
+    assert _type != T_ENUM;
     if( hcnt.length == 0 ) return;
     int k = 0;
     long s = 0;
-    assert _gprows==htot();
+    double guess = 0;
+    double actualBinWidth= 0;
+    assert _gprows==htot2() : "_gprows: "+_gprows+" htot2(): "+htot2();
+
+    // walk up until we're at the bin that starts with the threshold, or right before
     for(int j = 0; j < thres.length; ++j) {
       final double s1 = thres[j]*_gprows;
       long bc;
-      while(s1 > s+(bc = hcnt[k])){
+      while(s1 > s+(bc = hcnt2[k])){
         s  += bc;
         k++;
       }
-      qtiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
+      assert s1>=s;
+
+      if ( s1 == s ) {
+        // suppose we could have the same "gone too far" fp compare issue
+        // back up one if so. Should never get this if we only have one bin
+        if ( hcnt2[k] == 0 ) {
+            // use prior bin's max
+            assert k>0;
+            assert hcnt2[k-1] != 0;
+            guess = hcnt2_max[k-1];
+        }
+        else {
+            // use that bin's min
+            assert hcnt2[k] != 0;
+            guess = hcnt2_min[k];
+        }
+      }
+      else {
+        // cheap check that we binned correctly (check max/min against prior bin
+        // fp compare issues might say they are equal? (if they have values)
+        if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
+            assert hcnt2_max[k-1] <= hcnt2_min[k] : 
+                hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
+        }
+        // if bin count is 0 we shouldn't have stopped if not at the threshold yet..
+        // if we did due to fp comparison issues, then a non-zero bin should be right before,
+        // back up one
+        if ( hcnt2[k] == 0 ) {
+            // use prior bin's max
+            assert k>0;
+            assert hcnt2[k-1] != 0;
+            guess = hcnt2_max[k-1];
+        }
+        else {
+            actualBinWidth = hcnt2_max[k] - hcnt2_min[k];
+            // interpolate within the populated bin, assuming linear distribution
+            // since we have the actual min/max within a bin, we can be more accurate
+            // compared to using the bin boundaries
+            guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
+        }
+
+        // some cheap checks on the first and last bins against global min/max
+        // we may be slightly unaligned..so don't check if the fine bins are tmpey
+
+        // _maxs[5] is usually the biggest (not always)?  _mins[0] is the smallest
+        // oh..ugly. At this point, NaNs haven't been stripped. so we don't know that 
+        // the end of _maxs has the true max (if there is just 1-4 values in the data, 
+        // _maxs doens't get filled (legacy!). The NaNs and array length get flushed later.
+        // _maxs really should have been organized as big to small so biggest is always in 0.
+
+        // So find the last max before the nans
+        double trueMax = _maxs[0];
+        for(int p = 1; p < _maxs.length; ++p) {
+            if ( !Double.isNaN(_maxs[p])) trueMax = _maxs[p];
+        }
+
+        if ( hcnt2[hcnt2.length-1] != 0 ) {
+            assert hcnt2_max[hcnt2.length-1] == trueMax : 
+                hcnt2_max[hcnt2.length-1] +" "+trueMax;
+        }
+        if ( hcnt2[0] != 0 ) {
+            assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
+        }
+        
+        // might have fp tolerance issues here? but fp numbers should be exactly same?
+        assert guess <= trueMax;
+        assert guess >= _mins[0];
+        
+      }
+      qtiles[j] = guess;
     }
+    // Log.info(
+    //    "_mins[0]: "+_mins[0]+
+    //    "trueMax: "trueMax+
+    //    " hcnt2[k]: "+hcnt2[k]+
+    //    " hcnt2_min[k]: "+hcnt2_min[k]+
+    //    " hcnt2_max[k]: "+hcnt2_max[k]+
+    //    " _binsz2: "+_binsz2+
+    //    " guess: "+guess+
+    //    " k: "+k+
+    //    "\n");
   }
   // Compute majority categories for enums only
   public void computeMajorities() {

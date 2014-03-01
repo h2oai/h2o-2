@@ -4,7 +4,7 @@ source('../findNSourceUtils.R')
 test.km2vanilla.golden <- function(H2Oserver) {
 
 #Import Data:
-dummyH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/dummydata.csv"), key="dummyH2O")
+dummyH2O<- h2o.uploadFile.FV(H2Oserver, locate("../../smalldata/dummydata.csv"), key="dummyH2O")
 dummyR<- read.csv(locate("smalldata/dummydata.csv"), header=T)
 
 
@@ -30,5 +30,7 @@ testEnd()
 }
 
 doTest("K Means test on well separated dummy data example", test.km2vanilla.golden)
+
+#test currently failing becaue no modeling on factors
 
 #see JIRA Pub-386 for failure

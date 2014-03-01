@@ -267,7 +267,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
         # always check both normalized and normal coefficients
         norm_beta = submodels0['norm_beta']
-        if len(column_names)!=len(norm_beta):
+        if norm_beta and len(column_names)!=len(norm_beta):
             print len(column_names), len(norm_beta)
             raise Exception("column_names and normalized_norm_beta from h2o json not same length. column_names: %s normalized_norm_beta: %s" % (column_names, norm_beta))
 

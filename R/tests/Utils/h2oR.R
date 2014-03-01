@@ -83,14 +83,15 @@ function(m) {
 
 PASS_BANNER<-
 function() {
-  cat("")
-  cat("######     #     #####   #####  \n")
-  cat("#     #   # #   #     # #     # \n")
-  cat("#     #  #   #  #       #       \n")
-  cat("######  #     #  #####   #####  \n")
-  cat("#       #######       #       # \n")
-  cat("#       #     # #     # #     # \n")
-  cat("#       #     #  #####   #####  \n")  
+  cat("\n")
+  cat("########     ###     ######   ###### \n")
+  cat("##     ##   ## ##   ##    ## ##    ##\n")
+  cat("##     ##  ##   ##  ##       ##      \n")
+  cat("########  ##     ##  ######   ###### \n")
+  cat("##        #########       ##       ##\n")
+  cat("##        ##     ## ##    ## ##    ##\n")
+  cat("##        ##     ##  ######   ###### \n")
+  cat("\n")
 }
 
 PASS<- 
@@ -102,7 +103,7 @@ function() {
 
 FAIL<-
 function(e) {
-  cat("")
+  cat("\n")
   cat("########    ###    #### ##       \n")
   cat("##         ## ##    ##  ##       \n")
   cat("##        ##   ##   ##  ##       \n")
@@ -110,6 +111,8 @@ function(e) {
   cat("##       #########  ##  ##       \n")
   cat("##       ##     ##  ##  ##       \n")
   cat("##       ##     ## #### ######## \n")
+  cat("\n")
+
   Log.err(e)
 }
 
@@ -237,12 +240,11 @@ function(ipPort) {
   library(h2o)
   h2o.init(ip            = ipPort[[1]], 
            port          = ipPort[[2]], 
-           startH2O      = FALSE, 
-           silentUpgrade = TRUE)
-  #source("../../h2oRClient-package/R/Algorithms.R")
-  #source("../../h2oRClient-package/R/Classes.R")
-  #source("../../h2oRClient-package/R/ParseImport.R")
-  #source("../../h2oRClient-package/R/Internal.R")
+           startH2O      = FALSE)
+  #source("../../h2o-package/R/Algorithms.R")
+  #source("../../h2o-package/R/Classes.R")
+  #source("../../h2o-package/R/ParseImport.R")
+  #source("../../h2o-package/R/Internal.R")
   #sandbox()
 }
 

@@ -72,6 +72,6 @@ Step by step instructions on how to use each of the algorithms and
 tools can be found in tutorials . Users have a variety of options for
 accessing and running H\ :sub:`2`\ O. For instructions on how to get
 started using H\ :sub:`2`\ O (for example through R, using Java, or
-via git-hub), please see the Quick Start Guides. New users may also
-find the :ref:`glossary` useful for familiarizing themselves with H\
-:sub:`2`\ O's computing and statistics terms. 
+via git-hub), please see the Quick Start Guides, and Walk Through
+Tutorials. New users may also find the :ref:`glossary` useful for 
+familiarizing themselves with H\ :sub:`2`\ O's computing and statistics terms. 

@@ -125,7 +125,8 @@ class ASTApply extends AST {
       int i=1;
       if( !E.peek(')') ) {
         while( true ) {
-          args[i++] = parseCXExpr(E);
+          if( (args[i++] = parseCXExpr(E)) == null )
+            E.throwErr("Missing argument",E._x);
           if( E.peek(')') ) break;
           E.xpeek(',',E._x,null);
           if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);

@@ -41,9 +41,9 @@ public class EmbeddedPseudoCranTest extends TestUtil {
     }
 
     {
-      String input = "/R/src/contrib/h2oRClient_2.1.0.99999.1391149274.tar.gz";
+      String input = "/R/src/contrib/h2o_2.1.0.99999.tar.gz";
       String output = RequestServer.maybeTransformRequest(input);
-      check(output.equals("/R/src/contrib/h2oRClient_2.1.0.99999.1391149274.tar.gz"));
+      check(output.equals("/R/src/contrib/h2o_2.1.0.99999.tar.gz"));
     }
   }
 }

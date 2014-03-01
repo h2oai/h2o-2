@@ -1,0 +1,36 @@
+
+{
+    "type":"object", "properties": {
+        "Request2": { "type":"number" },
+        "cols": {
+            "required":false
+            "type":"array", "items":
+                { "type":"object", "properties": {
+                        "cardinality": { "type":"number" },
+                        "max": { "type":"number" },
+                        "mean": { "type":"number" },
+                        "min": { "type":"number" },
+                        "naCnt": { "type":"number" },
+                        "name": { "type":"string" },
+                        "type": { "type":"string" }
+                }
+                }
+        },
+        "error": { "type":"string" },
+        "funstr": { "type":"string" },
+        "key": { "type":"string" },
+        "num_cols": { "type":"number" },
+        "num_rows": { "type":"number" },
+        "response_info": { "type":"object", "properties": {
+                "h2o": { "type":"string" },
+                "node": { "type":"string" },
+                "redirect_url": { "type":"string" },
+                "status": { "type":"string" },
+                "time": { "type":"number" }
+            }
+        },
+        "result": { "type":"string" },
+        "scalar": { "type":"number" }
+    }
+}
+

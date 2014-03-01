@@ -28,6 +28,7 @@ public class NewChunk extends Chunk {
   int _naCnt=-1;                // Count of NA's   appended
   int _strCnt;                  // Count of Enum's appended
   int _nzCnt;                   // Count of non-zero's appended
+  final int _timCnt[] = new int[ParseTime.TIME_PARSE.length]; // Count of successful time parses
 
   public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
@@ -65,11 +66,14 @@ public class NewChunk extends Chunk {
       _nzCnt=nzs;  _strCnt=ss;  _naCnt=nas;
     }
     // Now run heuristic for type
-    if(_naCnt == _len2)
+    if(_naCnt == _len2)          // All NAs ==> NA Chunk
       return AppendableVec.NA;
     if(_strCnt > 0 && _strCnt + _naCnt == _len2)
-      return AppendableVec.ENUM;
-    return AppendableVec.NUMBER;
+      return AppendableVec.ENUM; // All are Strings+NAs ==> Enum Chunk
+    // Larger of time & numbers
+    int timCnt=0; for( int t : _timCnt ) timCnt+=t;
+    int nums = _len2-_naCnt-timCnt;
+    return timCnt >= nums ? AppendableVec.TIME : AppendableVec.NUMBER;
   }
   protected final boolean isNA(int idx) {
     return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE) : Double.isNaN(_ds[idx]);
@@ -185,11 +189,12 @@ public class NewChunk extends Chunk {
     byte mode = type();
     if( mode==AppendableVec.NA ) // ALL NAs, nothing to do
       return new C0DChunk(Double.NaN,_len);
+    boolean rerun=false;
     for( int i=0; i<_len; i++ )
       if( mode==AppendableVec.ENUM   && !isEnum(i) ||
           mode==AppendableVec.NUMBER &&  isEnum(i) )
-        setNA_impl(i);
-    _naCnt = -1;  type();    // Re-run rollups after dropping all numbers/enums
+        { setNA_impl(i); rerun = true; }  // Smack any mismatched string/numbers
+    if( rerun ) { _naCnt = -1;  type(); } // Re-run rollups after dropping all numbers/enums
 
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.
@@ -224,6 +229,7 @@ public class NewChunk extends Chunk {
     boolean first = true;
     double min = _len2==_len ?  Double.MAX_VALUE : 0;
     double max = _len2==_len ? -Double.MAX_VALUE : 0;
+    int p10iLength = DParseTask.powers10i.length;
 
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) continue;
@@ -244,19 +250,20 @@ public class NewChunk extends Chunk {
         lemin = lemax = l;
         continue;
       }
-      // Remove any trailing zeros / powers-of-10
-      if(overflow || (overflow = (Math.abs(xmin-x)) >=10))continue;
       // Track largest/smallest values at xmin scale.  Note overflow.
       if( x < xmin ) {
+        if( overflow || (overflow = ((xmin-x) >=p10iLength)) ) continue;
         lemin *= DParseTask.pow10i(xmin-x);
         lemax *= DParseTask.pow10i(xmin-x);
         xmin = x;               // Smaller xmin
       }
       // *this* value, as a long scaled at the smallest scale
+      if( overflow || (overflow = ((x-xmin) >=p10iLength)) ) continue;
       long le = l*DParseTask.pow10i(x-xmin);
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
+
     if(_len2 != _len){ // sparse? compare xmin/lemin/lemax with 0
       lemin = Math.min(0, lemin);
       lemax = Math.max(0, lemax);
@@ -299,7 +306,7 @@ public class NewChunk extends Chunk {
     // uniform, so we scale up the largest lmax by the largest scale we need
     // and if that fits in a byte/short - then it's worth compressing.  Other
     // wise we just flip to a float or double representation.
-    if(overflow || fpoint && floatOverflow || -35 > xmin || xmin > 35)
+    if( overflow || (fpoint && floatOverflow) || -35 > xmin || xmin > 35 )
       return chunkD();
     if( fpoint ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?

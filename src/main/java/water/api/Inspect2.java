@@ -3,6 +3,10 @@ package water.api;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
+import hex.nn.NN;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import water.*;
 import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.*;
@@ -28,12 +32,12 @@ public class Inspect2 extends Request2 {
 
   // An internal JSON-output-only class
   static class ColSummary extends Iced {
-    public static enum ColType { Enum, Int, Real };
+    public static enum ColType { Enum, Int, Real, Time };
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public ColSummary( String name, Vec vec ) {
       this.name = name;
-      this.type = vec.isEnum() ? ColType.Enum : vec.isInt() ? ColType.Int : ColType.Real;
+      this.type = vec.isEnum() ? ColType.Enum : vec.isInt() ? (vec.isTime() ? ColType.Time : ColType.Int) : ColType.Real;
       this.min  = vec.isEnum() ? Double.NaN : vec.min();
       this.max  = vec.isEnum() ? Double.NaN : vec.max();
       this.mean = vec.isEnum() ? Double.NaN : vec.mean();
@@ -87,7 +91,7 @@ public class Inspect2 extends Request2 {
       naCnt += cols[i].naCnt;
       enumCol |= cols[i].type == ColType.Enum;
     }
-
+    Vec svecs[] = src_key.vecs();
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+String.format("%,d",numCols)+" columns, "+String.format("%,d",numRows)+" rows, "+
@@ -101,6 +105,7 @@ public class Inspect2 extends Request2 {
               DRF.link(skey, "Distributed Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
               GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
+              NN.link(skey, "Neural Net (beta)") +", "+
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV") +
@@ -140,19 +145,19 @@ public class Inspect2 extends Request2 {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : x1(src_key.vecs()[i],-1,cols[i].min)).append("</td>");
+      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : x1(svecs[i],-1,cols[i].min)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Max").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA :x1(src_key.vecs()[i],-1,cols[i].max)).append("</td>");
+      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : x1(svecs[i],-1,cols[i].max)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Mean").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : String.format("%5.3g",cols[i].mean)).append("</td>");
+      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : x1(svecs[i],-1,cols[i].mean)).append("</td>");
     sb.append("</tr>");
 
     // Cardinality row is shown only if dataset contains enum-column
@@ -178,7 +183,7 @@ public class Inspect2 extends Request2 {
       // An extra row holding vec's compressed bytesize
       sb.append("<td>").append("Size").append("</td>");
       for( int i=0; i<cols.length; i++ )
-        sb.append("<td>").append(PrettyPrint.bytes(src_key.vecs()[i].byteSize())).append("</td>");
+        sb.append("<td>").append(PrettyPrint.bytes(svecs[i].byteSize())).append("</td>");
       sb.append("</tr>");
 
       // All Vecs within a frame are compatible, so just read the
@@ -192,7 +197,7 @@ public class Inspect2 extends Request2 {
           .append(", ").append(c0.chunk2StartElem(j)).append("</td>");
         for( int i=0; i<cols.length; i++ ) {
           // Report chunk-type (compression scheme)
-          String clazz = src_key.vecs()[i].elem2BV(j).getClass().getSimpleName();
+          String clazz = svecs[i].elem2BV(j).getClass().getSimpleName();
           String trim = clazz.replaceAll("Chunk","");
           sb.append("<td>").append(trim).append("</td>");
         }
@@ -206,7 +211,7 @@ public class Inspect2 extends Request2 {
         sb.append("<tr id='row_"+String.valueOf(offset+j)+"'>");      // Row header
         sb.append("<td>").append(offset+j).append("</td>");
         for( int i=0; i<cols.length; i++ ) // Columns w/in row
-          sb.append("<td>").append(x0(src_key.vecs()[i],offset+j)).append("</td>");
+          sb.append("<td>").append(x0(svecs[i],offset+j)).append("</td>");
         sb.append("</tr>");
       }
     }
@@ -225,6 +230,13 @@ public class Inspect2 extends Request2 {
     if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) )
       return "-";               // Display of missing elements
     if( v.isEnum() ) return row >= 0 ? v.domain(v.at8(row)) : Long.toString((long)d);
+    if( v.isTime() ) {
+      String tpat = v.timeParse();
+      DateTime dt = new DateTime(row >= 0 ? v.at8(row) : (long)d);
+      DateTimeFormatter fmt = DateTimeFormat.forPattern(tpat);
+      String str = fmt.print(dt);
+      return str;
+    }
     if( v.isInt() )  return Long.toString(row >= 0 ? v.at8(row) : (long)d);
     Chunk c = v.elem2BV(0);
     Class Cc = c.getClass();

@@ -967,7 +967,7 @@ class H2O(object):
         for e in ['error', 'Error', 'errors', 'Errors']:
             # error can be null (python None). This happens in exec2
             if e in rjson and rjson[e]:
-                verboseprint(dump_json(rjson))
+                print "rjson:", dump_json(rjson)
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
                     # well, we print it..so not totally ignore. test can look at rjson returned
@@ -1043,6 +1043,16 @@ class H2O(object):
             params={"value": value, "key": key, "replication_factor": repl},
             extraComment = str(value) + "," + str(key) + "," + str(repl))
 
+    # {"Request2":0,"response_info":i
+    # {"h2o":"pytest-kevin-4530","node":"/192.168.0.37:54321","time":0,"status":"done","redirect_url":null},
+    # "levels":[null,null,null,null]}
+    # FIX! what is this for? R uses it. Get one per col? maybe something about enums
+    def levels(self, source=None):
+        return self.__do_json_request(
+            '2/Levels2.json',
+            params={"source": key, },
+            )
+
     def put_file(self, f, key=None, timeoutSecs=60):
         if key is None:
             key = os.path.basename(f)
@@ -1092,19 +1102,6 @@ class H2O(object):
 
                 if response_info['status'] != 'done':
                     redirect_url = response_info['redirect_url']
-                    # HACK: these are missing the "2/" prefix for now
-                    # 'KMeans2Progress' in str(redirect_url) or
-                    # 'GLMModelView' in str(redirect_url) or
-###                     if 'PCAProgressPage' in str(redirect_url):
-###                         if "2/" not in str(redirect_url):
-###                             print "Hacking in the 2/ prefix..need to fix h2o?"
-###                             redirect_url = "2/" + redirect_url
-###                     if  'DRFProgressPage' in str(redirect_url):
-###                         if "2/" not in str(redirect_url):
-###                             # already has a leading /?
-###                             print "Hacking in the 2/ prefix..need to fix h2o?"
-###                             redirect_url = "2" + redirect_url
-
                     if redirect_url:
                         url = self.__url(redirect_url)
                         params = None
@@ -1580,7 +1577,8 @@ class H2O(object):
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, 
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, print_params=True, noPoll=False, rfView=True, **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, rfView=True, 
+        print_params=True, noPrint=False, **kwargs):
 
         algo = '2/DRF' if beta_features else 'RF'
         algoView = '2/DRFView' if beta_features else 'RFView'
@@ -1603,6 +1601,8 @@ class H2O(object):
                 'mtries': None,
                 'sample_rate': None,
                 'seed': None,
+                'build_tree_per_node': None,
+                'score_each_iteration': None,
                 }
             if 'model_key' in kwargs:
                 kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -1661,7 +1661,7 @@ class H2O(object):
             time.sleep(5)
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging)
+                noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
             return rfView
 
         else:
@@ -1697,6 +1697,7 @@ class H2O(object):
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300, 
             retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
             noise=None, benchmarkLogging=None, print_params=False, noPoll=False, 
+            noPrint=False,
             useRFScore=False, **kwargs): 
 
         # not supported yet
@@ -1769,7 +1770,7 @@ class H2O(object):
         if beta_features:
             rfView = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging)
+                noPrint=noPrint, noise=noise, benchmarkLogging=benchmarkLogging)
         else:
             fake_a = a
             fake_a['response'] = a['response']
@@ -2156,15 +2157,15 @@ class H2O(object):
             'score_training_samples'       : None,
             'score_validation_samples'     : None,
             'score_interval'               : None,
-            'sync_samples'                 : None,
+            'mini_batch'                   : None,
             'diagnostics'                  : None,
             'fast_mode'                    : None,
             'ignore_const_cols'            : None,
             'shuffle_training_data'        : None,
-            'nesterov_accelerated_gradient': None
+            'nesterov_accelerated_gradient': None,
         }
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net2', print_params)
         if 'validation' not in kwargs:
             kwargs['validation'] = data_key
 

@@ -6,6 +6,8 @@ import water.Model;
 import java.text.DecimalFormat;
 import java.util.Random;
 
+import static water.util.ModelUtils.getPrediction;
+
 /**
  * James McCaffrey's MLP on Iris.
  * <nl>
@@ -718,7 +720,7 @@ public class NeuralNetMLPReference2 {
         // convert to float and do the same tie-breaking as H2O
         float[] preds = new float[yValues.length+1];
         for (int j=0; j<yValues.length; ++j) preds[j+1] = (float)yValues[j];
-        preds[0] = Model.getPrediction(preds, xValues);
+        preds[0] = getPrediction(preds, xValues);
 
         if( tValues[(int)preds[0]] == 1.0 ) // ugly. consider AreEqual(double x, double y)
           ++numCorrect;

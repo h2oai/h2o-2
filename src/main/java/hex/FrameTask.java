@@ -1,8 +1,11 @@
 package hex;
 
 import water.H2O.H2OCountedCompleter;
-import water.*;
+import water.Iced;
+import water.Job;
 import water.Job.JobCancelledException;
+import water.MRTask2;
+import water.MemoryManager;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -20,7 +23,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   // size of the expanded vector of parameters
 
   protected float _useFraction = 1.0f;
-  protected long _seed;
   protected boolean _shuffle = false;
 
   public FrameTask(Job job, DataInfo dinfo) {
@@ -30,17 +32,17 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     super(cmp);
     _job = job;
     _dinfo = dinfo;
-    _seed = new Random().nextLong();
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
     _job = ft._job;
     _useFraction = ft._useFraction;
-    _seed = ft._seed;
     _shuffle = ft._shuffle;
   }
-  public double [] normMul(){return _dinfo._normMul;}
-  public double [] normSub(){return _dinfo._normSub;}
+  public final double [] normMul(){return _dinfo._normMul;}
+  public final double [] normSub(){return _dinfo._normSub;}
+  public final double [] normRespMul(){return _dinfo._normMul;}
+  public final double [] normRespSub(){return _dinfo._normSub;}
 
   /**
    * Method to process one row of the data for GLM functions.
@@ -72,16 +74,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public Frame _adaptedFrame;
     public final int _responses; // number of responses
     public final boolean _standardize;
+    public final boolean _standardize_response;
     public final int _nums;
     public final int _cats;
     public final int [] _catOffsets;
     public final double [] _normMul;
     public final double [] _normSub;
+    public final double [] _normRespMul;
+    public final double [] _normRespSub;
     public final int _foldId;
     public final int _nfolds;
 
     private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       _standardize = dinfo._standardize;
+      _standardize_response = dinfo._standardize_response;
       _responses = dinfo._responses;
       _nums = dinfo._nums;
       _cats = dinfo._cats;
@@ -89,15 +95,25 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _catOffsets = dinfo._catOffsets;
       _normMul = dinfo._normMul;
       _normSub = dinfo._normSub;
+      _normRespMul = dinfo._normRespMul;
+      _normRespSub = dinfo._normRespSub;
       _foldId = foldId;
       _nfolds = nfolds;
     }
-    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul){
-      this(fr,hasResponses,normSub != null && normMul != null);
+    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul) {
+      this(fr,hasResponses,normSub,normMul,null,null);
+    }
+    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
+      this(fr,hasResponses,normSub != null && normMul != null, normRespSub != null && normRespMul != null);
       assert (normSub == null) == (normMul == null);
+      assert (normRespSub == null) == (normRespMul == null);
       if(normSub != null && normMul != null){
         System.arraycopy(normSub, 0, _normSub, 0, normSub.length);
         System.arraycopy(normMul, 0, _normMul, 0, normMul.length);
+      }
+      if(normRespSub != null && normRespMul != null){
+        System.arraycopy(normRespSub, 0, _normRespSub, 0, normRespSub.length);
+        System.arraycopy(normRespMul, 0, _normRespMul, 0, normRespMul.length);
       }
     }
 
@@ -145,13 +161,17 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       }
       return fr;
     }
-
-    public DataInfo(Frame fr, int nResponses, boolean standardize){
+    public DataInfo(Frame fr, int nResponses, boolean standardize) {
+      this(fr, nResponses, standardize, false);
+    }
+    public DataInfo(Frame fr, int nResponses, boolean standardize, boolean standardize_response){
       _nfolds = _foldId = 0;
       _standardize = standardize;
+      _standardize_response = standardize_response;
       _responses = nResponses;
       final Vec [] vecs = fr.vecs();
       final int n = vecs.length-_responses;
+      if (n < 1) throw new IllegalArgumentException("Training data must have at least one column.");
       int [] nums = MemoryManager.malloc4(n);
       int [] cats = MemoryManager.malloc4(n);
       int nnums = 0, ncats = 0;
@@ -184,17 +204,30 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       if(standardize){
         _normSub = MemoryManager.malloc8d(nnums);
         _normMul = MemoryManager.malloc8d(nnums); Arrays.fill(_normMul, 1);
-      } else
-        _normSub = _normMul = null;
+      } else _normSub = _normMul = null;
       for(int i = 0; i < nnums; ++i){
-        Vec v = (vecs2[i+ncats]  = vecs [nums[i]]);
+        Vec v = (vecs2[i+ncats] = vecs[nums[i]]);
         names[i+ncats] = fr._names[nums[i]];
         if(standardize){
           _normSub[i] = v.mean();
           _normMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
         }
       }
+
+      if(standardize_response){
+        _normRespSub = MemoryManager.malloc8d(_responses);
+        _normRespMul = MemoryManager.malloc8d(_responses); Arrays.fill(_normRespMul, 1);
+      } else _normRespSub = _normRespMul = null;
+      for(int i = 0; i < _responses; ++i){
+        Vec v = (vecs2[nnums+ncats+i] = vecs[nnums+ncats+i]);
+        if(standardize_response){
+          _normRespSub[i] = v.mean();
+          _normRespMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
+//          Log.info("normalization for response[" + i + ": mul " + _normRespMul[i] + ", sub " + _normRespSub[i]);
+        }
+      }
       _adaptedFrame = new Frame(names,vecs2);
+      _adaptedFrame.reloadVecs();
     }
     public String toString(){
       return "";
@@ -254,7 +287,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     boolean contiguous = false;
     Random skip_rng = null; //random generator for skipping rows
     if (_useFraction < 1.0) {
-      skip_rng = water.util.Utils.getDeterRNG(_seed+++0x600D5EED+offset); //change seed to avoid periodicity across epochs
+      skip_rng = water.util.Utils.getDeterRNG(new Random().nextLong());
       if (contiguous) {
         final int howmany = (int)Math.ceil(_useFraction*nrows);
         if (howmany > 0) {
@@ -271,7 +304,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       shuf_map = new long[end-start];
       for (int i=0;i<shuf_map.length;++i)
         shuf_map[i] = start + i;
-      Utils.shuffleArray(shuf_map, _seed+++0xD0650F1E+offset);
+      Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
 
     OUTER:
@@ -291,8 +324,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
         nums[i-_dinfo._cats] = d;
       }
-      for(i = 0; i < _dinfo._responses; ++i)
+      for(i = 0; i < _dinfo._responses; ++i) {
         response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
+        if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
+      }
       if(outputs != null && outputs.length > 0)
         processRow(offset+r, nums, ncats, cats, response, outputs);
       else

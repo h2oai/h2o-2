@@ -91,15 +91,14 @@ class Basic(unittest.TestCase):
             # GBM (train iterate)****************************************
             # if not response:
             #     response = numCols - 1
-            # response = 378
-            response = 'C379'
+            response = 378
 
             # randomly ignore a bunch of cols, just to make it go faster
             x = range(numCols)
             del x[response]
-            ignored_cols_by_name = ",".join(map(lambda x: 'C' + str(x), random.sample(x, 300)))
+            ignored_cols_by_name = ",".join(map(lambda x: 'C' + str(x+1), random.sample(x, 300)))
 
-            print "Using the same response %s for train and test (which should have a output value too)" % response
+            print "Using the same response %s for train and test (which should have a output value too)" % "C" + str(response+1)
 
             ntrees = 10
             # ignore 200 random cols (not the response)
@@ -110,7 +109,7 @@ class Basic(unittest.TestCase):
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
-                    'response': 'C' + str(response),
+                    'response': 'C' + str(response+1),
                     'ignored_cols_by_name': ignored_cols_by_name,
                 }
             
@@ -153,7 +152,7 @@ class Basic(unittest.TestCase):
 
                 gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
                     actual=parseTestResult['destination_key'],
-                    vactual='C' + str(response),
+                    vactual='C' + str(response+1),
                     predict=predictKey,
                     vpredict='predict', # choices are 0 and 'predict'
                     )

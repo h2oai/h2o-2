@@ -73,6 +73,7 @@ public class Expr2Test extends TestUtil {
       checkStr("x=mean=3",3);     // Assign x & id mean with 3; "mean" here is not related to any built-in fcn
       checkStr("x=mean(c(3))",3); // Assign x to the result of running fcn mean(3)
       checkStr("x=mean+3","Arg 'x' typed as dblary but passed dbl(ary)\n"+"x=mean+3\n"+"  ^-----^\n");       // Error: "mean" is a function; cannot add a function and a number
+      checkStr("apply(c(1,2,3),,nrow)","Missing argument\napply(c(1,2,3),,nrow)\n               ^\n");
 
       // Simple array handling; broadcast operators
       checkStr("h.hex");        // Simple ref
@@ -181,6 +182,7 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){h.hex})","apply requires that ary fun(ary x) return 1 column");
       checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
+      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",183.96); // Row-wise apply on mean
 
       // Conditional selection; 
       checkStr("ifelse(0,1,2)",2);

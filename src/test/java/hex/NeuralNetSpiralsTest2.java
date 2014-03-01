@@ -2,7 +2,7 @@ package hex;
 
 import hex.nn.NN;
 import hex.nn.NNModel;
-import org.junit.Assert;
+import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
@@ -13,6 +13,8 @@ import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
 import water.util.Log;
+
+import java.util.Random;
 
 public class NeuralNetSpiralsTest2 extends TestUtil {
   @BeforeClass public static void stall() {
@@ -28,10 +30,10 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
     // build the model
     {
       NN p = new NN();
-      p.seed = 7401699394609084302l;
+      p.seed = new Random().nextLong();
       p.rate = 0.007;
       p.rate_annealing = 0;
-      p.epochs = 11000;
+      p.epochs = 30000;
       p.hidden = new int[]{100};
       p.activation = NN.Activation.Tanh;
       p.max_w2 = Double.MAX_VALUE;
@@ -48,16 +50,19 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       p.validation = null;
       p.score_interval = 10;
       p.ignored_cols = null;
-      p.sync_samples = 0;
-      p.fast_mode = true; //same as old NeuralNet code
-      p.ignore_const_cols = false; //same as old NeuralNet code
-      p.shuffle_training_data = false; //same as old NeuralNet code
-      p.nesterov_accelerated_gradient = true; //same as old NeuralNet code
+      p.mini_batch = 0; //sync once per period
+      p.quiet_mode = true;
+      p.fast_mode = true;
+      p.ignore_const_cols = true;
+      p.nesterov_accelerated_gradient = true;
       p.classification = true;
       p.diagnostics = true;
       p.expert_mode = true;
       p.score_training_samples = 1000;
       p.score_validation_samples = 10000;
+      p.shuffle_training_data = false;
+      //p.force_load_balance = true; //make it multi-threaded
+      p.force_load_balance = false; //make it single-threaded (1 chunk)
       p.destination_key = dest;
       p.exec();
     }

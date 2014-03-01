@@ -1,15 +1,14 @@
 package hex;
 
-import java.util.Arrays;
-
+import com.google.gson.JsonArray;
+import com.google.gson.JsonPrimitive;
 import water.Iced;
 import water.api.DocGen;
 import water.api.Request.API;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
+import java.util.Arrays;
 
-public final class ConfusionMatrix extends Iced {
+public class ConfusionMatrix extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
   @API(help="Confusion matrix (Actual/Predicted)")
@@ -71,7 +70,7 @@ public final class ConfusionMatrix extends Iced {
     _arr[i][j]++;
   }
 
-  public final double[] classErr() {
+  public double[] classErr() {
     double[] res = new double[_arr.length];
     for( int i = 0; i < res.length; ++i )
       res[i] = classErr(i);

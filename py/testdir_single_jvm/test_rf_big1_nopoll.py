@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             kwargs = {}
             if OVERWRITE_RF_MODEL:
-                print "Since we're overwriting here, we have to wait for each to complete nopoll=False"
+                print "Since we're overwriting here, we have to wait for each to complete noPoll=False"
                 model_key = 'RF_model'
             else:
                 model_key = 'RF_model' + str(jobDispatch)
