@@ -38,8 +38,20 @@ public class AUC extends Request2 {
   /* Helper */ double[] _tprs;
   /* Helper */ double[] _fprs;
 
+  public AUC() {
+    final int bins = 100;
+    _cms = new hex.ConfusionMatrix[bins];
+    _thresh = new double[bins];
+    _tprs = new double[bins];
+    _fprs = new double[bins];
+    for( int i=0; i<bins; ++i) {
+      _cms[i] = new hex.ConfusionMatrix(2);
+      _thresh[i] = (0.5f+i)/bins; //TODO: accurate percentiles
+    }
+  }
+
   @Override public Response serve() {
-    Vec va = null,vp = null;
+    Vec va = null, vp;
     // Input handling
     if( vactual==null || vpredict==null )
       throw new IllegalArgumentException("Missing actual or predict!");
@@ -51,21 +63,12 @@ public class AUC extends Request2 {
       throw new IllegalArgumentException("Predicted column must be a floating point probability!");
 
     try {
-      va = vactual .toEnum(); // always returns TransfVec
+      va = vactual.toEnum(); // always returns TransfVec
       actual_domain = va._domain;
       vp = vpredict;
       // The vectors are from different groups => align them, but properly delete it after computation
       if (!va.group().equals(vp.group())) {
         vp = va.align(vp);
-      }
-      final int bins = 100;
-      _cms = new hex.ConfusionMatrix[bins];
-      _thresh = new double[bins];
-      _tprs = new double[bins];
-      _fprs = new double[bins];
-      for( int i=0; i<bins; ++i) {
-        _cms[i] = new hex.ConfusionMatrix(2);
-        _thresh[i] = (0.5f+i)/bins; //TODO: accurate percentiles
       }
       AUCTask at = new AUCTask(_cms, _thresh, _tprs, _fprs).doAll(va,vp);
       auc = at.getAUC();
@@ -144,10 +147,10 @@ public class AUC extends Request2 {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     DocGen.HTML.arrayHead(sb);
-    DocGen.HTML.section(sb, "Predicting class " + actual.names()[actual.find(vactual)] + " from probabilities " + predict.names()[predict.find(vpredict)]);
-    sb.append("<th>AUC</th><th>Best threshold</th>");
+//    DocGen.HTML.section(sb, "Predicting: " + actual.names()[actual.find(vactual)]);
+    sb.append("<th>AUC</th><th>Gini</th><th>Best threshold</th>");
     sb.append("<tr class='warning'>");
-    sb.append("<td>" + String.format("%4f", auc) + "</td><td>" + String.format("%4f", best_threshold) + "</td>");
+    sb.append("<td>" + String.format("%4f", auc) + "</td><td>" + String.format("%4f", 2*auc-1) + "</td><td>" + String.format("%4f", best_threshold) + "</td>");
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
     plotROC(sb);
