@@ -489,7 +489,7 @@ public class Inspect extends Request {
         //+ "<button type='submit' class='btn btn-success'>As Integer</button>";
 
 
-        String btn = "<a href='ToEnum.html?src_key=" + k+ "&column_index=" + (i+1)  + "'>"
+        String btn = "<a href='ToEnum.html?key=" + k + "&col_index=" + (i+1)  + "&to_enum=true" + "'>"
                 + "<button type='submit' class='btn btn-success'>As Factor</button>";
         row.addProperty(_va._cols[i]._name, btn);
       }

@@ -169,7 +169,7 @@ public class Constants extends Iced {
   public static final String TCPS_DUTY             = "tcp_duty_cycle";
   public static final String TIME                  = "time";
   public static final String TOT_MEM               = "tot_mem" + Suffixes.BYTES;
-  public static final String TO_ENUM                = "to_enum";
+  public static final String TO_ENUM               = "to_enum";
   public static final String TREE_COUNT            = "number_built";
   public static final String TREE_DEPTH            = "depth";
   public static final String TREE_LEAVES           = "leaves";
