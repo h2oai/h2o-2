@@ -21,39 +21,37 @@ public class Exec2 {
 
   // Grammar:
   //   statements := cxexpr ; statements
-  //   cxexpr :=                   // COMPLEX expr 
-  //           iexpr               // Simple RHS-expr
-  //           id = cxexpr         // Shadows outer var with a ptr assignment; no copy, read-only
-  //                               // Overwrites inner var; types must match.
-  //           id := cxexpr        // Deep-copy writable temp; otherwise same as above
-  //           id[] = cxexpr       // Only for writable temps; slice assignment
-  //           id[] := cxexpr      // Deep-copy, then slice assignment
+  //   cxexpr :=                    // COMPLEX expr 
+  //           infix_expr           // Simple RHS-expr
+  //           id = cxexpr          // Shadows outer var with a ptr assignment; no copy
+  //                                // Overwrites inner var; types must match.
+  //           id <- cxexpr         // Alternative R syntax for assignment
+  //           id[] = cxexpr        // Slice/partial assignment; id already exists
   //           iexpr ? cxexpr : cxexpr  // exprs must have equal types
-  //   iexpr := 
-  //           term {op2 term}*  // Infix notation, evals LEFT TO RIGHT
-  //   term  :=
-  //           op1* slice
+  //   infix_expr :=                // Leading infix expression
+  //           op1 infix_expr term* // +x but also e.g. ++--!+-!-++!3 
+  //           op1?  slice term*    // e.g. cos() or -sin(foo) or -+-fun()[1,2]
+  //   term : =                     // Infix expression
+  //           op2 infix_expr       // Standard R operator prec ordering
   //   slice :=
-  //           expr                // Can be a dbl or fcn or ary
-  //           expr[]              // whole ary val
-  //           expr[,]             // whole ary val
-  //           expr[cxexpr,cxexpr] // row & col ary slice (row FIRST, col SECOND)
-  //           expr[,cxexpr]       // col-only ary slice
-  //           expr[cxexpr,]       // row-only ary slice
-  //   expr :=
+  //           prefix_expr          // No slicing
+  //           prefix_expr[]        // Whole slice
+  //           prefix_expr[cxexpr?,cxexpr?] // optional row & col slicing
+  //   prefix_expr :=
   //           val
-  //           val(cxexpr,...)*    // Prefix function application, evals LEFT TO RIGHT
+  //           val(cxexpr,...)*     // Prefix function application, evals LEFT TO RIGHT
   //   val :=
-  //           ( cxexpr )          // Ordering evaluation
-  //           { statements }      // compound statement
-  //           id                  // any visible var; will be typed
-  //           num                 // Scalars, treated as 1x1
-  //           op                  // Built-in functions
+  //           ( cxexpr )           // Ordering evaluation
+  //           id                   // any visible var; will be typed
+  //           num                  // Scalars, treated as 1x1
+  //           op                   // Built-in functions
   //           function(v0,v1,v2) { statements; ...v0,v1,v2... } // 1st-class lexically scoped functions
-  //   op  := sgn sin cos ...any unary op...
-  //   op  := min max + - * / % & |    ...any boolean op...
-  //   op  := c // R's "c" operator, returns a Nx1 array
-  //   op  := ary byCol(ary,dbl op2(dbl,dbl))
+  //           function(v0,v1,v2) statement // Single statement variant
+  //   op1 := + - !                 // Unary operators allowed w/out parens prefix location
+  //   op2 := + - * / % & | <= > >= !=  ... // Binary operators allowed w/out parens infix location
+  //   op  := sgn sin cos nrow ncol isNA sqrt isTRUE year month day ...
+  //   op  := min max sum sdev mean  ...
+  //   op  := c cbind seq quantile table ...  // Various R operators
 
   public static Env exec( String str ) throws IllegalArgumentException {
     cluster_init();
