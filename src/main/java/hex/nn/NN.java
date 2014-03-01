@@ -17,6 +17,7 @@ import water.util.RString;
 import java.util.Random;
 
 import static water.util.MRUtils.sampleFrame;
+import static water.util.MRUtils.sampleFrameStratified;
 
 /**
  * NN - Neural Net implementation based on MRTask2
@@ -101,6 +102,12 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
 
+  @API(help = "Balance class counts via over/under-sampling with replacement (can increase predictive accuracy for imbalanced datasets)", filter = Default.class, json = true, gridable = false)
+  public boolean balance_classes = false;
+
+  @API(help = "Maximum growth factor (relative size) of the training dataset after balancing classes (especially when oversampling rare minority classes)", filter = Default.class, json = true, dmin=1, dmax=1e6, gridable = false)
+  public float max_balance_growth = 5.0f;
+
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
@@ -165,25 +172,33 @@ public class NN extends Job.ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
-    if(arg._name.equals("classification_stop") && !classification) {
-      arg.disable("Only for classification.", inputArgs);
-    }
     if (expert_mode && arg._name.equals("force_load_balance") && H2O.CLOUD.size()>1) {
       force_load_balance = false;
       arg.disable("Only for single-node operation.");
     }
 
-    if(arg._name.equals("regression_stop") && classification) {
-      arg.disable("Only for regression.", inputArgs);
+    if (classification) {
+      if(arg._name.equals("regression_stop")) {
+        arg.disable("Only for regression.", inputArgs);
+      }
+      if(arg._name.equals("max_balance_growth") && !balance_classes) {
+        arg.disable("Requires balance_classes.", inputArgs);
+      }
     }
-    if(arg._name.equals("max_confusion_matrix_size") && !classification) {
-      arg.disable("Only for classification.", inputArgs);
+    else {
+      if(arg._name.equals("classification_stop")
+              || arg._name.equals("max_confusion_matrix_size")
+              || arg._name.equals("max_balance_growth")
+              || arg._name.equals("balance_classes")) {
+        arg.disable("Only for classification.", inputArgs);
+      }
     }
-
     if (arg._name.equals("score_validation_samples") && validation == null) {
       arg.disable("Only if a validation set is specified.", inputArgs);
     }
-    if (arg._name.equals("loss") || arg._name.equals("max_w2") || arg._name.equals("warmup_samples")
+    if (arg._name.equals("loss")
+            || arg._name.equals("max_w2")
+            || arg._name.equals("warmup_samples")
             || arg._name.equals("score_training_samples")
             || arg._name.equals("score_validation_samples")
             || arg._name.equals("initial_weight_distribution")
@@ -194,6 +209,8 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("mini_batch")
             || arg._name.equals("score_duty_cycle")
             || arg._name.equals("fast_mode")
+            || arg._name.equals("balance_classes")
+            || arg._name.equals("max_balance_growth")
             || arg._name.equals("ignore_const_cols")
             || arg._name.equals("force_load_balance")
             || arg._name.equals("shuffle_training_data")
@@ -246,6 +263,11 @@ public class NN extends Job.ValidatedJob {
   private void checkParams() {
     if (source.numCols() <= 1)
       throw new IllegalArgumentException("Training data must have at least 2 features (incl. response).");
+
+    for (int i=0;i<hidden.length;++i) {
+      if (hidden[i]==0)
+        throw new IllegalArgumentException("Hidden layer size must be >0.");
+    }
 
     if(!classification && loss != Loss.MeanSquare) {
       Log.warn("Setting loss to MeanSquare for regression.");
@@ -304,12 +326,24 @@ public class NN extends Job.ValidatedJob {
       final long model_size = model.model_info().size();
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
-      train = reBalance(model.model_info().data_info()._adaptedFrame, seed);
+      train = model.model_info().data_info()._adaptedFrame;
+      train = reBalance(train, seed);
+      float[] trainSamplingFactors = null;
+
+      if (classification && balance_classes) {
+        trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
+        train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors, (long)(max_balance_growth*train.numRows()), seed, false);
+        model.setClassSamplingFactors(trainSamplingFactors);
+      }
       trainScoreFrame = sampleFrame(train, score_training_samples, seed);
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
         valid_adapted = model.adapt(validation, false);
         valid = reBalance(valid_adapted[0], seed+1);
+        if (classification && balance_classes) {
+          // re-use same sampling factors for validation set as for training to avoid data shift
+          valid = sampleFrameStratified(valid, valid.lastVec(), trainSamplingFactors, (long)(max_balance_growth*valid.numRows()), seed+1, false);
+        }
         validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
@@ -327,7 +361,7 @@ public class NN extends Job.ValidatedJob {
 
       //main loop
       do model.set_model_info(new NNTask(model.model_info(), sync_fraction).doAll(train).model_info());
-      while (model.doScoring(trainScoreFrame, validScoreFrame, timeStart, self()));
+      while (model.doScoring(train, trainScoreFrame, validScoreFrame, timeStart, self()));
 
       Log.info("Finished training the Neural Net model.");
       return model;
@@ -340,7 +374,7 @@ public class NN extends Job.ValidatedJob {
       if (model != null) model.unlock(self());
       if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
       if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
-      if (validation != null) valid_adapted[1].delete(); //just deleted the adapted frames for validation
+      if (validation != null && valid_adapted != null && valid_adapted.length > 1 ) valid_adapted[1].delete(); //just deleted the adapted frames for validation
       unlock_data();
     }
   }

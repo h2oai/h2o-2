@@ -18,14 +18,22 @@ set -x
 set -e
 
 r_version=3.0
+
+# Windows
+# -------
 os=windows
 ext=.zip
+
+# Mac
+# ---
+# os=macosx
+# ext=.tgz
 
 branch=rel-jacobi
 major=2
 minor=2
 incremental=0
-build=2
+build=6
 project_version=${major}.${minor}.${incremental}.${build}
 
 # binary dir

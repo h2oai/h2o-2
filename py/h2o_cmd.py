@@ -3,8 +3,7 @@ import h2o
 import h2o_browse as h2b, h2o_rf as h2f, h2o_exec, h2o_gbm
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
-    timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
-    noise=None, noPoll=None, **kwargs):
+    timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, **kwargs):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
     if not bucket  : raise Exception('No S3 bucket')
     if not filename: raise Exception('No filename in bucket')
@@ -19,7 +18,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = keyForParseResult
     p = node.parse(s3_key, myKeyForParseResult, 
         timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
+        pollTimeoutSecs=pollTimeoutSecs, **kwargs)
 
     # do SummaryPage here too, just to get some coverage
     node.summary_page(myKeyForParseResult)
@@ -35,10 +34,10 @@ def runInspect(node=None, key=None, timeoutSecs=30, verbose=False, **kwargs):
         print "inspect of %s:" % key, h2o.dump_json(a)
     return a
 
-def runSummary(node=None, key=None, timeoutSecs=30, numRows=None, numCols=None, **kwargs):
+def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
     if not key: raise Exception('No key for Summary')
     if not node: node = h2o.nodes[0]
-    return node.summary_page(key, timeoutSecs=timeoutSecs, numRows=numRows, numCols=numCols, **kwargs)
+    return node.summary_page(key, timeoutSecs=timeoutSecs, **kwargs)
 
 # Not working in H2O yet, but support the test
 def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
@@ -58,56 +57,54 @@ def runExec(node=None, timeoutSecs=20, **kwargs):
         h2o.check_sandbox_for_errors()
     return a
 
-def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noPoll=False, **kwargs):
+def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
     if not node: node = h2o.nodes[0]
-    return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, noPoll=noPoll, **kwargs)
+    return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, **kwargs)
 
-def runGLM(node=None, parseResult=None, 
-        timeoutSecs=20, retryDelaySecs=2, noise=None, noPoll=False, **kwargs):
+def runGLM(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLM')
     if not node: node = h2o.nodes[0]
     return node.GLM(parseResult['destination_key'], 
-        timeoutSecs, retryDelaySecs, noise=noise, noPoll=noPoll,**kwargs)
+        timeoutSecs, retryDelaySecs, **kwargs)
 
 def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.GLMScore(key, model_key, timeoutSecs, **kwargs)
 
-def runGLMGrid(node=None, parseResult=None,
-        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
+def runGLMGrid(node=None, parseResult=None, timeoutSecs=60, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLMGrid')
     if not node: node = h2o.nodes[0]
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
-def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, returnFast=False, **kwargs):
+def runPCA(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     if not parseResult: raise Exception('No parseResult for PCA')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, returnFast=returnFast, **kwargs)
+    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
-def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, noPoll=False, **kwargs):
+def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, **kwargs):
     if not node: node = h2o.nodes[0]
-    return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+    return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, **kwargs)
 
-def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
+def runNNet(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
-def runNNet2(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
+def runNNet2(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN2')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.neural_net2(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+    return node.neural_net2(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
-def runGBM(node=None, parseResult=None, timeoutSecs=500, noPoll=False, **kwargs):
+def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs) 
+    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs) 
 
 def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwargs):
     if not data_key: raise Exception('No data_key for run Predict')
@@ -116,8 +113,7 @@ def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwar
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
-def runRF(node=None, parseResult=None, trees=5, 
-        timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
+def runRF(node=None, parseResult=None, trees=5, timeoutSecs=20, **kwargs):
     if not parseResult: raise Exception('No parseResult for RF')
     if not node: node = h2o.nodes[0]
     Key = parseResult['destination_key']
@@ -127,52 +123,51 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
-def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not model_key: 
         raise Exception("\nNo model_key was supplied to the gbm view!")
-    gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
+    gbmView = node.gbm_view(model_key, timeoutSecs=timeoutSecs)
     return gbmView
 
-def runNeuralView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runNeuralView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not model_key: 
         raise Exception("\nNo model_key was supplied to the neural view!")
-    neuralView = node.neural_view(model_key,timeoutSecs=timeoutSecs)
+    neuralView = node.neural_view(model_key, timeoutSecs=timeoutSecs, retryDelaysSecs=retryDelaysecs)
     return neuralView
 
-def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not modelKey:
         raise Exception("\nNo modelKey was supplied to the pca view!")
     pcaView = node.pca_view(modelKey, timeoutSecs=timeoutSecs)
     return pcaView
 
-def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not modelKey:
         raise Exception("\nNo modelKey was supplied to the glm view!")
-    glmView = node.glm_view(modelKey,timeoutSecs=timeoutSecs)
+    glmView = node.glm_view(modelKey,timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
     return glmView
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
-    noise=None, noPoll=False, noPrint=False, **kwargs):
+    noPrint=False, **kwargs):
     if not node: node = h2o.nodes[0]
 
     # kind of wasteful re-read, but maybe good for testing
-    rfView = node.random_forest_view(data_key, model_key, ntree=ntree, timeoutSecs=timeoutSecs, noise=noise, **kwargs)
+    rfView = node.random_forest_view(data_key, model_key, ntree=ntree, timeoutSecs=timeoutSecs, **kwargs)
     if doSimpleCheck:
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
 def runRFScore(node=None, data_key=None, model_key=None, ntree=None, 
-    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
-    noise=None, noPoll=False, noPrint=False, **kwargs):
+    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True, **kwargs):
     if not node: node = h2o.nodes[0]
 
     # kind of wasteful re-read, but maybe good for testing
-    rfView = node.random_forest_score(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
+    rfView = node.random_forest_score(data_key, model_key, timeoutSecs, **kwargs)
     if doSimpleCheck:
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView

@@ -52,6 +52,42 @@ public class Utils {
       if (from[i]>from[result]) result = i;
     return result;
   }
+  public static int minIndex(int[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
+  public static int minIndex(float[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
+  public static float maxValue(float[] from) {
+    float result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
+    return result;
+  }
+  public static float minValue(float[] from) {
+    float result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<result) result = from[i];
+    return result;
+  }
+  public static long maxValue(long[] from) {
+    long result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
+    return result;
+  }
+  public static long minValue(long[] from) {
+    long result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<result) result = from[i];
+    return result;
+  }
 
   /**
    * Compare two numbers to see if they are within one ulp of the smaller decade.
@@ -105,17 +141,22 @@ public class Utils {
     return Double.longBitsToDouble(sum);
   }
 
-  public static int sum(int[] from) {
+  public static long sum(final long[] from) {
+    long result = 0;
+    for (long d: from) result += d;
+    return result;
+  }
+  public static int sum(final int[] from) {
     int result = 0;
     for (int d: from) result += d;
     return result;
   }
-  public static float sum(float[] from) {
+  public static float sum(final float[] from) {
     float result = 0;
     for (float d: from) result += d;
     return result;
   }
-  public static double sum(double[] from) {
+  public static double sum(final double[] from) {
     double result = 0;
     for (double d: from) result += d;
     return result;
@@ -247,8 +288,25 @@ public class Utils {
     }
   }
 
+  public static int[] shuffleArray(int[] a, int n, int result[], long seed) {
+    Random random = getDeterRNG(seed);
+    result[0] = a[0];
+    for (int i = 1; i < n; i++) {
+      int j = random.nextInt(i+1);
+      if (j!=i) result[i] = a[j];
+      result[j] = a[i];
+    }
+    return result;
+  }
+
   private static void swap(long[] a, int i, int change) {
     long helper = a[i];
+    a[i] = a[change];
+    a[change] = helper;
+  }
+
+  private static void swap(int[] a, int i, int change) {
+    int helper = a[i];
     a[i] = a[change];
     a[change] = helper;
   }
@@ -782,17 +840,27 @@ public class Utils {
     return sum/nums.length;
   }
   public static float[] div(float[] nums, int n) {
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
     return nums;
   }
   public static float[] div(float[] nums, float n) {
     assert !Float.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
     return nums;
   }
   public static double[] div(double[] nums, double n) {
     assert !Double.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
+    return nums;
+  }
+  public static float[] mult(float[] nums, float n) {
+    assert !Float.isInfinite(n) : "Trying to multiply " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] *= n;
+    return nums;
+  }
+  public static double[] mult(double[] nums, double n) {
+    assert !Double.isInfinite(n) : "Trying to multiply " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] *= n;
     return nums;
   }
   /**
@@ -982,4 +1050,22 @@ public class Utils {
     }
     return new int[][] { pvals, pindx };
   }
+
+  /**
+   * Poisson-distributed RNG
+   * @param lambda Lambda parameter
+   * @return Poisson-distributed random number in [0,inf)
+   */
+  public static int getPoisson(double lambda, Random rng) {
+    double L = Math.exp(-lambda);
+    double p = 1.0;
+    int k = 0;
+    if (rng == null) rng = new Random();
+    do {
+      k++;
+      p *= rng.nextDouble();
+    } while (p > L);
+    return k - 1;
+  }
+
 }

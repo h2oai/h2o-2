@@ -82,7 +82,7 @@ class Basic(unittest.TestCase):
         for i in range(5):
             parseResult = h2i.import_parse(path=csvPathname, schema='put')
             h2o_cmd.runRF(parseResult=parseResult, trees=1,
-                timeoutSecs=10, retryDelaySecs=0.1, noPrint=True, print_params=False)
+                timeoutSecs=10, retryDelaySecs=0.1, noPrint=True)
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -1577,7 +1577,8 @@ class H2O(object):
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, 
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, print_params=True, noPoll=False, rfView=True, **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, rfView=True, 
+        print_params=True, noPrint=False, **kwargs):
 
         algo = '2/DRF' if beta_features else 'RF'
         algoView = '2/DRFView' if beta_features else 'RFView'
@@ -1660,7 +1661,7 @@ class H2O(object):
             time.sleep(5)
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging)
+                noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
             return rfView
 
         else:
@@ -1696,6 +1697,7 @@ class H2O(object):
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300, 
             retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
             noise=None, benchmarkLogging=None, print_params=False, noPoll=False, 
+            noPrint=False,
             useRFScore=False, **kwargs): 
 
         # not supported yet
@@ -1768,7 +1770,7 @@ class H2O(object):
         if beta_features:
             rfView = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging)
+                noPrint=noPrint, noise=noise, benchmarkLogging=benchmarkLogging)
         else:
             fake_a = a
             fake_a['response'] = a['response']

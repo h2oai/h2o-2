@@ -50,6 +50,11 @@ public abstract class Model extends Lockable<Model> {
   @API(help="Column names used to build the model")
   public final String _domains[][];
 
+  @API(help = "Class sampling factors for imbalanced classification")
+  protected float[] _classSamplingFactors;
+  public void setClassSamplingFactors(float[] sf) { _classSamplingFactors = sf.clone(); }
+
+
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {

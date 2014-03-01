@@ -45,13 +45,14 @@ if("h2oRClient" %in% myPackages) {
 
 # make the install conditional. Don't install if it's already there
 usePackage <- function(p) {
+    local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
     if (!is.element(p, installed.packages()[,1]))
         install.packages(p, dep = TRUE)
     require(p, character.only = TRUE)
 }
 
 # what packages did the h2o_master_test need?
-usePackage("Rcurl")
+usePackage("RCurl")
 usePackage("rjson")
 usePackage("statmod")
 usePackage("testthat")
@@ -63,6 +64,8 @@ usePackage("caTools")
 usePackage("gplots")
 usePackage("ROCR")
 usePackage("digest")
+usePackage("R.utils")
+usePackage("penalized")
 
 # these came from source('../findNSourceUtils.R')
 usePackage("glmnet")

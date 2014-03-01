@@ -1,13 +1,13 @@
 library(h2o)
 myIP = "192.168.1.161"; myPort = 60024
 # myIP = "23.22.188.100"; myPort = 54321
-remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE)
+remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = FALSE)
 
 # Import airlines dataset to H2O
 # airPath = "hdfs://192.168.1.161/datasets/airlines.clean/earl/original/2007.csv.gz"
 # airPath = "s3n://h2o-airlines-unpacked/allyears.1987.2013.csv"
 airPath = "/home/tomk/airlines_all.csv"
-airlines.hex = h2o.importFile(remoteH2O, path = airPath, key = "airlines.hex")
+airlines.hex = h2o.importFile.FV(remoteH2O, path = airPath, key = "airlines.hex")
 
 # Print out basic summary
 str(airlines.hex)
@@ -17,8 +17,8 @@ tail(airlines.hex)
 
 # Display count of State column's levels
 colnames(airlines.hex)
-dest.count = h2o.table(airlines.hex$Dest)
-as.data.frame(dest.count)
+# dest.count = h2o.table(airlines.hex$Dest)
+# as.data.frame(dest.count)
 origindest.count = h2o.table(airlines.hex[,c("Origin", "Dest")])
 head(origindest.count)
 

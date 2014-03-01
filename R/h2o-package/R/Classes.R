@@ -421,16 +421,17 @@ h2o.year <- function(x){
   if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
   .h2o.__unop2('year', x)
 }
+
 h2o.month <- function(x){
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
   .h2o.__unop2('month', x)
 }
+
 year <- function(x) UseMethod('year', x)
 year.H2OParsedData <- h2o.year
 month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
-
 
 as.h2o <- function(client, object, key = "", header, sep = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
@@ -531,8 +532,6 @@ h2o.addFunction <- function(object, fun, name){
   exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
   res <- .h2o.__exec2(object, exec_cmd)
 }
-
-
 
 h2o.runif <- function(x, min = 0, max = 1) {
   if(missing(x)) stop("Must specify data set")
@@ -681,10 +680,11 @@ setMethod("dim", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
   as.numeric(c(res$numRows, res$numCols))
 })
+
 setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), sep='')
   ttt <- getURL(url)
   n = nchar(ttt)
 
