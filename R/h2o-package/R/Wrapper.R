@@ -185,7 +185,7 @@ h2o.clusterStatus <- function(client) {
     else if(file.exists(Sys.getenv("APPDATA")))
       tmp_path <- Sys.getenv("APPDATA")
     else
-      stop("Error: Cannot log Java output. Please create the directory ", default_path, " and re-initialize H2O")
+      stop("Error: Cannot log Java output. Please create the directory ", default_path, ", ensure it is writable, and re-initialize H2O")
     
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
     stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
