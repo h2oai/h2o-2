@@ -224,9 +224,8 @@ public abstract class LSMSolver extends Iced{
       if(_lambda>0)
         gram.addDiag(_lambda*(1-_alpha));
       double rho = _rho;
-      if(_alpha > 0){
+      if(_alpha > 0 && _lambda > 0){
         if(Double.isNaN(_rho)) rho = gram.diagMin()+1e-5;// find rho value as min diag element + constant
-        System.out.println(rho = + rho);
         gram.addDiag(rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){
@@ -239,15 +238,15 @@ public abstract class LSMSolver extends Iced{
       long t1 = System.currentTimeMillis();
       Cholesky chol = gram.cholesky(null,true,_id);
       long t2 = System.currentTimeMillis();
-      Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");
       while(!chol.isSPD() && attempts < 10){
         if(rho == 0 || Double.isNaN(rho))rho = 1e-5;
         else rho *= 10;
-        System.out.println("BUMPED UP RHO TO " + rho );
+        Log.info("GLM ADMM: BUMPED UP RHO TO " + rho);
         ++attempts;
         gram.addDiag(rho); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
+      Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");
       if(!chol.isSPD()){
         System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
         throw new NonSPDMatrixException(gram);
@@ -311,7 +310,7 @@ public abstract class LSMSolver extends Iced{
       }
       if(!_converged)gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
-      Log.info("ADMM " + (_converged?"converged":"done(NOT CONVERGED)") +" in " + i + " iterations and " + (System.currentTimeMillis() - t) + "ms");
+      Log.info("ADMM " + (_converged ? "converged" : "done(NOT CONVERGED)") + " in " + i + " iterations and " + (System.currentTimeMillis() - t) + "ms");
       return _converged;
     }
     @Override

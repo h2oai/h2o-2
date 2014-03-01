@@ -67,7 +67,7 @@ public final class Gram extends Iced {
       for(double d:_diag) if(d < res)res = d;
     if(_xx != null)
       for(double [] x:_xx)if(x[x.length-1] < res)res = x[x.length-1];
-    return res;a
+    return res;
   }
   @Override
   public Gram clone(){return new Gram(this);}

@@ -199,7 +199,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if( _glm.family == Family.gaussian) {
         w = 1;
         z = y;
-        assert _beta == null; // don't expect beta here, gaussian is non-iteratove
+        assert _beta == null; // don't expect beta here, gaussian is non-iterative
         for(int i = 0; i < ncats; ++i)
           _grad[cats[i]] -= y;
         for(int i = 0; i < nums.length; ++i)_grad[numStart+i] -= y*nums[i];
