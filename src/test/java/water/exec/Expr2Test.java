@@ -72,6 +72,7 @@ public class Expr2Test extends TestUtil {
       checkStr("x=mean");         // Assign x to the built-in fcn mean
       checkStr("x=mean=3",3);     // Assign x & id mean with 3; "mean" here is not related to any built-in fcn
       checkStr("x=mean(c(3))",3); // Assign x to the result of running fcn mean(3)
+      checkStr("x=mean(c(\n3))",3); // Assign x to the result of running fcn mean(3)
       checkStr("x=mean+3","Arg 'x' typed as dblary but passed dbl(ary)\n"+"x=mean+3\n"+"  ^-----^\n");       // Error: "mean" is a function; cannot add a function and a number
       checkStr("apply(c(1,2,3),,nrow)","Missing argument\napply(c(1,2,3),,nrow)\n               ^\n");
 
@@ -141,10 +142,10 @@ public class Expr2Test extends TestUtil {
       checkStr("T||F&&F",1);    // Evals as T|(F&F)==1 not as (T|F)&F==0
 
       // User functions
-      checkStr("function(=){x+1}(2)");
-      checkStr("function(x,=){x+1}(2)");
-      checkStr("function(x,<-){x+1}(2)");
-      checkStr("function(x,x){x+1}(2)");
+      checkStr("function(=){x+1}(2)","Invalid var\nfunction(=){x+1}(2)\n         ^\n");
+      checkStr("function(x,=){x+1}(2)","Invalid var\nfunction(x,=){x+1}(2)\n           ^\n");
+      checkStr("function(x,<-){x+1}(2)","Invalid var\nfunction(x,<-){x+1}(2)\n           ^\n");
+      checkStr("function(x,x){x+1}(2)","Repeated argument\nfunction(x,x){x+1}(2)\n           ^^\n");
       checkStr("function(x,y,z){x[]}(h.hex,1,2)");
       checkStr("function(x){x[]}(2)");
       checkStr("function(x){x+1}(2)",3);
@@ -242,6 +243,20 @@ public class Expr2Test extends TestUtil {
       checkStr("ddply(h.hex,NA,sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,NA,3),sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,99,3),sum)","Column 99 out of range for frame columns 17");
+
+      // Newlines as statement-ends
+      checkStr("3*4+5*6",42);
+      checkStr("(h.hex[1,1]=2)",2);
+      checkStr("(h.hex[1,1]=2\n)",2);
+      checkStr("(h.hex[1,1]\n=2)",2);
+      checkStr("function(){x=1.23;(x=4.5)\n}()",4.5);
+      checkStr("function(){x=1.23;x=\n4.5\n}()",4.5);
+      checkStr("x=3\nfunction()x=1.23\nx",3);
+      checkStr("x=3\nfunction(){(x=1.23)}\nx",3);
+      checkStr("1.23\n-4",-4);
+      checkStr("1.23 +\n-4",-2.77);
+      checkStr("x=3;3*-x",-9);  // *- is not a token
+      checkStr("x=3;3\n*\n-\nx",3); // Each of '3' and '*' and '-' and 'x' is a standalone statement
 
       // Cleanup testing temps
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope
