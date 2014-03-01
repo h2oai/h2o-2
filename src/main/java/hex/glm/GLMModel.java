@@ -12,6 +12,7 @@ import water.H2O.H2OCountedCompleter;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
+import water.util.Log;
 import water.util.Utils;
 
 public class GLMModel extends Model implements Comparable<GLMModel> {
@@ -185,7 +186,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public int iteration(){
     int res = 0;
-    for(int i = 0; i < submodels.length && submodels[i] != null && submodels[i].iteration != 0; ++i)
+    for(int i = 1; i < submodels.length && submodels[i] != null && submodels[i].iteration != 0; ++i)
       res = submodels[i].iteration;
     return res;
   }
@@ -325,7 +326,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     if(lambdaIdx == 0 || rank(lambdaIdx) == 1)return true;
     double diff = (submodels[lambdaIdx-1].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
     if(diff >= 0.01)best_lambda_idx = lambdaIdx;
-    return  (diff > 0.001);
+    return  true;
   }
 
   /**
