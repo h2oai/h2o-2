@@ -830,7 +830,8 @@ public class Summary2 extends Iced {
               ">Percentiles</th></tr>");
       sb.append("<tr><th>Threshold(%)</th>");
       for (double pc : stats.pct)
-        sb.append("<td>" + (int) Math.round(pc * 100) + "</td>");
+        sb.append("<td>" + Utils.p2d(pc * 100.0) + "</td>");
+        // sb.append("<td>" + (int) Math.round(pc * 100) + "</td>");
       sb.append("</tr>");
       sb.append("<tr><th>Value</th>");
       for (double pv : stats.pctile)
