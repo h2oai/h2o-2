@@ -115,7 +115,7 @@ class Basic(unittest.TestCase):
             # RF score******************************************************
             print "Now score with the 2nd random dataset"
             rfv = h2o_cmd.runRFView(data_key=dataKeyTest, model_key=model_key, 
-                timeoutSecs=timeoutSecs, retryDelaySecs=1, print_params=True)
+                timeoutSecs=timeoutSecs, retryDelaySecs=1)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
             self.assertAlmostEqual(classification_error, 5.0, delta=2.0, msg="Classification error %s differs too much" % classification_error)

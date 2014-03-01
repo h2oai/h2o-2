@@ -263,7 +263,7 @@ class Basic(unittest.TestCase):
                     parseResult = h2i.import_parse(path=csvPathname, schema='put', separator=ord(newSep),
                         noPrint=not h2o.verbose)
                     h2o_cmd.runRF(parseResult=parseResult, trees=1, response_variable='C1',
-                        timeoutSecs=10, retryDelaySecs=0.1, noPrint=True, print_params=False)
+                        timeoutSecs=10, retryDelaySecs=0.1, noPrint=True)
                     h2o.verboseprint("Set", set)
                     h2o.check_sandbox_for_errors()
                     sys.stdout.write('.')

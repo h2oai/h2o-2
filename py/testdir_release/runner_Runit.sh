@@ -130,9 +130,9 @@ myR() {
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
 
     echo "FIX!  we don't need H2OWrapperDir stuff any more???"
-    export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
-    echo "H2OWrapperDir should be $H2OWrapperDir"
-    ls $H2OWrapperDir/h2o*.tar.gz
+    # export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
+    # echo "H2OWrapperDir should be $H2OWrapperDir"
+    # ls $H2OWrapperDir/h2o*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
     # test paths are always relative to tests
@@ -164,7 +164,7 @@ echo "Okay to run h2oWrapper.R every time for now"
 mySetup 
 
 # can be slow if it had to reinstall all packages?
-export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
+# export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
 
 # FIX! if we assume we're always running with a local build, we shouldn't load from here
 # echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"

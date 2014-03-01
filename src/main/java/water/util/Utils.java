@@ -52,6 +52,18 @@ public class Utils {
       if (from[i]>from[result]) result = i;
     return result;
   }
+  public static int minIndex(int[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
+  public static int minIndex(float[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
   public static float maxValue(float[] from) {
     float result = from[0];
     for (int i = 1; i<from.length; ++i)
@@ -276,8 +288,25 @@ public class Utils {
     }
   }
 
+  public static int[] shuffleArray(int[] a, int n, int result[], long seed) {
+    Random random = getDeterRNG(seed);
+    result[0] = a[0];
+    for (int i = 1; i < n; i++) {
+      int j = random.nextInt(i+1);
+      if (j!=i) result[i] = a[j];
+      result[j] = a[i];
+    }
+    return result;
+  }
+
   private static void swap(long[] a, int i, int change) {
     long helper = a[i];
+    a[i] = a[change];
+    a[change] = helper;
+  }
+
+  private static void swap(int[] a, int i, int change) {
+    int helper = a[i];
     a[i] = a[change];
     a[change] = helper;
   }

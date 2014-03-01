@@ -1,7 +1,7 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
-test.glm2glmnetregtrees2.golden <- function(H2Oserver) {
+test.glm2glmnetreg5.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing TREES data...") 
@@ -13,12 +13,12 @@ treesR<- read.csv(locate("../smalldata/trees.csv"), header=T)
 #fit R model in glmnet with regularization
 x<- as.matrix(treesR[,3:4])
 y<- as.matrix(treesR[,2])
-fitRglmnet<- glmnet(x, y, family="gaussian", nlambda=1, alpha=.5, lambda=0.04010316)
+fitRglmnet<- glmnet(x, y, family="gaussian", nlambda=1, alpha=1, lambda=0.15)
 
 
 #fit corresponding H2O model
 
-fitH2O<- h2o.glm.FV(x=c("Height", "Volume"), y="Girth", family="gaussian", nfolds=0, alpha=.3, lambda=0.04010316, data=treesH2O)
+fitH2O<- h2o.glm.FV(x=c("Height", "Volume"), y="Girth", family="gaussian", nfolds=0, alpha=1, lambda=0.15, data=treesH2O)
 
 #test that R coefficients and basic descriptives are equal
 Rcoeffsglmnet<- sort(as.matrix(coefficients(fitRglmnet)))
@@ -41,5 +41,5 @@ expect_equal(H2Oratio, fitRglmnet$dev.ratio, tolerance = 0.01)
    testEnd()
 }
 
-doTest("GLM Test: Regularization: Alpha=0, verif with penalized", test.glm2glmnetregtrees2.golden)
+doTest("GLM Test: Regularization: Alpha=.1", test.glm2glmnetreg5.golden)
 

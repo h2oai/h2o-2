@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
             # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
             # out_of_bag_error_estimate=1&
             rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
-                timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+                timeoutSecs, retryDelaySecs=1, **kwargs)
             # new web page for predict? throw it in here for now
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)

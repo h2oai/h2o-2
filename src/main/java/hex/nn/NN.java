@@ -105,7 +105,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Balance class counts via over/under-sampling with replacement (can increase predictive accuracy for imbalanced datasets)", filter = Default.class, json = true, gridable = false)
   public boolean balance_classes = false;
 
-  @API(help = "Maximum growth factor (relative size) of datasets after balancing classes (especially when oversampling rare minority classes)", filter = Default.class, json = true, dmin=1, dmax=1e6, gridable = false)
+  @API(help = "Maximum growth factor (relative size) of the training dataset after balancing classes (especially when oversampling rare minority classes)", filter = Default.class, json = true, dmin=1, dmax=1e6, gridable = false)
   public float max_balance_growth = 5.0f;
 
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
@@ -182,7 +182,7 @@ public class NN extends Job.ValidatedJob {
         arg.disable("Only for regression.", inputArgs);
       }
       if(arg._name.equals("max_balance_growth") && !balance_classes) {
-        arg.disable("Requires imbalanced.", inputArgs);
+        arg.disable("Requires balance_classes.", inputArgs);
       }
     }
     else {
@@ -323,22 +323,21 @@ public class NN extends Job.ValidatedJob {
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
       train = reBalance(train, seed);
-      float[] trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
+      float[] trainSamplingFactors = null;
+
       if (classification && balance_classes) {
-        train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors,
-                train.numRows(), (long)(max_balance_growth*train.numRows()), seed, false);
+        trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
+        train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors, (long)(max_balance_growth*train.numRows()), seed, false);
         model.setClassSamplingFactors(trainSamplingFactors);
       }
       trainScoreFrame = sampleFrame(train, score_training_samples, seed);
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
-      float[] validSamplingFactors = null;
       if (validation != null) {
         valid_adapted = model.adapt(validation, false);
         valid = reBalance(valid_adapted[0], seed+1);
-        validSamplingFactors = new float[valid.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
         if (classification && balance_classes) {
-          valid = sampleFrameStratified(valid, valid.lastVec(), validSamplingFactors,
-                  valid.numRows(), (long)(max_balance_growth*valid.numRows()), seed+1, false);
+          // re-use same sampling factors for validation set as for training to avoid data shift
+          valid = sampleFrameStratified(valid, valid.lastVec(), trainSamplingFactors, (long)(max_balance_growth*valid.numRows()), seed+1, false);
         }
         validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
@@ -357,7 +356,7 @@ public class NN extends Job.ValidatedJob {
 
       //main loop
       do model.set_model_info(new NNTask(model.model_info(), sync_fraction).doAll(train).model_info());
-      while (model.doScoring(trainScoreFrame, validScoreFrame, timeStart, self()));
+      while (model.doScoring(train, trainScoreFrame, validScoreFrame, timeStart, self()));
 
       Log.info("Finished training the Neural Net model.");
       return model;
