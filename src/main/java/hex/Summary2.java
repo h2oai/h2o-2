@@ -363,7 +363,7 @@ public class Summary2 extends Iced {
       // update: we allow api to change max_qbins. default 1000. larger = more accuracy
       // minimum of 1, probably. 0 is bad. negative is bad. Wants to be int.
       // can just force if bad param.
-      assert max_qbins > 0 && max_qbins < 10000000;
+      assert max_qbins > 0 && max_qbins <= 10000000 : "max_qbins must be >0 and <= 10000000";
       _binsz2 = _binsz / (max_qbins / nbin);
       int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz2)/1000000L) + 1;
       // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
@@ -643,90 +643,74 @@ public class Summary2 extends Iced {
       final double s1 = thres[j]*_gprows;
       long bc;
       while(s1 > s+(bc = hcnt2[k])){
-        s  += bc;
+        s += bc;
         k++;
       }
-      assert s1>=s;
-
-      if ( s1 == s ) {
-        // suppose we could have the same "gone too far" fp compare issue
-        // back up one if so. Should never get this if we only have one bin
-        if ( hcnt2[k] == 0 ) {
-            // use prior bin's max
-            assert k>0;
-            assert hcnt2[k-1] != 0;
-            guess = hcnt2_max[k-1];
+    
+      // If bin count is 0 we shouldn't have stopped if not at the threshold yet..
+      // If did due to fp comparison issues, then a non-zero bin should be right before.
+      if ( s1 == s || hcnt2[k] == 0 ) {
+        if ( k > 0 ) {
+          assert hcnt2[k-1] != 0;
+          guess = hcnt2_max[k-1];
         }
         else {
-            // use that bin's min
-            assert hcnt2[k] != 0;
-            guess = hcnt2_min[k];
+          // Stopping at bin 0, with nothing in bin 0..maybe a threshold 0 case?
+          // but threshold can be very small. If the min value wasn't in bin 0, 
+          // Could end here if very small threshold
+          // Cover possible fp threshold issues +-1 bin
+          if ( hcnt2[k] == 0 ) {
+            assert hcnt2.length > 0;
+            assert hcnt2[k+1] != 0;
+            guess = hcnt2_min[k+1];
+          }
+          else {
+            guess = hcnt2_max[k];
+          }
         }
       }
       else {
-        // cheap check that we binned correctly (check max/min against prior bin
-        // fp compare issues might say they are equal? (if they have values)
-        if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
-            assert hcnt2_max[k-1] <= hcnt2_min[k] : 
-                hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
-        }
-        // if bin count is 0 we shouldn't have stopped if not at the threshold yet..
-        // if we did due to fp comparison issues, then a non-zero bin should be right before,
-        // back up one
-        if ( hcnt2[k] == 0 ) {
-            // use prior bin's max
-            assert k>0;
-            assert hcnt2[k-1] != 0;
-            guess = hcnt2_max[k-1];
-        }
-        else {
-            actualBinWidth = hcnt2_max[k] - hcnt2_min[k];
-            // interpolate within the populated bin, assuming linear distribution
-            // since we have the actual min/max within a bin, we can be more accurate
-            // compared to using the bin boundaries
-            guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
-        }
-
-        // some cheap checks on the first and last bins against global min/max
-        // we may be slightly unaligned..so don't check if the fine bins are tmpey
-
-        // _maxs[5] is usually the biggest (not always)?  _mins[0] is the smallest
-        // oh..ugly. At this point, NaNs haven't been stripped. so we don't know that 
-        // the end of _maxs has the true max (if there is just 1-4 values in the data, 
-        // _maxs doens't get filled (legacy!). The NaNs and array length get flushed later.
-        // _maxs really should have been organized as big to small so biggest is always in 0.
-
-        // So find the last max before the nans
-        double trueMax = _maxs[0];
-        for(int p = 1; p < _maxs.length; ++p) {
-            if ( !Double.isNaN(_maxs[p])) trueMax = _maxs[p];
-        }
-
-        if ( hcnt2[hcnt2.length-1] != 0 ) {
-            assert hcnt2_max[hcnt2.length-1] == trueMax : 
-                hcnt2_max[hcnt2.length-1] +" "+trueMax;
-        }
-        if ( hcnt2[0] != 0 ) {
-            assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
-        }
-        
-        // might have fp tolerance issues here? but fp numbers should be exactly same?
-        assert guess <= trueMax;
-        assert guess >= _mins[0];
-        
+        // nonzero hcnt2[k] guarantees these are valid
+        actualBinWidth = hcnt2_max[k] - hcnt2_min[k];
+        // interpolate within the populated bin, assuming linear distribution
+        // since we have the actual min/max within a bin, we can be more accurate
+        // compared to using the bin boundaries
+        guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
       }
+
       qtiles[j] = guess;
+
+      // Some cheap checks.
+      if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
+        assert hcnt2_max[k-1] <= hcnt2_min[k] : 
+          hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
+      }
+
+      // _maxs[5] is usually the biggest (not always)?  _mins[0] is the smallest
+      // oh..ugly. At this point, NaNs haven't been stripped. so we don't know that 
+      // the end of _maxs has the true max (if there is just 1-4 values in the data, 
+      // _maxs doens't get filled (legacy!). The NaNs and array length get flushed later.
+      // _maxs really should have been organized as big to small so biggest is always in 0.
+      // So find the last max before the nans
+      double trueMax = _maxs[0];
+      for(int p = 1; p < _maxs.length; ++p) {
+        if ( !Double.isNaN(_maxs[p]) ) trueMax = _maxs[p];
+      }
+
+      if ( hcnt2[hcnt2.length-1] != 0 ) {
+        assert hcnt2_max[hcnt2.length-1] == trueMax : 
+          hcnt2_max[hcnt2.length-1] +" "+trueMax;
+      }
+      if ( hcnt2[0] != 0 ) {
+        assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
+      }
+
+      // might have fp tolerance issues here? but fp numbers should be exactly same?
+      assert guess <= trueMax;
+      assert guess >= _mins[0];
+      //  Log.info("_mins[0]: "+_mins[0]+" trueMax: "+trueMax+" hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
+      //   " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
     }
-    // Log.info(
-    //    "_mins[0]: "+_mins[0]+
-    //    "trueMax: "trueMax+
-    //    " hcnt2[k]: "+hcnt2[k]+
-    //    " hcnt2_min[k]: "+hcnt2_min[k]+
-    //    " hcnt2_max[k]: "+hcnt2_max[k]+
-    //    " _binsz2: "+_binsz2+
-    //    " guess: "+guess+
-    //    " k: "+k+
-    //    "\n");
   }
   // Compute majority categories for enums only
   public void computeMajorities() {
