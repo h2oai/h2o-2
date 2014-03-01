@@ -8,7 +8,7 @@ Converts an R object to an H2O object
 Convert an R object to an H2O object, copy contents of the object to the running instance of H2O
 }
 \usage{
-as.h2o(client, object, key = "")
+as.h2o(client, object, key = "", header, sep = "")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -17,7 +17,14 @@ The h2o.init object that facilitates communication between R and H2O.
 }
   \item{object}{The object in the R environment to be converted to an H2O object.
 }
-  \item{key}{A reference assigned to the object in the instance of H2O (the key part of the key-value store, where the value is the R object to be converted.)
+  \item{key}{
+(Optional) A reference assigned to the object in the instance of H2O (the key part of the key-value store, where the value is the R object to be converted.)
+}
+  \item{header}{
+(Optional) A logical value indicating whether the first line of the file contains column headers. If left empty, the parser will try to automatically detect this.
+  }
+  \item{sep}{
+(Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parse
 }
 }
 \details{
