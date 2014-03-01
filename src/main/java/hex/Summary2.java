@@ -649,23 +649,27 @@ public class Summary2 extends Iced {
     
       // If bin count is 0 we shouldn't have stopped if not at the threshold yet..
       // If did due to fp comparison issues, then a non-zero bin should be right before.
-      if ( s1 == s || hcnt2[k] == 0 ) {
-        if ( k > 0 ) {
-          assert hcnt2[k-1] != 0;
-          guess = hcnt2_max[k-1];
+      if ( s == s1 || hcnt2[k]==0) {
+        if (hcnt2[k] != 0 ) {
+            guess = hcnt2_min[k-1];
+            // Log.info("Guess A: "+guess);
         }
         else {
-          // Stopping at bin 0, with nothing in bin 0..maybe a threshold 0 case?
-          // but threshold can be very small. If the min value wasn't in bin 0, 
-          // Could end here if very small threshold
-          // Cover possible fp threshold issues +-1 bin
-          if ( hcnt2[k] == 0 ) {
+          if ( k > 0 ) {
+            assert hcnt2[k-1] != 0;
+            guess = hcnt2_max[k-1];
+            // Log.info("Guess B: "+guess);
+          }
+          else {
+            // Stopping at bin 0, with nothing in bin 0..maybe a threshold 0 case?
+            // but threshold can be very small. If the min value wasn't in bin 0, 
+            // Could end here if very small threshold
+            // Cover possible fp threshold issues +-1 bin
+            // hcnt2[k] == 0  here
             assert hcnt2.length > 0;
             assert hcnt2[k+1] != 0;
             guess = hcnt2_min[k+1];
-          }
-          else {
-            guess = hcnt2_max[k];
+            // Log.info("Guess C: "+guess);
           }
         }
       }
@@ -675,7 +679,9 @@ public class Summary2 extends Iced {
         // interpolate within the populated bin, assuming linear distribution
         // since we have the actual min/max within a bin, we can be more accurate
         // compared to using the bin boundaries
+        // Note actualBinWidth is 0 when all values are the same in a bin
         guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
+        // Log.info("Guess D: "+guess+" "+k+" "+hcnt2_min[k]+" "+actualBinWidth+" "+s+" "+s1+" "+hcnt2[k]);
       }
 
       qtiles[j] = guess;
