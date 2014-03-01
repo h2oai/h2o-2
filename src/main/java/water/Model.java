@@ -50,9 +50,16 @@ public abstract class Model extends Lockable<Model> {
   @API(help="Column names used to build the model")
   public final String _domains[][];
 
-  @API(help = "Class sampling factors for imbalanced classification")
-  protected float[] _classSamplingFactors;
-  public void setClassSamplingFactors(float[] sf) { _classSamplingFactors = sf.clone(); }
+  @API(help = "Relative class distribution factors in original data")
+  protected float[] _priorClassDist;
+  @API(help = "Relative class distribution factors used for model building")
+  protected float[] _modelClassDist;
+  public void setPriorClassDistribution(float[] priordist) {
+    _priorClassDist = priordist.clone();
+  }
+  public void setModelClassDistribution(float[] classdist) {
+    _modelClassDist = classdist.clone();
+  }
 
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
@@ -135,6 +142,10 @@ public abstract class Model extends Lockable<Model> {
     Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
     // Invoke scoring
     Frame output = scoreImpl(adaptFrm);
+    // Correct probabilities after per-class stratified sampling
+    if (isClassifier() && _modelClassDist != null && _priorClassDist != null) {
+      water.util.MRUtils.correctProbabilities(output, _priorClassDist, _modelClassDist);
+    }
     // Be nice to DKV and delete vectors which i created :-)
     if (adapt) onlyAdaptFrm.delete();
     return output;

@@ -413,6 +413,7 @@ public class NNModel extends Model {
 
   public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
     super(selfKey, dataKey, dinfo._adaptedFrame);
+    setPriorClassDistribution(new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist());
     this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
@@ -524,7 +525,7 @@ public class NNModel extends Model {
 //    sb.append(super.toString());
 //    sb.append("\n"+data_info.toString()); //not implemented yet
     sb.append(model_info.toString());
-    sb.append(errors[errors.length-1].toString());
+    sb.append(errors[errors.length - 1].toString());
 //    sb.append("\nrun time: " + PrettyPrint.msecs(run_time, true));
 //    sb.append("\nepoch counter: " + epoch_counter);
     return sb.toString();

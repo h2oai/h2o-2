@@ -133,6 +133,14 @@ public class MRUtils {
     public ClassDist(final Vec label) { super(label.domain().length); }
     public ClassDist(int n) { super(n); }
     public final long[] dist() { return _ys; }
+    public final float[] rel_dist() {
+      float[] rel = new float[_ys.length];
+      for (int i=0; i<_ys.length; ++i) rel[i] = (float)_ys[i];
+      final float sum = Utils.sum(rel);
+      assert(sum != 0.);
+      Utils.div(rel, sum);
+      return rel;
+    }
   }
   private static class ClassDistHelper extends MRTask2<ClassDist> {
     private ClassDistHelper(int nclass) { _nclass = nclass; }
@@ -279,4 +287,55 @@ public class MRUtils {
 
     return r;
   }
+
+
+  /**
+   * Correct probabilities obtained from training on oversampled data back to original distribution
+   * Following instructions by Guido Deutsch
+   * @param fr Frame containing one label and C per-class probabilities
+   * @param prior_fraction Prior per-class fractions
+   * @param model_fraction Modeled per-class fractions
+   */
+  public static void correctProbabilities(final Frame fr, final float[] prior_fraction, final float[] model_fraction) {
+    assert(prior_fraction != null && model_fraction != null);
+    assert(prior_fraction.length == model_fraction.length);
+    assert(fr.numCols() == 1+prior_fraction.length); //first col: label, remaining cols: probs
+
+    // DEBUGGING
+//    for (int i=0; i<prior_fraction.length;++i) {
+//      System.out.println("class " + fr.vecs()[0].domain()[i] + " prior: " + prior_fraction[i] + " model: " + model_fraction[i]);
+//    }
+//    for (int r=0; r<fr.anyVec().length(); ++r) {
+//      String s = "row " + r + " prob: ";
+//      for (int i=1; i<fr.vecs().length;++i) {
+//        s+= fr.vecs()[i].at(r) + " ";
+//      }
+//      System.out.println(s);
+//    }
+
+    new MRTask2() {
+      @Override
+      public void map(Chunk[] cs) {
+        for (int r = 0; r < cs[0]._len; r++) {
+          double prob = 0;
+          // class i
+          for (int i = 0; i < cs.length-1; i++) {
+            final double scoring_result = cs[i+1].at0(r);
+            assert(!Double.isNaN(scoring_result));
+            final double original_fraction = prior_fraction[i];
+            assert(original_fraction > 0);
+            final double oversampled_fraction = model_fraction[i];
+            assert(oversampled_fraction > 0);
+            final double corrected_prob = 1/(1+((1/original_fraction)-1)/((1/oversampled_fraction)-1)*((1/scoring_result)-1));
+            assert(!Double.isNaN(corrected_prob));
+            assert(corrected_prob >= 0 && corrected_prob <= 1.);
+            cs[i+1].set0(r, corrected_prob);
+            prob += corrected_prob;
+          }
+          if (prior_fraction.length==2) assert(Math.abs(prob - 1.0) < 1e-6); //TODO: Find a formula for multi-class
+        }
+      }
+    }.doAll(fr);
+  }
+
 }
