@@ -256,7 +256,7 @@ public abstract class LSMSolver extends Iced{
         System.arraycopy(xy, 0, z, 0, xy.length);
         chol.solve(z);
         gram.addDiag(-gram._diagAdded + d);
-        return converged(gram,z,xy);
+        return true;
       }
       long t = System.currentTimeMillis();
       final double ABSTOL = Math.sqrt(N) * 1e-8;

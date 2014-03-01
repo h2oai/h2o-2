@@ -299,7 +299,7 @@ public class GLM2 extends ModelJob {
     @Override public void callback(final GLMIterationTask glmt) {
       if(!(isRunning(self())))throw new JobCancelledException();
       boolean converged = false;
-      if(_glm.family != Family.gaussian && _glm.family != Family.tweedie && glmt._val != null){
+      if(_glm.family == Family.binomial && glmt._beta != null && glmt._val != null){
         glmt._val.finalize_AIC_AUC();
         _model.setAndTestValidation(_lambdaIdx,glmt._val);//.store();
         _model.clone().update(self());
@@ -414,7 +414,7 @@ public class GLM2 extends ModelJob {
               _model.setAndTestValidation(0,t._val);
               _lambdaIdx = 1;
             }
-            new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, _glm.family == Family.gaussian?null:_beta,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
+            new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
             ex.printStackTrace();
