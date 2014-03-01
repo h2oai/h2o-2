@@ -19,7 +19,7 @@ def percentileOnSortedList(N, percent, key=lambda x:x):
 
     @return - the percentile of the values
     """
-    if not N:
+    if N is None:
         return None
     k = (len(N)-1) * percent
     f = math.floor(k)
@@ -32,13 +32,13 @@ def percentileOnSortedList(N, percent, key=lambda x:x):
 
 # median is 50th percentile.
 def medianOnSortedList(N, key=lambda x:x):
-    median = functools.partial(percentileOnSortedlist, percent=0.5)
+    median = percentileOnSortedlist(N, percent=0.5, key=key)
     return median
 
 def percentileOnSortedList_25_50_75( N, key=lambda x:x):
     three = (
-        functools.partial(percentileOnSortedlist, percent=0.25)
-        functools.partial(percentileOnSortedlist, percent=0.50)
-        functools.partial(percentileOnSortedlist, percent=0.75)
+        percentileOnSortedlist(N, percent=0.25, key=key),
+        percentileOnSortedlist(N, percent=0.50, key=key),
+        percentileOnSortedlist(N, percent=0.75, key=key),
     )
     return three
