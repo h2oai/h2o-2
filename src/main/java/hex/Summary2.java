@@ -26,7 +26,10 @@ public class Summary2 extends Iced {
   public static final int    MAX_HIST_SZ = water.parser.Enum.MAX_ENUM_SIZE;
   public static final int    NMAX = 5;
   public static final int    RESAMPLE_SZ = 1000;
-  public static final double DEFAULT_PERCENTILES[] = {0.01,0.05,0.10,0.25,0.33,0.50,0.66,0.75,0.90,0.95,0.99};
+  // updated boundaries to be 0.1% 1%...99%, 99.9% so R code didn't have to change
+  // ideally we extend the array here, and just update the R extraction of 25/50/75 percentiles
+  // note python tests (junit?) may look at result
+  public static final double DEFAULT_PERCENTILES[] = {0.001,0.01,0.10,0.25,0.33,0.50,0.66,0.75,0.90,0.99,0.999};
   private static final int   T_REAL = 0;
   private static final int   T_INT  = 1;
   private static final int   T_ENUM = 2;
@@ -200,12 +203,13 @@ public class Summary2 extends Iced {
   }
   public static class SummaryTask2 extends MRTask2<SummaryTask2> {
     private BasicStat[] _basics;
+    private int _max_qbins;
     public Summary2 _summaries[];
-    public SummaryTask2 (BasicStat[] basicStats) { _basics = basicStats; }
+    public SummaryTask2 (BasicStat[] basicStats, int max_qbins) { _basics = basicStats; _max_qbins = max_qbins; }
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _summaries[i] = new Summary2(_fr.vecs()[i],_fr.names()[i],_basics[i]).add(cs[i]);
+        _summaries[i] = new Summary2(_fr.vecs()[i], _fr.names()[i], _basics[i], _max_qbins).add(cs[i]);
     }
     @Override public void reduce(SummaryTask2 other) {
       for (int i = 0; i < _summaries.length; i++)
@@ -232,7 +236,7 @@ public class Summary2 extends Iced {
       Summary2 sums[] = new Summary2[vecs.length];
       BasicStat basics[] = new PrePass().doAll(_fr).finishUp()._basicStats;
       for( int i=0; i<vecs.length; i++ )
-        sums[i] = new Summary2(vecs[i],_fr._names[i],basics[i]);
+        sums[i] = new Summary2(vecs[i], _fr._names[i], basics[i]);
       return new SummaryPerRow(_fr,sums);
     }
     @Override public String toString() {
@@ -313,7 +317,7 @@ public class Summary2 extends Iced {
     }
   }
 
-  public Summary2(Vec vec, String name, BasicStat stat0) {
+  public Summary2(Vec vec, String name, BasicStat stat0, int max_qbins) {
     colname = name;
     _stat0 = stat0;
     _type = vec.isEnum()?2:vec.isInt()?1:0;
@@ -356,7 +360,11 @@ public class Summary2 extends Iced {
 
       // create a 2nd finer grained historam for quantile estimates. 1000 bins
       // okay if it is approx. 1000 bins (+-1)
-      _binsz2 = _binsz / (1000.0 / nbin);
+      // update: we allow api to change max_qbins. default 1000. larger = more accuracy
+      // minimum of 1, probably. 0 is bad. negative is bad. Wants to be int.
+      // can just force if bad param.
+      assert max_qbins > 0 && max_qbins < 10000000;
+      _binsz2 = _binsz / (max_qbins / nbin);
       int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz2)/1000000L) + 1;
       // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
       
@@ -375,6 +383,10 @@ public class Summary2 extends Iced {
       hcnt2_min = new double[1];
       hcnt2_max = new double[1];
     }
+  }
+
+  public Summary2(Vec vec, String name, BasicStat stat0) {
+    this(vec, name, stat0, 1000);
   }
 
   /**
