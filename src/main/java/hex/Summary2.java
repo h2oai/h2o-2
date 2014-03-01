@@ -341,37 +341,10 @@ public class Summary2 extends Iced {
 
       // tweak for integers
       if (d < 1. && vec.isInt()) d = 1.;
-<<<<<<< HEAD
-      double binszTry = d;
-      _start = binszTry * Math.floor(stat0._min2/binszTry);
-      // kbn. ugly doing it twice, but need nbin * _binsz to fully cover the needed min/max range.
-      // Don't want to disturb current calcs for that. Keep _start as is.
-      // We might get 19-21 min due to the equation?
-
-      // More binning improves accuracy of current quantile estimate algo.
-      // Some dataset cols already create 20 bins and that seems okay, so make that a min.
-      // okay if we don't have 20 unique ints or reals. (Our quantiles for ints can be reals)
-      int nbin = 0;
-      // could it take more than 1 iteration due to the weird eqn for nbin?
-      int tried = 0;
-      int BIN_GOAL = 21;
-      while ( tried < 3 && nbin < BIN_GOAL) { 
-        if ( tried > 0 ) binszTry = binszTry / ((BIN_GOAL + 0.0)/ nbin); // decrease bin size by ratio. coerce fp div
-        nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/binszTry)/1000000L) + 1;
-        // Log.info("Summary hueristic "+tried+" nbin: "+nbin+" binszTry: "+binszTry+" _max2: "+stat0._max2+" _start: "+_start);
-        assert nbin > 0;
-        tried++;
-      }
-      _binsz = binszTry;
-        
-      // assert nbin >= BIN_GOAL : nbin+" too few bins";
-      assert nbin <= MAX_HIST_SZ : nbin+" too many bins";
-=======
       _binsz = d;
       _start = _binsz * Math.floor(stat0._min2/_binsz);
       int nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
       assert nbin > 0;
->>>>>>> c90df35312899fc35011c650a5c8dd29e05404fd
       hcnt = new long[nbin];
     } else { // vec does not contain finite numbers
       _start = vec.min();
@@ -566,20 +539,13 @@ public class Summary2 extends Iced {
       if ( s1 > s ) {
         assert hcnt[k]!=0; // s1 > s implies it
         // kbn: assume linear distribution within a bin
-        // Last bin doesn't have linear distribution, Max value truncates the bin.
+        // ah! the edge cases don't have linear distribution.
 
-<<<<<<< HEAD
-        // kbn: Start with min. it's just the last bin that overreaches.
-        // Calc max-start of bin, and then get percentage of that
-        // Avoids gettings values that are too big for the 99% qtile
-        // if max somehow ended up before this bin, hcnt[k] should be 0
-=======
         // kbn: we start with min. So it's just at the max size the bin overreaches
         // so we really should do max-start of bin, and then get percentage of that
         // This avoids gettings values that are too big for the 99% qtile
         // if max is was before this bin, hcnt[k] should be 0
         
->>>>>>> c90df35312899fc35011c650a5c8dd29e05404fd
         double binRange = _binsz; // normal case. linear distribution assumed.
         if ( k == (hcnt.length-1) ) {
             binRange = _maxs[0] - (_mins[0] + k*_binsz); // non-linear distribution in last bin!
