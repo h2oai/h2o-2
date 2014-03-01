@@ -17,7 +17,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
       cat("\nH2O is not running yet, starting it now...\n")
       .h2o.startJar(Xmx, beta)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
-      if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
+      if(!url.exists(myURL)) stop("H2O failed to start, stopping execution")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }
   cat("Successfully connected to", myURL, "\n")
@@ -50,8 +50,6 @@ h2o.shutdown <- function(client, prompt = TRUE) {
 }
 
 # ----------------------- Diagnostics ----------------------- #
-
-
 # **** TODO: This isn't really a cluster status... it's a node status check for the node we're connected to.
 # This is possibly confusing because this can come back without warning,
 # but if a user tries to do any remoteSend, they will get a "cloud sick warning"
@@ -81,7 +79,6 @@ h2o.clusterStatus <- function(client) {
   temp = data.frame(t(sapply(res$nodes, c)))
   return(temp[,cnames])
 }
-
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
@@ -180,7 +177,16 @@ h2o.clusterStatus <- function(client) {
   
   # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
   if(.Platform$OS.type == "windows") {
-    tmp_path <- paste("C:", "TMP", sep = .Platform$file.sep)
+    default_path <- paste("C:", "TMP", sep = .Platform$file.sep)
+    if(file.exists(default_path))
+      tmp_path <- default_path
+    else if(file.exists(paste("C:", "TEMP", sep = .Platform$file.sep)))
+      tmp_path <- paste("C:", "TEMP", sep = .Platform$file.sep)
+    else if(file.exists(Sys.getenv("APPDATA")))
+      tmp_path <- Sys.getenv("APPDATA")
+    else
+      stop("Error: Cannot log Java output. Please create the directory ", default_path, " and re-initialize H2O")
+    
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
     stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
     stderr <- paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
