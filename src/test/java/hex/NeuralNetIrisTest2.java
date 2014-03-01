@@ -9,7 +9,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
-import water.Model;
 import water.TestUtil;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
@@ -60,8 +59,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
       double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
       double[] holdout_ratios = { 0.1 + new Random().nextDouble() * 0.8 };
       double[] momenta = { new Random().nextDouble() * 0.99 };
-      int[] hiddens = { 1, new Random().nextInt(50) };
-      int[] epochs = { 1, new Random().nextInt(50) };
+      int[] hiddens = { 1, 2 + new Random().nextInt(50) };
+      int[] epochs = { 1, 2 + new Random().nextInt(50) };
       double[] rates = { 0.01, 1e-5 + new Random().nextDouble() * .1 };
 
       int num_runs = 0;

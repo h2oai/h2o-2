@@ -2199,7 +2199,8 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': 1000
+                'max_ncols': 1000,
+                'max_qbins': None,
                 }
         else:
             params_dict = {

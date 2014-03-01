@@ -412,7 +412,7 @@ public class Job extends Request2 {
     cancel((String)null);
   }
   public void cancel(Throwable ex){
-
+    ex.printStackTrace();
     if(_fjtask != null && !_fjtask.isDone())_fjtask.completeExceptionally(ex);
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);

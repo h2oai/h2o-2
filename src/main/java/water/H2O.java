@@ -738,6 +738,7 @@ public final class H2O {
       try {
         callback((T)caller);
       } catch(Throwable ex){
+        ex.printStackTrace();
         completeExceptionally(ex);
       }
     }
@@ -751,7 +752,8 @@ public final class H2O {
     @Override public void compute2(){throw new UnsupportedOperationException();}
     @Override public void onCompletion(CountedCompleter caller){_job.remove();}
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter c){
-      if(!(ex instanceof JobCancelledException))_job.cancel(ex);
+      if(!(ex instanceof JobCancelledException))
+        _job.cancel(ex);
       return true;
     }
   }

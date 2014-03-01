@@ -136,22 +136,37 @@ public class Exec2 {
   // Generic parsing functions
   // --------------------------------------------------------------------------
 
-  void skipWS() {
-    while( _x < _buf.length && _buf[_x] <= ' ' )  _x++;
+  void skipWS() { skipWS(false); }
+  void skipWS( boolean EOS) {
+    while( _x < _buf.length && isWS(_buf[_x]) && (!EOS || _buf[_x]!='\n') )  _x++;
   }
   // Skip whitespace.
   // If c is the next char, eat it & return true
   // Else return false.
-  boolean peek(char c) {
+  boolean peek(char c) { return peek(c,false); }
+  // Peek for 'c' past whitespace but not past a newline if EOS is set
+  // (basically treat newline as the statement-end character ';' which does not
+  // match c)
+  boolean peek(char c, boolean EOS) {
     if( _x ==_buf.length ) return false;
-    while( _buf[_x] <= ' ' )
+    while( isWS(_buf[_x]) && (!EOS || _buf[_x]!='\n') )
       if( ++_x ==_buf.length ) return false;
     if( _buf[_x]!=c ) return false;
     _x++;
     return true;
   }
-  // Same as peek, but throw if char not found  
-  AST xpeek(char c, int x, AST ast) { return peek(c) ? ast : throwErr("Missing '"+c+"'",x); }
+  // Same as peek, but throw if char not found.  Always newlines are treated as whitespace
+  AST xpeek(char c, int x, AST ast) { return peek(c,false) ? ast : throwErr("Missing '"+c+"'",x); }
+
+  // True if end-of-statement (';' or '\n' or no-more-data)
+  boolean peekEOS() {
+    while( _x < _buf.length ) {
+      char d = _buf[_x++];
+      if( d==';' || d=='\n' ) return true;
+      if( !isWS(d) ) { _x--; return false; }
+    }
+    return false;
+  }
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
@@ -166,7 +181,6 @@ public class Exec2 {
   // Valid IDs: + - <=  > ! [ ] joe123 ABC
   // Invalid  : +++ 0joe ( = ) 123.45 1e3
   String isID() {
-    skipWS();
     if( _x>=_buf.length ) return null; // No characters to parse
     char c = _buf[_x];
     // Fail on special chars in the grammar
@@ -193,7 +207,7 @@ public class Exec2 {
     }
     if( c=='<' && c2=='-' ) { _x--; return null; } // The other assignment operator
     // Must accept as single letters to avoid ambiguity
-    if( c=='+' || c=='-' ) return _str.substring(_x-1,_x);
+    if( c=='+' || c=='-' || c=='*' || c=='/' ) return _str.substring(_x-1,_x);
     // One letter look ahead to decide on what to accept
     if( c=='=' || c=='!' || c=='<' || c =='>' )
       if ( c2 =='=' ) return _str.substring(++_x-2,_x);
