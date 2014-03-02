@@ -333,7 +333,7 @@ public class MRUtils {
             cs[i+1].set0(r, corrected_prob);
             prob += corrected_prob;
           }
-          if (prior_fraction.length==2) assert(Math.abs(prob - 1.0) < 1e-6); //TODO: Find a formula for multi-class
+          if (prior_fraction.length==2) assert(Math.abs(prob - 1.0) < 1e-4); //TODO: Find a formula for multi-class
         }
       }
     }.doAll(fr);
