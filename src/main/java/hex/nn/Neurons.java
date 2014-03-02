@@ -289,7 +289,7 @@ public abstract class Neurons {
     /**
      * The second method used to set input layer values. This one is used directly by FrameTask.processRow() and by the method above.
      * @param seed For seeding the RNG inside (for input dropout)
-     * @param nums Array containing numerical values
+     * @param nums Array containing numerical values, can be NaN
      * @param numcat Number of horizontalized categorical non-zero values (i.e., those not being the first factor of a class)
      * @param cats Array of indices, the first numcat values are the input layer unit (==column) indices for the non-zero categorical values
      *             (This allows this array to be re-usable by the caller, without re-allocating each time)
@@ -297,7 +297,9 @@ public abstract class Neurons {
     public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
       Arrays.fill(_a, 0.);
       for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
-      System.arraycopy(nums, 0, _a, _dinfo.numStart(), nums.length);
+      for (int i=0; i<nums.length; ++i) _a[_dinfo.numStart()+i] = Double.isNaN(nums[i]) ? 0 : nums[i];
+
+      // Input Dropout
       final double rate = params.input_dropout_ratio;
       if (rate == 0 || _dropout == null) return;
       seed += params.seed + 0x1337B4BE;
@@ -325,8 +327,6 @@ public abstract class Neurons {
 
           // use this identity: tanh = 2*sigmoid(2*x) - 1, evaluates faster than tanh(x)
           _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
-          if (Double.isNaN(_a[o]))
-            throw new RuntimeException("Numerical instability, predicted NaN.");
 
 //          _a[o] = Math.tanh(_a[o]); //slow
         }
