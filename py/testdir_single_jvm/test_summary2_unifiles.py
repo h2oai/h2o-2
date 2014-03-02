@@ -7,7 +7,7 @@ DO_TRY_SCIPY = False
 if  getpass.getuser() == 'kevin': 
     DO_TRY_SCIPY = True
 
-DO_MEDIAN = False
+DO_MEDIAN = True
 MAX_QBINS = 10000000
 
 def twoDecimals(l): 

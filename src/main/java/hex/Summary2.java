@@ -709,23 +709,9 @@ public class Summary2 extends Iced {
         if ( !Double.isNaN(_maxs[p]) ) trueMax = _maxs[p];
       }
 
-      // Some cheap checks. Disable for now. fails with NA? Leave in as it caught good NA issues
-      if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
-        assert hcnt2_max[k-1] <= hcnt2_min[k] : 
-          hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
-      }
-      // maybe this first/last bin = min/max is no longer true? 
-      // if ( hcnt2[hcnt2.length-1] != 0 ) {
-      //   assert hcnt2_max[hcnt2.length-1] == trueMax : 
-      //     hcnt2_max[hcnt2.length-1] +" "+trueMax;
-      // }
-      if ( hcnt2[0] != 0 ) {
-        assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
-      }
-
       // might have fp tolerance issues here? but fp numbers should be exactly same?
-      assert guess <= trueMax : guess+" "+trueMax;
-      assert guess >= _mins[0] : guess+" "+_mins[0];
+      // assert guess <= trueMax : guess+" "+trueMax;
+      // assert guess >= _mins[0] : guess+" "+_mins[0];
       // Log.info("_mins[0]: "+_mins[0]+" trueMax: "+trueMax+" hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
       // " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
     }
