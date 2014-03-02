@@ -325,6 +325,8 @@ public abstract class Neurons {
 
           // use this identity: tanh = 2*sigmoid(2*x) - 1, evaluates faster than tanh(x)
           _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
+          if (Double.isNaN(_a[o]))
+            throw new RuntimeException("Numerical instability, predicted NaN.");
 
 //          _a[o] = Math.tanh(_a[o]); //slow
         }
@@ -483,8 +485,11 @@ public abstract class Neurons {
         _a[o] = Math.exp(_a[o] - max);
         scale += _a[o];
       }
-      for( int o = 0; o < _a.length; o++ )
+      for( int o = 0; o < _a.length; o++ ) {
+        if (Double.isNaN(_a[o]))
+          throw new RuntimeException("Numerical instability, predicted NaN.");
         _a[o] /= scale;
+      }
     }
     protected void bprop(int target) {
       long processed = _minfo.get_processed_total();

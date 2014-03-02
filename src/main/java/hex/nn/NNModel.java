@@ -561,7 +561,10 @@ public class NNModel extends Model {
     double[] out = neurons[neurons.length - 1]._a;
     if (isClassifier()) {
       assert(preds.length == out.length+1);
-      for (int i=0; i<preds.length-1; ++i) preds[i+1] = (float)out[i];
+      for (int i=0; i<preds.length-1; ++i) {
+        preds[i+1] = (float)out[i];
+        if (Float.isNaN(preds[i+1])) throw new RuntimeException("Numerical instability, predicted NaN.");
+      }
       preds[0] = ModelUtils.getPrediction(preds, data);
     } else {
       assert(preds.length == 1 && out.length == 1);
@@ -570,6 +573,7 @@ public class NNModel extends Model {
       else
         preds[0] = (float)out[0];
     }
+    if (Float.isNaN(preds[0])) throw new RuntimeException("Numerical instability, predicted NaN.");
     return preds;
   }
 
@@ -602,10 +606,6 @@ public class NNModel extends Model {
     final Errors error = errors[errors.length - 1];
 
     DocGen.HTML.title(sb, title);
-    DocGen.HTML.paragraph(sb, "Model Key: " + _key);
-    DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
-    DocGen.HTML.paragraph(sb, "Model type: " + (model_info().parameters.classification ? " Classification" : " Regression") + ", predicting: " + responseName());
-    DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     model_info.job().toHTML(sb);
     Inspect2 is2 = new Inspect2();
@@ -615,6 +615,11 @@ public class NNModel extends Model {
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", " +
             NN.link(_dataKey, "Compute new model") + "</div>");
+
+    DocGen.HTML.paragraph(sb, "Model Key: " + _key);
+    DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
+    DocGen.HTML.paragraph(sb, "Model type: " + (model_info().parameters.classification ? " Classification" : " Regression") + ", predicting: " + responseName());
+    DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     if (model_info.unstable()) {
       final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
