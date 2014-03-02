@@ -654,7 +654,7 @@ public class Summary2 extends Iced {
     for(int j = 0; j < thres.length; ++j) {
       // 0 okay for threshold?
       assert 0 <= thres[j] && thres[j] <= 1;
-      double s1 = Math.round(thres[j] * (double) _gprows); 
+      double s1 = Math.floor(thres[j] * (double) _gprows); 
       if ( s1 == 0 ) {
         s1 = 1; // always need at least one row
       }
