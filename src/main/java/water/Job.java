@@ -60,12 +60,14 @@ public class Job extends Request2 {
   }
 
   public Job(Key jobKey, Key dstKey){
-   job_key = jobKey;
-   destination_key = dstKey;
+    job_key = jobKey;
+    destination_key = dstKey;
+    state = JobState.RUNNING;
   }
   public Job() {
     job_key = defaultJobKey();
     description = getClass().getSimpleName();
+    state = JobState.RUNNING;
   }
   /** Private copy constructor used by {@link JobHandle}. */
   private Job(final Job prior) {
@@ -474,7 +476,8 @@ public class Job extends Request2 {
    */
   public void remove() {
     end_time = System.currentTimeMillis();
-    state = state == JobState.RUNNING ? JobState.DONE : state;
+    if( state == JobState.RUNNING )
+      state = JobState.DONE;
     // Overwrite handle - copy end_time, state, msg
     replaceByJobHandle();
   }

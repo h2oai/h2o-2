@@ -187,12 +187,12 @@ public class GLM2 extends ModelJob {
 
   protected void complete(){
     _model.unlock(self());
-    remove();
+    if( _dinfo._nfolds == 0 ) remove(); // Remove/complete job only for top-level, not xval GLM2s
     if(_fjtask != null)_fjtask.tryComplete();
   }
 
   @Override public void cancel(Throwable ex){
-    _model.unlock(self());
+    if( _model != null ) _model.unlock(self());
     ex.printStackTrace();
     super.cancel(ex);
   }
@@ -297,7 +297,7 @@ public class GLM2 extends ModelJob {
   }
   private class Iteration extends H2OCallback<GLMIterationTask> {
     @Override public void callback(final GLMIterationTask glmt) {
-      if(!(isRunning(self())))throw new JobCancelledException();
+      if( !isRunning(self()) )  throw new JobCancelledException();
       boolean converged = false;
       if(_glm.family == Family.binomial && glmt._beta != null && glmt._val != null){
         glmt._val.finalize_AIC_AUC();
