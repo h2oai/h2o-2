@@ -227,7 +227,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
    * */
   private DRFModel doVarImp(final DRFModel model, final Frame f) {
     // Score a dataset as usual but collects properties per tree.
-    final TreeVotes cx = TreeVotes.varimp(model, f, sample_rate, -1);
+    final TreeVotes cx = TreeVotes.varimp(model, f, _ncols, sample_rate, -1);
+    //System.err.println("Votes of trees: " + cx);
     final int ntrees = model.numTrees();
     assert cx.treeCVotes().length == ntrees && cx.nrows().length == ntrees; // make sure that numbers of trees correspond
     final float[] varimp = new float[_ncols]; // output variable importance
@@ -243,7 +244,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         @Override public void compute2() {
           Frame wf = new Frame(f); // create a copy of frame
           // Compute prediction error per tree on shuffled OOB sample
-          TreeVotes cd = TreeVotes.varimp(model, wf, sample_rate, variable);
+          TreeVotes cd = TreeVotes.varimp(model, wf, _ncols, sample_rate, variable);
           double[] result = cd.imp(cx);
           varimp  [variable] = (float) result[0]; // importance
           varimpSD[variable] = (float) result[1]; // SD for importance

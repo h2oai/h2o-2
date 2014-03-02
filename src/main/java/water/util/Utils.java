@@ -288,13 +288,13 @@ public class Utils {
     }
   }
 
-  public static int[] shuffleArray(int[] a, int n, int result[], long seed) {
+  public static int[] shuffleArray(int[] a, int n, int result[], long seed, int startIndex) {
     Random random = getDeterRNG(seed);
-    result[0] = a[0];
+    result[0] = a[startIndex];
     for (int i = 1; i < n; i++) {
       int j = random.nextInt(i+1);
-      if (j!=i) result[i] = a[j];
-      result[j] = a[i];
+      if (j!=i) result[i] = a[startIndex+j];
+      result[j] = a[startIndex+i];
     }
     return result;
   }
