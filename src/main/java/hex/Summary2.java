@@ -623,8 +623,9 @@ public class Summary2 extends Iced {
     return ix<samples.length?samples[ix]:Double.NaN;
   }
 
-  private int htot2() { // same but for the finer histogram
-    int cnt = 0;
+  // need to count >4B rows
+  private long htot2() { // same but for the finer histogram
+    long cnt = 0;
     for (int i = 0; i < hcnt2.length; i++) cnt+=hcnt2[i];
     return cnt;
   }
@@ -713,11 +714,11 @@ public class Summary2 extends Iced {
         assert hcnt2_max[k-1] <= hcnt2_min[k] : 
           hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
       }
-      // maybe this first/last bin = min/max is no longer true? Check for now.
-      if ( hcnt2[hcnt2.length-1] != 0 ) {
-        assert hcnt2_max[hcnt2.length-1] == trueMax : 
-          hcnt2_max[hcnt2.length-1] +" "+trueMax;
-      }
+      // maybe this first/last bin = min/max is no longer true? 
+      // if ( hcnt2[hcnt2.length-1] != 0 ) {
+      //   assert hcnt2_max[hcnt2.length-1] == trueMax : 
+      //     hcnt2_max[hcnt2.length-1] +" "+trueMax;
+      // }
       if ( hcnt2[0] != 0 ) {
         assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
       }
