@@ -554,6 +554,12 @@ public class NNModel extends Model {
     return sb.toString();
   }
 
+  /**
+   * Predict from raw double values representing
+   * @param data raw array containing categorical values (horizontalized to 1,0,0,1,0,0 etc.) and numerical values (0.35,1.24,5.3234,etc), both can contain NaNs
+   * @param preds predicted label and per-class probabilities (for classification), predicted target (regression), can contain NaNs
+   * @return preds, can contain NaNs
+   */
   @Override public float[] score0(double[] data, float[] preds) {
     Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info);
     ((Neurons.Input)neurons[0]).setInput(-1, data);
@@ -563,7 +569,7 @@ public class NNModel extends Model {
       assert(preds.length == out.length+1);
       for (int i=0; i<preds.length-1; ++i) {
         preds[i+1] = (float)out[i];
-        if (Float.isNaN(preds[i+1])) throw new RuntimeException("Numerical instability, predicted NaN.");
+        if (Float.isNaN(preds[i+1])) throw new RuntimeException("Predicted class probability NaN!");
       }
       preds[0] = ModelUtils.getPrediction(preds, data);
     } else {
@@ -572,8 +578,8 @@ public class NNModel extends Model {
         preds[0] = (float)(out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
       else
         preds[0] = (float)out[0];
+      if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
     }
-    if (Float.isNaN(preds[0])) throw new RuntimeException("Numerical instability, predicted NaN.");
     return preds;
   }
 
