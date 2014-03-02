@@ -14,9 +14,9 @@ public class ConfusionMatrix extends Iced {
   @API(help="Confusion matrix (Actual/Predicted)")
   public long[][] _arr; // [actual][predicted]
   @API(help = "Prediction error by class")
-  public final double[] _classErr;
+  public double[] _classErr;
   @API(help = "Prediction error")
-  public final double _predErr;
+  public double _predErr;
 
   @Override public ConfusionMatrix clone() {
     ConfusionMatrix res = new ConfusionMatrix(0);
@@ -56,8 +56,6 @@ public class ConfusionMatrix extends Iced {
 
   public ConfusionMatrix(int n) {
     _arr = new long[n][n];
-    _classErr = classErr();
-    _predErr = err();
   }
 
   public ConfusionMatrix(long[][] value) {
@@ -74,7 +72,7 @@ public class ConfusionMatrix extends Iced {
     double[] res = new double[_arr.length];
     for( int i = 0; i < res.length; ++i )
       res[i] = classErr(i);
-    return res;
+    return _classErr = res;
   }
 
   public final int size() {
@@ -87,7 +85,7 @@ public class ConfusionMatrix extends Iced {
       s += x;
     if( s == 0 )
       return 0.0;    // Either 0 or NaN, but 0 is nicer
-    return (double) (s - _arr[c][c]) / s;
+    return _classErr[c] = (double) (s - _arr[c][c]) / s;
   }
 
   public double err() {
@@ -98,7 +96,7 @@ public class ConfusionMatrix extends Iced {
     long err = n;
     for( int d = 0; d < _arr.length; ++d )
       err -= _arr[d][d];
-    return (double) err / n;
+    return _predErr = (double) err / n;
   }
 
   public void add(ConfusionMatrix other) {
