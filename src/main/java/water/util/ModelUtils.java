@@ -1,5 +1,8 @@
 package water.util;
 
+import java.util.Arrays;
+import java.util.Random;
+
 import water.H2O;
 
 /**
@@ -62,4 +65,39 @@ public class ModelUtils {
   }
 
 
+  /**
+   * Sample out-of-bag rows with given rate with help of given sampler.
+   * It returns array of sampled rows. The first element of array contains a number
+   * of sampled rows. The returned array can be larger than number of returned sampled
+   * elements.
+   *
+   * @param nrows number of rows to sample from.
+   * @param rate sampling rate
+   * @param sampler random "dice"
+   * @return an array contains numbers of sampled rows. The first element holds a number of sampled rows. The array length
+   * can be greater than number of sampled rows.
+   */
+  public static int[] sampleOOBRows(int nrows, float rate, Random sampler) {
+    return sampleOOBRows(nrows, rate, sampler, new int[1+(int)((1f-rate)*nrows*1.2f)]);
+  }
+  /**
+   * In-situ version of {@link #sampleOOBRows(int, float, Random)}.
+   *
+   * @param oob an initial array to hold sampled rows. Can be internally realocted.
+   * @return an array containing sampled rows.
+   *
+   * @see #sampleOOBRows(int, float, Random)
+   */
+  public static int[] sampleOOBRows(int nrows, float rate, Random sampler, int[] oob) {
+    int oobcnt = 0; // Number of oob rows
+    Arrays.fill(oob, 0);
+    for(int row = 0; row < nrows; row++) {
+      if (sampler.nextFloat() >= rate) { // it is out-of-bag row
+        oob[1+oobcnt++] = row;
+        if (1+oobcnt>=oob.length) oob = Arrays.copyOf(oob, (int)(1.2f*oob.length)+1);
+      }
+    }
+    oob[0] = oobcnt;
+    return oob;
+  }
 }
