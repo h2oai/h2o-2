@@ -279,6 +279,7 @@ public class Summary2 extends Iced {
       // means (like R) we can have quantiles with values not in the dataset..ok?
       // ok since approximation? not okay if we did exact. Sampled sort is not good enough?
       if (1==0) { 
+        // FIX! should eventually get rid of this since unused
         Arrays.sort(_samples);
         // Compute percentiles for numeric data
         for (int i = 0; i < _pctile.length; i++)
@@ -420,6 +421,7 @@ public class Summary2 extends Iced {
     return dbls;
   }
 
+  // FIX! should eventually get rid of this since unused?
   public double[] resample(Chunk chk) {
     Random r = new Random(chk._start);
     if (_stat0.len1() <= RESAMPLE_SZ) return copy1(chk);
@@ -447,12 +449,14 @@ public class Summary2 extends Iced {
   public Summary2 add(Chunk chk) {
     for (int i = 0; i < chk._len; i++)
       add(chk.at0(i));
+    // FIX! should eventually get rid of this since unused?
     _samples = resample(chk);
     return this;
   }
   public void add(double val) {
     if( Double.isNaN(val) ) return;
     _len1++; _gprows++;
+
     if ( _type != T_ENUM ) {
       int index;
       // update min/max
@@ -483,21 +487,16 @@ public class Summary2 extends Iced {
       }
       // update the finer histogram (used for quantile estimates on numerics)
       long binIdx2;
-      if (hcnt2.length == 1) {
-        binIdx2 = 0;
-      }
-      else if (val == Double.NEGATIVE_INFINITY) {
-        binIdx2 = 0;
-      }
-      else if (val == Double.POSITIVE_INFINITY) {
-        binIdx2 = hcnt2.length-1;
+      if (hcnt2.length==1) {
+        binIdx2 = 0; // not used
       }
       else {
         binIdx2 = Math.round(((val - _start2) * 1000000.0) / _binsz2) / 1000000;
       }
 
       int binIdx2Int = (int) binIdx2;
-      if (binIdx2Int >= hcnt2.length) assert false;
+      assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
+        "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
 
       if (hcnt2[binIdx2Int] == 0) {
         // Log.info("New init: "+val+" for index "+binIdx2Int);
@@ -510,22 +509,19 @@ public class Summary2 extends Iced {
             hcnt2_min[binIdx2Int] = val;
         }
         if (val > hcnt2_max[binIdx2Int]) {
+            // if ( binIdx2Int == 500 ) Log.info("New max: "+val+" for index "+binIdx2Int);
             hcnt2_max[binIdx2Int] = val;
-
-            // if ( binIdx2Int == 500 ) {
-              // Log.info("New max: "+val+" for index "+binIdx2Int);
-            // }
-
         }
       }
       ++hcnt2[binIdx2Int];
     }
 
-    // update the histogram the browser/json returns
+    // update the histogram the browser/json uses
     long binIdx;
     if (hcnt.length == 1) {
       binIdx = 0;
     }
+    // interesting. do we really track Infs in the histogram?
     else if (val == Double.NEGATIVE_INFINITY) {
       binIdx = 0;
     }
@@ -536,14 +532,15 @@ public class Summary2 extends Iced {
       binIdx = Math.round(((val - _start) * 1000000.0) / _binsz) / 1000000;
     }
 
-    if ((int)binIdx >= hcnt.length) {
-      assert false;
-    }
-
-    ++hcnt[(int)binIdx];
+    int binIdxInt = (int) binIdx;
+    assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
+        "binIdxInt too big for hcnt2 "+binIdxInt+" "+hcnt.length;
+    ++hcnt[binIdxInt];
   }
 
   public Summary2 add(Summary2 other) {
+
+    // merge hcnt and hcnt just by adding
     if (hcnt != null)
       Utils.add(hcnt, other.hcnt);
     if (hcnt2 != null)
@@ -559,37 +556,28 @@ public class Summary2 extends Iced {
     if (_type == T_ENUM) return this;
 
     // merge hcnt2 per-bin mins
-    // don't care about possible min/max ==/overlap for hcnt2
-    double[] ds = MemoryManager.malloc8d(hcnt2_min.length);
-    int i = 0, j = 0;
-    for (int k = 0; k < ds.length; k++)
-      if (hcnt2_min[i] < other.hcnt2_min[j])
-        ds[k] = hcnt2_min[i++];
-      else if (Double.isNaN(other.hcnt2_min[j]))
-        ds[k] = hcnt2_min[i++];
-      else {            // _min[i] >= other._min[j]
-        if (hcnt2_min[i] == other.hcnt2_min[j]) i++;
-        ds[k] = other.hcnt2_min[j++];
+    for (int k = 0; k < hcnt2_min.length; k++) {
+      // for now..die on NaNs
+      assert !Double.isNaN(other.hcnt2_min[k]) : "NaN in other.hcnt2_min merging";
+      assert !Double.isNaN(hcnt2_min[k]) : "NaN in hcnt2_min merging";
+      if ( other.hcnt2_min[k] < hcnt2_min[k] ) {
+        hcnt2_min[k] = other.hcnt2_min[k];
       }
-    System.arraycopy(ds,0,hcnt2_min,0,ds.length);
+    }
 
-    // merge hcnt2 per-bin mins
-    ds = MemoryManager.malloc8d(hcnt2_max.length);
-    i = 0; j = 0;
-    for (int k = 0; k < ds.length; k++)
-      if (hcnt2_max[i] < other.hcnt2_max[j])
-        ds[k] = hcnt2_max[i++];
-      else if (Double.isNaN(other.hcnt2_max[j]))
-        ds[k] = hcnt2_max[i++];
-      else {            // _max[i] >= other._max[j]
-        if (hcnt2_max[i] == other.hcnt2_max[j]) i++;
-        ds[k] = other.hcnt2_max[j++];
+    // merge hcnt2 per-bin maxs
+    for (int k = 0; k < hcnt2_max.length; k++) {
+      // for now..die on NaNs
+      assert !Double.isNaN(other.hcnt2_max[k]) : "NaN in other.hcnt2_max merging";
+      assert !Double.isNaN(hcnt2_max[k]) : "NaN in hcnt2_max merging";
+      if ( other.hcnt2_max[k] < hcnt2_max[k] ) {
+        hcnt2_max[k] = other.hcnt2_max[k];
       }
-    System.arraycopy(ds,0,hcnt2_max,0,ds.length);
-
+    }
+      
     // merge hcnt mins
-    ds = MemoryManager.malloc8d(_mins.length);
-    i = 0; j = 0;
+    double[] ds = MemoryManager.malloc8d(_mins.length);
+    int i = 0, j = 0;
     for (int k = 0; k < ds.length; k++)
       if (_mins[i] < other._mins[j])
         ds[k] = _mins[i++];
@@ -625,9 +613,10 @@ public class Summary2 extends Iced {
     return this;
   }
 
-  // _start of each bin
+  // _start of each hcnt bin
   public double binValue(int b) { return _start + b*_binsz; }
 
+  // FIX! should eventually get rid of this since unused
   private double sampleQuantile(final double[] samples, final double threshold) {
     assert 0.0 <= threshold && threshold <= 1.0;
     int ix = (int)(samples.length * threshold);
@@ -719,13 +708,12 @@ public class Summary2 extends Iced {
         if ( !Double.isNaN(_maxs[p]) ) trueMax = _maxs[p];
       }
 
-      // Some cheap checks. Disable for now. fails with NA?
-      /*  
+      // Some cheap checks. Disable for now. fails with NA? Leave in as it caught good NA issues
       if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
         assert hcnt2_max[k-1] <= hcnt2_min[k] : 
           hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
       }
-      // maybe this first/last bin = min/max is no longer true
+      // maybe this first/last bin = min/max is no longer true? Check for now.
       if ( hcnt2[hcnt2.length-1] != 0 ) {
         assert hcnt2_max[hcnt2.length-1] == trueMax : 
           hcnt2_max[hcnt2.length-1] +" "+trueMax;
@@ -733,7 +721,6 @@ public class Summary2 extends Iced {
       if ( hcnt2[0] != 0 ) {
         assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
       }
-      */
 
       // might have fp tolerance issues here? but fp numbers should be exactly same?
       assert guess <= trueMax : guess+" "+trueMax;
