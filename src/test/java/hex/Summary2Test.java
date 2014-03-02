@@ -72,7 +72,9 @@ public class Summary2Test extends TestUtil {
     s.finishUp(vec);
 
     assertEquals(0, s.hcnt[4]); // no 7 cylinder cars
-    assertEquals(4, (int)s._pctile[0]);
+    // kbn 2/28. 1% quantile for 0 should expect 4
+    // I changed Summary2 to be .1%, 1% ...99%, 99.9% quantiles. So answer is 3 for [0]
+    assertEquals(3, (int)s._pctile[0]);
     assertEquals(8, (int)s._pctile[s._pctile.length - 1]);
     fr.delete();
   }

@@ -264,6 +264,11 @@ public class NN extends Job.ValidatedJob {
     if (source.numCols() <= 1)
       throw new IllegalArgumentException("Training data must have at least 2 features (incl. response).");
 
+    for (int i=0;i<hidden.length;++i) {
+      if (hidden[i]==0)
+        throw new IllegalArgumentException("Hidden layer size must be >0.");
+    }
+
     if(!classification && loss != Loss.MeanSquare) {
       Log.warn("Setting loss to MeanSquare for regression.");
       loss = Loss.MeanSquare;

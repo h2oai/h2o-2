@@ -26,7 +26,10 @@ public class Summary2 extends Iced {
   public static final int    MAX_HIST_SZ = water.parser.Enum.MAX_ENUM_SIZE;
   public static final int    NMAX = 5;
   public static final int    RESAMPLE_SZ = 1000;
-  public static final double DEFAULT_PERCENTILES[] = {0.01,0.05,0.10,0.25,0.33,0.50,0.66,0.75,0.90,0.95,0.99};
+  // updated boundaries to be 0.1% 1%...99%, 99.9% so R code didn't have to change
+  // ideally we extend the array here, and just update the R extraction of 25/50/75 percentiles
+  // note python tests (junit?) may look at result
+  public static final double DEFAULT_PERCENTILES[] = {0.001,0.01,0.10,0.25,0.33,0.50,0.66,0.75,0.90,0.99,0.999};
   private static final int   T_REAL = 0;
   private static final int   T_INT  = 1;
   private static final int   T_ENUM = 2;
@@ -39,7 +42,9 @@ public class Summary2 extends Iced {
 
   final transient String[]   _domain;
   final transient double     _start;
+  final transient double     _start2;
   final transient double     _binsz;
+  final transient double     _binsz2;    // 2nd finer grained histogram used for quantile estimates for numerics
   transient int              _len1;      /* Size of filled elements in a chunk. */
   transient double[]         _pctile;
 
@@ -96,6 +101,9 @@ public class Summary2 extends Iced {
   @API(help="histogram bin step") public double    hstep;
   @API(help="histogram headers" ) public String[]  hbrk;
   @API(help="histogram bin values") public long[]  hcnt;
+  public long[]  hcnt2; // finer histogram. not visible
+  public double[]  hcnt2_min; // min actual for each bin
+  public double[]  hcnt2_max; // max actual for each bin
 
   public static class BasicStat extends Iced {
     public long _len;   /* length of vec */
@@ -196,12 +204,13 @@ public class Summary2 extends Iced {
   }
   public static class SummaryTask2 extends MRTask2<SummaryTask2> {
     private BasicStat[] _basics;
+    private int _max_qbins;
     public Summary2 _summaries[];
-    public SummaryTask2 (BasicStat[] basicStats) { _basics = basicStats; }
+    public SummaryTask2 (BasicStat[] basicStats, int max_qbins) { _basics = basicStats; _max_qbins = max_qbins; }
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _summaries[i] = new Summary2(_fr.vecs()[i],_fr.names()[i],_basics[i]).add(cs[i]);
+        _summaries[i] = new Summary2(_fr.vecs()[i], _fr.names()[i], _basics[i], _max_qbins).add(cs[i]);
     }
     @Override public void reduce(SummaryTask2 other) {
       for (int i = 0; i < _summaries.length; i++)
@@ -228,7 +237,7 @@ public class Summary2 extends Iced {
       Summary2 sums[] = new Summary2[vecs.length];
       BasicStat basics[] = new PrePass().doAll(_fr).finishUp()._basicStats;
       for( int i=0; i<vecs.length; i++ )
-        sums[i] = new Summary2(vecs[i],_fr._names[i],basics[i]);
+        sums[i] = new Summary2(vecs[i], _fr._names[i], basics[i]);
       return new SummaryPerRow(_fr,sums);
     }
     @Override public String toString() {
@@ -309,7 +318,7 @@ public class Summary2 extends Iced {
     }
   }
 
-  public Summary2(Vec vec, String name, BasicStat stat0) {
+  public Summary2(Vec vec, String name, BasicStat stat0, int max_qbins) {
     colname = name;
     _stat0 = stat0;
     _type = vec.isEnum()?2:vec.isInt()?1:0;
@@ -325,10 +334,16 @@ public class Summary2 extends Iced {
       _mins = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
       _maxs = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
     }
+
     if( vec.isEnum() && _domain.length < MAX_HIST_SZ ) {
       _start = 0;
+      _start2 = 0;
       _binsz = 1;
+      _binsz2 = 1;
       hcnt = new long[_domain.length];
+      hcnt2 = new long[_domain.length];
+      hcnt2_min = new double[_domain.length];
+      hcnt2_max = new double[_domain.length];
     } else if (!Double.isNaN(stat0._min2)) {
       // guard against improper parse (date type) or zero c._sigma
       long N = _stat0._len - stat0._nas - stat0._nans - stat0._pinfs - stat0._ninfs;
@@ -342,15 +357,49 @@ public class Summary2 extends Iced {
       // tweak for integers
       if (d < 1. && vec.isInt()) d = 1.;
       _binsz = d;
+      // This equation means the first N bin can be empty?
+      // also: _binsz means many _binsz2 could be empty at the start if we just had _start. 
+      // FIX! is this okay if the dynamic range is > 2**32
       _start = _binsz * Math.floor(stat0._min2/_binsz);
       int nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
+
+      // create a 2nd finer grained historam for quantile estimates.
+      // okay if it is approx. 1000 bins (+-1)
+      // update: we allow api to change max_qbins. default 1000. larger = more accuracy
+      assert max_qbins > 0 && max_qbins <= 10000000 : "max_qbins must be >0 and <= 10000000";
+
+      // okay if 1 more than max_qbins gets created
+      // _binsz2 = _binsz / (max_qbins / nbin);
+      _binsz2 = (stat0._max2 + (vec.isInt()?.5:0) - stat0._min2) / max_qbins;
+      _start2 = _binsz2 * Math.floor(stat0._min2/_binsz2);
+      int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
+
+      // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
+      // Log.info("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
+      // Log.info("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
+
+      // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
       assert nbin > 0;
+      assert nbin2 > 0;
+
       hcnt = new long[nbin];
+      hcnt2 = new long[nbin2];
+      hcnt2_min = new double[nbin2];
+      hcnt2_max = new double[nbin2];
     } else { // vec does not contain finite numbers
       _start = vec.min();
+      _start2 = vec.min();
       _binsz = Double.POSITIVE_INFINITY;
+      _binsz2 = Double.POSITIVE_INFINITY;
       hcnt = new long[1];
+      hcnt2 = new long[1];
+      hcnt2_min = new double[1];
+      hcnt2_max = new double[1];
     }
+  }
+
+  public Summary2(Vec vec, String name, BasicStat stat0) {
+    this(vec, name, stat0, 1000);
   }
 
   /**
@@ -432,9 +481,47 @@ public class Summary2 extends Iced {
           }
         }
       }
+      // update the finer histogram (used for quantile estimates on numerics)
+      long binIdx2;
+      if (hcnt2.length == 1) {
+        binIdx2 = 0;
+      }
+      else if (val == Double.NEGATIVE_INFINITY) {
+        binIdx2 = 0;
+      }
+      else if (val == Double.POSITIVE_INFINITY) {
+        binIdx2 = hcnt2.length-1;
+      }
+      else {
+        binIdx2 = Math.round(((val - _start2) * 1000000.0) / _binsz2) / 1000000;
+      }
+
+      int binIdx2Int = (int) binIdx2;
+      if (binIdx2Int >= hcnt2.length) assert false;
+
+      if (hcnt2[binIdx2Int] == 0) {
+        // Log.info("New init: "+val+" for index "+binIdx2Int);
+        hcnt2_min[binIdx2Int] = val;
+        hcnt2_max[binIdx2Int] = val;
+      }
+      else {
+        if (val < hcnt2_min[binIdx2Int]) {
+            // Log.info("New min: "+val+" for index "+binIdx2Int);
+            hcnt2_min[binIdx2Int] = val;
+        }
+        if (val > hcnt2_max[binIdx2Int]) {
+            hcnt2_max[binIdx2Int] = val;
+
+            // if ( binIdx2Int == 500 ) {
+              // Log.info("New max: "+val+" for index "+binIdx2Int);
+            // }
+
+        }
+      }
+      ++hcnt2[binIdx2Int];
     }
 
-    // update histogram
+    // update the histogram the browser/json returns
     long binIdx;
     if (hcnt.length == 1) {
       binIdx = 0;
@@ -459,15 +546,50 @@ public class Summary2 extends Iced {
   public Summary2 add(Summary2 other) {
     if (hcnt != null)
       Utils.add(hcnt, other.hcnt);
+    if (hcnt2 != null)
+      Utils.add(hcnt2, other.hcnt2);
+
     _gprows += other._gprows;
+
     // merge samples
     double merged[] = new double[_samples.length+other._samples.length];
     System.arraycopy(_samples,0,merged,0,_samples.length);
     System.arraycopy(other._samples,0,merged,_samples.length,other._samples.length);
     _samples = merged;
     if (_type == T_ENUM) return this;
-    double[] ds = MemoryManager.malloc8d(_mins.length);
+
+    // merge hcnt2 per-bin mins
+    // don't care about possible min/max ==/overlap for hcnt2
+    double[] ds = MemoryManager.malloc8d(hcnt2_min.length);
     int i = 0, j = 0;
+    for (int k = 0; k < ds.length; k++)
+      if (hcnt2_min[i] < other.hcnt2_min[j])
+        ds[k] = hcnt2_min[i++];
+      else if (Double.isNaN(other.hcnt2_min[j]))
+        ds[k] = hcnt2_min[i++];
+      else {            // _min[i] >= other._min[j]
+        if (hcnt2_min[i] == other.hcnt2_min[j]) i++;
+        ds[k] = other.hcnt2_min[j++];
+      }
+    System.arraycopy(ds,0,hcnt2_min,0,ds.length);
+
+    // merge hcnt2 per-bin mins
+    ds = MemoryManager.malloc8d(hcnt2_max.length);
+    i = 0; j = 0;
+    for (int k = 0; k < ds.length; k++)
+      if (hcnt2_max[i] < other.hcnt2_max[j])
+        ds[k] = hcnt2_max[i++];
+      else if (Double.isNaN(other.hcnt2_max[j]))
+        ds[k] = hcnt2_max[i++];
+      else {            // _max[i] >= other._max[j]
+        if (hcnt2_max[i] == other.hcnt2_max[j]) i++;
+        ds[k] = other.hcnt2_max[j++];
+      }
+    System.arraycopy(ds,0,hcnt2_max,0,ds.length);
+
+    // merge hcnt mins
+    ds = MemoryManager.malloc8d(_mins.length);
+    i = 0; j = 0;
     for (int k = 0; k < ds.length; k++)
       if (_mins[i] < other._mins[j])
         ds[k] = _mins[i++];
@@ -483,7 +605,7 @@ public class Summary2 extends Iced {
     for (j = _maxs.length - 1; Double.isNaN(other._maxs[j]); j--) if (j == 0) {j--; break;}
 
     ds = MemoryManager.malloc8d(i + j + 2);
-    // merge two maxs, meanwhile deduplicating
+    // merge hcnt maxs, also deduplicating against mins?
     int k = 0, ii = 0, jj = 0;
     while (ii <= i && jj <= j) {
       if (_maxs[ii] < other._maxs[jj])
@@ -498,7 +620,6 @@ public class Summary2 extends Iced {
     }
     while (ii <= i) ds[k++] = _maxs[ii++];
     while (jj <= j) ds[k++] = other._maxs[jj++];
-
     System.arraycopy(ds,Math.max(0, k - _maxs.length),_maxs,0,Math.min(k,_maxs.length));
     for (int t = k; t < _maxs.length; t++) _maxs[t] = Double.NaN;
     return this;
@@ -508,69 +629,114 @@ public class Summary2 extends Iced {
   public double binValue(int b) { return _start + b*_binsz; }
 
   private double sampleQuantile(final double[] samples, final double threshold) {
-    assert .0 <= threshold && threshold <= 1.0;
+    assert 0.0 <= threshold && threshold <= 1.0;
     int ix = (int)(samples.length * threshold);
     return ix<samples.length?samples[ix]:Double.NaN;
   }
-  private int htot() {
+
+  private int htot2() { // same but for the finer histogram
     int cnt = 0;
-    for (int i = 0; i < hcnt.length; i++) cnt+=hcnt[i];
+    for (int i = 0; i < hcnt2.length; i++) cnt+=hcnt2[i];
     return cnt;
   }
+
   private void approxQuantiles(double[] qtiles, double[] thres){
-    if( hcnt.length == 0 ) return;
+    // not called for enums
+    assert _type != T_ENUM;
+    if( hcnt2.length == 0 ) return;
     int k = 0;
     long s = 0;
-    double addFromLastBin = 0;
-    assert _gprows==htot();
+    double guess = 0;
+    double actualBinWidth = 0;
+    assert _gprows==htot2() : "_gprows: "+_gprows+" htot2(): "+htot2();
+
+    // walk up until we're at the bin that starts with the threshold, or right before
     for(int j = 0; j < thres.length; ++j) {
-      final double s1 = thres[j]*_gprows;
-      long bc;
-      while(s1 > s+(bc = hcnt[k])){
-        s  += bc;
+      // 0 okay for threshold?
+      assert 0 <= thres[j] && thres[j] <= 1;
+      double s1 = Math.floor(thres[j] * (double) _gprows); 
+      if ( s1 == 0 ) {
+        s1 = 1; // always need at least one row
+      }
+      assert 1 <= s1 && s1 <= _gprows;
+      // how come first bins can be 0? Fixed. problem was _start. Needed _start2. still can get some
+      while( (s+hcnt2[k]) < s1) { // important to be < here. case: 100 rows, getting 50% right.
+        s += hcnt2[k];
         k++;
       }
+      // Log.info("Found k: "+k+" "+s+" "+s1+" "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
-      // kbn. add a % of the last bin.
-      // Our quanttiles threshold is 1% or 99% at the ends..
-      // Not aligned to the bin thresholds (can be as small as 10 bins?)
-      // Best would be: histogram at greater granularity than the smallest threshold step?
-      addFromLastBin = 0;
-      if ( s1 > s ) {
-        assert hcnt[k]!=0; // s1 > s implies it
-        // kbn: assume linear distribution within a bin
-        // ah! the edge cases don't have linear distribution.
-
-        // kbn: we start with min. So it's just at the max size the bin overreaches
-        // so we really should do max-start of bin, and then get percentage of that
-        // This avoids gettings values that are too big for the 99% qtile
-        // if max is was before this bin, hcnt[k] should be 0
-        
-        double binRange = _binsz; // normal case. linear distribution assumed.
-        if ( k == (hcnt.length-1) ) {
-            binRange = _maxs[0] - (_mins[0] + k*_binsz); // non-linear distribution in last bin!
-            if ( binRange < 0 ) {
-                binRange = 0;
-            }
-            // can be 0?
+      // All possible bin boundary issues 
+      if ( s==s1 || hcnt2[k]==0 ) {
+        if ( hcnt2[k]!=0 ) {
+          guess = hcnt2_min[k];
+          // Log.info("Guess A: "+guess+" "+s+" "+s1);
         }
+        else {
+          if ( k==0 ) { 
+            assert hcnt2[k+1]!=0 : "Unexpected state of starting hcnt2 bins";
+            guess = hcnt2_min[k+1];
+            // Log.info("Guess B: "+guess+" "+s+" "+s1);
+          }
+          else {
+            if ( hcnt2[k-1]!=0 ) {
+              guess = hcnt2_max[k-1];
+              // Log.info("Guess C: "+guess+" "+s+" "+s1);
+            }
+            else {
+              assert false : "Unexpected state of adjacent hcnt2 bins";
+            }
+          }
+        }
+      }
+      else {
+        // nonzero hcnt2[k] guarantees these are valid
+        actualBinWidth = hcnt2_max[k] - hcnt2_min[k];
 
-        double pctOfLastBin = (s1 - s) / hcnt[k];
-        addFromLastBin = pctOfLastBin * binRange;
-        if( !(addFromLastBin <= _binsz) )
-          Log.warn("Summary2, unexpectedly large offset: "+addFromLastBin+" > "+_binsz);
-        
+        // interpolate within the populated bin, assuming linear distribution
+        // since we have the actual min/max within a bin, we can be more accurate
+        // compared to using the bin boundaries
+        // Note actualBinWidth is 0 when all values are the same in a bin
+        // Interesting how we have a gap that we jump between max of one bin, and min of another.
+        guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
+        // Log.info("Guess D: "+guess+" "+k+" "+hcnt2_min[k]+" "+actualBinWidth+" "+s+" "+s1+" "+hcnt2[k]);
       }
 
-      // kbn. change so we get estimate at the threshold, not midpoint of bin.
-      // I think this matches what R wants for a threshold. Probably doesn't match
-      // what a binned quantile wants. (should we produce both?)
-      // k-1: cuz didn't fully eat the k bin
-      qtiles[j] = _mins[0] + k*_binsz + addFromLastBin;
-      // was this for midpoint estimation of the bin implied by the thresholds?
-      // qtiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
+      qtiles[j] = guess;
+
+      // _maxs[5] is usually the biggest (not always)?  _mins[0] is the smallest
+      // oh..ugly. At this point, NaNs haven't been stripped. so we don't know that 
+      // the end of _maxs has the true max (if there is just 1-4 values in the data, 
+      // _maxs doens't get filled (legacy!). The NaNs and array length get flushed later.
+      // _maxs really should have been organized as big to small so biggest is always in 0.
+      // So find the last max before the nans
+      double trueMax = _maxs[0];
+      for(int p = 1; p < _maxs.length; ++p) {
+        if ( !Double.isNaN(_maxs[p]) ) trueMax = _maxs[p];
+      }
+
+      // Some cheap checks. Disable for now. fails with NA?
+      /*  
+      if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
+        assert hcnt2_max[k-1] <= hcnt2_min[k] : 
+          hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
+      }
+      // maybe this first/last bin = min/max is no longer true
+      if ( hcnt2[hcnt2.length-1] != 0 ) {
+        assert hcnt2_max[hcnt2.length-1] == trueMax : 
+          hcnt2_max[hcnt2.length-1] +" "+trueMax;
+      }
+      if ( hcnt2[0] != 0 ) {
+        assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
+      }
+      */
+
+      // might have fp tolerance issues here? but fp numbers should be exactly same?
+      assert guess <= trueMax : guess+" "+trueMax;
+      assert guess >= _mins[0] : guess+" "+_mins[0];
+      // Log.info("_mins[0]: "+_mins[0]+" trueMax: "+trueMax+" hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
+      // " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
     }
-    // System.out.println("_maxs[0]"+_maxs[0]+"qtiles[thres.length-1]:"+qtiles[thres.length-1]+" addFromLastBin:"+addFromLastBin+" k:"+k+" _binsz:"+_binsz+" hcnt[k]:"+hcnt[k]+"\n");
   }
   // Compute majority categories for enums only
   public void computeMajorities() {
@@ -674,7 +840,8 @@ public class Summary2 extends Iced {
               ">Percentiles</th></tr>");
       sb.append("<tr><th>Threshold(%)</th>");
       for (double pc : stats.pct)
-        sb.append("<td>" + (int) Math.round(pc * 100) + "</td>");
+        sb.append("<td>" + Utils.p2d(pc * 100.0) + "</td>");
+        // sb.append("<td>" + (int) Math.round(pc * 100) + "</td>");
       sb.append("</tr>");
       sb.append("<tr><th>Value</th>");
       for (double pv : stats.pctile)

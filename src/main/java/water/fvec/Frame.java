@@ -384,6 +384,7 @@ public class Frame extends Lockable<Frame> {
     s += "}";
     return s;
   }
+  public String toStringNames() { return Arrays.toString(_names); }
 
   // Print a row with headers inlined
   private String toStr( long idx, int col ) {
