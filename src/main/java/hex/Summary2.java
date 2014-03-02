@@ -644,6 +644,7 @@ public class Summary2 extends Iced {
     // not called for enums
     assert _type != T_ENUM;
     if( hcnt2.length == 0 ) return;
+
     int k = 0;
     long s = 0;
     double guess = 0;
@@ -658,7 +659,10 @@ public class Summary2 extends Iced {
       if ( s1 == 0 ) {
         s1 = 1; // always need at least one row
       }
-      assert 1 <= s1 && s1 <= _gprows;
+      // what if _gprows is 0?. just return above?. Is it NAs?
+      // assert _gprows > 0 : _gprows;
+      if( _gprows == 0 ) return;
+      assert 1 <= s1 && s1 <= _gprows : s1+" "+_gprows;
       // how come first bins can be 0? Fixed. problem was _start. Needed _start2. still can get some
       while( (s+hcnt2[k]) < s1) { // important to be < here. case: 100 rows, getting 50% right.
         s += hcnt2[k];

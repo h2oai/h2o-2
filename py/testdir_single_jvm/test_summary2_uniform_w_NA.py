@@ -2,9 +2,17 @@ import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
 
+if  getpass.getuser() == 'kevin': 
+    DO_TRY_SCIPY = True
+# can't handle the NA in scipy?
 DO_TRY_SCIPY = False
 
+DO_MEDIAN = True
 MAX_QBINS = 1000
+
+# fails with 1M and NA
+ROWS = 100
+NA_ROW_RATIO = 5
 
 print "Same as test_summary2_uniform.py except for every data row,"
 print "5 rows of synthetic NA rows are added. results should be the same for quantiles"
@@ -17,7 +25,7 @@ def twoDecimals(l):
 
 # have to match the csv file?
 # dtype=['string', 'float');
-def generate_scipy_comparison(csvPathname, dtype):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -38,9 +46,10 @@ def generate_scipy_comparison(csvPathname, dtype):
     # data is last column
     # drop the output
     print dataset.shape
-    target = [x[1] for x in dataset]
+    target = [x[col] for x in dataset]
     # we may have read it in as a string. coerce to number
     targetFP = np.array(target, np.float)
+    # targetFP = target
 
     if 1==0:
         n_features = len(dataset[0]) - 1;
@@ -64,7 +73,26 @@ def generate_scipy_comparison(csvPathname, dtype):
     from scipy import stats
     # a = stats.scoreatpercentile(target, per=per)
     a = stats.mstats.mquantiles(targetFP, prob=per)
-    print "sp percentiles:", a
+    a2 = ["%.2f" % v for v in a]
+    h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+
+    # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
+    # inplace sort
+    targetFP.sort()
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+    label = '50%' if DO_MEDIAN else '99.9%'
+    h2p.blue_print(label, "from sort:", b)
+    h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
+    h2p.blue_print(label, "from h2o:", h2oMedian)
+
+    # see if scipy changes. nope. it doesn't 
+    if 1==0:
+        a = stats.mstats.mquantiles(targetFP, prob=per)
+        a2 = ["%.2f" % v for v in a]
+        h2p.red_print("after sort")
+        h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+
+
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
@@ -84,9 +112,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
             rowData = []
             for j in range(colCount):
                 # this shouldn't be h2o parsed as an enum?...NA is special?
-                rowData.append('NA')
+                rowData.append(',,')
             rowDataCsv = ",".join(map(str,rowData))
-            for k in range(1):
+            for k in range(NA_ROW_RATIO):
                 dsf.write(rowDataCsv + "\n")
 
     dsf.close()
@@ -111,22 +139,21 @@ class Basic(unittest.TestCase):
 
     def test_summary2_uniform_w_NA(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        COLS = 1000
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (COLS, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
-            (COLS, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
-            (COLS, 1, 'x.hex', -100000, 100000, ('C1',  -100001.0, -50000.0, 1613.0, 50000.0, 100000.0)),
-            (COLS, 1, 'x.hex', -1, 1,           ('C1',  -1.05, -0.48, 0.0087, 0.50, 1.00)),
+            (ROWS, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
+            (ROWS, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
+            (ROWS, 1, 'x.hex', -100000, 100000, ('C1',  -100001.0, -50000.0, 1613.0, 50000.0, 100000.0)),
+            (ROWS, 1, 'x.hex', -1, 1,           ('C1',  -1.05, -0.48, 0.0087, 0.50, 1.00)),
 
-            (COLS, 1, 'A.hex', 1, 100,          ('C1',   1.05, 26.00, 51.00, 76.00, 100.0)),
-            (COLS, 1, 'A.hex', -99, 99,         ('C1',  -99, -50.0, 0, 50.00, 99)),
+            (ROWS, 1, 'A.hex', 1, 100,          ('C1',   1.05, 26.00, 51.00, 76.00, 100.0)),
+            (ROWS, 1, 'A.hex', -99, 99,         ('C1',  -99, -50.0, 0, 50.00, 99)),
 
-            (COLS, 1, 'B.hex', 1, 10000,        ('C1',   1.05, 2501.00, 5001.00, 7501.00, 10000.00)),
-            (COLS, 1, 'B.hex', -100, 100,       ('C1',  -100.10, -50.0, 0.85, 51.7, 100,00)),
+            (ROWS, 1, 'B.hex', 1, 10000,        ('C1',   1.05, 2501.00, 5001.00, 7501.00, 10000.00)),
+            (ROWS, 1, 'B.hex', -100, 100,       ('C1',  -100.10, -50.0, 0.85, 51.7, 100,00)),
 
-            (COLS, 1, 'C.hex', 1, 100000,       ('C1',   1.05, 25002.00, 50002.00, 75002.00, 100000.00)),
-            (COLS, 1, 'C.hex', -101, 101,       ('C1',  -100.10, -50.45, -1.18, 49.28, 100.00)),
+            (ROWS, 1, 'C.hex', 1, 100000,       ('C1',   1.05, 25002.00, 50002.00, 75002.00, 100000.00)),
+            (ROWS, 1, 'C.hex', -101, 101,       ('C1',  -100.10, -50.45, -1.18, 49.28, 100.00)),
         ]
 
         timeoutSecs = 10
@@ -149,6 +176,7 @@ class Basic(unittest.TestCase):
 
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
 
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
@@ -163,7 +191,7 @@ class Basic(unittest.TestCase):
             numCols = inspect["num_cols"]
 
             h2o.beta_features = True
-            summaryResult = h2o_cmd.runSummary(key=hex_key, noPrint=False, max_qbins=MAX_QBINS)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, noPrint=False, max_qbins=MAX_QBINS, numRows=numRows, numCols=numCols)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             # only one column
@@ -213,12 +241,18 @@ class Basic(unittest.TestCase):
             print "hcnt:", hcnt
             print "len(hcnt)", len(hcnt)
 
+            print "numRows:", numRows, "rowCount: ", rowCount
+            self.assertEqual((1+NA_ROW_RATIO) * rowCount, numRows, 
+                msg="numRows %s should be %s" % (numRows, (1+NA_ROW_RATIO) * rowCount))
+
             # don't check the last bin
             for b in hcnt[1:-1]:
                 # should we be able to check for a uniform distribution in the files?
-                e = numRows/len(hcnt) # expect 21 thresholds, so 20 bins. each 5% of rows (uniform distribution)
+                
+                e = rowCount/len(hcnt) # expect 21 thresholds, so 20 bins. each 5% of rows (uniform distribution)
                 # don't check the edge bins
-                self.assertAlmostEqual(b, rowCount/len(hcnt), delta=.01*rowCount, 
+                # NA rows should be ignored
+                self.assertAlmostEqual(b, e, delta=.15*e,
                     msg="Bins not right. b: %s e: %s" % (b, e))
 
             pt = twoDecimals(pctile)
@@ -236,9 +270,14 @@ class Basic(unittest.TestCase):
 
             trial += 1
 
-            if DO_TRY_SCIPY:
-                csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
-                generate_scipy_comparison(csvPathname1, dtype=dtype)
+            scipyCol = 1
+            if DO_TRY_SCIPY and colname!='':
+                # don't do for enums
+                # also get the median with a sort (h2o_summ.percentileOnSortedlist()
+                print scipyCol, pctile[10]
+                generate_scipy_comparison(csvPathnameFull, col=scipyCol,
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10])
+
 
 if __name__ == '__main__':
     h2o.unit_main()

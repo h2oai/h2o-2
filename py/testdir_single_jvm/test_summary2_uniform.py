@@ -3,6 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
 
 DO_TRY_SCIPY = False
+if  getpass.getuser() == 'kevin':
+    DO_TRY_SCIPY = True
 
 def twoDecimals(l): 
     if isinstance(l, list):
@@ -87,7 +89,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud(node_count=3, base_port=54327)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
 
@@ -138,7 +140,7 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
             h2o.beta_features = False
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -220,10 +222,12 @@ class Basic(unittest.TestCase):
             print "mins colname:", colname, "(2 places):", mn
 
             trial += 1
+            h2o.nodes[0].remove_all_keys()
 
             if DO_TRY_SCIPY:
                 csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
                 generate_scipy_comparison(csvPathname1, dtype=dtype)
+
 
 if __name__ == '__main__':
     h2o.unit_main()
