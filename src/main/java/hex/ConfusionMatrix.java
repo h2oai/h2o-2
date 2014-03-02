@@ -3,20 +3,22 @@ package hex;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 import water.Iced;
-import water.api.DocGen;
 import water.api.Request.API;
 
 import java.util.Arrays;
 
+import static water.api.DocGen.FieldDoc;
+import static water.api.DocGen.HTML;
+
 public class ConfusionMatrix extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+  static public FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
   @API(help="Confusion matrix (Actual/Predicted)")
   public long[][] _arr; // [actual][predicted]
   @API(help = "Prediction error by class")
-  public double[] _classErr;
+  public final double[] _classErr;
   @API(help = "Prediction error")
-  public double _predErr;
+  public final double _predErr;
 
   @Override public ConfusionMatrix clone() {
     ConfusionMatrix res = new ConfusionMatrix(0);
@@ -56,6 +58,8 @@ public class ConfusionMatrix extends Iced {
 
   public ConfusionMatrix(int n) {
     _arr = new long[n][n];
+    _classErr = classErr();
+    _predErr = err();
   }
 
   public ConfusionMatrix(long[][] value) {
@@ -64,7 +68,7 @@ public class ConfusionMatrix extends Iced {
     _predErr = err();
   }
 
-  public void add(int i, int j) {
+  public synchronized void add(int i, int j) {
     _arr[i][j]++;
   }
 
@@ -72,7 +76,7 @@ public class ConfusionMatrix extends Iced {
     double[] res = new double[_arr.length];
     for( int i = 0; i < res.length; ++i )
       res[i] = classErr(i);
-    return _classErr = res;
+    return res;
   }
 
   public final int size() {
@@ -85,21 +89,25 @@ public class ConfusionMatrix extends Iced {
       s += x;
     if( s == 0 )
       return 0.0;    // Either 0 or NaN, but 0 is nicer
-    return _classErr[c] = (double) (s - _arr[c][c]) / s;
+    return (double) (s - _arr[c][c]) / s;
   }
-
-  public double err() {
+  public long totalRows() {
     long n = 0;
     for( int a = 0; a < _arr.length; ++a )
       for( int p = 0; p < _arr[a].length; ++p )
         n += _arr[a][p];
+    return n;
+  }
+
+  public double err() {
+    long n = totalRows();
     long err = n;
     for( int d = 0; d < _arr.length; ++d )
       err -= _arr[d][d];
-    return _predErr = (double) err / n;
+    return (double) err / n;
   }
 
-  public void add(ConfusionMatrix other) {
+  public synchronized void add(ConfusionMatrix other) {
     water.util.Utils.add(_arr, other._arr);
   }
 
@@ -166,5 +174,84 @@ public class ConfusionMatrix extends Iced {
     totals.add(new JsonPrimitive(err));
     res.add(totals);
     return res;
+  }
+
+  public void toHTMLbasic(StringBuilder sb, String[] labels) {
+    String[] lab = labels;
+    if (lab == null||lab.length!=2) {
+      lab = new String[]{"false","true"};
+    }
+    sb.append("<table class='table table-bordered table-condensed'>");
+    sb.append("<tr><th>Actual / Predicted</th><th>"+lab[0]+"</th><th>"+lab[1]+"</th></tr>");
+    sb.append("<tr><th>"+lab[0]+"</th><td id='TN'>" + _arr[0][0] + "</td><td id='FN'>" + _arr[0][1] + "</td></tr>");
+    sb.append("<tr><th>"+lab[1]+"</th><td id='FP'>" + _arr[1][0] + "</td><td id='TP'>" + _arr[1][1] + "</td></tr>");
+    sb.append("</table>");
+  }
+
+  public void toHTML(StringBuilder sb, String[] labels) {
+    String[] lab = labels;
+    if (lab == null||lab.length!=2) {
+      lab = new String[]{"false","true"};
+    }
+    long[][] cm = _arr;
+    HTML.arrayHead(sb);
+    // Sum up predicted & actuals
+    long acts [] = new long[cm   .length];
+    long preds[] = new long[cm[0].length];
+    for( int a=0; a<cm.length; a++ ) {
+      long sum=0;
+      for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
+      acts[a] = sum;
+    }
+
+    String adomain[] = lab;
+    String pdomain[] = lab;
+
+    // Top row of CM
+    sb.append("<tr class='warning'>");
+    sb.append("<th>Actual / Predicted</th>"); // Row header
+    for( int p=0; p<pdomain.length; p++ )
+      if( pdomain[p] != null )
+        sb.append("<th>").append(pdomain[p]).append("</th>");
+    sb.append("<th>Error</th>");
+    sb.append("</tr>");
+
+    // Main CM Body
+    long terr=0;
+    for( int a=0; a<cm.length; a++ ) { // Actual loop
+      if( adomain[a] == null ) continue;
+      sb.append("<tr>");
+      sb.append("<th>").append(adomain[a]).append("</th>");// Row header
+      long correct=0;
+      for( int p=0; p<pdomain.length; p++ ) { // Predicted loop
+        if( pdomain[p] == null ) continue;
+        boolean onDiag = adomain[a].equals(pdomain[p]);
+        if( onDiag ) correct = cm[a][p];
+        String id = "";
+        // this is required to change values via JS - but then the sums and error rates won't change -> leave for now.
+//        if (cm.length == 2) {
+//          if (a == 0 && p == 0) id = "id='TN'";
+//          if (a == 0 && p == 1) id = "id='FP'";
+//          if (a == 1 && p == 0) id = "id='FN'";
+//          if (a == 1 && p == 1) id = "id='TP'";
+//        }
+        sb.append(onDiag ? "<td style='background-color:LightGreen' "+id+">":"<td "+id+">").append(cm[a][p]).append("</td>");
+      }
+      long err = acts[a]-correct;
+      terr += err;              // Bump totals
+      sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/acts[a], err, acts[a]));
+      sb.append("</tr>");
+    }
+
+    // Last row of CM
+    sb.append("<tr>");
+    sb.append("<th>Totals</th>");// Row header
+    for( int p=0; p<pdomain.length; p++ ) { // Predicted loop
+      if( pdomain[p] == null ) continue;
+      sb.append("<td>").append(preds[p]).append("</td>");
+    }
+    sb.append(String.format("<th>%5.3f = %d / %d</th>", err(), terr, totalRows()));
+    sb.append("</tr>");
+    HTML.arrayTail(sb);
   }
 }

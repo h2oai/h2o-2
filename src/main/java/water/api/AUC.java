@@ -8,6 +8,8 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
+import static java.util.Arrays.binarySearch;
+
 public class AUC extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -30,19 +32,12 @@ public class AUC extends Request2 {
   private String [] actual_domain;
   @API(help="AUC")
   public double auc;
-  @API(help="Best threshold")
+  @API(help="Threshold (min. Error)")
   private double best_threshold;
-  /* Helper */ final private double[] _thresh;
+  /* Helper */ private double[] _thresh;
   /* Helper */ private double[] _tprs;
   /* Helper */ private double[] _fprs;
-
-  public AUC() {
-    final int bins = 100;
-    _thresh = new double[bins];
-    for( int i=0; i<bins; ++i) {
-      _thresh[i] = (0.5f+i)/bins; //TODO: accurate percentiles
-    }
-  }
+  /* Helper */ private hex.ConfusionMatrix[] _cms;
 
   @Override public Response serve() {
     Vec va = null, vp;
@@ -64,11 +59,17 @@ public class AUC extends Request2 {
       if (!va.group().equals(vp.group())) {
         vp = va.align(vp);
       }
+      final int bins = 100;
+      _thresh = new double[bins];
+      for( int i=0; i<bins; ++i) {
+        _thresh[i] = (i+1.)/bins; //TODO: data-driven binning
+      }
       AUCTask at = new AUCTask(_thresh).doAll(va,vp);
       auc = at.getAUC();
       best_threshold = at.getBestThreshold();
-      _tprs = at._tprs;
-      _fprs = at._fprs;
+      _tprs = at.getTPRs();
+      _fprs = at.getFPRs();
+      _cms = at.getCMs();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -77,88 +78,44 @@ public class AUC extends Request2 {
     }
   }
 
-  // Compute the AUC via MRTask2
-  private static class AUCTask extends MRTask2<AUCTask> {
-    /* @OUT AUC */ public double getAUC() { return _auc; }
-    private double _auc;
-    /* @OUT Best Threshold */ public double getBestThreshold() { return _best_threshold; }
-    private double _best_threshold;
-    /* Helper */ final private hex.ConfusionMatrix[] _cms;
-    /* Helper */ final private double[] _thresh;
-    /* Helper */ private transient double[] _tprs;
-    /* Helper */ private transient double[] _fprs;
-
-    AUCTask(double[] thresh) {
-      _cms = new hex.ConfusionMatrix[thresh.length];
-      for (int i=0;i<_cms.length;++i)
-        _cms[i] = new hex.ConfusionMatrix(2);
-      _thresh = thresh.clone();
-    }
-
-    @Override public void map( Chunk ca, Chunk cp ) {
-      final int len = Math.min(ca._len, cp._len);
-      for( int i=0; i < len; i++ ) {
-        for( int t=0; t < _cms.length; t++ ) {
-          final int a = (int)ca.at80(i);
-          if (a != 0 && a != 1) throw new InvalidArgumentException("Invalid vactual: must be binary (0 or 1).");
-          final int p = cp.at0(i)>=_thresh[t]?1:0;
-          _cms[t].add(a, p);
-        }
-      }
-    }
-
-    @Override public void reduce( AUCTask other ) {
-      for( int i=0; i<_cms.length; ++i) {
-        _cms[i].add(other._cms[i]);
-      }
-    }
-
-    @Override protected void postGlobal() {
-      _tprs = new double[_cms.length];
-      _fprs = new double[_cms.length];
-
-      double TPR_pre = 1;
-      double FPR_pre = 1;
-      _auc = 0;
-      for( int t = 0; t < _cms.length; ++t ) {
-        double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true-positive-rate
-        double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
-        _auc += trapezoid_area(FPR_pre, FPR, TPR_pre, TPR);
-        TPR_pre = TPR;
-        FPR_pre = FPR;
-        _tprs[t] = TPR;
-        _fprs[t] = FPR;
-//        if (t > 1) {
-//          assert(_tprs[t] <= _tprs[t-1]);
-//          assert(_fprs[t] <= _fprs[t-1]);
-//        }
-      }
-      _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
-      assert(_auc >= 0. && _auc <= 1.0);
-      int best = 0;
-      for(int i = 1; i < _cms.length; ++i) {
-        if (Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
-          best = i;
-      }
-      _best_threshold = _thresh[best];
-    }
-
-    private double trapezoid_area(double x1, double x2, double y1, double y2) {
-      final double base = Math.abs(x1 - x2);
-      final double havg = 0.5 * (y1 + y2);
-      return base * havg;
-    }
-  }
-
   @Override public boolean toHTML( StringBuilder sb ) {
+    sb.append("<div>");
+    DocGen.HTML.title(sb, "Scoring for Binary Classification");
     DocGen.HTML.arrayHead(sb);
 //    DocGen.HTML.section(sb, "Predicting: " + actual.names()[actual.find(vactual)]);
-    sb.append("<th>AUC</th><th>Gini</th><th>Best threshold</th>");
+    sb.append("<th>AUC</th><th>Gini</th><th>Threshold (min. Error)</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>" + String.format("%4f", auc) + "</td><td>" + String.format("%4f", 2*auc-1) + "</td><td>" + String.format("%4f", best_threshold) + "</td>");
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
+    final int best = binarySearch(_thresh, best_threshold);
+    _cms[best].toHTML(sb, actual_domain);
     plotROC(sb);
+    _cms[best].toHTMLbasic(sb, actual_domain);
+    sb.append("\n<script type=\"text/javascript\">");//</script>");
+    sb.append("var cms = [\n");
+    for(hex.ConfusionMatrix cm:_cms){
+      sb.append("\t[\n");
+      for(long [] line:cm._arr) {
+        sb.append("\t\t[");
+        for(long l:line) sb.append(l + ",");
+        sb.append("],\n");
+      }
+      sb.append("\t],\n");
+    }
+    sb.append("];\n");
+    sb.append("function show_cm(i){\n");
+    sb.append("\t" + "document.getElementById('TN').innerHTML = cms[i][0][0];\n");
+    sb.append("\t" + "document.getElementById('TP').innerHTML = cms[i][1][1];\n");
+    sb.append("\t" + "document.getElementById('FN').innerHTML = cms[i][0][1];\n");
+    sb.append("\t" + "document.getElementById('FP').innerHTML = cms[i][1][0];\n");
+    sb.append("}\n");
+    sb.append("</script>\n");
+    sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
+    for(int i = 0; i < _cms.length; ++i)
+      sb.append("\t<option value='" + i + "'" + (_thresh[i] == best_threshold?"selected='selected'":"") +">" + _thresh[i] + "</option>\n");
+    sb.append("</select>\n");
+    sb.append("</div>");
     return true;
   }
 
@@ -330,5 +287,79 @@ public class AUC extends Request2 {
 
     sb.append("</script>");
     sb.append("</div>");
+  }
+
+  // Compute the AUC via MRTask2
+  private static class AUCTask extends MRTask2<AUCTask> {
+    /* @OUT AUC */ public double getAUC() { return _auc; }
+    transient private double _auc;
+    /* @OUT Best Threshold */ public double getBestThreshold() { return _best_threshold; }
+    transient private double _best_threshold;
+    /* @OUT TPRs */ public final double[] getTPRs() { return _tprs; }
+    transient private double[] _tprs;
+    /* @OUT FPRs */ public final double[] getFPRs() { return _fprs; }
+    transient private double[] _fprs;
+    /* @OUT CMs */ public final hex.ConfusionMatrix[] getCMs() { return _cms; }
+    final private hex.ConfusionMatrix[] _cms;
+
+
+    /* IN thresholds */ final private double[] _thresh;
+
+    AUCTask(double[] thresh) {
+      _thresh = thresh.clone();
+      _cms = new hex.ConfusionMatrix[_thresh.length];
+      for (int i=0;i<_cms.length;++i)
+        _cms[i] = new hex.ConfusionMatrix(2);
+    }
+
+    @Override public void map( Chunk ca, Chunk cp ) {
+      final int len = Math.min(ca._len, cp._len);
+      for( int i=0; i < len; i++ ) {
+        assert(!ca.isNA0(i)); //should never have actual NaN probability!
+        final int a = (int)ca.at80(i); //would be a 0 if double was NaN
+        if (a != 0 && a != 1) throw new InvalidArgumentException("Invalid vactual: must be binary (0 or 1).");
+        assert(!cp.isNA0(i)); //should never have predicted NaN probability
+        for( int t=0; t < _cms.length; t++ ) {
+          final int p = cp.at0(i)>=_thresh[t]?1:0;
+          _cms[t].add(a, p);
+        }
+      }
+    }
+
+    @Override public void reduce( AUCTask other ) {
+      for( int i=0; i<_cms.length; ++i) {
+        if (other._cms != _cms) {
+          _cms[i].add(other._cms[i]);
+        }
+      }
+    }
+
+    @Override protected void postGlobal() {
+      _tprs = new double[_cms.length];
+      _fprs = new double[_cms.length];
+
+      double TPR_pre = 1;
+      double FPR_pre = 1;
+      _auc = 0;
+      for( int t = 0; t < _cms.length; ++t ) {
+        double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true-positive-rate
+        double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
+        _auc += trapezoid_area(FPR_pre, FPR, TPR_pre, TPR);
+        TPR_pre = TPR;
+        FPR_pre = FPR;
+        _tprs[t] = TPR;
+        _fprs[t] = FPR;
+      }
+      _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
+      assert(_auc >= 0. && _auc <= 1.0);
+      int best = 0;
+      for(int i = 1; i < _cms.length; ++i) {
+        if (Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
+          best = i;
+      }
+      _best_threshold = _thresh[best];
+    }
+
+    private static double trapezoid_area(double x1, double x2, double y1, double y2) { return Math.abs(x1-x2)*(y1+y2)/2.; }
   }
 }
