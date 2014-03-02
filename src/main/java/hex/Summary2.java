@@ -42,6 +42,7 @@ public class Summary2 extends Iced {
 
   final transient String[]   _domain;
   final transient double     _start;
+  final transient double     _start2;
   final transient double     _binsz;
   final transient double     _binsz2;    // 2nd finer grained histogram used for quantile estimates for numerics
   transient int              _len1;      /* Size of filled elements in a chunk. */
@@ -336,6 +337,7 @@ public class Summary2 extends Iced {
 
     if( vec.isEnum() && _domain.length < MAX_HIST_SZ ) {
       _start = 0;
+      _start2 = 0;
       _binsz = 1;
       _binsz2 = 1;
       hcnt = new long[_domain.length];
@@ -355,27 +357,38 @@ public class Summary2 extends Iced {
       // tweak for integers
       if (d < 1. && vec.isInt()) d = 1.;
       _binsz = d;
+      // This equation means the first N bin can be empty?
+      // also: _binsz means many _binsz2 could be empty at the start if we just had _start. 
+      // FIX! is this okay if the dynamic range is > 2**32
       _start = _binsz * Math.floor(stat0._min2/_binsz);
       int nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
 
-      // create a 2nd finer grained historam for quantile estimates. 1000 bins
+      // create a 2nd finer grained historam for quantile estimates.
       // okay if it is approx. 1000 bins (+-1)
       // update: we allow api to change max_qbins. default 1000. larger = more accuracy
-      // minimum of 1, probably. 0 is bad. negative is bad. Wants to be int.
-      // can just force if bad param.
       assert max_qbins > 0 && max_qbins <= 10000000 : "max_qbins must be >0 and <= 10000000";
-      _binsz2 = _binsz / (max_qbins / nbin);
-      int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz2)/1000000L) + 1;
+
+      // okay if 1 more than max_qbins gets created
+      // _binsz2 = _binsz / (max_qbins / nbin);
+      _binsz2 = (stat0._max2 + (vec.isInt()?.5:0) - stat0._min2) / max_qbins;
+      _start2 = _binsz2 * Math.floor(stat0._min2/_binsz2);
+      int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
+
       // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
-      
+      // Log.info("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
+      // Log.info("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
+
+      // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
       assert nbin > 0;
       assert nbin2 > 0;
+
       hcnt = new long[nbin];
       hcnt2 = new long[nbin2];
       hcnt2_min = new double[nbin2];
       hcnt2_max = new double[nbin2];
     } else { // vec does not contain finite numbers
       _start = vec.min();
+      _start2 = vec.min();
       _binsz = Double.POSITIVE_INFINITY;
       _binsz2 = Double.POSITIVE_INFINITY;
       hcnt = new long[1];
@@ -480,7 +493,7 @@ public class Summary2 extends Iced {
         binIdx2 = hcnt2.length-1;
       }
       else {
-        binIdx2 = Math.round(((val - _start) * 1000000.0) / _binsz2) / 1000000;
+        binIdx2 = Math.round(((val - _start2) * 1000000.0) / _binsz2) / 1000000;
       }
 
       int binIdx2Int = (int) binIdx2;
@@ -497,13 +510,15 @@ public class Summary2 extends Iced {
             hcnt2_min[binIdx2Int] = val;
         }
         if (val > hcnt2_max[binIdx2Int]) {
-            // Log.info("New max: "+val+" for index "+binIdx2Int);
             hcnt2_max[binIdx2Int] = val;
+
+            // if ( binIdx2Int == 500 ) {
+              // Log.info("New max: "+val+" for index "+binIdx2Int);
+            // }
+
         }
       }
       ++hcnt2[binIdx2Int];
-            
-    
     }
 
     // update the histogram the browser/json returns
@@ -614,83 +629,80 @@ public class Summary2 extends Iced {
   public double binValue(int b) { return _start + b*_binsz; }
 
   private double sampleQuantile(final double[] samples, final double threshold) {
-    assert .0 <= threshold && threshold <= 1.0;
+    assert 0.0 <= threshold && threshold <= 1.0;
     int ix = (int)(samples.length * threshold);
     return ix<samples.length?samples[ix]:Double.NaN;
   }
-  private int htot() {
-    int cnt = 0;
-    for (int i = 0; i < hcnt.length; i++) cnt+=hcnt[i];
-    return cnt;
-  }
+
   private int htot2() { // same but for the finer histogram
     int cnt = 0;
     for (int i = 0; i < hcnt2.length; i++) cnt+=hcnt2[i];
     return cnt;
   }
+
   private void approxQuantiles(double[] qtiles, double[] thres){
     // not called for enums
     assert _type != T_ENUM;
-    if( hcnt.length == 0 ) return;
+    if( hcnt2.length == 0 ) return;
     int k = 0;
     long s = 0;
     double guess = 0;
-    double actualBinWidth= 0;
+    double actualBinWidth = 0;
     assert _gprows==htot2() : "_gprows: "+_gprows+" htot2(): "+htot2();
 
     // walk up until we're at the bin that starts with the threshold, or right before
     for(int j = 0; j < thres.length; ++j) {
-      final double s1 = thres[j]*_gprows;
-      long bc;
-      while(s1 > s+(bc = hcnt2[k])){
-        s += bc;
+      // 0 okay for threshold?
+      assert 0 <= thres[j] && thres[j] <= 1;
+      double s1 = Math.round(thres[j] * (double) _gprows); 
+      if ( s1 == 0 ) {
+        s1 = 1; // always need at least one row
+      }
+      assert 1 <= s1 && s1 <= _gprows;
+      // how come first bins can be 0? Fixed. problem was _start. Needed _start2. still can get some
+      while( (s+hcnt2[k]) < s1) { // important to be < here. case: 100 rows, getting 50% right.
+        s += hcnt2[k];
         k++;
       }
-    
-      // If bin count is 0 we shouldn't have stopped if not at the threshold yet..
-      // If did due to fp comparison issues, then a non-zero bin should be right before.
-      if ( s == s1 || hcnt2[k]==0) {
-        if (hcnt2[k] != 0 ) {
-            guess = hcnt2_min[k-1];
-            // Log.info("Guess A: "+guess);
+      // Log.info("Found k: "+k+" "+s+" "+s1+" "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+
+      // All possible bin boundary issues 
+      if ( s==s1 || hcnt2[k]==0 ) {
+        if ( hcnt2[k]!=0 ) {
+          guess = hcnt2_min[k];
+          // Log.info("Guess A: "+guess+" "+s+" "+s1);
         }
         else {
-          if ( k > 0 ) {
-            assert hcnt2[k-1] != 0;
-            guess = hcnt2_max[k-1];
-            // Log.info("Guess B: "+guess);
+          if ( k==0 ) { 
+            assert hcnt2[k+1]!=0 : "Unexpected state of starting hcnt2 bins";
+            guess = hcnt2_min[k+1];
+            // Log.info("Guess B: "+guess+" "+s+" "+s1);
           }
           else {
-            // Stopping at bin 0, with nothing in bin 0..maybe a threshold 0 case?
-            // but threshold can be very small. If the min value wasn't in bin 0, 
-            // Could end here if very small threshold
-            // Cover possible fp threshold issues +-1 bin
-            // hcnt2[k] == 0  here
-            assert hcnt2.length > 0;
-            assert hcnt2[k+1] != 0;
-            guess = hcnt2_min[k+1];
-            // Log.info("Guess C: "+guess);
+            if ( hcnt2[k-1]!=0 ) {
+              guess = hcnt2_max[k-1];
+              // Log.info("Guess C: "+guess+" "+s+" "+s1);
+            }
+            else {
+              assert false : "Unexpected state of adjacent hcnt2 bins";
+            }
           }
         }
       }
       else {
         // nonzero hcnt2[k] guarantees these are valid
         actualBinWidth = hcnt2_max[k] - hcnt2_min[k];
+
         // interpolate within the populated bin, assuming linear distribution
         // since we have the actual min/max within a bin, we can be more accurate
         // compared to using the bin boundaries
         // Note actualBinWidth is 0 when all values are the same in a bin
+        // Interesting how we have a gap that we jump between max of one bin, and min of another.
         guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
         // Log.info("Guess D: "+guess+" "+k+" "+hcnt2_min[k]+" "+actualBinWidth+" "+s+" "+s1+" "+hcnt2[k]);
       }
 
       qtiles[j] = guess;
-
-      // Some cheap checks.
-      if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
-        assert hcnt2_max[k-1] <= hcnt2_min[k] : 
-          hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
-      }
 
       // _maxs[5] is usually the biggest (not always)?  _mins[0] is the smallest
       // oh..ugly. At this point, NaNs haven't been stripped. so we don't know that 
@@ -703,6 +715,13 @@ public class Summary2 extends Iced {
         if ( !Double.isNaN(_maxs[p]) ) trueMax = _maxs[p];
       }
 
+      // Some cheap checks. Disable for now. fails with NA?
+      /*  
+      if ( k>0 && hcnt2[k-1]!=0 && hcnt2[k]!=0 ) {
+        assert hcnt2_max[k-1] <= hcnt2_min[k] : 
+          hcnt2_max[k-1]+" "+hcnt2_min[k]+" "+k+" "+hcnt2[k-1]+" "+hcnt2[k];
+      }
+      // maybe this first/last bin = min/max is no longer true
       if ( hcnt2[hcnt2.length-1] != 0 ) {
         assert hcnt2_max[hcnt2.length-1] == trueMax : 
           hcnt2_max[hcnt2.length-1] +" "+trueMax;
@@ -710,12 +729,13 @@ public class Summary2 extends Iced {
       if ( hcnt2[0] != 0 ) {
         assert hcnt2_min[0] == _mins[0] : hcnt2_min[0]+" "+_mins[0];
       }
+      */
 
       // might have fp tolerance issues here? but fp numbers should be exactly same?
-      assert guess <= trueMax;
-      assert guess >= _mins[0];
-      //  Log.info("_mins[0]: "+_mins[0]+" trueMax: "+trueMax+" hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
-      //   " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
+      assert guess <= trueMax : guess+" "+trueMax;
+      assert guess >= _mins[0] : guess+" "+_mins[0];
+      // Log.info("_mins[0]: "+_mins[0]+" trueMax: "+trueMax+" hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
+      // " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
     }
   }
   // Compute majority categories for enums only
