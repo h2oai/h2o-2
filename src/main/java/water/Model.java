@@ -143,9 +143,7 @@ public abstract class Model extends Lockable<Model> {
     // Invoke scoring
     Frame output = scoreImpl(adaptFrm);
     // Correct probabilities after per-class stratified sampling
-    if (isClassifier() && _modelClassDist != null && _priorClassDist != null) {
-      water.util.MRUtils.correctProbabilities(output, _priorClassDist, _modelClassDist);
-    }
+    if (isClassifier()) water.util.MRUtils.correctProbabilities(output, _priorClassDist, _modelClassDist);
     // Be nice to DKV and delete vectors which i created :-)
     if (adapt) onlyAdaptFrm.delete();
     return output;

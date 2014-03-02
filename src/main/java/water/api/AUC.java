@@ -27,25 +27,19 @@ public class AUC extends Request2 {
   class predictVecSelect extends VecClassSelect { predictVecSelect() { super("predict"); } }
 
   @API(help="domain of the actual response")
-  String [] actual_domain;
+  private String [] actual_domain;
   @API(help="AUC")
   public double auc;
   @API(help="Best threshold")
   private double best_threshold;
-
-  /* Helper */ private hex.ConfusionMatrix[] _cms;
-  /* Helper */ private double[] _thresh;
-  /* Helper */ double[] _tprs;
-  /* Helper */ double[] _fprs;
+  /* Helper */ final private double[] _thresh;
+  /* Helper */ private double[] _tprs;
+  /* Helper */ private double[] _fprs;
 
   public AUC() {
     final int bins = 100;
-    _cms = new hex.ConfusionMatrix[bins];
     _thresh = new double[bins];
-    _tprs = new double[bins];
-    _fprs = new double[bins];
     for( int i=0; i<bins; ++i) {
-      _cms[i] = new hex.ConfusionMatrix(2);
       _thresh[i] = (0.5f+i)/bins; //TODO: accurate percentiles
     }
   }
@@ -70,9 +64,11 @@ public class AUC extends Request2 {
       if (!va.group().equals(vp.group())) {
         vp = va.align(vp);
       }
-      AUCTask at = new AUCTask(_cms, _thresh, _tprs, _fprs).doAll(va,vp);
+      AUCTask at = new AUCTask(_thresh).doAll(va,vp);
       auc = at.getAUC();
       best_threshold = at.getBestThreshold();
+      _tprs = at._tprs;
+      _fprs = at._fprs;
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -87,16 +83,16 @@ public class AUC extends Request2 {
     private double _auc;
     /* @OUT Best Threshold */ public double getBestThreshold() { return _best_threshold; }
     private double _best_threshold;
-    /* Helper */ private hex.ConfusionMatrix[] _cms;
-    /* Helper */ private double[] _thresh;
-    /* Helper */ double[] _tprs;
-    /* Helper */ double[] _fprs;
+    /* Helper */ final private hex.ConfusionMatrix[] _cms;
+    /* Helper */ final private double[] _thresh;
+    /* Helper */ private transient double[] _tprs;
+    /* Helper */ private transient double[] _fprs;
 
-    AUCTask(hex.ConfusionMatrix[] cms, double[] thresh, double[] tprs, double[] fprs) {
-      _cms = cms;
-      _thresh = thresh;
-      _tprs = tprs;
-      _fprs = fprs;
+    AUCTask(double[] thresh) {
+      _cms = new hex.ConfusionMatrix[thresh.length];
+      for (int i=0;i<_cms.length;++i)
+        _cms[i] = new hex.ConfusionMatrix(2);
+      _thresh = thresh.clone();
     }
 
     @Override public void map( Chunk ca, Chunk cp ) {
@@ -112,27 +108,36 @@ public class AUC extends Request2 {
     }
 
     @Override public void reduce( AUCTask other ) {
-      for( int i=0; i<_cms.length; ++i) _cms[i].add(other._cms[i]);
+      for( int i=0; i<_cms.length; ++i) {
+        _cms[i].add(other._cms[i]);
+      }
     }
 
     @Override protected void postGlobal() {
-      super.postGlobal();
+      _tprs = new double[_cms.length];
+      _fprs = new double[_cms.length];
+
       double TPR_pre = 1;
       double FPR_pre = 1;
       _auc = 0;
       for( int t = 0; t < _cms.length; ++t ) {
-        double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true -positive-rate
+        double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true-positive-rate
         double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
         _auc += trapezoid_area(FPR_pre, FPR, TPR_pre, TPR);
         TPR_pre = TPR;
         FPR_pre = FPR;
         _tprs[t] = TPR;
         _fprs[t] = FPR;
+//        if (t > 1) {
+//          assert(_tprs[t] <= _tprs[t-1]);
+//          assert(_fprs[t] <= _fprs[t-1]);
+//        }
       }
       _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
+      assert(_auc >= 0. && _auc <= 1.0);
       int best = 0;
       for(int i = 1; i < _cms.length; ++i) {
-        if(Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
+        if (Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
           best = i;
       }
       _best_threshold = _thresh[best];
@@ -163,7 +168,7 @@ public class AUC extends Request2 {
     return auc;
   }
 
-  public void plotROC(StringBuilder sb) {
+  void plotROC(StringBuilder sb) {
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
     sb.append("<div id=\"ROC\">");
     sb.append("<style type=\"text/css\">");
@@ -189,14 +194,15 @@ public class AUC extends Request2 {
             "var padding = 40;\n"
     );
     sb.append("var dataset = [");
-    for(int c = 0; c < _cms.length; c++) {
+    for(int c = 0; c < _fprs.length; c++) {
+      assert(_tprs.length == _fprs.length);
       if (c == 0) {
         sb.append("["+String.valueOf(_fprs[c])+",").append(String.valueOf(_tprs[c])).append("]");
       }
       sb.append(", ["+String.valueOf(_fprs[c])+",").append(String.valueOf(_tprs[c])).append("]");
     }
-    for(int c = 0; c < 2*_cms.length; c++) {
-      sb.append(", ["+String.valueOf(c/(2.0*_cms.length))+",").append(String.valueOf(c/(2.0*_cms.length))).append("]");
+    for(int c = 0; c < 2*_fprs.length; c++) {
+      sb.append(", ["+String.valueOf(c/(2.0*_fprs.length))+",").append(String.valueOf(c/(2.0*_fprs.length))).append("]");
     }
     sb.append("];\n");
 

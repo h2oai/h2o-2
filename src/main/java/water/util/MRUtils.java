@@ -292,11 +292,12 @@ public class MRUtils {
   /**
    * Correct probabilities obtained from training on oversampled data back to original distribution
    * Following instructions by Guido Deutsch
-   * @param fr Frame containing one label and C per-class probabilities
+   * @param fr Frame containing one label and C per-class probabilities (to be modified in-place)
    * @param prior_fraction Prior per-class fractions
    * @param model_fraction Modeled per-class fractions
    */
   public static void correctProbabilities(final Frame fr, final float[] prior_fraction, final float[] model_fraction) {
+    if (prior_fraction == null || model_fraction == null) return;
     assert(prior_fraction != null && model_fraction != null);
     assert(prior_fraction.length == model_fraction.length);
     assert(fr.numCols() == 1+prior_fraction.length); //first col: label, remaining cols: probs
