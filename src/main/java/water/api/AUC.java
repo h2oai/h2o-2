@@ -116,10 +116,10 @@ public class AUC extends Request2 {
     sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold (min. Error)</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>"
-            + String.format("%4f", auc()) + "</td><td>"
-            + String.format("%4f", gini()) + "</td><td>"
-            + String.format("%4f", f1()) + "</td><td>"
-            + String.format("%4f", best_threshold()) + "</td>"
+            + String.format("%5f", auc()) + "</td><td>"
+            + String.format("%5f", gini()) + "</td><td>"
+            + String.format("%5f", f1()) + "</td><td>"
+            + String.format("%g", best_threshold()) + "</td>"
     );
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
@@ -154,10 +154,10 @@ public class AUC extends Request2 {
   }
 
   public double toASCII( StringBuilder sb ) {
-    sb.append("AUC: " + String.format("%4f", auc()));
-    sb.append(", Gini: " + String.format("%4f", gini()));
-    sb.append(", F1: " + String.format("%4f", f1()));
-    sb.append(", Best threshold: " + String.format("%4f", best_threshold()));
+    sb.append("AUC: " + String.format("%5f", auc()));
+    sb.append(", Gini: " + String.format("%5f", gini()));
+    sb.append(", F1: " + String.format("%5f", f1()));
+    sb.append(", Best threshold: " + String.format("%g", best_threshold()));
     return auc();
   }
 
