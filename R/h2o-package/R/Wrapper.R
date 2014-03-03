@@ -2,7 +2,7 @@
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
-h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g", beta=F) {
+h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g") {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
@@ -15,9 +15,9 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
-      .h2o.startJar(Xmx, beta)
+      .h2o.startJar(Xmx)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
-      if(!url.exists(myURL)) stop("H2O failed to start, stopping execution")
+      if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }
   cat("Successfully connected to", myURL, "\n")
@@ -169,12 +169,12 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
-.h2o.startJar <- function(memory = "1g", beta=F) {
-  command <- .h2o.checkJava()
-  
+.h2o.startJar <- function(memory = "1g") {
+  command <- Sys.which("java")
   #
   # TODO: tmp files should be user-independent
   #
+  
   # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
   if(.Platform$OS.type == "windows") {
     default_path <- paste("C:", "TMP", sep = .Platform$file.sep)
@@ -185,7 +185,7 @@ h2o.clusterStatus <- function(client) {
     else if(file.exists(Sys.getenv("APPDATA")))
       tmp_path <- Sys.getenv("APPDATA")
     else
-      stop("Error: Cannot log Java output. Please create the directory ", default_path, ", ensure it is writable, and re-initialize H2O")
+      stop("Error: Cannot log Java output. Please create the directory ", default_path, " and re-initialize H2O")
     
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
     stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
@@ -204,7 +204,6 @@ h2o.clusterStatus <- function(client) {
             "-ip", "127.0.0.1",
             "-port", "54321"
             )
-  if( beta ) args <- c(args, '-beta')
   cat("\n")
   cat(        "Note:  In case of errors look at the following log files:\n")
   cat(sprintf("           %s\n", stdout))
@@ -221,39 +220,6 @@ h2o.clusterStatus <- function(client) {
     stop(sprintf("Failed to exec %s with return code=%s", jar_file, as.character(rc)))
   }
   .startedH2O <<- TRUE
-}
-
-# This function returns the path to the Java executable if it exists
-# 1) Check for Java in user's PATH
-# 2) Check for JAVA_HOME environment variable
-# 3) If Windows, check standard install locations in Program Files folder. Warn if JRE found, but not JDK since H2O requires JDK to run.
-# 4) When all fails, stop and prompt user to download JDK from Oracle website.
-.h2o.checkJava <- function() {
-  if(nchar(Sys.which("java")) > 0)
-    return(Sys.which("java"))
-  else if(nchar(Sys.getenv("JAVA_HOME")) > 0)
-    return(paste(Sys.getenv("JAVA_HOME"), "bin", "java.exe", sep = .Platform$file.sep))
-  else if(.Platform$OS.type == "windows") {
-    # Note: Should we require the version (32/64-bit) of Java to be the same as the version of R?
-    prog_folder <- c("Program Files", "Program Files (x86)")
-    for(prog in prog_folder) {
-      prog_path <- paste("C:", prog, "Java", sep = .Platform$file.sep)
-      jdk_folder <- list.files(prog_path, pattern = "jdk")
-      
-      for(jdk in jdk_folder) {
-        path <- paste(prog_path, jdk, "bin", "java.exe", sep = .Platform$file.sep)
-        if(file.exists(path)) return(path)
-      }
-    }
-    
-    # Check for existence of JRE and warn user
-    for(prog in prog_folder) {
-      path <- paste("C:", prog, "Java", "jre7", "bin", "java.exe", sep = .Platform$file.sep)
-      if(file.exists(path)) warning("Found JRE at ", path, " but H2O requires the JDK to run.")
-    }
-  }
-  
-  stop("Cannot find Java. Please install the latest JDK from http://www.oracle.com/technetwork/java/javase/downloads/index.html")
 }
 
 #-------------------------------- Deprecated --------------------------------#
