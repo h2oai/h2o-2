@@ -478,7 +478,7 @@ public class NNModel extends Model {
         err.trainAUC.serve();
       }
       trainPredict.delete();
-      if (err.classification) err.train_err = trainErr;
+      if (err.classification) err.train_err = err.trainAUC != null ? err.trainAUC.err() : trainErr;
       else err.train_mse = trainErr;
 
       if (err.validation) {
@@ -496,7 +496,7 @@ public class NNModel extends Model {
           err.validAUC.serve();
         }
         validPredict.delete();
-        if (err.classification) err.valid_err = validErr;
+        if (err.classification) err.valid_err = err.validAUC != null ? err.validAUC.err() : validErr;
         else err.valid_mse = validErr;
       }
 
@@ -727,29 +727,31 @@ public class NNModel extends Model {
     boolean smallenough = model_info.units[model_info.units.length-1] <= model_info().get_params().max_confusion_matrix_size;
 
     if (isClassifier()) {
-      String cmTitle = "Confusion matrix reported on training data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":";
-      sb.append("<h5>" + cmTitle);
-      if (error.train_confusion_matrix != null && smallenough) {
-        sb.append("</h5>");
-        error.train_confusion_matrix.toHTML(sb);
-      } else if (smallenough) sb.append(" Not yet computed.</h5>");
-      else sb.append(toolarge + "</h5>");
-
-      if (error.validation) {
-        cmTitle = "Confusion matrix reported on validation data" + (fullvalid ? "" : " (" + score_valid + " samples)") + ":";
-        sb.append("<h5>" + cmTitle);
-        if (error.valid_confusion_matrix != null && smallenough) {
-          sb.append("</h5>");
-          error.valid_confusion_matrix.toHTML(sb);
-        } else if (smallenough) sb.append(" Not yet computed.</h5>");
-        else sb.append(" Too large." + "</h5>");
-      }
       // print AUC
-      if (error.trainAUC != null) {
-        error.trainAUC.toHTML(sb);
-      }
       if (error.validAUC != null) {
         error.validAUC.toHTML(sb);
+      }
+      else if (error.trainAUC != null) {
+        error.trainAUC.toHTML(sb);
+      }
+      else {
+        if (error.validation) {
+          String cmTitle = "Confusion matrix reported on validation data" + (fullvalid ? "" : " (" + score_valid + " samples)") + ":";
+          sb.append("<h5>" + cmTitle);
+          if (error.valid_confusion_matrix != null && smallenough) {
+            sb.append("</h5>");
+            error.valid_confusion_matrix.toHTML(sb);
+          } else if (smallenough) sb.append(" Not yet computed.</h5>");
+          else sb.append(" Too large." + "</h5>");
+        } else {
+          String cmTitle = "Confusion matrix reported on training data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":";
+          sb.append("<h5>" + cmTitle);
+          if (error.train_confusion_matrix != null && smallenough) {
+            sb.append("</h5>");
+            error.train_confusion_matrix.toHTML(sb);
+          } else if (smallenough) sb.append(" Not yet computed.</h5>");
+          else sb.append(toolarge + "</h5>");
+        }
       }
     }
 
