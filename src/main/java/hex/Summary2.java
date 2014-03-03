@@ -647,6 +647,13 @@ public class Summary2 extends Iced {
     double actualBinWidth = 0;
     assert _gprows==htot2() : "_gprows: "+_gprows+" htot2(): "+htot2();
 
+    // One goal definition: (Excel?)
+    // Given a set of N ordered values {v[1], v[2], ...} and a requirement to 
+    // calculate the pth percentile, do the following:
+    // Calculate l = p(N-1) + 1
+    // Split l into integer and decimal components i.e. l = k + d
+    // Compute the required value as V = v[k] + d(v[k+1] - v[k])
+
     // walk up until we're at the bin that starts with the threshold, or right before
     for(int j = 0; j < thres.length; ++j) {
       // 0 okay for threshold?
