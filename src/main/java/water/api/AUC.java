@@ -8,7 +8,10 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
-import static java.util.Arrays.binarySearch;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+
+import static java.util.Arrays.sort;
 
 public class AUC extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -34,7 +37,17 @@ public class AUC extends Request2 {
   public double auc;
   @API(help="Threshold (min. Error)")
   private double best_threshold;
-  /* Helper */ private double[] _thresh;
+  @API(help="Index of best CM")
+  private int best;
+
+  public double auc() { return auc; }
+  public double err() { return _cms[best].err(); }
+  public double f1() { return _cms[best].precisionAndRecall(); }
+  public double gini() { return 2*auc-1; }
+  public int best_idx() { return best; }
+  public double best_threshold() { return best_threshold; }
+
+  /* Helper */ private float[] _thresh;
   /* Helper */ private double[] _tprs;
   /* Helper */ private double[] _fprs;
   /* Helper */ private hex.ConfusionMatrix[] _cms;
@@ -59,14 +72,30 @@ public class AUC extends Request2 {
       if (!va.group().equals(vp.group())) {
         vp = va.align(vp);
       }
-      final int bins = 100;
-      _thresh = new double[bins];
+      final int bins = (int)Math.min(vpredict.length(), 200l); //at least 200
+      _thresh = new float[bins];
+      //Use 200 random (strided) predicted probabilities TODO: use accurate percentiles
+      long stride = Math.max(vpredict.length() / bins, 1);
       for( int i=0; i<bins; ++i) {
-        _thresh[i] = (i+1.)/bins; //TODO: data-driven binning
+        _thresh[i] = (float)vpredict.at(i*stride);
       }
+
+      // sort & unique thresholds
+      sort(_thresh);
+      ArrayList al = new ArrayList();
+      for (int i=0;i<_thresh.length;++i) al.add(new Float(_thresh[i]));
+      LinkedHashSet hs = new LinkedHashSet();
+      hs.addAll(al);
+      al.clear();
+      al.addAll(hs);
+      _thresh = new float[hs.size()];
+      int i=0;
+      for (Object h : hs) {_thresh[i++] = (Float)h; }
+
       AUCTask at = new AUCTask(_thresh).doAll(va,vp);
       auc = at.getAUC();
       best_threshold = at.getBestThreshold();
+      best = at.getBestIdx();
       _tprs = at.getTPRs();
       _fprs = at.getFPRs();
       _cms = at.getCMs();
@@ -80,15 +109,19 @@ public class AUC extends Request2 {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     sb.append("<div>");
-    DocGen.HTML.title(sb, "Scoring for Binary Classification");
+    DocGen.HTML.section(sb, "Scoring for Binary Classification");
     DocGen.HTML.arrayHead(sb);
 //    DocGen.HTML.section(sb, "Predicting: " + actual.names()[actual.find(vactual)]);
-    sb.append("<th>AUC</th><th>Gini</th><th>Threshold (min. Error)</th>");
+    sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold (min. Error)</th>");
     sb.append("<tr class='warning'>");
-    sb.append("<td>" + String.format("%4f", auc) + "</td><td>" + String.format("%4f", 2*auc-1) + "</td><td>" + String.format("%4f", best_threshold) + "</td>");
+    sb.append("<td>"
+            + String.format("%4f", auc()) + "</td><td>"
+            + String.format("%4f", gini()) + "</td><td>"
+            + String.format("%4f", f1()) + "</td><td>"
+            + String.format("%4f", best_threshold()) + "</td>"
+    );
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
-    final int best = binarySearch(_thresh, best_threshold);
     _cms[best].toHTML(sb, actual_domain);
     plotROC(sb);
     _cms[best].toHTMLbasic(sb, actual_domain);
@@ -113,16 +146,18 @@ public class AUC extends Request2 {
     sb.append("</script>\n");
     sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
     for(int i = 0; i < _cms.length; ++i)
-      sb.append("\t<option value='" + i + "'" + (_thresh[i] == best_threshold?"selected='selected'":"") +">" + _thresh[i] + "</option>\n");
+      sb.append("\t<option value='" + i + "'" + (_thresh[i] == best_threshold()?"selected='selected'":"") +">" + _thresh[i] + "</option>\n");
     sb.append("</select>\n");
     sb.append("</div>");
     return true;
   }
 
   public double toASCII( StringBuilder sb ) {
-    sb.append("AUC: " + String.format("%4f", auc));
-    sb.append("Best threshold: " + String.format("%4f", best_threshold));
-    return auc;
+    sb.append("AUC: " + String.format("%4f", auc()));
+    sb.append(", Gini: " + String.format("%4f", gini()));
+    sb.append(", F1: " + String.format("%4f", f1()));
+    sb.append(", Best threshold: " + String.format("%4f", best_threshold()));
+    return auc();
   }
 
   void plotROC(StringBuilder sb) {
@@ -293,8 +328,10 @@ public class AUC extends Request2 {
   private static class AUCTask extends MRTask2<AUCTask> {
     /* @OUT AUC */ public double getAUC() { return _auc; }
     transient private double _auc;
-    /* @OUT Best Threshold */ public double getBestThreshold() { return _best_threshold; }
-    transient private double _best_threshold;
+    /* @OUT Best Threshold Idx */ public int getBestIdx() { return _best; }
+    transient private int _best;
+    /* @OUT Best Threshold */ public float getBestThreshold() { return _best_threshold; }
+    transient private float _best_threshold;
     /* @OUT TPRs */ public final double[] getTPRs() { return _tprs; }
     transient private double[] _tprs;
     /* @OUT FPRs */ public final double[] getFPRs() { return _fprs; }
@@ -303,9 +340,9 @@ public class AUC extends Request2 {
     final private hex.ConfusionMatrix[] _cms;
 
 
-    /* IN thresholds */ final private double[] _thresh;
+    /* IN thresholds */ final private float[] _thresh;
 
-    AUCTask(double[] thresh) {
+    AUCTask(float[] thresh) {
       _thresh = thresh.clone();
       _cms = new hex.ConfusionMatrix[_thresh.length];
       for (int i=0;i<_cms.length;++i)
@@ -352,12 +389,14 @@ public class AUC extends Request2 {
       }
       _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
       assert(_auc >= 0. && _auc <= 1.0);
-      int best = 0;
+      _best = 0;
+      _best_threshold = _thresh[0];
       for(int i = 1; i < _cms.length; ++i) {
-        if (Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
-          best = i;
+        if (Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[_best].classErr(0),_cms[_best].classErr(1))) {
+          _best = i;
+          _best_threshold = _thresh[i];
+        }
       }
-      _best_threshold = _thresh[best];
     }
 
     private static double trapezoid_area(double x1, double x2, double y1, double y2) { return Math.abs(x1-x2)*(y1+y2)/2.; }
