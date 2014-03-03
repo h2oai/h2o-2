@@ -60,11 +60,32 @@ public class NN extends Job.ValidatedJob {
   @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
   public double epochs = 10;
 
-  @API(help = "Seed for random numbers (reproducible results for small datasets (single chunk) only, cf. Hogwild!)", filter = Default.class, json = true)
+  @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
+
+  @API(help = "Shortest time interval (in secs) between model scoring", filter = Default.class, dmin = 0, json = true)
+  public double score_interval = 5;
+
+  @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
+  public long mini_batch = 0l;
+
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false)
+  public boolean balance_classes = false;
 
   @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
   public boolean expert_mode = false;
+
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false)
+  public float max_after_balance_size = 5.0f;
+
+  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  public long score_training_samples = 10000l;
+
+  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  public long score_validation_samples = 0l;
+
+  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false)
+  public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
 
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
@@ -81,32 +102,14 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
   public double max_w2 = Double.POSITIVE_INFINITY;
 
-  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_training_samples = 10000l;
-
-  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_validation_samples = 0l;
-
-  @API(help = "Minimum time (in seconds) between scoring (scoring can happen after training a mini-batch)", filter = Default.class, dmin = 0, json = true)
-  public double score_interval = 5;
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
+  public boolean diagnostics = true;
 
   @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double score_duty_cycle = 0.1;
 
-  @API(help = "Number of training samples per mini-batch, after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 0l;
-
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
-  public boolean diagnostics = true;
-
   @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
-
-  @API(help = "Balance class counts via over/under-sampling with replacement (can increase predictive accuracy for imbalanced datasets)", filter = Default.class, json = true, gridable = false)
-  public boolean balance_classes = false;
-
-  @API(help = "Maximum growth factor (relative size) of the training dataset after balancing classes (especially when oversampling rare minority classes)", filter = Default.class, json = true, dmin=1, dmax=1e6, gridable = false)
-  public float max_balance_growth = 5.0f;
 
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
@@ -131,6 +134,10 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
   public int max_confusion_matrix_size = 20;
+
+  public enum ClassSamplingMethod {
+    Uniform, Stratified
+  }
 
   public enum InitialWeightDistribution {
     UniformAdaptive, Uniform, Normal
@@ -181,20 +188,24 @@ public class NN extends Job.ValidatedJob {
       if(arg._name.equals("regression_stop")) {
         arg.disable("Only for regression.", inputArgs);
       }
-      if(arg._name.equals("max_balance_growth") && !balance_classes) {
+      if(arg._name.equals("max_after_balance_size") && !balance_classes) {
         arg.disable("Requires balance_classes.", inputArgs);
       }
     }
     else {
       if(arg._name.equals("classification_stop")
               || arg._name.equals("max_confusion_matrix_size")
-              || arg._name.equals("max_balance_growth")
+              || arg._name.equals("max_after_balance_size")
               || arg._name.equals("balance_classes")) {
         arg.disable("Only for classification.", inputArgs);
       }
+      if (validation != null && arg._name.equals("score_validation_sampling")) {
+        score_validation_sampling = ClassSamplingMethod.Uniform;
+        arg.disable("Using uniform sampling for validation scoring dataset.", inputArgs);
+      }
     }
-    if (arg._name.equals("score_validation_samples") && validation == null) {
-      arg.disable("Only if a validation set is specified.", inputArgs);
+    if ((arg._name.equals("score_validation_samples") || arg._name.equals("score_validation_sampling")) && validation == null) {
+      arg.disable("Requires a validation data set.", inputArgs);
     }
     if (arg._name.equals("loss")
             || arg._name.equals("max_w2")
@@ -203,14 +214,12 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("score_validation_samples")
             || arg._name.equals("initial_weight_distribution")
             || arg._name.equals("initial_weight_scale")
-            || arg._name.equals("score_interval")
             || arg._name.equals("diagnostics")
             || arg._name.equals("rate_decay")
-            || arg._name.equals("mini_batch")
             || arg._name.equals("score_duty_cycle")
             || arg._name.equals("fast_mode")
-            || arg._name.equals("balance_classes")
-            || arg._name.equals("max_balance_growth")
+            || arg._name.equals("score_validation_sampling")
+            || arg._name.equals("max_after_balance_size")
             || arg._name.equals("ignore_const_cols")
             || arg._name.equals("force_load_balance")
             || arg._name.equals("shuffle_training_data")
@@ -328,23 +337,25 @@ public class NN extends Job.ValidatedJob {
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
       train = reBalance(train, seed);
-      float[] trainSamplingFactors = null;
-
+      float[] trainSamplingFactors;
       if (classification && balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
-        train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors, (long)(max_balance_growth*train.numRows()), seed, false);
-        model.setClassSamplingFactors(trainSamplingFactors);
+        train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*train.numRows()), seed, true, false);
+        model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
-      trainScoreFrame = sampleFrame(train, score_training_samples, seed);
+      trainScoreFrame = sampleFrame(train, score_training_samples, seed); //training scoring dataset is always sampled uniformly from the training dataset
+
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
         valid_adapted = model.adapt(validation, false);
-        valid = reBalance(valid_adapted[0], seed+1);
-        if (classification && balance_classes) {
-          // re-use same sampling factors for validation set as for training to avoid data shift
-          valid = sampleFrameStratified(valid, valid.lastVec(), trainSamplingFactors, (long)(max_balance_growth*valid.numRows()), seed+1, false);
+        valid = reBalance(valid_adapted[0], seed+1); //rebalance for load balancing, shuffle for "fairness"
+        // validation scoring dataset can be sampled in multiple ways from the given validation dataset
+        if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
+          validScoreFrame = sampleFrameStratified(valid, valid.lastVec(), null,
+                  score_validation_samples > 0 ? score_validation_samples : valid.numRows(), seed+1, false /* no oversampling */, false);
+        } else {
+          validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
         }
-        validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
       if (mini_batch > train.numRows()) {
