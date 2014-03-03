@@ -7,6 +7,8 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
+import water.api.Request.API;
+import water.api.Request.Default;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -49,6 +51,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class, json=true)
   public boolean score_each_iteration = false;
+
+  @API(help = "Compute variable importance (true/false).", filter = Default.class )
+  protected boolean importance = false; // compute variable importance
 
   // Overall prediction Mean Squared Error as I add trees
   transient protected double _errs[];
@@ -274,6 +279,16 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       sc = new Score().doIt(model, fr, validationFrame, _adaptedValidationResponse, _modelMap, cmDomain, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
+
+    // Compute variable importance for this tree if necessary
+    double[] varimp   = null;
+    double[] varimpSD = null;
+    /*if (importance) { // compute this tree votes
+      Frame validationFrame = _validAdapted ? _adaptedValidation : validation;
+      double[][] vi = doVarImpCalc(model, ktrees, tid, validationFrame);
+      varimp   = vi[0];
+      varimpSD = vi[1];
+    }*/
     // Double update - after scoring
     model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
@@ -281,6 +296,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     model.update(self());
     return model;
   }
+
+  protected abstract double[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame);
 
   // --------------------------------------------------------------------------
   // Convenvience accessor for a complex chunk layout.
@@ -292,6 +309,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
   protected final Vec vec_resp( Frame fr, int t) { return fr.vecs()[_ncols]; }
+
+  protected double[] data_row( Chunk chks[], int row, double[] data) {
+    assert data.length == _ncols;
+    for(int f=0; f<_ncols; f++) data[f] = chks[f].at0(row);
+    return data;
+  }
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -807,6 +830,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
+  protected final boolean isClassification() { return _nclass > 1; }
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }

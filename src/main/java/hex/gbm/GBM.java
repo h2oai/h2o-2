@@ -491,4 +491,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected AutoBuffer compress(AutoBuffer ab) { assert !Double.isNaN(_pred); return ab.put4f((float)_pred); }
     @Override protected int size() { return 4; }
   }
+
+  @Override protected double[][] doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame) {
+    throw new RuntimeException("TODO Auto-generated method stub");
+  }
 }
