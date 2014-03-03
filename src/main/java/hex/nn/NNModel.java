@@ -826,6 +826,7 @@ public class NNModel extends Model {
     if (isClassifier()) {
 //      sb.append("<th>Training MCE</th>");
       sb.append("<th>Training Error</th>");
+      if (nclasses()==2) sb.append("<th>Training AUC</th>");
     } else {
       sb.append("<th>Training MSE</th>");
     }
@@ -833,6 +834,7 @@ public class NNModel extends Model {
       if (isClassifier()) {
 //      sb.append("<th>Validation MCE</th>");
         sb.append("<th>Validation Error</th>");
+        if (nclasses()==2) sb.append("<th>Validation AUC</th>");
       } else {
         sb.append("<th>Validation MSE</th>");
       }
@@ -847,6 +849,8 @@ public class NNModel extends Model {
       if (isClassifier()) {
 //        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
         sb.append("<td>" + formatPct(e.train_err) + "</td>");
+        if (e.trainAUC != null) sb.append("<td>" + formatPct(e.trainAUC.auc()) + "</td>");
+        else sb.append("<td>" + "N/A" + "</td>");
       } else {
         sb.append("<td>" + String.format(mse_format, e.train_mse) + "</td>");
       }
@@ -854,6 +858,8 @@ public class NNModel extends Model {
         if (isClassifier()) {
 //          sb.append("<td>" + String.format(cross_entropy_format, e.valid_mce) + "</td>");
           sb.append("<td>" + formatPct(e.valid_err) + "</td>");
+          if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.auc()) + "</td>");
+          else sb.append("<td>" + "N/A" + "</td>");
         } else {
           sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
         }
