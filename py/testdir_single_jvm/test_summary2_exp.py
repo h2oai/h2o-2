@@ -7,10 +7,10 @@ DO_TRY_SCIPY = False
 if  getpass.getuser() == 'kevin':
     DO_TRY_SCIPY = True
 
-DO_MEDIAN = False
+DO_MEDIAN = True
 MAX_QBINS = 10000000
 # 1 over desired mean
-LAMBD = 0.2
+LAMBD = 0.005
 
 def twoDecimals(l): 
     if isinstance(l, list):
@@ -18,7 +18,7 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2o1Median=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -76,7 +76,11 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
     h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o:", h2oMedian)
+    h2p.blue_print(label, "from h2o2:", h2oMedian)
+    # Summary1 has a different threshold ..not 99.9%
+    # median is okay
+    if DO_MEDIAN:
+        h2p.blue_print(label, "from h2o1:", h2o1Median)
     # see if scipy changes. nope. it doesn't 
     if 1==0:
         a = stats.mstats.mquantiles(targetFP, prob=per)
@@ -128,7 +132,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=3, base_port=54327)
+            h2o.build_cloud(node_count=1, base_port=54327)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
 
@@ -138,21 +142,15 @@ class Basic(unittest.TestCase):
 
     def test_summary2_exp(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
+        LAMBD = random.uniform(0.005, 0.5)
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (1000000, 1, 'x.hex', 1, 20000,        ('C1', None, None, None, None, None)),
-            (1000000, 1, 'x.hex', -5000, 0,        ('C1', None, None, None, None, None)),
-            (1000000, 1, 'x.hex', -100000, 100000, ('C1', None, None, None, None, None)),
-            (1000000, 1, 'x.hex', -1, 1,           ('C1', None, None, None, None, None)),
-
+            (10,     1, 'x.hex', 1, 20000,        ('C1', None, None, None, None, None)),
+            (100,    1, 'x.hex', 1, 20000,        ('C1', None, None, None, None, None)),
+            (1000,   1, 'x.hex', -5000, 0,        ('C1', None, None, None, None, None)),
+            (10000,  1, 'x.hex', -100000, 100000, ('C1', None, None, None, None, None)),
+            (100000, 1, 'x.hex', -1, 1,           ('C1', None, None, None, None, None)),
             (1000000, 1, 'A.hex', 1, 100,          ('C1', None, None, None, None, None)),
-            (1000000, 1, 'A.hex', -99, 99,         ('C1', None, None, None, None, None)),
-
-            (1000000, 1, 'B.hex', 1, 10000,        ('C1', None, None, None, None, None)),
-            (1000000, 1, 'B.hex', -100, 100,       ('C1', None, None, None, None, None)),
-
-            (1000000, 1, 'C.hex', 1, 100000,       ('C1', None, None, None, None, None)),
-            (1000000, 1, 'C.hex', -101, 101,       ('C1', None, None, None, None, None)),
         ]
 
         timeoutSecs = 10
@@ -190,9 +188,19 @@ class Basic(unittest.TestCase):
             numRows = inspect["num_rows"]
             numCols = inspect["num_cols"]
 
+            h2o.beta_features = False
+            summary1Result = h2o_cmd.runSummary(key=hex_key)
+            h2o.verboseprint("Summary1 summary1Result:", h2o.dump_json(summary1Result))
+            percentiles1 = summary1Result['summary']['columns'][0]['percentiles']
+            thresholds1 = percentiles1['thresholds']
+            values1 = percentiles1['values']
+
+            print "Summary1 thresholds", twoDecimals(thresholds1)
+            print "Summary1 values", twoDecimals(values1)
+
             h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
-            h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
+            h2o.verboseprint("Summary2 summaryResult:", h2o.dump_json(summaryResult))
 
             # only one column
             column = summaryResult['summaries'][0]
@@ -264,7 +272,8 @@ class Basic(unittest.TestCase):
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                 print scipyCol, pctile[10]
                 generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                    h2oMedian=pctile[5 if DO_MEDIAN else 10])
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10], 
+                    h2o1Median=values1[5 if DO_MEDIAN else 10]) # from Summary1
 
 
 
