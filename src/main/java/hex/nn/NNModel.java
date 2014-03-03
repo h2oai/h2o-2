@@ -850,7 +850,7 @@ public class NNModel extends Model {
 //        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
         sb.append("<td>" + formatPct(e.train_err) + "</td>");
         if (nclasses()==2) {
-          if (e.trainAUC != null) sb.append("<td>" + formatPct(e.trainAUC.auc()) + "</td>");
+          if (e.trainAUC != null) sb.append("<td>" + formatPct(e.trainAUC.AUC()) + "</td>");
           else sb.append("<td>" + "N/A" + "</td>");
         }
       } else {
@@ -861,7 +861,7 @@ public class NNModel extends Model {
 //          sb.append("<td>" + String.format(cross_entropy_format, e.valid_mce) + "</td>");
           sb.append("<td>" + formatPct(e.valid_err) + "</td>");
           if (nclasses()==2) {
-            if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.auc()) + "</td>");
+            if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.AUC()) + "</td>");
             else sb.append("<td>" + "N/A" + "</td>");
           }
         } else {

@@ -127,6 +127,7 @@ public class ConfusionMatrix extends Iced {
     double precision = tp / (tp + fp);
     double recall = tp / (tp + fn);
     double f = 2 * (precision * recall) / (precision + recall);
+    if (Double.isNaN(f)) return 0;
     return f;
   }
 

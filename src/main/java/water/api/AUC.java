@@ -8,8 +8,7 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 
 import static java.util.Arrays.sort;
 
@@ -35,18 +34,20 @@ public class AUC extends Request2 {
   private String [] actual_domain;
   @API(help="AUC")
   public double auc;
-  @API(help="Threshold (min. Error)")
-  private double best_threshold;
+  @API(help="F1")
+  public double f1;
+  @API(help="Threshold for max. F1")
+  private float best_thresholdF1;
 
   //helper
-  private int best;
+  private int idx_bestF1;
 
-  public double auc() { return auc; }
-  public double err() { return _cms[best].err(); }
-  public double f1() { return _cms[best].precisionAndRecall(); }
-  public double gini() { return 2*auc-1; }
-  public int best_idx() { return best; }
-  public double best_threshold() { return best_threshold; }
+  public double AUC() { return auc; }
+  public double err() { return _cms[idx_bestF1].err(); }
+  public double F1() { return f1; }
+  public double Gini() { return 2*auc-1; }
+  public int best_idxF1() { return idx_bestF1; }
+  public float best_thresholdF1() { return best_thresholdF1; }
 
   /* Helper */ private float[] _thresh;
   /* Helper */ private double[] _tprs;
@@ -73,33 +74,29 @@ public class AUC extends Request2 {
       if (!va.group().equals(vp.group())) {
         vp = va.align(vp);
       }
-      final int bins = (int)Math.min(vpredict.length(), 200l); //at least 200
-      _thresh = new float[bins];
-      //Use 200 random (strided) predicted probabilities TODO: use accurate percentiles
-      long stride = Math.max(vpredict.length() / bins, 1);
-      for( int i=0; i<bins; ++i) {
-        _thresh[i] = (float)vpredict.at(i*stride);
-      }
 
-      // sort & unique thresholds
-      sort(_thresh);
-      ArrayList al = new ArrayList();
-      for (int i=0;i<_thresh.length;++i) al.add(new Float(_thresh[i]));
-      LinkedHashSet hs = new LinkedHashSet();
-      hs.addAll(al);
-      al.clear();
-      al.addAll(hs);
+      // make thresholds
+      HashSet hs = new HashSet();
+      final int bins = (int)Math.min(vpredict.length(), 200l);
+      final long stride = Math.max(vpredict.length() / bins, 1);
+      for( int i=0; i<bins; ++i) hs.add(new Float(vpredict.at(i*stride))); //data-driven thresholds TODO: use percentiles (from Summary2?)
+      for (int i=0;i<51;++i) hs.add(new Float(i/50.)); //always add 0.02-spaced thresholds from 0 to 1
+
+      // created sorted vector of unique thresholds
       _thresh = new float[hs.size()];
       int i=0;
       for (Object h : hs) {_thresh[i++] = (Float)h; }
+      sort(_thresh);
 
+      // compute AUC, CMs, and best threshold
       AUCTask at = new AUCTask(_thresh).doAll(va,vp);
-      auc = at.getAUC();
-      best_threshold = at.getBestThreshold();
-      best = at.getBestIdx();
+      _cms = at.getCMs();
+      idx_bestF1 = at.getBestIdxF1();
       _tprs = at.getTPRs();
       _fprs = at.getFPRs();
-      _cms = at.getCMs();
+      auc = at.getAUC();
+      f1 = _cms[idx_bestF1].precisionAndRecall();
+      best_thresholdF1 = at.getBestThresholdF1();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -113,19 +110,19 @@ public class AUC extends Request2 {
     DocGen.HTML.section(sb, "Scoring for Binary Classification");
     DocGen.HTML.arrayHead(sb);
 //    DocGen.HTML.section(sb, "Predicting: " + actual.names()[actual.find(vactual)]);
-    sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold (min. Error)</th>");
+    sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold for max. F1</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>"
-            + String.format("%5f", auc()) + "</td><td>"
-            + String.format("%5f", gini()) + "</td><td>"
-            + String.format("%5f", f1()) + "</td><td>"
-            + String.format("%g", best_threshold()) + "</td>"
+            + String.format("%5f", AUC()) + "</td><td>"
+            + String.format("%5f", Gini()) + "</td><td>"
+            + String.format("%5f", F1()) + "</td><td>"
+            + String.format("%g", best_thresholdF1()) + "</td>"
     );
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
-    _cms[best].toHTML(sb, actual_domain);
+    _cms[idx_bestF1].toHTML(sb, actual_domain);
     plotROC(sb);
-    _cms[best].toHTMLbasic(sb, actual_domain);
+    _cms[idx_bestF1].toHTMLbasic(sb, actual_domain);
     sb.append("\n<script type=\"text/javascript\">");//</script>");
     sb.append("var cms = [\n");
     for(hex.ConfusionMatrix cm:_cms){
@@ -147,18 +144,18 @@ public class AUC extends Request2 {
     sb.append("</script>\n");
     sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
     for(int i = 0; i < _cms.length; ++i)
-      sb.append("\t<option value='" + i + "'" + (_thresh[i] == best_threshold()?"selected='selected'":"") +">" + _thresh[i] + "</option>\n");
+      sb.append("\t<option value='" + i + "'" + (_thresh[i] == best_thresholdF1()?"selected='selected'":"") +">" + _thresh[i] + "</option>\n");
     sb.append("</select>\n");
     sb.append("</div>");
     return true;
   }
 
   public double toASCII( StringBuilder sb ) {
-    sb.append("AUC: " + String.format("%5f", auc()));
-    sb.append(", Gini: " + String.format("%5f", gini()));
-    sb.append(", F1: " + String.format("%5f", f1()));
-    sb.append(", Best threshold: " + String.format("%g", best_threshold()));
-    return auc();
+    sb.append("AUC: " + String.format("%5f", AUC()));
+    sb.append(", Gini: " + String.format("%5f", Gini()));
+    sb.append(", F1: " + String.format("%5f", F1()));
+    sb.append(", Best threshold for F1: " + String.format("%g", best_thresholdF1()));
+    return AUC();
   }
 
   void plotROC(StringBuilder sb) {
@@ -329,10 +326,10 @@ public class AUC extends Request2 {
   private static class AUCTask extends MRTask2<AUCTask> {
     /* @OUT AUC */ public double getAUC() { return _auc; }
     transient private double _auc;
-    /* @OUT Best Threshold Idx */ public int getBestIdx() { return _best; }
-    transient private int _best;
-    /* @OUT Best Threshold */ public float getBestThreshold() { return _best_threshold; }
-    transient private float _best_threshold;
+    /* @OUT Best Threshold Idx */ public int getBestIdxF1() { return _best_idxF1; }
+    transient private int _best_idxF1;
+    /* @OUT Best Threshold */ public float getBestThresholdF1() { return _best_thresholdF1; }
+    transient private float _best_thresholdF1;
     /* @OUT TPRs */ public final double[] getTPRs() { return _tprs; }
     transient private double[] _tprs;
     /* @OUT FPRs */ public final double[] getFPRs() { return _fprs; }
@@ -393,12 +390,12 @@ public class AUC extends Request2 {
       }
       _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
       assert(_auc >= 0. && _auc <= 1.0);
-      _best = 0;
-      _best_threshold = _thresh[0];
+      _best_idxF1 = 0;
+      _best_thresholdF1 = _thresh[0];
       for(int i = 1; i < _cms.length; ++i) {
-        if (Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[_best].classErr(0),_cms[_best].classErr(1))) {
-          _best = i;
-          _best_threshold = _thresh[i];
+        if (_cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall()) {
+          _best_idxF1 = i;
+          _best_thresholdF1 = _thresh[i];
         }
       }
     }
