@@ -96,6 +96,23 @@ def cleanseInfNan(value):
         value = translate[str(value)]
     return value
 
+# http://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/
+# given [2, 3, 5] it returns 0 (the index of the first element) with probability 0.2, 
+# 1 with probability 0.3 and 2 with probability 0.5. 
+# The weights need not sum up to anything in particular, and can actually be 
+# arbitrary Python floating point numbers.
+
+# The weights need to cover the whole list? otherwise you don't get the rest of the choises
+# random_data = [6,7,8]
+# weights = [2,3,5]
+# d = h2o_util.random_data[weighted_choice(weights)]
+def weighted_choice(weights):
+    rnd = random.random() * sum(weights)
+    for i, w in enumerate(weights):
+        rnd -= w
+        if rnd < 0:
+            return i
+
 # x = choice_with_probability( [('one',0.25), ('two',0.25), ('three',0.5)] )
 # need to sum to 1 or less. check error case if you go negative
 def choice_with_probability(tupleList):
