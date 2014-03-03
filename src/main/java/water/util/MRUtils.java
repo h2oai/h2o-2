@@ -292,6 +292,7 @@ public class MRUtils {
   /**
    * Correct probabilities obtained from training on oversampled data back to original distribution
    * Following instructions by Guido Deutsch
+   * Also c.f. http://gking.harvard.edu/files/0s.pdf Eq.(28)
    * @param fr Frame containing one label and C per-class probabilities (to be modified in-place)
    * @param prior_fraction Prior per-class fractions
    * @param model_fraction Modeled per-class fractions
