@@ -6,7 +6,6 @@ import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
 
 import java.util.HashSet;
 
@@ -358,7 +357,7 @@ public class AUC extends Request2 {
         final int a = (int)ca.at80(i); //would be a 0 if double was NaN
         assert (a == 0 || a == 1) : "Invalid vactual: must be binary (0 or 1).";
         if (cp.isNA0(i)) {
-          Log.warn("Skipping predicted NaN."); //Fix your score0(): models should never predict NaN!
+//          Log.warn("Skipping predicted NaN."); //some models predict NaN!
           continue;
         }
         for( int t=0; t < _cms.length; t++ ) {
