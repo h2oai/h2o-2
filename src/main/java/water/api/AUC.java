@@ -1,12 +1,12 @@
 package water.api;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import water.MRTask2;
 import water.Request2;
 import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -17,17 +17,17 @@ public class AUC extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "", required = true, filter = Default.class)
+  @API(help = "", required = true, filter = Default.class, json=true)
   public Frame actual;
 
-  @API(help="Column of the actual results (will display vertically)", required=true, filter=actualVecSelect.class)
+  @API(help="Column of the actual results (will display vertically)", required=true, filter=actualVecSelect.class, json=true)
   public Vec vactual;
   class actualVecSelect extends VecClassSelect { actualVecSelect() { super("actual"); } }
 
-  @API(help = "", required = true, filter = Default.class)
+  @API(help = "", required = true, filter = Default.class, json=true)
   public Frame predict;
 
-  @API(help="Column of the predicted results (will display horizontally)", required=true, filter=predictVecSelect.class)
+  @API(help="Column of the predicted results (will display horizontally)", required=true, filter=predictVecSelect.class, json=true)
   public Vec vpredict;
   class predictVecSelect extends VecClassSelect { predictVecSelect() { super("predict"); } }
 
@@ -37,7 +37,8 @@ public class AUC extends Request2 {
   public double auc;
   @API(help="Threshold (min. Error)")
   private double best_threshold;
-  @API(help="Index of best CM")
+
+  //helper
   private int best;
 
   public double auc() { return auc; }
@@ -354,8 +355,11 @@ public class AUC extends Request2 {
       for( int i=0; i < len; i++ ) {
         assert(!ca.isNA0(i)); //should never have actual NaN probability!
         final int a = (int)ca.at80(i); //would be a 0 if double was NaN
-        if (a != 0 && a != 1) throw new InvalidArgumentException("Invalid vactual: must be binary (0 or 1).");
-        assert(!cp.isNA0(i)); //should never have predicted NaN probability
+        assert (a == 0 || a == 1) : "Invalid vactual: must be binary (0 or 1).";
+        if (cp.isNA0(i)) {
+          Log.warn("Skipping predicted NaN."); //Fix your score0(): models should never predict NaN!
+          continue;
+        }
         for( int t=0; t < _cms.length; t++ ) {
           final int p = cp.at0(i)>=_thresh[t]?1:0;
           _cms[t].add(a, p);
