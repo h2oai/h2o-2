@@ -37,7 +37,7 @@ public class Summary2 extends Iced {
   public final int           _type;      // 0 - real; 1 - int; 2 - enum
   public double[]            _mins;
   public double[]            _maxs;
-  public double[]            _samples;
+  public double[]            _samples;   // currently, sampling is disabled. see below.
   long                       _gprows;    // non-empty rows per group
 
   final transient String[]   _domain;
@@ -273,12 +273,12 @@ public class Summary2 extends Iced {
       computeMajorities();
     } else {
       _pctile = new double[DEFAULT_PERCENTILES.length];
-      // kbn. was
-      // if (_samples != null) {
       // never take this choice (summary1 didn't?
       // means (like R) we can have quantiles with values not in the dataset..ok?
       // ok since approximation? not okay if we did exact. Sampled sort is not good enough?
-      if (1==0) { 
+      // was:
+      // if (_samples != null) {
+      if (false) { // don't use sampling
         // FIX! should eventually get rid of this since unused
         Arrays.sort(_samples);
         // Compute percentiles for numeric data
@@ -450,7 +450,9 @@ public class Summary2 extends Iced {
     for (int i = 0; i < chk._len; i++)
       add(chk.at0(i));
     // FIX! should eventually get rid of this since unused?
-    _samples = resample(chk);
+    if (false) { // disabling to save mem
+      _samples = resample(chk);
+    }
     return this;
   }
   public void add(double val) {
@@ -548,11 +550,15 @@ public class Summary2 extends Iced {
 
     _gprows += other._gprows;
 
+    // FIX! no longer using
     // merge samples
-    double merged[] = new double[_samples.length+other._samples.length];
-    System.arraycopy(_samples,0,merged,0,_samples.length);
-    System.arraycopy(other._samples,0,merged,_samples.length,other._samples.length);
-    _samples = merged;
+    if (false) { // disabling to save mem
+      double merged[] = new double[_samples.length+other._samples.length];
+      System.arraycopy(_samples,0,merged,0,_samples.length);
+      System.arraycopy(other._samples,0,merged,_samples.length,other._samples.length);
+      _samples = merged;
+    }
+    
     if (_type == T_ENUM) return this;
 
     // merge hcnt2 per-bin mins
