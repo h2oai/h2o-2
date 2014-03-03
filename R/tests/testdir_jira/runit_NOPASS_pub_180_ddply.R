@@ -43,7 +43,7 @@ ddplytest <- function(conn){
 
 
   Log.info('testing')
-  expect_that( dim(df.1) == c(3, 2) )
+  expect_equal( dim(df.1), c(3, 2) )
   expect_that(all( df.1[,1] == c('a', 'b', 'c') ))
   expect_that(all( df.1[,2] == c(1,3,5) ))
 
