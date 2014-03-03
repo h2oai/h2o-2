@@ -414,7 +414,10 @@ public class GLM2 extends ModelJob {
               _model.setAndTestValidation(0,t._val);
               _lambdaIdx = 1;
             }
-            new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
+            if(_lambdaIdx == lambda.length) // ran only with one lambda > lambda_max => return null model
+              GLM2.this.complete(); // signal we're done to anyone waiting for the job
+            else
+              new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
             ex.printStackTrace();
