@@ -257,6 +257,7 @@ public class Expr2Test extends TestUtil {
       checkStr("function(){x=1.23;x=\n4.5\n}()",4.5);
       checkStr("x=3\nfunction()x=1.23\nx",3);
       checkStr("x=3\nfunction(){(x=1.23)}\nx",3);
+      checkStr("x=function(df)\n{\nmin(df$age)\n}\n;x(h.hex)",0.92);
       checkStr("1.23\n-4",-4);
       checkStr("1.23 +\n-4",-2.77);
       checkStr("x=3;3*-x",-9);  // *- is not a token

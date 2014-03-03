@@ -18,6 +18,7 @@ abstract public class AST extends Iced {
   final Type _t;
   AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E, boolean EOS ) {
+    if( EOS && E.peekEOS() ) { E._x--; return new ASTNop(); }
     AST ast2, ast = ASTApply.parseInfix(E,0,EOS);
     if( ast == null ) return ASTAssign.parseNew(E,EOS);
     // In case of a slice or id, try match an assignment
@@ -49,6 +50,12 @@ abstract public class AST extends Iced {
 }
 
 // --------------------------------------------------------------------------
+class ASTNop extends AST {
+  ASTNop() { super(Type.DBL); }
+  @Override void exec(Env env) { env.push(0.0); }
+}
+
+// --------------------------------------------------------------------------
 class ASTStatement extends AST {
   final AST[] _asts;
   ASTStatement( AST[] asts ) { super(asts[asts.length-1]._t); _asts = asts; }
@@ -59,12 +66,12 @@ class ASTStatement extends AST {
       AST ast = parseCXExpr(E,true);
       if( ast == null ) break;
       asts.add(ast);
-      if( !E.peekEOS() ) break;
+      if( !E.peekEOS() ) break; // if not finding statement separator, break
     }
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
-  void exec(Env env) {
+  @Override void exec(Env env) {
     for( int i=0; i<_asts.length-1; i++ ) {
       _asts[i].exec(env);       // Exec all statements
       env.pop();                // Pop all intermediate results
@@ -72,7 +79,7 @@ class ASTStatement extends AST {
     _asts[_asts.length-1].exec(env); // Return final statement as result
   }
   @Override public String toString() { return ";;;"; }
-  public StringBuilder toString( StringBuilder sb, int d ) {
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
     for( int i=0; i<_asts.length-1; i++ )
       _asts[i].toString(sb,d+1).append(";\n");
     return _asts[_asts.length-1].toString(sb,d+1);
