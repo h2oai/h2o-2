@@ -18,6 +18,7 @@ abstract public class AST extends Iced {
   final Type _t;
   AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E, boolean EOS ) {
+    if( EOS && E.peekEOS() ) { E._x--; return new ASTNop(); }
     AST ast2, ast = ASTApply.parseInfix(E,0,EOS);
     if( ast == null ) return ASTAssign.parseNew(E,EOS);
     // In case of a slice or id, try match an assignment
@@ -49,6 +50,12 @@ abstract public class AST extends Iced {
 }
 
 // --------------------------------------------------------------------------
+class ASTNop extends AST {
+  ASTNop() { super(Type.DBL); }
+  @Override void exec(Env env) { env.push(0.0); }
+}
+
+// --------------------------------------------------------------------------
 class ASTStatement extends AST {
   final AST[] _asts;
   ASTStatement( AST[] asts ) { super(asts[asts.length-1]._t); _asts = asts; }
@@ -59,12 +66,12 @@ class ASTStatement extends AST {
       AST ast = parseCXExpr(E,true);
       if( ast == null ) break;
       asts.add(ast);
-      if( !E.peekEOS() ) break;
+      if( !E.peekEOS() ) break; // if not finding statement separator, break
     }
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
-  void exec(Env env) {
+  @Override void exec(Env env) {
     for( int i=0; i<_asts.length-1; i++ ) {
       _asts[i].exec(env);       // Exec all statements
       env.pop();                // Pop all intermediate results
@@ -72,7 +79,7 @@ class ASTStatement extends AST {
     _asts[_asts.length-1].exec(env); // Return final statement as result
   }
   @Override public String toString() { return ";;;"; }
-  public StringBuilder toString( StringBuilder sb, int d ) {
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
     for( int i=0; i<_asts.length-1; i++ )
       _asts[i].toString(sb,d+1).append(";\n");
     return _asts[_asts.length-1].toString(sb,d+1);
@@ -204,7 +211,8 @@ class ASTSlice extends AST {
     int x = E._x;
     AST ast = ASTApply.parsePrefix(E, EOS);
     if( ast == null ) return null;
-    if( !E.peek('[',true) ) return ast; // No slice
+    if( !E.peek('[',EOS) )      // Not start of slice?
+      return ASTNamedCol.parse(E,ast,EOS); // Also try named col slice
     if( !Type.ARY.union(ast._t) ) E.throwErr("Not an ary",x);
     if(  E.peek(']',false) ) return ast; // [] ===> same as no slice
     AST rows=E.xpeek(',',(x=E._x),parseCXExpr(E, false));
@@ -265,7 +273,7 @@ class ASTSlice extends AST {
     // Got a frame/list of results.
     // Decide if we're a toss-out or toss-in list
     Frame ary = env._ary[env._sp-1];  // Peek-frame
-    if( ary.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+ary);
+    if( ary.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+ary.toStringNames());
     Vec vec = ary.anyVec();
     // Check for a matching column of bools.
     if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
@@ -281,7 +289,7 @@ class ASTSlice extends AST {
   }
 
   @Override public String toString() { return "[,]"; }
-  public StringBuilder toString( StringBuilder sb, int d ) {
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append('\n');
     _ast.toString(sb,d+1).append("\n");
     if( _cols==null ) indent(sb,d+1).append("all\n");
@@ -290,6 +298,32 @@ class ASTSlice extends AST {
     else      _rows.toString(sb,d+1);
     return sb;
   }
+}
+
+// --------------------------------------------------------------------------
+class ASTNamedCol extends AST {
+  final AST _ast;               // named slice of an expression
+  final String _colname;        // 
+  ASTNamedCol( Type t, AST ast, String colname ) {
+    super(t); _ast = ast; _colname=colname;
+  }
+  static AST parse(Exec2 E, AST ast, boolean EOS ) {
+    if( !E.peek('$',true) ) return ast;
+    int x = E._x;
+    E.skipWS(EOS);
+    String colname = E.isID();
+    if( colname == null ) E.throwErr("Missing column name after $",x);
+    return new ASTNamedCol(Type.ARY,ast,colname);
+  }
+  @Override void exec(Env env) {
+    int sp = env._sp;  _ast.exec(env);  assert sp+1==env._sp;
+    Frame ary=env.peekAry();
+    int cidx = ary.find(_colname);
+    if( cidx== -1 ) throw new IllegalArgumentException("Missing column "+_colname+" in frame "+ary.toStringNames());
+    Frame fr2 = ary.deepSlice(null,new long[]{cidx+1});
+    env.poppush(1,fr2,null);
+  }
+  @Override public String toString() { return "$"+_colname; }
 }
 
 // --------------------------------------------------------------------------

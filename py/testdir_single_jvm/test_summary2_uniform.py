@@ -1,8 +1,13 @@
 import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p, h2o_summ
 
 DO_TRY_SCIPY = False
+if  getpass.getuser() == 'kevin':
+    DO_TRY_SCIPY = True
+
+DO_MEDIAN = False
+MAX_QBINS = 10000000
 
 def twoDecimals(l): 
     if isinstance(l, list):
@@ -10,9 +15,7 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-# have to match the csv file?
-# dtype=['string', 'float');
-def generate_scipy_comparison(csvPathname, dtype):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -33,7 +36,8 @@ def generate_scipy_comparison(csvPathname, dtype):
     # data is last column
     # drop the output
     print dataset.shape
-    target = [x[1] for x in dataset]
+    # target = [x[col] for x in dataset]
+    target = dataset
     # we may have read it in as a string. coerce to number
     targetFP = np.array(target, np.float)
 
@@ -52,14 +56,30 @@ def generate_scipy_comparison(csvPathname, dtype):
         print target[0]
         print target[1]
 
-    thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+    thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
     # per = [100 * t for t in thresholds]
     per = [1 * t for t in thresholds]
-    print "sp per:", per
+    print "scipy per:", per
     from scipy import stats
     # a = stats.scoreatpercentile(target, per=per)
     a = stats.mstats.mquantiles(targetFP, prob=per)
-    print "sp percentiles:", a
+    a2 = ["%.2f" % v for v in a]
+    h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+
+    # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
+    # inplace sort
+    targetFP.sort()
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+    label = '50%' if DO_MEDIAN else '99.9%'
+    h2p.blue_print(label, "from sort:", b)
+    h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
+    h2p.blue_print(label, "from h2o:", h2oMedian)
+    # see if scipy changes. nope. it doesn't 
+    if 1==0:
+        a = stats.mstats.mquantiles(targetFP, prob=per)
+        a2 = ["%.2f" % v for v in a]
+        h2p.red_print("after sort")
+        h2p.red_print("scipy stats.mstats.mquantiles:", a2)
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
@@ -87,7 +107,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud(node_count=3, base_port=54327)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
 
@@ -138,7 +158,8 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
             h2o.beta_features = False
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -148,7 +169,7 @@ class Basic(unittest.TestCase):
             numCols = inspect["num_cols"]
 
             h2o.beta_features = True
-            summaryResult = h2o_cmd.runSummary(key=hex_key)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             # only one column
@@ -220,10 +241,17 @@ class Basic(unittest.TestCase):
             print "mins colname:", colname, "(2 places):", mn
 
             trial += 1
+            h2o.nodes[0].remove_all_keys()
 
-            if DO_TRY_SCIPY:
-                csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
-                generate_scipy_comparison(csvPathname1, dtype=dtype)
+            scipyCol = 0
+            if DO_TRY_SCIPY and colname!='':
+                # don't do for enums
+                # also get the median with a sort (h2o_summ.percentileOnSortedlist()
+                print scipyCol, pctile[10]
+                generate_scipy_comparison(csvPathnameFull, col=scipyCol,
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10])
+
+
 
 if __name__ == '__main__':
     h2o.unit_main()

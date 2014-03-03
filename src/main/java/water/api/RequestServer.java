@@ -54,15 +54,14 @@ public class RequestServer extends NanoHTTPD {
   // cache of all loaded resources
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
-  public static HashMap<String,Request> requests() {
-    return _requests;
-  }
 
   static final Request _http404;
   static final Request _http500;
 
   // initialization ------------------------------------------------------------
   static {
+    boolean USE_NEW_TAB = true;
+
     _http404 = registerRequest(new HTTP404());
     _http500 = registerRequest(new HTTP500());
 
@@ -98,9 +97,10 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
     Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (deprecated)","Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
-    Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
+    Request.addToNavbar(registerRequest(new Predict()),     "Predict2",                   "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
+    Request.addToNavbar(registerRequest(new AUC()),         "AUC",                        "Score");
 
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",            "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",  "Admin");
@@ -112,11 +112,12 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Script()),      "Get Script",      "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
 
-    Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help");
-    Request.addToNavbar(registerRequest(new Tutorials()),           "Tutorials Home",         "Help");
-    Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help");
-    Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
-    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
+    Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new Tutorials()),           "Tutorials Home",         "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new AboutH2O()),            "About H2O",              "Help");
 
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {

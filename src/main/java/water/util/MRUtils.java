@@ -133,6 +133,14 @@ public class MRUtils {
     public ClassDist(final Vec label) { super(label.domain().length); }
     public ClassDist(int n) { super(n); }
     public final long[] dist() { return _ys; }
+    public final float[] rel_dist() {
+      float[] rel = new float[_ys.length];
+      for (int i=0; i<_ys.length; ++i) rel[i] = (float)_ys[i];
+      final float sum = Utils.sum(rel);
+      assert(sum != 0.);
+      Utils.div(rel, sum);
+      return rel;
+    }
   }
   private static class ClassDistHelper extends MRTask2<ClassDist> {
     private ClassDistHelper(int nclass) { _nclass = nclass; }
@@ -157,21 +165,22 @@ public class MRUtils {
    * @param sampling_ratios Optional: array containing the requested sampling ratios per class (in order of domains), will be overwritten if it contains all 0s
    * @return Sampled frame, with approximately the same number of samples from each class (or given by the requested sampling ratios)
    */
-  public static Frame sampleFrameStratified(final Frame fr, Vec label, float[] sampling_ratios, long maxrows, final long seed, final boolean debug) {
+  public static Frame sampleFrameStratified(final Frame fr, Vec label, float[] sampling_ratios, long maxrows, final long seed, final boolean allowOversampling, final boolean debug) {
     if (fr == null) return null;
     assert(label.isEnum());
+    assert(maxrows >= label.domain().length);
+
+    long[] dist = new ClassDist(label).doAll(label).dist();
+    assert(dist.length > 0);
+    Log.info("Doing stratified sampling for data set containing " + fr.numRows() + " rows from " + dist.length + " classes. Oversampling: " + (allowOversampling ? "on" : "off"));
+    if (debug) {
+      for (int i=0; i<dist.length;++i) {
+        Log.info("Class " + label.domain(i) + ": count: " + dist[i] + " prior: " + (float)dist[i]/fr.numRows());
+      }
+    }
 
     // create sampling_ratios for class balance with max. maxrows rows (fill existing array if not null)
     if (sampling_ratios == null || (Utils.minValue(sampling_ratios) == 0 && Utils.maxValue(sampling_ratios) == 0)) {
-      long[] dist = new ClassDist(label).doAll(label).dist();
-      assert(dist.length > 0);
-      Log.info("Stratified sampling of data set containing " + fr.numRows() + " rows from " + dist.length + " classes.");
-      if (debug) {
-        for (int i=0; i<dist.length;++i) {
-          Log.info("Class " + label.domain(i) + ": count: " + dist[i] + " prior: " + (float)dist[i]/fr.numRows());
-        }
-      }
-
       // compute sampling ratios to achieve class balance
       if (sampling_ratios == null) {
         sampling_ratios = new float[dist.length];
@@ -180,26 +189,35 @@ public class MRUtils {
       for (int i=0; i<dist.length;++i) {
         sampling_ratios[i] = ((float)fr.numRows() / label.domain().length) / dist[i]; // prior^-1 / num_classes
       }
-
       final float inv_scale = Utils.minValue(sampling_ratios); //majority class has lowest required oversampling factor to achieve balance
       Utils.div(sampling_ratios, inv_scale); //want sampling_ratio 1.0 for majority class (no downsampling)
-
-      final long numrows = (long)((float)fr.numRows() / inv_scale + 0.5f);
-      assert(numrows >= fr.numRows()); //balance cannot require downsampling
-      final long actualnumrows = Math.min(maxrows, numrows); //cap #rows at maxrows
-      Log.info("Balancing class counts by sampling to a total of " + String.format("%,d", actualnumrows) + " rows.");
-
-      if (actualnumrows != numrows) {
-        Utils.mult(sampling_ratios, (float)actualnumrows/numrows); //adjust the sampling_ratios by the global rescaling factor
-        if (debug)
-          Log.info("Downsampling majority class by " + (float)actualnumrows/numrows
-                  + " to limit number of rows to " + String.format("%,d", maxrows));
-      }
-      Log.info("Majority class (" + label.domain()[Utils.minIndex(sampling_ratios)].toString()
-              + ") sampling ratio: " + Utils.minValue(sampling_ratios));
-      Log.info("Minority class (" + label.domain()[Utils.maxIndex(sampling_ratios)].toString()
-              + ") sampling ratio: " + Utils.maxValue(sampling_ratios));
     }
+
+    if (!allowOversampling) {
+      for (int i=0; i<sampling_ratios.length; ++i) {
+        sampling_ratios[i] = Math.min(1.0f, sampling_ratios[i]);
+      }
+    }
+
+    // given these sampling ratios, and the original class distribution, this is the expected number of resulting rows
+    float numrows = 0;
+    for (int i=0; i<sampling_ratios.length; ++i) {
+      numrows += sampling_ratios[i] * dist[i];
+    }
+    final long actualnumrows = Math.min(maxrows, Math.round(numrows)); //cap #rows at maxrows
+    assert(actualnumrows > 0);
+    Log.info("Stratified sampling to a total of " + String.format("%,d", actualnumrows) + " rows.");
+
+    if (actualnumrows != numrows) {
+      Utils.mult(sampling_ratios, (float)actualnumrows/numrows); //adjust the sampling_ratios by the global rescaling factor
+      if (debug)
+        Log.info("Downsampling majority class by " + (float)actualnumrows/numrows
+                + " to limit number of rows to " + String.format("%,d", maxrows));
+    }
+    Log.info("Majority class (" + label.domain()[Utils.minIndex(sampling_ratios)].toString()
+            + ") sampling ratio: " + Utils.minValue(sampling_ratios));
+    Log.info("Minority class (" + label.domain()[Utils.maxIndex(sampling_ratios)].toString()
+            + ") sampling ratio: " + Utils.maxValue(sampling_ratios));
 
     return sampleFrameStratified(fr, label, sampling_ratios, seed, debug);
   }
@@ -220,6 +238,8 @@ public class MRUtils {
     final int labelidx = fr.find(label); //which column is the label?
     assert(labelidx >= 0);
 
+    final boolean poisson = false; //beta feature
+
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
@@ -228,7 +248,13 @@ public class MRUtils {
           if (cs[labelidx].isNA0(r)) continue; //skip missing labels
           final int label = (int)cs[labelidx].at80(r);
           assert(sampling_ratios.length > label && label >= 0);
-          final int sampling_reps = Utils.getPoisson(sampling_ratios[label], rng);
+          int sampling_reps;
+          if (poisson) {
+            sampling_reps = Utils.getPoisson(sampling_ratios[label], rng);
+          } else {
+            final float remainder = sampling_ratios[label] - (int)sampling_ratios[label];
+            sampling_reps = (int)sampling_ratios[label] + (rng.nextFloat() < remainder ? 1 : 0);
+          }
           for (int i = 0; i < ncs.length; i++) {
             for (int j = 0; j < sampling_reps; ++j) {
               ncs[i].addNum(cs[i].at0(r));
@@ -261,4 +287,56 @@ public class MRUtils {
 
     return r;
   }
+
+
+  /**
+   * Correct probabilities obtained from training on oversampled data back to original distribution
+   * Following instructions by Guido Deutsch
+   * @param fr Frame containing one label and C per-class probabilities (to be modified in-place)
+   * @param prior_fraction Prior per-class fractions
+   * @param model_fraction Modeled per-class fractions
+   */
+  public static void correctProbabilities(final Frame fr, final float[] prior_fraction, final float[] model_fraction) {
+    if (prior_fraction == null || model_fraction == null) return;
+    assert(prior_fraction != null && model_fraction != null);
+    assert(prior_fraction.length == model_fraction.length);
+    assert(fr.numCols() == 1+prior_fraction.length); //first col: label, remaining cols: probs
+
+    // DEBUGGING
+//    for (int i=0; i<prior_fraction.length;++i) {
+//      System.out.println("class " + fr.vecs()[0].domain()[i] + " prior: " + prior_fraction[i] + " model: " + model_fraction[i]);
+//    }
+//    for (int r=0; r<fr.anyVec().length(); ++r) {
+//      String s = "row " + r + " prob: ";
+//      for (int i=1; i<fr.vecs().length;++i) {
+//        s+= fr.vecs()[i].at(r) + " ";
+//      }
+//      System.out.println(s);
+//    }
+
+    new MRTask2() {
+      @Override
+      public void map(Chunk[] cs) {
+        for (int r = 0; r < cs[0]._len; r++) {
+          double prob = 0;
+          // class i
+          for (int i = 0; i < cs.length-1; i++) {
+            final double scoring_result = cs[i+1].at0(r);
+            assert(!Double.isNaN(scoring_result));
+            final double original_fraction = prior_fraction[i];
+            assert(original_fraction > 0);
+            final double oversampled_fraction = model_fraction[i];
+            assert(oversampled_fraction > 0);
+            final double corrected_prob = 1/(1+((1/original_fraction)-1)/((1/oversampled_fraction)-1)*((1/scoring_result)-1));
+            assert(!Double.isNaN(corrected_prob));
+            assert(corrected_prob >= 0 && corrected_prob <= 1.);
+            cs[i+1].set0(r, corrected_prob);
+            prob += corrected_prob;
+          }
+          if (prior_fraction.length==2) assert(Math.abs(prob - 1.0) < 1e-4); //TODO: Find a formula for multi-class
+        }
+      }
+    }.doAll(fr);
+  }
+
 }

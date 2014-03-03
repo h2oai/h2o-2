@@ -82,8 +82,7 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[2,+]","Must be scalar or array\n"+"h.hex[2,+]\n"+"        ^-^\n");   // Function not allowed
       checkStr("h.hex[2+4,-4]");// Select row 6, all-cols but 4
       checkStr("h.hex[1,-1]; h.hex[2,-2]; h.hex[3,-3]");// Partial results are freed
-      checkStr("h.hex[2+3,h.hex]","Selector must be a single column: {pclass,name,sex,age,sibsp,parch,ticket,fare,cabin,embarked,boat,body,home.dest,survived}, 1.1 KB\n" +
-              "Chunk starts: {0,}"); // Error: col selector has too many columns
+      checkStr("h.hex[2+3,h.hex]","Selector must be a single column: [pclass, name, sex, age, sibsp, parch, ticket, fare, cabin, embarked, boat, body, home.dest, survived]"); // Error: col selector has too many columns
       checkStr("h.hex[2,]");    // Row 2 all cols
       checkStr("h.hex[,3]");    // Col 3 all rows
       checkStr("h.hex+1");      // Broadcast scalar over ary
@@ -114,7 +113,11 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[,c(1,3,5)]");
       checkStr("h.hex[c(1,3,5),]");
       checkStr("a=c(11,22,33,44,55,66); a[c(2,6,1),]");
-
+      // Named column selection
+      checkStr("h.hex$ 2","Missing column name after $\nh.hex$ 2\n      ^^\n");
+      checkStr("h.hex$crunk","Missing column crunk in frame [pclass, name, sex, age, sibsp, parch, ticket, fare, cabin, embarked, boat, body, home.dest, survived]");
+      checkStr("h.hex$pclass");
+      checkStr("mean(h.hex$pclass)",1);
 
       // More complicated operator precedence
       checkStr("c(1,0)&c(2,3)");// 1,0
@@ -249,10 +252,12 @@ public class Expr2Test extends TestUtil {
       checkStr("(h.hex[1,1]=2)",2);
       checkStr("(h.hex[1,1]=2\n)",2);
       checkStr("(h.hex[1,1]\n=2)",2);
+      checkStr("(h.hex\n[1,1]=2)",2);
       checkStr("function(){x=1.23;(x=4.5)\n}()",4.5);
       checkStr("function(){x=1.23;x=\n4.5\n}()",4.5);
       checkStr("x=3\nfunction()x=1.23\nx",3);
       checkStr("x=3\nfunction(){(x=1.23)}\nx",3);
+      checkStr("x=function(df)\n{\nmin(df$age)\n}\n;x(h.hex)",0.92);
       checkStr("1.23\n-4",-4);
       checkStr("1.23 +\n-4",-2.77);
       checkStr("x=3;3*-x",-9);  // *- is not a token

@@ -1083,7 +1083,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response,
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False):
+        noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -2199,7 +2199,8 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': 1000
+                'max_ncols': 1000,
+                'max_qbins': None,
                 }
         else:
             params_dict = {

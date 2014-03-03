@@ -4,6 +4,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util
 import h2o_print as h2p, h2o_exec as h2e
 
 DO_TRY_SCIPY = False
+if  getpass.getuser() == 'kevin': 
+    DO_TRY_SCIPY = True
 
 print "This test will try to compare exec quantiles to summary2 quantiles"
 def twoDecimals(l): 
@@ -102,8 +104,8 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (1000000, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
-            (1000000, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
+            (5000000, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
+            (5000000, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
             (1000000, 1, 'x.hex', -100000, 100000, ('C1',  -100001.0, -50000.0, 1613.0, 50000.0, 100000.0)),
             (1000000, 1, 'x.hex', -1, 1,           ('C1',  -1.05, -0.48, 0.0087, 0.50, 1.00)),
 

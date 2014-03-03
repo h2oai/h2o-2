@@ -1,23 +1,16 @@
 import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p, h2o_summ
 
-if  getpass.getuser() == 'kevin': 
-    DO_TRY_SCIPY = True
-# can't handle the NA in scipy?
+print "Same as test_summary2_uniform.py but with exponential distribution on the data"
 DO_TRY_SCIPY = False
+if  getpass.getuser() == 'kevin':
+    DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
-MAX_QBINS = 1000
-
-# fails with 1M and NA
-ROWS = 10000 # passes
-ROWS = 100000 # passes
-ROWS = 1000000 # corrupted hcnt2_min/max and ratio 5
-NA_ROW_RATIO = 1
-
-print "Same as test_summary2_uniform.py except for every data row,"
-print "5 rows of synthetic NA rows are added. results should be the same for quantiles"
+MAX_QBINS = 10000000
+# 1 over desired mean
+LAMBD = 0.005
 
 def twoDecimals(l): 
     if isinstance(l, list):
@@ -25,9 +18,7 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-# have to match the csv file?
-# dtype=['string', 'float');
-def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2o1Median=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -48,10 +39,10 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     # data is last column
     # drop the output
     print dataset.shape
-    target = [x[col] for x in dataset]
+    # target = [x[col] for x in dataset]
+    target = dataset
     # we may have read it in as a string. coerce to number
     targetFP = np.array(target, np.float)
-    # targetFP = target
 
     if 1==0:
         n_features = len(dataset[0]) - 1;
@@ -71,7 +62,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
     # per = [100 * t for t in thresholds]
     per = [1 * t for t in thresholds]
-    print "sp per:", per
+    print "scipy per:", per
     from scipy import stats
     # a = stats.scoreatpercentile(target, per=per)
     a = stats.mstats.mquantiles(targetFP, prob=per)
@@ -85,8 +76,11 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
     h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o:", h2oMedian)
-
+    h2p.blue_print(label, "from h2o2:", h2oMedian)
+    # Summary1 has a different threshold ..not 99.9%
+    # median is okay
+    if DO_MEDIAN:
+        h2p.blue_print(label, "from h2o1:", h2o1Median)
     # see if scipy changes. nope. it doesn't 
     if 1==0:
         a = stats.mstats.mquantiles(targetFP, prob=per)
@@ -94,32 +88,39 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
         h2p.red_print("after sort")
         h2p.red_print("scipy stats.mstats.mquantiles:", a2)
 
-
-
-def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
+def write_syn_dataset(csvPathname, rowCount, colCount, lambd=0.2, SEED=None):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 
-    expectedRange = (expectedMax - expectedMin)
+    expectedMin = None
+    expectedMax = None
     for i in range(rowCount):
         rowData = []
-        ri = expectedMin + (random.uniform(0,1) * expectedRange)
+
+        # Exponential distribution. 
+        # lambd is 1.0 divided by the desired mean. It should be nonzero. 
+        # Returned values range from 0 to positive infinity if lambd is positive, 
+        # and from negative infinity to 0 if lambd is negative.
         for j in range(colCount):
+            ri = random.expovariate(lambd=lambd)
+            # None doesn't dominate for max, it doesn for min
+            if expectedMin is None:
+                expectedMin = ri
+            else:
+                expectedMin = min(expectedMin, ri)
+
+            if expectedMax is None:
+                expectedMax = ri
+            else:
+                expectedMax = max(expectedMax, ri)
             rowData.append(ri)
+
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
-
-        # add 5 rows of NAs, for every row of valid dat
-        if 1==1:
-            rowData = []
-            for j in range(colCount):
-                # this shouldn't be h2o parsed as an enum?...NA is special?
-                rowData.append(',,')
-            rowDataCsv = ",".join(map(str,rowData))
-            for k in range(NA_ROW_RATIO):
-                dsf.write(rowDataCsv + "\n")
+        
 
     dsf.close()
+    return (expectedMin, expectedMax)
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -139,23 +140,17 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary2_uniform_w_NA(self):
+    def test_summary2_exp(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
+        LAMBD = random.uniform(0.005, 0.5)
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (ROWS, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
-            (ROWS, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
-            (ROWS, 1, 'x.hex', -100000, 100000, ('C1',  -100001.0, -50000.0, 1613.0, 50000.0, 100000.0)),
-            (ROWS, 1, 'x.hex', -1, 1,           ('C1',  -1.05, -0.48, 0.0087, 0.50, 1.00)),
-
-            (ROWS, 1, 'A.hex', 1, 100,          ('C1',   1.05, 26.00, 51.00, 76.00, 100.0)),
-            (ROWS, 1, 'A.hex', -99, 99,         ('C1',  -99, -50.0, 0, 50.00, 99)),
-
-            (ROWS, 1, 'B.hex', 1, 10000,        ('C1',   1.05, 2501.00, 5001.00, 7501.00, 10000.00)),
-            (ROWS, 1, 'B.hex', -100, 100,       ('C1',  -100.10, -50.0, 0.85, 51.7, 100,00)),
-
-            (ROWS, 1, 'C.hex', 1, 100000,       ('C1',   1.05, 25002.00, 50002.00, 75002.00, 100000.00)),
-            (ROWS, 1, 'C.hex', -101, 101,       ('C1',  -100.10, -50.45, -1.18, 49.28, 100.00)),
+            (10,     1, 'x.hex', 1, 20000,        ('C1', None, None, None, None, None)),
+            (100,    1, 'x.hex', 1, 20000,        ('C1', None, None, None, None, None)),
+            (1000,   1, 'x.hex', -5000, 0,        ('C1', None, None, None, None, None)),
+            (10000,  1, 'x.hex', -100000, 100000, ('C1', None, None, None, None, None)),
+            (100000, 1, 'x.hex', -1, 1,           ('C1', None, None, None, None, None)),
+            (1000000, 1, 'A.hex', 1, 100,          ('C1', None, None, None, None, None)),
         ]
 
         timeoutSecs = 10
@@ -165,25 +160,26 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (rowCount, colCount, hex_key, expectedMin, expectedMax, expected) in tryList:
-            # max error = half the bin size?
-        
-            maxDelta = ((expectedMax - expectedMin)/20.0) / 2.0
-            # add 5% for fp errors?
-            maxDelta = 1.05 * maxDelta
-
+        # rangeMin and rangeMax are not used right now
+        for (rowCount, colCount, hex_key, rangeMin, rangeMax, expected) in tryList:
             h2o.beta_features = False
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
 
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
 
-            print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
+            print "Creating random", csvPathname, "lambd:", LAMBD
+            (expectedMin, expectedMax) = write_syn_dataset(csvPathname, 
+                rowCount, colCount, lambd=LAMBD, SEED=SEEDPERFILE)
+            print "expectedMin:", expectedMin, "expectedMax:", expectedMax
+            maxDelta = ((expectedMax - expectedMin)/20.0) / 2.0
+            # add 5% for fp errors?
+            maxDelta = 1.05 * maxDelta
+
             h2o.beta_features = False
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -192,19 +188,25 @@ class Basic(unittest.TestCase):
             numRows = inspect["num_rows"]
             numCols = inspect["num_cols"]
 
+            h2o.beta_features = False
+            summary1Result = h2o_cmd.runSummary(key=hex_key)
+            h2o.verboseprint("Summary1 summary1Result:", h2o.dump_json(summary1Result))
+            percentiles1 = summary1Result['summary']['columns'][0]['percentiles']
+            thresholds1 = percentiles1['thresholds']
+            values1 = percentiles1['values']
+
+            print "Summary1 thresholds", twoDecimals(thresholds1)
+            print "Summary1 values", twoDecimals(values1)
+
             h2o.beta_features = True
-            summaryResult = h2o_cmd.runSummary(key=hex_key, noPrint=False, max_qbins=MAX_QBINS, numRows=numRows, numCols=numCols)
-            h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
+            summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
+            h2o.verboseprint("Summary2 summaryResult:", h2o.dump_json(summaryResult))
 
             # only one column
             column = summaryResult['summaries'][0]
-
             colname = column['colname']
-            self.assertEqual(colname, expected[0])
-
             coltype = column['type']
             nacnt = column['nacnt']
-
             stats = column['stats']
             stattype= stats['type']
 
@@ -216,21 +218,24 @@ class Basic(unittest.TestCase):
             print "colname:", colname, "std dev. (2 places):", twoDecimals(sd)
 
             zeros = stats['zeros']
-
             mins = stats['mins']
-            h2o_util.assertApproxEqual(mins[0], expected[1], tol=maxDelta, msg='min is not approx. expected')
-
             maxs = stats['maxs']
-            h2o_util.assertApproxEqual(maxs[0], expected[5], tol=maxDelta, msg='max is not approx. expected')
-
             pct = stats['pct']
-            # the thresholds h2o used, should match what we expected
             expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
-
             pctile = stats['pctile']
-            h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxDelta, msg='25th percentile is not approx. expected')
-            h2o_util.assertApproxEqual(pctile[5], expected[3], tol=maxDelta, msg='50th percentile (median) is not approx. expected')
-            h2o_util.assertApproxEqual(pctile[7], expected[4], tol=maxDelta, msg='75th percentile is not approx. expected')
+            # the thresholds h2o used, should match what we expected
+            if expected[0]:
+                self.assertEqual(colname, expected[0])
+            if expected[1]:
+                h2o_util.assertApproxEqual(mins[0], expected[1], tol=maxDelta, msg='min is not approx. expected')
+            if expected[2]:
+                h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxDelta, msg='25th percentile is not approx. expected')
+            if expected[3]:
+                h2o_util.assertApproxEqual(pctile[5], expected[3], tol=maxDelta, msg='50th percentile (median) is not approx. expected')
+            if expected[4]:
+                h2o_util.assertApproxEqual(pctile[7], expected[4], tol=maxDelta, msg='75th percentile is not approx. expected')
+            if expected[5]:
+                h2o_util.assertApproxEqual(maxs[0], expected[5], tol=maxDelta, msg='max is not approx. expected')
 
             hstart = column['hstart']
             hstep = column['hstep']
@@ -243,21 +248,7 @@ class Basic(unittest.TestCase):
             print "hcnt:", hcnt
             print "len(hcnt)", len(hcnt)
 
-            print "numRows:", numRows, "rowCount: ", rowCount
-            self.assertEqual((1+NA_ROW_RATIO) * rowCount, numRows, 
-                msg="numRows %s should be %s" % (numRows, (1+NA_ROW_RATIO) * rowCount))
-
-
-            # don't check the last bin
-            # we sometimes get a messed up histogram for all NA cols? just don't let them go thru here
-            for b in hcnt[1:-1]:
-                # should we be able to check for a uniform distribution in the files?
-                
-                e = rowCount/len(hcnt) # expect 21 thresholds, so 20 bins. each 5% of rows (uniform distribution)
-                # don't check the edge bins
-                # NA rows should be ignored
-                self.assertAlmostEqual(b, e, delta=2*e,
-                    msg="Bins not right. b: %s e: %s" % (b, e))
+            print "Can't estimate the bin distribution"
 
             pt = twoDecimals(pctile)
             mx = twoDecimals(maxs)
@@ -273,16 +264,17 @@ class Basic(unittest.TestCase):
             print "mins colname:", colname, "(2 places):", mn
 
             trial += 1
+            h2o.nodes[0].remove_all_keys()
 
-            scipyCol = 1
+            scipyCol = 0
             if DO_TRY_SCIPY and colname!='':
                 # don't do for enums
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                 print scipyCol, pctile[10]
                 generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                    h2oMedian=pctile[5 if DO_MEDIAN else 10])
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10], 
+                    h2o1Median=values1[5 if DO_MEDIAN else 10]) # from Summary1
 
-            h2i.delete_keys_at_all_nodes()
 
 
 if __name__ == '__main__':
