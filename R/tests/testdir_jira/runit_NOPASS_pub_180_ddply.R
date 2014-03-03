@@ -10,22 +10,30 @@ source('../findNSourceUtils.R')
 
 ddplytest <- function(conn){
   Log.info('uploading ddply testing dataset')
-  df.h <- h2o.importFile.FV(conn, locate('smalldata/jira/pub-180.csv'))
+  df.h <- h2o.importFile(conn, locate('smalldata/jira/pub-180.csv'))
 
   Log.info('printing from h2o')
   Log.info( head(df.h) )
 
   Log.info('grouping over a single column (equivalent to tapply)')
-  df.h.1 <- ddply(df.h, .(colgroup), function(df){ min(df$col1)} )
+  fn1 <- function(df){ min(df$col1)}
+  h2o.addFunction(conn, fn1)
+  df.h.1 <- ddply(df.h, .(colgroup), fn1)
 
   Log.info('grouping over multiple columns (equivalent to tapply with IDX=group1 + group2)')
-  df.h.2 <- ddply(df.h, .(colgroup, colgroup2), function(df){ min(df$col1)} )
+  fn2 <- function(df){ min(df$col1)}
+  h2o.addFunction(conn, fn2)
+  df.h.2 <- ddply(df.h, .(colgroup, colgroup2), fn2)
 
   Log.info('single grouping column, use 2 columns')
-  df.h.3 <- ddply(df.h, .(colgroup), function(df){ min(df$col1 + df$col2) } )
+  fn3 <- function(df){ min(df$col1 + df$col2) }
+  h2o.addFunction(conn, fn3)
+  df.h.3 <- ddply(df.h, .(colgroup), fn3)
 
   Log.info('grouping multiple columns, use 2 columns')
-  df.h.3 <- ddply(df.h, .(colgroup, colgroup2), function(df){ min(df$col1 + df$col2) } )
+  fn4 <- function(df){ min(df$col1 + df$col2) }
+  h2o.addFunction(conn, fn4)
+  df.h.4 <- ddply(df.h, .(colgroup, colgroup2), fn4)
 
   Log.info('pulling data locally')
   df.1 <- as.data.frame( df.h.1 )
