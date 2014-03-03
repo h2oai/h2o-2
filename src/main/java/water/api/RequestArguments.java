@@ -23,7 +23,6 @@ import water.util.RString;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.text.NumberFormat;
 import java.util.*;
 
 /** All arguments related classes are defined in this guy.
@@ -1115,6 +1114,80 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  public static class NumberSequenceFloat {
+    public final float [] _arr;
+    final String _str;
+    final boolean _ints;
+
+    public NumberSequenceFloat(float [] val, String str, boolean ints) {
+      _arr = val;
+      _str = str;
+      _ints = ints;
+    }
+
+    public NumberSequenceFloat(String str, boolean mul, float defaultStep) {
+      this(parseArray(str,mul,defaultStep),str, false);
+    }
+
+    static float [] parseArray(String input, boolean mul, float defaultStep) {
+      String str = input.trim().toLowerCase();
+      if(str.startsWith("c(") && str.endsWith(")"))
+        str = str.substring(2,str.length()-1);
+      if( str.startsWith("seq") ) {
+        throw new RuntimeException("unimplemented");
+      } if( str.contains(":") )
+        return parseGenerator(input, mul, defaultStep);
+      else if( str.contains(",") ) {
+        String [] parts = str.split(",");
+        float [] res = new float[parts.length];
+        for(int i = 0; i < parts.length; ++i)
+          res[i] = Float.parseFloat(parts[i]);
+        return res;
+      } else {
+        return new float [] {Float.parseFloat(str)};
+      }
+    }
+    public static float[] parseGenerator(String input, boolean mul, float defaultStep) {
+      String str = input.trim().toLowerCase();
+      String [] parts = str.split(":");
+      if(parts.length != 2 &&  parts.length != 3 )throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      float step = defaultStep;
+
+      if( parts.length == 3 ){
+        step = Float.parseFloat(parts[2]);
+      }
+      float from = Float.parseFloat(parts[0]);
+      float to = Float.parseFloat(parts[1]);
+      if(to == from) return new float[]{from};
+      if(to < from)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      if(mul?(step <= 1):(step<=0))throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      // make sure we have format from < to
+
+      float [] res = new float[1024];
+      int i = 0;
+      while(from <= to){
+        res[i++] = from;
+        if(i == res.length)res = Arrays.copyOf(res, res.length + Math.max(1, res.length >> 1));
+        if( mul) from *= step; else from += step;
+      }
+      return Arrays.copyOf(res,i);
+    }
+    static NumberSequenceFloat parse(String input, boolean mul, float defaultStep) {
+      return new NumberSequenceFloat(parseArray(input, mul, defaultStep),null, false);
+    }
+    @Override public String toString() {
+      if(_str != null)return _str;
+      if(_arr == null || _arr.length == 0)return"";
+
+      StringBuilder res = new StringBuilder();
+      for(int i = 0; i < _arr.length; ++i) {
+        if(i > 0) res.append(",");
+        res.append(_ints ? "" + (int) _arr[i] : _arr[i]);
+      }
+      return res.toString();
+    }
+  }
+
   public class RSeq extends InputText<NumberSequence> {
     boolean _multiplicative;
     transient NumberSequence _dVal;
@@ -1156,6 +1229,55 @@ public class RequestArguments extends RequestStatics {
     @Override
     protected NumberSequence defaultValue() {
       return _dVal;
+    }
+
+    @Override
+    protected String queryDescription() {
+      return "Number sequence. Comma separated list of values. Or range specified as from:to:step.";
+    }
+  }
+
+  public class RSeqFloat extends InputText<NumberSequenceFloat> {
+    boolean _multiplicative;
+    transient NumberSequenceFloat _fVal;
+    float _defaultStep;
+    String _comment;
+
+    @Override
+    public String queryComment() {
+      if( disabled() ) return "";
+      if( _comment != null ) return _comment;
+      return "Comma separated list of values. Or range specified as from:to:step" + (_multiplicative?"(*).":"(+).");
+    }
+
+    public RSeqFloat(String name, boolean req, boolean mul){
+      this(name,req,null,mul);
+    }
+    public RSeqFloat(String seq, boolean mul){
+      this("", false, new NumberSequenceFloat(seq, mul, 0), mul);
+    }
+    public RSeqFloat(String name, boolean req, NumberSequenceFloat fVal, boolean mul){
+      this(name, req, fVal, mul, null);
+    }
+    public RSeqFloat(String name, boolean req, NumberSequenceFloat fVal, boolean mul, String comment){
+      super(name,req);
+      _fVal = fVal;
+      _multiplicative = mul;
+      _defaultStep = mul?10:1;
+      _comment = comment;
+    }
+
+    @Override protected NumberSequenceFloat parse(String input) throws IllegalArgumentException {
+      try {
+        return NumberSequenceFloat.parse(input, _multiplicative, _defaultStep);
+      } catch( NumberFormatException e) {
+        throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      }
+    }
+
+    @Override
+    protected NumberSequenceFloat defaultValue() {
+      return _fVal;
     }
 
     @Override

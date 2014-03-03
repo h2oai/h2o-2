@@ -30,6 +30,9 @@ public class AUC extends Request2 {
   public Vec vpredict;
   class predictVecSelect extends VecClassSelect { predictVecSelect() { super("predict"); } }
 
+  @API(help = "Thresholds (optional, e.g. 0:1:0.01 or 0.0,0.2,0.4,0.6,0.8,1.0).", required = false, filter = Default.class, json = true)
+  public float[] thresholds;
+
   @API(help="domain of the actual response")
   private String [] actual_domain;
   @API(help="AUC")
@@ -39,8 +42,6 @@ public class AUC extends Request2 {
   @API(help="Threshold for max. F1")
   private float best_thresholdF1;
 
-  //helper
-  private int idx_bestF1;
 
   public double AUC() { return auc; }
   public double err() { return _cms[idx_bestF1].err(); }
@@ -49,10 +50,11 @@ public class AUC extends Request2 {
   public int best_idxF1() { return idx_bestF1; }
   public float best_thresholdF1() { return best_thresholdF1; }
 
-  /* Helper */ private float[] _thresh;
-  /* Helper */ private double[] _tprs;
-  /* Helper */ private double[] _fprs;
-  /* Helper */ private hex.ConfusionMatrix[] _cms;
+  /* Helpers */
+  private int idx_bestF1;
+  private double[] _tprs;
+  private double[] _fprs;
+  private hex.ConfusionMatrix[] _cms;
 
   @Override public Response serve() {
     Vec va = null, vp;
@@ -75,21 +77,23 @@ public class AUC extends Request2 {
         vp = va.align(vp);
       }
 
-      // make thresholds
-      HashSet hs = new HashSet();
-      final int bins = (int)Math.min(vpredict.length(), 200l);
-      final long stride = Math.max(vpredict.length() / bins, 1);
-      for( int i=0; i<bins; ++i) hs.add(new Float(vpredict.at(i*stride))); //data-driven thresholds TODO: use percentiles (from Summary2?)
-      for (int i=0;i<51;++i) hs.add(new Float(i/50.)); //always add 0.02-spaced thresholds from 0 to 1
+      // make thresholds, if not user-given
+      if (thresholds == null) {
+        HashSet hs = new HashSet();
+        final int bins = (int)Math.min(vpredict.length(), 200l);
+        final long stride = Math.max(vpredict.length() / bins, 1);
+        for( int i=0; i<bins; ++i) hs.add(new Float(vpredict.at(i*stride))); //data-driven thresholds TODO: use percentiles (from Summary2?)
+        for (int i=0;i<51;++i) hs.add(new Float(i/50.)); //always add 0.02-spaced thresholds from 0 to 1
 
-      // created sorted vector of unique thresholds
-      _thresh = new float[hs.size()];
-      int i=0;
-      for (Object h : hs) {_thresh[i++] = (Float)h; }
-      sort(_thresh);
+        // created sorted vector of unique thresholds
+        thresholds = new float[hs.size()];
+        int i=0;
+        for (Object h : hs) {thresholds[i++] = (Float)h; }
+        sort(thresholds);
+      }
 
       // compute AUC, CMs, and best threshold
-      AUCTask at = new AUCTask(_thresh).doAll(va,vp);
+      AUCTask at = new AUCTask(thresholds).doAll(va,vp);
       _cms = at.getCMs();
       idx_bestF1 = at.getBestIdxF1();
       _tprs = at.getTPRs();
@@ -144,7 +148,7 @@ public class AUC extends Request2 {
     sb.append("</script>\n");
     sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
     for(int i = 0; i < _cms.length; ++i)
-      sb.append("\t<option value='" + i + "'" + (_thresh[i] == best_thresholdF1()?"selected='selected'":"") +">" + _thresh[i] + "</option>\n");
+      sb.append("\t<option value='" + i + "'" + (thresholds[i] == best_thresholdF1()?"selected='selected'":"") +">" + thresholds[i] + "</option>\n");
     sb.append("</select>\n");
     sb.append("</div>");
     return true;
