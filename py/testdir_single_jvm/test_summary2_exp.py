@@ -162,7 +162,8 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (rowCount, colCount, hex_key, expectedMin, expectedMax, expected) in tryList:
+        # rangeMin and rangeMax are not used right now
+        for (rowCount, colCount, hex_key, rangeMin, rangeMax, expected) in tryList:
             h2o.beta_features = False
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
