@@ -381,8 +381,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // ----
     // Move rows into the final leaf rows
     Timer t_4 = new Timer();
-    new CollectPreds(ktrees,leafs).doAll(fr,build_tree_per_node);
+    CollectPreds cp = new CollectPreds(ktrees,leafs).doAll(fr,build_tree_per_node);
     Log.debug(Sys.DRF__, "CollectPreds done: " + t_4);
+    System.err.println("Tree: " + tid + ": " + cp.rightVotes + "/" + cp.allRows);
 
     // Collect leaves stats
     for (int i=0; i<ktrees.length; i++)
@@ -411,24 +412,33 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
   // Collect and write predictions into leafs.
   private class CollectPreds extends MRTask2<CollectPreds> {
-    final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
+    /* @IN  */ final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
+    /* @OUT */ long rightVotes; // number of right votes over OOB rows (performed by this tree)
+    /* @OUT */ long allRows;    // number of all OOB rows (sampled by this tree)
     CollectPreds(DTree trees[], int leafs[]) { _trees=trees; }
     @Override public void map( Chunk[] chks ) {
-      // For all tree/klasses
-      for( int k=0; k<_nclass; k++ ) {
-        final DTree tree = _trees[k];
-        if( tree == null ) continue; // Empty class is ignored
-        // If we have all constant responses, then we do not split even the
-        // root and the residuals should be zero.
-        if( tree.root() instanceof LeafNode ) continue;
-        final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
-        final Chunk ct   = chk_tree(chks,k);
-        final Chunk oobt = chk_oobt(chks); // out-of-bag tree counter
-        for( int row=0; row<nids._len; row++ ) { // For all rows
+      final Chunk    y       = importance ? chk_resp(chks) : null; // Response
+      final float [] rpred   = importance ? new float [1+_nclass] : null; // Row prediction
+      final double[] rowdata = importance ? new double[_ncols] : null; // Pre-allocated row data
+      final Chunk   oobt  = chk_oobt(chks); // Out-of-bag rows counter over all trees
+      // Iterate over all rows
+      for( int row=0; row<oobt._len; row++ ) {
+        boolean wasOOBRow = false;
+        // For all tree (i.e., k-classes)
+        for( int k=0; k<_nclass; k++ ) {
+          final DTree tree = _trees[k];
+          if( tree == null ) { System.err.println("ROW SKIPPED: " + (row));continue; } // Empty class is ignored
+          // If we have all constant responses, then we do not split even the
+          // root and the residuals should be zero.
+          if( tree.root() instanceof LeafNode ) {System.err.println("XROW SKIPPED: " + row); continue; }
+          final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
+          final Chunk ct   = chk_tree(chks,k); // k-tree working column holding votes for given row
           int nid = (int)nids.at80(row);         // Get Node to decide from
           // Update only out-of-bag rows
           // This is out-of-bag row - but we would like to track on-the-fly prediction for the row
-          if( isOOBRow(nid) ) {
+          if( isOOBRow(nid) ) { // The row should be OOB for all k-trees !!!
+            assert k==0 || wasOOBRow : "Something is wrong: k-class trees oob row computing is broken! All k-trees should agree on oob row!";
+            wasOOBRow = true;
             nid = oob2Nid(nid);
             if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
               nid = tree.node(nid).pid();                 // Then take parent's decision
@@ -439,14 +449,29 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
             // Setup Tree(i) - on the fly prediction of i-tree for row-th row
             //   - for classification: cumulative number of votes for this row
             //   - for regression: cumulative sum of prediction of each tree - has to be normalized by number of trees
-            ct.set0(row, (float)(ct.at0 (row) + ((LeafNode)tree.node(leafnid)).pred() ));
+            double prediction = ((LeafNode)tree.node(leafnid)).pred(); // Prediction for this k-class and this row
+            if (importance) rpred[1+k] = (float) prediction;
+            ct.set0(row, (float)(ct.at0(row) +  prediction));
             // For this tree this row is out-of-bag - i.e., a tree voted for this row
             oobt.set0(row, _nclass>1?1:oobt.at0(row)+1); // for regression track number of trees, for classification boolean flag is enough
           }
-          // reset help column
+          // reset help column for this row and this k-class
           nids.set0(row,0);
+        } /* end of k-trees iteration */
+        if (importance) {
+          if (wasOOBRow) {
+            int treePred = ModelUtils.getPrediction(rpred, data_row(chks,row, rowdata));
+            int actuPred = (int) y.at80(row);
+            System.err.println("OOB row: " + (oobt._start+row) + " : " + Arrays.toString(rowdata) + " tree/actu: " + treePred + "/" +actuPred);
+            if (treePred==actuPred) rightVotes++;
+            allRows++;
+          }
         }
       }
+    }
+    @Override public void reduce(CollectPreds mrt) {
+      rightVotes += mrt.rightVotes;
+      allRows    += mrt.allRows;
     }
   }
 
