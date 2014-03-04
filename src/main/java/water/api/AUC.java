@@ -40,12 +40,15 @@ public class AUC extends Request2 {
   public double F1;
   @API(help="Threshold for max. F1")
   private float threshold_maxF1;
+  @API(help="Confusion Matrix for best index.")
+  private long[][] cm;
 
   public double AUC() { return AUC; }
   public double Gini() { return 2*AUC-1; }
   public double F1() { return F1; }
   public double err() { return _cms[idx_bestF1].err(); }
   public float threshold_maxF1() { return threshold_maxF1; }
+  public long[][] cm() { return cm; }
 
   /* Helpers */
   private int idx_bestF1;
@@ -97,6 +100,7 @@ public class AUC extends Request2 {
       _fprs = at.getFPRs();
       AUC = at.getAUC();
       F1 = _cms[idx_bestF1].precisionAndRecall();
+      cm = _cms[idx_bestF1]._arr;
       threshold_maxF1 = at.getBestThresholdF1();
       return Response.done(this);
     } catch( Throwable t ) {
@@ -157,7 +161,7 @@ public class AUC extends Request2 {
     sb.append(", Gini: " + String.format("%5f", Gini()));
     sb.append(", F1: " + String.format("%5f", F1()));
     sb.append(", Best threshold for F1: " + String.format("%g", threshold_maxF1()));
-    sb.append(", Classification Error: " + String.format("%5", err()));
+    sb.append(", Classification Error: " + String.format("%5f", err()));
     return AUC();
   }
 
