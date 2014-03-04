@@ -87,9 +87,9 @@ public class NNModel extends Model {
       StringBuilder sb = new StringBuilder();
       if (classification) {
         sb.append("Error on training data (misclassification): " + String.format("%.2f", 100*train_err) + "%");
-        if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.auc) + "%");
+        if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
         if (validation) sb.append("\nError on validation data (misclassification): " + String.format("%.2f", (100 * valid_err)) + "%");
-        if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.auc) + "%");
+        if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else {
         sb.append("Error on training data (MSE): " + train_mse);
         if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
