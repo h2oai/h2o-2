@@ -20,7 +20,6 @@ public class ToEnum extends Request {
   public static class CollectIntDomain extends MRTask<CollectIntDomain> {
     final int _col;
     int [] _dom;
-    int _n;
 
     public CollectIntDomain(int col){_col = col;}
 
@@ -44,29 +43,28 @@ public class ToEnum extends Request {
           ++n;
         }
       }
-      _n = n;
       _dom = Arrays.copyOf(dom,n);
     }
     public void reduce(CollectIntDomain other){
       if(_dom == null)_dom = other._dom;
       else if(other._dom != null && !Arrays.equals(_dom,other._dom)){
         // merge sort the domains
-        int [] res = new int[_n + other._n];
+        int [] res = new int[_dom.length + other._dom.length];
         Arrays.fill(res,Integer.MAX_VALUE);
         int i = 0, j = 0, k = 0;
-        while(i < _n && j < other._n){
+        while(i < _dom.length && j < other._dom.length){
           if(_dom[i] < other._dom[j])res[k++] = _dom[i++];
           else if(_dom[i] == other._dom[j]){
             res[k++] = _dom[i++];j++;
           } else
             res[k++] = other._dom[j++];
         }
-        assert (i == _dom.length || j == _dom.length);
+        assert (i == _dom.length || j == other._dom.length);
         for(int ii = i; ii < _dom.length; ++ii)
           res[k++] = _dom[ii];
-        for(int jj = j; jj < _dom.length; ++jj)
-          res[k++] = _dom[jj];
-        _dom = res;
+        for(int jj = j; jj < other._dom.length; ++jj)
+          res[k++] = other._dom[jj];
+        _dom = Arrays.copyOf(res,k);
       }
     }
   }
@@ -129,14 +127,18 @@ public class ToEnum extends Request {
             for(int i = 0; i < strdom.length; ++i)
               strdom[i] = String.valueOf(dom[i]);
             col._domain = strdom;
-
+            col._min = 0;
+            col._max = strdom.length-1;
           } else {
             String [] strdom = ary._cols[column_index]._domain;
             dom = new int[strdom.length];
             for(int i = 0; i < dom.length; ++i)
               dom[i] = Integer.valueOf(strdom[i]);
             col._domain = null;
+            col._min = dom[0];
+            col._max = dom[dom.length-1];
           }
+          System.out.println("domain = " + Arrays.toString(dom));
           EnumIntSwapTask etsk = new EnumIntSwapTask(column_index,dom,true);
           etsk.invoke(key);
           col._base = to_enum?0:dom[0];
