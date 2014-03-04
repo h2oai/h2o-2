@@ -154,6 +154,7 @@ public class AUC extends Request2 {
   }
 
   public double toASCII( StringBuilder sb ) {
+    sb.append(_cms[idx_bestF1].toString());
     sb.append("AUC: " + String.format("%5f", AUC()));
     sb.append(", Gini: " + String.format("%5f", Gini()));
     sb.append(", F1: " + String.format("%5f", F1()));
