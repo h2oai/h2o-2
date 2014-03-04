@@ -16,8 +16,8 @@ ifeq ($(SBT),$(TRUE))
 endif
 
 build: init
-	$(D) $(SBT) package
+	$(D) "$(SBT)" package
 
 clean: init
-	$(D) $(SBT) clean
+	$(D) "$(SBT)" clean
 
