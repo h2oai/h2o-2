@@ -287,43 +287,4 @@ public class MRUtils {
 
     return r;
   }
-
-
-  /**
-   * Correct probabilities obtained from training on oversampled data back to original distribution
-   * C.f. http://gking.harvard.edu/files/0s.pdf Eq.(27)
-   * @param fr Frame containing one label and C per-class probabilities (to be modified in-place)
-   * @param prior_fraction Prior per-class fractions (original data)
-   * @param model_fraction Modeled per-class fractions (after class rebalancing via over/under-sampling)
-   */
-  public static void correctProbabilities(final Frame fr, final float[] prior_fraction, final float[] model_fraction) {
-    if (prior_fraction == null || model_fraction == null) return;
-    assert(prior_fraction != null && model_fraction != null);
-    assert(prior_fraction.length == model_fraction.length);
-    assert(fr.numCols() == 1+prior_fraction.length); //first col: label, remaining cols: probs
-
-    new MRTask2() {
-      @Override
-      public void map(Chunk[] cs) {
-        for (int r = 0; r < cs[0]._len; r++) {
-          double[] probs = new double[cs.length-1];
-          for (int i = 0; i < cs.length-1; i++) {
-            final double scoring_result = cs[i+1].at0(r);
-            assert(!Double.isNaN(scoring_result));
-            final double original_fraction = prior_fraction[i];
-            assert(original_fraction > 0);
-            final double oversampled_fraction = model_fraction[i];
-            assert(oversampled_fraction > 0);
-            probs[i] = scoring_result * original_fraction / oversampled_fraction;
-            assert(!Double.isNaN(probs[i]));
-          }
-          final double probsum = Utils.sum(probs);
-          for (int i = 0; i < cs.length-1; i++) {
-            cs[i+1].set0(r, probs[i]/probsum);
-          }
-        }
-      }
-    }.doAll(fr);
-  }
-
 }
