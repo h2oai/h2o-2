@@ -118,9 +118,9 @@ public class AUC extends Request2 {
     sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold for max. F1</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>"
-            + String.format("%5f", AUC()) + "</td><td>"
-            + String.format("%5f", Gini()) + "</td><td>"
-            + String.format("%5f", F1()) + "</td><td>"
+            + String.format("%.5f", AUC()) + "</td><td>"
+            + String.format("%.5f", Gini()) + "</td><td>"
+            + String.format("%.5f", F1()) + "</td><td>"
             + String.format("%g", threshold_maxF1()) + "</td>"
     );
     sb.append("</tr>");
@@ -157,11 +157,11 @@ public class AUC extends Request2 {
 
   public double toASCII( StringBuilder sb ) {
     sb.append(_cms[idx_bestF1].toString());
-    sb.append("AUC: " + String.format("%5f", AUC()));
-    sb.append(", Gini: " + String.format("%5f", Gini()));
-    sb.append(", F1: " + String.format("%5f", F1()));
+    sb.append("AUC: " + String.format("%.5f", AUC()));
+    sb.append(", Gini: " + String.format("%.5f", Gini()));
+    sb.append(", F1: " + String.format("%.5f", F1()));
     sb.append(", Best threshold for F1: " + String.format("%g", threshold_maxF1()));
-    sb.append(", Classification Error: " + String.format("%5f", err()));
+    sb.append(", Classification Error: " + String.format("%.5f", err()));
     return AUC();
   }
 
