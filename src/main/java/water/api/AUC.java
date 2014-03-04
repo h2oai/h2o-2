@@ -161,7 +161,7 @@ public class AUC extends Request2 {
     sb.append(", Gini: " + String.format("%5f", Gini()));
     sb.append(", F1: " + String.format("%5f", F1()));
     sb.append(", Best threshold for F1: " + String.format("%g", threshold_maxF1()));
-    sb.append(", Classification Error: " + String.format("%5", err()));
+    sb.append(", Classification Error: " + String.format("%5f", err()));
     return AUC();
   }
 
