@@ -35,19 +35,17 @@ public class AUC extends Request2 {
   @API(help="domain of the actual response")
   private String [] actual_domain;
   @API(help="AUC")
-  public double auc;
+  public double AUC;
   @API(help="F1")
-  public double f1;
+  public double F1;
   @API(help="Threshold for max. F1")
-  private float best_thresholdF1;
+  private float threshold_maxF1;
 
-
-  public double AUC() { return auc; }
+  public double AUC() { return AUC; }
+  public double Gini() { return 2*AUC-1; }
+  public double F1() { return F1; }
   public double err() { return _cms[idx_bestF1].err(); }
-  public double F1() { return f1; }
-  public double Gini() { return 2*auc-1; }
-  public int best_idxF1() { return idx_bestF1; }
-  public float best_thresholdF1() { return best_thresholdF1; }
+  public float threshold_maxF1() { return threshold_maxF1; }
 
   /* Helpers */
   private int idx_bestF1;
@@ -97,9 +95,9 @@ public class AUC extends Request2 {
       idx_bestF1 = at.getBestIdxF1();
       _tprs = at.getTPRs();
       _fprs = at.getFPRs();
-      auc = at.getAUC();
-      f1 = _cms[idx_bestF1].precisionAndRecall();
-      best_thresholdF1 = at.getBestThresholdF1();
+      AUC = at.getAUC();
+      F1 = _cms[idx_bestF1].precisionAndRecall();
+      threshold_maxF1 = at.getBestThresholdF1();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -119,7 +117,7 @@ public class AUC extends Request2 {
             + String.format("%5f", AUC()) + "</td><td>"
             + String.format("%5f", Gini()) + "</td><td>"
             + String.format("%5f", F1()) + "</td><td>"
-            + String.format("%g", best_thresholdF1()) + "</td>"
+            + String.format("%g", threshold_maxF1()) + "</td>"
     );
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
@@ -147,7 +145,7 @@ public class AUC extends Request2 {
     sb.append("</script>\n");
     sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
     for(int i = 0; i < _cms.length; ++i)
-      sb.append("\t<option value='" + i + "'" + (thresholds[i] == best_thresholdF1()?"selected='selected'":"") +">" + thresholds[i] + "</option>\n");
+      sb.append("\t<option value='" + i + "'" + (thresholds[i] == threshold_maxF1()?"selected='selected'":"") +">" + thresholds[i] + "</option>\n");
     sb.append("</select>\n");
     sb.append("</div>");
     return true;
@@ -158,7 +156,8 @@ public class AUC extends Request2 {
     sb.append("AUC: " + String.format("%5f", AUC()));
     sb.append(", Gini: " + String.format("%5f", Gini()));
     sb.append(", F1: " + String.format("%5f", F1()));
-    sb.append(", Best threshold for F1: " + String.format("%g", best_thresholdF1()));
+    sb.append(", Best threshold for F1: " + String.format("%g", threshold_maxF1()));
+    sb.append(", Classification Error: " + String.format("%5", err()));
     return AUC();
   }
 
