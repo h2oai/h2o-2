@@ -258,8 +258,8 @@ public class AUC extends Request2 {
                     "  }\n"+
                     "})\n" +
                     ".on(\"mouseover\", function(d,i){\n" +
-                    "   if(i <= 100) {" +
-                    "     document.getElementById(\"select\").selectedIndex = 100 - i\n" +
+                    "   if(i <= " + _fprs.length + ") {" +
+                    "     document.getElementById(\"select\").selectedIndex = " + _fprs.length + " - i\n" +
                     "     show_cm(i)\n" +
                     "   }\n" +
                     "});\n"+
