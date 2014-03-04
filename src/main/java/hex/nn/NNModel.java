@@ -720,7 +720,7 @@ public class NNModel extends Model {
     }
     final long time_so_far = System.currentTimeMillis() - model_info.parameters.start_time;
     DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(time_so_far, true));
-    if (!model_info.get_params().isDone())
+    if (progress > 0 && !model_info.get_params().isDone())
       DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(time_so_far*(1-progress)/progress), true));
 
     long score_train = error.score_training_samples;
