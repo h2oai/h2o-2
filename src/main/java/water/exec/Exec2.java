@@ -21,39 +21,37 @@ public class Exec2 {
 
   // Grammar:
   //   statements := cxexpr ; statements
-  //   cxexpr :=                   // COMPLEX expr 
-  //           iexpr               // Simple RHS-expr
-  //           id = cxexpr         // Shadows outer var with a ptr assignment; no copy, read-only
-  //                               // Overwrites inner var; types must match.
-  //           id := cxexpr        // Deep-copy writable temp; otherwise same as above
-  //           id[] = cxexpr       // Only for writable temps; slice assignment
-  //           id[] := cxexpr      // Deep-copy, then slice assignment
+  //   cxexpr :=                    // COMPLEX expr 
+  //           infix_expr           // Simple RHS-expr
+  //           id = cxexpr          // Shadows outer var with a ptr assignment; no copy
+  //                                // Overwrites inner var; types must match.
+  //           id <- cxexpr         // Alternative R syntax for assignment
+  //           id[] = cxexpr        // Slice/partial assignment; id already exists
   //           iexpr ? cxexpr : cxexpr  // exprs must have equal types
-  //   iexpr := 
-  //           term {op2 term}*  // Infix notation, evals LEFT TO RIGHT
-  //   term  :=
-  //           op1* slice
+  //   infix_expr :=                // Leading infix expression
+  //           op1 infix_expr term* // +x but also e.g. ++--!+-!-++!3 
+  //           op1?  slice term*    // e.g. cos() or -sin(foo) or -+-fun()[1,2]
+  //   term : =                     // Infix expression
+  //           op2 infix_expr       // Standard R operator prec ordering
   //   slice :=
-  //           expr                // Can be a dbl or fcn or ary
-  //           expr[]              // whole ary val
-  //           expr[,]             // whole ary val
-  //           expr[cxexpr,cxexpr] // row & col ary slice (row FIRST, col SECOND)
-  //           expr[,cxexpr]       // col-only ary slice
-  //           expr[cxexpr,]       // row-only ary slice
-  //   expr :=
+  //           prefix_expr          // No slicing
+  //           prefix_expr[]        // Whole slice
+  //           prefix_expr[cxexpr?,cxexpr?] // optional row & col slicing
+  //   prefix_expr :=
   //           val
-  //           val(cxexpr,...)*    // Prefix function application, evals LEFT TO RIGHT
+  //           val(cxexpr,...)*     // Prefix function application, evals LEFT TO RIGHT
   //   val :=
-  //           ( cxexpr )          // Ordering evaluation
-  //           { statements }      // compound statement
-  //           id                  // any visible var; will be typed
-  //           num                 // Scalars, treated as 1x1
-  //           op                  // Built-in functions
+  //           ( cxexpr )           // Ordering evaluation
+  //           id                   // any visible var; will be typed
+  //           num                  // Scalars, treated as 1x1
+  //           op                   // Built-in functions
   //           function(v0,v1,v2) { statements; ...v0,v1,v2... } // 1st-class lexically scoped functions
-  //   op  := sgn sin cos ...any unary op...
-  //   op  := min max + - * / % & |    ...any boolean op...
-  //   op  := c // R's "c" operator, returns a Nx1 array
-  //   op  := ary byCol(ary,dbl op2(dbl,dbl))
+  //           function(v0,v1,v2) statement // Single statement variant
+  //   op1 := + - !                 // Unary operators allowed w/out parens prefix location
+  //   op2 := + - * / % & | <= > >= !=  ... // Binary operators allowed w/out parens infix location
+  //   op  := sgn sin cos nrow ncol isNA sqrt isTRUE year month day ...
+  //   op  := min max sum sdev mean  ...
+  //   op  := c cbind seq quantile table ...  // Various R operators
 
   public static Env exec( String str ) throws IllegalArgumentException {
     cluster_init();
@@ -136,26 +134,42 @@ public class Exec2 {
   // Generic parsing functions
   // --------------------------------------------------------------------------
 
-  void skipWS() {
-    while( _x < _buf.length && _buf[_x] <= ' ' )  _x++;
+  void skipWS() { skipWS(false); }
+  void skipWS( boolean EOS) {
+    while( _x < _buf.length && isWS(_buf[_x]) && (!EOS || _buf[_x]!='\n') )  _x++;
   }
   // Skip whitespace.
   // If c is the next char, eat it & return true
   // Else return false.
-  boolean peek(char c) {
-    if( _x ==_buf.length ) return false;
-    while( _buf[_x] <= ' ' )
-      if( ++_x ==_buf.length ) return false;
-    if( _buf[_x]!=c ) return false;
-    _x++;
+  boolean peek(char c) { return peek(c,false); }
+  // Peek for 'c' past whitespace but not past a newline if EOS is set
+  // (basically treat newline as the statement-end character ';' which does not
+  // match c)
+  boolean peek(char c, boolean EOS) {
+    char d;
+    while( _x < _buf.length && isWS(_buf[_x]) && _buf[_x]!='\n' ) _x++;
+    int nx=_x;
+    if( !EOS ) while( nx < _buf.length && isWS(_buf[nx]) ) nx++;
+    if( nx==_buf.length || _buf[nx]!=c ) return false;
+    _x=nx+1;
     return true;
   }
-  // Same as peek, but throw if char not found  
-  AST xpeek(char c, int x, AST ast) { return peek(c) ? ast : throwErr("Missing '"+c+"'",x); }
+  // Same as peek, but throw if char not found.  Always newlines are treated as whitespace
+  AST xpeek(char c, int x, AST ast) { return peek(c,false) ? ast : throwErr("Missing '"+c+"'",x); }
+
+  // True if end-of-statement (';' or '\n' or no-more-data)
+  boolean peekEOS() {
+    while( _x < _buf.length ) {
+      char d = _buf[_x++];
+      if( d==';' || d=='\n' ) return true;
+      if( !isWS(d) ) { _x--; return false; }
+    }
+    return false;
+  }
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
-  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';'; }
+  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';' || c=='$'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
     return c=='.' || c==':' || c=='\\' || isDigit(c) || isLetter(c);
@@ -166,7 +180,6 @@ public class Exec2 {
   // Valid IDs: + - <=  > ! [ ] joe123 ABC
   // Invalid  : +++ 0joe ( = ) 123.45 1e3
   String isID() {
-    skipWS();
     if( _x>=_buf.length ) return null; // No characters to parse
     char c = _buf[_x];
     // Fail on special chars in the grammar
@@ -193,7 +206,7 @@ public class Exec2 {
     }
     if( c=='<' && c2=='-' ) { _x--; return null; } // The other assignment operator
     // Must accept as single letters to avoid ambiguity
-    if( c=='+' || c=='-' ) return _str.substring(_x-1,_x);
+    if( c=='+' || c=='-' || c=='*' || c=='/' ) return _str.substring(_x-1,_x);
     // One letter look ahead to decide on what to accept
     if( c=='=' || c=='!' || c=='<' || c =='>' )
       if ( c2 =='=' ) return _str.substring(++_x-2,_x);

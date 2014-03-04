@@ -1083,7 +1083,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response,
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False):
+        noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -1934,6 +1934,20 @@ class H2O(object):
         verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
         return a
 
+    def generate_auc(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'thresholds': None,
+            'actual': None,
+            'vactual': 'predict',
+            'predict': None,
+            'vpredict': 'predict',
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'auc', print_params)
+        a = self.__do_json_request('2/AUC.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nauc result:", dump_json(a))
+        return a
+
+
 
     def random_forest_treeview(self, tree_number, data_key, model_key,
         timeoutSecs=10, ignoreH2oError=False, **kwargs):
@@ -2199,7 +2213,8 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': 1000
+                'max_ncols': 1000,
+                'max_qbins': None,
                 }
         else:
             params_dict = {

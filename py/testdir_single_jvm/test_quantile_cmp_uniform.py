@@ -4,6 +4,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util
 import h2o_print as h2p, h2o_exec as h2e
 
 DO_TRY_SCIPY = False
+if  getpass.getuser() == 'kevin': 
+    DO_TRY_SCIPY = True
 
 print "This test will try to compare exec quantiles to summary2 quantiles"
 def twoDecimals(l): 
@@ -14,9 +16,9 @@ def twoDecimals(l):
 
 # have to match the csv file?
 # dtype=['string', 'float');
-thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
 
-def generate_scipy_comparison(csvPathname, dtype):
+def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -102,8 +104,8 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (1000000, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
-            (1000000, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
+            (5000000, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
+            (5000000, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
             (1000000, 1, 'x.hex', -100000, 100000, ('C1',  -100001.0, -50000.0, 1613.0, 50000.0, 100000.0)),
             (1000000, 1, 'x.hex', -1, 1,           ('C1',  -1.05, -0.48, 0.0087, 0.50, 1.00)),
 
@@ -141,6 +143,7 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
             h2o.beta_features = False
+            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -183,7 +186,7 @@ class Basic(unittest.TestCase):
 
             pct = stats['pct']
             # the thresholds h2o used, should match what we expected
-            expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+            expectedPct = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
 
             pctile = stats['pctile']
             h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxDelta, msg='25th percentile is not approx. expected')
@@ -236,11 +239,10 @@ class Basic(unittest.TestCase):
                 h2p.green_print("\nresultExec: %s" % h2o.dump_json(resultExec))
                 ex = twoDecimals(result)
                 h2p.blue_print("\nthreshold: %.2f Exec quantile: %s Summary2: %s" % (trial, ex, pt[i]))
-                h2o_util.assertApproxEqual(result, pctile[i], tol=maxDelta, msg='threshold: %s percentile is not expected' % thresholds)
+                h2o_util.assertApproxEqual(result, pctile[i], tol=maxDelta, msg='percentile: % is not expected: %s' % (result, pctile[i]))
 
             if DO_TRY_SCIPY:
-                csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
-                generate_scipy_comparison(csvPathname1, dtype=dtype)
+                generate_scipy_comparison(csvPathnameFull)
 
 if __name__ == '__main__':
     h2o.unit_main()

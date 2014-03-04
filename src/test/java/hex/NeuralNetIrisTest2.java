@@ -9,7 +9,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
-import water.Model;
 import water.TestUtil;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
@@ -60,8 +59,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
       double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
       double[] holdout_ratios = { 0.1 + new Random().nextDouble() * 0.8 };
       double[] momenta = { new Random().nextDouble() * 0.99 };
-      int[] hiddens = { 1, new Random().nextInt(50) };
-      int[] epochs = { 1, new Random().nextInt(50) };
+      int[] hiddens = { 1, 2 + new Random().nextInt(50) };
+      int[] epochs = { 1, 2 + new Random().nextInt(50) };
       double[] rates = { 0.01, 1e-5 + new Random().nextDouble() * .1 };
 
       int num_runs = 0;
@@ -267,8 +266,10 @@ public class NeuralNetIrisTest2 extends TestUtil {
                          */
                         final double trainErr = ref._nn.Accuracy(ref._trainData);
                         final double testErr = ref._nn.Accuracy(ref._testData);
-                        final double myTrainErr = mymodel.calcError(_train, "Final training error:", true, null);
-                        final double myTestErr = mymodel.calcError(_test,  "Final testing error:",  true, null);
+                        final Frame trainPredict = mymodel.score(_train, false);
+                        final double myTrainErr = mymodel.calcError(_train, trainPredict, "Final training error:", true, null, null);
+                        final Frame testPredict = mymodel.score(_test, false);
+                        final double myTestErr = mymodel.calcError(_test, testPredict, "Final testing error:",  true, null, null);
                         Log.info("H2O  training error : " + myTrainErr*100 + "%, test error: " + myTestErr*100 + "%");
                         Log.info("REF  training error : " + trainErr*100 + "%, test error: " + testErr*100 + "%");
                         compareVal(trainErr, myTrainErr, abseps, releps);
@@ -282,6 +283,8 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         frame.delete();
                         fr.delete();
                         p.delete();
+                        trainPredict.delete();
+                        testPredict.delete();
 
                         num_runs++;
                         Log.info("Parameters combination " + num_runs + ": PASS");

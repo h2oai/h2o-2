@@ -90,6 +90,7 @@ public class GBMTest extends TestUtil {
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.validation = validation ? new Frame(gbm.source) : null;
       gbm.learn_rate = .2f;
+      gbm.score_each_iteration=true;
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
       //System.out.println(gbmmodel.toJava());

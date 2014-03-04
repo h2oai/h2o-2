@@ -22,6 +22,7 @@ public class TreeVotes extends MRTask2<TreeVotes> {
   /* @IN */ final private TreeModel _tmodel; // Pased over wire !!!
   /* @IN */ final private int       _var;
   /* @IN */ final private boolean   _oob;
+  /* @IN */ final private int       _ncols;
 
   /* @OUT */ private long[]   _treeCVotes; // Number of correct votes per tree
   /* @OUT */ private long[]   _nrows;      // Number of scored row per tree
@@ -65,15 +66,15 @@ public class TreeVotes extends MRTask2<TreeVotes> {
     return new double[] { av, csd};
   }
 
-  TreeVotes(TreeModel tmodel, float rate, int variable) { _tmodel = tmodel; _rate = rate; _var = variable; _oob = true; }
+  TreeVotes(TreeModel tmodel, int ncols, float rate, int variable) { _tmodel = tmodel; _ncols = ncols; _rate = rate; _var = variable; _oob = true; }
 
   @Override public void map(Chunk[] chks) {
     int ntrees = _tmodel.numTrees();
-    double[] data = new double[chks.length-1];
+    double[] data = new double[_ncols];
     float [] preds = new float[_tmodel.nclasses()+1];
     Chunk cresp = chk_resp(chks);
     int   nrows = cresp._len;
-    int   [] oob = new int[(int)((1f-_rate)*nrows*1.2f)];
+    int   [] oob = new int[1+(int)((1f-_rate)*nrows*1.2f)];
     int   [] soob = null;
 
     // prepare output data
@@ -84,33 +85,32 @@ public class TreeVotes extends MRTask2<TreeVotes> {
       // OOB RNG for this tree
       Random rng = rngForTree(_tmodel.treeBits[tidx], cresp.cidx());
       // Collect oob rows and permutate them
-      int oobcnt = 0; // Number of oob rows
-      Arrays.fill(oob, 0);
-      for(int row = 0; row < nrows; row++) {
-        if (rng.nextFloat()>=_rate) { // it is out-of-bag row
-          oob[oobcnt++] = row;
-          if (oobcnt>=oob.length) oob = Arrays.copyOf(oob, (int)(1.2f*oob.length));
-        }
+      oob = ModelUtils.sampleOOBRows(nrows, _rate, rng);
+      int oobcnt = oob[0]; // Get number of sample rows
+      if (_var>=0) {
+        if (soob==null || soob.length < oobcnt) soob = new int[oobcnt];
+        Utils.shuffleArray(oob, oobcnt, soob, seedForOob, 1); // Shuffle array and copy results into <code>soob</code>
       }
-      if (soob==null || soob.length < oobcnt) soob = new int[oobcnt];
-      Utils.shuffleArray(oob, oobcnt, soob, seedForOob);
-      //System.err.println("-> " + cresp.cidx() + " : " + Arrays.toString(soob));
-      for(int row = 0; row < oobcnt; row++) {
+      for(int j = 1; j < 1+oobcnt; j++) {
+        int row = oob[j];
         // Do scoring:
         // - prepare a row data
-        for (int i=0;i<chks.length-1;i++) data[i] = chks[i].at0(oob[row]);
+        for (int i=0;i<_ncols;i++) data[i] = chks[i].at0(row); // 1+i - one free is expected by prediction
         // - permute variable
-        if (_var>=0) data[_var] = chks[_var].at0(soob[row]);
+        if (_var>=0) data[_var] = chks[_var].at0(soob[j-1]);
+        else assert soob==null;
         // - score data
         Arrays.fill(preds, 0);
         _tmodel.score0(data, preds, tidx);
         // - derive a prediction
         int pred = ModelUtils.getPrediction(preds, data);
+        int actu = (int) cresp.at80(row);
         // assert preds[pred] > 0 : "There should be a vote for at least one class.";
         // - collect only correct votes
-        if (pred==cresp.at80(row)) _treeCVotes[tidx]++;
+        if (pred == actu) _treeCVotes[tidx]++;
         // - collect rows which were used for voting
         _nrows[tidx]++;
+        //if (_var<0) System.err.println("VARIMP OOB row: " + (cresp._start+row) + " : " + Arrays.toString(data) + " tree/actu: " + pred + "/" + actu);
       }
     }
   }
@@ -132,25 +132,23 @@ public class TreeVotes extends MRTask2<TreeVotes> {
         .append("]");
     return builder.toString();
   }
-  static Chunk chk_resp( Chunk chks[] ) { return chks[chks.length-1]; }
-  static Vec   vec_resp( Frame f      ) { return f.vecs()[f.vecs().length-1]; }
+  private Chunk chk_resp( Chunk chks[] ) { return chks[_ncols]; }
 
   private Random rngForTree(CompressedTree[] ts, int cidx) {
     return _oob ? ts[0].rngForChunk(cidx) : new DummyRandom(); // k-class set of trees shares the same random number
   }
 
-  public static TreeVotes varimp(TreeModel tmodel, Frame f, float rate, int variable) {
-    Frame todelete = new Frame();
-    try {
-      Frame ff = new Frame(f);
-      Vec   fr = ff.remove(ff.numCols()-1);
-      Vec  efr = fr.toEnum();
-      ff.add("__response__", efr);
-      todelete.add("__response__", efr);
-      return new TreeVotes(tmodel, rate, variable).doAll(ff);
-    } finally {
-      todelete.delete();
-    }
+  /**
+   *
+   * @param tmodel
+   * @param f     input frame (should be already adapted to a model) - ncols-features + response
+   * @param ncols number of features
+   * @param rate
+   * @param variable
+   * @return
+   */
+  public static TreeVotes varimp(TreeModel tmodel, Frame f, int ncols, float rate, int variable) {
+    return new TreeVotes(tmodel, ncols, rate, variable).doAll(f);
   }
 
   private static final class DummyRandom extends Random {

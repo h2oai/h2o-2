@@ -17,7 +17,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
       cat("\nH2O is not running yet, starting it now...\n")
       .h2o.startJar(Xmx, beta)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
-      if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
+      if(!url.exists(myURL)) stop("H2O failed to start, stopping execution")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }
   cat("Successfully connected to", myURL, "\n")
@@ -50,8 +50,6 @@ h2o.shutdown <- function(client, prompt = TRUE) {
 }
 
 # ----------------------- Diagnostics ----------------------- #
-
-
 # **** TODO: This isn't really a cluster status... it's a node status check for the node we're connected to.
 # This is possibly confusing because this can come back without warning,
 # but if a user tries to do any remoteSend, they will get a "cloud sick warning"
@@ -81,7 +79,6 @@ h2o.clusterStatus <- function(client) {
   temp = data.frame(t(sapply(res$nodes, c)))
   return(temp[,cnames])
 }
-
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
@@ -173,14 +170,24 @@ h2o.clusterStatus <- function(client) {
 # }
 
 .h2o.startJar <- function(memory = "1g", beta=F) {
-  command <- Sys.which("java")
+  command <- .h2o.checkJava()
+  command <- paste('"', command, '"', sep = "")
+  
   #
   # TODO: tmp files should be user-independent
   #
-  
   # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
   if(.Platform$OS.type == "windows") {
-    tmp_path <- paste("C:", "TMP", sep = .Platform$file.sep)
+    default_path <- paste("C:", "TMP", sep = .Platform$file.sep)
+    if(file.exists(default_path))
+      tmp_path <- default_path
+    else if(file.exists(paste("C:", "TEMP", sep = .Platform$file.sep)))
+      tmp_path <- paste("C:", "TEMP", sep = .Platform$file.sep)
+    else if(file.exists(Sys.getenv("APPDATA")))
+      tmp_path <- Sys.getenv("APPDATA")
+    else
+      stop("Error: Cannot log Java output. Please create the directory ", default_path, ", ensure it is writable, and re-initialize H2O")
+    
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
     stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
     stderr <- paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
@@ -215,6 +222,39 @@ h2o.clusterStatus <- function(client) {
     stop(sprintf("Failed to exec %s with return code=%s", jar_file, as.character(rc)))
   }
   .startedH2O <<- TRUE
+}
+
+# This function returns the path to the Java executable if it exists
+# 1) Check for Java in user's PATH
+# 2) Check for JAVA_HOME environment variable
+# 3) If Windows, check standard install locations in Program Files folder. Warn if JRE found, but not JDK since H2O requires JDK to run.
+# 4) When all fails, stop and prompt user to download JDK from Oracle website.
+.h2o.checkJava <- function() {
+  if(nchar(Sys.which("java")) > 0)
+    return(Sys.which("java"))
+  else if(nchar(Sys.getenv("JAVA_HOME")) > 0)
+    return(paste(Sys.getenv("JAVA_HOME"), "bin", "java.exe", sep = .Platform$file.sep))
+  else if(.Platform$OS.type == "windows") {
+    # Note: Should we require the version (32/64-bit) of Java to be the same as the version of R?
+    prog_folder <- c("Program Files", "Program Files (x86)")
+    for(prog in prog_folder) {
+      prog_path <- paste("C:", prog, "Java", sep = .Platform$file.sep)
+      jdk_folder <- list.files(prog_path, pattern = "jdk")
+      
+      for(jdk in jdk_folder) {
+        path <- paste(prog_path, jdk, "bin", "java.exe", sep = .Platform$file.sep)
+        if(file.exists(path)) return(path)
+      }
+    }
+    
+    # Check for existence of JRE and warn user
+    for(prog in prog_folder) {
+      path <- paste("C:", prog, "Java", "jre7", "bin", "java.exe", sep = .Platform$file.sep)
+      if(file.exists(path)) warning("Found JRE at ", path, " but H2O requires the JDK to run.")
+    }
+  }
+  
+  stop("Cannot find Java. Please install the latest JDK from http://www.oracle.com/technetwork/java/javase/downloads/index.html")
 }
 
 #-------------------------------- Deprecated --------------------------------#

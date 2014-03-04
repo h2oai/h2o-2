@@ -226,20 +226,6 @@ public abstract class ASTOp extends AST {
     return ASTFunc.parseFcn(E);
   }
 
-  //// Parse a prefix OP or return null.
-  //static ASTOp parsePrefixOp(Exec2 E) {
-  //  int x = E._x;
-  //  String id = E.isID();
-  //  if( id == null ) return null;
-  //  ASTOp op = PREFIX_OPS.get(id);
-  //  if( op != null ) return op.make();
-  //  E._x = x;                 // Roll back, no parse happened
-  //  // Attempt a user-mode function parse
-  //  return ASTFunc.parseFcn(E);
-  //}
-
-  // Parse
-
   // Parse a unary infix OP or return null.
   static ASTOp parseUniInfixOp(Exec2 E) {
     int x = E._x;
@@ -1191,13 +1177,13 @@ class ASTIfElse extends ASTOp {
   @Override ASTOp make() {return new ASTIfElse();}
   @Override String opStr() { return "ifelse"; }
   // Parse an infix trinary ?: operator
-  static AST parse(Exec2 E, AST tst) {
-    if( !E.peek('?') ) return null;
+  static AST parse(Exec2 E, AST tst, boolean EOS) {
+    if( !E.peek('?',true) ) return null;
     int x=E._x;
-    AST tru=E.xpeek(':',E._x,parseCXExpr(E));
+    AST tru=E.xpeek(':',E._x,parseCXExpr(E,false));
     if( tru == null ) E.throwErr("Missing expression in trinary",x);
     x = E._x;
-    AST fal=parseCXExpr(E);
+    AST fal=parseCXExpr(E,EOS);
     if( fal == null ) E.throwErr("Missing expression in trinary",x);
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }

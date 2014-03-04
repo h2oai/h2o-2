@@ -17,7 +17,7 @@ import java.util.Arrays;
 
 public final class Gram extends Iced {
   final boolean _hasIntercept;
-  double[][] _xx;
+  public double[][] _xx;
   double[] _diag;
   final int _diagN;
   final int _denseN;
@@ -61,6 +61,14 @@ public final class Gram extends Iced {
       _xx[i][_xx[i].length - 1] += d;
   }
 
+  public double diagMin(){
+    double res = Double.POSITIVE_INFINITY;
+    if(_diag != null)
+      for(double d:_diag) if(d < res)res = d;
+    if(_xx != null)
+      for(double [] x:_xx)if(x[x.length-1] < res)res = x[x.length-1];
+    return res;
+  }
   @Override
   public Gram clone(){return new Gram(this);}
   public String toString(){
@@ -292,7 +300,7 @@ public final class Gram extends Iced {
   }
 
   public static final class Cholesky {
-    protected final double[][] _xx;
+    public final double[][] _xx;
     protected final double[] _diag;
     private boolean _isSPD;
 
@@ -396,6 +404,27 @@ public final class Gram extends Iced {
         _xx[i][j] *= x;
   }
 
+  public double [] mul(double [] x){
+    double [] res = MemoryManager.malloc8d(x.length);
+    mul(x,res);
+    return res;
+  }
+
+  public void mul(double [] x, double [] res){
+    Arrays.fill(res,0);
+    for(int i = 0; i < _diagN; ++i)
+      res[i] = x[i] * _diag[i];
+    for(int ii = 0; ii < _xx.length; ++ii){
+      final int n = _xx[ii].length-1;
+      final int i = _diagN + ii;
+      for(int j = 0; j < n; ++j) {
+        double e = _xx[ii][j];  // we store only lower diagonal, so we have two updates:
+        res[i] += x[j]*e;       // standard matrix mul, row * vec, except short (only up to diag)
+        res[j] += x[i]*e;       // symmetric matrix => each non-diag element adds to 2 places
+      }
+      res[i] += _xx[ii][n]*x[n]; // diagonal element
+    }
+  }
   /**
    * Task to compute gram matrix normalized by the number of observations (not counting rows with NAs).
    * in R's notation g = t(X)%*%X/nobs, nobs = number of rows of X with no NA.

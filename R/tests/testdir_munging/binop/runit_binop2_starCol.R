@@ -21,13 +21,7 @@ function() {
     doSelect()
 }
 
-toDouble<-
-function(r) {
-  for (i in 1:length(r)) {
-    r[i] <- ifelse(is.integer(r[i]), as.numeric(r[i]), r[i])
-  }
-  return(as.numeric(r))
-}
+toDouble <- function(r) ifelse(is.integer(r), as.numeric(r), r)
 
 test.slice.star <- function(conn) {
   dataSet <- doSelect()
@@ -60,15 +54,16 @@ test.slice.star <- function(conn) {
 
   Log.info("Orignal sliced: ")
   df_head <- as.data.frame(sliced)
-  df_head <- data.frame(sapply(df_head, toDouble))
+  df_head <- data.frame(apply(df_head, 1:2, toDouble))
   print(head(df_head))
 
   Log.info("Sliced * 5: ")
   df_slicedStarFive <- as.data.frame(slicedStarFive)
-  df_slicedStarFive <- data.frame(sapply(df_slicedStarFive, toDouble))
+  df_slicedStarFive <- data.frame(apply(df_slicedStarFive, 1:2, toDouble))
   df_sliced <- as.data.frame(sliced)
-  df_sliced <- data.frame(sapply(df_sliced, toDouble))
+  df_sliced <- data.frame(apply(df_sliced, 1:2, toDouble))
   print(head(df_slicedStarFive))
+
   expect_that(df_slicedStarFive, equals(5 * df_sliced  ))
 
   Log.info("Checking left and right: ")
@@ -82,9 +77,9 @@ test.slice.star <- function(conn) {
   print(head(fiveStarSliced))
 
   df_slicedStarFive <- as.data.frame(slicedStarFive)
-  df_slicedStarFive <- data.frame(sapply(df_slicedStarFive, toDouble))
+  df_slicedStarFive <- data.frame(apply(df_slicedStarFive, 1:2, toDouble))
   df_sliced <- as.data.frame(fiveStarSliced)
-  df_fiveStarSliced <- data.frame(sapply(df_sliced, toDouble))
+  df_fiveStarSliced <- data.frame(apply(df_sliced, 1:2, toDouble))
 
   expect_that(df_slicedStarFive, equals(df_fiveStarSliced))
 

@@ -198,16 +198,24 @@ public abstract class Request extends RequestBuilders {
   private static class MenuItem {
     public final Request _request;
     public final String _name;
+    public final boolean _useNewTab;
 
-    public MenuItem(Request request, String name) {
+    public MenuItem(Request request, String name, boolean useNewTab) {
       _request = request;
       _name = name;
+      _useNewTab = useNewTab;
     }
 
     public void toHTML(StringBuilder sb) {
       sb.append("<li><a href='");
       sb.append(_request.href() + _request.hrefType()._suffix);
-      sb.append("'>");
+      sb.append("'");
+
+      if (_useNewTab) {
+        sb.append(" target='_blank'");
+      }
+
+      sb.append(">");
       sb.append(_name);
       sb.append("</a></li>");
     }
@@ -250,20 +258,26 @@ public abstract class Request extends RequestBuilders {
   public static Request addToNavbar(Request r, String name) {
     assert (!_navbar.containsKey(name));
     ArrayList<MenuItem> arl = new ArrayList();
-    arl.add(new MenuItem(r, name));
+    boolean useNewTab = false;
+    arl.add(new MenuItem(r, name, useNewTab));
     _navbar.put(name, arl);
     _navbarOrdering.add(name);
     return r;
   }
 
   public static Request addToNavbar(Request r, String name, String category) {
+    boolean useNewTab = false;
+    return addToNavbar(r, name, category, useNewTab);
+  }
+
+  public static Request addToNavbar(Request r, String name, String category, boolean useNewTab) {
     ArrayList<MenuItem> arl = _navbar.get(category);
     if( arl == null ) {
       arl = new ArrayList();
       _navbar.put(category, arl);
       _navbarOrdering.add(category);
     }
-    arl.add(new MenuItem(r, name));
+    arl.add(new MenuItem(r, name, useNewTab));
     return r;
   }
 
