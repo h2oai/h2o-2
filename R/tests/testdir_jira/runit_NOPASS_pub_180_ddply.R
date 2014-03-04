@@ -41,12 +41,12 @@ ddplytest <- function(conn){
   df.3 <- as.data.frame( df.h.3 )
   df.4 <- as.data.frame( df.h.4 )
   
-  Log.info('sorting (in ascending order) data by first column for comparisons')
-  df.1 <- df.1[order(df.1[,1]),]
-  df.2 <- df.2[order(df.2[,1]),]
-  df.3 <- df.3[order(df.3[,1]),]
-  df.4 <- df.4[order(df.4[,1]),]
-  
+  Log.info('sorting each column in ascending order for comparisons')
+  df.1[,1] <- sort(df.1[,1]); df.1[,2] <- sort(df.1[,2])
+  # df.2[,1] <- sort(df.2[,1]); df.2[,2] <- sort(df.2[,2]); df.2[,3] <- sort(df.2[,3])
+  df.3[,1] <- sort(df.3[,1]); df.3[,2] <- sort(df.3[,2])
+  # df.4[,1] <- sort(df.4[,1]); df.4[,2] <- sort(df.4[,2]); df.4[,3] <- sort(df.4[,3])
+
   Log.info('testing')
   expect_equal( dim(df.1), c(3, 2) )
   expect_equal(df.1[,1], factor(c('a', 'b', 'c')))
