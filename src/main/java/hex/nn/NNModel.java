@@ -467,17 +467,11 @@ public class NNModel extends Model {
       err.training_samples = model_info().get_processed_total();
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
+      if (err.classification && nclasses()==2) err.trainAUC = new AUC();
       final Frame trainPredict = score(ftrain, false);
-      final double trainErr = calcError(ftrain, trainPredict, "Scoring on training data:", printme, err.train_confusion_matrix);
-      if (err.classification && nclasses()==2) {
-        err.trainAUC = new AUC();
-        err.trainAUC.actual = ftrain;
-        err.trainAUC.vactual = ftrain.lastVec();
-        err.trainAUC.predict = trainPredict;
-        err.trainAUC.vpredict = trainPredict.lastVec();
-        err.trainAUC.serve();
-      }
+      final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC);
       trainPredict.delete();
+
       if (err.classification) err.train_err = err.trainAUC != null ? err.trainAUC.err() : trainErr;
       else err.train_mse = trainErr;
 
@@ -485,16 +479,9 @@ public class NNModel extends Model {
         assert ftest != null;
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
+        if (err.classification && nclasses()==2) err.validAUC = new AUC();
         final Frame validPredict = score(ftest, false);
-        final double validErr = calcError(ftest, validPredict, "Scoring on validation data:", printme, err.valid_confusion_matrix);
-        if (err.classification && nclasses()==2) {
-          err.validAUC = new AUC();
-          err.validAUC.actual = ftest;
-          err.validAUC.vactual = ftest.lastVec();
-          err.validAUC.predict = validPredict;
-          err.validAUC.vpredict = validPredict.lastVec();
-          err.validAUC.serve();
-        }
+        final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC);
         validPredict.delete();
         if (err.classification) err.valid_err = err.validAUC != null ? err.validAUC.err() : validErr;
         else err.valid_mse = validErr;
@@ -589,17 +576,27 @@ public class NNModel extends Model {
     return preds;
   }
 
-  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix CM) {
-    if (CM == null) CM = new ConfusionMatrix();
-    CM.actual = ftest;
-    CM.vactual = ftest.lastVec();
-    CM.predict = fpreds;
-    CM.vpredict = fpreds.vecs()[0];
-    CM.serve();
+  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc) {
     StringBuilder sb = new StringBuilder();
-    final double error = CM.toASCII(sb); //either classification error or MSE
-    if (printCM && (CM.cm==null || CM.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
-      Log.info(label);
+    double error;
+    if (auc != null) {
+      auc.actual = ftest;
+      auc.vactual = ftest.lastVec();
+      auc.predict = fpreds;
+      auc.vpredict = fpreds.lastVec();
+      auc.serve();
+      error = auc.toASCII(sb);
+    } else {
+      if (cm == null) cm = new ConfusionMatrix();
+      cm.actual = ftest;
+      cm.vactual = ftest.lastVec();
+      cm.predict = fpreds;
+      cm.vpredict = fpreds.vecs()[0];
+      cm.serve();
+      error = cm.toASCII(sb); //either classification error or MSE
+    }
+    if (printCM && (cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
+      Log.info("Scoring on " + label + " data:");
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
     return error;
