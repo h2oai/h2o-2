@@ -27,6 +27,10 @@ public class NN extends Job.ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "NN";
 
+  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
+  public boolean expert_mode = false;
+
+  /*Neural Net Topology*/
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
 
@@ -36,15 +40,23 @@ public class NN extends Job.ValidatedJob {
   @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
   public double epochs = 10;
 
+  @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
+  public long mini_batch = 0l;
+
+  @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
+  public long seed = new Random().nextLong();
+
+  /*Adaptive Learning Rate*/
   @API(help = "Adaptive learning rate (AdaDelta)", filter = Default.class, json = true)
   public boolean adaptive_rate = true;
 
   @API(help = "Adaptive learning rate time decay factor (length of moving window over prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
   public double rho = 0.95;
 
-  @API(help = "Adaptive learning rate smoothing factor", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
+  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double epsilon = 1e-6;
 
+  /*Learning Rate*/
   @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double rate = .005;
 
@@ -54,6 +66,7 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
   public double rate_decay = 1.0;
 
+  /*Momentum*/
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_start = 0;
 
@@ -63,6 +76,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_stable = 0;
 
+  @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
+  public boolean nesterov_accelerated_gradient = true;
+
+  /*Regularization*/
   @API(help = "Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double input_dropout_ratio = 0.0;
 
@@ -72,33 +89,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "L2 regularization (can add stability and improve generalization, causes many weights to be small", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double l2 = 0.0;
 
-  @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
-  public long seed = new Random().nextLong();
+  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
+  public double max_w2 = Double.POSITIVE_INFINITY;
 
-  @API(help = "Shortest time interval (in secs) between model scoring", filter = Default.class, dmin = 0, json = true)
-  public double score_interval = 5;
-
-  @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 0l;
-
-  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false)
-  public boolean balance_classes = false;
-
-  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
-  public boolean expert_mode = false;
-
-  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false)
-  public float max_after_balance_size = 5.0f;
-
-  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_training_samples = 10000l;
-
-  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_validation_samples = 0l;
-
-  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false)
-  public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
-
+  /*Initialization*/
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
@@ -108,29 +102,18 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
-  public double max_w2 = Double.POSITIVE_INFINITY;
+  /*Scoring*/
+  @API(help = "Shortest time interval (in secs) between model scoring", filter = Default.class, dmin = 0, json = true)
+  public double score_interval = 5;
 
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
-  public boolean diagnostics = true;
+  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  public long score_training_samples = 10000l;
+
+  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  public long score_validation_samples = 0l;
 
   @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double score_duty_cycle = 0.1;
-
-  @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
-  public boolean fast_mode = true;
-
-  @API(help = "Ignore constant training columns", filter = Default.class, json = true)
-  public boolean ignore_const_cols = true;
-
-  @API(help = "Force extra load balancing to increase training speed for small datasets (beta)", filter = Default.class, json = true)
-  public boolean force_load_balance = false;
-
-  @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
-  public boolean shuffle_training_data = false;
-
-  @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
-  public boolean nesterov_accelerated_gradient = true;
 
   @API(help = "Stopping criterion for classification error fraction (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
   public double classification_stop = 0;
@@ -143,6 +126,32 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
   public int max_confusion_matrix_size = 20;
+
+  /*Imbalanced Classes*/
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false)
+  public boolean balance_classes = false;
+
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false)
+  public float max_after_balance_size = 5.0f;
+
+  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false)
+  public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
+
+  /*Misc*/
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
+  public boolean diagnostics = true;
+
+  @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
+  public boolean fast_mode = true;
+
+  @API(help = "Ignore constant training columns", filter = Default.class, json = true)
+  public boolean ignore_const_cols = true;
+
+  @API(help = "Force extra load balancing to increase training speed for small datasets (beta)", filter = Default.class, json = true)
+  public boolean force_load_balance = false;
+
+  @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
+  public boolean shuffle_training_data = false;
 
   public enum ClassSamplingMethod {
     Uniform, Stratified
@@ -189,9 +198,14 @@ public class NN extends Job.ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
-    if (expert_mode && arg._name.equals("force_load_balance") && H2O.CLOUD.size()>1) {
-      force_load_balance = false;
-      arg.disable("Only for single-node operation.");
+    if (H2O.CLOUD.size()>1) {
+      if (expert_mode && arg._name.equals("force_load_balance")) {
+        force_load_balance = false;
+        arg.disable("Only for single-node operation.");
+      }
+      if (arg._name.equals("seed")) {
+        arg.disable("Only for single-node operation.");
+      }
     }
 
     if (classification) {
@@ -249,8 +263,8 @@ public class NN extends Job.ValidatedJob {
         epsilon = 0;
       }
     } else {
-      if (arg._name.equals("rate") || arg._name.equals("rate_annealing") || arg._name.equals("rate_decay")
-              || arg._name.equals("momentum_start") || arg._name.equals("momentum_ramp") || arg._name.equals("momentum_stable")) {
+      if (arg._name.equals("rate") || arg._name.equals("rate_annealing") || arg._name.equals("rate_decay") || arg._name.equals("nesterov_accelerated_gradient")
+              || arg._name.equals("momentum_start") || arg._name.equals("momentum_ramp") || arg._name.equals("momentum_stable") ) {
         arg.disable("Only for non-adaptive learning rate.", inputArgs);
         momentum_start = 0;
         momentum_stable = 0;
