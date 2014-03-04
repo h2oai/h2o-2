@@ -30,11 +30,20 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
 
-  @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double input_dropout_ratio = 0.0;
-
   @API(help = "Hidden layer sizes (e.g. 100,100). Grid search: (10,10), (20,20,20)", filter = Default.class, json = true)
   public int[] hidden = new int[] { 200, 200 };
+
+  @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
+  public double epochs = 10;
+
+  @API(help = "Adaptive learning rate (AdaDelta)", filter = Default.class, json = true)
+  public boolean adaptive_rate = true;
+
+  @API(help = "Adaptive learning rate time decay factor (length of moving window over prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
+  public double rho = 0.95;
+
+  @API(help = "Adaptive learning rate smoothing factor", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
+  public double epsilon = 1e-6;
 
   @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double rate = .005;
@@ -42,23 +51,23 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double rate_annealing = 1 / 1e6;
 
-  @API(help = "L1 regularization, can add stability and improve generalization", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double l1 = 0.0;
-
-  @API(help = "L2 regularization, can add stability and improve generalization", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double l2 = 0.0;
-
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
-  public double momentum_start = .5;
+  public double momentum_start = 0;
 
   @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 1, json = true)
   public long momentum_ramp = 1000000;
 
   @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
-  public double momentum_stable = 0.99;
+  public double momentum_stable = 0;
 
-  @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
-  public double epochs = 10;
+  @API(help = "Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double input_dropout_ratio = 0.0;
+
+  @API(help = "L1 regularization (can add stability and improve generalization, causes many weights to become 0)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double l1 = 0.0;
+
+  @API(help = "L2 regularization (can add stability and improve generalization, causes many weights to be small", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double l2 = 0.0;
 
   @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
@@ -162,7 +171,8 @@ public class NN extends Job.ValidatedJob {
   protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
     for (Argument arg : _arguments) {
-      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution") || arg._name.equals("expert_mode")) {
+      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")
+              || arg._name.equals("expert_mode") || arg._name.equals("adaptive_rate") || arg._name.equals("balance_classes")) {
         arg.setRefreshOnChange();
       }
     }
@@ -230,6 +240,21 @@ public class NN extends Job.ValidatedJob {
             || arg._name.equals("max_confusion_matrix_size")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
+    }
+
+    if (!adaptive_rate) {
+      if (arg._name.equals("rho") || arg._name.equals("epsilon")) {
+        arg.disable("Only for adaptive learning rate.", inputArgs);
+        rho = 0;
+        epsilon = 0;
+      }
+    } else {
+      if (arg._name.equals("rate") || arg._name.equals("rate_annealing") || arg._name.equals("momentum_start")
+              || arg._name.equals("momentum_ramp") || arg._name.equals("momentum_stable")) {
+        arg.disable("Only for non-adaptive learning rate.", inputArgs);
+        momentum_start = 0;
+        momentum_stable = 0;
+      }
     }
   }
 
@@ -359,6 +384,7 @@ public class NN extends Job.ValidatedJob {
         }
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
+      model.training_rows = train.numRows();
       if (mini_batch > train.numRows()) {
         Log.warn("Setting mini_batch (" + mini_batch
                 + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");
