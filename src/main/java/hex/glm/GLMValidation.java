@@ -85,8 +85,6 @@ public class GLMValidation extends Iced {
     if(_glm.family == Family.binomial) // classification -> update confusion matrix too
       for(int i = 0; i < DEFAULT_THRESHOLDS.length; ++i)
         _cms[i].add((int)yreal, (ymodel >= DEFAULT_THRESHOLDS[i])?1:0);
-    if(Double.isNaN(_glm.deviance(yreal, ymodel)))
-      System.out.println("NaN from yreal=" + yreal + ", ymodel=" + ymodel);
     residual_deviance  += _glm.deviance(yreal, ymodel);
     ++nobs;
     avg_err += (ymodel - yreal) * (ymodel - yreal);
