@@ -87,9 +87,9 @@ public class NNModel extends Model {
       StringBuilder sb = new StringBuilder();
       if (classification) {
         sb.append("Error on training data (misclassification): " + String.format("%.2f", 100*train_err) + "%");
-        if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.auc) + "%");
+        if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
         if (validation) sb.append("\nError on validation data (misclassification): " + String.format("%.2f", (100 * valid_err)) + "%");
-        if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.auc) + "%");
+        if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else {
         sb.append("Error on training data (MSE): " + train_mse);
         if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
@@ -414,9 +414,8 @@ public class NNModel extends Model {
     }
   }
 
-  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
-    super(selfKey, dataKey, dinfo._adaptedFrame);
-    setPriorClassDistribution(new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist());
+  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params, float[] priorDist) {
+    super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
@@ -638,8 +637,10 @@ public class NNModel extends Model {
       DocGen.HTML.section(sb, "=======================================================================================");
     }
 
-    final double progress = model_info.get_params().progress();
     DocGen.HTML.title(sb, "Progress");
+    // update epoch counter every time the website is displayed
+    epoch_counter = (float)model_info.get_processed_total() / model_info.data_info()._adaptedFrame.numRows();
+    final double progress = model_info.get_params().progress();
 
     if (model_info.parameters != null && model_info.parameters.diagnostics) {
       DocGen.HTML.section(sb, "Status of Neuron Layers");
@@ -712,13 +713,14 @@ public class NNModel extends Model {
         DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
       }
     }
+    DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
     if (error.training_time_ms > 0) {
-      DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
       DocGen.HTML.paragraph(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
-      DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(error.training_time_ms, true));
-      if (!model_info.get_params().isDone())
-        DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(error.training_time_ms*(1-progress)/progress), true));
     }
+    final long time_so_far = System.currentTimeMillis() - model_info.parameters.start_time;
+    DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(time_so_far, true));
+    if (progress > 0 && !model_info.get_params().isDone())
+      DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(time_so_far*(1-progress)/progress), true));
 
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
