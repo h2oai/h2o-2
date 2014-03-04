@@ -500,6 +500,12 @@ public class NNModel extends Model {
         else err.valid_mse = validErr;
       }
 
+      // remove thresholds from all the previous AUC results to keep output JSON small
+      if (errors.length > 1) {
+        if (errors[errors.length-1].trainAUC != null) errors[errors.length-1].trainAUC.thresholds = null;
+        if (errors[errors.length-1].validAUC != null) errors[errors.length-1].validAUC.thresholds = null;
+      }
+
       // only keep confusion matrices for the last step if there are fewer than specified number of output classes
       if (err.train_confusion_matrix.cm != null
               && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
