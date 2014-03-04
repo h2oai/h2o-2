@@ -48,12 +48,9 @@ public abstract class Model extends Lockable<Model> {
   public final String _domains[][];
 
   @API(help = "Relative class distribution factors in original data")
-  protected float[] _priorClassDist;
+  final protected float[] _priorClassDist;
   @API(help = "Relative class distribution factors used for model building")
   protected float[] _modelClassDist;
-  public void setPriorClassDistribution(float[] priordist) {
-    _priorClassDist = priordist.clone();
-  }
   public void setModelClassDistribution(float[] classdist) {
     _modelClassDist = classdist.clone();
   }
@@ -61,12 +58,23 @@ public abstract class Model extends Lockable<Model> {
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
+  public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
+    this(selfKey,dataKey,fr.names(),fr.domains(),priorClassDist);
+  }
+
+  /** Constructor from frame (without prior class dist): Strips out the Vecs to just the names needed
+   *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains());
+    this(selfKey,dataKey,fr.names(),fr.domains(),null);
+  }
+
+  /** Constructor without prior class distribution */
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][]) {
+    this(selfKey,dataKey,names,domains,null);
   }
 
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][] ) {
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
     super(selfKey);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
@@ -75,6 +83,7 @@ public abstract class Model extends Lockable<Model> {
     _dataKey = dataKey;
     _names   = names;
     _domains = domains;
+    _priorClassDist = priorClassDist;
   }
 
   /** Simple shallow copy constructor to a new Key */

@@ -414,9 +414,8 @@ public class NNModel extends Model {
     }
   }
 
-  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
-    super(selfKey, dataKey, dinfo._adaptedFrame);
-    setPriorClassDistribution(new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist());
+  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params, float[] priorDist) {
+    super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
