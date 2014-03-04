@@ -51,6 +51,9 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double rate_annealing = 1 / 1e6;
 
+  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
+  public double rate_decay = 1.0;
+
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_start = 0;
 
@@ -104,9 +107,6 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
-
-  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
-  public double rate_decay = 1.0;
 
   @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
   public double max_w2 = Double.POSITIVE_INFINITY;
@@ -249,8 +249,8 @@ public class NN extends Job.ValidatedJob {
         epsilon = 0;
       }
     } else {
-      if (arg._name.equals("rate") || arg._name.equals("rate_annealing") || arg._name.equals("momentum_start")
-              || arg._name.equals("momentum_ramp") || arg._name.equals("momentum_stable")) {
+      if (arg._name.equals("rate") || arg._name.equals("rate_annealing") || arg._name.equals("rate_decay")
+              || arg._name.equals("momentum_start") || arg._name.equals("momentum_ramp") || arg._name.equals("momentum_stable")) {
         arg.disable("Only for non-adaptive learning rate.", inputArgs);
         momentum_start = 0;
         momentum_stable = 0;
