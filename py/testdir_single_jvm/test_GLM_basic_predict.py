@@ -76,10 +76,6 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].generate_predictions(model_key=modelKey, 
                 data_key=parseResult['destination_key'], destination_key='Predict.hex')
 
-            # just get a predict and AUC on the same data
-            h2o.nodes[0].AUC(model_key=modelKey, actual=dataKey, predict='Predict.hex', 
-                vactual=y, vpredict=1)
-
         h2o.nodes[0].log_view()
         namelist = h2o.nodes[0].log_download()
 
