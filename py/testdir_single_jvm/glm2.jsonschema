@@ -33,10 +33,11 @@
                 "_domains": { "type": "array", "items": 
                     { "type": "string" }
                 },
+                "_key": { "type": "string", },
+                "_modelClassDist": { "type": "string", },
+                "_priorClassDist": { "type": "string", },
                 "_names": { "type": "array", "items": 
                     { "type": "string" }
-                },
-                "_key": { "type": "string",
                 },
                 "alpha": { "type": "number" },
                 "best_lambda_idx": { "type": "number" }

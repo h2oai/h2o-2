@@ -19,7 +19,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_B_benign_w_predict(self):
+    def test_B_GLM2_basic_predict_benign(self):
+        h2o.beta_features = True
         h2o.nodes[0].log_view()
         namelist = h2o.nodes[0].log_download()
 
@@ -28,17 +29,18 @@ class Basic(unittest.TestCase):
         csvPathname = 'logreg/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
-        y = "3"
+        y = 3
         # cols 0-13. 3 is output
         # no member id in this one
-        for maxx in range(11,14):
-            x = range(maxx)
-            x.remove(3) # 3 is output
-            x = ",".join(map(str,x))
-            print "\nx:", x
-            print "y:", y
-
-            kwargs = {'x': x, 'y':  y}
+        for maxx in range(1):
+            # 3 is output
+            kwargs = { 
+                'response': y,
+                'family': 'binomial',
+                'alpha': 0,
+                'lambda': 1e-4,
+                'n_folds': 0,
+            }
             # fails with n_folds
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
@@ -47,26 +49,33 @@ class Basic(unittest.TestCase):
             print "Doing predict with same dataset, and the GLM model"
             h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=parseResult['destination_key'])
 
-    def test_C_prostate_w_predict(self):
+            # just get a predict and AUC on the same data. has to be binomial result
+            h2o.nodes[0].AUC(model_key=modelKey, actual=dataKey, predict='Predict.hex', 
+                vactual=y, vpredict=1)
+
+    def test_A_GLM2_basic_predict_prostate(self):
+        h2o.beta_features = True
         h2o.nodes[0].log_view()
         namelist = h2o.nodes[0].log_download()
         print "\nStarting prostate.csv"
         # columns start at 0
-        y = "1"
-        x = ""
+        y = 1
         csvFilename = "prostate.csv"
         csvPathname = 'logreg/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
-        for maxx in range(2,6):
-            x = range(maxx)
-            x.remove(0) # 0 is member ID. not used
-            x.remove(1) # 1 is output
-            x = ",".join(map(str,x))
-            print "\nx:", x
-            print "y:", y
+        for maxx in range(1):
+            # 0 is member ID. not used
+            # 1 is output
 
-            kwargs = {'x': x, 'y':  y, 'n_folds': 5}
+            kwargs = {
+                'response': y,
+                'family': 'binomial',
+                'ignored_cols':  '0', 
+                'n_folds': 0,
+                'alpha': 0,
+                'lambda': 1e-8,
+            }
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
             h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
@@ -76,7 +85,7 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].generate_predictions(model_key=modelKey, 
                 data_key=parseResult['destination_key'], destination_key='Predict.hex')
 
-            # just get a predict and AUC on the same data
+            # just get a predict and AUC on the same data. has to be binomial result
             h2o.nodes[0].AUC(model_key=modelKey, actual=dataKey, predict='Predict.hex', 
                 vactual=y, vpredict=1)
 

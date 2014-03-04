@@ -9,11 +9,8 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.TransfVec;
 import water.fvec.Vec;
-import water.util.JCodeGen;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.SB;
-import water.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,12 +48,9 @@ public abstract class Model extends Lockable<Model> {
   public final String _domains[][];
 
   @API(help = "Relative class distribution factors in original data")
-  protected float[] _priorClassDist;
+  final protected float[] _priorClassDist;
   @API(help = "Relative class distribution factors used for model building")
   protected float[] _modelClassDist;
-  public void setPriorClassDistribution(float[] priordist) {
-    _priorClassDist = priordist.clone();
-  }
   public void setModelClassDistribution(float[] classdist) {
     _modelClassDist = classdist.clone();
   }
@@ -64,12 +58,23 @@ public abstract class Model extends Lockable<Model> {
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
+  public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
+    this(selfKey,dataKey,fr.names(),fr.domains(),priorClassDist);
+  }
+
+  /** Constructor from frame (without prior class dist): Strips out the Vecs to just the names needed
+   *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains());
+    this(selfKey,dataKey,fr.names(),fr.domains(),null);
+  }
+
+  /** Constructor without prior class distribution */
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][]) {
+    this(selfKey,dataKey,names,domains,null);
   }
 
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][] ) {
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
     super(selfKey);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
@@ -78,6 +83,7 @@ public abstract class Model extends Lockable<Model> {
     _dataKey = dataKey;
     _names   = names;
     _domains = domains;
+    _priorClassDist = priorClassDist;
   }
 
   /** Simple shallow copy constructor to a new Key */
@@ -142,8 +148,6 @@ public abstract class Model extends Lockable<Model> {
     Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
     // Invoke scoring
     Frame output = scoreImpl(adaptFrm);
-    // Correct probabilities after per-class stratified sampling
-    if (isClassifier()) water.util.MRUtils.correctProbabilities(output, _priorClassDist, _modelClassDist);
     // Be nice to DKV and delete vectors which i created :-)
     if (adapt) onlyAdaptFrm.delete();
     return output;
@@ -151,7 +155,7 @@ public abstract class Model extends Lockable<Model> {
 
   /** Score already adapted frame.
    *
-   * @param fr
+   * @param adaptFrm
    * @return
    */
   private Frame scoreImpl(Frame adaptFrm) {
@@ -351,13 +355,32 @@ public abstract class Model extends Lockable<Model> {
     assert chks.length>=_names.length; // Last chunk is for the response
     for( int i=0; i<_names.length; i++ )
       tmp[i] = chks[i].at0(row_in_chunk);
-    return score0(tmp,preds);
+    float[] scored = score0(tmp,preds);
+    // Correct probabilities obtained from training on oversampled data back to original distribution
+    // C.f. http://gking.harvard.edu/files/0s.pdf Eq.(27)
+    if (isClassifier() && _priorClassDist != null && _modelClassDist != null) {
+      assert(scored.length == nclasses()+1); //1 label + nclasses probs
+      double probsum=0;
+      for( int c=1; c<scored.length; c++ ) {
+        final double original_fraction = _priorClassDist[c-1];
+        assert(original_fraction > 0);
+        final double oversampled_fraction = _modelClassDist[c-1];
+        assert(oversampled_fraction > 0);
+        assert(!Double.isNaN(scored[c]));
+        scored[c] *= original_fraction / oversampled_fraction;
+        probsum += scored[c];
+      }
+      for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+      //set label based on corrected probabilities (max value wins, with deterministic tie-breaking)
+      scored[0] = ModelUtils.getPrediction(scored, tmp);
+    }
+    return scored;
   }
 
   /** Subclasses implement the scoring logic.  The data is pre-loaded into a
    *  re-used temp array, in the order the model expects.  The predictions are
    *  loaded into the re-used temp array, which is also returned.  */
-  protected abstract float[] score0(double data[/*ncols*/], float preds[/*nclasses*/]);
+  protected abstract float[] score0(double data[/*ncols*/], float preds[/*nclasses+1*/]);
   // Version where the user has just ponied-up an array of data to be scored.
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }

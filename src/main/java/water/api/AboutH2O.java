@@ -25,6 +25,13 @@ public class AboutH2O extends HTMLOnlyRequest {
     sb.append("<tr><td>Build project version:</td><td>" + build_project_version + "</td></tr>");
     sb.append("<tr><td>Built by:</td><td>" + "'" + build_by + "'" + "</td></tr>");
     sb.append("<tr><td>Built on:</td><td>" + "'" + build_on + "'" + "</td></tr>");
+    sb.append("<tr></tr>");
+    sb.append("</table>");
+    sb.append("<br></br>");
+    sb.append("<table border=\"5\" cellpadding=\"5\" align=\"center\" style=\"text-align:center;\">");
+    sb.append("<tr><td>Join <a href=\"https://groups.google.com/forum/#!forum/h2ostream\" target=\"_blank\">h2ostream</a>, our google group community</td></tr>");
+    sb.append("<tr><td>Follow us on Twitter, <a href=\"https://twitter.com/hexadata\" target=\"_blank\">@hexadata</a></td></tr>");
+    sb.append("<tr><td>Email us at <a href=\"mailto:support@0xdata.com\" target=\"_top\">support@0xdata.com</a></td></tr>");
     sb.append("</table>");
 
     return sb.toString();
