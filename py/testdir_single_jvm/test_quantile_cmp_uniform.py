@@ -16,9 +16,9 @@ def twoDecimals(l):
 
 # have to match the csv file?
 # dtype=['string', 'float');
-thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
 
-def generate_scipy_comparison(csvPathname, dtype):
+def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -143,6 +143,7 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
             h2o.beta_features = False
+            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -185,7 +186,7 @@ class Basic(unittest.TestCase):
 
             pct = stats['pct']
             # the thresholds h2o used, should match what we expected
-            expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+            expectedPct = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
 
             pctile = stats['pctile']
             h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxDelta, msg='25th percentile is not approx. expected')
@@ -238,11 +239,10 @@ class Basic(unittest.TestCase):
                 h2p.green_print("\nresultExec: %s" % h2o.dump_json(resultExec))
                 ex = twoDecimals(result)
                 h2p.blue_print("\nthreshold: %.2f Exec quantile: %s Summary2: %s" % (trial, ex, pt[i]))
-                h2o_util.assertApproxEqual(result, pctile[i], tol=maxDelta, msg='threshold: %s percentile is not expected' % thresholds)
+                h2o_util.assertApproxEqual(result, pctile[i], tol=maxDelta, msg='percentile: % is not expected: %s' % (result, pctile[i]))
 
             if DO_TRY_SCIPY:
-                csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
-                generate_scipy_comparison(csvPathname1, dtype=dtype)
+                generate_scipy_comparison(csvPathnameFull)
 
 if __name__ == '__main__':
     h2o.unit_main()

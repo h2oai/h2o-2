@@ -27,7 +27,8 @@ class Basic(unittest.TestCase):
         print "\nStarting benign.csv"
         csvFilename = "benign.csv"
         csvPathname = 'logreg/' + csvFilename
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
+        hexKey = csvFilename + ".hex"
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hexKey, schema='put')
         # columns start at 0
         y = 3
         # cols 0-13. 3 is output
@@ -44,13 +45,13 @@ class Basic(unittest.TestCase):
             # fails with n_folds
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-            GLMModel = glm['GLMModel']
-            modelKey = GLMModel['model_key']
+            GLMModel = glm['glm_model']
+            modelKey = GLMModel['_key']
             print "Doing predict with same dataset, and the GLM model"
             h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=parseResult['destination_key'])
 
             # just get a predict and AUC on the same data. has to be binomial result
-            h2o.nodes[0].AUC(model_key=modelKey, actual=dataKey, predict='Predict.hex', 
+            h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
                 vactual=y, vpredict=1)
 
     def test_A_GLM2_basic_predict_prostate(self):
@@ -62,7 +63,8 @@ class Basic(unittest.TestCase):
         y = 1
         csvFilename = "prostate.csv"
         csvPathname = 'logreg/' + csvFilename
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
+        hexKey = csvFilename + ".hex"
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hexKey, schema='put')
 
         for maxx in range(1):
             # 0 is member ID. not used
@@ -79,14 +81,14 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
             h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
-            GLMModel = glm['GLMModel']
-            modelKey = GLMModel['model_key']
+            GLMModel = glm['glm_model']
+            modelKey = GLMModel['_key']
             print "Doing predict with same dataset, and the GLM model"
             h2o.nodes[0].generate_predictions(model_key=modelKey, 
-                data_key=parseResult['destination_key'], destination_key='Predict.hex')
+                data_key=hexKey, destination_key='Predict.hex')
 
             # just get a predict and AUC on the same data. has to be binomial result
-            h2o.nodes[0].AUC(model_key=modelKey, actual=dataKey, predict='Predict.hex', 
+            h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
                 vactual=y, vpredict=1)
 
         h2o.nodes[0].log_view()
