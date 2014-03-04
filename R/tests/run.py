@@ -483,6 +483,12 @@ class Test:
         """
         return self.test_name
 
+    def get_seed_used(self):
+        """
+        @return: The seed used by this test.
+        """
+        return self._scrape_output_for_seed()
+
     def get_ip(self):
         """
         @return: IP of the cloud where this test ran.
@@ -522,6 +528,19 @@ class Test:
         @return: Full path to the output file which you can paste to a terminal window.
         """
         return (os.path.join(self.output_dir, self.output_file_name))
+
+    def _scrape_output_for_seed(self):
+        """
+        @return: The seed scraped from the outpul file.
+        """
+        res = ""
+        with open(self.get_output_dir_file_name(), "r") as f:
+            for line in f:
+                if "SEED used" in line:
+                    line = line.strip().split(' ')
+                    res = line[-1]
+                    break
+        return res
 
     def __str__(self):
         s = ""
@@ -972,10 +991,10 @@ class RUnitRunner:
         now = time.time()
         duration = now - test.start_seconds
         if (test.get_passed()):
-            s = "PASS      %d %4ds %-70s" % (port, duration, test.get_test_name())
+            s = "PASS      %d %4ds %-60s" % (port, duration, test.get_test_name())
             self._log(s)
         else:
-            s = "     FAIL %d %4ds %-70s %s" % (port, duration, test.get_test_name(), test.get_output_dir_file_name())
+            s = "     FAIL %d %4ds %-60s %s  %s" % (port, duration, test.get_test_name(), test.get_output_dir_file_name(), test.get_seed_used())
             self._log(s)
             f = self._get_failed_filehandle_for_appending()
             f.write(test.get_test_dir_file_name() + "\n")
