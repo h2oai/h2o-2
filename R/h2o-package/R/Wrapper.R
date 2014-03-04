@@ -171,10 +171,6 @@ h2o.clusterStatus <- function(client) {
 
 .h2o.startJar <- function(memory = "1g", beta=F) {
   command <- .h2o.checkJava()
-  if(.Platform$OS.type == "windows")
-    command <- paste('"', command, '"', sep = "")
-  else
-    command <- "java"
   
   #
   # TODO: tmp files should be user-independent
