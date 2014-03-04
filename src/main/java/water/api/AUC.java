@@ -338,19 +338,20 @@ public class AUC extends Request2 {
     /* @OUT FPRs */ public final double[] getFPRs() { return _fprs; }
     transient private double[] _fprs;
     /* @OUT CMs */ public final hex.ConfusionMatrix[] getCMs() { return _cms; }
-    final private hex.ConfusionMatrix[] _cms;
+    private hex.ConfusionMatrix[] _cms;
 
 
     /* IN thresholds */ final private float[] _thresh;
 
     AUCTask(float[] thresh) {
       _thresh = thresh.clone();
-      _cms = new hex.ConfusionMatrix[_thresh.length];
-      for (int i=0;i<_cms.length;++i)
-        _cms[i] = new hex.ConfusionMatrix(2);
     }
 
     @Override public void map( Chunk ca, Chunk cp ) {
+      _cms = new hex.ConfusionMatrix[_thresh.length];
+      for (int i=0;i<_cms.length;++i)
+        _cms[i] = new hex.ConfusionMatrix(2);
+
       final int len = Math.min(ca._len, cp._len);
       for( int i=0; i < len; i++ ) {
         assert(!ca.isNA0(i)); //should never have actual NaN probability!
@@ -369,9 +370,7 @@ public class AUC extends Request2 {
 
     @Override public void reduce( AUCTask other ) {
       for( int i=0; i<_cms.length; ++i) {
-        if (other._cms != _cms) {
-          _cms[i].add(other._cms[i]);
-        }
+        _cms[i].add(other._cms[i]);
       }
     }
 
