@@ -64,6 +64,9 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       //p.force_load_balance = true; //make it multi-threaded
       p.force_load_balance = false; //make it single-threaded (1 chunk)
       p.destination_key = dest;
+      p.adaptive_rate = false;
+      p.rho = 0;
+      p.epsilon = 0;
       p.execImpl();
     }
 

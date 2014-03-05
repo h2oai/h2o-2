@@ -154,6 +154,9 @@ public class NNvsNeuralNet extends TestUtil {
                             p.ignored_cols = null;
                             p.seed = seed;
                             p.hidden = hidden;
+                            p.adaptive_rate = false;
+                            p.rho = 0;
+                            p.epsilon = 0;
                             p.rate = rate;
                             p.activation = activation;
                             p.max_w2 = max_w2;
