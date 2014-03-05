@@ -27,66 +27,72 @@ public class NN extends Job.ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "NN";
 
+  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
+  public boolean expert_mode = false;
+
+  /*Neural Net Topology*/
   @API(help = "Activation function", filter = Default.class, json = true)
   public Activation activation = Activation.Tanh;
-
-  @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double input_dropout_ratio = 0.0;
 
   @API(help = "Hidden layer sizes (e.g. 100,100). Grid search: (10,10), (20,20,20)", filter = Default.class, json = true)
   public int[] hidden = new int[] { 200, 200 };
 
+  @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
+  public double epochs = 10;
+
+  @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
+  public long mini_batch = 100000l;
+
+  @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
+  public long seed = new Random().nextLong();
+
+  /*Adaptive Learning Rate*/
+  @API(help = "Adaptive learning rate (AdaDelta)", filter = Default.class, json = true)
+  public boolean adaptive_rate = true;
+
+  @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
+  public double rho = 0.95;
+
+  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
+  public double epsilon = 1e-6;
+
+  /*Learning Rate*/
   @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double rate = .005;
 
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double rate_annealing = 1 / 1e6;
 
-  @API(help = "L1 regularization, can add stability and improve generalization", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double l1 = 0.0;
+  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
+  public double rate_decay = 1.0;
 
-  @API(help = "L2 regularization, can add stability and improve generalization", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double l2 = 0.0;
-
+  /*Momentum*/
   @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
-  public double momentum_start = .5;
+  public double momentum_start = 0;
 
   @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 1, json = true)
   public long momentum_ramp = 1000000;
 
   @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
-  public double momentum_stable = 0.99;
+  public double momentum_stable = 0;
 
-  @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
-  public double epochs = 10;
+  @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
+  public boolean nesterov_accelerated_gradient = true;
 
-  @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
-  public long seed = new Random().nextLong();
+  /*Regularization*/
+  @API(help = "Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double input_dropout_ratio = 0.0;
 
-  @API(help = "Shortest time interval (in secs) between model scoring", filter = Default.class, dmin = 0, json = true)
-  public double score_interval = 5;
+  @API(help = "L1 regularization (can add stability and improve generalization, causes many weights to become 0)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double l1 = 0.0;
 
-  @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 0l;
+  @API(help = "L2 regularization (can add stability and improve generalization, causes many weights to be small", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double l2 = 0.0;
 
-  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false)
-  public boolean balance_classes = false;
+  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
+  public double max_w2 = Double.POSITIVE_INFINITY;
 
-  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
-  public boolean expert_mode = false;
-
-  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false)
-  public float max_after_balance_size = 5.0f;
-
-  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_training_samples = 10000l;
-
-  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
-  public long score_validation_samples = 0l;
-
-  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false)
-  public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
-
+  /*Initialization*/
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
@@ -96,17 +102,44 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Loss function", filter = Default.class, json = true)
   public Loss loss = Loss.CrossEntropy;
 
-  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
-  public double rate_decay = 1.0;
+  /*Scoring*/
+  @API(help = "Shortest time interval (in secs) between model scoring", filter = Default.class, dmin = 0, json = true)
+  public double score_interval = 5;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
-  public double max_w2 = Double.POSITIVE_INFINITY;
+  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  public long score_training_samples = 10000l;
 
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
-  public boolean diagnostics = true;
+  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  public long score_validation_samples = 0l;
 
   @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double score_duty_cycle = 0.1;
+
+  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
+  public double classification_stop = 0;
+
+  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
+  public double regression_stop = 1e-6;
+
+  @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
+  public boolean quiet_mode = false;
+
+  @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
+  public int max_confusion_matrix_size = 20;
+
+  /*Imbalanced Classes*/
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false)
+  public boolean balance_classes = false;
+
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false)
+  public float max_after_balance_size = 5.0f;
+
+  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false)
+  public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
+
+  /*Misc*/
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
+  public boolean diagnostics = true;
 
   @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
@@ -119,21 +152,6 @@ public class NN extends Job.ValidatedJob {
 
   @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
-
-  @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
-  public boolean nesterov_accelerated_gradient = true;
-
-  @API(help = "Stopping criterion for classification error fraction (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
-  public double classification_stop = 0;
-
-  @API(help = "Stopping criterion for regression error (MSE) (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
-  public double regression_stop = 1e-6;
-
-  @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
-  public boolean quiet_mode = false;
-
-  @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
-  public int max_confusion_matrix_size = 20;
 
   public enum ClassSamplingMethod {
     Uniform, Stratified
@@ -162,7 +180,8 @@ public class NN extends Job.ValidatedJob {
   protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
     for (Argument arg : _arguments) {
-      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution") || arg._name.equals("expert_mode")) {
+      if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")
+              || arg._name.equals("expert_mode") || arg._name.equals("adaptive_rate") || arg._name.equals("balance_classes")) {
         arg.setRefreshOnChange();
       }
     }
@@ -179,9 +198,14 @@ public class NN extends Job.ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
-    if (expert_mode && arg._name.equals("force_load_balance") && H2O.CLOUD.size()>1) {
-      force_load_balance = false;
-      arg.disable("Only for single-node operation.");
+    if (H2O.CLOUD.size()>1) {
+      if (expert_mode && arg._name.equals("force_load_balance")) {
+        force_load_balance = false;
+        arg.disable("Only for single-node operation.");
+      }
+      if (arg._name.equals("seed")) {
+        arg.disable("Only for single-node operation.");
+      }
     }
 
     if (classification) {
@@ -231,6 +255,21 @@ public class NN extends Job.ValidatedJob {
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
+
+    if (!adaptive_rate) {
+      if (arg._name.equals("rho") || arg._name.equals("epsilon")) {
+        arg.disable("Only for adaptive learning rate.", inputArgs);
+        rho = 0;
+        epsilon = 0;
+      }
+    } else {
+      if (arg._name.equals("rate") || arg._name.equals("rate_annealing") || arg._name.equals("rate_decay") || arg._name.equals("nesterov_accelerated_gradient")
+              || arg._name.equals("momentum_start") || arg._name.equals("momentum_ramp") || arg._name.equals("momentum_stable") ) {
+        arg.disable("Only for non-adaptive learning rate.", inputArgs);
+        momentum_start = 0;
+        momentum_stable = 0;
+      }
+    }
   }
 
   public Frame score( Frame fr ) { return ((NNModel)UKV.get(dest())).score(fr);  }
@@ -258,7 +297,7 @@ public class NN extends Job.ValidatedJob {
     return 0;
   }
 
-  @Override public JobState exec() {
+  @Override public JobState execImpl() {
     trainModel(initModel());
     delete();
     return JobState.DONE;
@@ -323,7 +362,6 @@ public class NN extends Job.ValidatedJob {
    * @return Trained model
    */
   public final NNModel trainModel(NNModel model) {
-    Frame[] valid_adapted = null;
     Frame valid = null, validScoreFrame = null;
     Frame train = null, trainScoreFrame = null;
     try {
@@ -333,6 +371,7 @@ public class NN extends Job.ValidatedJob {
         model = UKV.get(dest());
       }
       model.write_lock(self());
+      prepareValidationWithModel(model);
       final long model_size = model.model_info().size();
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
@@ -348,8 +387,10 @@ public class NN extends Job.ValidatedJob {
 
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
-        valid_adapted = model.adapt(validation, false);
-        valid = reBalance(valid_adapted[0], seed+1); //rebalance for load balancing, shuffle for "fairness"
+        Frame adaptedValid = getValidation();
+        if (getValidAdaptor().needsAdaptation2CM())
+          adaptedValid.add("adaptedValidationResponse", getValidAdaptor().getAdaptedValidationResponse2CM());
+        valid = reBalance(adaptedValid, seed+1); //rebalance for load balancing, shuffle for "fairness"
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
         if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
           validScoreFrame = sampleFrameStratified(valid, valid.lastVec(), null,
@@ -359,6 +400,7 @@ public class NN extends Job.ValidatedJob {
         }
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
+      model.training_rows = train.numRows();
       if (mini_batch > train.numRows()) {
         Log.warn("Setting mini_batch (" + mini_batch
                 + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");
@@ -386,7 +428,6 @@ public class NN extends Job.ValidatedJob {
       if (model != null) model.unlock(self());
       if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
       if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
-      if (validation != null && valid_adapted != null && valid_adapted.length > 1 ) valid_adapted[1].delete(); //just deleted the adapted frames for validation
       unlock_data();
     }
   }
@@ -424,7 +465,9 @@ public class NN extends Job.ValidatedJob {
    * @return Frame that can be load-balanced (and shuffled), depending on whether force_load_balance and shuffle_training_data are set
    */
   private Frame reBalance(final Frame fr, long seed) {
-    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
+    Frame f = force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
+//    if (f != fr) tocleanup(f); //triggers assert since vector groups won't match
+    return f;
   }
 
 }

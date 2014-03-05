@@ -1,15 +1,16 @@
 import sys
 
 import math
-DO_MEDIAN = True
 OTHER_T = 0.50
-DO_TO_BEFORE = False
 
+# Always need an extra bin (with it's min value) for interpolating
+# if we're at the last bin and need to interpolate
+# maybe keep a hcnt_min for the high guys for that 
 # set this to 1, to see that NUDGE makes sure the end data isn't lost
 # should iterate without change, if nudge is big enough
 # otherwse  one vlue gets dropped each iteration
 # test with BIN_COUNT = 2, to see that it always resolves..i.e. NUDGE is not too big
-BIN_COUNT = 5
+BIN_COUNT = 1000
 sys.path.extend(['.','..','py'])
 import h2o_print as h2p, h2o_summ
 import numpy as np
@@ -76,6 +77,7 @@ def findQuantile(d, dmin, dmax, drows, threshold):
         # out of the histogram
         hcnt_low = 0
         hcnt_high = 0
+        hcnt_high_min = None
 
         for val in d:
             # need to count the stuff outside the bin-gathering, since threshold compare
@@ -87,10 +89,14 @@ def findQuantile(d, dmin, dmax, drows, threshold):
             elif val > valEnd:
                 if hcnt_high==0:
                     print "First addition to hcnt_high this pass val:", val, "valEnd:", valEnd
+                    # for intepolating past the last bin?
+                    hcnt_high_min = val
+                else:
+                    hcnt_high_min = min(hcnt_high_min, val)
                 hcnt_high += 1
             else:
                 # where are we zeroing in (start)
-                print valOffset, binSize
+                # print valOffset, binSize
                 hcntIdx = int(round((valOffset * 1000000.0) / binSize) / 1000000.0)
                 assert hcntIdx >=0 and hcntIdx<=binCount, "val %s %s %s %s hcntIdx: %s binCount: %s binSize: %s" % \
                     (val, valStart, valEnd, valOffset, hcntIdx, binCount, binSize)
@@ -111,26 +117,17 @@ def findQuantile(d, dmin, dmax, drows, threshold):
         # now walk thru and find out what bin you look at it's valOffset (which will be the hcnt_min for that bin
         s = 0
         k = 0
-        prevK = 0
         currentCnt = newLowCount
         targetCnt = int(math.floor(threshold * drows))
-        targetCntExact = (threshold + 0.0) * drows
-        exactGoal = targetCnt==targetCntExact
-        print "targetCnt:", targetCnt, "targetCntExact", targetCntExact
+        targetCntFractional = (threshold * drows) - targetCnt
+        exactGoal = targetCntFractional==0.0
 
-        if DO_TO_BEFORE:
-            e = lambda x, y : x < y
-        else:
-            e = lambda x, y : x <= y
-        while( e((currentCnt + hcnt[k]), targetCnt) ): 
+        print "targetCnt:", targetCnt, "targetCntFractional", targetCntFractional
+
+        while((currentCnt + hcnt[k]) <= targetCnt): 
             currentCnt += hcnt[k]
-            if hcnt[k]!=0:
-                prevK = k # will always be the previous non-zero (except when k=0)
-                print "setting prevK:", prevK
             k += 1
             assert k <= binCount, "k too large, k: %s binCount %s" % (k, binCount)
-
-        assert (k==0 and prevK==0) or prevK<k, "prevK should be before k except if both are zero %s %s" % (prevK, k)
 
         # I guess we don't care about the values at the bin edge
         # binLeftEdge = valStart + k*binSize
@@ -163,35 +160,52 @@ def findQuantile(d, dmin, dmax, drows, threshold):
             # Note actualBinWidth is 0 when all values are the same in a bin
             # Interesting how we have a gap that we jump between max of one bin, and min of another.
             guess = hcnt_min[k] + (actualBinWidth * ((targetCnt - currentCnt)/ hcnt[k]))
+            print "Guess D:", 'guess', 'k', 'hcnt_min[k]', 'actualBinWidth', 'currentCnt', 'targetCnt', 'hcnt[k]'
             print "Guess D:", guess, k, hcnt_min[k], actualBinWidth, currentCnt, targetCnt, hcnt[k]
 
         # We should end with a count of 1, otherwise it's still a best guess
-        # could be approximately equaly
+        # could be approximately equal
         # THERE CAN BE MULTIPLE VALUES AT THE TARGET VALUE
         # chenk for min = max in that bin!
         print "checking for done, hcnt_min[k]", hcnt_min[k], "hcnt_max[k]", hcnt_max[k]
 
-        if DO_TO_BEFORE:
-            done = hcnt_min[k]==hcnt_max[k] and (currentCnt+hcnt[k])==targetCnt
-            if done:
-                print "Done:", hcnt[k], hcnt_min[k], hcnt_max[k], currentCnt, targetCnt
-            else:
-                print "Not Done:", hcnt[k], hcnt_min[k], hcnt_max[k], currentCnt, targetCnt
+        # In the right bit with only one value, and the 
+        if hcnt_min[k]==hcnt_max[k] and currentCnt==targetCnt: 
+            # no mattter what size the fraction it would be on this number
+            if hcnt[k]>=2 and targetCntFraction==0:
+                done = True
+                guess = hcnt_min[k]
+
+        if done:
+            print 'Done:', 'hcnt_min[k]', 'hcnt_max[k]', 'currentCnt', 'targetCnt', 'targetCntFractional'
+            print 'Done:', hcnt_min[k], hcnt_max[k], currentCnt, targetCnt, targetCntFractional
         else:
-            
-            # targetCnt and targetCntExact should be equal if exactGoal
-            # covers inexact goal landing in a bin with multiple all the same value?
-            done = hcnt_min[k]==hcnt_max[k] and currentCnt==targetCnt
-            if done:
-                print "Done:", hcnt_min[k], hcnt_max[k], currentCnt, targetCnt, targetCntExact
-            else:
-                print "Not Done:", hcnt_min[k], hcnt_max[k], currentCnt, targetCnt, targetCntExact
+            print 'Not Done:', 'hcnt_min[k]', 'hcnt_max[k]', 'currentCnt', 'targetCnt', 'targetCntFractional'
+            print 'Not Done:', hcnt_min[k], hcnt_max[k], currentCnt, targetCnt, targetCntFractional
 
         # do we have to compute the mean, using the current k and nextK bins?
         # if min and max for a bin are different the count must be >1
-        assert (hcnt[k]==1 and hcnt_min[k]==hcnt_max[k]) or hcnt[k]>1
+        if hcnt[k]==1: 
+            assert hcnt_min[k]==hcnt_max[k]
 
-        if not done and hcnt[k]==1: # need mean with next_k
+        # need to get to 1 entry to 
+        # if there's a fractional part, and we're not done, it's in the next k
+
+        # okay...potentially multiple of same value in the bin
+        if not done and hcnt[k]>1 and hcnt_min[k]==hcnt_max[k] and targetCntFractional!=0:
+            print "\nInterpolating result into single value of this bin"
+            print 'Guess E:', 'guess', 'k', 'hcnt[k]', 'hcnt_min[k]', 'hcnt_max[k]', 'currentCnt', 'targetCnt'
+            print "Guess E:", guess, k, hcnt[k], hcnt_min[k], hcnt_max[k], currentCnt, targetCnt
+            guess = hcnt_min[k]
+            done = True
+
+        if not done and hcnt[k]==1 and hcnt_min[k]==hcnt_max[k] and targetCntFractional!=0:
+            print "\nSingle value in this bin, but fractional means we need to interpolate to next non-zero"
+            print 'k', 'hcnt[k]', 'hcnt_min[k]', 'hcnt_max[k]', 'currentCnt', 'targetCnt'
+            print k, hcnt[k], hcnt_min[k], hcnt_max[k], currentCnt, targetCnt
+
+        # one in bin. look to next bin
+        if not done and hcnt[k]==1 and targetCntFractional!=0:
             # only legitimate case is !exactGoal?
             assert not exactGoal
             print "Trying to find nextK for possibly interpolating k: %s" % k
@@ -207,51 +221,53 @@ def findQuantile(d, dmin, dmax, drows, threshold):
                 nextK += 1
 
             if nextK>=binCount:
-                print "k must be the last non-zero bin. set nextK to last bin"
-                nextK = binCount - 1 
+                nextK = None
+                print "nextK is outside the bins. Use hcnt_high_min"
+                if hcnt_high > 0:
+                    print "\nInterpolating result using hcnt_high_min"
+                    print "Guess F with hcnt_high_min:"
+                    print 'guess', 'k', 'hcnt_high_min', ' currentCnt', 'targetCnt', 'targetCntFractional', 'hcnt[k]'
+                    print guess, k, hcnt_high_min,  currentCnt, targetCnt, targetCntFractional, hcnt[k]
+                    guess = (hcnt_max[k]+ hcnt_high_min) / 2.0
+                else:
+                    print "Guess F with hcnt_high_min not valid:", \
+                        guess, k, hcnt_high, hcnt_high_min,  currentCnt, targetCnt, targetCntFractional, hcnt[k]
+                    assert false # should never happen?
+                    guess = hcnt_high
 
-            # last might be empty
-            assert nextK<binCount, "%s %s" % (nextK, binCount)
-            if hcnt[nextK]==0:
-                nextK = k
+            else:
+                # last might be empty
+                assert nextK<binCount, "%s %s" % (nextK, binCount)
+                if hcnt[nextK]==0:
+                    nextK = k
 
-            nextCnt = int(nextK * binSize)
+                nextCnt = int(nextK * binSize)
 
-            # have the "extra bin" for this
-            assert nextK < (binCount+1), "nextK too large, nextK: %s binCount %s" % (nextK, binCount)
-                
-            print "k:", k, "nextK", nextK    
-            if 1==0 and k != nextK:
-                guess = (hcnt_max[k] + hcnt_min[nextK]) / 2.0
-                print "\nInterpolating result using nextK"
-                print "Guess E with nextK:", guess, k, nextK,  hcnt_max[k], hcnt_min[nextK], actualBinWidth,\
-                    currentCnt, targetCnt, hcnt[k]
+                # have the "extra bin" for this
+                assert nextK < (binCount+1), "nextK too large, nextK: %s binCount %s" % (nextK, binCount)
+                    
+                print "k:", k, "nextK", nextK    
+                if  k != nextK:
+                    guess = (hcnt_max[k] + hcnt_min[nextK]) / 2.0
+                    print "\nInterpolating result using nextK"
+                    print "Guess G with nextK:", guess, k, nextK,  hcnt_max[k], hcnt_min[nextK], currentCnt, targetCnt, hcnt[k]
 
-            if 1==1 and k != prevK:
-                guess = (hcnt_max[k] + hcnt_min[prevK]) / 2.0
-                print "\nInterpolating result using prevK %s" % prevK
-                print "Guess E with prevK:", guess, prevK,  k, hcnt_max[k], hcnt_min[prevK], actualBinWidth,\
-                    currentCnt, targetCnt, hcnt[k]
-            
-
-            # since we moved into the partial bin
-            # use prevK to imput the mean
-
-            assert hcnt[nextK]!=0, hcnt[nextK]
-                
-            assert hcnt[k]!=0, hcnt[k]
-            assert hcnt[prevK]!=0, hcnt[prevK]
+                # since we moved into the partial bin
+                assert hcnt[nextK]!=0, hcnt[nextK]
+                assert hcnt[k]!=0, hcnt[k]
 
             # now we're done
-            done = True
 
         newValStart = hcnt_min[k] - NUDGE# FIX! should we nudge a little?
         newValEnd   = hcnt_max[k] + NUDGE # FIX! should we nudge a little?
         newValRange = newValEnd - newValStart 
-        newBinSize = newValRange / binCount
+        newBinSize = newValRange / (binCount + 0.0)
 
         # assert done or newBinSize!=0
         if not done:
+            print "Saying done because newBinSize is 0."
+            print "newValRange: %s, hcnt[k]: %s hcnt_min[k]: %s hcnt_max[k]: %s" %\
+                 (newValRange, hcnt[k], hcnt_min[k], hcnt_max[k])
             done = newBinSize==0
         # if we have to interpolate
         # if it falls into this bin, interpolate to this bin means one answer?
@@ -290,8 +306,8 @@ def twoDecimals(l):
         return "%.2f" % l
 
 # csvPathname = './syn_binary_1000000x1.csv'
-csvPathname = './d.csv'
-# csvPathname = './syn_binary_100000x1.csv'
+# csvPathname = './d.csv'
+csvPathname = './syn_binary_1000000x1.csv'
 # csvPathname = './syn_binary_100x1.csv'
 col = 0
 
@@ -324,32 +340,22 @@ d = target
 dmin = min(d)
 dmax = max(d)
 drows = len(d)
-if DO_MEDIAN:
-    thresholdList = [0.5]
-else:
-    thresholdList = [OTHER_T]
+thresholdList = [OTHER_T]
 
 quantiles = findQuantileList(d, dmin, dmax, drows, thresholdList)
 #*****************************************************************
 # for comparison
 #*****************************************************************
 # perPrint = ["%.2f" % v for v in a]
-per = [1 * t for t in thresholds]
-print "scipy per:", per
 
 from scipy import stats
-a1 = stats.scoreatpercentile(target, per=100*(0.50 if DO_MEDIAN else OTHER_T), interpolation_method='fraction')
+a1 = stats.scoreatpercentile(target, per=100*OTHER_T, interpolation_method='fraction')
 h2p.red_print("stats.scoreatpercentile:", a1)
-a2 = stats.mstats.mquantiles(targetFP, prob=per)
+a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T])
 h2p.red_print("scipy stats.mstats.mquantiles:", ["%.2f" % v for v in a2])
 
 # looking at the sorted list here
 targetFP.sort()
-b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else OTHER_T)
-label = '50%' if DO_MEDIAN else '99.9%'
-h2p.blue_print(label, "from scipy:", a2[5 if DO_MEDIAN else 10])
-
-a3 = stats.mstats.mquantiles(targetFP, prob=per)
-h2p.red_print("after sort")
-h2p.red_print("scipy stats.mstats.mquantiles:", ["%.2f" % v for v in a3])
+b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T)
+h2p.blue_print( "from scipy:", a2)
 

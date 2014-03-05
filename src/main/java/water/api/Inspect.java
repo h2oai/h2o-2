@@ -471,7 +471,7 @@ public class Inspect extends Request {
 
       JsonObject row = new JsonObject();
 
-      row.addProperty(ROW,TO_ENUM);
+      row.addProperty(ROW, "Change Type");
       String k = _va._key.toString();
       for( int i = 0; i < _max_columns; i++ ) {
         if(_va._cols[i].isFloat()) {
@@ -484,7 +484,7 @@ public class Inspect extends Request {
           // enums have mu = sigma = NaN, unless they are just transformed int column.
           if(!Double.isNaN(_va._cols[i]._mean) && !Double.isNaN(_va._cols[i]._sigma)){
             String btn = "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=false" + "'>"
-              + "<button type='submit' class='btn btn-success'>As Int</button>";
+              + "<button type='submit' class='btn btn-success'>As Integer</button>";
             row.addProperty(_va._cols[i]._name, btn);
           } else row.addProperty(_va._cols[i]._name, "");
           continue;

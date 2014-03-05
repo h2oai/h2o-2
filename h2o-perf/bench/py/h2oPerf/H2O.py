@@ -173,7 +173,7 @@ class H2OCloudNode:
 
         cmd = ["java",
                "-Xmx" + self.xmx,
-               "-ea",
+               #"-ea",
                "-jar", self.uploaded[self.h2o_jar],
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port)]

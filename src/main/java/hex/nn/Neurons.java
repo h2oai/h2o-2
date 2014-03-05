@@ -1,5 +1,6 @@
 package hex.nn;
 
+import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask;
 import water.MemoryManager;
 import water.api.DocGen;
@@ -56,9 +57,15 @@ public abstract class Neurons {
   public Neurons _previous; // previous layer of neurons
   NNModel.NNModelInfo _minfo; //reference to shared model info
   public float[] _w; //reference to _minfo.weights[layer] for convenience
-  float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
   public double[] _b; //reference to _minfo.biases[layer] for convenience
+
+  // momentum
+  float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
   private double[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
+
+  // AdaDelta
+  private float[] _E_dx2; //reference to _minfo.E_dx2[layer] for convenience
+  private double[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
 
   /**
    * For Dropout training
@@ -82,12 +89,21 @@ public abstract class Neurons {
       assert (!training || _dropout != null);
     } else {
       assert(_previous != null);
-      if (params.momentum_stable != params.momentum_start) {
+      if (params.momentum_stable != 0 || params.momentum_start != 0) {
         assert(_minfo.has_momenta());
-        assert(_minfo.has_momenta());
-        assert(params.momentum_ramp > 0);
         assert(_wm != null);
         assert(_bm != null);
+        assert(_E_dx2 == null);
+        assert(_E_g2 == null);
+      }
+      if (params.rho > 0 || params.epsilon > 0) {
+        if (params.rho == 0) throw new InvalidArgumentException("rho must be > 0 if epsilon is >0.");
+        if (params.epsilon == 0) throw new InvalidArgumentException("epsilon must be > 0 if rho is >0.");
+        assert(_minfo.adaDelta());
+        assert(_E_dx2 != null);
+        assert(_E_g2 != null);
+        assert(_wm == null);
+        assert(_bm == null);
       }
       if (this instanceof MaxoutDropout || this instanceof TanhDropout || this instanceof RectifierDropout) {
         assert (!training || _dropout != null);
@@ -123,8 +139,11 @@ public abstract class Neurons {
         _wm = minfo.get_weights_momenta(index-1); //incoming weights
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
+      if (minfo.adaDelta()) {
+        _E_dx2 = minfo.get_E_dx2(index-1);
+        _E_g2 = minfo.get_E_g2(index - 1);
+      }
     }
-
     sanityCheck(training);
   }
 
@@ -155,7 +174,19 @@ public abstract class Neurons {
       int w = off + i;
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
-      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
+      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1; //this is the actual gradient
+
+      // adaptive learning rate r from AdaDelta
+      // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
+      if (_E_dx2 != null && _E_g2 != null) {
+        assert(_wm == null && _bm == null);
+        final double grad = d;
+        _E_g2[w] = params.rho * _E_g2[w] + (1.-params.rho)*grad*grad;
+        final double RMS_dx = Math.sqrt(_E_dx2[w]+params.epsilon);
+        final double RMS_g = Math.sqrt(_E_g2[w]+params.epsilon);
+        r = RMS_dx/RMS_g;
+        _E_dx2[w] = (float)(params.rho * _E_dx2[w] + (1.-params.rho)*(r*d)*(r*d));
+      }
 
       // TODO finish per-weight acceleration, doesn't help for now
 //        if( _wp != null && d != 0 ) {

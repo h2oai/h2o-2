@@ -33,7 +33,7 @@ class PerfRunner:
         self.tests_running = []
         self.__create_output_dir__()
 
-    def build_test_list(self):
+    def build_test_list(self, test_to_run):
         """
         Recursively find the list of tests to run.
         """
@@ -42,7 +42,8 @@ class PerfRunner:
 
         for root, dirs, files in os.walk(self.test_root_dir):
             for d in dirs:
-                self.add_test(d)
+                if test_to_run in d:
+                    self.add_test(d)
 
     def add_test(self, testDir):
         """

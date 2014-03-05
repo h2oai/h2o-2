@@ -225,7 +225,7 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_lambda*(1-_alpha));
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
-        if(Double.isNaN(_rho)) rho = gram.diagMin()+1e-5;// find rho value as min diag element + constant
+        if(Double.isNaN(_rho)) rho = _lambda*_alpha;//gram.diagMin()+1e-5;// find rho value as min diag element + constant
         gram.addDiag(rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){

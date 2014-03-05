@@ -17,13 +17,12 @@ import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 
 import static water.util.Utils.difference;
 import static water.util.Utils.isEmpty;
 
-public class Job extends Request2 {
+public abstract class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -252,6 +251,9 @@ public class Job extends Request2 {
 
     @Override protected void init() {
       super.init();
+      // Check if it make sense to build a model
+      if (source.numRows()==0)
+        throw new IllegalArgumentException("Cannot build a model on empty dataset!");
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
@@ -274,9 +276,28 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     protected transient Vec[] _train, _valid;
+    /** Validation vector extracted from validation frame. */
     protected transient Vec _validResponse;
+    /** Validation response domain or null if validation is not specified or null if response is float. */
+    protected transient String[] _validResponseDomain;
+    /** Source response domain or null if response is float. */
+    protected transient String[] _sourceResponseDomain;
+    /** CM domain derived from {@link #_validResponseDomain} and {@link #_sourceResponseDomain}. */
+    protected transient String[] _cmDomain;
+    /** Names of columns */
     protected transient String[] _names;
+    /** Name of validation response. Should be same as source response. */
     protected transient String _responseName;
+
+    /** Adapted validation frame to a computed model. */
+    private transient Frame _adaptedValidation;
+    private transient Vec   _adaptedValidationResponse; // Validation response adapted to computed CM domain
+    private transient int[][] _fromModel2CM;            // Transformation for model response to common CM domain
+    private transient int[][] _fromValid2CM;            // Transformation for validation response to common CM domain
+
+    /** Frame containing only adapted part of validation which needs to be clean-up at the end of computation
+     *  by {@link #cleanup()} call. */
+    private transient Frame _toDeleteFrame;
 
     @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
@@ -296,6 +317,7 @@ public class Job extends Request2 {
 
     @Override protected void init() {
       super.init();
+      _toDeleteFrame = new Frame();
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )
@@ -308,11 +330,93 @@ public class Job extends Request2 {
       for( int i = 0; i < cols.length; i++ )
         _names[i] = source._names[cols[i]];
 
+      // Compute source response domain
+      if (classification) _sourceResponseDomain = getVectorDomain(response);
+      // Is validation specified?
       if( validation != null ) {
+        // Extract a validation response
         int idx = validation.find(source.names()[rIndex]);
         if( idx == -1 ) throw new IllegalArgumentException("Validation set does not have a response column called "+_responseName);
         _validResponse = validation.vecs()[idx];
+        // Compute output confusion matrix domain for classification:
+        // - if validation dataset is specified then CM domain is union of train and validation response domains
+        //   else it is only domain of response column.
+        if (classification) {
+          _validResponseDomain  = getVectorDomain(_validResponse);
+          if (_validResponseDomain!=null) {
+            _cmDomain = Utils.union(_sourceResponseDomain, _validResponseDomain);
+            if (!Arrays.deepEquals(_sourceResponseDomain, _validResponseDomain)) {
+              _fromModel2CM = Model.getDomainMapping(_cmDomain, _sourceResponseDomain, false); // transformation from model produced response ~> cmDomain
+              _fromValid2CM = Model.getDomainMapping(_cmDomain, _validResponseDomain , false); // transformation from validation response domain ~> cmDomain
+            }
+          } else _cmDomain = _sourceResponseDomain;
+        } /* end of if classification */
+      } else if (classification) _cmDomain = _sourceResponseDomain;
+    }
+
+    protected String[] getVectorDomain(final Vec v) {
+      assert v==null || v.isInt() || v.isEnum() : "Cannot get vector domain!";
+      if (v==null) return null;
+      String[] r = null;
+      if (v.isEnum()) {
+        r = v.domain();
+      } else {
+        Vec tmp = v.toEnum();
+        r = tmp.domain();
+        UKV.remove(tmp._key);
       }
+      return r;
+    }
+
+    /** Returns true if the job has specified validation dataset. */
+    protected final boolean  hasValidation() { return validation!=null; }
+    /** Returns a domain for confusion matrix. */
+    protected final String[] getCMDomain() { return _cmDomain; }
+    /** Return validation dataset which can be adapted to a model if it is necessary. */
+    protected final Frame    getValidation() { return _adaptedValidation!=null ? _adaptedValidation : validation; };
+    /** Returns original validation dataset. */
+    protected final Frame    getOrigValidation() { return validation; }
+    public final Response2CMAdaptor getValidAdaptor() { return new Response2CMAdaptor(); }
+
+    /** */
+    protected final void prepareValidationWithModel(final Model model) {
+      if (validation == null) return;
+      Frame[] av = model.adapt(validation, false);
+      _adaptedValidation = av[0];
+      tocleanup(av[1]); // delete this after computation
+      if (_fromValid2CM!=null) {
+        assert classification : "Validation response transformation should be declared only for classification!";
+        assert _fromModel2CM != null : "Model response transformation should exist if validation response transformation exists!";
+        Vec tmp = _validResponse.toEnum();
+        _adaptedValidationResponse = tmp.makeTransf(_fromValid2CM, getCMDomain()); // Add an original response adapted to CM domain
+        tocleanup(_adaptedValidationResponse); // Add the created vector to a clean-up list
+        tocleanup(tmp);
+      }
+    }
+
+    @Override protected void cleanup() {
+      if (_toDeleteFrame != null) _toDeleteFrame.delete();
+    }
+
+    /** Append all vectors from  given frame to clean up list. */
+    protected void tocleanup(Frame fr) {  _toDeleteFrame.add(fr, true);  }
+    /** Append given vector to clean up list. */
+    protected void tocleanup(Vec vec)  { _toDeleteFrame.add(UUID.randomUUID().toString(), vec); }
+
+    /** A micro helper for transforming model/validation responses to confusion matrix domain. */
+    public class Response2CMAdaptor {
+      /** Adapt given vector produced by a model to confusion matrix domain. Always return a new vector which needs to be deleted. */
+      public Vec adaptModelResponse2CM(final Vec v) { return  v.makeTransf(_fromModel2CM, getCMDomain()); }
+      /** Adapt given validation vector to confusion matrix domain. Always return a new vector which needs to be deleted. */
+      public Vec adaptValidResponse2CM(final Vec v) { return  v.makeTransf(_fromValid2CM, getCMDomain()); }
+      /** Returns validation dataset. */
+      public Frame getValidation() { return ValidatedJob.this.getValidation(); }
+      /** Return cached validation response already adapted to CM domain. */
+      public Vec getAdaptedValidationResponse2CM() { return _adaptedValidationResponse; }
+      /** Return cm domain. */
+      public String[] getCMDomain() { return ValidatedJob.this.getCMDomain(); }
+      /** Returns true if model/validation responses need to be adapted to confusion matrix domain. */
+      public boolean needsAdaptation2CM() { return _fromModel2CM != null; }
     }
   }
 
@@ -484,7 +588,7 @@ public class Job extends Request2 {
 
   /** Finds a job with given key or returns null.
    *
-   * @param key job key
+   * @param jobkey job key
    * @return returns a job with given job key or null if a job is not found.
    */
   public static final Job findJob(final Key jobkey) {
@@ -582,10 +686,19 @@ public class Job extends Request2 {
    *
    * @return true if job is done, false if it will still be running after the method returns.
    */
-  protected JobState exec() {
-    throw new RuntimeException("Should be overridden if job is a request");
+  private final JobState exec() {
+    try {
+      return execImpl();
+    } finally {
+      cleanup();
+    }
   }
 
+  protected JobState execImpl() { throw new RuntimeException("Job does not support exec call! Please implement execImpl method!"); };
+
+  /** Clean-up code which is executed after each {@link Job#exec()} call in any case (normal/exceptional). */
+  protected void cleanup() {
+  }
 
   /**
    * Block synchronously waiting for a job to end, success or not.
@@ -700,15 +813,12 @@ public class Job extends Request2 {
       }
       cancel(ex);
     }
+
   }
 
   public static boolean checkIdx(Frame source, int[] idx) {
     for (int i : idx) if (i<0 || i>source.vecs().length-1) return false;
     return true;
-  }
-
-  private JobHandle jobHandle() {
-    return new JobHandle(this);
   }
 
   /* Update end_time, state, msg, preserve start_time */

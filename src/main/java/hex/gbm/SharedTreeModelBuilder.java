@@ -50,9 +50,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class, json=true)
   public boolean score_each_iteration = false;
 
-  // Overall prediction Mean Squared Error as I add trees
-  transient protected double _errs[];
-
 //  @API(help = "Active feature columns")
   protected int _ncols;
 
@@ -66,13 +63,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected long _distribution[];
 
   private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
-
-  private transient boolean _validAdapted;        // Internal flag to signal that validation dataset adaptation was performed
-  private transient Frame _adaptedValidation;     // Validation dataset is already adapted to a produced model
-  private transient Vec   _adaptedValidationResponse; // Validation response adapted to computed CM domain
-  private transient Frame _toDeleteFrame; // Frame containing only adapted part of validation which needs to be clean-up at the end of computation
-  private transient int[][] _modelMap;            // Transformation for model response to common domain
-  private transient int[][] _validMap;            // Transformation for validation response to common domain
 
   /** Maximal number of supported levels in response. */
   public static final int MAX_SUPPORTED_LEVELS = 1000;
@@ -102,8 +92,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     assert (classification && (response.isInt() || response.isEnum())) ||   // Classify Int or Enums
            (!classification && !response.isEnum()) : "Classification="+classification + " and response="+response.isInt();  // Regress  Int or Float
 
-    if (source.numRows()==0)
-      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
     if (source.numRows() - response.naCnt() <=0)
       throw new IllegalArgumentException("Dataset contains too many NAs!");
 
@@ -112,12 +100,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
     assert (_nrows>0) : "Dataset contains no rows - validation of input parameters is probably broken!";
     // Transform response to enum
+    // TODO: moved to shared model job
     if( !response.isEnum() && classification ) {
       response = response.toEnum();
       _gen_enum = true;
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
-    _errs = new double[0];                // No trees yet
     if (classification && _nclass <= 1)
       throw new IllegalArgumentException("Constant response column!");
     if (_nclass > MAX_SUPPORTED_LEVELS)
@@ -178,52 +166,18 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     for( int i=0; i<_nclass; i++ )
       fr.add("NIDs_"+domain[i], response.makeCon(_distribution==null ? 0 : (_distribution[i]==0?-1:0)));
 
-    // Compute output confusion matrix domain for classification:
-    // - if validation dataset is specified then CM domain is union of train and validation response domains
-    //   else it is only domain of response column.
-    String[] cmDomain = null;
-    if (validation!=null && _nclass > 1) {
-      // Collect domain for validation response
-      Vec validResponse = validation.vec(names[names.length-1]).toEnum(); // toEnum call require explicit delete of created vector
-      String[] validationDomain = validResponse.domain();
-      cmDomain = Utils.union(domain, validationDomain);
-      // Remove temporary vector
-      UKV.remove(validResponse._key);
-      if (!Arrays.deepEquals(cmDomain, domain)) { // Muhehehe, we have different domain for CM which is superset of model response domain
-        // Compute transformations: from response columns to CM domain
-        _modelMap = Model.getDomainMapping(cmDomain, domain, false);           // transformation from model produced response ~> cmDomain
-        _validMap = Model.getDomainMapping(cmDomain, validationDomain, false); // transformation from validation response domain ~> cmDomain
-      }
-    } else if (_nclass > 1) {
-      cmDomain = domain;
-    }
-
     // Timer  for model building
     Timer bm_timer =  new Timer();
     // Create an initial model
-    TM model = makeModel(outputKey, dataKey, testKey, names, domains, cmDomain);
+    TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
     // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
     model.delete_and_lock(self());
-    // Prepare adapted validation dataset if it is necessary for classification  (we do not need to care about regression)
-    if (validation!=null) {
-      Frame[] av = model.adapt(validation, false);
-      _adaptedValidation     = av[0]; // adapted validation data for model
-      _toDeleteFrame         = av[1]; // only adapted vectors which need to be deleted
-      _validAdapted = true;
-      // Do I need to perform additional adaptation of response?
-      if (_validMap!=null) {
-        assert _modelMap != null : "Model response transformation should exist if validation response transformation exists!";
-        String vr = model.responseName();
-        Vec tmp = validation.vec(vr).toEnum();
-        _adaptedValidationResponse = tmp.makeTransf(_validMap); // Add an original response adapted to CM domain
-        _toDeleteFrame.add("__dummy__validation_response__", _adaptedValidationResponse); // Add the created vector to a clean-up list
-        _toDeleteFrame.add("__dummy__validation_enum_response__", tmp);
-      }
-    }
+    // Prepare and cache adapted validation dataset if it is necessary
+    prepareValidationWithModel(model);
 
     try {
       // Compute the model
-      model = buildModel(model, fr, names, domains, cmDomain, bm_timer);
+      model = buildModel(model, fr, names, domains, bm_timer);
     //} catch (Throwable t) { t.printStackTrace();
     } finally {
       model.unlock(self());  // Update and unlock model
@@ -231,8 +185,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     }
   }
 
-  // Shared cleanup
+  // Tree model cleanup
   protected void cleanUp(Frame fr, Timer t_build) {
+    //super.cleanUp(fr, t_build);
     Log.info(logTag(),"Modeling done in "+t_build);
 
     // Remove temp vectors; cleanup the Frame
@@ -240,8 +195,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       UKV.remove(fr.remove(fr.numCols()-1)._key);
     // If we made a response column with toEnum, nuke it.
     if( _gen_enum ) UKV.remove(response._key);
-    // Delete adapted part of validation dataset
-    if( _toDeleteFrame != null ) _toDeleteFrame.delete();
 
     // Unlock the input datasets against deletes
     source.unlock(self());
@@ -252,7 +205,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected TM doScoring(TM model, Frame fr, DTree[] ktrees, int tid, String[] cmDomain, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
+  protected TM doScoring(TM model, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
@@ -270,8 +223,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
          (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
       // Perform scoring
-      Frame validationFrame = _validAdapted ? _adaptedValidation : validation;
-      sc = new Score().doIt(model, fr, validationFrame, _adaptedValidationResponse, _modelMap, cmDomain, oob, build_tree_per_node).report(logTag(),tid,ktrees);
+      Response2CMAdaptor vadaptor = getValidAdaptor();
+      sc = new Score().doIt(model, fr, vadaptor, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
     // Double update - after scoring
@@ -642,18 +595,19 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
      *
      * @param model a model which is used to perform computation
      * @param fr    a model training frame
-     * @param adaptedValidation a test frame or null, the test frame is already adapted to a model
-     * @param modelTransf expose a transformation of model results to be consistent with produced confusion matrix
+     * @param vadaptor an adaptor which helps to adapt model/validation response to confusion matrix domain.
      * @param oob   perform out-of-bag validation on training frame
      * @param build_tree_per_node
      * @return this score object
      */
-    public Score doIt(Model model, Frame fr, Frame adaptedValidation, Vec adaptedValidationResponse, int[][] modelTransf, String[] cmDomain, boolean oob, boolean build_tree_per_node) {
-      assert !oob || adaptedValidation==null : "Validation frame cannot be specified if oob validation is demanded!"; // oob => validation==null
-      assert _nclass == 1 || cmDomain != null ;
+    public Score doIt(Model model, Frame fr, Response2CMAdaptor vadaptor, boolean oob, boolean build_tree_per_node) {
+      assert !oob || vadaptor.getValidation()==null : "Validation frame cannot be specified if oob validation is demanded!"; // oob => validation==null
+      assert _nclass == 1 || vadaptor.getCMDomain() != null : "CM domain has to be configured from classification!";
 
-      _cmlen = _nclass > 1 ? cmDomain.length : 1;
+      _cmlen = _nclass > 1 ? vadaptor.getCMDomain().length : 1;
       _oob = oob;
+      // Validation frame adapted to a model
+      Frame adaptedValidation = vadaptor.getValidation();
       // No validation frame is specified, so perform computation on training data
       if( adaptedValidation == null ) return doAll(fr, build_tree_per_node);
       _validation = true;
@@ -666,10 +620,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       if (_nclass>1) { // Only for Classification
         for( int i=0; i<_nclass; i++ ) // Distribution of response classes
           adapValidation.add("ClassDist"+i,res.vecs()[i+1]);
-        if (modelTransf!=null) {
-          Vec ar = res.vecs()[0].makeTransf(modelTransf); // perform transformation of model results to be consistent with expected confusion matrix domain
+        if (vadaptor.needsAdaptation2CM()) {
+          Vec ar = vadaptor.adaptModelResponse2CM(res.vecs()[0]); // perform transformation of model results to be consistent with expected confusion matrix domain
           adapValidation.add("Prediction", ar); // add as a prediction
-          adapValidation.add("ActualValidationResponse", adaptedValidationResponse);
+          adapValidation.add("ActualValidationResponse", vadaptor.getAdaptedValidationResponse2CM());
           _cavr = true; // signal that we have two predictions vectors in the frame.
           res.add("__dummyx__", ar); // add the vector to clean up list
         } else
@@ -800,7 +754,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   protected abstract water.util.Log.Tag.Sys logTag();
-  protected abstract TM buildModel( TM initialModel, Frame fr, String names[], String domains[][], String[] cmDomain, Timer t_build );
+  protected abstract TM buildModel( TM initialModel, Frame fr, String names[], String domains[][], Timer t_build );
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm);
