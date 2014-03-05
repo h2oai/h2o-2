@@ -342,7 +342,11 @@ function(modelType, datatype = "VA") {
 
 .predict<-
 function(model) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
+  if( class(model)[1] == "H2OGLMModelVA") {
+    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT, model_key = model@key, data_key=testData@key, destination_key = "h2opreds.hex")
+  } else {
+    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
+  }
   h2opred <- new("H2OParsedData", h2o = h, key = "h2opreds.hex")
   if (predict_type == "binomial") 
     .calcBinomResults(h2opred)
@@ -356,13 +360,13 @@ function(model) {
 function(h2opred) {
   res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = testData@key, 
                           vactual = response, predict = h2opred@key,
-                          vpredict = "predict")
+                          vpredict = response)
   cm <- res$cm
   confusion_matrix    <<- t(matrix(unlist(cm), 2 ,2))
   precision           <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[1,2])
   recall              <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[2,1])
-  error_rate          <<- confusion_matrix[3,3]
-  minority_error_rate <<- confusion_matrix[2,3]
+  error_rate          <<- -1 #confusion_matrix[3,3]
+  minority_error_rate <<- -1 #confusion_matrix[2,3]
   auc                 <<- res$AUC
 }
 
