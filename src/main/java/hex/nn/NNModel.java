@@ -5,7 +5,11 @@ import water.*;
 import water.api.*;
 import water.api.Request.API;
 import water.fvec.Frame;
-import water.util.*;
+import water.fvec.Vec;
+import water.util.D3Plot;
+import water.util.Log;
+import water.util.ModelUtils;
+import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -479,7 +483,18 @@ public class NNModel extends Model {
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
         if (err.classification && nclasses()==2) err.validAUC = new AUC();
+        Job.ValidatedJob.Response2CMAdaptor vadaptor = model_info().job().getValidAdaptor();
+        Vec tmp = null;
+        if (isClassifier() && vadaptor.needsAdaptation2CM()) tmp = ftest.remove(ftest.vecs().length-1);
         final Frame validPredict = score(ftest, false);
+        // Adapt output response domain, in case validation domain is different from training domain
+        // Note: doesn't change predictions, just the *possible* label domain
+        if (isClassifier() && vadaptor.needsAdaptation2CM()) {
+          ftest.add("adaptedValidationResponse", tmp);
+          final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
+          validPredict.replace(0, CMadapted); //replace label
+          validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+        }
         final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC);
         validPredict.delete();
         if (err.classification) err.valid_err = err.validAUC != null ? err.validAUC.err() : validErr;
@@ -582,15 +597,15 @@ public class NNModel extends Model {
       auc.actual = ftest;
       auc.vactual = ftest.lastVec();
       auc.predict = fpreds;
-      auc.vpredict = fpreds.lastVec();
+      auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
       auc.serve();
       error = auc.toASCII(sb);
     } else {
       if (cm == null) cm = new ConfusionMatrix();
       cm.actual = ftest;
-      cm.vactual = ftest.lastVec();
+      cm.vactual = ftest.lastVec(); //original vector or adapted response (label) if CM adaptation was done
       cm.predict = fpreds;
-      cm.vpredict = fpreds.vecs()[0];
+      cm.vpredict = fpreds.vecs()[0]; //ditto
       cm.serve();
       error = cm.toASCII(sb); //either classification error or MSE
     }

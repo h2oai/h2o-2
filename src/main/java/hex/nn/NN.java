@@ -323,7 +323,6 @@ public class NN extends Job.ValidatedJob {
    * @return Trained model
    */
   public final NNModel trainModel(NNModel model) {
-    Frame[] valid_adapted = null;
     Frame valid = null, validScoreFrame = null;
     Frame train = null, trainScoreFrame = null;
     try {
@@ -333,6 +332,7 @@ public class NN extends Job.ValidatedJob {
         model = UKV.get(dest());
       }
       model.write_lock(self());
+      prepareValidationWithModel(model);
       final long model_size = model.model_info().size();
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
@@ -348,8 +348,10 @@ public class NN extends Job.ValidatedJob {
 
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
-        valid_adapted = model.adapt(validation, false);
-        valid = reBalance(valid_adapted[0], seed+1); //rebalance for load balancing, shuffle for "fairness"
+        Frame adaptedValid = getValidation();
+        if (getValidAdaptor().needsAdaptation2CM())
+          adaptedValid.add("adaptedValidationResponse", getValidAdaptor().getAdaptedValidationResponse2CM());
+        valid = reBalance(adaptedValid, seed+1); //rebalance for load balancing, shuffle for "fairness"
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
         if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
           validScoreFrame = sampleFrameStratified(valid, valid.lastVec(), null,
@@ -386,7 +388,6 @@ public class NN extends Job.ValidatedJob {
       if (model != null) model.unlock(self());
       if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
       if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
-      if (validation != null && valid_adapted != null && valid_adapted.length > 1 ) valid_adapted[1].delete(); //just deleted the adapted frames for validation
       unlock_data();
     }
   }
@@ -424,7 +425,9 @@ public class NN extends Job.ValidatedJob {
    * @return Frame that can be load-balanced (and shuffled), depending on whether force_load_balance and shuffle_training_data are set
    */
   private Frame reBalance(final Frame fr, long seed) {
-    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
+    Frame f = force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
+    if (f != fr) tocleanup(f);
+    return f;
   }
 
 }
