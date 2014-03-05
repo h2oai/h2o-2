@@ -198,8 +198,9 @@ public class AUC extends Request2 {
       }
       sb.append(", ["+String.valueOf(_fprs[c])+",").append(String.valueOf(_tprs[c])).append("]");
     }
-    for(int c = 0; c < 2*_fprs.length; c++) {
-      sb.append(", ["+String.valueOf(c/(2.0*_fprs.length))+",").append(String.valueOf(c/(2.0*_fprs.length))).append("]");
+    //diagonal
+    for(int c = 0; c < 200; c++) {
+      sb.append(", ["+String.valueOf(c/200.)+",").append(String.valueOf(c/200.)).append("]");
     }
     sb.append("];\n");
 
@@ -246,18 +247,22 @@ public class AUC extends Request2 {
                     ".attr(\"cy\", function(d) {\n"+
                     "return yScale(d[1]);\n"+
                     "})\n"+
-                    ".attr(\"fill\", function(d) {\n"+
+                    ".attr(\"fill\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return \"red\"\n"+
+                    "  } else if (i == " + (_fprs.length - idx_bestF1) + "){\n"+
+                    "  return \"green\"\n"+
                     "  } else {\n"+
                     "  return \"blue\"\n"+
                     "  }\n"+
                     "})\n"+
-                    ".attr(\"r\", function(d) {\n"+
+                    ".attr(\"r\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return 1\n"+
+                    "  } else if (i == " + (_fprs.length - idx_bestF1) + ") {\n" +
+                    "  return 5\n"+
                     "  } else {\n"+
-                    "  return 2\n"+
+                    "  return 1.5\n"+
                     "  }\n"+
                     "})\n" +
                     ".on(\"mouseover\", function(d,i){\n" +
