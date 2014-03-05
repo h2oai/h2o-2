@@ -466,7 +466,7 @@ public class NN extends Job.ValidatedJob {
    */
   private Frame reBalance(final Frame fr, long seed) {
     Frame f = force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
-    if (f != fr) tocleanup(f);
+//    if (f != fr) tocleanup(f); //triggers assert since vector groups won't match
     return f;
   }
 
