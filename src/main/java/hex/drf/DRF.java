@@ -149,7 +149,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  @Override protected JobState exec() {
+  @Override protected JobState execImpl() {
     logStart();
     buildModel();
     return JobState.DONE;
@@ -174,7 +174,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // Out-of-bag trees counter - only one since it is shared via k-trees
   protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
-  @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], String[] cmDomain, final Timer t_build ) {
+  @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
     // Append number of trees participating in on-the-fly scoring
     fr.add("OUT_BAG_TREES", response.makeZero());
 
@@ -190,7 +190,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     TreeStats tstats = new TreeStats();
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) {
-      model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, tid==0, validation==null, build_tree_per_node);
+      model = doScoring(model, fr, ktrees, tid, tstats, tid==0, !hasValidation(), build_tree_per_node);
       // At each iteration build K trees (K = nclass = response column domain size)
 
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
@@ -204,7 +204,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       tstats.updateBy(ktrees);
     }
     // Final scoring
-    model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, true, validation==null, build_tree_per_node);
+    model = doScoring(model, fr, ktrees, tid, tstats, true, !hasValidation(), build_tree_per_node);
     // Compute variable importance if required
     if (classification && importance) {
       Timer vi_timer = new Timer();

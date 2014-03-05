@@ -24,7 +24,7 @@ public class MapReduce extends Job {
   }
 
   @Override
-  protected JobState exec() {
+  protected JobState execImpl() {
     // Parse a dataset into a Frame, H2O's distributed table-like data structure
     File file = new File(VM.h2oFolder(), "smalldata/iris/iris.csv");
     Frame frame = Frames.parse(file);

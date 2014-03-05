@@ -117,7 +117,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return rs.toString();
   }
 
-  @Override protected JobState exec() {
+  @Override protected JobState execImpl() {
     logStart();
     buildModel();
     return JobState.DONE;
@@ -139,7 +139,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-  @Override protected GBMModel buildModel( GBMModel model, final Frame fr, String names[], String domains[][], String[] cmDomain, Timer t_build ) {
+  @Override protected GBMModel buildModel( GBMModel model, final Frame fr, String names[], String domains[][], Timer t_build ) {
 
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
@@ -152,7 +152,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       // During first iteration model contains 0 trees, then 0-trees, then 1-tree,...
       // BUT if validation is not specified model does not participate in voting
       // but on-the-fly computed data are used
-      model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, false, false, false);
+      model = doScoring(model, fr, ktrees, tid, tstats, false, false, false);
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
@@ -173,7 +173,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       tstats.updateBy(ktrees);
     }
     // Final scoring
-    model = doScoring(model, fr, ktrees, tid, cmDomain, tstats, true, false, false);
+    model = doScoring(model, fr, ktrees, tid, tstats, true, false, false);
 
     return model;
   }

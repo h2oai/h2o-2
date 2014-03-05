@@ -27,7 +27,7 @@ public class NeuralNetMnist2 extends Job {
 //    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
-  @Override protected JobState exec() {
+  @Override protected JobState execImpl() {
     Log.info("Parsing data.");
     //long seed = 0xC0FFEE;
     long seed = new Random().nextLong();
@@ -73,6 +73,6 @@ public class NeuralNetMnist2 extends Job {
     p.shuffle_training_data = false;
     p.force_load_balance = true;
     p.quiet_mode = false;
-    return p.exec();
+    return p.execImpl();
   }
 }

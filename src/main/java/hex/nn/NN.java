@@ -258,7 +258,7 @@ public class NN extends Job.ValidatedJob {
     return 0;
   }
 
-  @Override public JobState exec() {
+  @Override public JobState execImpl() {
     trainModel(initModel());
     delete();
     return JobState.DONE;
