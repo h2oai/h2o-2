@@ -50,10 +50,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Adaptive learning rate (AdaDelta)", filter = Default.class, json = true)
   public boolean adaptive_rate = true;
 
-  @API(help = "Adaptive learning rate time decay factor (length of moving window over prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
+  @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
   public double rho = 0.95;
 
-  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
+  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double epsilon = 1e-6;
 
   /*Learning Rate*/
