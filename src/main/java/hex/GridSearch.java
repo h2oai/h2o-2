@@ -76,6 +76,7 @@ public class GridSearch extends Job {
     }
 
     void updateErrors(ArrayList<JobInfo> infos) {
+      if (jobs == null) return;
       errors = new double[jobs.length];
       int i = 0;
       for( Job job : jobs ) {
