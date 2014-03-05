@@ -399,7 +399,8 @@ public class AUC extends Request2 {
       _best_idxF1 = 0;
       _best_thresholdF1 = _thresh[0];
       for(int i = 1; i < _cms.length; ++i) {
-        if (_cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall()) {
+        if ( (!Double.isNaN(_cms[i].precisionAndRecall()) && (
+               Double.isNaN(_cms[_best_idxF1].precisionAndRecall())) || _cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall())) {
           _best_idxF1 = i;
           _best_thresholdF1 = _thresh[i];
         }

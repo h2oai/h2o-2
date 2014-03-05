@@ -61,6 +61,8 @@ public class GridSearch extends Job {
 
     @API(help = "Jobs")
     public Job[] jobs;
+    @API(help = "Errors")
+    public double[] errors;
 
     @Override protected Response serve() {
       Response response = super.serve();
@@ -68,9 +70,32 @@ public class GridSearch extends Job {
         GridSearch grid = UKV.get(destination_key);
         if( grid != null )
           jobs = grid.jobs;
+        updateErrors(null);
       }
       return response;
     }
+
+    void updateErrors(ArrayList<JobInfo> infos) {
+      errors = new double[jobs.length];
+      int i = 0;
+      for( Job job : jobs ) {
+        JobInfo info = new JobInfo();
+        info._job = job;
+        if(job.dest() != null){
+          Object value = UKV.get(job.dest());
+          info._model = value instanceof Model ? (Model) value : null;
+          if( info._model != null ) {
+            info._cm = info._model.cm();
+            info._error = info._model.mse();
+          }
+        }
+        if( info._cm != null)
+          info._error = info._cm.err();
+        if (infos != null) infos.add(info);
+        errors[i++] = info._error;
+      }
+    }
+
 
     @Override public boolean toHTML(StringBuilder sb) {
       if( jobs != null ) {
@@ -93,21 +118,7 @@ public class GridSearch extends Job {
         sb.append("</tr>");
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
-        for( Job job : jobs ) {
-          JobInfo info = new JobInfo();
-          info._job = job;
-          if(job.dest() != null){
-            Object value = UKV.get(job.dest());
-            info._model = value instanceof Model ? (Model) value : null;
-            if( info._model != null ) {
-              info._cm = info._model.cm();
-              info._error = info._model.mse();
-            }
-          }
-          if( info._cm != null)
-            info._error = info._cm.err();
-          infos.add(info);
-        }
+        updateErrors(infos);
         Collections.sort(infos, new Comparator<JobInfo>() {
           @Override public int compare(JobInfo a, JobInfo b) {
             return Double.compare(a._error, b._error);
