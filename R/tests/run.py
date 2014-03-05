@@ -1162,7 +1162,7 @@ def usage():
     print("    Rerunning failures from a previous run, keeping old random seeds:")
     print("        # Copy failures.txt, otherwise --wipe removes the directory with the list!")
     print("        cp " + os.path.join(g_output_dir, "failures.txt") + " .")
-    print("        "+g_script_name+" --wipe --numclouds 16 --testlist failures.txt")
+    print("        "+g_script_name+" --wipe --numclouds 16 --testlist failed.txt")
     print("")
     print("    Run tests on a pre-existing cloud (e.g. in a debugger), keeping old random seeds:")
     print("        "+g_script_name+" --wipe --usecloud ip:port")
