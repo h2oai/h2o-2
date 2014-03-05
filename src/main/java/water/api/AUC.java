@@ -40,12 +40,12 @@ public class AUC extends Request2 {
   public double F1;
   @API(help="Threshold for max. F1")
   private float threshold_maxF1;
-  @API(help="Confusion Matrix for best index.")
+  @API(help="Confusion Matrix for max. F1")
   private long[][] cm;
 
   public double AUC() { return AUC; }
   public double Gini() { return 2*AUC-1; }
-  public double F1() { return F1; }
+  public double F1() { return _cms[idx_bestF1].precisionAndRecall(); }
   public double err() { return _cms[idx_bestF1].err(); }
   public float threshold_maxF1() { return threshold_maxF1; }
   public long[][] cm() { return cm; }
@@ -55,6 +55,17 @@ public class AUC extends Request2 {
   private double[] _tprs;
   private double[] _fprs;
   private hex.ConfusionMatrix[] _cms;
+
+  /**
+   * Constructor for algos that make their own CMs
+   * @param cms ConfusionMatrices
+   * @param thresh Thresholds
+   */
+  AUC(hex.ConfusionMatrix[] cms, float[] thresh) {
+    assert(_cms.length == thresholds.length);
+    _cms = cms;
+    thresholds = thresh;
+  }
 
   @Override public Response serve() {
     Vec va = null, vp;
@@ -77,7 +88,7 @@ public class AUC extends Request2 {
         vp = va.align(vp);
       }
 
-      // make thresholds, if not user-given
+      // compute thresholds, if not user-given
       if (thresholds == null) {
         HashSet hs = new HashSet();
         final int bins = (int)Math.min(vpredict.length(), 200l);
@@ -91,23 +102,56 @@ public class AUC extends Request2 {
         for (Object h : hs) {thresholds[i++] = (Float)h; }
         sort(thresholds);
       }
-
-      // compute AUC, CMs, and best threshold
-      AUCTask at = new AUCTask(thresholds).doAll(va,vp);
-      _cms = at.getCMs();
-      idx_bestF1 = at.getBestIdxF1();
-      _tprs = at.getTPRs();
-      _fprs = at.getFPRs();
-      AUC = at.getAUC();
-      F1 = _cms[idx_bestF1].precisionAndRecall();
-      cm = _cms[idx_bestF1]._arr;
-      threshold_maxF1 = at.getBestThresholdF1();
+      // compute CMs
+      if (_cms == null) {
+        AUCTask at = new AUCTask(thresholds).doAll(va,vp);
+        _cms = at.getCMs();
+      }
+      // compute AUC and best thresholds
+      computeAUC();
+      findBestThreshold();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
     }
+  }
+
+
+  private static double trapezoid_area(double x1, double x2, double y1, double y2) { return Math.abs(x1-x2)*(y1+y2)/2.; }
+
+  private void computeAUC() {
+    _tprs = new double[_cms.length];
+    _fprs = new double[_cms.length];
+    double TPR_pre = 1;
+    double FPR_pre = 1;
+    AUC = 0;
+    for( int t = 0; t < _cms.length; ++t ) {
+      double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true-positive-rate
+      double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
+      AUC += trapezoid_area(FPR_pre, FPR, TPR_pre, TPR);
+      TPR_pre = TPR;
+      FPR_pre = FPR;
+      _tprs[t] = TPR;
+      _fprs[t] = FPR;
+    }
+    AUC += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
+    assert(AUC > -1e-5 && AUC < 1.+1e-5); //check numerical sanity
+    AUC = Math.max(0., Math.min(AUC, 1.)); //clamp to 0...1
+  }
+
+  private void findBestThreshold() {
+    idx_bestF1 = 0;
+    threshold_maxF1 = thresholds[0];
+    for(int i = 1; i < _cms.length; ++i) {
+      if ( (!Double.isNaN(_cms[i].precisionAndRecall()) && (
+              Double.isNaN(_cms[idx_bestF1].precisionAndRecall())) || _cms[i].precisionAndRecall() > _cms[idx_bestF1].precisionAndRecall())) {
+        idx_bestF1 = i;
+        threshold_maxF1 = thresholds[i];
+      }
+    }
+    cm = _cms[idx_bestF1]._arr;
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
@@ -334,21 +378,10 @@ public class AUC extends Request2 {
     sb.append("</div>");
   }
 
-  // Compute the AUC via MRTask2
+  // Compute CMs for different thresholds via MRTask2
   private static class AUCTask extends MRTask2<AUCTask> {
-    /* @OUT AUC */ public double getAUC() { return _auc; }
-    transient private double _auc;
-    /* @OUT Best Threshold Idx */ public int getBestIdxF1() { return _best_idxF1; }
-    transient private int _best_idxF1;
-    /* @OUT Best Threshold */ public float getBestThresholdF1() { return _best_thresholdF1; }
-    transient private float _best_thresholdF1;
-    /* @OUT TPRs */ public final double[] getTPRs() { return _tprs; }
-    transient private double[] _tprs;
-    /* @OUT FPRs */ public final double[] getFPRs() { return _fprs; }
-    transient private double[] _fprs;
     /* @OUT CMs */ public final hex.ConfusionMatrix[] getCMs() { return _cms; }
     private hex.ConfusionMatrix[] _cms;
-
 
     /* IN thresholds */ final private float[] _thresh;
 
@@ -360,7 +393,6 @@ public class AUC extends Request2 {
       _cms = new hex.ConfusionMatrix[_thresh.length];
       for (int i=0;i<_cms.length;++i)
         _cms[i] = new hex.ConfusionMatrix(2);
-
       final int len = Math.min(ca._len, cp._len);
       for( int i=0; i < len; i++ ) {
         assert(!ca.isNA0(i)); //should never have actual NaN probability!
@@ -382,37 +414,5 @@ public class AUC extends Request2 {
         _cms[i].add(other._cms[i]);
       }
     }
-
-    @Override protected void postGlobal() {
-      _tprs = new double[_cms.length];
-      _fprs = new double[_cms.length];
-
-      double TPR_pre = 1;
-      double FPR_pre = 1;
-      _auc = 0;
-      for( int t = 0; t < _cms.length; ++t ) {
-        double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true-positive-rate
-        double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
-        _auc += trapezoid_area(FPR_pre, FPR, TPR_pre, TPR);
-        TPR_pre = TPR;
-        FPR_pre = FPR;
-        _tprs[t] = TPR;
-        _fprs[t] = FPR;
-      }
-      _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
-      assert(_auc > -1e-5 && _auc < 1.+1e-5); //check numerical sanity
-      _auc = Math.max(0., Math.min(_auc, 1.)); //clamp to 0...1
-      _best_idxF1 = 0;
-      _best_thresholdF1 = _thresh[0];
-      for(int i = 1; i < _cms.length; ++i) {
-        if ( (!Double.isNaN(_cms[i].precisionAndRecall()) && (
-               Double.isNaN(_cms[_best_idxF1].precisionAndRecall())) || _cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall())) {
-          _best_idxF1 = i;
-          _best_thresholdF1 = _thresh[i];
-        }
-      }
-    }
-
-    private static double trapezoid_area(double x1, double x2, double y1, double y2) { return Math.abs(x1-x2)*(y1+y2)/2.; }
   }
 }
