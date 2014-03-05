@@ -545,8 +545,6 @@ public class Summary2 extends Iced {
     // merge hcnt and hcnt just by adding
     if (hcnt != null)
       Utils.add(hcnt, other.hcnt);
-    if (hcnt2 != null)
-      Utils.add(hcnt2, other.hcnt2);
 
     _gprows += other._gprows;
 
@@ -566,20 +564,32 @@ public class Summary2 extends Iced {
       // for now..die on NaNs
       assert !Double.isNaN(other.hcnt2_min[k]) : "NaN in other.hcnt2_min merging";
       assert !Double.isNaN(hcnt2_min[k]) : "NaN in hcnt2_min merging";
-      if ( other.hcnt2_min[k] < hcnt2_min[k] ) {
+
+      // cover the initial case (relying on initial min = 0 to work is wrong)
+      // can hcnt2 ever be null here?
+      if ( hcnt2[k]==0 || ( other.hcnt2_min[k] < hcnt2_min[k] )) {
         hcnt2_min[k] = other.hcnt2_min[k];
       }
     }
+
 
     // merge hcnt2 per-bin maxs
     for (int k = 0; k < hcnt2_max.length; k++) {
       // for now..die on NaNs
       assert !Double.isNaN(other.hcnt2_max[k]) : "NaN in other.hcnt2_max merging";
       assert !Double.isNaN(hcnt2_max[k]) : "NaN in hcnt2_max merging";
-      if ( other.hcnt2_max[k] < hcnt2_max[k] ) {
+
+      // cover the initial case (relying on initial min = 0 to work is wrong)
+      // can hcnt2 ever be null here?
+      if ( hcnt2[k]==0 || ( other.hcnt2_max[k] > hcnt2_max[k] )) {
         hcnt2_max[k] = other.hcnt2_max[k];
       }
     }
+
+    // can hcnt2 ever be null here?. Inc last, so the zero case is detected above
+    // seems like everything would fail if hcnt2 doesn't exist here
+    if (hcnt2 != null)
+      Utils.add(hcnt2, other.hcnt2);
       
     // merge hcnt mins
     double[] ds = MemoryManager.malloc8d(_mins.length);
