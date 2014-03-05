@@ -560,7 +560,7 @@ class RUnitRunner:
     def __init__(self,
                  test_root_dir,
                  use_cloud, use_ip, use_port,
-                 num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
+                 num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir, failed_output_dir):
         """
         Create a runner.
 
@@ -590,6 +590,7 @@ class RUnitRunner:
         self.h2o_jar = h2o_jar
         self.base_port = base_port
         self.output_dir = output_dir
+        self.failed_output_dir = failed_output_dir
 
         self.start_seconds = time.time()
         self.terminated = False
@@ -599,6 +600,7 @@ class RUnitRunner:
         self.tests_running = []
         self.regression_passed = False
         self._create_output_dir()
+        self._create_failed_output_dir()
 
         if (use_cloud):
             node_num = 0
@@ -957,6 +959,18 @@ class RUnitRunner:
 
         return test_short_dir
 
+    def _create_failed_output_dir(self):
+        try:
+            os.makedirs(self.failed_output_dir)
+        except OSError as e:
+            print("")
+            print("mkdir failed (errno {0}): {1}".format(e.errno, e.strerror))
+            print("    " + self.failed_output_dir)
+            print("")
+            print("(try adding --wipe)")
+            print("")
+            sys.exit(1)
+
     def _create_output_dir(self):
         try:
             os.makedirs(self.output_dir)
@@ -999,6 +1013,9 @@ class RUnitRunner:
             f = self._get_failed_filehandle_for_appending()
             f.write(test.get_test_dir_file_name() + "\n")
             f.close()
+            # Copy failed test output into directory failed
+            if not test.get_nopass():
+                shutil.copy(test.get_output_dir_file_name(), self.failed_output_dir)
 
     def _log(self, s):
         f = self._get_summary_filehandle_for_appending()
@@ -1326,6 +1343,7 @@ def main(argv):
     global g_script_name
     global g_num_clouds
     global g_output_dir
+    global g_failed_output_dir
     global g_test_to_run
     global g_test_list_file
     global g_test_group
@@ -1336,6 +1354,7 @@ def main(argv):
 
     # Calculate global variables.
     g_output_dir = os.path.join(test_root_dir, str("results"))
+    g_failed_output_dir = os.path.join(g_output_dir, str("failed"))
 
     # Calculate and set other variables.
     nodes_per_cloud = 1
@@ -1361,7 +1380,7 @@ def main(argv):
 
     g_runner = RUnitRunner(test_root_dir,
                            g_use_cloud, g_use_ip, g_use_port,
-                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx, g_output_dir)
+                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx, g_output_dir, g_failed_output_dir)
 
     # Build test list.
     if (g_test_to_run is not None):
