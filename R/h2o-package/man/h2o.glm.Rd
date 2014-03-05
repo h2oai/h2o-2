@@ -10,13 +10,20 @@ Fit a generalized linear model, specified by a response variable, a set of predi
 }
 \usage{
 ## Default method:
-h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1)
+h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
+  standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, 
+  as.numeric(NA)), thresholds, version = 1)
 
 ## Import to a ValueArray object:
-h2o.glm.VA(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA)))
+h2o.glm.VA(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
+  standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, 
+  as.numeric(NA)), thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), 
+  as.numeric(NA)))
 
 ## Import to a FluidVecs object:
-h2o.glm.FV(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)))
+h2o.glm.FV(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
+  standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, 
+  as.numeric(NA)))
 }
 \arguments{
   \item{x}{
@@ -86,15 +93,19 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
-h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
+prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
+  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
+h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", 
+  nfolds = 10, alpha = 0.5)
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, alpha = 0.1)
 
 # Run GLM of IsDepDelayed ~ Distance + Origin + Dest + UniqueCarrier on airlines dataset in HDFS
-airlines.hex =  h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip", version = 2)
-h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', family = 'binomial', data = airlines.hex, version = 2)
+airlines.hex =  h2o.importURL(localH2O, path = paste("https://raw.github.com", 
+  "0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip", sep = "/"), version = 2)
+h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', 
+  family = 'binomial', data = airlines.hex, version = 2)
 h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

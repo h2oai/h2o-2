@@ -10,13 +10,16 @@ Imports a file from the URL and parses it, returning an object containing the id
 }
 \usage{
 ## Default method:
-h2o.importURL(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1)
+h2o.importURL(object, path, key = "", parse = TRUE, header, 
+  sep = "", col.names, version = 1)
 
 ## Import to a ValueArray object:
-h2o.importURL.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importURL.VA(object, path, key = "", parse = TRUE, header, 
+  sep = "", col.names)
 
 ## Import to a FluidVecs object:
-h2o.importURL.FV(object, path, key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importURL.FV(object, path, key = "", parse = TRUE, header, 
+  sep = "", col.names)
 }
 
 \arguments{
@@ -60,11 +63,14 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
+  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 class(prostate.hex)
 summary(prostate.hex)
 
-prostate.fv = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex", version = 2)
+prostate.fv = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
+  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex", 
+  version = 2)
 class(prostate.fv)
 h2o.shutdown(localH2O)
 }

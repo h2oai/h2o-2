@@ -10,7 +10,8 @@ H2O: Gradient Boosted Machines
 	 on a parsed data set.
 }
 \usage{
-h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, validation)
+h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 5, 
+  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, validation)
 }
 \arguments{
   \item{x}{
@@ -76,11 +77,14 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 # Run regression GBM on australia.hex data 
 ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
-independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", "maxsoilmoist", "Max_czcs")
+independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", 
+  "maxsoilmoist", "Max_czcs")
 dependent <- "runoffnew"
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, 
+  n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
 
 # Run multinomial classification GBM on australia data 
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, interaction.depth = 5, n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, interaction.depth = 5, 
+  n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
 h2o.shutdown(localH2O)
 }
