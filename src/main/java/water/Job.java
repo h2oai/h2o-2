@@ -266,11 +266,6 @@ public abstract class Job extends Request2 {
               response.domain().length <= 1 : response.min() == response.max();
       if (has_constant_response)
         throw new IllegalArgumentException("Constant response column!");
-
-      // Should be handled by input
-      //assert response.isEnum() : "Response is not enum";
-      assert (classification && (response.isInt() || response.isEnum())) ||   // Classify Int or Enums
-             (!classification && !response.isEnum()) : "Classification="+classification + " and response="+response.isInt();  // Regress  Int or Float
     }
   }
 

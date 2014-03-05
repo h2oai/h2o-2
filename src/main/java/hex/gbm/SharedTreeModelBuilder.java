@@ -87,6 +87,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     super.init();
     // Check parameters
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
+    // Should be handled by input
+    //assert response.isEnum() : "Response is not enum";
+    assert (classification && (response.isInt() || response.isEnum())) ||   // Classify Int or Enums
+           (!classification && !response.isEnum()) : "Classification="+classification + " and response="+response.isInt();  // Regress  Int or Float
 
     if (source.numRows() - response.naCnt() <=0)
       throw new IllegalArgumentException("Dataset contains too many NAs!");
