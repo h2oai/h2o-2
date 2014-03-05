@@ -170,11 +170,11 @@ h2o.clusterStatus <- function(client) {
 # }
 
 .h2o.startJar <- function(memory = "1g") {
-  command <- Sys.which("java")
+  command <- .h2o.checkJava()
+  
   #
   # TODO: tmp files should be user-independent
   #
-  
   # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
   if(.Platform$OS.type == "windows") {
     default_path <- paste("C:", "TMP", sep = .Platform$file.sep)
@@ -220,6 +220,39 @@ h2o.clusterStatus <- function(client) {
     stop(sprintf("Failed to exec %s with return code=%s", jar_file, as.character(rc)))
   }
   .startedH2O <<- TRUE
+}
+
+# This function returns the path to the Java executable if it exists
+# 1) Check for Java in user's PATH
+# 2) Check for JAVA_HOME environment variable
+# 3) If Windows, check standard install locations in Program Files folder. Warn if JRE found, but not JDK since H2O requires JDK to run.
+# 4) When all fails, stop and prompt user to download JDK from Oracle website.
+.h2o.checkJava <- function() {
+  if(nchar(Sys.which("java")) > 0)
+    return(Sys.which("java"))
+  else if(nchar(Sys.getenv("JAVA_HOME")) > 0)
+    return(paste(Sys.getenv("JAVA_HOME"), "bin", "java.exe", sep = .Platform$file.sep))
+  else if(.Platform$OS.type == "windows") {
+    # Note: Should we require the version (32/64-bit) of Java to be the same as the version of R?
+    prog_folder <- c("Program Files", "Program Files (x86)")
+    for(prog in prog_folder) {
+      prog_path <- paste("C:", prog, "Java", sep = .Platform$file.sep)
+      jdk_folder <- list.files(prog_path, pattern = "jdk")
+      
+      for(jdk in jdk_folder) {
+        path <- paste(prog_path, jdk, "bin", "java.exe", sep = .Platform$file.sep)
+        if(file.exists(path)) return(path)
+      }
+    }
+    
+    # Check for existence of JRE and warn user
+    for(prog in prog_folder) {
+      path <- paste("C:", prog, "Java", "jre7", "bin", "java.exe", sep = .Platform$file.sep)
+      if(file.exists(path)) warning("Found JRE at ", path, " but H2O requires the JDK to run.")
+    }
+  }
+  
+  stop("Cannot find Java. Please install the latest JDK from http://www.oracle.com/technetwork/java/javase/downloads/index.html")
 }
 
 #-------------------------------- Deprecated --------------------------------#
