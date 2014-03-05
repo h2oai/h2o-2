@@ -32,6 +32,7 @@ public class ToEnum extends Request {
       int nrows = ab.remaining()/ary._rowsize;
       final ValueArray.Column col = ary._cols[_col];
       for(int i = 0; i < nrows; ++i){
+        if(ary.isNA(ab,i,col))continue;
         int val = (int)ary.data(ab,i,col);
         int id = Arrays.binarySearch(dom,0,n,val);
         if(id < 0){
@@ -88,16 +89,17 @@ public class ToEnum extends Request {
       int nrows = ab.remaining()/ary._rowsize;
       final ValueArray.Column col = ary._cols[_col];
       int off = col._off;
-      for(int i = 0; i < nrows; ++i){
+      for(int i = 0; i < nrows; ++i,off += ary._rowsize){
+        if(ary.isNA(ab,i,col))continue; // NA stays NA
         int val = (int)ary.data(ab,i,col);
         int id = _i2e?Arrays.binarySearch(_dom,val):_dom[val];
+        assert !_i2e || (id >= 0 && id < _dom.length):"unexpected id for val = " + val + ", id = " + id + ", domain = " + Arrays.toString(_dom);
         switch(col._size){
           case 1: bits[off] = (byte)(id - base); break;
           case 2: UDP.set2(bits,off,(short)(id-base)); break;
           case 4: UDP.set4(bits,off,id-base); break;
           default: assert false;
         }
-        off += ary._rowsize;
       }
       DKV.put(k,new Value(k,bits));
     }
@@ -138,8 +140,7 @@ public class ToEnum extends Request {
             col._min = dom[0];
             col._max = dom[dom.length-1];
           }
-          System.out.println("domain = " + Arrays.toString(dom));
-          EnumIntSwapTask etsk = new EnumIntSwapTask(column_index,dom,true);
+          EnumIntSwapTask etsk = new EnumIntSwapTask(column_index,dom,to_enum);
           etsk.invoke(key);
           col._base = to_enum?0:dom[0];
           // finally, update the header
