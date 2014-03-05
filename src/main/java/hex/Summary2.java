@@ -559,8 +559,10 @@ public class Summary2 extends Iced {
     
     if (_type == T_ENUM) return this;
 
-    // merge hcnt2 per-bin mins
-    for (int k = 0; k < hcnt2_min.length; k++) {
+    // merge hcnt2 per-bin mins 
+    // other must be same length, but use it's length for safety
+    // could add assert on lengths?
+    for (int k = 0; k < other.hcnt2_min.length; k++) {
       // for now..die on NaNs
       assert !Double.isNaN(other.hcnt2_min[k]) : "NaN in other.hcnt2_min merging";
       assert !Double.isNaN(other.hcnt2[k]) : "NaN in hcnt2_min merging";
@@ -570,7 +572,7 @@ public class Summary2 extends Iced {
       // cover the initial case (relying on initial min = 0 to work is wrong)
       // Only take the new max if it's hcnt2 is non-zero. like a valid bit
       // can hcnt2 ever be null here?
-      if (other.hcnt[k] > 0) {
+      if (other.hcnt2[k] > 0) {
         if ( hcnt2[k]==0 || ( other.hcnt2_min[k] < hcnt2_min[k] )) {
           hcnt2_min[k] = other.hcnt2_min[k];
         }
@@ -579,7 +581,8 @@ public class Summary2 extends Iced {
 
 
     // merge hcnt2 per-bin maxs
-    for (int k = 0; k < hcnt2_max.length; k++) {
+    // other must be same length, but use it's length for safety
+    for (int k = 0; k < other.hcnt2_max.length; k++) {
       // for now..die on NaNs
       assert !Double.isNaN(other.hcnt2_max[k]) : "NaN in other.hcnt2_max merging";
       assert !Double.isNaN(other.hcnt2[k]) : "NaN in hcnt2_min merging";
@@ -589,7 +592,7 @@ public class Summary2 extends Iced {
       // cover the initial case (relying on initial min = 0 to work is wrong)
       // Only take the new max if it's hcnt2 is non-zero. like a valid bit
       // can hcnt2 ever be null here?
-      if (other.hcnt[k] > 0) {
+      if (other.hcnt2[k] > 0) {
         if ( hcnt2[k]==0 || ( other.hcnt2_max[k] > hcnt2_max[k] )) {
           hcnt2_max[k] = other.hcnt2_max[k];
         }
