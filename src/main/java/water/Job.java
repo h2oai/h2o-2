@@ -380,11 +380,12 @@ public abstract class Job extends Request2 {
 
     /** */
     protected final void prepareValidationWithModel(final Model model) {
-      if (validation == null || !classification) return;
+      if (validation == null) return;
       Frame[] av = model.adapt(validation, false);
       _adaptedValidation = av[0];
       tocleanup(av[1]); // delete this after computation
       if (_fromValid2CM!=null) {
+        assert classification : "Validation response transformaiton should be declared only for classification!";
         assert _fromModel2CM != null : "Model response transformation should exist if validation response transformation exists!";
         Vec tmp = _validResponse.toEnum();
         _adaptedValidationResponse = tmp.makeTransf(_fromValid2CM); // Add an original response adapted to CM domain
@@ -404,9 +405,9 @@ public abstract class Job extends Request2 {
 
     /** A micro helper for transforming model/validation responses to confusion matrix domain. */
     protected class Response2CMAdaptor {
-      /** Adapt given vector produced by a model to confusion matrix domain. */
+      /** Adapt given vector produced by a model to confusion matrix domain. Always return a new vector which needs to be deleted. */
       public Vec adaptModelResponse2CM(final Vec v) { return  v.makeTransf(_fromModel2CM); }
-      /** Adapt given validation vector to confusion matrix domain. */
+      /** Adapt given validation vector to confusion matrix domain. Always return a new vector which needs to be deleted. */
       public Vec adaptValidResponse2CM(final Vec v) { return  v.makeTransf(_fromValid2CM); }
       /** Returns validation dataset. */
       public Frame getValidation() { return ValidatedJob.this.getValidation(); }
