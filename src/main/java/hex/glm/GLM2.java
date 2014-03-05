@@ -254,7 +254,6 @@ public class GLM2 extends ModelJob {
       l2 += diff*diff;
     }
     f_hat = _lastResult._objval + f_hat +  0.001*l2/step;
-    System.out.println("objval = " + objval + ", old = " + _lastResult._objval + ", f_hat = " + f_hat);
     return objval > f_hat;
   }
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
