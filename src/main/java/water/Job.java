@@ -406,9 +406,9 @@ public abstract class Job extends Request2 {
     /** A micro helper for transforming model/validation responses to confusion matrix domain. */
     protected class Response2CMAdaptor {
       /** Adapt given vector produced by a model to confusion matrix domain. Always return a new vector which needs to be deleted. */
-      public Vec adaptModelResponse2CM(final Vec v) { return  v.makeTransf(_fromModel2CM); }
+      public Vec adaptModelResponse2CM(final Vec v) { return  v.makeTransf(_fromModel2CM, getCMDomain()); }
       /** Adapt given validation vector to confusion matrix domain. Always return a new vector which needs to be deleted. */
-      public Vec adaptValidResponse2CM(final Vec v) { return  v.makeTransf(_fromValid2CM); }
+      public Vec adaptValidResponse2CM(final Vec v) { return  v.makeTransf(_fromValid2CM, getCMDomain()); }
       /** Returns validation dataset. */
       public Frame getValidation() { return ValidatedJob.this.getValidation(); }
       /** Return cached validation response already adapted to CM domain. */
