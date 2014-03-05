@@ -68,7 +68,7 @@ public class ToEnum extends Request {
           res[k++] = _dom[ii];
         for(int jj = j; jj < other._dom.length; ++jj)
           res[k++] = other._dom[jj];
-        if(k >= water.parser.Enum.MAX_ENUM_SIZE)throw new RuntimeException("too many unique elements!");
+        if(k > water.parser.Enum.MAX_ENUM_SIZE)throw new RuntimeException("too many unique elements!");
         _dom = Arrays.copyOf(res,k);
       }
     }
