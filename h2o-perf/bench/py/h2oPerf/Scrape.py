@@ -84,7 +84,7 @@ class ParseScraper(Scraper):
         self.did_correct_pass = 0
         self.did_time_pass = 0
         
-        self.test_run = {'dataset_name': '', 
+        self.test_run = {
                          'dataset_source': '', 
                          'train_dataset_url': '',
                          'test_dataset_url': '',

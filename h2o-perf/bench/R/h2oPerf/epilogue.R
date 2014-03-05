@@ -15,9 +15,10 @@ passed <<- ifelse(correct_pass && time_pass, 1, 0)
 #"Private" Methods
 .dataSources<-
 function() {
-  train_data_url <<- trainData
-  test_data_url  <<- testData
-  data_name      <<- basename(trainData)
+  train_data_url  <<- trainData
+  test_data_url   <<- testData
+  train_data_name <<- basename(trainData)
+  test_data_name  <<- basename(testData)
 }
 .dataSources()
 
@@ -85,8 +86,11 @@ function() {
 .emitParseResults<-
 function() {
   r <- list(parse_result = 
-                list(dataset_name = data_name,
+                list(train_dataset_name = train_data_name,
+                     test_dataset_name = test_data_name,
                      dataset_source = data_source,
+                     num_train_rows = num_train_rows,
+                     num_explan_cols = num_explan_cols,
                      train_dataset_url = train_data_url,
                      datacenter = data_center,
                      test_dataset_url = test_data_url))

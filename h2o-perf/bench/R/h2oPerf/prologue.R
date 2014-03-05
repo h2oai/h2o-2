@@ -53,6 +53,8 @@ minority_error    <<- "None"
 model             <<- "None"
 model.json        <<- "None"
 null_dev          <<- "None"
+num_explan_cols   <<- -1
+num_train_rows    <<- -1   
 path              <<- "None"
 phase             <<- "None"
 PORT              <<- "None"
@@ -64,9 +66,11 @@ res_dev           <<- "None"
 response          <<- "None"
 start_time        <<- "None"
 testData          <<- "None"
+test_data_name    <<- "None"
 test_data_url     <<- "None"
 time_pass         <<- "None"
 trainData         <<- "None"
+train_data_name   <<- "None"
 train_data_url    <<- "None"
 
 #Internal.R Extensions:
@@ -372,9 +376,8 @@ function(h2opred) {
 
 .calcRegressionResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
-                          vactual = response, predict = h2opred@key,
-                          vpredict = "predict")
+  #TODO: Write out logic for calculating regression results....
+
   aic      <<- -1
   null_dev <<- -1
   res_dev  <<- -1
@@ -398,7 +401,7 @@ function() {
     }   
   }
   if (grepl("GBM", h2o.ls(h))) {
-    if(model@model$distribution == "gaussian") {
+    if(model@model$params$distribution == "gaussian") {
       cat("regression")
       predict_type <<- "regression"
       return(0)

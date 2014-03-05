@@ -1,5 +1,7 @@
 import MySQLdb
 from pprint import pprint
+import socket
+
 class PerfDB:
     """
     A class that represents a MySQL connection to the PerfDB
@@ -12,6 +14,7 @@ class PerfDB:
     def __init__(self):
         db_host = '192.168.1.171'
         self.host = db_host
+#        self.host = "localhost"
         if( socket.gethostbyname_ex(socket.gethostname())[2][0] == db_host):
             self.host = "localhost"
         self.db = MySQLdb.connect(host = self.host,
@@ -139,6 +142,9 @@ class TableRow:
         py_table.row['row'] = MySQLdb.escape_string(str(self.row))
         py_table.update(True)
         print message
+        print "Some entries were missing and the row could not be written."
+        print "Here's the incomplete row: "
+        print self.row
 
     def __is_complete__(self):
         """
