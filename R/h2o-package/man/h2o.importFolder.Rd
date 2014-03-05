@@ -10,13 +10,16 @@ Import Local Directory of Data Files
 }
 \usage{
 ## Default method:
-h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1)
+h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header, 
+  sep = "", col.names, version = 1)
 
 ## Import to a ValueArray object:
-h2o.importFolder.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importFolder.VA(object, path, pattern = "", key = "", parse = TRUE, header, 
+  sep = "", col.names)
 
 ## Import to a FluidVecs object:
-h2o.importFolder.FV(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importFolder.FV(object, path, pattern = "", key = "", parse = TRUE, header, 
+  sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

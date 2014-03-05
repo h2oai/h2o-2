@@ -10,13 +10,16 @@
 }
 \usage{
 ## Default method:
-h2o.importHDFS(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1)
+h2o.importHDFS(object, path, pattern = "", key = "", parse = TRUE, header, 
+  sep = "", col.names, version = 1)
 
 ## Import to a ValueArray object:
-h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importHDFS.VA(object, path, pattern = "", key = "", parse = TRUE, header, 
+  sep = "", col.names)
 
 ## Import to a FluidVecs object:
-h2o.importHDFS.FV(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importHDFS.FV(object, path, pattern = "", key = "", parse = TRUE, header, 
+  sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -71,13 +74,16 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 # The user must modify the path to his or her specific HDFS path for this example to run.
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-iris.hex = h2o.importHDFS(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_wheader.csv", parse = TRUE)
+iris.hex = h2o.importHDFS(localH2O, path = paste("hdfs://192.168.1.161", 
+  "datasets/runit/iris_wheader.csv", sep = "/"), parse = TRUE)
 class(iris.hex)
 summary(iris.hex)
-iris.fv = h2o.importHDFS(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_wheader.csv", parse = TRUE, version = 2)
+iris.fv = h2o.importHDFS(localH2O, path = paste("hdfs://192.168.1.161", 
+  "datasets/runit/iris_wheader.csv", sep = "/"), parse = TRUE, version = 2)
 class(iris.fv)
 
-iris_folder.hex = h2o.importHDFS(localH2O, path = "hdfs://192.168.1.161/datasets/runit/iris_test_train")
+iris_folder.hex = h2o.importHDFS(localH2O, path = paste("hdfs://192.168.1.161", 
+  "datasets/runit/iris_test_train", sep = "/"))
 summary(iris_folder.hex)
 h2o.shutdown(localH2O)
 }

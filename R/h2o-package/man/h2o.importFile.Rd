@@ -10,7 +10,8 @@ Imports a file from the local path and parses it, returning an object containing
 }
 \usage{
 ## Default method:
-h2o.importFile(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1)
+h2o.importFile(object, path, key = "", parse = TRUE, header, sep = "", col.names, 
+  version = 1)
 
 ## Import to a ValueArray object:
 h2o.importFile.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names)
@@ -59,7 +60,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-irisPath = system.file("extdata", "iris.csv", package="h2o")
+irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 class(iris.hex)
 summary(iris.hex)

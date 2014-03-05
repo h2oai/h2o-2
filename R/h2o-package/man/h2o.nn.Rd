@@ -7,7 +7,9 @@ H2O: Neural Networks
 Performs neural networks on an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
-h2o.nn(x, y, data, classification = TRUE, activation = "Tanh", dropout = as.numeric(NA), layers = 500, rate = 0.01, annealing_rate = 1e-6, l1_reg = 1e-4, l2_reg = 0.0010, mom_start = 0.5, mom_ramp = 1e6, mom_stable = 0.99, epochs = 100, validation)
+h2o.nn(x, y, data, classification = TRUE, activation = "Tanh", dropout = as.numeric(NA), 
+  layers = 500, rate = 0.01, annealing_rate = 1e-6, l1_reg = 1e-4, l2_reg = 0.0010, 
+  mom_start = 0.5, mom_ramp = 1e6, mom_stable = 0.99, epochs = 100, validation)
 }
 
 %- maybe also 'usage' for other objects documented here.

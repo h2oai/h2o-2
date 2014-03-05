@@ -10,13 +10,17 @@ Performs random forest classification on a data set.
 }
 \usage{
 ## Default method:
-h2o.randomForest(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, use_non_local = TRUE, version = 1)
+h2o.randomForest(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, 
+  nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, 
+  use_non_local = TRUE, version = 1)
 
 ## Import to a ValueArray object:
-h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, use_non_local = TRUE)
+h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, 
+  classwt = NULL, nbins = 100, seed = -1, use_non_local = TRUE)
 
 ## Import to a FluidVecs object:
-h2o.randomForest.FV(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1)
+h2o.randomForest.FV(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, nbins = 100, 
+  seed = -1, importance = FALSE, validation, nodesize = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -79,14 +83,15 @@ An object of class \code{\linkS4class{H2ORFModelVA}} (\code{version = 1}) or \co
 # Run an RF model on iris data
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-irisPath = system.file("extdata", "iris.csv", package="h2o")
+irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100)
 
 # Run an RF model on covtype data
 covPath = system.file("extdata", "covtype.csv", package="h2o")
 covtype.hex = h2o.importFile(localH2O, path = covPath, key = "covtype.hex", version = 2)
-h2o.randomForest(y = "Cover_Type",  x = setdiff(colnames(covtype.hex), c("Cover_Type", "Aspect", "Hillshade_9am")), data = covtype.hex, ntree = 50, depth = 150, version = 2)
+h2o.randomForest(y = "Cover_Type",  x = setdiff(colnames(covtype.hex), c("Cover_Type", 
+  "Aspect", "Hillshade_9am")), data = covtype.hex, ntree = 50, depth = 150, version = 2)
 h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
