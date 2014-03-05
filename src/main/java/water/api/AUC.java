@@ -118,9 +118,9 @@ public class AUC extends Request2 {
     sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold for max. F1</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>"
-            + String.format("%5f", AUC()) + "</td><td>"
-            + String.format("%5f", Gini()) + "</td><td>"
-            + String.format("%5f", F1()) + "</td><td>"
+            + String.format("%.5f", AUC()) + "</td><td>"
+            + String.format("%.5f", Gini()) + "</td><td>"
+            + String.format("%.5f", F1()) + "</td><td>"
             + String.format("%g", threshold_maxF1()) + "</td>"
     );
     sb.append("</tr>");
@@ -157,11 +157,11 @@ public class AUC extends Request2 {
 
   public double toASCII( StringBuilder sb ) {
     sb.append(_cms[idx_bestF1].toString());
-    sb.append("AUC: " + String.format("%5f", AUC()));
-    sb.append(", Gini: " + String.format("%5f", Gini()));
-    sb.append(", F1: " + String.format("%5f", F1()));
+    sb.append("AUC: " + String.format("%.5f", AUC()));
+    sb.append(", Gini: " + String.format("%.5f", Gini()));
+    sb.append(", F1: " + String.format("%.5f", F1()));
     sb.append(", Best threshold for F1: " + String.format("%g", threshold_maxF1()));
-    sb.append(", Classification Error: " + String.format("%5f", err()));
+    sb.append(", Classification Error: " + String.format("%.5f", err()));
     return AUC();
   }
 
@@ -198,8 +198,9 @@ public class AUC extends Request2 {
       }
       sb.append(", ["+String.valueOf(_fprs[c])+",").append(String.valueOf(_tprs[c])).append("]");
     }
-    for(int c = 0; c < 2*_fprs.length; c++) {
-      sb.append(", ["+String.valueOf(c/(2.0*_fprs.length))+",").append(String.valueOf(c/(2.0*_fprs.length))).append("]");
+    //diagonal
+    for(int c = 0; c < 200; c++) {
+      sb.append(", ["+String.valueOf(c/200.)+",").append(String.valueOf(c/200.)).append("]");
     }
     sb.append("];\n");
 
@@ -246,18 +247,22 @@ public class AUC extends Request2 {
                     ".attr(\"cy\", function(d) {\n"+
                     "return yScale(d[1]);\n"+
                     "})\n"+
-                    ".attr(\"fill\", function(d) {\n"+
+                    ".attr(\"fill\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return \"red\"\n"+
+                    "  } else if (i == " + (_fprs.length - idx_bestF1) + "){\n"+
+                    "  return \"green\"\n"+
                     "  } else {\n"+
                     "  return \"blue\"\n"+
                     "  }\n"+
                     "})\n"+
-                    ".attr(\"r\", function(d) {\n"+
+                    ".attr(\"r\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return 1\n"+
+                    "  } else if (i == " + (_fprs.length - idx_bestF1) + ") {\n" +
+                    "  return 5\n"+
                     "  } else {\n"+
-                    "  return 2\n"+
+                    "  return 1.5\n"+
                     "  }\n"+
                     "})\n" +
                     ".on(\"mouseover\", function(d,i){\n" +
@@ -399,7 +404,8 @@ public class AUC extends Request2 {
       _best_idxF1 = 0;
       _best_thresholdF1 = _thresh[0];
       for(int i = 1; i < _cms.length; ++i) {
-        if (_cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall()) {
+        if ( (!Double.isNaN(_cms[i].precisionAndRecall()) && (
+               Double.isNaN(_cms[_best_idxF1].precisionAndRecall())) || _cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall())) {
           _best_idxF1 = i;
           _best_thresholdF1 = _thresh[i];
         }

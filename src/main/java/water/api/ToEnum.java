@@ -6,7 +6,6 @@ import jsr166y.RecursiveAction;
 import water.*;
 import water.parser.*;
 import water.util.Log;
-import hex.TypeChange;
 
 import java.util.Arrays;
 

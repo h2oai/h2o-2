@@ -81,7 +81,7 @@ def stop_cloud(object, use_remote):
 #        return
 
     print("")
-    print("All tets completed; tearing down clouds...")
+    print("All tests completed; tearing down clouds...")
     print("")
     if use_remote:
         object.cloud[0].stop_remote()

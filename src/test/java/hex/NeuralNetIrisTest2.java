@@ -134,6 +134,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
                         p.seed = seed;
                         p.hidden = new int[]{hidden};
+                        p.adaptive_rate = false;
+                        p.rho = 0;
+                        p.epsilon = 0;
                         p.rate = rate / (1 - momentum); //adapt to (1-m) correction that's done inside (only for constant momentum!)
                         p.activation = activation;
                         p.max_w2 = Double.MAX_VALUE;

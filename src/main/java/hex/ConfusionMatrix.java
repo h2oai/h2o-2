@@ -112,12 +112,14 @@ public class ConfusionMatrix extends Iced {
   }
 
   public double precisionAndRecall() {
+    if (_arr == null || _arr.length != 2) return Double.NaN;
     return precisionAndRecall(_arr);
   }
 
   /**
    * Returns the F-measure which combines precision and recall. <br>
    * C.f. end of http://en.wikipedia.org/wiki/Precision_and_recall.
+   * Can be NaN
    */
   public static double precisionAndRecall(long[][] cm) {
     assert cm.length == 2 && cm[0].length == 2 && cm[1].length == 2;
@@ -126,9 +128,7 @@ public class ConfusionMatrix extends Iced {
     double fn = cm[0][1];
     double precision = tp / (tp + fp);
     double recall = tp / (tp + fn);
-    double f = 2 * (precision * recall) / (precision + recall);
-    if (Double.isNaN(f)) return 0;
-    return f;
+    return 2 * (precision * recall) / (precision + recall);
   }
 
   @Override public String toString() {

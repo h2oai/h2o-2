@@ -20,6 +20,7 @@ def parse_args():
         parser.add_argument("--testlist", help = "A file containing a list of tests to run (for example the 'failed.txt' file from the output directory).")
         parser.add_argument("--testgroup", help = "Test a group of tests by function: pca, glm, kmeans, gbm, rf, algos, golden, munging")
         parser.add_argument("--usecloud", help = "ip:port of cloud to send tests to instead of starting clouds.")
+        parser.add_argument("--testname", help = "Test a single test name.")
         args = ""
         args = vars(parser.parse_args())
     except:
@@ -52,9 +53,13 @@ def main(argv):
 
     #new perfdb connection
     perfdb = PerfDB()
-    
+    test_to_run = ""
+
+    if args['testname']:
+        test_to_run = args['testname']
+
     perf_runner = PerfRunner(test_root_dir, output_dir, h2o_jar, perfdb)
-    perf_runner.build_test_list()
+    perf_runner.build_test_list(test_to_run)
     
     signal.signal(signal.SIGINT, PerfUtils.signal_handler)
     signal.signal(signal.SIGTERM, PerfUtils.signal_handler)

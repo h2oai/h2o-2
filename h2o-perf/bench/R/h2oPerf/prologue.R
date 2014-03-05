@@ -25,10 +25,10 @@ options(echo=F)
 #source("../../../R/h2o-package/R/Classes.R")
 #source("../../../R/h2o-package/R/ParseImport.R")
 
-source("../../../../../h2o/R/h2o-package/R/Internal.R")
-source("../../../../../h2o/R/h2o-package/R/Algorithms.R")
-source("../../../../../h2o/R/h2o-package/R/Classes.R")
-source("../../../../../h2o/R/h2o-package/R/ParseImport.R")
+source("../../../../R/h2o-package/R/Internal.R")
+source("../../../../R/h2o-package/R/Algorithms.R")
+source("../../../../R/h2o-package/R/Classes.R")
+source("../../../../R/h2o-package/R/ParseImport.R")
 
 
 #GLOBALS
@@ -53,6 +53,8 @@ minority_error    <<- "None"
 model             <<- "None"
 model.json        <<- "None"
 null_dev          <<- "None"
+num_explan_cols   <<- -1
+num_train_rows    <<- -1   
 path              <<- "None"
 phase             <<- "None"
 PORT              <<- "None"
@@ -64,9 +66,11 @@ res_dev           <<- "None"
 response          <<- "None"
 start_time        <<- "None"
 testData          <<- "None"
+test_data_name    <<- "None"
 test_data_url     <<- "None"
 time_pass         <<- "None"
 trainData         <<- "None"
+train_data_name   <<- "None"
 train_data_url    <<- "None"
 
 #Internal.R Extensions:
@@ -338,7 +342,11 @@ function(modelType, datatype = "VA") {
 
 .predict<-
 function(model) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
+  if( class(model)[1] == "H2OGLMModelVA") {
+    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT, model_key = model@key, data_key=testData@key, destination_key = "h2opreds.hex")
+  } else {
+    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
+  }
   h2opred <- new("H2OParsedData", h2o = h, key = "h2opreds.hex")
   if (predict_type == "binomial") 
     .calcBinomResults(h2opred)
@@ -352,13 +360,13 @@ function(model) {
 function(h2opred) {
   res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = testData@key, 
                           vactual = response, predict = h2opred@key,
-                          vpredict = "predict")
+                          vpredict = response)
   cm <- res$cm
   confusion_matrix    <<- t(matrix(unlist(cm), 2 ,2))
   precision           <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[1,2])
   recall              <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[2,1])
-  error_rate          <<- confusion_matrix[3,3]
-  minority_error_rate <<- confusion_matrix[2,3]
+  error_rate          <<- -1 #confusion_matrix[3,3]
+  minority_error_rate <<- -1 #confusion_matrix[2,3]
   auc                 <<- res$AUC
 }
 
@@ -372,9 +380,8 @@ function(h2opred) {
 
 .calcRegressionResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
-                          vactual = response, predict = h2opred@key,
-                          vpredict = "predict")
+  #TODO: Write out logic for calculating regression results....
+
   aic      <<- -1
   null_dev <<- -1
   res_dev  <<- -1
@@ -398,7 +405,7 @@ function() {
     }   
   }
   if (grepl("GBM", h2o.ls(h))) {
-    if(model@model$distribution == "gaussian") {
+    if(model@model$params$distribution == "gaussian") {
       cat("regression")
       predict_type <<- "regression"
       return(0)
