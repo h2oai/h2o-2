@@ -85,8 +85,53 @@ public abstract class Job extends Request2 {
     return 1;
   }
 
+  /** A set containing a temporary vectors which are <strong>automatically</strong> deleted when job is done.
+   *  Deletion is by {@link #cleanup()} call. */
+  private transient HashSet<Vec> _gVecTrash;
+  /** Local trash which can be deleted by user call */
+  private transient HashSet<Vec> _lVecTrash;
+  /** Clean-up code which is executed after each {@link Job#exec()} call in any case (normal/exceptional). */
+  protected void cleanup() {
+    // Clean-up global list of temporary vectors
+    Futures fs = new Futures();
+    cleanupTrash(_gVecTrash, fs);
+    if (!_lVecTrash.isEmpty()) cleanupTrash(_lVecTrash, fs);
+    fs.blockForPending();
+  }
+  /** User call which empty local trash of vectors. */
+  protected final void emptyLTrash() {
+    if (!_lVecTrash.isEmpty()) return;
+    Futures fs = new Futures();
+    cleanupTrash(_lVecTrash, fs);
+    fs.blockForPending();
+  }
+  /** Append all vectors from  given frame to a global clean up list.
+   * @see #cleanup()
+   * @see #_gVecTrash */
+  protected final void gtrash(Frame fr) { gtrash(fr.vecs());  }
+  /** Append given vector to clean up list.
+   * @see #cleanup()*/
+  protected final void gtrash(Vec ...vec)  { appendToTrash(_gVecTrash, vec); }
+  /** Put given frame vectors into local trash which can be emptied by a user calling the {@link #emptyLTrash()} method.
+   * @see #emptyLTrash() */
+  protected final void ltrash(Frame fr) {  ltrash(fr.vecs()); }
+  /** Put given vectors into local trash.
+   * * @see #emptyLTrash() */
+  protected final void ltrash(Vec ...vec) { appendToTrash(_lVecTrash, vec); }
+
+  /** Put given vectors into a given trash. */
+  private void appendToTrash(HashSet<Vec> t, Vec[] vec) {
+    for (Vec v : vec) t.add(v);
+  }
+  /** Delete all vectors in given trash. */
+  private void cleanupTrash(HashSet<Vec> trash, Futures fs) {
+    for (Vec v : trash) UKV.remove(v._key, fs);
+  }
+
   /**
+   * A job which operates with a frame.
    *
+   * @INPUT frame
    */
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
@@ -110,7 +155,11 @@ public abstract class Job extends Request2 {
   }
 
   /**
+   * A job which has an input represented by a frame which columns can be ignored.
    *
+   * @INPUT list ignored columns by idx XOR list of ignored columns by name XOR list of used columns
+   *
+   * @see FrameJob
    */
   public static abstract class ColumnsJob extends FrameJob {
     static final int API_WEAVER = 1;
@@ -295,10 +344,6 @@ public abstract class Job extends Request2 {
     private transient int[][] _fromModel2CM;            // Transformation for model response to common CM domain
     private transient int[][] _fromValid2CM;            // Transformation for validation response to common CM domain
 
-    /** Frame containing only adapted part of validation which needs to be clean-up at the end of computation
-     *  by {@link #cleanup()} call. */
-    private transient Frame _toDeleteFrame;
-
     @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
 
@@ -317,7 +362,6 @@ public abstract class Job extends Request2 {
 
     @Override protected void init() {
       super.init();
-      _toDeleteFrame = new Frame();
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )
@@ -383,25 +427,16 @@ public abstract class Job extends Request2 {
       if (validation == null) return;
       Frame[] av = model.adapt(validation, false);
       _adaptedValidation = av[0];
-      tocleanup(av[1]); // delete this after computation
+      gtrash(av[1]); // delete this after computation
       if (_fromValid2CM!=null) {
         assert classification : "Validation response transformation should be declared only for classification!";
         assert _fromModel2CM != null : "Model response transformation should exist if validation response transformation exists!";
         Vec tmp = _validResponse.toEnum();
         _adaptedValidationResponse = tmp.makeTransf(_fromValid2CM, getCMDomain()); // Add an original response adapted to CM domain
-        tocleanup(_adaptedValidationResponse); // Add the created vector to a clean-up list
-        tocleanup(tmp);
+        gtrash(_adaptedValidationResponse); // Add the created vector to a clean-up list
+        gtrash(tmp);
       }
     }
-
-    @Override protected void cleanup() {
-      if (_toDeleteFrame != null) _toDeleteFrame.delete();
-    }
-
-    /** Append all vectors from  given frame to clean up list. */
-    protected void tocleanup(Frame fr) {  _toDeleteFrame.add(fr, true);  }
-    /** Append given vector to clean up list. */
-    protected void tocleanup(Vec vec)  { _toDeleteFrame.add(UUID.randomUUID().toString(), vec); }
 
     /** A micro helper for transforming model/validation responses to confusion matrix domain. */
     public class Response2CMAdaptor {
@@ -695,10 +730,6 @@ public abstract class Job extends Request2 {
   }
 
   protected JobState execImpl() { throw new RuntimeException("Job does not support exec call! Please implement execImpl method!"); };
-
-  /** Clean-up code which is executed after each {@link Job#exec()} call in any case (normal/exceptional). */
-  protected void cleanup() {
-  }
 
   /**
    * Block synchronously waiting for a job to end, success or not.
