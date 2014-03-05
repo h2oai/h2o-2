@@ -2,7 +2,14 @@ import sys
 
 import math
 DO_MEDIAN = True
+OTHER_T = 0.50
 DO_TO_BEFORE = False
+
+# set this to 1, to see that NUDGE makes sure the end data isn't lost
+# should iterate without change, if nudge is big enough
+# otherwse  one vlue gets dropped each iteration
+# test with BIN_COUNT = 2, to see that it always resolves..i.e. NUDGE is not too big
+BIN_COUNT = 5
 sys.path.extend(['.','..','py'])
 import h2o_print as h2p, h2o_summ
 import numpy as np
@@ -12,7 +19,7 @@ import scipy as sp
 def findQuantile(d, dmin, dmax, drows, threshold):
     # returns the value at the threshold, or the mean of the two rows that bound it.
     # fixed bin count per pass
-    binCount = 50
+    binCount = BIN_COUNT
     maxIterations = 30
 
     # initial
@@ -23,12 +30,8 @@ def findQuantile(d, dmin, dmax, drows, threshold):
     newBinSize  = newValRange / (newBinCount + 0.0)
     newLowCount = 0
 
-    # check if val is NaN and ignore?
-    # floor so we end up at the target if the row exists
-    # otherwise one below where we'll interpolate
-    targetCount = math.floor(threshold * drows)
-    minK = 0
-    maxK = binCount - 1
+    # what if the vals are all constant?
+    assert newBinSize != 0
 
     # break out on stopping condition
     # reuse the histogram array hcnt[]
@@ -53,12 +56,19 @@ def findQuantile(d, dmin, dmax, drows, threshold):
         h2p.green_print("newValRange", newValRange)
         h2p.green_print("newBinSize", newBinSize)
         h2p.green_print("newLowCount", newLowCount)
+        h2p.green_print("threshold", threshold)
 
         valStart = newValStart
         valEnd   = newValEnd
         valRange = newValRange
         binSize = newBinSize
         lowCount = newLowCount
+        # does this relate to the use of 1M in the way the index is created? 
+        NUDGE = 1e-3
+        NUDGE = (1000 * (valEnd - valStart)) / 1000000
+        # ratio it down from binSize
+        NUDGE = binSize / binCount
+        NUDGE = 0
 
         for b in range(binCount+1):
             hcnt[b] = 0.0
@@ -75,9 +85,12 @@ def findQuantile(d, dmin, dmax, drows, threshold):
             if valOffset < 0:
                 hcnt_low += 1
             elif val > valEnd:
+                if hcnt_high==0:
+                    print "First addition to hcnt_high this pass val:", val, "valEnd:", valEnd
                 hcnt_high += 1
             else:
                 # where are we zeroing in (start)
+                print valOffset, binSize
                 hcntIdx = int(round((valOffset * 1000000.0) / binSize) / 1000000.0)
                 assert hcntIdx >=0 and hcntIdx<=binCount, "val %s %s %s %s hcntIdx: %s binCount: %s binSize: %s" % \
                     (val, valStart, valEnd, valOffset, hcntIdx, binCount, binSize)
@@ -101,6 +114,10 @@ def findQuantile(d, dmin, dmax, drows, threshold):
         prevK = 0
         currentCnt = newLowCount
         targetCnt = int(math.floor(threshold * drows))
+        targetCntExact = (threshold + 0.0) * drows
+        exactGoal = targetCnt==targetCntExact
+        print "targetCnt:", targetCnt, "targetCntExact", targetCntExact
+
         if DO_TO_BEFORE:
             e = lambda x, y : x < y
         else:
@@ -109,6 +126,7 @@ def findQuantile(d, dmin, dmax, drows, threshold):
             currentCnt += hcnt[k]
             if hcnt[k]!=0:
                 prevK = k # will always be the previous non-zero (except when k=0)
+                print "setting prevK:", prevK
             k += 1
             assert k <= binCount, "k too large, k: %s binCount %s" % (k, binCount)
 
@@ -155,17 +173,28 @@ def findQuantile(d, dmin, dmax, drows, threshold):
 
         if DO_TO_BEFORE:
             done = hcnt_min[k]==hcnt_max[k] and (currentCnt+hcnt[k])==targetCnt
+            if done:
+                print "Done:", hcnt[k], hcnt_min[k], hcnt_max[k], currentCnt, targetCnt
+            else:
+                print "Not Done:", hcnt[k], hcnt_min[k], hcnt_max[k], currentCnt, targetCnt
         else:
+            
+            # targetCnt and targetCntExact should be equal if exactGoal
+            # covers inexact goal landing in a bin with multiple all the same value?
             done = hcnt_min[k]==hcnt_max[k] and currentCnt==targetCnt
-
-        
+            if done:
+                print "Done:", hcnt_min[k], hcnt_max[k], currentCnt, targetCnt, targetCntExact
+            else:
+                print "Not Done:", hcnt_min[k], hcnt_max[k], currentCnt, targetCnt, targetCntExact
 
         # do we have to compute the mean, using the current k and nextK bins?
-
         # if min and max for a bin are different the count must be >1
         assert (hcnt[k]==1 and hcnt_min[k]==hcnt_max[k]) or hcnt[k]>1
 
         if not done and hcnt[k]==1: # need mean with next_k
+            # only legitimate case is !exactGoal?
+            assert not exactGoal
+            print "Trying to find nextK for possibly interpolating k: %s" % k
             # always figure nextK
             # should we take the mean of the current and next non-zero bin
             # find the next non-zero bin too
@@ -190,11 +219,23 @@ def findQuantile(d, dmin, dmax, drows, threshold):
 
             # have the "extra bin" for this
             assert nextK < (binCount+1), "nextK too large, nextK: %s binCount %s" % (nextK, binCount)
-            if k != nextK:
+                
+            print "k:", k, "nextK", nextK    
+            if 1==0 and k != nextK:
                 guess = (hcnt_max[k] + hcnt_min[nextK]) / 2.0
-                print "\nInterpolating result"
-                print "Guess E:", guess, k, nextK,  hcnt_max[k], hcnt_min[nextK], actualBinWidth,\
+                print "\nInterpolating result using nextK"
+                print "Guess E with nextK:", guess, k, nextK,  hcnt_max[k], hcnt_min[nextK], actualBinWidth,\
                     currentCnt, targetCnt, hcnt[k]
+
+            if 1==1 and k != prevK:
+                guess = (hcnt_max[k] + hcnt_min[prevK]) / 2.0
+                print "\nInterpolating result using prevK %s" % prevK
+                print "Guess E with prevK:", guess, prevK,  k, hcnt_max[k], hcnt_min[prevK], actualBinWidth,\
+                    currentCnt, targetCnt, hcnt[k]
+            
+
+            # since we moved into the partial bin
+            # use prevK to imput the mean
 
             assert hcnt[nextK]!=0, hcnt[nextK]
                 
@@ -204,31 +245,20 @@ def findQuantile(d, dmin, dmax, drows, threshold):
             # now we're done
             done = True
 
-        # s is right before targetCnt (less than the bin width..good for avoiding rounding error issues?
-        # we should also add one of the new binsizes to the end, to avoid missing something 
-        # (but that's a waste..just need to 
-        # bump it a little? only an issue, if the new end is less than max. 
-        # Could add or subtract a small number to make sure?
-        # just live with it for now.
-
-        # adjust the start to be that value
-        # subtract something to cover fp error?
-        # keep one bin below that 
-
-        # or maybe, just grab hcnt_min from the next k+1 bi and hcnt_max from k-1
-        # that'll git er done.
-
-
-
-        
-        # can't nudge it a little bigger? end condition prevents 
-        # we have a one element end condition. I suppose we could have a two element end condition
-        # but we'd have to adjust the two element end condition and the two element mean calculation
-        # if needed, for that end condition. Not clear it saves a pass, since we tend to jump from 1000 in bin to 1?
-        newValStart = hcnt_min[k] # FIX! should we nudge a little?
-        newValEnd   = hcnt_max[k] # FIX! should we nudge a little?
+        newValStart = hcnt_min[k] - NUDGE# FIX! should we nudge a little?
+        newValEnd   = hcnt_max[k] + NUDGE # FIX! should we nudge a little?
         newValRange = newValEnd - newValStart 
         newBinSize = newValRange / binCount
+
+        # assert done or newBinSize!=0
+        if not done:
+            done = newBinSize==0
+        # if we have to interpolate
+        # if it falls into this bin, interpolate to this bin means one answer?
+
+        # cover the case above with multiple entris in a bin, all the same value
+        # will be zero on the last pass?
+        # assert newBinSize != 0 or done
 
         # need the count up to but not including newValStart
         newLowCount = currentCnt
@@ -237,7 +267,7 @@ def findQuantile(d, dmin, dmax, drows, threshold):
         
         iteration += 1
         h2p.blue_print("Ending Pass", iteration, "best_result:", best_result, "done:", done, "hcnt[k]", hcnt[k])
-        print "currentCnt", currentCnt, "targetCnt", targetCnt
+        print "currentCnt", currentCnt, "targetCnt", targetCnt, "hcnt_low", hcnt_low, "hcnt_high", hcnt_high
         print "was", valStart, valEnd, valRange, binSize
         print "next", newValStart, newValEnd, newValRange, newBinSize
 
@@ -260,7 +290,8 @@ def twoDecimals(l):
         return "%.2f" % l
 
 # csvPathname = './syn_binary_1000000x1.csv'
-csvPathname = './syn_binary_100000x1.csv'
+csvPathname = './d.csv'
+# csvPathname = './syn_binary_100000x1.csv'
 # csvPathname = './syn_binary_100x1.csv'
 col = 0
 
@@ -268,7 +299,7 @@ print "Reading csvPathname"
 dataset = np.genfromtxt(
     open(csvPathname, 'r'),
     delimiter=',',
-    skip_header=1,
+    # skip_header=1,
     dtype=None) # guess!
 
 print dataset.shape
@@ -296,7 +327,7 @@ drows = len(d)
 if DO_MEDIAN:
     thresholdList = [0.5]
 else:
-    thresholdList = [0.999]
+    thresholdList = [OTHER_T]
 
 quantiles = findQuantileList(d, dmin, dmax, drows, thresholdList)
 #*****************************************************************
@@ -307,14 +338,14 @@ per = [1 * t for t in thresholds]
 print "scipy per:", per
 
 from scipy import stats
-a1 = stats.scoreatpercentile(target, per=100*(0.50 if DO_MEDIAN else 0.999), interpolation_method='fraction')
+a1 = stats.scoreatpercentile(target, per=100*(0.50 if DO_MEDIAN else OTHER_T), interpolation_method='fraction')
 h2p.red_print("stats.scoreatpercentile:", a1)
 a2 = stats.mstats.mquantiles(targetFP, prob=per)
 h2p.red_print("scipy stats.mstats.mquantiles:", ["%.2f" % v for v in a2])
 
 # looking at the sorted list here
 targetFP.sort()
-b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else OTHER_T)
 label = '50%' if DO_MEDIAN else '99.9%'
 h2p.blue_print(label, "from scipy:", a2[5 if DO_MEDIAN else 10])
 
