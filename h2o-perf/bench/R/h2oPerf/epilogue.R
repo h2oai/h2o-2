@@ -7,10 +7,10 @@
 #   "Private" function declarations begin with a '.'     #
 ##                                                      ##
 .NaN = -1
-end_time <<- round(System$currentTimeMillis())[[1]]
+end_time     <<- round(System$currentTimeMillis())[[1]]
 correct_pass <<- 1
-time_pass <<- 1
-passed <<- ifelse(correct_pass && time_pass, 1, 0)
+time_pass    <<- 1
+passed       <<- ifelse(correct_pass && time_pass, 1, 0)
 
 #"Private" Methods
 .dataSources<-
@@ -18,8 +18,9 @@ function() {
   train_data_url  <<- trainData
   test_data_url   <<- testData
   train_data_name <<- basename(trainData)
-  test_data_name  <<- basename(testData)
+  test_data_name  <<- tryCatch(basename(testData), error = function(e) {return(-1)})
 }
+
 .dataSources()
 
 .isNone<-

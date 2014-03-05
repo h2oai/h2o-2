@@ -2,7 +2,7 @@ source("../../R/h2oPerf/prologue.R")
 
 data_source <<- "home-0xdiag-datasets"
 
-trainData   <<-  "/home/0xdiag/datasets/covtype200x.data"
+trainData   <<-  "/home/0xdiag/datasets/standard/covtype200x.data"
 response <<- "C55"
 
 num_train_rows  <<- 116202400
