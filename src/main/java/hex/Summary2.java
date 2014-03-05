@@ -563,12 +563,17 @@ public class Summary2 extends Iced {
     for (int k = 0; k < hcnt2_min.length; k++) {
       // for now..die on NaNs
       assert !Double.isNaN(other.hcnt2_min[k]) : "NaN in other.hcnt2_min merging";
+      assert !Double.isNaN(other.hcnt2[k]) : "NaN in hcnt2_min merging";
       assert !Double.isNaN(hcnt2_min[k]) : "NaN in hcnt2_min merging";
+      assert !Double.isNaN(hcnt2[k]) : "NaN in hcnt2_min merging";
 
       // cover the initial case (relying on initial min = 0 to work is wrong)
+      // Only take the new max if it's hcnt2 is non-zero. like a valid bit
       // can hcnt2 ever be null here?
-      if ( hcnt2[k]==0 || ( other.hcnt2_min[k] < hcnt2_min[k] )) {
-        hcnt2_min[k] = other.hcnt2_min[k];
+      if (other.hcnt[k] > 0) {
+        if ( hcnt2[k]==0 || ( other.hcnt2_min[k] < hcnt2_min[k] )) {
+          hcnt2_min[k] = other.hcnt2_min[k];
+        }
       }
     }
 
@@ -577,12 +582,17 @@ public class Summary2 extends Iced {
     for (int k = 0; k < hcnt2_max.length; k++) {
       // for now..die on NaNs
       assert !Double.isNaN(other.hcnt2_max[k]) : "NaN in other.hcnt2_max merging";
+      assert !Double.isNaN(other.hcnt2[k]) : "NaN in hcnt2_min merging";
       assert !Double.isNaN(hcnt2_max[k]) : "NaN in hcnt2_max merging";
+      assert !Double.isNaN(hcnt2[k]) : "NaN in hcnt2_max merging";
 
       // cover the initial case (relying on initial min = 0 to work is wrong)
+      // Only take the new max if it's hcnt2 is non-zero. like a valid bit
       // can hcnt2 ever be null here?
-      if ( hcnt2[k]==0 || ( other.hcnt2_max[k] > hcnt2_max[k] )) {
-        hcnt2_max[k] = other.hcnt2_max[k];
+      if (other.hcnt[k] > 0) {
+        if ( hcnt2[k]==0 || ( other.hcnt2_max[k] > hcnt2_max[k] )) {
+          hcnt2_max[k] = other.hcnt2_max[k];
+        }
       }
     }
 
