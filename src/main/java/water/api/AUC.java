@@ -250,7 +250,7 @@ public class AUC extends Request2 {
                     ".attr(\"fill\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return \"red\"\n"+
-                    "  } else if (i == " + (_fprs.length - idx_bestF1) + "){\n"+
+                    "  } else if (i == " + (idx_bestF1) + "){\n"+
                     "  return \"green\"\n"+
                     "  } else {\n"+
                     "  return \"blue\"\n"+
@@ -259,7 +259,7 @@ public class AUC extends Request2 {
                     ".attr(\"r\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return 1\n"+
-                    "  } else if (i == " + (_fprs.length - idx_bestF1) + ") {\n" +
+                    "  } else if (i == " + (idx_bestF1) + ") {\n" +
                     "  return 5\n"+
                     "  } else {\n"+
                     "  return 1.5\n"+
@@ -267,7 +267,7 @@ public class AUC extends Request2 {
                     "})\n" +
                     ".on(\"mouseover\", function(d,i){\n" +
                     "   if(i <= " + _fprs.length + ") {" +
-                    "     document.getElementById(\"select\").selectedIndex = " + _fprs.length + " - i\n" +
+                    "     document.getElementById(\"select\").selectedIndex = i\n" +
                     "     show_cm(i)\n" +
                     "   }\n" +
                     "});\n"+
