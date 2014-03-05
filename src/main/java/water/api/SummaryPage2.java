@@ -30,7 +30,7 @@ public class SummaryPage2 extends Request2 {
   @API(help = "Maximum columns to show summaries of", filter = Default.class, lmin = 1)
   int max_ncols = 1000;
 
-  @API(help = "Number of bins for quantile (1-10000000)", filter = Default.class, lmin = 1)
+  @API(help = "Number of bins for quantile (1-10000000)", filter = Default.class, lmin = 1, lmax = 1000000)
   int max_qbins = 1000;
 
   @API(help = "Column summaries.")
