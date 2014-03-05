@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
+import water.parser.*;
 import water.util.Log;
 import hex.TypeChange;
 
@@ -36,8 +37,10 @@ public class ToEnum extends Request {
         int val = (int)ary.data(ab,i,col);
         int id = Arrays.binarySearch(dom,0,n,val);
         if(id < 0){
-          if(n == dom.length)
-            dom = Arrays.copyOf(dom,n+(n >>1));
+          if(n == dom.length){
+            if(n == water.parser.Enum.MAX_ENUM_SIZE)throw new RuntimeException("too many unique elements!");
+            dom = Arrays.copyOf(dom,Math.min(n+(n >>1),water.parser.Enum.MAX_ENUM_SIZE));
+          }
           id = -id - 1;
           for(int j = n; j > id; --j)dom[j] = dom[j-1];
             dom[id] = val;
@@ -65,6 +68,7 @@ public class ToEnum extends Request {
           res[k++] = _dom[ii];
         for(int jj = j; jj < other._dom.length; ++jj)
           res[k++] = other._dom[jj];
+        if(k >= water.parser.Enum.MAX_ENUM_SIZE)throw new RuntimeException("too many unique elements!");
         _dom = Arrays.copyOf(res,k);
       }
     }
