@@ -193,8 +193,8 @@ public class GLM2 extends ModelJob {
 
   @Override public void cancel(Throwable ex){
     if( _model != null ) _model.unlock(self());
-    ex.printStackTrace();
-    super.cancel(ex);
+    if(ex instanceof JobCancelledException)cancel();
+    else super.cancel(ex);
   }
 
   @Override protected Response serve() {
@@ -360,7 +360,6 @@ public class GLM2 extends ModelJob {
       nextLambda(glmt);
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      ex.printStackTrace();
       GLM2.this.cancel(ex);
       return true;
     }
@@ -423,7 +422,6 @@ public class GLM2 extends ModelJob {
             }
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-            ex.printStackTrace();
             GLM2.this.cancel(ex);
             return true;
           }
