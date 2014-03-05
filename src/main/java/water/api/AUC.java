@@ -400,7 +400,8 @@ public class AUC extends Request2 {
         _fprs[t] = FPR;
       }
       _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
-      assert(_auc >= 0. && _auc <= 1.0);
+      assert(_auc > -1e-5 && _auc < 1.+1e-5); //check numerical sanity
+      _auc = Math.max(0., Math.min(_auc, 1.)); //clamp to 0...1
       _best_idxF1 = 0;
       _best_thresholdF1 = _thresh[0];
       for(int i = 1; i < _cms.length; ++i) {
