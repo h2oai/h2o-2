@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
             GLMModel = glm['glm_model']
             modelKey = GLMModel['_key']
             print "Doing predict with same dataset, and the GLM model"
-            h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=parseResult['destination_key'])
+            h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=hexKey, prediction='Predict.hex')
 
             # just get a predict and AUC on the same data. has to be binomial result
             h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
@@ -84,8 +84,7 @@ class Basic(unittest.TestCase):
             GLMModel = glm['glm_model']
             modelKey = GLMModel['_key']
             print "Doing predict with same dataset, and the GLM model"
-            h2o.nodes[0].generate_predictions(model_key=modelKey, 
-                data_key=hexKey, destination_key='Predict.hex')
+            h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=hexKey, prediction='Predict.hex')
 
             # just get a predict and AUC on the same data. has to be binomial result
             h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
