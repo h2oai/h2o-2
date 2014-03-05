@@ -27,8 +27,11 @@ public class SummaryPage2 extends Request2 {
   @API(help = "Select columns", filter=colsFilter1.class)
   int[] cols;
 
-  @API(help = "Maximum columns to show summaries of", filter = Default.class, lmin = 1,  lmax = 1000)
+  @API(help = "Maximum columns to show summaries of", filter = Default.class, lmin = 1)
   int max_ncols = 1000;
+
+  @API(help = "Number of bins for quantile (1-10000000)", filter = Default.class, lmin = 1, lmax = 1000000)
+  int max_qbins = 1000;
 
   @API(help = "Column summaries.")
   Summary2[] summaries;
@@ -59,9 +62,9 @@ public class SummaryPage2 extends Request2 {
     fs.blockForPending();
 
     Summary2.BasicStat basicStats[] = new Summary2.PrePass().doAll(fr).finishUp()._basicStats;
-    summaries = new Summary2.SummaryTask2(basicStats).doAll(fr)._summaries;
+    summaries = new Summary2.SummaryTask2(basicStats, max_qbins).doAll(fr)._summaries;
     if (summaries != null)
-      for (int i = 0; i < cols.length; i++) 
+      for (int i = 0; i < cols.length; i++)
         summaries[i].finishUp(vecs[i]);
     return Response.done(this);
   }
