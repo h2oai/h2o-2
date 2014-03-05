@@ -1,5 +1,6 @@
 package hex.nn;
 
+import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask.DataInfo;
 import water.*;
 import water.api.*;
@@ -32,6 +33,9 @@ public class NNModel extends Model {
 
   @API(help="Number of training epochs", json = true)
   public double epoch_counter;
+
+  @API(help="Number of rows in training data", json = true)
+  public long training_rows;
 
   @API(help = "Scoring during model building")
   private Errors[] errors;
@@ -104,25 +108,31 @@ public class NNModel extends Model {
 
   final private static class ConfMat extends hex.ConfusionMatrix {
     final private double _err;
-    public ConfMat(double err) {
+    final private double _f1;
+    public ConfMat(double err, double f1) {
       super(null);
       _err=err;
+      _f1=f1;
     }
     @Override public double err() { return _err; }
+    @Override public double precisionAndRecall() { return _f1; }
     @Override public double[] classErr() { return null; }
   }
 
   /** for grid search error reporting */
   @Override
   public hex.ConfusionMatrix cm() {
+    final Errors lasterror = errors[errors.length-1];
     if (errors == null) return null;
-    water.api.ConfusionMatrix cm = errors[errors.length-1].validation ?
-            errors[errors.length-1].valid_confusion_matrix :
-            errors[errors.length-1].train_confusion_matrix;
+    water.api.ConfusionMatrix cm = lasterror.validation ?
+            lasterror.valid_confusion_matrix :
+            lasterror.train_confusion_matrix;
     if (cm == null || cm.cm == null) {
-      return new ConfMat(errors[errors.length-1].validation ?
-              errors[errors.length-1].valid_err :
-              errors[errors.length-1].train_err);
+      if (lasterror.validation) {
+        return new ConfMat(lasterror.valid_err, lasterror.validAUC != null ? lasterror.validAUC.F1() : 0);
+      } else {
+        return new ConfMat(lasterror.train_err, lasterror.trainAUC != null ? lasterror.trainAUC.F1() : 0);
+      }
     }
     return new hex.ConfusionMatrix(cm.cm);
   }
@@ -155,6 +165,11 @@ public class NNModel extends Model {
     private float[][] weights_momenta;
     private double[][] biases_momenta;
 
+
+    // helpers for AdaDelta
+    private float[][] E_dx2;
+    private double[][] E_g2;
+
     // compute model size (number of model parameters required for making predictions)
     // momenta are not counted here, but they are needed for model building
     public long size() {
@@ -165,17 +180,25 @@ public class NNModel extends Model {
     }
 
     // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
-    final boolean _has_momenta;
-    boolean has_momenta() { return _has_momenta; }
+    boolean has_momenta() { return parameters.momentum_start != 0 || parameters.momentum_stable != 0; }
+    boolean adaDelta() { return parameters.rho > 0 && parameters.epsilon > 0; }
     public final float[] get_weights(int i) { return weights[i]; }
     public final double[] get_biases(int i) { return biases[i]; }
     public final float[] get_weights_momenta(int i) { return weights_momenta[i]; }
     public final double[] get_biases_momenta(int i) { return biases_momenta[i]; }
+    public final float[] get_E_dx2(int i) { return E_dx2[i]; }
+    public final double[] get_E_g2(int i) { return E_g2[i]; }
 
     @API(help = "Model parameters", json = true)
     final private NN parameters;
     public final NN get_params() { return parameters; }
     public final NN job() { return get_params(); }
+
+    @API(help = "Mean rate", json = true)
+    private double[] mean_rate;
+
+    @API(help = "RMS rate", json = true)
+    private double[] rms_rate;
 
     @API(help = "Mean bias", json = true)
     private double[] mean_bias;
@@ -217,7 +240,7 @@ public class NNModel extends Model {
       assert(num_input > 0);
       assert(num_output > 0);
       parameters = params;
-      _has_momenta = ( parameters.momentum_start != 0 || parameters.momentum_stable != 0 );
+      if (has_momenta() && adaDelta()) throw new InvalidArgumentException("Cannot have non-zero momentum and non-zero AdaDelta parameters at the same time.");
       final int layers=parameters.hidden.length;
       // units (# neurons for each layer)
       units = new int[layers+2];
@@ -230,20 +253,31 @@ public class NNModel extends Model {
       // biases (only for hidden layers and output layer)
       biases = new double[layers+1][];
       for (int i=0; i<=layers; ++i) biases[i] = new double[units[i+1]];
-      createMomenta();
+      fillHelpers();
       // for diagnostics
+      mean_rate = new double[units.length];
+      rms_rate = new double[units.length];
       mean_bias = new double[units.length];
       rms_bias = new double[units.length];
       mean_weight = new double[units.length];
       rms_weight = new double[units.length];
     }
 
-    void createMomenta() {
-      if (has_momenta() && weights_momenta == null) {
+    void fillHelpers() {
+      if (has_momenta()) {
+        if (weights_momenta != null) return;
         weights_momenta = new float[weights.length][];
         for (int i=0; i<weights_momenta.length; ++i) weights_momenta[i] = new float[units[i]*units[i+1]];
         biases_momenta = new double[biases.length][];
         for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
+      }
+      else {
+        //AdaGrad
+        if (E_dx2 != null) return;
+        E_dx2 = new float[weights.length][];
+        for (int i=0; i<E_dx2.length; ++i) E_dx2[i] = new float[units[i]*units[i+1]];
+        E_g2 = new double[weights.length][];
+        for (int i=0; i<E_g2.length; ++i) E_g2[i] = new double[units[i]*units[i+1]];
       }
     }
     public void delete() {
@@ -258,7 +292,7 @@ public class NNModel extends Model {
         if (!parameters.quiet_mode) {
           Neurons[] neurons = NNTask.makeNeuronsForTesting(this);
           sb.append("Status of Neuron Layers:\n");
-          sb.append("#  Units         Type      Dropout      Rate      L1       L2    Momentum     Weight (Mean, RMS)      Bias (Mean,RMS)\n");
+          sb.append("#  Units         Type      Dropout    L1       L2    " + (parameters.adaptive_rate ? "  Rate (Mean,RMS)   " : "  Rate      Momentum") + "   Weight (Mean, RMS)      Bias (Mean,RMS)\n");
           final String format = "%7g";
           for (int i=0; i<neurons.length; ++i) {
             sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
@@ -275,10 +309,10 @@ public class NNModel extends Model {
               sb.append("          ");
             }
             sb.append(
-                    " " + String.format("%10g", neurons[i].rate(get_processed_total()))
-                            + " " + String.format("%5f", neurons[i].params.l1)
+                    " " + String.format("%5f", neurons[i].params.l1)
                             + " " + String.format("%5f", neurons[i].params.l2)
-                            + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))
+                            + " " + (parameters.adaptive_rate ? (" (" + String.format(format, mean_rate[i]) + ", " + String.format(format, rms_rate[i]) + ")" )
+                                    : (String.format("%10g", neurons[i].rate(get_processed_total())) + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))))
                             + " (" + String.format(format, mean_weight[i])
                             + ", " + String.format(format, rms_weight[i]) + ")"
                             + " (" + String.format(format, mean_bias[i])
@@ -334,6 +368,11 @@ public class NNModel extends Model {
         Utils.add(weights_momenta, other.weights_momenta);
         Utils.add(biases_momenta,  other.biases_momenta);
       }
+      if (adaDelta()) {
+        assert(other.adaDelta());
+        Utils.add(E_dx2, other.E_dx2);
+        Utils.add(E_g2,  other.E_g2);
+      }
       add_processed_local(other.get_processed_local());
     }
     protected void div(double N) {
@@ -342,6 +381,10 @@ public class NNModel extends Model {
       if (has_momenta()) {
         for (float[] weight_momenta : weights_momenta) Utils.div(weight_momenta, (float) N);
         for (double[] bias_momenta : biases_momenta) Utils.div(bias_momenta, N);
+      }
+      if (adaDelta()) {
+        for (float[] dx2 : E_dx2) Utils.div(dx2, (float) N);
+        for (double[] g2 : E_g2) Utils.div(g2, N);
       }
     }
     double uniformDist(Random rand, double min, double max) {
@@ -381,17 +424,27 @@ public class NNModel extends Model {
 
     // compute stats on all nodes
     public void computeStats() {
+      double[][] rate = parameters.adaptive_rate ? new double[units.length-1][] : null;
       for( int y = 1; y < units.length; y++ ) {
+        mean_rate[y] = rms_rate[y] = 0;
         mean_bias[y] = rms_bias[y] = 0;
         mean_weight[y] = rms_weight[y] = 0;
         for(int u = 0; u < biases[y-1].length; u++) {
           mean_bias[y] += biases[y-1][u];
         }
+        if (rate != null) rate[y-1] = new double[weights[y-1].length];
         for(int u = 0; u < weights[y-1].length; u++) {
           mean_weight[y] += weights[y-1][u];
+          if (rate != null) {
+            final double RMS_dx = Math.sqrt(E_dx2[y-1][u]+parameters.epsilon);
+            final double RMS_g = Math.sqrt(E_g2[y-1][u]+parameters.epsilon);
+            rate[y-1][u] = (RMS_dx/RMS_g); //not exactly right, RMS_dx should be from the previous time step -> but close enough for diagnostics.
+            mean_rate[y] += rate[y-1][u];
+          }
         }
         mean_bias[y] /= biases[y-1].length;
         mean_weight[y] /= weights[y-1].length;
+        if (rate != null) mean_rate[y] /= rate[y-1].length;
 
         for(int u = 0; u < biases[y-1].length; u++) {
           final double db = biases[y-1][u] - mean_bias[y];
@@ -400,9 +453,14 @@ public class NNModel extends Model {
         for(int u = 0; u < weights[y-1].length; u++) {
           final double dw = weights[y-1][u] - mean_weight[y];
           rms_weight[y] += dw * dw;
+          if (rate != null) {
+            final double drate = rate[y-1][u] - mean_rate[y];
+            rms_rate[y] += drate * drate;
+          }
         }
         rms_bias[y] = Math.sqrt(rms_bias[y]/biases[y-1].length);
         rms_weight[y] = Math.sqrt(rms_weight[y]/weights[y-1].length);
+        if (rate != null) rms_rate[y] = Math.sqrt(rms_rate[y]/rate[y-1].length);
 
         unstable |= Double.isNaN(mean_bias[y])  || Double.isNaN(rms_bias[y])
                 || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
@@ -532,17 +590,9 @@ public class NNModel extends Model {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
       Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
       keep_running = false;
-    } else if (ftest == null &&
-            (model_info().get_params().classification && errors[errors.length-1].train_err <= model_info().get_params().classification_stop)
-        || (!model_info().get_params().classification && errors[errors.length-1].train_mse <= model_info().get_params().regression_stop)
-            ) {
+    } else if ( (model_info().get_params().classification && errors[errors.length-1].train_err <= model_info().get_params().classification_stop)
+        || (!model_info().get_params().classification && errors[errors.length-1].train_mse <= model_info().get_params().regression_stop) ) {
       Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
-      keep_running = false;
-    } else if (ftest != null &&
-            (model_info().get_params().classification && errors[errors.length-1].valid_err <= model_info().get_params().classification_stop)
-        || (!model_info().get_params().classification && errors[errors.length-1].valid_mse <= model_info().get_params().regression_stop)
-            ) {
-      Log.info("Achieved requested predictive accuracy on the validation data. Model building completed.");
       keep_running = false;
     }
     update(job_key);
@@ -654,7 +704,7 @@ public class NNModel extends Model {
 
     DocGen.HTML.title(sb, "Progress");
     // update epoch counter every time the website is displayed
-    epoch_counter = (float)model_info.get_processed_total() / model_info.data_info()._adaptedFrame.numRows();
+    epoch_counter = training_rows > 0 ? (float)model_info().get_processed_total()/training_rows : 0;
     final double progress = model_info.get_params().progress();
 
     if (model_info.parameters != null && model_info.parameters.diagnostics) {
@@ -665,10 +715,14 @@ public class NNModel extends Model {
       sb.append("<th>").append("Units").append("</th>");
       sb.append("<th>").append("Type").append("</th>");
       sb.append("<th>").append("Dropout").append("</th>");
-      sb.append("<th>").append("Rate").append("</th>");
       sb.append("<th>").append("L1").append("</th>");
       sb.append("<th>").append("L2").append("</th>");
-      sb.append("<th>").append("Momentum").append("</th>");
+      if (model_info.get_params().adaptive_rate) {
+        sb.append("<th>").append("Rate (Mean, RMS)").append("</th>");
+      } else {
+        sb.append("<th>").append("Rate").append("</th>");
+        sb.append("<th>").append("Momentum").append("</th>");
+      }
       sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
       sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
       sb.append("</tr>");
@@ -701,11 +755,16 @@ public class NNModel extends Model {
           sb.append("<td></td>");
         }
 
-        sb.append("<td>").append(String.format("%.5g", neurons[i].rate(error.training_samples))).append("</td>");
+        final String format = "%g";
         sb.append("<td>").append(neurons[i].params.l1).append("</td>");
         sb.append("<td>").append(neurons[i].params.l2).append("</td>");
-        final String format = "%g";
-        sb.append("<td>").append(String.format("%.5f", neurons[i].momentum(error.training_samples))).append("</td>");
+        if (model_info.get_params().adaptive_rate) {
+          sb.append("<td>(").append(String.format(format, model_info.mean_rate[i])).
+                  append(", ").append(String.format(format, model_info.rms_rate[i])).append(")</td>");
+        } else {
+          sb.append("<td>").append(String.format("%.5g", neurons[i].rate(error.training_samples))).append("</td>");
+          sb.append("<td>").append(String.format("%.5f", neurons[i].momentum(error.training_samples))).append("</td>");
+        }
         sb.append("<td>(").append(String.format(format, model_info.mean_weight[i])).
                 append(", ").append(String.format(format, model_info.rms_weight[i])).append(")</td>");
         sb.append("<td>(").append(String.format(format, model_info.mean_bias[i])).
