@@ -307,7 +307,8 @@ public class NN extends Job.ValidatedJob {
       checkParams();
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
-      final NNModel model = new NNModel(dest(), self(), source._key, dinfo, this);
+      float[] priorDist = classification ? new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist() : null;
+      final NNModel model = new NNModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
       return model;
     }

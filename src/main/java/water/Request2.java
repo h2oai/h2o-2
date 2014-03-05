@@ -269,6 +269,12 @@ public abstract class Request2 extends Request {
             arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null, false), false, api.help());
           }
 
+          // RSeq float
+          else if( f.getType() == float[].class ) {
+            float[] val = (float[]) defaultValue;
+            arg = new RSeqFloat(f.getName(), api.required(), new NumberSequenceFloat(val, null, false), false, api.help());
+          }
+
           // Bool
           else if( f.getType() == boolean.class && api.filter() == Default.class ) {
             boolean val = (Boolean) defaultValue;
@@ -519,6 +525,16 @@ public abstract class Request2 extends Request {
           value = is;
         } else
           value = ds;
+      }
+      else if( value instanceof NumberSequenceFloat ) {
+        float[] fs = ((NumberSequenceFloat) value)._arr;
+        if( arg._field.getType() == int[].class ) {
+          int[] is = new int[fs.length];
+          for( int i = 0; i < is.length; i++ )
+            is[i] = (int) fs[i];
+          value = is;
+        } else
+          value = fs;
       }
       arg._field.set(this, value);
     } catch( Exception e ) {

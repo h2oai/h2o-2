@@ -72,6 +72,7 @@ train_data_url    <<- "None"
 #Internal.R Extensions:
 .h2o.__PAGE_CM <- "2/ConfusionMatrix.json" #actual/vactual, predict/vpredict
 .h2o.__GLM_SCORE <- "GLMScore.json" #model_key, key, thresholds
+.h2o.__PAGE_AUC <- "2/AUC.json"
 
 #"Private" Methods
 .setup<-
@@ -84,23 +85,23 @@ function() {
   .getArgs(commandArgs(trailingOnly = TRUE))
   .h2oSetup()
   .calcPhase()
-  .locateInternal()
+#  .locateInternal()
   start_time <<- round(System$currentTimeMillis())[[1]]
 }
 
 .locateInternal<-
 function() {
-  for (i in 1:10) {
-    bn <- basename(path)
-    if (bn == "py") {
-      source("../R/h2oPerf/Internal.R")
-      print("SUCCESSFULLY SOURCED INTERNAL R CODE")
+#  for (i in 1:10) {
+#    bn <- basename(path)
+#    if (bn == "py") {
+#      source("../R/h2oPerf/Internal.R")
+#      print("SUCCESSFULLY SOURCED INTERNAL R CODE")
       return(0)
-    }
-    if (bn == "h2o") {
-      stop("Couldn't find Internal.R")
-    }
-  }
+#    }
+#    if (bn == "h2o") {
+#      stop("Couldn't find Internal.R")
+#    }
+#  }
 }
 
 h2o.removeAll <-
@@ -349,15 +350,16 @@ function(model) {
 
 .calcBinomResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = testData@key, 
                           vactual = response, predict = h2opred@key,
                           vpredict = "predict")
-  .buildcm2(res)
+  cm <- res$cm
+  confusion_matrix    <<- t(matrix(unlist(cm), 2 ,2))
   precision           <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[1,2])
   recall              <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[2,1])
   error_rate          <<- confusion_matrix[3,3]
   minority_error_rate <<- confusion_matrix[2,3]
-  auc                 <<- -1
+  auc                 <<- res$AUC
 }
 
 .calcMultinomResults<-
@@ -449,9 +451,6 @@ function(res) {
   cm.json <<- res$cm
   levels.json <<- res$response_domain
 }
-
-
-
 
 
 .setup()

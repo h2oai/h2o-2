@@ -87,9 +87,9 @@ public class NNModel extends Model {
       StringBuilder sb = new StringBuilder();
       if (classification) {
         sb.append("Error on training data (misclassification): " + String.format("%.2f", 100*train_err) + "%");
-        if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.auc) + "%");
+        if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
         if (validation) sb.append("\nError on validation data (misclassification): " + String.format("%.2f", (100 * valid_err)) + "%");
-        if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.auc) + "%");
+        if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else {
         sb.append("Error on training data (MSE): " + train_mse);
         if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
@@ -414,9 +414,8 @@ public class NNModel extends Model {
     }
   }
 
-  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params) {
-    super(selfKey, dataKey, dinfo._adaptedFrame);
-    setPriorClassDistribution(new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist());
+  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params, float[] priorDist) {
+    super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
@@ -467,17 +466,11 @@ public class NNModel extends Model {
       err.training_samples = model_info().get_processed_total();
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
+      if (err.classification && nclasses()==2) err.trainAUC = new AUC();
       final Frame trainPredict = score(ftrain, false);
-      final double trainErr = calcError(ftrain, trainPredict, "Scoring on training data:", printme, err.train_confusion_matrix);
-      if (err.classification && nclasses()==2) {
-        err.trainAUC = new AUC();
-        err.trainAUC.actual = ftrain;
-        err.trainAUC.vactual = ftrain.lastVec();
-        err.trainAUC.predict = trainPredict;
-        err.trainAUC.vpredict = trainPredict.lastVec();
-        err.trainAUC.serve();
-      }
+      final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC);
       trainPredict.delete();
+
       if (err.classification) err.train_err = err.trainAUC != null ? err.trainAUC.err() : trainErr;
       else err.train_mse = trainErr;
 
@@ -485,19 +478,18 @@ public class NNModel extends Model {
         assert ftest != null;
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
+        if (err.classification && nclasses()==2) err.validAUC = new AUC();
         final Frame validPredict = score(ftest, false);
-        final double validErr = calcError(ftest, validPredict, "Scoring on validation data:", printme, err.valid_confusion_matrix);
-        if (err.classification && nclasses()==2) {
-          err.validAUC = new AUC();
-          err.validAUC.actual = ftest;
-          err.validAUC.vactual = ftest.lastVec();
-          err.validAUC.predict = validPredict;
-          err.validAUC.vpredict = validPredict.lastVec();
-          err.validAUC.serve();
-        }
+        final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC);
         validPredict.delete();
         if (err.classification) err.valid_err = err.validAUC != null ? err.validAUC.err() : validErr;
         else err.valid_mse = validErr;
+      }
+
+      // remove thresholds from all the previous AUC results to keep output JSON small
+      if (errors.length > 1) {
+        if (errors[errors.length-1].trainAUC != null) errors[errors.length-1].trainAUC.thresholds = null;
+        if (errors[errors.length-1].validAUC != null) errors[errors.length-1].validAUC.thresholds = null;
       }
 
       // only keep confusion matrices for the last step if there are fewer than specified number of output classes
@@ -583,17 +575,27 @@ public class NNModel extends Model {
     return preds;
   }
 
-  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix CM) {
-    if (CM == null) CM = new ConfusionMatrix();
-    CM.actual = ftest;
-    CM.vactual = ftest.lastVec();
-    CM.predict = fpreds;
-    CM.vpredict = fpreds.vecs()[0];
-    CM.serve();
+  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc) {
     StringBuilder sb = new StringBuilder();
-    final double error = CM.toASCII(sb); //either classification error or MSE
-    if (printCM && (CM.cm==null || CM.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
-      Log.info(label);
+    double error;
+    if (auc != null) {
+      auc.actual = ftest;
+      auc.vactual = ftest.lastVec();
+      auc.predict = fpreds;
+      auc.vpredict = fpreds.lastVec();
+      auc.serve();
+      error = auc.toASCII(sb);
+    } else {
+      if (cm == null) cm = new ConfusionMatrix();
+      cm.actual = ftest;
+      cm.vactual = ftest.lastVec();
+      cm.predict = fpreds;
+      cm.vpredict = fpreds.vecs()[0];
+      cm.serve();
+      error = cm.toASCII(sb); //either classification error or MSE
+    }
+    if (printCM && (cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
+      Log.info("Scoring on " + label + " data:");
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
     return error;
@@ -635,8 +637,10 @@ public class NNModel extends Model {
       DocGen.HTML.section(sb, "=======================================================================================");
     }
 
-    final double progress = model_info.get_params().progress();
     DocGen.HTML.title(sb, "Progress");
+    // update epoch counter every time the website is displayed
+    epoch_counter = (float)model_info.get_processed_total() / model_info.data_info()._adaptedFrame.numRows();
+    final double progress = model_info.get_params().progress();
 
     if (model_info.parameters != null && model_info.parameters.diagnostics) {
       DocGen.HTML.section(sb, "Status of Neuron Layers");
@@ -709,13 +713,14 @@ public class NNModel extends Model {
         DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
       }
     }
+    DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
     if (error.training_time_ms > 0) {
-      DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
       DocGen.HTML.paragraph(sb, "Training speed: " + error.training_samples * 1000 / error.training_time_ms + " samples/s");
-      DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(error.training_time_ms, true));
-      if (!model_info.get_params().isDone())
-        DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(error.training_time_ms*(1-progress)/progress), true));
     }
+    final long time_so_far = System.currentTimeMillis() - model_info.parameters.start_time;
+    DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(time_so_far, true));
+    if (progress > 0 && !model_info.get_params().isDone())
+      DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(time_so_far*(1-progress)/progress), true));
 
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
