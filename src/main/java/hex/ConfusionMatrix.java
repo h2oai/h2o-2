@@ -112,6 +112,7 @@ public class ConfusionMatrix extends Iced {
   }
 
   public double precisionAndRecall() {
+    if (_arr == null || _arr.length != 2) return Double.NaN;
     return precisionAndRecall(_arr);
   }
 

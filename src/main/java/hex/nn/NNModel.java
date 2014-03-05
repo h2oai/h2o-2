@@ -104,25 +104,31 @@ public class NNModel extends Model {
 
   final private static class ConfMat extends hex.ConfusionMatrix {
     final private double _err;
-    public ConfMat(double err) {
+    final private double _f1;
+    public ConfMat(double err, double f1) {
       super(null);
       _err=err;
+      _f1=f1;
     }
     @Override public double err() { return _err; }
+    @Override public double precisionAndRecall() { return _f1; }
     @Override public double[] classErr() { return null; }
   }
 
   /** for grid search error reporting */
   @Override
   public hex.ConfusionMatrix cm() {
+    final Errors lasterror = errors[errors.length-1];
     if (errors == null) return null;
-    water.api.ConfusionMatrix cm = errors[errors.length-1].validation ?
-            errors[errors.length-1].valid_confusion_matrix :
-            errors[errors.length-1].train_confusion_matrix;
+    water.api.ConfusionMatrix cm = lasterror.validation ?
+            lasterror.valid_confusion_matrix :
+            lasterror.train_confusion_matrix;
     if (cm == null || cm.cm == null) {
-      return new ConfMat(errors[errors.length-1].validation ?
-              errors[errors.length-1].valid_err :
-              errors[errors.length-1].train_err);
+      if (lasterror.validation) {
+        return new ConfMat(lasterror.valid_err, lasterror.validAUC != null ? lasterror.validAUC.F1() : 0);
+      } else {
+        return new ConfMat(lasterror.train_err, lasterror.trainAUC != null ? lasterror.trainAUC.F1() : 0);
+      }
     }
     return new hex.ConfusionMatrix(cm.cm);
   }
@@ -569,17 +575,9 @@ public class NNModel extends Model {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
       Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
       keep_running = false;
-    } else if (ftest == null &&
-            (model_info().get_params().classification && errors[errors.length-1].train_err <= model_info().get_params().classification_stop)
-        || (!model_info().get_params().classification && errors[errors.length-1].train_mse <= model_info().get_params().regression_stop)
-            ) {
+    } else if ( (model_info().get_params().classification && errors[errors.length-1].train_err <= model_info().get_params().classification_stop)
+        || (!model_info().get_params().classification && errors[errors.length-1].train_mse <= model_info().get_params().regression_stop) ) {
       Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
-      keep_running = false;
-    } else if (ftest != null &&
-            (model_info().get_params().classification && errors[errors.length-1].valid_err <= model_info().get_params().classification_stop)
-        || (!model_info().get_params().classification && errors[errors.length-1].valid_mse <= model_info().get_params().regression_stop)
-            ) {
-      Log.info("Achieved requested predictive accuracy on the validation data. Model building completed.");
       keep_running = false;
     }
     update(job_key);

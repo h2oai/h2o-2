@@ -41,7 +41,7 @@ public class NN extends Job.ValidatedJob {
   public double epochs = 10;
 
   @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 0l;
+  public long mini_batch = 100000l;
 
   @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
@@ -115,10 +115,10 @@ public class NN extends Job.ValidatedJob {
   @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double score_duty_cycle = 0.1;
 
-  @API(help = "Stopping criterion for classification error fraction (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
+  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
   public double classification_stop = 0;
 
-  @API(help = "Stopping criterion for regression error (MSE) (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
+  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
   public double regression_stop = 1e-6;
 
   @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
