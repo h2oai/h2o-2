@@ -891,11 +891,13 @@ h2o.predict <- function(object, newdata) {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
     new("H2OParsedDataVA", h2o=object@data@h2o, key=res$key)
+    # new("H2OPredDataVA", h2o=object@data@h2o, key=res$key, model=object, data=newdata)
   } else if(class(object) == "H2OKMeansModelVA") {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
     .h2o.__waitOnJob(object@data@h2o, res$response$redirect_request_args$job)
     res2 = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$destination_key)
     new("H2OParsedDataVA", h2o=object@data@h2o, key=res2$key)
+    # new("H2OPredDataVA", h2o=object@data@h2o, key=res2$key, model=object, data=newdata)
   } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel")) {
     # Set randomized prediction key
     key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
@@ -904,6 +906,7 @@ h2o.predict <- function(object, newdata) {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
     new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
+    # new("H2OPredData", h2o=object@data@h2o, key=rand_pred_key, model=object, data=newdata)
   } else if(class(object) == "H2OPCAModel") {
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
@@ -912,6 +915,7 @@ h2o.predict <- function(object, newdata) {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
     new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
+    # new("H2OPredData", h2o=object@data@h2o, key=rand_pred_key, model=object, data=newdata)
   } else
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
