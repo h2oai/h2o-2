@@ -19,7 +19,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
       .h2o.startJar(Xmx, beta)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
-    } else stop("Can only start H2O launcher if IP address is localhost")
+    } else stop("Can only start H2O launcher if IP address is localhost.")
   }
   cat("Successfully connected to", myURL, "\n")
   H2Oserver = new("H2OClient", ip = ip, port = port)
@@ -170,7 +170,7 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
-.h2o.startJar <- function(memory = "1g", beta = FALSE) {
+.h2o.startJar <- function(memory = "1g") {
   command <- .h2o.checkJava()
   
   #
@@ -205,7 +205,6 @@ h2o.clusterStatus <- function(client) {
             "-ip", "127.0.0.1",
             "-port", "54321"
             )
-  if(beta) args <- c(args, "-beta")
   cat("\n")
   cat(        "Note:  In case of errors look at the following log files:\n")
   cat(sprintf("           %s\n", stdout))
