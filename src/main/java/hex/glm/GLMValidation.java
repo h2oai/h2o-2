@@ -99,7 +99,6 @@ public class GLMValidation extends Iced {
     }
     this.dataKey = dataKey;
     this.thresholds = thresholds;
-    System.out.println("thresholds = " + Arrays.toString(thresholds));
   }
   protected void regularize(double reg){avg_err = avg_err*reg;}
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
@@ -165,6 +164,7 @@ public class GLMValidation extends Iced {
       AUC auc = new AUC(_cms,thresholds);
       this.auc = auc.AUC();
       best_threshold = auc.threshold();
+      computeAIC();
     }
   }
   /**
