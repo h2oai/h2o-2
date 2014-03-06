@@ -50,11 +50,11 @@ class PerfRunner:
         Create a Test object and push it onto the queue.
         """
         config_file = os.path.abspath(os.path.join(self.test_root_dir,testDir,testDir + ".cfg"))
-        parse_file = testDir + "_Parse.R"
-        model_file = testDir + "_Model.R"
+        parse_file = "parse.R" #testDir + "_Parse.R"
+        model_file = "model.R" #testDir + "_Model.R"
         predict_file = None
         if os.path.exists(os.path.join(self.test_root_dir, testDir, testDir + "_Predict.R")):
-            predict_file = testDir + "_Predict.R"
+            predict_file = "predict.R" #testDir + "_Predict.R"
 
         test_dir = os.path.join(self.test_root_dir, testDir)
         test_short_dir = testDir
