@@ -1,5 +1,8 @@
 package water.api;
 
+import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
+import hex.ConfusionMatrix;
+import org.apache.commons.lang.StringEscapeUtils;
 import water.MRTask2;
 import water.Request2;
 import water.UKV;
@@ -32,29 +35,68 @@ public class AUC extends Request2 {
   @API(help = "Thresholds (optional, e.g. 0:1:0.01 or 0.0,0.2,0.4,0.6,0.8,1.0).", required = false, filter = Default.class, json = true)
   public float[] thresholds;
 
+  @API(help = "Criterion for choosing optimal threshold", filter = Default.class, json = true)
+  public ThresholdCriterion threshold_criterion = ThresholdCriterion.maximum_F1;
+
+  enum ThresholdCriterion {
+    maximum_F1, minimum_Error, minimum_per_class_Error
+  }
+
   @API(help="domain of the actual response")
   private String [] actual_domain;
   @API(help="AUC")
   public double AUC;
-  @API(help="F1")
-  public double F1;
-  @API(help="Threshold for max. F1")
-  private float threshold_maxF1;
-  @API(help="Confusion Matrix for best index.")
-  private long[][] cm;
 
+  @API(help="F1 values at thresholds")
+  public double[] F1;
+  @API(help="Classification errors at thresholds")
+  public double[] err;
+  @API(help="Threshold criteria")
+  String[] threshold_criteria;
+  @API(help="Optimal thresholds (for different threshold criteria)")
+  private float[] optimal_thresholds;
+  @API(help="Confusion Matrices (for different threshold criteria")
+  private long[][][] optimal_cms;
+
+  /* Independent on thresholds */
   public double AUC() { return AUC; }
   public double Gini() { return 2*AUC-1; }
-  public double F1() { return F1; }
-  public double err() { return _cms[idx_bestF1].err(); }
-  public float threshold_maxF1() { return threshold_maxF1; }
-  public long[][] cm() { return cm; }
+
+  /* Return the metrics for given criterion */
+  public double F1(ThresholdCriterion criter) { return F1[criter.ordinal()]; }
+  public double err(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].err(); }
+  public float threshold(ThresholdCriterion criter) { return optimal_thresholds[criter.ordinal()]; }
+  public long[][] cm(ThresholdCriterion criter) { return optimal_cms[criter.ordinal()]; }
+
+  /* Return the metrics for chosen threshold criterion */
+  public double F1() { return F1(threshold_criterion); }
+  public double err() { return err(threshold_criterion); }
+  public float threshold() { return threshold(threshold_criterion); }
+  public long[][] cm() { return cm(threshold_criterion); }
+  public ConfusionMatrix CM() { return _cms[idxCriter[threshold_criterion.ordinal()]]; }
+
+  /* Return the best possible metrics */
+  public double bestF1() { return F1(ThresholdCriterion.maximum_F1); }
+  public double bestErr() { return err(ThresholdCriterion.minimum_Error); }
 
   /* Helpers */
-  private int idx_bestF1;
+  private int[] idxCriter;
   private double[] _tprs;
   private double[] _fprs;
   private hex.ConfusionMatrix[] _cms;
+
+  public AUC() {}
+
+  /**
+   * Constructor for algos that make their own CMs
+   * @param cms ConfusionMatrices
+   * @param thresh Thresholds
+   */
+  public AUC(hex.ConfusionMatrix[] cms, float[] thresh) {
+    assert(_cms.length == thresholds.length);
+    _cms = cms;
+    thresholds = thresh;
+  }
 
   @Override public Response serve() {
     Vec va = null, vp;
@@ -77,7 +119,7 @@ public class AUC extends Request2 {
         vp = va.align(vp);
       }
 
-      // make thresholds, if not user-given
+      // compute thresholds, if not user-given
       if (thresholds == null) {
         HashSet hs = new HashSet();
         final int bins = (int)Math.min(vpredict.length(), 200l);
@@ -91,17 +133,14 @@ public class AUC extends Request2 {
         for (Object h : hs) {thresholds[i++] = (Float)h; }
         sort(thresholds);
       }
-
-      // compute AUC, CMs, and best threshold
-      AUCTask at = new AUCTask(thresholds).doAll(va,vp);
-      _cms = at.getCMs();
-      idx_bestF1 = at.getBestIdxF1();
-      _tprs = at.getTPRs();
-      _fprs = at.getFPRs();
-      AUC = at.getAUC();
-      F1 = _cms[idx_bestF1].precisionAndRecall();
-      cm = _cms[idx_bestF1]._arr;
-      threshold_maxF1 = at.getBestThresholdF1();
+      // compute CMs
+      if (_cms == null) {
+        AUCTask at = new AUCTask(thresholds).doAll(va,vp);
+        _cms = at.getCMs();
+      }
+      // compute AUC and best thresholds
+      computeAUC();
+      findBestThresholds();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -110,57 +149,152 @@ public class AUC extends Request2 {
     }
   }
 
+
+  private static double trapezoid_area(double x1, double x2, double y1, double y2) { return Math.abs(x1-x2)*(y1+y2)/2.; }
+
+  private void computeAUC() {
+    _tprs = new double[_cms.length];
+    _fprs = new double[_cms.length];
+    double TPR_pre = 1;
+    double FPR_pre = 1;
+    AUC = 0;
+    for( int t = 0; t < _cms.length; ++t ) {
+      double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true-positive-rate
+      double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
+      AUC += trapezoid_area(FPR_pre, FPR, TPR_pre, TPR);
+      TPR_pre = TPR;
+      FPR_pre = FPR;
+      _tprs[t] = TPR;
+      _fprs[t] = FPR;
+    }
+    AUC += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
+    assert(AUC > -1e-5 && AUC < 1.+1e-5); //check numerical sanity
+    AUC = Math.max(0., Math.min(AUC, 1.)); //clamp to 0...1
+  }
+
+  /* return true if a is better than b with respect to criterion criter */
+  private boolean isBetter(ConfusionMatrix a, ConfusionMatrix b, ThresholdCriterion criter) {
+    if (criter == ThresholdCriterion.maximum_F1) {
+      return (!Double.isNaN(a.precisionAndRecall()) &&
+              (Double.isNaN(b.precisionAndRecall()) || a.precisionAndRecall() > b.precisionAndRecall()));
+    } else if (criter == ThresholdCriterion.minimum_Error) {
+      return a.err() < b.err();
+    } else if (criter == ThresholdCriterion.minimum_per_class_Error) {
+      return (Math.max(a.classErr(0),a.classErr(1)) < Math.max(b.classErr(0), b.classErr(1)));
+    } else throw new InvalidArgumentException("Unknown threshold criterion.");
+  }
+
+  private void findBestThresholds() {
+    threshold_criteria = new String[ThresholdCriterion.values().length];
+    int i=0;
+    HashSet<ThresholdCriterion> hs = new HashSet<ThresholdCriterion>();
+    for (ThresholdCriterion criter : ThresholdCriterion.values()) {
+      hs.add(criter);
+      threshold_criteria[i++] = criter.toString().replace("_", " ");
+    }
+    optimal_cms = new long[hs.size()][][];
+    idxCriter = new int[hs.size()];
+    optimal_thresholds = new float[hs.size()];
+    F1 = new double[hs.size()];
+    err = new double[hs.size()];
+
+    for (ThresholdCriterion criter : hs) {
+      final int id = criter.ordinal();
+      idxCriter[id] = 0;
+      optimal_thresholds[id] = thresholds[0];
+      for(i = 1; i < _cms.length; ++i) {
+        if (isBetter(_cms[i], _cms[idxCriter[id]], criter)) {
+          idxCriter[id] = i;
+          optimal_thresholds[id] = thresholds[i];
+        }
+      }
+      // Set members for JSON
+      optimal_cms[id] = _cms[idxCriter[id]]._arr;
+      F1[id] = _cms[idxCriter[id]].precisionAndRecall();
+      err[id] = _cms[idxCriter[id]].err();
+    }
+  }
+
   @Override public boolean toHTML( StringBuilder sb ) {
     sb.append("<div>");
     DocGen.HTML.section(sb, "Scoring for Binary Classification");
-    DocGen.HTML.arrayHead(sb);
-//    DocGen.HTML.section(sb, "Predicting: " + actual.names()[actual.find(vactual)]);
-    sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold for max. F1</th>");
-    sb.append("<tr class='warning'>");
-    sb.append("<td>"
-            + String.format("%.5f", AUC()) + "</td><td>"
-            + String.format("%.5f", Gini()) + "</td><td>"
-            + String.format("%.5f", F1()) + "</td><td>"
-            + String.format("%g", threshold_maxF1()) + "</td>"
-    );
-    sb.append("</tr>");
-    DocGen.HTML.arrayTail(sb);
-    _cms[idx_bestF1].toHTML(sb, actual_domain);
-    plotROC(sb);
-    _cms[idx_bestF1].toHTMLbasic(sb, actual_domain);
+
+    // data for JS
     sb.append("\n<script type=\"text/javascript\">");//</script>");
     sb.append("var cms = [\n");
     for(hex.ConfusionMatrix cm:_cms){
-      sb.append("\t[\n");
-      for(long [] line:cm._arr) {
-        sb.append("\t\t[");
-        for(long l:line) sb.append(l + ",");
-        sb.append("],\n");
-      }
-      sb.append("\t],\n");
+      StringBuilder tmp = new StringBuilder();
+      cm.toHTML(tmp, actual_domain);
+      sb.append("\t'" + StringEscapeUtils.escapeJavaScript(tmp.toString()) + "',\n");
     }
     sb.append("];\n");
-    sb.append("function show_cm(i){\n");
-    sb.append("\t" + "document.getElementById('TN').innerHTML = cms[i][0][0];\n");
-    sb.append("\t" + "document.getElementById('TP').innerHTML = cms[i][1][1];\n");
-    sb.append("\t" + "document.getElementById('FN').innerHTML = cms[i][0][1];\n");
-    sb.append("\t" + "document.getElementById('FP').innerHTML = cms[i][1][0];\n");
-    sb.append("}\n");
+    sb.append("var criterion = " + threshold_criterion.ordinal() + ";\n"); //which one
+    sb.append("var criteria = ["); for(String c:threshold_criteria) sb.append("\"" + c + "\","); sb.append(" ];\n");
+    sb.append("var thresholds = ["); for(double t:optimal_thresholds) sb.append((float)t + ","); sb.append(" ];\n");
+    sb.append("var F1 = ["); for(double f:F1) sb.append((float)f + ","); sb.append(" ];\n");
+    sb.append("var Err = ["); for(double e:err) sb.append((float)e + ","); sb.append(" ];\n");
+    sb.append("var idxCriter = ["); for(int i:idxCriter) sb.append(i + ","); sb.append(" ];\n");
     sb.append("</script>\n");
-    sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
-    for(int i = 0; i < _cms.length; ++i)
-      sb.append("\t<option value='" + i + "'" + (thresholds[i] == threshold_maxF1()?"selected='selected'":"") +">" + thresholds[i] + "</option>\n");
+
+    // Selection of threshold criterion
+    sb.append("\n<div><b>Threshold criterion:</b></div><select id='threshold_select' onchange='set_criterion(this.value, idxCriter[this.value])'>\n");
+    for(int i = 0; i < threshold_criteria.length; ++i)
+      sb.append("\t<option value='" + i + "'" + (i == threshold_criterion.ordinal()?"selected='selected'":"") +">" + threshold_criteria[i] + "</option>\n");
     sb.append("</select>\n");
     sb.append("</div>");
+
+    DocGen.HTML.arrayHead(sb);
+    sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th id='threshold_criterion'>Threshold for " + threshold_criterion.toString().replace("_", " ") + "</th>");
+    sb.append("<tr class='warning'>");
+    sb.append("<td>" + String.format("%.5f", AUC()) + "</td>"
+            + "<td>" + String.format("%.5f", Gini()) + "</td>"
+            + "<td id='F1_value'>" + String.format("%.5f", F1()) + "</td>"
+            + "<td id='threshold'>" + String.format("%g", threshold()) + "</td>");
+    DocGen.HTML.arrayTail(sb);
+    sb.append("<div id='BestConfusionMatrix'>");
+    CM().toHTML(sb, actual_domain);
+    sb.append("</div>");
+
+
+    sb.append("<table><tr><td>");
+    plotROC(sb);
+    sb.append("</td><td id='ConfusionMatrix'>");
+    CM().toHTML(sb, actual_domain);
+    sb.append("</td></tr>");
+    sb.append("<tr><td><h5>Threshold:</h5></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
+    for(int i = 0; i < _cms.length; ++i)
+      sb.append("\t<option value='" + i + "'" + (thresholds[i] == threshold()?"selected='selected'":"") +">" + thresholds[i] + "</option>\n");
+    sb.append("</select></td></tr>");
+    sb.append("</table>");
+
+
+    sb.append("\n<script type=\"text/javascript\">");
+    sb.append("function show_cm(i){\n");
+    sb.append("\t" + "document.getElementById('ConfusionMatrix').innerHTML = cms[i];\n");
+    sb.append("\t" + "update(dataset);\n");
+    sb.append("}\n");
+    sb.append("function set_criterion(i, idx){\n");
+    sb.append("\t" + "criterion = i;\n");
+    sb.append("\t" + "document.getElementById('BestConfusionMatrix').innerHTML = cms[idx];\n");
+    sb.append("\t" + "document.getElementById('threshold_criterion').innerHTML = \" Threshold for \" + criteria[i];\n");
+    sb.append("\t" + "document.getElementById('F1_value').innerHTML = F1[i];\n");
+    sb.append("\t" + "document.getElementById('threshold').innerHTML = thresholds[i];\n");
+    sb.append("\t" + "show_cm(idx);\n");
+    sb.append("\t" + "document.getElementById(\"select\").selectedIndex = idx;\n");
+    sb.append("\t" + "update(dataset);\n");
+    sb.append("}\n");
+    sb.append("</script>\n");
+
+
     return true;
   }
 
   public double toASCII( StringBuilder sb ) {
-    sb.append(_cms[idx_bestF1].toString());
+    sb.append(CM().toString());
     sb.append("AUC: " + String.format("%.5f", AUC()));
     sb.append(", Gini: " + String.format("%.5f", Gini()));
     sb.append(", F1: " + String.format("%.5f", F1()));
-    sb.append(", Best threshold for F1: " + String.format("%g", threshold_maxF1()));
+    sb.append(", Threshold for " + threshold_criterion.toString().replace("_", " ") + ": " + String.format("%g", threshold()));
     sb.append(", Classification Error: " + String.format("%.5f", err()));
     return AUC();
   }
@@ -236,42 +370,6 @@ public class AUC extends Request2 {
                     ".attr(\"width\", w)\n"+
                     ".attr(\"height\", h);\n"+
 
-                    "//Create circles\n"+
-                    "svg.selectAll(\"circle\")\n"+
-                    ".data(dataset)\n"+
-                    ".enter()\n"+
-                    ".append(\"circle\")\n"+
-                    ".attr(\"cx\", function(d) {\n"+
-                    "return xScale(d[0]);\n"+
-                    "})\n"+
-                    ".attr(\"cy\", function(d) {\n"+
-                    "return yScale(d[1]);\n"+
-                    "})\n"+
-                    ".attr(\"fill\", function(d,i) {\n"+
-                    "  if (d[0] == d[1]) {\n"+
-                    "    return \"red\"\n"+
-                    "  } else if (i == " + (idx_bestF1) + "){\n"+
-                    "  return \"green\"\n"+
-                    "  } else {\n"+
-                    "  return \"blue\"\n"+
-                    "  }\n"+
-                    "})\n"+
-                    ".attr(\"r\", function(d,i) {\n"+
-                    "  if (d[0] == d[1]) {\n"+
-                    "    return 1\n"+
-                    "  } else if (i == " + (idx_bestF1) + ") {\n" +
-                    "  return 5\n"+
-                    "  } else {\n"+
-                    "  return 1.5\n"+
-                    "  }\n"+
-                    "})\n" +
-                    ".on(\"mouseover\", function(d,i){\n" +
-                    "   if(i <= " + _fprs.length + ") {" +
-                    "     document.getElementById(\"select\").selectedIndex = i\n" +
-                    "     show_cm(i)\n" +
-                    "   }\n" +
-                    "});\n"+
-
                     "/*"+
                     "//Create labels\n"+
                     "svg.selectAll(\"text\")"+
@@ -328,27 +426,68 @@ public class AUC extends Request2 {
                     ".attr(\"x\",w/2)"+
                     ".attr(\"y\",padding - 20)"+
                     ".attr(\"text-anchor\", \"middle\")"+
-                    ".text(\"ROC\");\n");
+                    ".text(\"ROC\");\n" +
+
+                    "function update(dataset) {" +
+                    "svg.selectAll(\"circle\").remove();" +
+
+                    "//Create circles\n"+
+                    "var data = svg.selectAll(\"circle\")"+
+                    ".data(dataset);\n"+
+
+                    "var activeIdx = idxCriter[criterion];\n" +
+
+                    "data.enter()\n"+
+                    ".append(\"circle\")\n"+
+                    ".attr(\"cx\", function(d) {\n"+
+                    "return xScale(d[0]);\n"+
+                    "})\n"+
+                    ".attr(\"cy\", function(d) {\n"+
+                    "return yScale(d[1]);\n"+
+                    "})\n"+
+                    ".attr(\"fill\", function(d,i) {\n"+
+                    "  if (document.getElementById(\"select\") != null && i == document.getElementById(\"select\").selectedIndex && i != activeIdx) {\n" +
+                    " return \"blue\"\n" +
+                    "}\n" +
+                    "  if (d[0] == d[1]) {\n"+
+                    "    return \"red\"\n"+
+                    "  } else if (i == activeIdx) {\n"+
+                    "  return \"green\"\n"+
+                    "  } else {\n"+
+                    "  return \"blue\"\n"+
+                    "  }\n"+
+                    "})\n"+
+                    ".attr(\"r\", function(d,i) {\n"+
+                    "  if (document.getElementById(\"select\") != null && i == document.getElementById(\"select\").selectedIndex && i != activeIdx) {\n" +
+                    " return 5\n" +
+                    "}\n" +
+                    "  if (d[0] == d[1]) {\n"+
+                    "    return 1\n"+
+                    "  } else if (i == activeIdx) {\n"+
+                    "  return 7\n"+
+                    "  } else {\n"+
+                    "  return 1.5\n"+
+                    "  }\n"+
+                    "})\n" +
+                    ".on(\"mouseover\", function(d,i){\n" +
+                    "   if(i <= " + _fprs.length + ") {" +
+                    "     document.getElementById(\"select\").selectedIndex = i\n" +
+                    "     show_cm(i)\n" +
+                    "   }\n" +
+                    "});\n"+
+                    "data.exit().remove();" +
+                    "}\n" +
+
+                    "update(dataset);");
 
     sb.append("</script>");
     sb.append("</div>");
   }
 
-  // Compute the AUC via MRTask2
+  // Compute CMs for different thresholds via MRTask2
   private static class AUCTask extends MRTask2<AUCTask> {
-    /* @OUT AUC */ public double getAUC() { return _auc; }
-    transient private double _auc;
-    /* @OUT Best Threshold Idx */ public int getBestIdxF1() { return _best_idxF1; }
-    transient private int _best_idxF1;
-    /* @OUT Best Threshold */ public float getBestThresholdF1() { return _best_thresholdF1; }
-    transient private float _best_thresholdF1;
-    /* @OUT TPRs */ public final double[] getTPRs() { return _tprs; }
-    transient private double[] _tprs;
-    /* @OUT FPRs */ public final double[] getFPRs() { return _fprs; }
-    transient private double[] _fprs;
     /* @OUT CMs */ public final hex.ConfusionMatrix[] getCMs() { return _cms; }
     private hex.ConfusionMatrix[] _cms;
-
 
     /* IN thresholds */ final private float[] _thresh;
 
@@ -360,7 +499,6 @@ public class AUC extends Request2 {
       _cms = new hex.ConfusionMatrix[_thresh.length];
       for (int i=0;i<_cms.length;++i)
         _cms[i] = new hex.ConfusionMatrix(2);
-
       final int len = Math.min(ca._len, cp._len);
       for( int i=0; i < len; i++ ) {
         assert(!ca.isNA0(i)); //should never have actual NaN probability!
@@ -382,37 +520,5 @@ public class AUC extends Request2 {
         _cms[i].add(other._cms[i]);
       }
     }
-
-    @Override protected void postGlobal() {
-      _tprs = new double[_cms.length];
-      _fprs = new double[_cms.length];
-
-      double TPR_pre = 1;
-      double FPR_pre = 1;
-      _auc = 0;
-      for( int t = 0; t < _cms.length; ++t ) {
-        double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true-positive-rate
-        double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
-        _auc += trapezoid_area(FPR_pre, FPR, TPR_pre, TPR);
-        TPR_pre = TPR;
-        FPR_pre = FPR;
-        _tprs[t] = TPR;
-        _fprs[t] = FPR;
-      }
-      _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
-      assert(_auc > -1e-5 && _auc < 1.+1e-5); //check numerical sanity
-      _auc = Math.max(0., Math.min(_auc, 1.)); //clamp to 0...1
-      _best_idxF1 = 0;
-      _best_thresholdF1 = _thresh[0];
-      for(int i = 1; i < _cms.length; ++i) {
-        if ( (!Double.isNaN(_cms[i].precisionAndRecall()) && (
-               Double.isNaN(_cms[_best_idxF1].precisionAndRecall())) || _cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall())) {
-          _best_idxF1 = i;
-          _best_thresholdF1 = _thresh[i];
-        }
-      }
-    }
-
-    private static double trapezoid_area(double x1, double x2, double y1, double y2) { return Math.abs(x1-x2)*(y1+y2)/2.; }
   }
 }

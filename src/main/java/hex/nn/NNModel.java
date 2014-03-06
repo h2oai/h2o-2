@@ -853,7 +853,8 @@ public class NNModel extends Model {
         if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         DocGen.HTML.paragraph(sb, validation);
       }
-      if (isClassifier()) {
+
+      if (isClassifier() && nclasses() != 2 /*binary classifier has its own conflicting D3 object (AUC)*/) {
         // Plot training error
         float[] err = new float[errors.length];
         float[] samples = new float[errors.length];
@@ -872,7 +873,9 @@ public class NNModel extends Model {
           new D3Plot(samples, err, "training samples", "classification error",
                   "classification error on validation set").generate(sb);
         }
-      } else {
+      }
+      // regression
+      else if (!isClassifier()) {
         // Plot training MSE
         float[] err = new float[errors.length-1];
         float[] samples = new float[errors.length-1];
