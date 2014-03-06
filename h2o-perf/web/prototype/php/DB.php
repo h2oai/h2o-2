@@ -1,5 +1,6 @@
 <?php
-
+ session_start();
+ ini_set('post_max_size','5M');
  ini_set('display_errors','On');
  error_reporting(E_ALL);
   //connect to the database (possibly don't use this tableName)
