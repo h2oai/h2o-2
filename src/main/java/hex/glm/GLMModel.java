@@ -185,7 +185,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return submodels[best_lambda_idx].validation;
   }
   public int iteration(){
-    int res = 0;
+    int res = submodels[0].iteration;
     for(int i = 1; i < submodels.length && submodels[i] != null && submodels[i].iteration != 0; ++i)
       res = submodels[i].iteration;
     return res;

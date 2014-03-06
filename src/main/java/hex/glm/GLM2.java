@@ -193,8 +193,8 @@ public class GLM2 extends ModelJob {
 
   @Override public void cancel(Throwable ex){
     if( _model != null ) _model.unlock(self());
-    ex.printStackTrace();
-    super.cancel(ex);
+    if(ex instanceof JobCancelledException)cancel();
+    else super.cancel(ex);
   }
 
   @Override protected Response serve() {
@@ -360,7 +360,6 @@ public class GLM2 extends ModelJob {
       nextLambda(glmt);
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      ex.printStackTrace();
       GLM2.this.cancel(ex);
       return true;
     }
@@ -396,8 +395,7 @@ public class GLM2 extends ModelJob {
             if(lambda == null){
               lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
               _runAllLambdas = false;
-            }
-            else { // make sure we start with lambda max (and discard all lambda > lambda max)
+            } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)
               int i = 0; while(i < lambda.length && lambda[i] >= lmax)++i;
               double [] l = new double[1+lambda.length-i];
               l[0] = lmax;
@@ -408,7 +406,7 @@ public class GLM2 extends ModelJob {
             }
             _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             _model.clone().delete_and_lock(self());
-            if(_lambdaIdx == 0 && _beta == null){ // fill-in trivial solution for lambda max
+            if(_lambdaIdx == 0 && _beta == null && alpha[0] > 0){ // fill-in trivial solution for lambda max
               _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
               _beta[_beta.length-1] = _glm.link(ymut.ymu());
               _model.setLambdaSubmodel(0,_beta,_beta,0);
@@ -418,11 +416,12 @@ public class GLM2 extends ModelJob {
             }
             if(_lambdaIdx == lambda.length) // ran only with one lambda > lambda_max => return null model
               GLM2.this.complete(); // signal we're done to anyone waiting for the job
-            else
+            else {
+              ++_iter;
               new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
+            }
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-            ex.printStackTrace();
             GLM2.this.cancel(ex);
             return true;
           }
