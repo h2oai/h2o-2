@@ -49,11 +49,6 @@ irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 
-# Attach H2O R package and run GLM demo
-??h2o
-demo(package = "h2o")
-demo(h2o.glm)
-
 # Shutdown local H2O instance when finished
 h2o.shutdown(localH2O)
 }
