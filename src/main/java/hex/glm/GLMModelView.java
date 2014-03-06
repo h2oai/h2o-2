@@ -119,10 +119,7 @@ public class GLMModelView extends Request2 {
     sb.append("<tr><th>Training Error Rate Avg</th><td>" + val.avg_err + "</td></tr>");
     if(glm_model.glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + DFORMAT.format(val.auc()) + "</td></tr>");
     sb.append("</table>");
-
-    if(glm_model.glm.family == Family.binomial){
-      new AUC(val._cms,val.thresholds).toHTML(sb);
-    }
+    if(glm_model.glm.family == Family.binomial)new AUC(val._cms,val.thresholds).toHTML(sb);
     if(val instanceof GLMXValidation){
       GLMXValidation xval = (GLMXValidation)val;
       // add links to the xval models
