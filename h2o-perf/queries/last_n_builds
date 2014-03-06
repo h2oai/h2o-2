@@ -1,6 +1,5 @@
 DELIMITER $$
-
-CREATE DEFINER=`spencer`@`localhost` PROCEDURE `LastN` (IN testName longtext, IN numBuilds bigint(20), IN phasse longtext)
+CREATE DEFINER=`spencer`@`localhost` PROCEDURE `LastN`(IN testName longtext, IN numBuilds bigint(20), IN phasse longtext)
 BEGIN
   SELECT
       -- Select from test_run --
@@ -42,3 +41,4 @@ BEGIN
   LIMIT numBuilds;
 END$$
 DELIMITER ;
+
