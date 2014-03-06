@@ -72,3 +72,10 @@ airlines.hex$ArrDelay_High = airlines.hex$ArrDelay > airlines.qs["75%"]
 head(airlines.hex)
 airlines.glm.lin = h2o.glm.FV(y = "ArrDelay_High", x = myX, data = airlines.hex, family = "binomial", nfolds = 2)
 print(airlines.glm.lin)
+
+# Beta: Demonstrate simple ddply implementation of mean over groups
+fun = function(df) { sum(df[,16])/nrow(df) }
+h2o.addFunction(remoteH2O, fun)
+airlines.filt = airlines.hex[!is.na(airlines.hex$DepDelay),]
+airlines.ddply = h2o.ddply(airlines.filt, "DayOfWeek", fun)
+as.data.frame(airlines.ddply)
