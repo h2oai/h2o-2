@@ -51,8 +51,9 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=hexKey, prediction='Predict.hex')
 
             # just get a predict and AUC on the same data. has to be binomial result
-            h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
+            resultAUC = h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
                 vactual=y, vpredict=1)
+            print "AUC result:", h2o.dump_json(resultAUC)
 
     def test_A_GLM2_basic_predict_prostate(self):
         h2o.beta_features = True
