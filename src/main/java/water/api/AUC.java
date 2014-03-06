@@ -9,6 +9,7 @@ import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Utils;
 
 import java.util.HashSet;
 
@@ -35,7 +36,8 @@ public class AUC extends Request2 {
   @API(help = "Thresholds (optional, e.g. 0:1:0.01 or 0.0,0.2,0.4,0.6,0.8,1.0).", required = false, filter = Default.class, json = true)
   public float[] thresholds;
 
-  @API(help = "Criterion for choosing optimal threshold", filter = Default.class, json = true)
+
+//  @API(help = "Criterion for choosing optimal threshold", filter = Default.class, json = true)
   public ThresholdCriterion threshold_criterion = ThresholdCriterion.maximum_F1;
 
   enum ThresholdCriterion {
@@ -49,13 +51,24 @@ public class AUC extends Request2 {
 
   @API(help="domain of the actual response")
   private String [] actual_domain;
-  @API(help="AUC")
+  @API(help="AUC (ROC)")
   public double AUC;
+  @API(help="Gini")
+  public double Gini;
 
-  @API(help="F1 values at thresholds")
+  @API(help = "Confusion Matrices for all thresholds")
+  public long[][][] confusion_matrices;
+  @API(help = "F1 for all thresholds")
   public float[] F1;
-  @API(help="Classification errors at thresholds")
-  public float[] err;
+  @API(help = "Accuracy for all thresholds")
+  public float[] accuracy;
+  @API(help = "Precision for all thresholds")
+  public float[] precision;
+  @API(help = "Recall for all thresholds")
+  public float[] recall;
+  @API(help = "Specificity for all thresholds")
+  public float[] specificity;
+
   @API(help="Threshold criteria")
   String[] threshold_criteria;
   @API(help="Optimal thresholds (for different threshold criteria)")
@@ -63,12 +76,26 @@ public class AUC extends Request2 {
   @API(help="Confusion Matrices (for different threshold criteria")
   private long[][][] optimal_cms;
 
+  /**
+   * Clean out large JSON fields.
+   * Only keep AUC, Gini and the optimal thresholds and CMs for each criterion
+   */
+  public void clear() {
+    thresholds = null;
+    confusion_matrices = null;
+    F1 = null;
+    accuracy = null;
+    precision = null;
+    recall = null;
+    specificity = null;
+  }
+
   /* Independent on thresholds */
   public double AUC() { return AUC; }
-  public double Gini() { return 2*AUC-1; }
+  public double Gini() { return Gini; }
 
   /* Return the metrics for given criterion */
-  public double F1(ThresholdCriterion criter) { return F1[criter.ordinal()]; }
+  public double F1(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].F1(); }
   public double err(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].err(); }
   public double precision(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].precision(); }
   public double recall(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].recall(); }
@@ -134,7 +161,11 @@ public class AUC extends Request2 {
       }
 
       // compute thresholds, if not user-given
-      if (thresholds == null) {
+      if (thresholds != null) {
+        if (_cms == null) sort(thresholds); //otherwise assume that thresholds and CMs are in the same order
+        if (Utils.minValue(thresholds) < 0) throw new InvalidArgumentException("Minimum threshold cannot be negative.");
+        if (Utils.maxValue(thresholds) > 1) throw new InvalidArgumentException("Maximum threshold cannot be greater than 1.");
+      } else {
         HashSet hs = new HashSet();
         final int bins = (int)Math.min(vpredict.length(), 200l);
         final long stride = Math.max(vpredict.length() / bins, 1);
@@ -148,13 +179,16 @@ public class AUC extends Request2 {
         sort(thresholds);
       }
       // compute CMs
-      if (_cms == null) {
+      if (_cms != null) {
+        if (_cms.length != thresholds.length) throw new InvalidArgumentException("Number of thresholds differs from number of confusion matrices.");
+      } else {
         AUCTask at = new AUCTask(thresholds).doAll(va,vp);
         _cms = at.getCMs();
       }
       // compute AUC and best thresholds
       computeAUC();
       findBestThresholds();
+      computeMetrics();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -184,6 +218,7 @@ public class AUC extends Request2 {
     AUC += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
     assert(AUC > -1e-5 && AUC < 1.+1e-5); //check numerical sanity
     AUC = Math.max(0., Math.min(AUC, 1.)); //clamp to 0...1
+    Gini = 2*AUC-1;
   }
 
   /* return true if a is better than b with respect to criterion criter */
@@ -221,8 +256,6 @@ public class AUC extends Request2 {
     optimal_cms = new long[hs.size()][][];
     idxCriter = new int[hs.size()];
     optimal_thresholds = new float[hs.size()];
-    F1 = new float[hs.size()];
-    err = new float[hs.size()];
 
     for (ThresholdCriterion criter : hs) {
       final int id = criter.ordinal();
@@ -236,8 +269,26 @@ public class AUC extends Request2 {
       }
       // Set members for JSON, float to save space
       optimal_cms[id] = _cms[idxCriter[id]]._arr;
-      F1[id] = (float)_cms[idxCriter[id]].F1();
-      err[id] = (float)_cms[idxCriter[id]].err();
+    }
+  }
+
+  /**
+   * Populate JSON fields
+   */
+  private void computeMetrics() {
+    confusion_matrices = new long[_cms.length][][];
+    F1 = new float[_cms.length];
+    accuracy = new float[_cms.length];
+    precision = new float[_cms.length];
+    recall = new float[_cms.length];
+    specificity = new float[_cms.length];
+    for(int i=0;i<_cms.length;++i) {
+      confusion_matrices[i] = _cms[i]._arr;
+      F1[i] = (float)_cms[i].F1();
+      accuracy[i] = (float)_cms[i].accuracy();
+      precision[i] = (float)_cms[i].precision();
+      recall[i] = (float)_cms[i].recall();
+      specificity[i] = (float)_cms[i].specificity();
     }
   }
 
