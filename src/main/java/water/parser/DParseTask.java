@@ -690,6 +690,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     1000000000000000l,
     10000000000000000l,
     100000000000000000l,
+    1000000000000000000l,
   };
 
   public static double pow10(int exp){
