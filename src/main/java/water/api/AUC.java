@@ -44,7 +44,7 @@ public class AUC extends Request2 {
     maximum_Precision,
     maximum_Recall,
     maximum_Specificity,
-    minimize_max_per_class_Error
+    minimizing_max_per_class_Error
   }
 
   @API(help="domain of the actual response")
@@ -53,9 +53,9 @@ public class AUC extends Request2 {
   public double AUC;
 
   @API(help="F1 values at thresholds")
-  public double[] F1;
+  public float[] F1;
   @API(help="Classification errors at thresholds")
-  public double[] err;
+  public float[] err;
   @API(help="Threshold criteria")
   String[] threshold_criteria;
   @API(help="Optimal thresholds (for different threshold criteria)")
@@ -70,12 +70,21 @@ public class AUC extends Request2 {
   /* Return the metrics for given criterion */
   public double F1(ThresholdCriterion criter) { return F1[criter.ordinal()]; }
   public double err(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].err(); }
+  public double precision(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].precision(); }
+  public double recall(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].recall(); }
+  public double specificity(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].specificity(); }
+  public double accuracy(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].accuracy(); }
   public float threshold(ThresholdCriterion criter) { return optimal_thresholds[criter.ordinal()]; }
   public long[][] cm(ThresholdCriterion criter) { return optimal_cms[criter.ordinal()]; }
+
 
   /* Return the metrics for chosen threshold criterion */
   public double F1() { return F1(threshold_criterion); }
   public double err() { return err(threshold_criterion); }
+  public double precision() { return precision(threshold_criterion); }
+  public double recall() { return recall(threshold_criterion); }
+  public double specificity() { return specificity(threshold_criterion); }
+  public double accuracy() { return accuracy(threshold_criterion); }
   public float threshold() { return threshold(threshold_criterion); }
   public long[][] cm() { return cm(threshold_criterion); }
   public ConfusionMatrix CM() { return _cms[idxCriter[threshold_criterion.ordinal()]]; }
@@ -190,7 +199,7 @@ public class AUC extends Request2 {
               (Double.isNaN(b.precision()) || a.precision() > b.precision()));
     } else if (criter == ThresholdCriterion.maximum_Accuracy) {
       return a.accuracy() > b.accuracy();
-    } else if (criter == ThresholdCriterion.minimize_max_per_class_Error) {
+    } else if (criter == ThresholdCriterion.minimizing_max_per_class_Error) {
       return (Math.max(a.classErr(0),a.classErr(1)) < Math.max(b.classErr(0), b.classErr(1)));
     } else if (criter == ThresholdCriterion.maximum_Specificity) {
       return (!Double.isNaN(a.specificity()) &&
@@ -212,8 +221,8 @@ public class AUC extends Request2 {
     optimal_cms = new long[hs.size()][][];
     idxCriter = new int[hs.size()];
     optimal_thresholds = new float[hs.size()];
-    F1 = new double[hs.size()];
-    err = new double[hs.size()];
+    F1 = new float[hs.size()];
+    err = new float[hs.size()];
 
     for (ThresholdCriterion criter : hs) {
       final int id = criter.ordinal();
@@ -225,14 +234,16 @@ public class AUC extends Request2 {
           optimal_thresholds[id] = thresholds[i];
         }
       }
-      // Set members for JSON
+      // Set members for JSON, float to save space
       optimal_cms[id] = _cms[idxCriter[id]]._arr;
-      F1[id] = _cms[idxCriter[id]].F1();
-      err[id] = _cms[idxCriter[id]].err();
+      F1[id] = (float)_cms[idxCriter[id]].F1();
+      err[id] = (float)_cms[idxCriter[id]].err();
     }
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
+    if (thresholds == null) return false;
+
     sb.append("<div>");
     DocGen.HTML.section(sb, "Scoring for Binary Classification");
 
@@ -248,8 +259,11 @@ public class AUC extends Request2 {
     sb.append("var criterion = " + threshold_criterion.ordinal() + ";\n"); //which one
     sb.append("var criteria = ["); for(String c:threshold_criteria) sb.append("\"" + c + "\","); sb.append(" ];\n");
     sb.append("var thresholds = ["); for(double t:optimal_thresholds) sb.append((float)t + ","); sb.append(" ];\n");
-    sb.append("var F1 = ["); for(double f:F1) sb.append((float)f + ","); sb.append(" ];\n");
-    sb.append("var Err = ["); for(double e:err) sb.append((float)e + ","); sb.append(" ];\n");
+    sb.append("var F1_values = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].F1() + ","); sb.append(" ];\n");
+    sb.append("var accuracy = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].accuracy() + ","); sb.append(" ];\n");
+    sb.append("var precision = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].precision() + ","); sb.append(" ];\n");
+    sb.append("var recall = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].recall() + ","); sb.append(" ];\n");
+    sb.append("var specificity = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].specificity() + ","); sb.append(" ];\n");
     sb.append("var idxCriter = ["); for(int i:idxCriter) sb.append(i + ","); sb.append(" ];\n");
     sb.append("</script>\n");
 
@@ -261,17 +275,28 @@ public class AUC extends Request2 {
     sb.append("</div>");
 
     DocGen.HTML.arrayHead(sb);
-    sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th id='threshold_criterion'>Threshold for " + threshold_criterion.toString().replace("_", " ") + "</th>");
+    sb.append("<th>AUC</th>");
+    sb.append("<th>Gini</th>");
+    sb.append("<th id='threshold_criterion'>Threshold for " + threshold_criterion.toString().replace("_", " ") + "</th>");
+    sb.append("<th>F1         </th>");
+    sb.append("<th>Accuracy   </th>");
+    sb.append("<th>Precision  </th>");
+    sb.append("<th>Recall     </th>");
+    sb.append("<th>Specificity</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>" + String.format("%.5f", AUC()) + "</td>"
             + "<td>" + String.format("%.5f", Gini()) + "</td>"
-            + "<td id='F1_value'>" + String.format("%.5f", F1()) + "</td>"
-            + "<td id='threshold'>" + String.format("%g", threshold()) + "</td>");
+            + "<td id='threshold'>" + String.format("%g", threshold()) + "</td>"
+            + "<td id='F1_value'>" + String.format("%.7f", F1()) + "</td>"
+            + "<td id='accuracy'>" + String.format("%.7f", accuracy()) + "</td>"
+            + "<td id='precision'>" + String.format("%.7f", precision()) + "</td>"
+            + "<td id='recall'>" + String.format("%.7f", recall()) + "</td>"
+            + "<td id='specificity'>" + String.format("%.7f", specificity()) + "</td>"
+    );
     DocGen.HTML.arrayTail(sb);
-    sb.append("<div id='BestConfusionMatrix'>");
-    CM().toHTML(sb, actual_domain);
-    sb.append("</div>");
-
+//    sb.append("<div id='BestConfusionMatrix'>");
+//    CM().toHTML(sb, actual_domain);
+//    sb.append("</div>");
 
     sb.append("<table><tr><td>");
     plotROC(sb);
@@ -288,21 +313,23 @@ public class AUC extends Request2 {
     sb.append("\n<script type=\"text/javascript\">");
     sb.append("function show_cm(i){\n");
     sb.append("\t" + "document.getElementById('ConfusionMatrix').innerHTML = cms[i];\n");
+    sb.append("\t" + "document.getElementById('F1_value').innerHTML = F1_values[i];\n");
+    sb.append("\t" + "document.getElementById('accuracy').innerHTML = accuracy[i];\n");
+    sb.append("\t" + "document.getElementById('precision').innerHTML = precision[i];\n");
+    sb.append("\t" + "document.getElementById('recall').innerHTML = recall[i];\n");
+    sb.append("\t" + "document.getElementById('specificity').innerHTML = specificity[i];\n");
     sb.append("\t" + "update(dataset);\n");
     sb.append("}\n");
     sb.append("function set_criterion(i, idx){\n");
     sb.append("\t" + "criterion = i;\n");
-    sb.append("\t" + "document.getElementById('BestConfusionMatrix').innerHTML = cms[idx];\n");
+//    sb.append("\t" + "document.getElementById('BestConfusionMatrix').innerHTML = cms[idx];\n");
     sb.append("\t" + "document.getElementById('threshold_criterion').innerHTML = \" Threshold for \" + criteria[i];\n");
-    sb.append("\t" + "document.getElementById('F1_value').innerHTML = F1[i];\n");
     sb.append("\t" + "document.getElementById('threshold').innerHTML = thresholds[i];\n");
     sb.append("\t" + "show_cm(idx);\n");
     sb.append("\t" + "document.getElementById(\"select\").selectedIndex = idx;\n");
     sb.append("\t" + "update(dataset);\n");
     sb.append("}\n");
     sb.append("</script>\n");
-
-
     return true;
   }
 
@@ -478,13 +505,13 @@ public class AUC extends Request2 {
                     "})\n"+
                     ".attr(\"r\", function(d,i) {\n"+
                     "  if (document.getElementById(\"select\") != null && i == document.getElementById(\"select\").selectedIndex && i != activeIdx) {\n" +
-                    " return 5\n" +
+                    "    return 4\n" +
                     "  }\n" +
                     "  else if (i == activeIdx) {\n"+
-                    "    return 7\n"+
+                    "    return 6\n"+
                     "  }\n" +
                     "  else if (d[0] != d[1] && d[0] != 0) {\n"+
-                    "    return 2\n"+
+                    "    return 1.5\n"+
                     "  }\n"+
                     "  else {\n"+
                     "    return 1\n"+
