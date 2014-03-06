@@ -179,12 +179,13 @@ public abstract class LSMSolver extends Iced{
 
     public boolean normalize() {return _lambda != 0;}
 
+    public double _addedL2;
     public ADMMSolver (double lambda, double alpha) {
       super(lambda,alpha);
     }
-    public ADMMSolver (double lambda, double alpha, double rho) {
+    public ADMMSolver (double lambda, double alpha, double addedL2) {
       super(lambda,alpha);
-      _rho = rho;
+      _addedL2 = addedL2;
     }
 
     public JsonObject toJson(){
@@ -221,8 +222,8 @@ public abstract class LSMSolver extends Iced{
       double d = gram._diagAdded;
       final int N = xy.length;
       Arrays.fill(z, 0);
-      if(_lambda>0)
-        gram.addDiag(_lambda*(1-_alpha));
+      if(_lambda>0 || _addedL2 > 0)
+        gram.addDiag(_lambda*(1-_alpha) + _addedL2);
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
         if(Double.isNaN(_rho)) rho = _lambda*_alpha;//gram.diagMin()+1e-5;// find rho value as min diag element + constant
@@ -239,11 +240,11 @@ public abstract class LSMSolver extends Iced{
       Cholesky chol = gram.cholesky(null,true,_id);
       long t2 = System.currentTimeMillis();
       while(!chol.isSPD() && attempts < 10){
-        if(rho == 0 || Double.isNaN(rho))rho = 1e-5;
-        else rho *= 10;
-        Log.info("GLM ADMM: BUMPED UP RHO TO " + rho);
+        if(_addedL2 == 0) _addedL2 = 1e-5;
+        else _addedL2 *= 10;
+        Log.info("GLM ADMM: BUMPED UP RHO TO " + rho + _addedL2);
         ++attempts;
-        gram.addDiag(rho); // try to add L2 penalty to make the Gram issp
+        gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
       Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");

@@ -193,6 +193,7 @@ public abstract class Job extends Request2 {
   }
   public void cancel(final String msg) {
     state = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    if(state == JobState.CANCELLED)Log.info("Job " + self() + "("  + description + ") was cancelled.");
     exception = msg;
     // replace finished job by a job handle
     replaceByJobHandle();

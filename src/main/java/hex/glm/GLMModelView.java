@@ -58,8 +58,8 @@ public class GLMModelView extends Request2 {
     sb.append("<div class='alert " + succ + "'>");
     pprintTime(sb.append(glm_model.iteration() + " iterations computed in "),glm_model.run_time);
     if(glm_model.warnings != null && glm_model.warnings.length > 0){
-      sb.append("<b>Warnings:</b><ul>");
-      for(String w:glm_model.warnings)sb.append("<li>" + w + "</li>");
+      sb.append("<ul>");
+      for(String w:glm_model.warnings)sb.append("<li><b>Warning:</b>" + w + "</li>");
       sb.append("</ul>");
     }
     sb.append("</div>");

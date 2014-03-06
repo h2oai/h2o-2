@@ -8,13 +8,16 @@ H2O: K-Means Clustering
 \description{Performs k-means clustering on a data set.}
 \usage{
 ## Default method:
-h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 1)
+h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
+  init = "none", seed = 0, version = 1)
 
 ## Import to a ValueArray object:
-h2o.kmeans.VA(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0)
+h2o.kmeans.VA(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
+  init = "none", seed = 0)
 
 ## Import to a FluidVecs object:
-h2o.kmeans.FV(data, centers, cols = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0)
+h2o.kmeans.FV(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
+  init = "none", seed = 0)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -65,11 +68,11 @@ An object of class \code{\linkS4class{H2OKMeansModelVA}} (\code{version = 1}) or
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-prosPath = system.file("extdata", "prostate.csv", package="h2o")
+prosPath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
 
-covPath = system.file("extdata", "covtype.csv", package="h2o")
+covPath = system.file("extdata", "covtype.csv", package = "h2o")
 covtype.hex = h2o.importFile(localH2O, path = covPath, version = 2)
 h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3), version = 2)
 h2o.shutdown(localH2O)

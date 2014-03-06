@@ -540,7 +540,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
 }
 
 # ------------------------------- Neural Network ------------------------------------ #
-h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=as.numeric(NA), layers=500, rate=0.01, annealing_rate=1e-6, l1_reg=1e-4, l2_reg=0.0010, mom_start=0.5, mom_ramp=1e6, mom_stable=0.99, epochs=100, validation) {
+h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=as.numeric(NA), layers=500, rate=0.01, annealing_rate=1e-6, l1_reg=1e-4, l2_reg=0.0010, mom_start=0.0, mom_ramp=1e6, mom_stable=0.0, epochs=100, validation) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.logical(classification)) stop('classification must be true or false')

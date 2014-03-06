@@ -63,6 +63,8 @@ public class GridSearch extends Job {
     public Job[] jobs;
     @API(help = "Prediction Errors")
     public double[] prediction_errors;
+    @API(help = "State")
+    public String[] job_state;
 
     @Override protected Response serve() {
       Response response = super.serve();
@@ -78,6 +80,7 @@ public class GridSearch extends Job {
     void updateErrors(ArrayList<JobInfo> infos) {
       if (jobs == null) return;
       prediction_errors = new double[jobs.length];
+      job_state = new String[jobs.length];
       int i = 0;
       for( Job job : jobs ) {
         JobInfo info = new JobInfo();
@@ -93,7 +96,9 @@ public class GridSearch extends Job {
         if( info._cm != null)
           info._error = info._cm.err();
         if (infos != null) infos.add(info);
-        prediction_errors[i++] = info._error;
+        prediction_errors[i] = info._error;
+        job_state[i] = info._job.state.toString();
+        i++;
       }
     }
 
@@ -107,8 +112,7 @@ public class GridSearch extends Job {
         args = (ArrayList<Argument>) args.clone();
         filter(args, "destination_key", "source", "cols", "ignored_cols", "ignored_cols_by_name", //
             "response", "classification", "validation");
-        for( int i = 0; i < args.size(); i++ )
-          sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
+        for (Argument arg : args) sb.append("<td><b>").append(arg._name).append("</b></td>");
         sb.append("<td><b>").append("run time").append("</b></td>");
         String perf = jobs[0].speedDescription();
         if( perf != null )
@@ -167,10 +171,10 @@ public class GridSearch extends Job {
           }
           sb.append("<td>").append(link).append("</td>");
 
-          String pct = "", f1 = "";
+          String pct, f1 = "";
           if( info._cm != null ) {
             pct = String.format("%.2f", 100 * info._error) + "%";
-            if (info._cm.precisionAndRecall() != Double.NaN) f1 = String.format("%.4f", info._cm.precisionAndRecall());
+            if (info._cm.F1() != Double.NaN) f1 = String.format("%.4f", info._cm.F1());
           } else pct = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");
