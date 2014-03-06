@@ -40,14 +40,6 @@ prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = 
 # Get fitted values of prostate dataset
 prostate.fit = h2o.predict(object = prostate.glm, newdata = prostate.hex)
 summary(prostate.fit)
-
-# Run K-Means Model on prostate data set
-covPath = system.file("extdata", "covtype.csv", package="h2o")
-covtype.hex = h2o.importFile(localH2O, path = covPath)
-covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
-# Get predicted cluster information for covtype dataset
-covtype.clusters = h2o.predict(object = covtype.km, newdata = covtype.hex)
-summary(covtype.clusters)
 h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
