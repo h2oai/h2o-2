@@ -87,8 +87,9 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=hexKey, prediction='Predict.hex')
 
             # just get a predict and AUC on the same data. has to be binomial result
-            h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
+            resultAUC = h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex', 
                 vactual=y, vpredict=1)
+            print "AUC result:", h2o.dump_json(resultAUC)
 
         h2o.nodes[0].log_view()
         namelist = h2o.nodes[0].log_download()
