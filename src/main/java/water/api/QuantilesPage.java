@@ -23,7 +23,7 @@ public class QuantilesPage extends Request2 {
   @API(help = "Quantile to calculate", filter = Default.class, dmin = 0, dmax = 1)
   public double quantile = 0.0;
 
-  @API(help = "Number of bins for quantile (1-10000000)", filter = Default.class, lmin = 1, lmax = 1000000)
+  @API(help = "Number of bins for quantile (1-1000000)", filter = Default.class, lmin = 1, lmax = 1000000)
   public int max_qbins = 1000;
 
   @API(help = "Column name.")
