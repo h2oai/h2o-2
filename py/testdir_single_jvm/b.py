@@ -151,14 +151,15 @@ def findQuantile(d, dmin, dmax, threshold):
 
         # now walk thru and find out what bin to look inside
         currentCnt = hcnt_low
-        targetCntFull = (threshold * totalRows) + 0.5
-        targetCntInt = int(math.floor(targetCntFull))
-        targetCntFract = targetCntFull - targetCntInt
+        targetCntFull = threshold * (totalRows-1)  # zero based indexing
+        targetCntInt = int(math.floor(threshold * (totalRows-1)))
+        targetCntFract = targetCntFull  - targetCntInt
+        assert targetCntFract>=0 and targetCntFract<=1
 
         print "targetCntInt:", targetCntInt, "targetCntFract", targetCntFract
 
         k = 0
-        while((currentCnt + hcnt[k]) < targetCntInt): 
+        while((currentCnt + hcnt[k]) <= targetCntInt): 
             currentCnt += hcnt[k]
             k += 1
             assert k<=maxBinCnt, "k too large, k: %s maxBinCnt %s" % (k, maxBinCnt)
@@ -242,9 +243,8 @@ def findQuantile(d, dmin, dmax, threshold):
             # need the count up to but not including newValStart
 
         best_result.append(guess)
-        print "Compare these two, should be identical? %s %s" % (guess, best_result[-1])
-        
         iteration += 1
+
         h2p.blue_print("Ending Pass", iteration)
         h2p.blue_print("best_result:", best_result, "done:", done, "hcnt[k]", hcnt[k])
         print "currentCnt", currentCnt, "targetCntInt", targetCntInt, "hcnt_low", hcnt_low, "hcnt_high", hcnt_high
@@ -270,8 +270,8 @@ def twoDecimals(l):
 
 # csvPathname = './syn_binary_1000000x1.csv'
 csvPathname = './syn_binary_100x1.csv'
-csvPathname = './d.csv'
 csvPathname = './syn_binary_100000x1.csv'
+csvPathname = './d.csv'
 col = 0
 
 print "Reading csvPathname"
