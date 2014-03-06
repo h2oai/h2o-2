@@ -39,7 +39,12 @@ public class AUC extends Request2 {
   public ThresholdCriterion threshold_criterion = ThresholdCriterion.maximum_F1;
 
   enum ThresholdCriterion {
-    maximum_F1, minimum_Error, minimum_per_class_Error
+    maximum_F1,
+    maximum_Accuracy,
+    maximum_Precision,
+    maximum_Recall,
+    maximum_Specificity,
+    minimize_max_per_class_Error
   }
 
   @API(help="domain of the actual response")
@@ -77,7 +82,7 @@ public class AUC extends Request2 {
 
   /* Return the best possible metrics */
   public double bestF1() { return F1(ThresholdCriterion.maximum_F1); }
-  public double bestErr() { return err(ThresholdCriterion.minimum_Error); }
+  public double bestErr() { return err(ThresholdCriterion.maximum_Accuracy); }
 
   /* Helpers */
   private int[] idxCriter;
@@ -175,13 +180,25 @@ public class AUC extends Request2 {
   /* return true if a is better than b with respect to criterion criter */
   private boolean isBetter(ConfusionMatrix a, ConfusionMatrix b, ThresholdCriterion criter) {
     if (criter == ThresholdCriterion.maximum_F1) {
-      return (!Double.isNaN(a.precisionAndRecall()) &&
-              (Double.isNaN(b.precisionAndRecall()) || a.precisionAndRecall() > b.precisionAndRecall()));
-    } else if (criter == ThresholdCriterion.minimum_Error) {
-      return a.err() < b.err();
-    } else if (criter == ThresholdCriterion.minimum_per_class_Error) {
+      return (!Double.isNaN(a.F1()) &&
+              (Double.isNaN(b.F1()) || a.F1() > b.F1()));
+    } else if (criter == ThresholdCriterion.maximum_Recall) {
+      return (!Double.isNaN(a.recall()) &&
+              (Double.isNaN(b.recall()) || a.recall() > b.recall()));
+    } else if (criter == ThresholdCriterion.maximum_Precision) {
+      return (!Double.isNaN(a.precision()) &&
+              (Double.isNaN(b.precision()) || a.precision() > b.precision()));
+    } else if (criter == ThresholdCriterion.maximum_Accuracy) {
+      return a.accuracy() > b.accuracy();
+    } else if (criter == ThresholdCriterion.minimize_max_per_class_Error) {
       return (Math.max(a.classErr(0),a.classErr(1)) < Math.max(b.classErr(0), b.classErr(1)));
-    } else throw new InvalidArgumentException("Unknown threshold criterion.");
+    } else if (criter == ThresholdCriterion.maximum_Specificity) {
+      return (!Double.isNaN(a.specificity()) &&
+              (Double.isNaN(b.specificity()) || a.specificity() > b.specificity()));
+    }
+    else {
+      throw new InvalidArgumentException("Unknown threshold criterion.");
+    }
   }
 
   private void findBestThresholds() {
@@ -210,7 +227,7 @@ public class AUC extends Request2 {
       }
       // Set members for JSON
       optimal_cms[id] = _cms[idxCriter[id]]._arr;
-      F1[id] = _cms[idxCriter[id]].precisionAndRecall();
+      F1[id] = _cms[idxCriter[id]].F1();
       err[id] = _cms[idxCriter[id]].err();
     }
   }
@@ -447,27 +464,31 @@ public class AUC extends Request2 {
                     "})\n"+
                     ".attr(\"fill\", function(d,i) {\n"+
                     "  if (document.getElementById(\"select\") != null && i == document.getElementById(\"select\").selectedIndex && i != activeIdx) {\n" +
-                    " return \"blue\"\n" +
-                    "}\n" +
-                    "  if (d[0] == d[1]) {\n"+
+                    "    return \"blue\"\n" +
+                    "  }\n" +
+                    "  else if (i == activeIdx) {\n"+
+                    "    return \"green\"\n"+
+                    "  }\n" +
+                    "  else if (d[0] != d[1] && d[0] != 0) {\n"+
+                    "    return \"blue\"\n"+
+                    "  }\n" +
+                    "  else {\n"+
                     "    return \"red\"\n"+
-                    "  } else if (i == activeIdx) {\n"+
-                    "  return \"green\"\n"+
-                    "  } else {\n"+
-                    "  return \"blue\"\n"+
                     "  }\n"+
                     "})\n"+
                     ".attr(\"r\", function(d,i) {\n"+
                     "  if (document.getElementById(\"select\") != null && i == document.getElementById(\"select\").selectedIndex && i != activeIdx) {\n" +
                     " return 5\n" +
-                    "}\n" +
-                    "  if (d[0] == d[1]) {\n"+
-                    "    return 1\n"+
-                    "  } else if (i == activeIdx) {\n"+
-                    "  return 7\n"+
-                    "  } else {\n"+
-                    "  return 1.5\n"+
+                    "  }\n" +
+                    "  else if (i == activeIdx) {\n"+
+                    "    return 7\n"+
+                    "  }\n" +
+                    "  else if (d[0] != d[1] && d[0] != 0) {\n"+
+                    "    return 2\n"+
                     "  }\n"+
+                    "  else {\n"+
+                    "    return 1\n"+
+                    "  }\n" +
                     "})\n" +
                     ".on(\"mouseover\", function(d,i){\n" +
                     "   if(i <= " + _fprs.length + ") {" +

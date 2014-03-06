@@ -170,7 +170,7 @@ public class GridSearch extends Job {
           String pct = "", f1 = "";
           if( info._cm != null ) {
             pct = String.format("%.2f", 100 * info._error) + "%";
-            if (info._cm.precisionAndRecall() != Double.NaN) f1 = String.format("%.4f", info._cm.precisionAndRecall());
+            if (info._cm.F1() != Double.NaN) f1 = String.format("%.4f", info._cm.F1());
           } else pct = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");
