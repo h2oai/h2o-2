@@ -38,6 +38,7 @@ abstract public class AST extends Iced {
     if( (ast = ASTId   .parse(E)) != null ) return ast;
     if( (ast = ASTNum  .parse(E)) != null ) return ast;
     if( (ast = ASTOp   .parse(E)) != null ) return ast;
+    if( E.peek('"',EOS) ) E.throwErr("The current Exec does not handle strings",E._x);
     return null;
   }
   abstract void exec(Env env);

@@ -37,6 +37,7 @@ public class Exec2 {
   //           prefix_expr          // No slicing
   //           prefix_expr[]        // Whole slice
   //           prefix_expr[cxexpr?,cxexpr?] // optional row & col slicing
+  //           prefix_expr$col      // named column
   //   prefix_expr :=
   //           val
   //           val(cxexpr,...)*     // Prefix function application, evals LEFT TO RIGHT
