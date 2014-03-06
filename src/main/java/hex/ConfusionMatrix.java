@@ -124,7 +124,7 @@ public class ConfusionMatrix extends Iced {
   public double specificity() {
     assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
     double tn = _arr[0][0];
-    double fp = _arr[1][1];
+    double fp = _arr[0][1];
     return tn / (tn + fp);
   }
   /**

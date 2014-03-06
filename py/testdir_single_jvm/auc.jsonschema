@@ -1,0 +1,50 @@
+{
+    "type":"object", "properties": {
+        "AUC": { "type":"number" },
+        "F1": { "type":"array", "items":
+            { "type":"number" }
+        },
+        "Request2": { "type":"number" },
+        "actual_domain": { "type":"array", "items": 
+            { "type":"string" }
+        },
+        "actual": { "type":"object", "properties": {
+            "_key": { "type":"string" }
+        }
+        },
+        "err": { "type":"array", "items":
+            { "type":"number" }
+        },
+        "optimal_cms": { "type":"array", "items":
+            { "type":"array" }
+        },
+        "optimal_thresholds": { "type":"array", "items":
+            { "type":"number" }
+        },
+        "predict": { "type":"object", "properties": {
+            "_key": { "type":"string" }
+        }
+        },
+        "threshold_criteria": { "type":"array", "items":
+            { "type":"string" }
+        },
+        "threshold_criterion": { "type":"string" },
+        "thresholds": { "type":"array", "items": 
+            { "type":"number" }
+        },
+        "vactual": { "type":"object", "properties": {
+            "": { "type":"string" }
+        },
+        "vpredict": { "type":"object", "properties": {
+            "": { "type":"string" }
+        }
+        "response_info": { "type":"object", "properties": {
+            "h2o": { "type":"string" },
+            "node": { "type":"string" },
+            "redirect_url": { "type":"string" },
+            "status": { "type":"string" },
+            "time": { "type":"number" }
+        }
+    }
+}
+

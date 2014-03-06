@@ -1,7 +1,4 @@
-
-
-
-# Courtesy of Wai Yip Tung. a pure python percentile function
+# similar to Wai Yip Tung. a pure python percentile function
 # so we don't have to use the one(s) from numpy or scipy
 # and require those package installs
 ## {{{ http://code.activestate.com/recipes/511478/ (r1)
@@ -10,6 +7,9 @@ import math
 import functools
 
 def percentileOnSortedList(N, percent, key=lambda x:x):
+    # 5 ways of resolving fractional
+    # floor, ceil, funky, linear, mean
+    INTERPOLATE = 'mean'
     """
     Find the percentile of a list of values.
 
@@ -22,13 +22,50 @@ def percentileOnSortedList(N, percent, key=lambda x:x):
     if N is None:
         return None
     k = (len(N)-1) * percent
-    f = math.floor(k)
-    c = math.ceil(k)
+    f = int(math.floor(k))
+    c = int(math.ceil(k))
     if f == c:
-        return key(N[int(k)])
-    d0 = key(N[int(f)]) * (c-k)
-    d1 = key(N[int(c)]) * (k-f)
-    return d0+d1
+        d = key(N[k])
+        msg = "aligned:" 
+
+    elif INTERPOLATE=='floor':
+        d = key(N[f])
+        msg = "fractional with floor:" 
+
+    elif INTERPOLATE=='ceil':
+        d = key(N[c])
+        msg = "fractional with ceil:" 
+
+    elif INTERPOLATE=='funky':
+        d0 = key(N[f]) * (c-k)
+        d1 = key(N[c]) * (k-f)
+        d = d0+d1
+        msg = "fractional with Tung(floor and ceil) :" 
+    
+    elif INTERPOLATE=='linear':
+        pctDiff = (k-f)/(c-f+0.0)
+        dDiff = pctDiff * (key(N[c]) - key(N[f]))
+        d = key(N[c] + dDiff)
+        msg = "fractional with linear(floor and ceil):" 
+
+    elif INTERPOLATE=='mean':
+        d = (key(N[c]) + key(N[f])) / 2.0
+        msg = "fractional with mean(floor and ceil):" 
+
+    # print 3 around the floored k, for eyeballing when we're close
+    flooredK = int(f)
+    # print the 3 around the median
+    if flooredK > 0:
+        print "prior->", key(N[flooredK-1]), " "
+    else:
+        print "prior->", "<bof>"
+    print "floor->", key(N[flooredK]), " ", msg, d
+    if flooredK+1 < len(N):
+        print " ceil->", key(N[flooredK+1])
+    else:
+        print " ceil-> <eof>"
+
+    return d
 
 # median is 50th percentile.
 def medianOnSortedList(N, key=lambda x:x):
