@@ -3,8 +3,7 @@ import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json
 import h2o
 
-
-# a short quick version for relative comparion
+# a short quick version for relative comparion. But it's probably better to use approx_equal below
 # the subsequent ones might be prefered, especially assertAlmostEqual(
 # http://en.wikipedia.org/wiki/Relative_difference
 # http://stackoverflow.com/questions/4028889/floating-point-equality-in-python
@@ -74,12 +73,14 @@ def approx_equal(x, y, *args, **kwargs):
                 if result is NotImplemented:
                     continue
                 return bool(result)
+
     # If we get here without returning, then neither x nor y knows how to do an
     # approximate equal comparison (or are both floats). Fall back to a numeric
     # comparison.
     return _float_approx_equal(x, y, *args, **kwargs)
 
 # note this can take 'tol' and 'rel' parms for the float case
+# just wraps approx_equal in an assert with a good print message
 def assertApproxEqual(x, y, msg='', **kwargs):
     if not approx_equal(x, y, msg=msg, **kwargs):
         m = msg + '. h2o_util.assertApproxEqual failed comparing %s and %s. %s.' % (x, y, kwargs)
@@ -103,9 +104,9 @@ def cleanseInfNan(value):
 # arbitrary Python floating point numbers.
 
 # The weights need to cover the whole list? otherwise you don't get the rest of the choises
-# random_data = [6,7,8]
-# weights = [2,3,5]
-# d = h2o_util.random_data[weighted_choice(weights)]
+#     random_data = [6,7,8]
+#     weights = [2,3,5]
+#     d = random_data[h2o_util.weighted_choice(weights)]
 def weighted_choice(weights):
     rnd = random.random() * sum(weights)
     for i, w in enumerate(weights):
