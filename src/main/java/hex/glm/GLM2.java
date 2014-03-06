@@ -25,6 +25,7 @@ import water.util.RString;
 import water.util.Utils;
 
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -79,6 +80,10 @@ public class GLM2 extends ModelJob {
   @API(help = "beta_eps", filter = Default.class, json=true)
   double beta_epsilon = DEFAULT_BETA_EPS;
   int _lambdaIdx = 0;
+
+  private transient double _addedL2;
+
+
   public static final double DEFAULT_BETA_EPS = 1e-4;
 
   private transient double _ymu;
@@ -186,6 +191,16 @@ public class GLM2 extends ModelJob {
   }
 
   protected void complete(){
+    if(_addedL2 > 0){
+      String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
+      if(_model.warnings == null || _model.warnings.length == 0)
+        _model.warnings = new String[]{warn};
+      else {
+        _model.warnings = Arrays.copyOf(_model.warnings,_model.warnings.length+1);
+        _model.warnings[_model.warnings.length-1] = warn;
+      }
+      _model.update(self());
+    }
     _model.unlock(self());
     if( _dinfo._nfolds == 0 ) remove(); // Remove/complete job only for top-level, not xval GLM2s
     if(_fjtask != null)_fjtask.tryComplete();
@@ -329,7 +344,9 @@ public class GLM2 extends ModelJob {
       }
       double [] newBeta = glmt._beta != null?glmt._beta.clone():MemoryManager.malloc8d(glmt._xy.length);
       double [] newBetaDeNorm = null;
-      new ADMMSolver(lambda[_lambdaIdx],alpha[0]).solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+      ADMMSolver slvr = new ADMMSolver(lambda[_lambdaIdx],alpha[0], _addedL2);
+      slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
+      _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
         Log.info("GLM forcibly converged by getting NaNs and/or Infs in beta");
       } else {

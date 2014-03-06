@@ -35,7 +35,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   DataInfo data_info;
 
   @API(help="warnings")
-  final String []  warnings;
+  String []  warnings;
   @API(help="Decision threshold.")
   final double     threshold;
   @API(help="glm params")
