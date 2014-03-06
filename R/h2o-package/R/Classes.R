@@ -8,6 +8,7 @@ setClass("H2OParsedData", representation(h2o="H2OClient", key="character", logic
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
 # setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
+# setClass("H2OPredData", contains="H2OParsedData", representation(model="H2OModel", data="H2OParsedData"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
@@ -30,6 +31,8 @@ setClass("H2OParsedDataVA", contains="H2OParsedData")
 setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", "VIRTUAL"))
 # setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
+# setClass("H2OPredDataVA", contains="H2OParsedDataVA", representation(model="H2OModelVA", data="H2OParsedDataVA"))
+
 setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
 setClass("H2OGLMGridVA", contains="H2OGridVA")
 setClass("H2OKMeansModelVA", contains="H2OModelVA")
