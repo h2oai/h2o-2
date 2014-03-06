@@ -134,9 +134,13 @@ public class AUC extends Request2 {
    * @param thresh Thresholds
    */
   public AUC(hex.ConfusionMatrix[] cms, float[] thresh) {
-    assert(_cms.length == thresholds.length);
     _cms = cms;
     thresholds = thresh;
+    assert(_cms.length == thresholds.length):("incompatible lengths of thresholds and confusion matrices: " + _cms.length + " != " + thresholds.length);
+    // compute AUC and best thresholds
+    computeAUC();
+    findBestThresholds();
+    computeMetrics();
   }
 
   @Override public Response serve() {
