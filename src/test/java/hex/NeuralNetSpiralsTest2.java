@@ -28,7 +28,7 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
     // build the model
     {
       NN p = new NN();
-      p.seed = 0xDADAAAA;
+      p.seed = 0xbabe;
       p.rate = 0.007;
       p.rate_annealing = 0;
       p.epochs = 3000;
