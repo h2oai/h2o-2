@@ -496,7 +496,7 @@ public class AUC extends Request2 {
                     "  else if (i == activeIdx) {\n"+
                     "    return \"green\"\n"+
                     "  }\n" +
-                    "  else if (d[0] != d[1] && d[0] != 0) {\n"+
+                    "  else if (d[0] != d[1] || d[0] == 0 || d[1] == 0) {\n"+
                     "    return \"blue\"\n"+
                     "  }\n" +
                     "  else {\n"+
@@ -510,7 +510,7 @@ public class AUC extends Request2 {
                     "  else if (i == activeIdx) {\n"+
                     "    return 6\n"+
                     "  }\n" +
-                    "  else if (d[0] != d[1] && d[0] != 0) {\n"+
+                    "  else if (d[0] != d[1] || d[0] == 0 || d[1] == 0) {\n"+
                     "    return 1.5\n"+
                     "  }\n"+
                     "  else {\n"+
