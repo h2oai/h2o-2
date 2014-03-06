@@ -115,7 +115,7 @@ public class NNModel extends Model {
       _f1=f1;
     }
     @Override public double err() { return _err; }
-    @Override public double precisionAndRecall() { return _f1; }
+    @Override public double F1() { return _f1; }
     @Override public double[] classErr() { return null; }
   }
 
