@@ -483,6 +483,12 @@ class Test:
         """
         return self.test_name
 
+    def get_seed_used(self):
+        """
+        @return: The seed used by this test.
+        """
+        return self._scrape_output_for_seed()
+
     def get_ip(self):
         """
         @return: IP of the cloud where this test ran.
@@ -523,6 +529,19 @@ class Test:
         """
         return (os.path.join(self.output_dir, self.output_file_name))
 
+    def _scrape_output_for_seed(self):
+        """
+        @return: The seed scraped from the outpul file.
+        """
+        res = ""
+        with open(self.get_output_dir_file_name(), "r") as f:
+            for line in f:
+                if "SEED used" in line:
+                    line = line.strip().split(' ')
+                    res = line[-1]
+                    break
+        return res
+
     def __str__(self):
         s = ""
         s += "Test: {}/{}\n".format(self.test_dir, self.test_name)
@@ -541,7 +560,7 @@ class RUnitRunner:
     def __init__(self,
                  test_root_dir,
                  use_cloud, use_ip, use_port,
-                 num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
+                 num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir, failed_output_dir):
         """
         Create a runner.
 
@@ -571,6 +590,7 @@ class RUnitRunner:
         self.h2o_jar = h2o_jar
         self.base_port = base_port
         self.output_dir = output_dir
+        self.failed_output_dir = failed_output_dir
 
         self.start_seconds = time.time()
         self.terminated = False
@@ -580,6 +600,7 @@ class RUnitRunner:
         self.tests_running = []
         self.regression_passed = False
         self._create_output_dir()
+        self._create_failed_output_dir()
 
         if (use_cloud):
             node_num = 0
@@ -938,6 +959,18 @@ class RUnitRunner:
 
         return test_short_dir
 
+    def _create_failed_output_dir(self):
+        try:
+            os.makedirs(self.failed_output_dir)
+        except OSError as e:
+            print("")
+            print("mkdir failed (errno {0}): {1}".format(e.errno, e.strerror))
+            print("    " + self.failed_output_dir)
+            print("")
+            print("(try adding --wipe)")
+            print("")
+            sys.exit(1)
+
     def _create_output_dir(self):
         try:
             os.makedirs(self.output_dir)
@@ -972,14 +1005,17 @@ class RUnitRunner:
         now = time.time()
         duration = now - test.start_seconds
         if (test.get_passed()):
-            s = "PASS      %d %4ds %-70s" % (port, duration, test.get_test_name())
+            s = "PASS      %d %4ds %-60s" % (port, duration, test.get_test_name())
             self._log(s)
         else:
-            s = "     FAIL %d %4ds %-70s %s" % (port, duration, test.get_test_name(), test.get_output_dir_file_name())
+            s = "     FAIL %d %4ds %-60s %s  %s" % (port, duration, test.get_test_name(), test.get_output_dir_file_name(), test.get_seed_used())
             self._log(s)
             f = self._get_failed_filehandle_for_appending()
             f.write(test.get_test_dir_file_name() + "\n")
             f.close()
+            # Copy failed test output into directory failed
+            if not test.get_nopass():
+                shutil.copy(test.get_output_dir_file_name(), self.failed_output_dir)
 
     def _log(self, s):
         f = self._get_summary_filehandle_for_appending()
@@ -1143,7 +1179,7 @@ def usage():
     print("    Rerunning failures from a previous run, keeping old random seeds:")
     print("        # Copy failures.txt, otherwise --wipe removes the directory with the list!")
     print("        cp " + os.path.join(g_output_dir, "failures.txt") + " .")
-    print("        "+g_script_name+" --wipe --numclouds 16 --testlist failures.txt")
+    print("        "+g_script_name+" --wipe --numclouds 16 --testlist failed.txt")
     print("")
     print("    Run tests on a pre-existing cloud (e.g. in a debugger), keeping old random seeds:")
     print("        "+g_script_name+" --wipe --usecloud ip:port")
@@ -1307,6 +1343,7 @@ def main(argv):
     global g_script_name
     global g_num_clouds
     global g_output_dir
+    global g_failed_output_dir
     global g_test_to_run
     global g_test_list_file
     global g_test_group
@@ -1317,6 +1354,7 @@ def main(argv):
 
     # Calculate global variables.
     g_output_dir = os.path.join(test_root_dir, str("results"))
+    g_failed_output_dir = os.path.join(g_output_dir, str("failed"))
 
     # Calculate and set other variables.
     nodes_per_cloud = 1
@@ -1342,7 +1380,7 @@ def main(argv):
 
     g_runner = RUnitRunner(test_root_dir,
                            g_use_cloud, g_use_ip, g_use_port,
-                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx, g_output_dir)
+                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx, g_output_dir, g_failed_output_dir)
 
     # Build test list.
     if (g_test_to_run is not None):

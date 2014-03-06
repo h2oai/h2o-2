@@ -94,7 +94,7 @@ public class NeuralNetMnist extends Job {
     _trainer.start();
   }
 
-  @Override protected JobState exec() {
+  @Override protected JobState execImpl() {
     Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
     Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
     train = trainf.vecs();

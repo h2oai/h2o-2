@@ -119,12 +119,13 @@ public class Frame extends Lockable<Frame> {
     assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group());
     for( String name : names )
       if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
-    final int len0= _names.length;
-    final int len1=  names.length;
+    final int len0= _names!=null ? _names.length : 0;
+    final int len1=  names!=null ?  names.length : 0;
     final int len = len0+len1;
-    _names = Arrays.copyOf(_names,len);
-    _vecs  = Arrays.copyOf(_vecs ,len);
-    _keys  = Arrays.copyOf(_keys ,len);
+    // Note: _names==null <=> _vecs==null <=> _keys==null
+    _names = _names != null ? Arrays.copyOf(_names,len) : new String[len];
+    _vecs  = _vecs  != null ? Arrays.copyOf(_vecs ,len) : new Vec   [len];
+    _keys  = _keys  != null ? Arrays.copyOf(_keys ,len) : new Key   [len];
     System.arraycopy(    names,0,_names,len0,len1);
     System.arraycopy(fr._vecs ,0,_vecs ,len0,len1);
     System.arraycopy(fr._keys ,0,_keys ,len0,len1);

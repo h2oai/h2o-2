@@ -6,7 +6,6 @@ import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
 
 import java.util.HashSet;
 
@@ -30,29 +29,32 @@ public class AUC extends Request2 {
   public Vec vpredict;
   class predictVecSelect extends VecClassSelect { predictVecSelect() { super("predict"); } }
 
+  @API(help = "Thresholds (optional, e.g. 0:1:0.01 or 0.0,0.2,0.4,0.6,0.8,1.0).", required = false, filter = Default.class, json = true)
+  public float[] thresholds;
+
   @API(help="domain of the actual response")
   private String [] actual_domain;
   @API(help="AUC")
-  public double auc;
+  public double AUC;
   @API(help="F1")
-  public double f1;
+  public double F1;
   @API(help="Threshold for max. F1")
-  private float best_thresholdF1;
+  private float threshold_maxF1;
+  @API(help="Confusion Matrix for best index.")
+  private long[][] cm;
 
-  //helper
-  private int idx_bestF1;
-
-  public double AUC() { return auc; }
+  public double AUC() { return AUC; }
+  public double Gini() { return 2*AUC-1; }
+  public double F1() { return F1; }
   public double err() { return _cms[idx_bestF1].err(); }
-  public double F1() { return f1; }
-  public double Gini() { return 2*auc-1; }
-  public int best_idxF1() { return idx_bestF1; }
-  public float best_thresholdF1() { return best_thresholdF1; }
+  public float threshold_maxF1() { return threshold_maxF1; }
+  public long[][] cm() { return cm; }
 
-  /* Helper */ private float[] _thresh;
-  /* Helper */ private double[] _tprs;
-  /* Helper */ private double[] _fprs;
-  /* Helper */ private hex.ConfusionMatrix[] _cms;
+  /* Helpers */
+  private int idx_bestF1;
+  private double[] _tprs;
+  private double[] _fprs;
+  private hex.ConfusionMatrix[] _cms;
 
   @Override public Response serve() {
     Vec va = null, vp;
@@ -75,28 +77,31 @@ public class AUC extends Request2 {
         vp = va.align(vp);
       }
 
-      // make thresholds
-      HashSet hs = new HashSet();
-      final int bins = (int)Math.min(vpredict.length(), 200l);
-      final long stride = Math.max(vpredict.length() / bins, 1);
-      for( int i=0; i<bins; ++i) hs.add(new Float(vpredict.at(i*stride))); //data-driven thresholds TODO: use percentiles (from Summary2?)
-      for (int i=0;i<51;++i) hs.add(new Float(i/50.)); //always add 0.02-spaced thresholds from 0 to 1
+      // make thresholds, if not user-given
+      if (thresholds == null) {
+        HashSet hs = new HashSet();
+        final int bins = (int)Math.min(vpredict.length(), 200l);
+        final long stride = Math.max(vpredict.length() / bins, 1);
+        for( int i=0; i<bins; ++i) hs.add(new Float(vpredict.at(i*stride))); //data-driven thresholds TODO: use percentiles (from Summary2?)
+        for (int i=0;i<51;++i) hs.add(new Float(i/50.)); //always add 0.02-spaced thresholds from 0 to 1
 
-      // created sorted vector of unique thresholds
-      _thresh = new float[hs.size()];
-      int i=0;
-      for (Object h : hs) {_thresh[i++] = (Float)h; }
-      sort(_thresh);
+        // created sorted vector of unique thresholds
+        thresholds = new float[hs.size()];
+        int i=0;
+        for (Object h : hs) {thresholds[i++] = (Float)h; }
+        sort(thresholds);
+      }
 
       // compute AUC, CMs, and best threshold
-      AUCTask at = new AUCTask(_thresh).doAll(va,vp);
+      AUCTask at = new AUCTask(thresholds).doAll(va,vp);
       _cms = at.getCMs();
       idx_bestF1 = at.getBestIdxF1();
       _tprs = at.getTPRs();
       _fprs = at.getFPRs();
-      auc = at.getAUC();
-      f1 = _cms[idx_bestF1].precisionAndRecall();
-      best_thresholdF1 = at.getBestThresholdF1();
+      AUC = at.getAUC();
+      F1 = _cms[idx_bestF1].precisionAndRecall();
+      cm = _cms[idx_bestF1]._arr;
+      threshold_maxF1 = at.getBestThresholdF1();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -113,10 +118,10 @@ public class AUC extends Request2 {
     sb.append("<th>AUC</th><th>Gini</th><th>F1</th><th>Threshold for max. F1</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>"
-            + String.format("%5f", AUC()) + "</td><td>"
-            + String.format("%5f", Gini()) + "</td><td>"
-            + String.format("%5f", F1()) + "</td><td>"
-            + String.format("%g", best_thresholdF1()) + "</td>"
+            + String.format("%.5f", AUC()) + "</td><td>"
+            + String.format("%.5f", Gini()) + "</td><td>"
+            + String.format("%.5f", F1()) + "</td><td>"
+            + String.format("%g", threshold_maxF1()) + "</td>"
     );
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
@@ -144,17 +149,19 @@ public class AUC extends Request2 {
     sb.append("</script>\n");
     sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
     for(int i = 0; i < _cms.length; ++i)
-      sb.append("\t<option value='" + i + "'" + (_thresh[i] == best_thresholdF1()?"selected='selected'":"") +">" + _thresh[i] + "</option>\n");
+      sb.append("\t<option value='" + i + "'" + (thresholds[i] == threshold_maxF1()?"selected='selected'":"") +">" + thresholds[i] + "</option>\n");
     sb.append("</select>\n");
     sb.append("</div>");
     return true;
   }
 
   public double toASCII( StringBuilder sb ) {
-    sb.append("AUC: " + String.format("%5f", AUC()));
-    sb.append(", Gini: " + String.format("%5f", Gini()));
-    sb.append(", F1: " + String.format("%5f", F1()));
-    sb.append(", Best threshold for F1: " + String.format("%g", best_thresholdF1()));
+    sb.append(_cms[idx_bestF1].toString());
+    sb.append("AUC: " + String.format("%.5f", AUC()));
+    sb.append(", Gini: " + String.format("%.5f", Gini()));
+    sb.append(", F1: " + String.format("%.5f", F1()));
+    sb.append(", Best threshold for F1: " + String.format("%g", threshold_maxF1()));
+    sb.append(", Classification Error: " + String.format("%.5f", err()));
     return AUC();
   }
 
@@ -191,8 +198,9 @@ public class AUC extends Request2 {
       }
       sb.append(", ["+String.valueOf(_fprs[c])+",").append(String.valueOf(_tprs[c])).append("]");
     }
-    for(int c = 0; c < 2*_fprs.length; c++) {
-      sb.append(", ["+String.valueOf(c/(2.0*_fprs.length))+",").append(String.valueOf(c/(2.0*_fprs.length))).append("]");
+    //diagonal
+    for(int c = 0; c < 200; c++) {
+      sb.append(", ["+String.valueOf(c/200.)+",").append(String.valueOf(c/200.)).append("]");
     }
     sb.append("];\n");
 
@@ -239,23 +247,27 @@ public class AUC extends Request2 {
                     ".attr(\"cy\", function(d) {\n"+
                     "return yScale(d[1]);\n"+
                     "})\n"+
-                    ".attr(\"fill\", function(d) {\n"+
+                    ".attr(\"fill\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return \"red\"\n"+
+                    "  } else if (i == " + (idx_bestF1) + "){\n"+
+                    "  return \"green\"\n"+
                     "  } else {\n"+
                     "  return \"blue\"\n"+
                     "  }\n"+
                     "})\n"+
-                    ".attr(\"r\", function(d) {\n"+
+                    ".attr(\"r\", function(d,i) {\n"+
                     "  if (d[0] == d[1]) {\n"+
                     "    return 1\n"+
+                    "  } else if (i == " + (idx_bestF1) + ") {\n" +
+                    "  return 5\n"+
                     "  } else {\n"+
-                    "  return 2\n"+
+                    "  return 1.5\n"+
                     "  }\n"+
                     "})\n" +
                     ".on(\"mouseover\", function(d,i){\n" +
-                    "   if(i <= 100) {" +
-                    "     document.getElementById(\"select\").selectedIndex = 100 - i\n" +
+                    "   if(i <= " + _fprs.length + ") {" +
+                    "     document.getElementById(\"select\").selectedIndex = i\n" +
                     "     show_cm(i)\n" +
                     "   }\n" +
                     "});\n"+
@@ -335,26 +347,27 @@ public class AUC extends Request2 {
     /* @OUT FPRs */ public final double[] getFPRs() { return _fprs; }
     transient private double[] _fprs;
     /* @OUT CMs */ public final hex.ConfusionMatrix[] getCMs() { return _cms; }
-    final private hex.ConfusionMatrix[] _cms;
+    private hex.ConfusionMatrix[] _cms;
 
 
     /* IN thresholds */ final private float[] _thresh;
 
     AUCTask(float[] thresh) {
       _thresh = thresh.clone();
-      _cms = new hex.ConfusionMatrix[_thresh.length];
-      for (int i=0;i<_cms.length;++i)
-        _cms[i] = new hex.ConfusionMatrix(2);
     }
 
     @Override public void map( Chunk ca, Chunk cp ) {
+      _cms = new hex.ConfusionMatrix[_thresh.length];
+      for (int i=0;i<_cms.length;++i)
+        _cms[i] = new hex.ConfusionMatrix(2);
+
       final int len = Math.min(ca._len, cp._len);
       for( int i=0; i < len; i++ ) {
         assert(!ca.isNA0(i)); //should never have actual NaN probability!
         final int a = (int)ca.at80(i); //would be a 0 if double was NaN
         assert (a == 0 || a == 1) : "Invalid vactual: must be binary (0 or 1).";
         if (cp.isNA0(i)) {
-          Log.warn("Skipping predicted NaN."); //Fix your score0(): models should never predict NaN!
+//          Log.warn("Skipping predicted NaN."); //some models predict NaN!
           continue;
         }
         for( int t=0; t < _cms.length; t++ ) {
@@ -366,9 +379,7 @@ public class AUC extends Request2 {
 
     @Override public void reduce( AUCTask other ) {
       for( int i=0; i<_cms.length; ++i) {
-        if (other._cms != _cms) {
-          _cms[i].add(other._cms[i]);
-        }
+        _cms[i].add(other._cms[i]);
       }
     }
 
@@ -389,11 +400,13 @@ public class AUC extends Request2 {
         _fprs[t] = FPR;
       }
       _auc += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
-      assert(_auc >= 0. && _auc <= 1.0);
+      assert(_auc > -1e-5 && _auc < 1.+1e-5); //check numerical sanity
+      _auc = Math.max(0., Math.min(_auc, 1.)); //clamp to 0...1
       _best_idxF1 = 0;
       _best_thresholdF1 = _thresh[0];
       for(int i = 1; i < _cms.length; ++i) {
-        if (_cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall()) {
+        if ( (!Double.isNaN(_cms[i].precisionAndRecall()) && (
+               Double.isNaN(_cms[_best_idxF1].precisionAndRecall())) || _cms[i].precisionAndRecall() > _cms[_best_idxF1].precisionAndRecall())) {
           _best_idxF1 = i;
           _best_thresholdF1 = _thresh[i];
         }

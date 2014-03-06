@@ -46,7 +46,7 @@ public class KMeans2 extends ColumnsJob {
     description = "K-means";
   }
 
-  @Override protected JobState exec() {
+  @Override protected JobState execImpl() {
     logStart();
     source.read_lock(self());
     String sourceArg = input("source");

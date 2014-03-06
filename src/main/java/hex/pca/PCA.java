@@ -55,7 +55,7 @@ public class PCA extends ColumnsJob {
     this.standardize = standardize;
   }
 
-  @Override protected JobState exec() {
+  @Override protected JobState execImpl() {
     Frame fr = selectFrame(source);
     Vec[] vecs = fr.vecs();
 

@@ -134,6 +134,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
 
                         p.seed = seed;
                         p.hidden = new int[]{hidden};
+                        p.adaptive_rate = false;
+                        p.rho = 0;
+                        p.epsilon = 0;
                         p.rate = rate / (1 - momentum); //adapt to (1-m) correction that's done inside (only for constant momentum!)
                         p.activation = activation;
                         p.max_w2 = Double.MAX_VALUE;
@@ -267,9 +270,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         final double trainErr = ref._nn.Accuracy(ref._trainData);
                         final double testErr = ref._nn.Accuracy(ref._testData);
                         final Frame trainPredict = mymodel.score(_train, false);
-                        final double myTrainErr = mymodel.calcError(_train, trainPredict, "Final training error:", true, null);
+                        final double myTrainErr = mymodel.calcError(_train, trainPredict, "Final training error:", true, null, null);
                         final Frame testPredict = mymodel.score(_test, false);
-                        final double myTestErr = mymodel.calcError(_test, testPredict, "Final testing error:",  true, null);
+                        final double myTestErr = mymodel.calcError(_test, testPredict, "Final testing error:",  true, null, null);
                         Log.info("H2O  training error : " + myTrainErr*100 + "%, test error: " + myTestErr*100 + "%");
                         Log.info("REF  training error : " + trainErr*100 + "%, test error: " + testErr*100 + "%");
                         compareVal(trainErr, myTrainErr, abseps, releps);

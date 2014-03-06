@@ -244,6 +244,7 @@ public class GLM2 extends ModelJob {
   }
 
   protected boolean needLineSearch(double [] beta,double objval, double step){
+    if(Double.isNaN(objval))return true; // needed for gamma (and possibly others...)
     // line search
     double f_hat = 0;
     double l2 = 0;
@@ -257,9 +258,11 @@ public class GLM2 extends ModelJob {
   }
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
     @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
+      Log.info("GLM invoking line search");
       double step = 0.5;
       for(int i = 0; i < glmt._objvals.length; ++i){
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
+          Log.info("GLM line search: find admissible step=" + step);
           _lastResult = null; // set last result to null so that the Iteration will not attempt to verify whether or not it should do the line search.
           new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode,case_val,glmt._betas[i],_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
           return;
@@ -299,7 +302,7 @@ public class GLM2 extends ModelJob {
     @Override public void callback(final GLMIterationTask glmt) {
       if( !isRunning(self()) )  throw new JobCancelledException();
       boolean converged = false;
-      if(_glm.family == Family.binomial && glmt._beta != null && glmt._val != null){
+      if(glmt._beta != null && glmt._val != null && _glm.family != Family.tweedie){
         glmt._val.finalize_AIC_AUC();
         _model.setAndTestValidation(_lambdaIdx,glmt._val);//.store();
         _model.clone().update(self());
@@ -377,7 +380,6 @@ public class GLM2 extends ModelJob {
   }
   public void run(){
     logStart();
-
     assert alpha.length == 1;
     new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
       @Override public void callback(final YMUTask ymut){

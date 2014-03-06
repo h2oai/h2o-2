@@ -19,7 +19,7 @@ public class GridSearch extends Job {
   public GridSearch(){
 
   }
-  @Override protected JobState exec() {
+  @Override protected JobState execImpl() {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
@@ -61,6 +61,8 @@ public class GridSearch extends Job {
 
     @API(help = "Jobs")
     public Job[] jobs;
+    @API(help = "Prediction Errors")
+    public double[] prediction_errors;
 
     @Override protected Response serve() {
       Response response = super.serve();
@@ -68,9 +70,33 @@ public class GridSearch extends Job {
         GridSearch grid = UKV.get(destination_key);
         if( grid != null )
           jobs = grid.jobs;
+        updateErrors(null);
       }
       return response;
     }
+
+    void updateErrors(ArrayList<JobInfo> infos) {
+      if (jobs == null) return;
+      prediction_errors = new double[jobs.length];
+      int i = 0;
+      for( Job job : jobs ) {
+        JobInfo info = new JobInfo();
+        info._job = job;
+        if(job.dest() != null){
+          Object value = UKV.get(job.dest());
+          info._model = value instanceof Model ? (Model) value : null;
+          if( info._model != null ) {
+            info._cm = info._model.cm();
+            info._error = info._model.mse();
+          }
+        }
+        if( info._cm != null)
+          info._error = info._cm.err();
+        if (infos != null) infos.add(info);
+        prediction_errors[i++] = info._error;
+      }
+    }
+
 
     @Override public boolean toHTML(StringBuilder sb) {
       if( jobs != null ) {
@@ -93,21 +119,7 @@ public class GridSearch extends Job {
         sb.append("</tr>");
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
-        for( Job job : jobs ) {
-          JobInfo info = new JobInfo();
-          info._job = job;
-          if(job.dest() != null){
-            Object value = UKV.get(job.dest());
-            info._model = value instanceof Model ? (Model) value : null;
-            if( info._model != null ) {
-              info._cm = info._model.cm();
-              info._error = info._model.mse();
-            }
-          }
-          if( info._cm != null)
-            info._error = info._cm.err();
-          infos.add(info);
-        }
+        updateErrors(infos);
         Collections.sort(infos, new Comparator<JobInfo>() {
           @Override public int compare(JobInfo a, JobInfo b) {
             return Double.compare(a._error, b._error);
@@ -158,8 +170,7 @@ public class GridSearch extends Job {
           String pct = "", f1 = "";
           if( info._cm != null ) {
             pct = String.format("%.2f", 100 * info._error) + "%";
-            if( info._cm._arr != null && info._cm._arr.length == 2 )
-              f1 = String.format("%.2f", info._cm.precisionAndRecall());
+            if (info._cm.precisionAndRecall() != Double.NaN) f1 = String.format("%.4f", info._cm.precisionAndRecall());
           } else pct = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");

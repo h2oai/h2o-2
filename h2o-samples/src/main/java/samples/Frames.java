@@ -20,7 +20,7 @@ public class Frames extends Job {
   }
 
   @Override
-  protected JobState exec() {
+  protected JobState execImpl() {
     // From file
     parse(new File(VM.h2oFolder(), "smalldata/iris/iris.csv"));
 

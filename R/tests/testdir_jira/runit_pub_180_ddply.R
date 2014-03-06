@@ -4,13 +4,13 @@
 
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
-source('../findNSourceUtils.R')
 
+source('../findNSourceUtils.R')
 
 
 ddplytest <- function(conn){
   Log.info('uploading ddply testing dataset')
-  df.h <- h2o.importFile(conn, 'smalldata/jira/pub-180.csv')
+  df.h <- h2o.importFile(conn, locate('smalldata/jira/pub-180.csv'))
 
   Log.info('printing from h2o')
   Log.info( head(df.h) )
@@ -41,28 +41,43 @@ ddplytest <- function(conn){
   df.3 <- as.data.frame( df.h.3 )
   df.4 <- as.data.frame( df.h.4 )
 
+  Log.info('avoid factor issues by making grouping columns into character')
+  df.1$colgroup <- as.character(df.1$colgroup)
+  df.2$colgroup <- as.character(df.2$colgroup)
+  df.3$colgroup <- as.character(df.3$colgroup)
+  df.4$colgroup <- as.character(df.4$colgroup)
+  df.2$colgroup2 <- as.character(df.2$colgroup2)
+  df.4$colgroup2 <- as.character(df.4$colgroup2)
+
+
+
+  # h2o doesnt sort
+  df.1 <- df.1[order(df.1$colgroup), ]
+  df.2 <- df.2[order(df.2$colgroup, df.2$colgroup2), ]
+  df.3 <- df.3[order(df.3$colgroup), ]
+  df.4 <- df.4[order(df.4$colgroup, df.4$colgroup2), ]
 
   Log.info('testing')
-  expect_equal( dim(df.1), c(3, 2) )
-  expect_that(all( df.1[,1] == c('a', 'b', 'c') ))
-  expect_that(all( df.1[,2] == c(1,3,5) ))
+  expect_that( dim(df.1), equals( c(3,2) ) )
+  expect_that( all(df.1[,1] == c('a', 'b', 'c')), equals(T) )
+  expect_that( all(df.1[,2] == c(1,3,5)), equals(T) )
 
 
-  expect_that( dim(df.2) == c(5, 3) )
-  expect_that(all( df.2[,1] == c('a', 'b', 'b', 'c', 'c') ))
-  expect_that(all( df.2[,2] == paste('group', c(1,1,3,1,2), sep='') ))
-  expect_that(all( df.2[,3] == c(1,3,7,5,5) ))
+  expect_that( dim(df.2), equals(c(5, 3)) )
+  expect_that(df.2[,1], equals(c('a', 'b', 'b', 'c', 'c')) )
+  expect_that(df.2[,2], equals(paste('group', c(1,1,3,1,2), sep='')) )
+  expect_that(df.2[,3], equals(c(1,3,7,5,5)) )
 
 
-  expect_that( dim(df.3) == c(3, 2) )
-  expect_that(all( df.3[,1] == c('a', 'b', 'c') ))
-  expect_that(all( df.3[,2] == c(3,7,11) ))
+  expect_that( dim(df.3), equals(c(3, 2)) )
+  expect_that(df.3[,1], equals(c('a', 'b', 'c')) )
+  expect_that(df.3[,2], equals(c(3,7,11)) )
 
 
-  expect_that( dim(df.4) == c(5, 3) )
-  expect_that(all( df.4[,1] == c('a', 'b', 'b', 'c', 'c') ))
-  expect_that(all( df.4[,2] == paste('group', c(1,1,3,1,2), sep='') ))
-  expect_that(all( df.4[,3] == c(3,7,18,11,11) ))
+  expect_that( dim(df.4), equals(c(5, 3)) )
+  expect_that(df.4[,1], equals(c('a', 'b', 'b', 'c', 'c')) )
+  expect_that(df.4[,2], equals(paste('group', c(1,1,3,1,2), sep='')) )
+  expect_that(df.4[,3], equals(c(3,7,18,11,11)) )
 
 
   testEnd()

@@ -133,6 +133,7 @@ public class Vec extends Iced {
   /** Create a vector transforming values according given domain map.
    * @see Vec#makeTransf(int[], int[], String[])
    */
+  public Vec makeTransf(final int[][] map, String[] domain) { return makeTransf(map[0], map[1], domain); }
   public Vec makeTransf(final int[][] map) { return makeTransf(map[0], map[1], null); }
   Vec makeTransf(final int[] values, final int[] indexes) { return makeTransf(values, indexes, null); }
   /**
@@ -695,11 +696,11 @@ public class Vec extends Iced {
     public CollectDomain(Vec v) { }
     @Override public void map(Chunk ys) {
       for( int row=0; row<ys._len; row++ )
-        if( !ys.isNA0(row) ) 
+        if( !ys.isNA0(row) )
           _uniques.put(ys.at80(row),"");
     }
 
-    @Override public void reduce(CollectDomain mrt) { 
+    @Override public void reduce(CollectDomain mrt) {
       if( _uniques == mrt._uniques ) return;
       _uniques.putAll(mrt._uniques);
     }
@@ -708,7 +709,7 @@ public class Vec extends Iced {
       super.write(ab);
       return ab.putA8(_uniques==null ? null : _uniques.keySetLong());
     }
-    
+
     @Override public CollectDomain read( AutoBuffer ab ) {
       super.read(ab);
       assert _uniques == null || _uniques.size()==0;
@@ -721,7 +722,7 @@ public class Vec extends Iced {
       super.copyOver(that);
       _uniques = ((CollectDomain)that)._uniques;
     }
-    
+
     /** Returns exact numeric domain of given vector computed by this task.
      * The domain is always sorted. Hence:
      *    domain()[0] - minimal domain value

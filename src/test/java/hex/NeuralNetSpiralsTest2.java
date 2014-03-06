@@ -14,8 +14,6 @@ import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
 import water.util.Log;
 
-import java.util.Random;
-
 public class NeuralNetSpiralsTest2 extends TestUtil {
   @BeforeClass public static void stall() {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
@@ -30,10 +28,10 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
     // build the model
     {
       NN p = new NN();
-      p.seed = new Random().nextLong();
+      p.seed = 0xbabe;
       p.rate = 0.007;
       p.rate_annealing = 0;
-      p.epochs = 30000;
+      p.epochs = 3000;
       p.hidden = new int[]{100};
       p.activation = NN.Activation.Tanh;
       p.max_w2 = Double.MAX_VALUE;
@@ -64,7 +62,10 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       //p.force_load_balance = true; //make it multi-threaded
       p.force_load_balance = false; //make it single-threaded (1 chunk)
       p.destination_key = dest;
-      p.exec();
+      p.adaptive_rate = true;
+      p.rho = 0.99;
+      p.epsilon = 5e-3;
+      p.execImpl();
     }
 
     // score and check result

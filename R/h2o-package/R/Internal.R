@@ -179,7 +179,7 @@ h2o.__changeLogPath <- function(path, type) {
   after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)
 
-  if (!is.null(res$error)) {
+  if(!is.null(res$error)) {
     if(.pkg.env$IS_LOGGING) .h2o.__writeToFile(res, .pkg.env$h2o.__LOG_ERROR)
     stop(paste(myURL," returned the following error:\n", .h2o.__formatError(res$error)))
   }

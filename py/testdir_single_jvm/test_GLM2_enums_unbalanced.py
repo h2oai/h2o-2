@@ -211,7 +211,7 @@ class Basic(unittest.TestCase):
 
                 # These will move into the h2o_gbm.py
                 pctWrong = h2o_gbm.pp_cm_summary(cm);
-                self.assertLess(pctWrong, 8,"Should see less than 7% error (class = 4)")
+                self.assertLess(pctWrong, 8,"Should see less than 7 pct error (class = 4): %s" % pctWrong)
 
                 print "\nTest\n==========\n"
                 print h2o_gbm.pp_cm(cm)

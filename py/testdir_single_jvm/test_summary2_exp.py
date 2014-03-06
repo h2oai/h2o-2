@@ -8,7 +8,7 @@ if  getpass.getuser() == 'kevin':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
-MAX_QBINS = 10000000
+MAX_QBINS = 1000000
 # 1 over desired mean
 LAMBD = 0.005
 
