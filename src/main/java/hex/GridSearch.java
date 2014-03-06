@@ -61,8 +61,8 @@ public class GridSearch extends Job {
 
     @API(help = "Jobs")
     public Job[] jobs;
-    @API(help = "Errors")
-    public double[] errors;
+    @API(help = "Prediction Errors")
+    public double[] prediction_errors;
 
     @Override protected Response serve() {
       Response response = super.serve();
@@ -77,7 +77,7 @@ public class GridSearch extends Job {
 
     void updateErrors(ArrayList<JobInfo> infos) {
       if (jobs == null) return;
-      errors = new double[jobs.length];
+      prediction_errors = new double[jobs.length];
       int i = 0;
       for( Job job : jobs ) {
         JobInfo info = new JobInfo();
@@ -93,7 +93,7 @@ public class GridSearch extends Job {
         if( info._cm != null)
           info._error = info._cm.err();
         if (infos != null) infos.add(info);
-        errors[i++] = info._error;
+        prediction_errors[i++] = info._error;
       }
     }
 

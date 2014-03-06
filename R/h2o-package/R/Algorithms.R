@@ -50,11 +50,11 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   mySum$nbins = res$nbins
   mySum$learn_rate = res$learn_rate
 
-  if(params$distribution == "multinomial") {
+  # if(params$distribution == "multinomial") {
     # temp = matrix(unlist(res$cm), nrow = length(res$cm))
     # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-    mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
-  }
+    # mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
+  # }
   return(mySum)
 }
 
@@ -608,7 +608,6 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=a
   mySum$l2_reg = resP$l2
   mySum$epochs = resP$epochs
 
-  # TODO: Need grid search to report prediction error in JSON
   # temp = matrix(unlist(res$confusion_matrix), nrow = length(res$confusion_matrix))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
   return(mySum)
@@ -974,7 +973,7 @@ h2o.confusionMatrix <- function(data, reference) {
   .h2o.__waitOnJob(data@h2o, job_key)
   # while(!.h2o.__isDone(data@h2o, algo, response)) { Sys.sleep(1); prog = .h2o.__poll(data@h2o, job_key); setTxtProgressBar(pb, prog) }
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GRIDSEARCH, job_key=job_key, destination_key=dest_key)
-  allModels = res2$jobs
+  allModels = res2$jobs; allErrs = res2$prediction_error
 
   model_obj = switch(algo, GBM = "H2OGBMModel", KM = "H2OKMeansModel", RF = "H2ODRFModel", NN = "H2ONNModel")
   grid_obj = switch(algo, GBM = "H2OGBMGrid", KM = "H2OKMeansGrid", RF = "H2ODRFGrid", NN = "H2ONNGrid")
@@ -988,6 +987,7 @@ h2o.confusionMatrix <- function(data, reference) {
       resH = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=allModels[[i]]$destination_key)
 
     myModelSum[[i]] = switch(algo, GBM = .h2o.__getGBMSummary(resH[[3]], params), KM = .h2o.__getKM2Summary(resH[[3]]), RF = .h2o.__getDRFSummary(resH[[3]]), NN = .h2o.__getNNSummary(resH[[3]]))
+    myModelSum[[i]]$prediction_error = allErrs[[i]]
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
     modelOrig = switch(algo, GBM = .h2o.__getGBMResults(resH[[3]], params), KM = .h2o.__getKM2Results(resH[[3]], data, params), RF = .h2o.__getDRFResults(resH[[3]], params), NN = .h2o.__getNNResults(resH[[3]], params))
 
