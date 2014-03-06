@@ -147,7 +147,14 @@ public class ConfusionMatrix extends Iced {
     double fp = _arr[0][1];
     return tp / (tp + fp);
   }
-
+  /**
+   * The maximum per-class error
+   * @return max(classErr(0), classErr(1))
+   */
+  public double max_per_class_error() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    return Math.max(classErr(0), classErr(1));
+  }
   /**
    * Returns the F-measure which combines precision and recall. <br>
    * C.f. end of http://en.wikipedia.org/wiki/Precision_and_recall.
