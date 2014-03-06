@@ -363,6 +363,70 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
+`[[.H2OParsedDataVA` <- function(x, ..., exact=TRUE){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
+
+  cols <- sapply(as.list(...), function(x) x)
+  if( length(cols) == 0 )
+  return(x)
+  if( length(cols) > 1 ) stop('[[]] may only select one column')
+  if( ! cols[1] %in% colnames(x) )
+    return(NULL)
+
+  x[, cols]
+}
+
+`[[.H2OParsedData` <- function(x, ..., exact=TRUE){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
+
+  cols <- sapply(as.list(...), function(x) x)
+  if( length(cols) == 0 )
+    return(x)
+  if( length(cols) > 1 ) stop('[[]] may only select one column')
+  if( ! cols[1] %in% colnames(x) )
+    return(NULL)
+
+  x[, cols]
+}
+
+
+# right now, all things must be H2OParsedData
+cbind.H2OParsedData <- function(...){
+  l <- list(...)
+  if( length(l) == 0 ) stop('cbind requires an h2o data')
+  klass <- 'H2OParsedData'
+  h2o <- l[[1]]@h2o
+  nrows <- nrow(l[[1]])
+  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem)}, l)
+  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
+
+  if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same h2o instance'))}
+
+  # todo: if cbind(x,x), fix up the column names so unique.  sigh.
+  exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
+  res <- .h2o.__exec2(h2o, exec_cmd)
+  new('H2OParsedData', h2o=h2o, key=res$dest_key)
+}
+
+cbind.H2OParsedDataVA <- function(...){
+  l <- list(...)
+  if( length(l) == 0 ) stop('cbind requires an h2o data')
+  klass <- 'H2OParsedDataVA'
+  h2o <- l[[1]]@h2o
+  nrows <- nrow(l[[1]])
+  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem)}, l)
+  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
+
+  if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same h2o instance'))}
+
+  # todo: if cbind(x,x), fix up the column names so unique.  sigh.
+  exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
+  res <- .h2o.__exec2(h2o, exec_cmd)
+  new('H2OParsedDataVA', h2o=h2o, key=res$dest_key)
+}
+
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
 setMethod("-", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("-", e1, e2) })
 setMethod("*", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("*", e1, e2) })
