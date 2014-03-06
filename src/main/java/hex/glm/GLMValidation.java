@@ -164,8 +164,7 @@ public class GLMValidation extends Iced {
     if(_glm.family == Family.binomial){
       AUC auc = new AUC(_cms,thresholds);
       this.auc = auc.AUC();
-      best_threshold = auc.threshold(AUC.ThresholdCriterion.maximum_F1);
-      System.out.println("best threshold = " + best_threshold);
+      best_threshold = auc.threshold();
     }
   }
   /**
