@@ -99,6 +99,13 @@ public class ConfusionMatrix extends Iced {
     return n;
   }
 
+  public synchronized void add(ConfusionMatrix other) {
+    water.util.Utils.add(_arr, other._arr);
+  }
+
+  /**
+   * @return overall classification error
+   */
   public double err() {
     long n = totalRows();
     long err = n;
@@ -106,29 +113,49 @@ public class ConfusionMatrix extends Iced {
       err -= _arr[d][d];
     return (double) err / n;
   }
-
-  public synchronized void add(ConfusionMatrix other) {
-    water.util.Utils.add(_arr, other._arr);
+  /**
+   * The percentage of predictions that are correct.
+   */
+  public double accuracy() { return 1-err(); }
+  /**
+   * The percentage of negative labeled instances that were predicted as negative.
+   * @return TNR / Specificity
+   */
+  public double specificity() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    double tn = _arr[0][0];
+    double fp = _arr[1][1];
+    return tn / (tn + fp);
   }
-
-  public double precisionAndRecall() {
-    if (_arr == null || _arr.length != 2) return Double.NaN;
-    return precisionAndRecall(_arr);
+  /**
+   * The percentage of positive labeled instances that were predicted as positive.
+   * @return Recall / TPR / Sensitivity
+   */
+  public double recall() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    double tp = _arr[1][1];
+    double fn = _arr[1][0];
+    return tp / (tp + fn);
+  }
+  /**
+   * The percentage of positive predictions that are correct.
+   * @return Precision
+   */
+  public double precision() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    double tp = _arr[1][1];
+    double fp = _arr[0][1];
+    return tp / (tp + fp);
   }
 
   /**
    * Returns the F-measure which combines precision and recall. <br>
    * C.f. end of http://en.wikipedia.org/wiki/Precision_and_recall.
-   * Can be NaN
    */
-  public static double precisionAndRecall(long[][] cm) {
-    assert cm.length == 2 && cm[0].length == 2 && cm[1].length == 2;
-    double tp = cm[0][0];
-    double fp = cm[1][0];
-    double fn = cm[0][1];
-    double precision = tp / (tp + fp);
-    double recall = tp / (tp + fn);
-    return 2 * (precision * recall) / (precision + recall);
+  public double F1() {
+    final double precision = precision();
+    final double recall = recall();
+    return 2. * (precision * recall) / (precision + recall);
   }
 
   @Override public String toString() {
@@ -184,8 +211,8 @@ public class ConfusionMatrix extends Iced {
     }
     sb.append("<table class='table table-bordered table-condensed'>");
     sb.append("<tr><th>Actual / Predicted</th><th>"+lab[0]+"</th><th>"+lab[1]+"</th></tr>");
-    sb.append("<tr><th>"+lab[0]+"</th><td id='TN'>" + _arr[0][0] + "</td><td id='FN'>" + _arr[0][1] + "</td></tr>");
-    sb.append("<tr><th>"+lab[1]+"</th><td id='FP'>" + _arr[1][0] + "</td><td id='TP'>" + _arr[1][1] + "</td></tr>");
+    sb.append("<tr><th>"+lab[0]+"</th><td id='TN'>" + _arr[0][0] + "</td><td id='FP'>" + _arr[0][1] + "</td></tr>");
+    sb.append("<tr><th>"+lab[1]+"</th><td id='FN'>" + _arr[1][0] + "</td><td id='TP'>" + _arr[1][1] + "</td></tr>");
     sb.append("</table>");
   }
 
