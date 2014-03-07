@@ -52,20 +52,20 @@ def main(argv):
         PerfUtils.wipe_output_dir(output_dir)
 
     if True:
-        out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out.txt")
+        out_file_name = os.path.join(output_dir, "runnerSetupPackage.out.txt")
         out = open(out_file_name, "w")
-        cloud = self.clouds[0]
-        port = cloud.get_port()
-        cmd = ["R",
-               "--quiet",
-               "-f",
-               os.path.join("../../../R/tests", "Utils/runnerSetupPackage.R"),
-               "--args",
-               "127.0.0.1:" + str(port)]
-        child = subprocess.Popen(args=cmd,
-                                 stdout=out,
-                                 stderr=subprocess.STDOUT)
-        rv = child.wait()
+        try:
+            cmd = ["R",
+                   "--quiet",
+                   "-f",
+                   os.path.join("../../../R/tests", "Utils/runnerSetupPackage.R"),
+                   "--args",
+                   "127.0.0.1:" + str(port)]
+            child = subprocess.Popen(args=cmd,
+                                     stdout=out,
+                                     stderr=subprocess.STDOUT)
+            rv = child.wait()
+        except: pass
         out.close()
 
     #new perfdb connection
