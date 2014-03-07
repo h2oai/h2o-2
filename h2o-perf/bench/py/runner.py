@@ -52,8 +52,6 @@ def main(argv):
         PerfUtils.wipe_output_dir(output_dir)
 
     if True:
-        out_file_name = os.path.join(output_dir, "runnerSetupPackage.out.txt")
-        out = open(out_file_name, "w")
         try:
             cmd = ["R",
                    "--quiet",
@@ -61,12 +59,9 @@ def main(argv):
                    os.path.join("../../../R/tests", "Utils/runnerSetupPackage.R"),
                    "--args",
                    "127.0.0.1:" + str(port)]
-            child = subprocess.Popen(args=cmd,
-                                     stdout=out,
-                                     stderr=subprocess.STDOUT)
+            child = subprocess.Popen(args=cmd)
             rv = child.wait()
         except: pass
-        out.close()
 
     #new perfdb connection
     perfdb = PerfDB()
