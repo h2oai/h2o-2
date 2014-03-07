@@ -70,6 +70,8 @@ public class GLM2 extends ModelJob {
   @API(help = "alpha", filter = Default.class, json=true)
   double [] alpha = new double[]{0.5};
 //  @API(help = "lambda", filter = RSeq2.class)
+  @API(help = "lambda max", json=true)
+  double lambda_max;
   @API(help = "lambda", filter = Default.class, json=true)
   double [] lambda;// = new double[]{1e-5};
   @API(help = "beta_eps", filter = Default.class, json=true)
@@ -394,24 +396,26 @@ public class GLM2 extends ModelJob {
           GLM2.this.cancel(msg);
           GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
         }
+
         new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
           @Override public void callback(LMAXTask t){
-            final double lmax = t.lmax();
+            final double lmax = lambda_max = t.lmax();
+            String [] warns = null;
             if(lambda == null){
               lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
               _runAllLambdas = false;
             } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)
-              int i = 0; while(i < lambda.length && lambda[i] >= lmax)++i;
-              double [] l = new double[1+lambda.length-i];
-              l[0] = lmax;
-              int j = 1;
-              for(; i < lambda.length; ++i)
-                l[j++] = lambda[i];
-              lambda = l;
+              int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
+              if(i != 0) {
+                Log.info("GLM: removing " + i + " lambdas > lambda_max: " + Arrays.toString(Arrays.copyOf(lambda,i)));
+                warns = i == lambda.length?new String[] {"Removed " + i + " lambdas > lambda_max","No lambdas < lambda_max, returning null model."}:new String[] {"Removed " + i + " lambdas > lambda_max"};
+              }
+              lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
             }
-            _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu());
+            _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
+            _model.warnings = warns;
             _model.clone().delete_and_lock(self());
-            if(_lambdaIdx == 0 && _beta == null && alpha[0] > 0){ // fill-in trivial solution for lambda max
+            if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
               _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
               _beta[_beta.length-1] = _glm.link(ymut.ymu());
               _model.setLambdaSubmodel(0,_beta,_beta,0);

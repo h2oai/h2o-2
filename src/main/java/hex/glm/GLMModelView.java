@@ -68,6 +68,7 @@ public class GLMModelView extends Request2 {
     parm(sb,"link",glm_model.glm.link);
     parm(sb,"&epsilon;<sub>&beta;</sub>",glm_model.beta_eps);
     parm(sb,"&alpha;",glm_model.alpha);
+    parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
     parm(sb,"&lambda;",DFORMAT2.format(lambda));
 
     if(glm_model.submodels.length > 1){

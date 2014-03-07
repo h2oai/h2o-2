@@ -18,6 +18,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  @API(help="lambda max, smallest lambda which drives all coefficients to zero")
+  final double  lambda_max;
   @API(help="mean of response in the training dataset")
   final double     ymu;
 
@@ -64,6 +66,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
+    if(warnings != null)res.warnings = warnings.clone();
     return res;
   }
 
@@ -139,7 +142,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu) {
+  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
     super(selfKey,null,dinfo._adaptedFrame);
     job_key = jobKey;
     this.ymu = ymu;
@@ -148,6 +151,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     this.data_info = dinfo;
     this.warnings = null;
     this.alpha = alpha;
+    this.lambda_max = lambda_max;
     this.lambdas = lambda;
     this.beta_eps = beta_eps;
     submodels = new Submodel[lambda.length];
