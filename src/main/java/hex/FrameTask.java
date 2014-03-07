@@ -10,6 +10,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.ArrayList;
@@ -120,7 +121,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     /**
      * Prepare a Frame (with a single response) to be processed by the FrameTask
      * 1) Place response at the end
-     * 2) (Optionally) Remove rows with constant values or with >20% NaNs
+     * 2) (Optionally) Remove columns with constant values or with >20% NaNs
      * 3) Possibly turn integer categoricals into enums
      *
      * @param source A frame to be expanded and sanity checked
@@ -147,11 +148,31 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         final String n = fr._names[vecs.length-1];
         fr.add(n, fr.remove(vecs.length-1).toEnum());
       }
+
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
-      for(int i = 0; i < vecs.length-1; ++i) {
-        // remove constant cols and cols with too many NAs
-        if( (dropConstantCols && vecs[i].min() == vecs[i].max()) || vecs[i].naCnt() > vecs[i].length()*0.2)
-          constantOrNAs.add(i);
+      {
+        ArrayList<Integer> constantCols = new ArrayList<Integer>();
+        ArrayList<Integer> NACols = new ArrayList<Integer>();
+        for(int i = 0; i < vecs.length-1; ++i) {
+          // remove constant cols and cols with too many NAs
+          final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
+          final boolean droptoomanyNAs = vecs[i].naCnt() > vecs[i].length()*0.2;
+          if(dropconstant) {
+            constantCols.add(i);
+          } else if (droptoomanyNAs) {
+            NACols.add(i);
+          }
+        }
+        constantOrNAs.addAll(constantCols);
+        constantOrNAs.addAll(NACols);
+
+        // Report what is dropped
+        String msg = "";
+        if (constantCols.size() > 0) msg += "Dropping constant column(s): ";
+        for (int i : constantCols) msg += source._names[i] + " ";
+        if (NACols.size() > 0) msg += "Dropping column(s) with too many missing values: ";
+        for (int i : NACols) msg += source._names[i] + " (" + String.format("%.2f", vecs[i].naCnt() * 100. / vecs[i].length()) + "%) ";
+        for (String s : msg.split("\n")) Log.info(s);
       }
       if(!constantOrNAs.isEmpty()){
         int [] cols = new int[constantOrNAs.size()];
