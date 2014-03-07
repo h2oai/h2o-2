@@ -533,7 +533,7 @@ public class DTree extends Iced {
     @API(help="Unscaled variable importance for individual input variables.")         public final float []        varimp;
     @API(help="Standard deviation of variable importance for input variables.")       public final float []        varimpSD;
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
-    @API(help="CM for AUC computation")                                               public final ConfusionMatrix auccms[/*CM-per-threshold*/];
+    @API(help="AUC for validation dataset")                                           public final AUC             validAUC;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
@@ -545,10 +545,10 @@ public class DTree extends Iced {
       this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
       this.varimp = null;
       this.varimpSD = null;
-      this.auccms = null;
+      this.validAUC = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, float[] varimp, float[] varimpSD, ConfusionMatrix[] auccms) {
+    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, float[] varimp, float[] varimpSD, AUC validAUC) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -562,7 +562,7 @@ public class DTree extends Iced {
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
       if (varimpSD != null) this.varimpSD  = varimpSD; else this.varimpSD  = prior.varimpSD;
-      if (cms      != null) this.auccms    = auccms;   else this.auccms    = prior.auccms;
+      if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
     }
 
     public TreeModel(TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
@@ -572,8 +572,8 @@ public class DTree extends Iced {
       this(prior, append(prior.treeBits, trees), null, null, tstats, null, null, null);
     }
 
-    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, ConfusionMatrix[] auccms) {
-      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, varimpSD, auccms);
+    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
+      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, varimpSD, validAUC);
     }
 
     public TreeModel(TreeModel prior, float[] varimp, float[] varimpSD) {
@@ -704,7 +704,7 @@ public class DTree extends Iced {
         DocGen.HTML.arrayTail(sb);
       }
       // Show AUC for binary classifiers
-      if (auccms != null) generateHTMLAUC(sb);
+      if (validAUC != null) generateHTMLAUC(sb);
 
       // Show tree stats
       if (treeStats != null) generateHTMLTreeStats(sb);
@@ -755,8 +755,7 @@ public class DTree extends Iced {
     }
 
     protected void generateHTMLAUC(StringBuilder sb) {
-      AUC auc = new AUC(auccms, ModelUtils.DEFAULT_THRESHOLDS);
-      auc.toHTML(sb);
+      validAUC.toHTML(sb);
     }
 
     public static class TreeStats extends Iced {
