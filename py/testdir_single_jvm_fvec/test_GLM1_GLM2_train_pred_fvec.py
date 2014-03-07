@@ -237,22 +237,14 @@ class Basic(unittest.TestCase):
             'beta_epsilon': BETA_EPSILON}
 
         timeoutSecs = 120
-
-        if USE_EXEC:
-            # maybe go back to simpler exec here. this was from when Exec failed unless this was used
-            execExpr="B.hex=%s" % trainKey
+        # maybe go back to simpler exec here. this was from when Exec failed unless this was used
+        execExpr="B.hex=%s" % trainKey
+        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+        # class 1=1, all else 0
+        if FAMILY == 'binomial':
+            execExpr="B.hex[,%s]=(B.hex[,%s]==%s)" % (y+1, y+1, CLASS)
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-            # class 1=1, all else 0
-            if FAMILY == 'binomial':
-                execExpr="B.hex[,%s]=(B.hex[,%s]==%s)" % (y+1, y+1, CLASS)
-                h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-            bHack = {'destination_key': 'B.hex'}
-        else:
-            # since we're not using predict, we can use case_mode/val to get the binomial output class
-            if FAMILY == 'binomial':
-                kwargs.update({'case_mode': '=', 'case_val': 1})
-            bHack = {'destination_key': hexKey}
-
+        bHack = {'destination_key': 'B.hex'}
         kwargs.update({'alpha': TRY_ALPHA, 'lambda': TRY_LAMBDA})
 
 #        kwargs.update({'alpha': 0.0, 'lambda': 0})
