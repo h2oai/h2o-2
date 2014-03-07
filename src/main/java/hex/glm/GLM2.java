@@ -5,7 +5,6 @@ import hex.FrameTask.DataInfo;
 import hex.GridSearch.GridSearchProgress;
 import hex.glm.GLMModel.GLMValidationTask;
 import hex.glm.GLMModel.GLMXValidationTask;
-import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMParams.Link;
 import hex.glm.GLMTask.GLMIterationTask;
@@ -64,10 +63,6 @@ public class GLM2 extends ModelJob {
   @API(help = "", json=true)
   Link link = Link.identity;
 
-  @API(help = "CaseMode", filter = Default.class, json=true)
-  CaseMode case_mode = CaseMode.none;
-  @API(help = "CaseMode", filter = Default.class, json=true)
-  double case_val = 0;
   @API(help = "Tweedie variance power", filter = Default.class, json=true)
   double tweedie_variance_power;
   @API(help = "Tweedie link power", json=true)
@@ -170,11 +165,6 @@ public class GLM2 extends ModelJob {
     return sb.toString();
   }
 
-  public GLM2 setCase(CaseMode cm, double cv){
-    case_mode = cm;
-    case_val = cv;
-    return this;
-  }
   /** Return the query link to this page */
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='GLM2.query?source=%$key'>%content</a>");
@@ -279,7 +269,7 @@ public class GLM2 extends ModelJob {
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
           Log.info("GLM line search: find admissible step=" + step);
           _lastResult = null; // set last result to null so that the Iteration will not attempt to verify whether or not it should do the line search.
-          new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode,case_val,glmt._betas[i],_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
+          new GLMIterationTask(GLM2.this,_dinfo,_glm,glmt._betas[i],_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
           return;
         }
         step *= 0.5;
@@ -369,7 +359,7 @@ public class GLM2 extends ModelJob {
         }
         if(!converged && _glm.family != Family.gaussian && _iter < max_iter){
           ++_iter;
-          GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
+          GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, newBeta,_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
           return;
         }
       }
@@ -397,12 +387,10 @@ public class GLM2 extends ModelJob {
   public void run(){
     logStart();
     assert alpha.length == 1;
-    new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
+    new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
       @Override public void callback(final YMUTask ymut){
         if(ymut._ymin == ymut._ymax){
-          String msg = case_mode == CaseMode.none
-              ?"Attempting to run GLM on column with constant value = " + ymut._ymin
-              :"Attempting to run GLM on column with constant value, y " + case_mode + " " + case_val  + " is " + (ymut._ymin == 0?"false":"true") + " for all rows!";
+          String msg = "Attempting to run GLM on column with constant value = " + ymut._ymin;
           GLM2.this.cancel(msg);
           GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
         }
@@ -421,7 +409,7 @@ public class GLM2 extends ModelJob {
                 l[j++] = lambda[i];
               lambda = l;
             }
-            _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
+            _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu());
             _model.clone().delete_and_lock(self());
             if(_lambdaIdx == 0 && _beta == null && alpha[0] > 0){ // fill-in trivial solution for lambda max
               _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
@@ -435,7 +423,7 @@ public class GLM2 extends ModelJob {
               GLM2.this.complete(); // signal we're done to anyone waiting for the job
             else {
               ++_iter;
-              new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
+              new GLMIterationTask(GLM2.this,_dinfo,_glm,null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
             }
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
@@ -471,7 +459,6 @@ public class GLM2 extends ModelJob {
     double proximal_penalty = 0;
     for(int i = 0; i < n_folds; ++i)
       new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),proximal_penalty).
-      setCase(case_mode,case_val).
       run(callback);
   }
 

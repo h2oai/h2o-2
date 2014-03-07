@@ -1,7 +1,6 @@
 package hex.glm;
 
 import hex.FrameTask.DataInfo;
-import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
@@ -24,12 +23,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   @API(help="job key assigned to the job building this model")
   final Key job_key;
-
-  @API(help="predicate applied to the response column to turn it into 0/1")
-  final CaseMode  _caseMode;
-
-  @API(help="value used to co compare agains using case-predicate to turn the response into 0/1")
-  final double _caseVal;
 
   @API(help="Input data info")
   DataInfo data_info;
@@ -146,7 +139,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
+  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu) {
     super(selfKey,null,dinfo._adaptedFrame);
     job_key = jobKey;
     this.ymu = ymu;
@@ -157,8 +150,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     this.alpha = alpha;
     this.lambdas = lambda;
     this.beta_eps = beta_eps;
-    _caseVal = caseVal;
-    _caseMode = caseMode;
     submodels = new Submodel[lambda.length];
     for(int i = 0; i < submodels.length; ++i)
       submodels[i] = new Submodel(null, null, 0, 0);
@@ -239,8 +230,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         }
         _model.score0(row, preds,_lambdaIdx);
         double response = chunks[chunks.length-1].at0(i);
-        if(_model._caseMode != CaseMode.none)
-          response = _model._caseMode.isCase(response, _model._caseVal)?1:0;
         _res.add(response, _model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
       _res.avg_err /= _res.nobs;
@@ -278,8 +267,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         final GLMValidation val = _xvals[mid];
         model.score0(row, preds);
         double response = chunks[chunks.length-1].at80(i);
-        if(model._caseMode != CaseMode.none)
-          response = model._caseMode.isCase(response, model._caseVal)?1:0;
         val.add(response, model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
       for(GLMValidation val:_xvals)
