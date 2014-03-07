@@ -6,8 +6,7 @@ import hex.VariableImportance;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 import water.*;
 import water.api.*;
@@ -734,23 +733,31 @@ public class DTree extends Iced {
     protected void generateHTMLVarImp(StringBuilder sb) {
       DocGen.HTML.section(sb,"Unscaled Variable Importance");
       DocGen.HTML.arrayHead(sb);
+      // Create a sort order
+      Integer[] sortOrder = new Integer[varimp.length];
+      for(int i=0; i<sortOrder.length; i++) sortOrder[i] = i;
+
+      Arrays.sort(sortOrder, new Comparator<Integer>() {
+        @Override public int compare(Integer o1, Integer o2) { float f = varimp[o1]-varimp[o2]; return f<0 ? 1 : (f>0 ? -1 : 0); }
+      });
+
       sb.append("<tr><th>Variable</th>");
       for( int i=0; i<varimp.length; i++ )
-        sb.append("<td>").append(_names[i]).append("</td>");
+        sb.append("<td>").append(_names[sortOrder[i]]).append("</td>");
       sb.append("</tr>");
       sb.append("<tr><th class='warning'>Mean Decrease Accuracy</th>");
       for( int i=0; i<varimp.length; i++ )
-        sb.append(String.format("<td>%5.4f</td>",varimp[i]));
+        sb.append(String.format("<td>%5.4f</td>",varimp[sortOrder[i]]));
       sb.append("</tr>");
       sb.append("<tr><th class='warning'>SD</th>");
       for( int i=0; i<varimpSD.length; i++ )
-        sb.append(String.format("<td>%5.4f</td>",varimpSD[i]));
+        sb.append(String.format("<td>%5.4f</td>",varimpSD[sortOrder[i]]));
       sb.append("</tr>");
       DocGen.HTML.arrayTail(sb);
       // Generate a graph - horrible code
       DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
-          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1)),
-          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
+          DocGen.HTML.toJSArray(new StringBuilder(), Utils.sortAccording(Arrays.copyOf(_names, _names.length-1), sortOrder) ),
+          DocGen.HTML.toJSArray(new StringBuilder(), Utils.sortAccording(varimp, sortOrder))
           );
     }
 
