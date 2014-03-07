@@ -179,7 +179,7 @@ class H2OCloudNode:
                "-baseport", str(self.my_base_port)]
 
         # Add S3N credentials to cmd if they exist.
-        ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")
+        ec2_hdfs_config_file_name = os.path.expanduser("/home/spencer/.ec2/core-site.xml")
         if (os.path.exists(ec2_hdfs_config_file_name)):
             cmd.append("-hdfs_config")
             cmd.append(ec2_hdfs_config_file_name)

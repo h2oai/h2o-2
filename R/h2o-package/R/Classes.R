@@ -182,12 +182,15 @@ setMethod("show", "H2OPCAModel", function(object) {
 
 setMethod("show", "H2OGBMModel", function(object) {
   print(object@data)
-  cat("GBM Model Key:", object@key)
+  cat("GBM Model Key:", object@key, "\n")
 
   model = object@model
   if(model$params$distribution == "multinomial") {
-    cat("\n\nConfusion matrix:\nReported on", object@valid@key, "\n");
+    cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
     print(model$confusion)
+    
+    if(!is.null(model$auc) && !is.null(model$gini))
+      cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
@@ -387,6 +390,28 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   x[, cols]
 }
 
+`[[<-.H2OParsedDataVA` <- function(x, i, j, value){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
+  if( !class(value) == 'H2OParsedDataVA') stop('can only append h2o data to h2o data')
+  if( ncol(value) > 1 ) stop('may only set a single column')
+  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
+
+  mm <- match.call()
+  col_name <- as.list(i)[[1]]
+
+  cc <- colnames(x)
+  if( col_name %in% cc ){
+    x[, match( col_name, cc ) ] <- value
+  } else {
+    x <- cbind(x, value)
+    cc <- c( cc, col_name )
+    colnames(x) <- cc
+  }
+  x
+}
+
+
 `[[.H2OParsedData` <- function(x, ..., exact=TRUE){
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
@@ -400,6 +425,29 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
 
   x[, cols]
 }
+
+`[[<-.H2OParsedData` <- function(x, i, j, value){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
+  if( !class(value) == 'H2OParsedData') stop('can only append h2o data to h2o data')
+  if( ncol(value) > 1 ) stop('may only set a single column')
+  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
+
+  mm <- match.call()
+  col_name <- as.list(i)[[1]]
+
+  cc <- colnames(x)
+  if( col_name %in% cc ){
+    x[, match( col_name, cc ) ] <- value
+  } else {
+    x <- cbind(x, value)
+    cc <- c( cc, col_name )
+    colnames(x) <- cc
+  }
+  x
+}
+
+
 
 
 # right now, all things must be H2OParsedData

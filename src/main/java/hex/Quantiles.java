@@ -231,6 +231,10 @@ public class Quantiles extends Iced {
 
   public void finishUp(Vec vec) {
     nacnt = _stat0._nas;
+    // below, we force it to ignore length and only do [0]
+    // need to figure out if we need to do a list and how that's returned
+    _pctile = new double[DEFAULT_PERCENTILES.length];
+
     if (_type == T_ENUM) {
       // Compute majority items for enum data
       computeMajorities();
@@ -567,7 +571,9 @@ public class Quantiles extends Iced {
     // Compute the required value as V = v[k] + d(v[k+1] - v[k])
 
     // walk up until we're at the bin that starts with the threshold, or right before
-    for(int j = 0; j < thres.length; ++j) {
+    // only do thres[0]. how do we make a list of thresholds work?
+    // for(int j = 0; j < thres.length; ++j) {
+     for(int j = 0; j <=0; ++j) {
       // 0 okay for threshold?
       assert 0 <= thres[j] && thres[j] <= 1;
       double s1 = Math.floor(thres[j] * (double) _gprows); 
