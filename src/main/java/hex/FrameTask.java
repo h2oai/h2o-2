@@ -150,7 +150,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
       for(int i = 0; i < vecs.length-1; ++i) {
         // remove constant cols and cols with too many NAs
-        if( (dropConstantCols && (vecs[i].min() == vecs[i].max()) || vecs[i].naCnt() > vecs[i].length()*0.2))
+        if( (dropConstantCols && vecs[i].min() == vecs[i].max()) || vecs[i].naCnt() > vecs[i].length()*0.2)
           constantOrNAs.add(i);
       }
       if(!constantOrNAs.isEmpty()){
