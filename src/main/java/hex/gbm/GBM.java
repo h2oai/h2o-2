@@ -490,6 +490,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   }
 
   @Override protected float[][] doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame) {
-    throw new RuntimeException("TODO Auto-generated method stub");
+    throw new RuntimeException("GBM does not support varimp now!");
   }
 }
