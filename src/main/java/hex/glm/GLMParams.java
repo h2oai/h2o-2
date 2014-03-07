@@ -194,48 +194,4 @@ public class GLMParams extends Iced {
     return (y != 0) ? (y * Math.log(y / mu)) : 0;
   }
 
-  public enum CaseMode {
-    none("n/a"), lt("<"), gt(">"), lte("<="), gte(">="), eq("="), neq("!="), ;
-    final String _str;
-
-    CaseMode(String str) {
-      _str = str;
-    }
-
-    public String toString() {
-      return _str;
-    }
-
-    public String exp(double v) {
-      switch( this ) {
-        case none:
-          return "n/a";
-        default:
-          return "x" + _str + v;
-      }
-    }
-
-    public final boolean isCase(double actual, double caseVal) {
-      switch( this ) {
-        case lt:
-          return actual < caseVal;
-        case gt:
-          return actual > caseVal;
-        case lte:
-          return actual <= caseVal;
-        case gte:
-          return actual >= caseVal;
-        case eq:
-          return actual == caseVal;
-        case neq:
-          return actual != caseVal;
-        default:
-          assert false:"uncexpected case " + this;
-          return false;
-      }
-    }
-  }
-
-
-
 }
