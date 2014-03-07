@@ -25,6 +25,7 @@ def percentileOnSortedList(N, percent, key=lambda x:x, interpolate='linear'):
     if N is None:
         return None
     k = (len(N)-1) * percent
+
     f = int(math.floor(k))
     c = int(math.ceil(k))
     if f == c:
@@ -48,8 +49,8 @@ def percentileOnSortedList(N, percent, key=lambda x:x, interpolate='linear'):
     elif interpolate=='linear':
         pctDiff = (k-f)/(c-f+0.0)
         dDiff = pctDiff * (key(N[c]) - key(N[f]))
-        d = key(N[c] + dDiff)
-        msg = "fractional with linear(floor and ceil):" 
+        d = key(N[f] + dDiff)
+        msg = "fractional %s with linear(floor and ceil):" % pctDiff
 
     elif interpolate=='mean':
         d = (key(N[c]) + key(N[f])) / 2.0
@@ -62,7 +63,7 @@ def percentileOnSortedList(N, percent, key=lambda x:x, interpolate='linear'):
         print "prior->", key(N[flooredK-1]), " "
     else:
         print "prior->", "<bof>"
-    print "floor->", key(N[flooredK]), " ", msg, d
+    print "floor->", key(N[flooredK]), " ", msg, 'result:', d
     if flooredK+1 < len(N):
         print " ceil->", key(N[flooredK+1])
     else:
