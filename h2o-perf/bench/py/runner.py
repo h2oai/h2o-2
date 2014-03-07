@@ -51,6 +51,18 @@ def main(argv):
     if args['wipe']:
         PerfUtils.wipe_output_dir(output_dir)
 
+    #if True:
+    #    try:
+    #        cmd = ["R",
+    #               "--quiet",
+    #               "-f",
+    #               os.path.join("../../../R/tests", "Utils/runnerSetupPackage.R"),
+    #               "--args",
+    #               "127.0.0.1:" + str(port)]
+    #        child = subprocess.Popen(args=cmd)
+    #        rv = child.wait()
+    #    except: pass
+
     #new perfdb connection
     perfdb = PerfDB()
     test_to_run = ""

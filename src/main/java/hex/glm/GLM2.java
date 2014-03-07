@@ -15,7 +15,6 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
-import water.H2O.JobCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
 import water.fvec.Frame;
@@ -269,7 +268,7 @@ public class GLM2 extends ModelJob {
       double step = 0.5;
       for(int i = 0; i < glmt._objvals.length; ++i){
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
-          Log.info("GLM line search: find admissible step=" + step);
+          Log.info("GLM line search: found admissible step=" + step);
           _lastResult = null; // set last result to null so that the Iteration will not attempt to verify whether or not it should do the line search.
           new GLMIterationTask(GLM2.this,_dinfo,_glm,glmt._betas[i],_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
           return;
@@ -376,7 +375,7 @@ public class GLM2 extends ModelJob {
 
   @Override
   public GLM2 fork(){
-    start(new JobCompleter(this));
+    start(new H2O.H2OEmptyCompleter());
     run();
     return this;
   }
@@ -537,7 +536,7 @@ public class GLM2 extends ModelJob {
     public Job fork(){
       DKV.put(destination_key, new GLMGrid(self(),_jobs));
       assert _maxParallelism >= 1;
-      final H2OCountedCompleter fjt = new JobCompleter(this);
+      final H2OCountedCompleter fjt = new H2O.H2OEmptyCompleter();
       fjt.setPendingCount(_jobs.length-1);
       start(fjt);
       for(int i = 0; i < Math.min(_jobs.length,_maxParallelism); ++i){

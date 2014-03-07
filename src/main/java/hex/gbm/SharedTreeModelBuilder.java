@@ -1,18 +1,28 @@
 package hex.gbm;
 
+import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.rng.MersenneTwisterRNG;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.AUC;
 import water.api.DocGen;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Log;
+import water.fvec.*;
+import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.util.MRUtils;
+import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static water.util.ModelUtils.getPrediction;
 import water.util.*;
 
 import java.util.Arrays;
@@ -49,6 +59,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class, json=true)
   public boolean score_each_iteration = false;
+
+  @API(help = "Compute variable importance (true/false).", filter = Default.class )
+  protected boolean importance = false; // compute variable importance
 
 //  @API(help = "Active feature columns")
   protected int _ncols;
@@ -196,7 +209,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected TM doScoring(TM model, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
+  protected TM doScoring(TM model, Frame fTrain, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
@@ -206,6 +219,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Double update - before scoring
     model = makeModel(model, ktrees, tstats);
     model.update(self());
+    // Now model already contains tid-trees in serialized form
     if( score_each_iteration ||
         finalScoring ||
         (now-_firstScore < 4000) || // Score every time for 4 secs
@@ -215,18 +229,33 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _timeLastScoreStart = now;
       // Perform scoring
       Response2CMAdaptor vadaptor = getValidAdaptor();
-      sc = new Score().doIt(model, fr, vadaptor, oob, build_tree_per_node).report(logTag(),tid,ktrees);
+      sc = new Score().doIt(model, fTrain, vadaptor, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
+    }
+
+    // Compute variable importance for this tree if necessary
+    float[] varimp   = null;
+    float[] varimpSD = null;
+    if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
+      Timer vi_timer = new Timer();
+      float[][] vi = doVarImpCalc(model, ktrees, tid-1, fTrain);
+      varimp   = vi[0];
+      varimpSD = vi[1];
+      Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring
     model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
-                      sc==null ? null : (_nclass>1  ? new ConfusionMatrix(sc._cm) : null),
+                      sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null),
+                      varimp,
+                      varimpSD,
                       sc==null ? null : (_nclass==2 ? makeAUC(toCMArray(sc._cms), ModelUtils.DEFAULT_THRESHOLDS) : null)
-                     );
+                      );
     model.update(self());
     return model;
   }
+
+  protected abstract float[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame);
 
   ConfusionMatrix[] toCMArray(long[][][] cms) {
     int n = cms.length;
@@ -245,6 +274,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
   protected final Vec vec_resp( Frame fr, int t) { return fr.vecs()[_ncols]; }
+
+  protected double[] data_row( Chunk chks[], int row, double[] data) {
+    assert data.length == _ncols;
+    for(int f=0; f<_ncols; f++) data[f] = chks[f].at0(row);
+    return data;
+  }
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -735,7 +770,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract TM buildModel( TM initialModel, Frame fr, String names[], String domains[][], Timer t_build );
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, water.api.AUC validAUC);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD,  water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
@@ -744,6 +779,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
+  protected final boolean isClassification() { return _nclass > 1; }
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }

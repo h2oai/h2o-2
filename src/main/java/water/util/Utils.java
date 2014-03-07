@@ -1068,4 +1068,15 @@ public class Utils {
     return k - 1;
   }
 
+  /** Create a new sorted array according to given sort order */
+  public static float[] sortAccording(float[] ary, Integer[] sortOrder) {
+    float[] res = new float[ary.length];
+    for(int i=0; i<ary.length; i++) res[i] = ary[sortOrder[i]];
+    return res;
+  }
+  public static String[] sortAccording(String[] ary, Integer[] sortOrder) {
+    String[] res = new String[ary.length];
+    for(int i=0; i<ary.length; i++) res[i] = ary[sortOrder[i]];
+    return res;
+  }
 }

@@ -202,6 +202,17 @@ function(pkey, dataPath) {
 hdfs.VA<-
 function(pkey, dataPath) {
   h2o.importHDFS.VA(h, dataPath, key = pkey)
+source("../../R/h2oPerf/prologue.R")
+
+data_source <<- "s3://h2o-bench/AirlinesClean2"
+trainData   <<- "s3n://h2o-bench/AirlinesClean2"
+
+hex <- h2o.importFile.FV(h, "s3n://h2o-bench/AirlinesClean2")
+
+num_train_rows <<- 1021368222
+num_explan_cols <<- 12
+upload.VA("parsed.hex", trainData)
+source("../../R/h2oPerf/epilogue.R")
 }
 
 hdfs.FV<-
@@ -303,7 +314,7 @@ runRF.FV<-
 function(x, y, ntree=50, depth=50, nodesize=1, 
          sample.rate=2/3, nbins=100, seed=-1) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  model <<- h2o.randomForest.FV(x = x, y = y, data = data, ntrees = ntrees,
+  model <<- h2o.randomForest.FV(x = x, y = y, data = data, ntree = ntree,
                                 depth = depth, nodesize = nodesize,
                                 sample.rate = sample.rate, nbins = nbins, seed = seed)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DRFModelView, '_modelKey'= model@key)

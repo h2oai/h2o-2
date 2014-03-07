@@ -79,7 +79,7 @@ public class QuantilesPage extends Request2 {
     if (summaries != null) {
       summaries[0].finishUp(vecs[0]);
       column_name = summaries[0].colname;
-      quantile_requested = summaries[0].DEFAULT_PERCENTILES[0];
+      quantile_requested = summaries[0].QUANTILES_TO_DO[0];
       interpolation_type_requested = interpolation_type;
       result = summaries[0]._pctile[0];
     }
