@@ -126,8 +126,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
   }
 
-  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, ConfusionMatrix[] auccms) {
-    return new DRFModel(this, model, err, cm, varimp, varimpSD, auccms!=null ? new water.api.AUC(auccms, ModelUtils.DEFAULT_THRESHOLDS) : null);
+  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
+    return new DRFModel(this, model, err, cm, varimp, varimpSD, validAUC);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
     return new DRFModel(this, model, ktrees, tstats);

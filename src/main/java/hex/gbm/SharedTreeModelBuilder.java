@@ -11,6 +11,7 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
+import water.api.AUC;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
@@ -248,7 +249,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
                       sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null),
                       varimp,
                       varimpSD,
-                      sc==null ? null : (_nclass==2 ? toCMArray(sc._cms) : null)
+                      sc==null ? null : (_nclass==2 ? makeAUC(toCMArray(sc._cms), ModelUtils.DEFAULT_THRESHOLDS) : null)
                       );
     model.update(self());
     return model;
@@ -769,8 +770,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract TM buildModel( TM initialModel, Frame fr, String names[], String domains[][], Timer t_build );
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, ConfusionMatrix[] auccms);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD,  water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
+
+  protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
+    assert _nclass == 2;
+    return cms != null ? new AUC(cms, threshold) : null;
+  }
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
   protected final boolean isClassification() { return _nclass > 1; }
