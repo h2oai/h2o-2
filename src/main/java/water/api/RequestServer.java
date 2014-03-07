@@ -338,7 +338,7 @@ public class RequestServer extends NanoHTTPD {
   // Returns the response containing the given uri with the appropriate mime
   // type.
   private NanoHTTPD.Response getResource(String uri) {
-    byte[] bytes = _cache.get(uri);
+    byte[] bytes = null; //_cache.get(uri);
     if( bytes == null ) {
       InputStream resource = Boot._init.getResource2(uri);
       if (resource != null) {
