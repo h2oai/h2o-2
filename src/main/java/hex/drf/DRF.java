@@ -218,6 +218,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     assert !importance || _treeVotesOnOOB.npredictors() == _treeVotesOnSOOB[0/*variable*/].npredictors() : "Missing some tree votes in variable importance voting?!";
 
     Log.info(Sys.DRF__, "Var. importance: "+Arrays.toString(model.varimp));
+    /*
     // Compute variable importance if required
     if (classification && importance) {
       Timer vi_timer = new Timer();
@@ -226,7 +227,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       Log.info(Sys.DRF__, "Computation of variable importance took: " + vi_timer.toString());
       Log.info(Sys.DRF__, "Var. importance: "+Arrays.toString(model.varimp));
       Log.info(Sys.DRF__, "==========================");
-    }
+    }*/
 
     return model;
   }
