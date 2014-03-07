@@ -289,7 +289,8 @@ public class NNvsNeuralNet extends TestUtil {
                             CM.vpredict = fpreds.vecs()[0];
                             CM.serve();
                             StringBuilder sb = new StringBuilder();
-                            trainerr += CM.toASCII(sb);
+                            CM.toASCII(sb);
+                            trainerr += new ConfusionMatrix(CM.cm).err();
                             for (String s : sb.toString().split("\n")) Log.info(s);
                             fpreds.delete();
 
@@ -301,7 +302,7 @@ public class NNvsNeuralNet extends TestUtil {
                             CM.vpredict = fpreds2.vecs()[0];
                             CM.serve();
                             sb = new StringBuilder();
-                            testerr += CM.toASCII(sb);
+                            testerr += new ConfusionMatrix(CM.cm).err();
                             for (String s : sb.toString().split("\n")) Log.info(s);
                             fpreds2.delete();
                           }

@@ -9,6 +9,7 @@ import water.fvec.Frame;
 import java.util.Arrays;
 
 public class ConfusionMatrixTest extends TestUtil {
+  final boolean debug = false;
 
   @Test
   public void testIdenticalVectors() {
@@ -24,7 +25,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
 
   }
 
@@ -43,7 +44,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
   }
 
   /** Negative test testing expected exception if two vectors
@@ -63,7 +64,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
   }
 
   @Test
@@ -80,7 +81,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v4.csv",
@@ -93,7 +94,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 2L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v2.csv",
@@ -106,7 +107,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 2L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
   }
 
   @Test
@@ -122,7 +123,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
 
     simpleCMTest(
         "smalldata/test/cm/v1n.csv",
@@ -135,7 +136,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
   }
 
   @Test
@@ -152,7 +153,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v4n.csv",
@@ -165,7 +166,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 2L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v2n.csv",
@@ -178,7 +179,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 2L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
   }
 
   /** Test for PUB-216:
@@ -198,7 +199,7 @@ public class ConfusionMatrixTest extends TestUtil {
               ar(0L, 0L, 1L, 0L),
               ar(0L, 0L, 0L, 0L)
               ),
-          false);
+          debug);
 
       simpleCMTest(
           frame("v1", vec(ar("B","C"), ari(0,0,1,1) )),
@@ -211,7 +212,7 @@ public class ConfusionMatrixTest extends TestUtil {
               ar(2L, 0L, 0L, 0L),
               ar(0L, 0L, 0L, 0L)
               ),
-          false);
+          debug);
   }
 
   @Test public void testBadModelPrect2() {
@@ -226,7 +227,7 @@ public class ConfusionMatrixTest extends TestUtil {
               ar(0L, 0L, 1L, 0L),
               ar(0L, 0L, 0L, 0L)
               ),
-          false);
+          debug);
 
       simpleCMTest(
           frame("v1", vec(ari(-1,-1,0,0) )),
@@ -239,7 +240,7 @@ public class ConfusionMatrixTest extends TestUtil {
               ar(0L, 0L, 0L, 0L),
               ar(0L, 0L, 0L, 0L)
               ),
-          false);
+          debug);
 
       // The case found by Nidhi on modified covtype dataset
       simpleCMTest(
@@ -258,7 +259,7 @@ public class ConfusionMatrixTest extends TestUtil {
               ar( 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "7"
               ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
               ),
-          false);
+          debug);
   }
 
 
