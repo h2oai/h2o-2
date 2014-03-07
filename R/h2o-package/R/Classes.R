@@ -182,12 +182,15 @@ setMethod("show", "H2OPCAModel", function(object) {
 
 setMethod("show", "H2OGBMModel", function(object) {
   print(object@data)
-  cat("GBM Model Key:", object@key)
+  cat("GBM Model Key:", object@key, "\n")
 
   model = object@model
   if(model$params$distribution == "multinomial") {
-    cat("\n\nConfusion matrix:\nReported on", object@valid@key, "\n");
+    cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
     print(model$confusion)
+    
+    if(!is.null(model$auc) && !is.null(model$gini))
+      cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
