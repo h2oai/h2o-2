@@ -51,7 +51,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
     public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm) {
-      super(prior, err, cm);
+      super(prior, err, cm, null, null);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
 
@@ -101,7 +101,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
     return new GBMModel(outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
   }
-  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm) {
+  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD) {
     return new GBMModel(model, err, cm);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
@@ -492,7 +492,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected int size() { return 4; }
   }
 
-  @Override protected double[][] doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame) {
+  @Override protected float[][] doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame) {
     throw new RuntimeException("TODO Auto-generated method stub");
   }
 }

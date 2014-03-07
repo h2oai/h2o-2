@@ -1,26 +1,20 @@
 package hex.gbm;
 
+import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.rng.MersenneTwisterRNG;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
-import water.api.Request.API;
-import water.api.Request.Default;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Log;
+import water.fvec.*;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.MRUtils;
-import water.util.Utils;
-
-import java.util.Arrays;
-import java.util.Random;
-
-import static water.util.ModelUtils.getPrediction;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
@@ -210,7 +204,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected TM doScoring(TM model, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
+  protected TM doScoring(TM model, Frame fTrain, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
@@ -220,6 +214,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Double update - before scoring
     model = makeModel(model, ktrees, tstats);
     model.update(self());
+    // Now model already contains tid-trees in serialized form
     if( score_each_iteration ||
         finalScoring ||
         (now-_firstScore < 4000) || // Score every time for 4 secs
@@ -229,28 +224,31 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _timeLastScoreStart = now;
       // Perform scoring
       Response2CMAdaptor vadaptor = getValidAdaptor();
-      sc = new Score().doIt(model, fr, vadaptor, oob, build_tree_per_node).report(logTag(),tid,ktrees);
+      sc = new Score().doIt(model, fTrain, vadaptor, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
 
     // Compute variable importance for this tree if necessary
-    double[] varimp   = null;
-    double[] varimpSD = null;
-    /*if (importance) { // compute this tree votes
-      Frame validationFrame = _validAdapted ? _adaptedValidation : validation;
-      double[][] vi = doVarImpCalc(model, ktrees, tid, validationFrame);
+    float[] varimp   = null;
+    float[] varimpSD = null;
+    if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
+      Timer vi_timer = new Timer();
+      float[][] vi = doVarImpCalc(model, ktrees, tid-1, fTrain);
       varimp   = vi[0];
       varimpSD = vi[1];
-    }*/
+      Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
+    }
     // Double update - after scoring
     model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
-                      sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null));
+                      sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null),
+                      varimp,
+                      varimpSD);
     model.update(self());
     return model;
   }
 
-  protected abstract double[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame);
+  protected abstract float[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame);
 
   // --------------------------------------------------------------------------
   // Convenvience accessor for a complex chunk layout.
@@ -780,7 +778,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract TM buildModel( TM initialModel, Frame fr, String names[], String domains[][], Timer t_build );
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
