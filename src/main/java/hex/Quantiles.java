@@ -6,9 +6,6 @@ import water.api.Request.API;
 import water.fvec.*;
 import water.util.Utils;
 
-import java.util.Arrays;
-import java.util.Random;
-
 /**
  * Quantile of a column.
  */
@@ -20,29 +17,22 @@ public class Quantiles extends Iced {
   // for GET.
   static final String DOC_GET = "Returns a quantile of a fluid-vec frame";
 
-  public static final int    MAX_HIST_SZ = water.parser.Enum.MAX_ENUM_SIZE;
-  public static final int    NMAX = 5;
-  public static final int    RESAMPLE_SZ = 1000;
+  public static final int    MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
   // updated boundaries to be 0.1% 1%...99%, 99.9% so R code didn't have to change
   // ideally we extend the array here, and just update the R extraction of 25/50/75 percentiles
   // note python tests (junit?) may look at result
-  public final double DEFAULT_PERCENTILES[];
+  public final double QUANTILES_TO_DO[];
   private static final int   T_REAL = 0;
   private static final int   T_INT  = 1;
   private static final int   T_ENUM = 2;
   public BasicStat           _stat0;     /* Basic Vec stats collected by PrePass. */
   public final int           _type;      // 0 - real; 1 - int; 2 - enum
-  public double[]            _mins;
-  public double[]            _maxs;
   long                       _gprows;    // non-empty rows per group
 
   final transient String[]   _domain;
-  final transient double     _start;
   final transient double     _start2;
-  final transient double     _binsz;
   final transient double     _binsz2;    // 2nd finer grained histogram used for quantile estimates for numerics
-  transient int              _len1;      /* Size of filled elements in a chunk. */
-  public transient double[]         _pctile;
+  public transient double[]  _pctile;
 
 
   static abstract class Stats extends Iced {
@@ -52,36 +42,20 @@ public class Quantiles extends Iced {
     @API(help="stats type"   ) public String type;
     Stats(String type) { this.type = type; }
   }
-  // An internal JSON-output-only class
-  @SuppressWarnings("unused")
-  static class EnumStats extends Stats {
-    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-    public EnumStats( int card ) {
-      super("Enum");
-      this.cardinality = card;
-    }
-    @API(help="cardinality"  ) public final int     cardinality;
-  }
-
   static class NumStats extends Stats {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-    public NumStats( double mean, double sigma, long zeros, double[] mins, double[] maxs, double[] pctile, double[] pct) {
+    public NumStats( double mean, double sigma, long zeros, double[] pctile, double[] pct) {
       super("Numeric");
       this.mean  = mean;
       this.sd    = sigma;
       this.zeros = zeros;
-      this.mins  = mins;
-      this.maxs  = maxs;
       this.pctile = pctile;
       this.pct   = pct;
     }
     @API(help="mean"        ) public final double   mean;
     @API(help="sd"          ) public final double   sd;
     @API(help="#zeros"      ) public final long     zeros;
-    @API(help="min elements") public final double[] mins; // min N elements
-    @API(help="max elements") public final double[] maxs; // max N elements
     @API(help="percentile thresholds" ) public final double[] pct;
     @API(help="percentiles" ) public final double[] pctile;
   }
@@ -93,18 +67,16 @@ public class Quantiles extends Iced {
   @API(help="NAs"         ) public long      nacnt;
   @API(help="Base Stats"  ) public Stats     stats;
 
-  @API(help="histogram start")    public double    hstart;
-  @API(help="histogram bin step") public double    hstep;
-  @API(help="histogram headers" ) public String[]  hbrk;
-  @API(help="histogram bin values") public long[]  hcnt;
   public long[]  hcnt2; // finer histogram. not visible
   public double[]  hcnt2_min; // min actual for each bin
   public double[]  hcnt2_max; // max actual for each bin
 
   public static class BasicStat extends Iced {
     public long _len;   /* length of vec */
+    /// FIX! can NAs vs NaNs be distinguished? Do we care for quantile?
     public long _nas;   /* number of NA's */
     public long _nans;   /* number of NaN's */
+
     public long _pinfs;   /* number of positive infinity's */
     public long _ninfs;   /* number of positive infinity's */
     public long _zeros;   /* number of zeros */
@@ -164,22 +136,6 @@ public class Quantiles extends Iced {
               :                       Double.NaN;                /* All NaN's or NAs */
       return this;
     }
-
-    /**
-     * @return number of filled elements, excluding NaN's as well.
-     */
-    public long len1() {
-      return _len - _nas - _nans;
-    }
-    /**
-     * Returns whether the fill density is less than the given percent.
-     * @param pct target percent.
-     * @param nan if true then NaN is counted as missing.
-     * @return true if less than {@code pct} of rows are filled. */
-    public boolean isSparse(double pct, boolean nan) {
-      assert 0 < pct && pct <= 1;
-      return (double)(_len - _nas - (nan?_nans:0)) / _len < pct;
-    }
   }
 
   public static class PrePass extends MRTask2<PrePass> {
@@ -204,11 +160,13 @@ public class Quantiles extends Iced {
     private double _quantile;
     private int _max_qbins;
     public Quantiles _summaries[];
-    public SummaryTask2 (BasicStat[] basicStats, double quantile, int max_qbins) { _basics = basicStats; _quantile = quantile; _max_qbins = max_qbins; }
+    public SummaryTask2 (BasicStat[] basicStats, double quantile, int max_qbins) 
+      { _basics = basicStats; _quantile = quantile; _max_qbins = max_qbins; }
     @Override public void map(Chunk[] cs) {
       _summaries = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _summaries[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], _basics[i], _quantile, _max_qbins).add(cs[i]);
+        _summaries[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], 
+          _basics[i], _quantile, _max_qbins).add(cs[i]);
     }
     @Override public void reduce(SummaryTask2 other) {
       for (int i = 0; i < _summaries.length; i++)
@@ -216,6 +174,7 @@ public class Quantiles extends Iced {
     }
   }
 
+  // FIX! do we need this?
   @Override public String toString() {
     String s = "";
     if( stats instanceof NumStats ) {
@@ -224,7 +183,7 @@ public class Quantiles extends Iced {
       for( int i=0; i<pct.length; i++ )
         s += ""+(pct[i]*100)+"%="+pctile[i]+", ";
     } else {
-      s += "cardinality="+((EnumStats)stats).cardinality;
+      s = "enums no longer here?";
     }
     return s;
   }
@@ -233,42 +192,14 @@ public class Quantiles extends Iced {
     nacnt = _stat0._nas;
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
-    _pctile = new double[DEFAULT_PERCENTILES.length];
+    _pctile = new double[QUANTILES_TO_DO.length];
 
     if (_type == T_ENUM) {
-      // Compute majority items for enum data
-      computeMajorities();
+      ;
     } else {
-        approxQuantiles1Pass(_pctile,DEFAULT_PERCENTILES);
-    }
-
-    // remove the trailing NaNs
-    for (int i = 0; i < _mins.length; i++) {
-      if (Double.isNaN(_mins[i])) {
-        _mins = Arrays.copyOf(_mins, i);
-        break;
-      }
-    }
-    for (int i = 0; i < _maxs.length; i++) {
-      if (Double.isNaN(_maxs[i])) {
-        _maxs = Arrays.copyOf(_maxs, i);
-        break;
-      }
-    }
-    for (int i = 0; i < _maxs.length>>>1; i++) {
-      double t = _maxs[i]; _maxs[i] = _maxs[_maxs.length-1-i]; _maxs[_maxs.length-1-i] = t;
-    }
-    this.stats = _type==T_ENUM?new EnumStats(vec.domain().length):new NumStats(vec.mean(),vec.sigma(),_stat0._zeros,_mins,_maxs,_pctile,DEFAULT_PERCENTILES);
-    if (_type == T_ENUM) {
-      this.hstart = 0;
-      this.hstep = 1;
-      this.hbrk = _domain;
-    } else {
-      this.hstart = _start;
-      this.hstep  = _binsz;
-      this.hbrk = new String[hcnt.length];
-      for (int i = 0; i < hbrk.length; i++)
-        hbrk[i] = Utils.p2d(i==0?_start:binValue(i));
+      approxQuantiles1Pass(_pctile,QUANTILES_TO_DO);
+      this.stats = 
+        new NumStats(vec.mean(), vec.sigma(), _stat0._zeros, _pctile, QUANTILES_TO_DO);
     }
   }
 
@@ -278,54 +209,21 @@ public class Quantiles extends Iced {
     _type = vec.isEnum()?2:vec.isInt()?1:0;
     _domain = vec.isEnum() ? vec.domain() : null;
     _gprows = 0;
-    DEFAULT_PERCENTILES = new double[1];
-    DEFAULT_PERCENTILES[0] = quantile;
+    QUANTILES_TO_DO = new double[1];
+    QUANTILES_TO_DO[0] = quantile;
     double sigma = Double.isNaN(vec.sigma()) ? 0 : vec.sigma();
-    if ( _type != T_ENUM ) {
-      _mins = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
-      _maxs = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
-      Arrays.fill(_mins, Double.NaN);
-      Arrays.fill(_maxs, Double.NaN);
-    } else {
-      _mins = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
-      _maxs = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
-    }
 
-    if( vec.isEnum() && _domain.length < MAX_HIST_SZ ) {
-      _start = 0;
+    if( vec.isEnum() && _domain.length < MAX_ENUM_SIZE ) {
       _start2 = 0;
-      _binsz = 1;
       _binsz2 = 1;
-      hcnt = new long[_domain.length];
       hcnt2 = new long[_domain.length];
       hcnt2_min = new double[_domain.length];
       hcnt2_max = new double[_domain.length];
     } else if (!Double.isNaN(stat0._min2)) {
-      // guard against improper parse (date type) or zero c._sigma
-      long N = _stat0._len - stat0._nas - stat0._nans - stat0._pinfs - stat0._ninfs;
-      double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(N));
-      double d = Math.pow(10, Math.floor(Math.log10(b)));
-      if (b > 20*d/3)
-        d *= 10;
-      else if (b > 5*d/3)
-        d *= 5;
-
-      // tweak for integers
-      if (d < 1. && vec.isInt()) d = 1.;
-      _binsz = d;
-      // This equation means the first N bin can be empty?
-      // also: _binsz means many _binsz2 could be empty at the start if we just had _start. 
-      // FIX! is this okay if the dynamic range is > 2**32
-      _start = _binsz * Math.floor(stat0._min2/_binsz);
-      int nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
-
-      // create a 2nd finer grained historam for quantile estimates.
-      // okay if it is approx. 1000 bins (+-1)
-      // update: we allow api to change max_qbins. default 1000. larger = more accuracy
-      assert max_qbins > 0 && max_qbins <= 10000000 : "max_qbins must be >0 and <= 10000000";
 
       // okay if 1 more than max_qbins gets created
       // _binsz2 = _binsz / (max_qbins / nbin);
+      assert max_qbins > 0 && max_qbins <= 1000000 : "max_qbins must be >0 and <= 1000000";
       _binsz2 = (stat0._max2 + (vec.isInt()?.5:0) - stat0._min2) / max_qbins;
       _start2 = _binsz2 * Math.floor(stat0._min2/_binsz2);
       int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
@@ -335,19 +233,14 @@ public class Quantiles extends Iced {
       // Log.info("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
 
       // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
-      assert nbin > 0;
       assert nbin2 > 0;
 
-      hcnt = new long[nbin];
       hcnt2 = new long[nbin2];
       hcnt2_min = new double[nbin2];
       hcnt2_max = new double[nbin2];
     } else { // vec does not contain finite numbers
-      _start = vec.min();
       _start2 = vec.min();
-      _binsz = Double.POSITIVE_INFINITY;
       _binsz2 = Double.POSITIVE_INFINITY;
-      hcnt = new long[1];
       hcnt2 = new long[1];
       hcnt2_min = new double[1];
       hcnt2_max = new double[1];
@@ -366,97 +259,42 @@ public class Quantiles extends Iced {
   }
   public void add(double val) {
     if( Double.isNaN(val) ) return;
-    _len1++; _gprows++;
+    _gprows++;
+    if ( _type == T_ENUM ) return;
 
-    if ( _type != T_ENUM ) {
-      int index;
-      // update min/max
-      if (val < _mins[_mins.length-1] || Double.isNaN(_mins[_mins.length-1])) {
-        index = Arrays.binarySearch(_mins, val);
-        if (index < 0) {
-          index = -(index + 1);
-          for (int j = _mins.length -1; j > index; j--)
-            _mins[j] = _mins[j-1];
-          _mins[index] = val;
-        }
-      }
-      boolean hasNan = Double.isNaN(_maxs[_maxs.length-1]);
-      if (val > _maxs[0] || hasNan) {
-        index = Arrays.binarySearch(_maxs, val);
-        if (index < 0) {
-          index = -(index + 1);
-          if (hasNan) {
-            for (int j = _maxs.length -1; j > index; j--)
-              _maxs[j] = _maxs[j-1];
-            _maxs[index] = val;
-          } else {
-            for (int j = 0; j < index-1; j++)
-              _maxs[j] = _maxs[j+1];
-            _maxs[index-1] = val;
-          }
-        }
-      }
-      // update the finer histogram (used for quantile estimates on numerics)
-      long binIdx2;
-      if (hcnt2.length==1) {
-        binIdx2 = 0; // not used
-      }
-      else {
-        binIdx2 = Math.round(((val - _start2) * 1000000.0) / _binsz2) / 1000000;
-      }
-
-      int binIdx2Int = (int) binIdx2;
-      assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
-        "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
-
-      if (hcnt2[binIdx2Int] == 0) {
-        // Log.info("New init: "+val+" for index "+binIdx2Int);
-        hcnt2_min[binIdx2Int] = val;
-        hcnt2_max[binIdx2Int] = val;
-      }
-      else {
-        if (val < hcnt2_min[binIdx2Int]) {
-            // Log.info("New min: "+val+" for index "+binIdx2Int);
-            hcnt2_min[binIdx2Int] = val;
-        }
-        if (val > hcnt2_max[binIdx2Int]) {
-            // if ( binIdx2Int == 500 ) Log.info("New max: "+val+" for index "+binIdx2Int);
-            hcnt2_max[binIdx2Int] = val;
-        }
-      }
-      ++hcnt2[binIdx2Int];
-    }
-
-    // update the histogram the browser/json uses
-    long binIdx;
-    if (hcnt.length == 1) {
-      binIdx = 0;
-    }
-    // interesting. do we really track Infs in the histogram?
-    else if (val == Double.NEGATIVE_INFINITY) {
-      binIdx = 0;
-    }
-    else if (val == Double.POSITIVE_INFINITY) {
-      binIdx = hcnt.length-1;
+    int index;
+    long binIdx2;
+    if (hcnt2.length==1) {
+      binIdx2 = 0; // not used
     }
     else {
-      binIdx = Math.round(((val - _start) * 1000000.0) / _binsz) / 1000000;
+      binIdx2 = Math.round(((val - _start2) * 1000000.0) / _binsz2) / 1000000;
     }
 
-    int binIdxInt = (int) binIdx;
-    assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
-        "binIdxInt too big for hcnt2 "+binIdxInt+" "+hcnt.length;
-    ++hcnt[binIdxInt];
+    int binIdx2Int = (int) binIdx2;
+    assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
+      "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
+
+    if (hcnt2[binIdx2Int] == 0) {
+      // Log.info("New init: "+val+" for index "+binIdx2Int);
+      hcnt2_min[binIdx2Int] = val;
+      hcnt2_max[binIdx2Int] = val;
+    }
+    else {
+      if (val < hcnt2_min[binIdx2Int]) {
+          // Log.info("New min: "+val+" for index "+binIdx2Int);
+          hcnt2_min[binIdx2Int] = val;
+      }
+      if (val > hcnt2_max[binIdx2Int]) {
+          // if ( binIdx2Int == 500 ) Log.info("New max: "+val+" for index "+binIdx2Int);
+          hcnt2_max[binIdx2Int] = val;
+      }
+    }
+    ++hcnt2[binIdx2Int];
   }
 
   public Quantiles add(Quantiles other) {
-
-    // merge hcnt and hcnt just by adding
-    if (hcnt != null)
-      Utils.add(hcnt, other.hcnt);
-
     _gprows += other._gprows;
-
     if (_type == T_ENUM) return this;
 
     // merge hcnt2 per-bin mins 
@@ -479,7 +317,6 @@ public class Quantiles extends Iced {
       }
     }
 
-
     // merge hcnt2 per-bin maxs
     // other must be same length, but use it's length for safety
     for (int k = 0; k < other.hcnt2_max.length; k++) {
@@ -501,49 +338,9 @@ public class Quantiles extends Iced {
 
     // can hcnt2 ever be null here?. Inc last, so the zero case is detected above
     // seems like everything would fail if hcnt2 doesn't exist here
-    if (hcnt2 != null)
-      Utils.add(hcnt2, other.hcnt2);
-      
-    // merge hcnt mins
-    double[] ds = MemoryManager.malloc8d(_mins.length);
-    int i = 0, j = 0;
-    for (int k = 0; k < ds.length; k++)
-      if (_mins[i] < other._mins[j])
-        ds[k] = _mins[i++];
-      else if (Double.isNaN(other._mins[j]))
-        ds[k] = _mins[i++];
-      else {            // _min[i] >= other._min[j]
-        if (_mins[i] == other._mins[j]) i++;
-        ds[k] = other._mins[j++];
-      }
-    System.arraycopy(ds,0,_mins,0,ds.length);
-
-    for (i = _maxs.length - 1; Double.isNaN(_maxs[i]); i--) if (i == 0) {i--; break;}
-    for (j = _maxs.length - 1; Double.isNaN(other._maxs[j]); j--) if (j == 0) {j--; break;}
-
-    ds = MemoryManager.malloc8d(i + j + 2);
-    // merge hcnt maxs, also deduplicating against mins?
-    int k = 0, ii = 0, jj = 0;
-    while (ii <= i && jj <= j) {
-      if (_maxs[ii] < other._maxs[jj])
-        ds[k] = _maxs[ii++];
-      else if (_maxs[ii] > other._maxs[jj])
-        ds[k] = other._maxs[jj++];
-      else { // _maxs[ii] == other.maxs[jj]
-        ds[k] = _maxs[ii++];
-        jj++;
-      }
-      k++;
-    }
-    while (ii <= i) ds[k++] = _maxs[ii++];
-    while (jj <= j) ds[k++] = other._maxs[jj++];
-    System.arraycopy(ds,Math.max(0, k - _maxs.length),_maxs,0,Math.min(k,_maxs.length));
-    for (int t = k; t < _maxs.length; t++) _maxs[t] = Double.NaN;
+    if (hcnt2 != null) Utils.add(hcnt2, other.hcnt2);
     return this;
   }
-
-  // _start of each hcnt bin
-  public double binValue(int b) { return _start + b*_binsz; }
 
   // need to count >4B rows
   private long htot2() { // same but for the finer histogram
@@ -563,12 +360,14 @@ public class Quantiles extends Iced {
     double actualBinWidth = 0;
     assert _gprows==htot2() : "_gprows: "+_gprows+" htot2(): "+htot2();
 
-    // One goal definition: (Excel?)
+    // A 'perfect' quantile definition, for comparison. 
     // Given a set of N ordered values {v[1], v[2], ...} and a requirement to 
     // calculate the pth percentile, do the following:
     // Calculate l = p(N-1) + 1
     // Split l into integer and decimal components i.e. l = k + d
     // Compute the required value as V = v[k] + d(v[k+1] - v[k])
+
+    // we do zero-indexed list, so slightly different eqns.
 
     // walk up until we're at the bin that starts with the threshold, or right before
     // only do thres[0]. how do we make a list of thresholds work?
@@ -629,136 +428,10 @@ public class Quantiles extends Iced {
 
       qtiles[j] = guess;
 
-      // _maxs[5] is usually the biggest (not always)?  _mins[0] is the smallest
-      // oh..ugly. At this point, NaNs haven't been stripped. so we don't know that 
-      // the end of _maxs has the true max (if there is just 1-4 values in the data, 
-      // _maxs doens't get filled (legacy!). The NaNs and array length get flushed later.
-      // _maxs really should have been organized as big to small so biggest is always in 0.
-      // So find the last max before the nans
-      double trueMax = _maxs[0];
-      for(int p = 1; p < _maxs.length; ++p) {
-        if ( !Double.isNaN(_maxs[p]) ) trueMax = _maxs[p];
-      }
-
       // might have fp tolerance issues here? but fp numbers should be exactly same?
-      // assert guess <= trueMax : guess+" "+trueMax;
-      // assert guess >= _mins[0] : guess+" "+_mins[0];
-      // Log.info("_mins[0]: "+_mins[0]+" trueMax: "+trueMax+" hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
-      // " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
+      // Log.info(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
+      //  " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
     }
-  }
-  // Compute majority categories for enums only
-  public void computeMajorities() {
-    if ( _type != T_ENUM ) return;
-    for (int i = 0; i < _mins.length; i++) _mins[i] = i;
-    for (int i = 0; i < _maxs.length; i++) _maxs[i] = i;
-    int mini = 0, maxi = 0;
-    for( int i = 0; i < hcnt.length; i++ ) {
-      if (hcnt[i] < hcnt[(int)_mins[mini]]) {
-        _mins[mini] = i;
-        for (int j = 0; j < _mins.length; j++)
-          if (hcnt[(int)_mins[j]] > hcnt[(int)_mins[mini]]) mini = j;
-      }
-      if (hcnt[i] > hcnt[(int)_maxs[maxi]]) {
-        _maxs[maxi] = i;
-        for (int j = 0; j < _maxs.length; j++)
-          if (hcnt[(int)_maxs[j]] < hcnt[(int)_maxs[maxi]]) maxi = j;
-      }
-    }
-    for (int i = 0; i < _mins.length - 1; i++)
-      for (int j = 0; j < i; j++) {
-        if (hcnt[(int)_mins[j]] > hcnt[(int)_mins[j+1]]) {
-          double t = _mins[j]; _mins[j] = _mins[j+1]; _mins[j+1] = t;
-        }
-      }
-    for (int i = 0; i < _maxs.length - 1; i++)
-      for (int j = 0; j < i; j++)
-        if (hcnt[(int)_maxs[j]] < hcnt[(int)_maxs[j+1]]) {
-          double t = _maxs[j]; _maxs[j] = _maxs[j+1]; _maxs[j+1] = t;
-        }
   }
 
-  public double percentileValue(int idx) {
-    if( _type == T_ENUM ) return Double.NaN;
-     return _pctile[idx];
-  }
-
-  public void toHTML( Vec vec, String cname, StringBuilder sb ) {
-    sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'>" +
-    "<div class='alert-success'><h4>Column: " + cname + " (type: " + type + ")</h4></div>\n");
-    if ( _stat0._len == _stat0._nas ) {
-      sb.append("<div class='alert'>Empty column, no summary!</div></div>\n");
-      return;
-    }
-    // Base stats
-    if( _type != T_ENUM ) {
-      NumStats stats = (NumStats)this.stats;
-      sb.append("<div style='width:100%;'><table class='table-bordered'>");
-      sb.append("<tr><th colspan='"+20+"' style='text-align:center;'>Base Stats</th></tr>");
-      sb.append("<tr>");
-      sb.append("<th>NAs</th>  <td>" + nacnt + "</td>");
-      sb.append("<th>mean</th><td>" + Utils.p2d(stats.mean)+"</td>");
-      sb.append("<th>sd</th><td>" + Utils.p2d(stats.sd) + "</td>");
-      sb.append("<th>zeros</th><td>" + stats.zeros + "</td>");
-      sb.append("<th>min[" + stats.mins.length + "]</th>");
-      for( double min : stats.mins ) {
-        sb.append("<td>" + Utils.p2d(min) + "</td>");
-      }
-      sb.append("<th>max[" + stats.maxs.length + "]</th>");
-      for( double max : stats.maxs ) {
-        sb.append("<td>" + Utils.p2d(max) + "</td>");
-      }
-      // End of base stats
-      sb.append("</tr> </table>");
-      sb.append("</div>");
-    } else {                    // Enums
-      sb.append("<div style='width:100%'><table class='table-bordered'>");
-      sb.append("<tr><th colspan='" + 4 + "' style='text-align:center;'>Base Stats</th></tr>");
-      sb.append("<tr><th>NAs</th>  <td>" + nacnt + "</td>");
-      sb.append("<th>cardinality</th>  <td>" + vec.domain().length + "</td></tr>");
-      sb.append("</table></div>");
-    }
-    // Histogram
-    final int MAX_HISTO_BINS_DISPLAYED = 1000;
-    int len = Math.min(hcnt.length,MAX_HISTO_BINS_DISPLAYED);
-    sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
-    sb.append("<tr> <th colspan="+len+" style='text-align:center'>Histogram</th></tr>");
-    sb.append("<tr>");
-    if ( _type == T_ENUM )
-       for( int i=0; i<len; i++ ) sb.append("<th>" + vec.domain(i) + "</th>");
-    else
-       for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(i==0?_start:binValue(i)) + "</th>");
-    sb.append("</tr>");
-    sb.append("<tr>");
-    for( int i=0; i<len; i++ ) sb.append("<td>" + hcnt[i] + "</td>");
-    sb.append("</tr>");
-    sb.append("<tr>");
-    for( int i=0; i<len; i++ )
-      sb.append(String.format("<td>%.1f%%</td>",(100.0*hcnt[i]/_stat0._len)));
-    sb.append("</tr>");
-    if( hcnt.length >= MAX_HISTO_BINS_DISPLAYED )
-      sb.append("<div class='alert'>Histogram for this column was too big and was truncated to 1000 values!</div>");
-    sb.append("</table></div>");
-
-    if (_type != T_ENUM) {
-      NumStats stats = (NumStats)this.stats;
-      // Percentiles
-      sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
-      sb.append("<tr> <th colspan='" + stats.pct.length + "' " +
-              "style='text-align:center' " +
-              ">Percentiles</th></tr>");
-      sb.append("<tr><th>Threshold(%)</th>");
-      for (double pc : stats.pct)
-        sb.append("<td>" + Utils.p2d(pc * 100.0) + "</td>");
-        // sb.append("<td>" + (int) Math.round(pc * 100) + "</td>");
-      sb.append("</tr>");
-      sb.append("<tr><th>Value</th>");
-      for (double pv : stats.pctile)
-        sb.append("<td>" + Utils.p2d(pv) + "</td>");
-      sb.append("</tr>");
-      sb.append("</table>");
-      sb.append("</div>");
-    }
-    sb.append("</div>\n"); 
-  }
 }

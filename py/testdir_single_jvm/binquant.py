@@ -4,8 +4,8 @@ import h2o_print as h2p, h2o_summ
 import numpy as np
 import scipy as sp
 import math
-OTHER_T = 0.66
-BIN_COUNT = 2
+OTHER_T = 0.5
+BIN_COUNT = 4
 
 # Defintion (this defn. seems odd. for the case of real quantiles, it should be a  floor, not a round up?)
 # This definition may be correct for 1-based indexing. (we do zero-based indexing in the code below, so it looks different)
