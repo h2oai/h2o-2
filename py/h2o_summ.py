@@ -6,10 +6,13 @@
 import math
 import functools
 
-def percentileOnSortedList(N, percent, key=lambda x:x):
+def percentileOnSortedList(N, percent, key=lambda x:x, interpolate='linear'):
     # 5 ways of resolving fractional
     # floor, ceil, funky, linear, mean
-    INTERPOLATE = 'mean'
+    interpolateChoices = ['floor', 'ceil', 'funky', 'linear', 'mean']
+    if interpolate not in interpolateChoices:
+        print "Bad choice for interpolate:", interpolate
+        print "Supported choices:", interpolateChoices
     """
     Find the percentile of a list of values.
 
@@ -22,33 +25,34 @@ def percentileOnSortedList(N, percent, key=lambda x:x):
     if N is None:
         return None
     k = (len(N)-1) * percent
+
     f = int(math.floor(k))
     c = int(math.ceil(k))
     if f == c:
         d = key(N[k])
         msg = "aligned:" 
 
-    elif INTERPOLATE=='floor':
+    elif interpolate=='floor':
         d = key(N[f])
         msg = "fractional with floor:" 
 
-    elif INTERPOLATE=='ceil':
+    elif interpolate=='ceil':
         d = key(N[c])
         msg = "fractional with ceil:" 
 
-    elif INTERPOLATE=='funky':
+    elif interpolate=='funky':
         d0 = key(N[f]) * (c-k)
         d1 = key(N[c]) * (k-f)
         d = d0+d1
         msg = "fractional with Tung(floor and ceil) :" 
     
-    elif INTERPOLATE=='linear':
+    elif interpolate=='linear':
         pctDiff = (k-f)/(c-f+0.0)
         dDiff = pctDiff * (key(N[c]) - key(N[f]))
-        d = key(N[c] + dDiff)
-        msg = "fractional with linear(floor and ceil):" 
+        d = key(N[f] + dDiff)
+        msg = "fractional %s with linear(floor and ceil):" % pctDiff
 
-    elif INTERPOLATE=='mean':
+    elif interpolate=='mean':
         d = (key(N[c]) + key(N[f])) / 2.0
         msg = "fractional with mean(floor and ceil):" 
 
@@ -59,7 +63,7 @@ def percentileOnSortedList(N, percent, key=lambda x:x):
         print "prior->", key(N[flooredK-1]), " "
     else:
         print "prior->", "<bof>"
-    print "floor->", key(N[flooredK]), " ", msg, d
+    print "floor->", key(N[flooredK]), " ", msg, 'result:', d
     if flooredK+1 < len(N):
         print " ceil->", key(N[flooredK+1])
     else:

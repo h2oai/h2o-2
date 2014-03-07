@@ -4,8 +4,25 @@ import h2o_print as h2p, h2o_summ
 import numpy as np
 import scipy as sp
 import math
-OTHER_T = 0.50
-BIN_COUNT = 100000
+OTHER_T = 0.66
+BIN_COUNT = 2
+
+# Defintion (this defn. seems odd. for the case of real quantiles, it should be a  floor, not a round up?)
+# This definition may be correct for 1-based indexing. (we do zero-based indexing in the code below, so it looks different)
+
+# For a finite population of N values indexed 1,...,N from lowest to highest, 
+# the kth q-quantile of this population can be computed via the value of I_p = N * k/q. 
+# "25th quantile":
+# If I_p is not an integer, then round up to the next integer to get the appropriate index; the corresponding data value is the kth q-quantile. 
+# If I_p is an integer then any number from the data value at that index to the data value of the next can be taken as the quantile, 
+# and it is conventional (though arbitrary) to take the average of those two values (see Estimating the quantiles).
+# "0.25 quantile"
+# If, instead of using integers k and q, the "p-quantile" is based on a real number p with 0<p<1, then p 
+# replaces k/q in the above formulae. Some software programs (including Microsoft Excel) regard the minimum and 
+# maximum as the 0th and 100th percentile, respectively; however, such terminology is an extension beyond traditional statistics definitions.
+
+
+# Multipass Binning implementatoin
 
 # might have multiple rows with that one number
 # possible answers:
@@ -104,6 +121,7 @@ def findQuantile(d, dmin, dmax, threshold):
         # ratio it down from binSize. 
         # It doesn't need to be as big as binSize.
         # implicitly, it shouldn't need to be as large as binSize
+        # can't seem to make it work yet. leave NUDGE=0
         NUDGE = 0
 
         # init to zero for each pass
@@ -155,7 +173,6 @@ def findQuantile(d, dmin, dmax, threshold):
         targetCntInt = int(math.floor(threshold * (totalRows-1)))
         targetCntFract = targetCntFull  - targetCntInt
         assert targetCntFract>=0 and targetCntFract<=1
-
         print "targetCntInt:", targetCntInt, "targetCntFract", targetCntFract
 
         k = 0
@@ -203,19 +220,20 @@ def findQuantile(d, dmin, dmax, threshold):
                 # have the "extra bin" for this
                 if nextK >= maxBinCnt:
                     assert hcnt_high!=0
-                    print "hello1:", hcnt_high_min
+                    print "Using hcnt_high_min for interpolate:", hcnt_high_min
                     nextVal = hcnt_high_min
                 else:
-                    print "hello2:", nextK
+                    print "Using nextK for interpolate:", nextK
                     assert hcnt[nextK]!=0
                     nextVal = hcnt_min[nextK]
 
-            guess = (hcnt_max[k] + nextVal) / 2.0
-            done = True # has to be one above us when needed. (or we're at end)
-            print 'k', 'hcnt_max[k]', 'nextVal'
-            print "hello3:", k, hcnt_max[k], nextVal
-            print "\nInterpolating result using nextK: %s nextVal: %s" % (nextK, nextVal)
-            print "Guess D", guess
+                guess = (hcnt_max[k] + nextVal) / 2.0
+                done = True # has to be one above us when needed. (or we're at end)
+
+                print 'k', 'hcnt_max[k]', 'nextVal'
+                print "hello3:", k, hcnt_max[k], nextVal
+                print "\nInterpolating result using nextK: %s nextVal: %s" % (nextK, nextVal)
+                print "Guess D", guess
 
         if not done:
             newValStart = hcnt_min[k] - NUDGE # FIX! should we nudge a little?
@@ -225,13 +243,13 @@ def findQuantile(d, dmin, dmax, threshold):
             # maxBinCnt is always binCount + 1, since we might cover over due to rounding/fp issues?
             newBinSize = newValRange / (desiredBinCnt + 0.0)
             newLowCount = currentCnt
-            # assert done or newBinSize!=0 and live with current guess
-            print "Saying done because newBinSize is 0."
-            print "newValRange: %s, hcnt[k]: %s hcnt_min[k]: %s hcnt_max[k]: %s" %\
-                 (newValRange, hcnt[k], hcnt_min[k], hcnt_max[k])
-
             if newBinSize==0:
+                # assert done or newBinSize!=0 and live with current guess
+                print "Assuming done because newBinSize is 0."
+                print "newValRange: %s, hcnt[k]: %s hcnt_min[k]: %s hcnt_max[k]: %s" %\
+                     (newValRange, hcnt[k], hcnt_min[k], hcnt_max[k])
                 guess = newValStart
+                print "Guess E", guess
                 done = True
 
             # if we have to interpolate
@@ -305,6 +323,7 @@ dmax = max(d)
 thresholdList = [OTHER_T]
 
 quantiles = findQuantileList(d, dmin, dmax, thresholdList)
+h2p.red_print('\nthis b result:', quantiles)
 #*****************************************************************
 # for comparison
 #*****************************************************************
