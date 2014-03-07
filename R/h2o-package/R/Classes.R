@@ -390,6 +390,28 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   x[, cols]
 }
 
+`[[<-.H2OParsedDataVA` <- function(x, i, j, value){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
+  if( !class(value) == 'H2OParsedDataVA') stop('can only append h2o data to h2o data')
+  if( ncol(value) > 1 ) stop('may only set a single column')
+  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
+
+  mm <- match.call()
+  col_name <- as.list(i)[[1]]
+
+  cc <- colnames(x)
+  if( col_name %in% cc ){
+    x[, match( col_name, cc ) ] <- value
+  } else {
+    x <- cbind(x, value)
+    cc <- c( cc, col_name )
+    colnames(x) <- cc
+  }
+  x
+}
+
+
 `[[.H2OParsedData` <- function(x, ..., exact=TRUE){
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
@@ -403,6 +425,29 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
 
   x[, cols]
 }
+
+`[[<-.H2OParsedData` <- function(x, i, j, value){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
+  if( !class(value) == 'H2OParsedData') stop('can only append h2o data to h2o data')
+  if( ncol(value) > 1 ) stop('may only set a single column')
+  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
+
+  mm <- match.call()
+  col_name <- as.list(i)[[1]]
+
+  cc <- colnames(x)
+  if( col_name %in% cc ){
+    x[, match( col_name, cc ) ] <- value
+  } else {
+    x <- cbind(x, value)
+    cc <- c( cc, col_name )
+    colnames(x) <- cc
+  }
+  x
+}
+
+
 
 
 # right now, all things must be H2OParsedData
