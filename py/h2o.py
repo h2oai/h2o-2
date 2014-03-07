@@ -1832,6 +1832,18 @@ class H2O(object):
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
+    def quantiles(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'source_key': None,
+            'column': None,
+            'quantile': None,
+            'max_qbins': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'quantiles', print_params)
+        a = self.__do_json_request('2/QuantilesPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nquantiles result:", dump_json(a))
+        return a
+
     def gbm_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             '_modelKey': model_key,
