@@ -20,11 +20,14 @@ public class QuantilesPage extends Request2 {
   public Vec column;
   class responseFilter extends VecClassSelect { responseFilter() { super("source_key"); } }
 
-  @API(help = "Quantile to calculate", filter = Default.class, dmin = 0, dmax = 1)
+  @API(help = "Quantile to calculate (0.0-1.0)", filter = Default.class, dmin = 0, dmax = 1)
   public double quantile = 0.0;
 
   @API(help = "Number of bins for quantile (1-1000000)", filter = Default.class, lmin = 1, lmax = 1000000)
   public int max_qbins = 1000;
+
+  @API(help = "Type 2 (discont.) and type 7 (cont.) are supported (like R)", filter = Default.class)
+  public int interpolation_type = 7;
 
   @API(help = "Column name.")
   String column_name;
@@ -32,11 +35,20 @@ public class QuantilesPage extends Request2 {
   @API(help = "Quantile requested.")
   double quantile_requested;
 
+  @API(help = "Interpolation type.")
+  int interpolation_type_requested;
+
+  @API(help = "False if an exact result is provided, True if the answer is interpolated.")
+  boolean interpolated;
+
+  @API(help = "Number of iterations actually performed.")
+  int iterations;
+
   @API(help = "Result.")
   double result;
 
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='SummaryPage2.query?source=%$key'>"+content+"</a>");
+    RString rs = new RString("<a href='QuantilesPage.query?source=%$key'>"+content+"</a>");
     rs.replace("key", k.toString());
     return rs.toString();
   }
@@ -46,6 +58,9 @@ public class QuantilesPage extends Request2 {
     if( column == null ) return RequestServer._http404.serve();
     if (column.isEnum()) {
       throw new IllegalArgumentException("Column is an enum");
+    }
+    if (! ((interpolation_type == 2) || (interpolation_type == 7))) {
+      throw new IllegalArgumentException("Unsupported interpolation type");
     }
 
     Vec[] vecs = new Vec[1];
@@ -65,6 +80,7 @@ public class QuantilesPage extends Request2 {
       summaries[0].finishUp(vecs[0]);
       column_name = summaries[0].colname;
       quantile_requested = summaries[0].DEFAULT_PERCENTILES[0];
+      interpolation_type_requested = interpolation_type;
       result = summaries[0]._pctile[0];
     }
 
