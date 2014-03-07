@@ -568,8 +568,8 @@ public class DTree extends Iced {
     public TreeModel(TreeModel prior, DTree[] trees, TreeStats tstats) {
       this(prior, append(prior.treeBits, trees), null, null, tstats, null, null);
     }
-    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm) {
-      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, null, null);
+    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD) {
+      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, varimpSD);
     }
 
     public TreeModel(TreeModel prior, float[] varimp, float[] varimpSD) {
@@ -798,7 +798,7 @@ public class DTree extends Iced {
       final int _nclass;
       final long _seed;
       public CompressedTree( byte [] bits, int nclass, long seed ) { _bits = bits; _nclass = nclass; _seed = seed; }
-      float score( final double row[] ) {
+      public float score( final double row[] ) {
         AutoBuffer ab = new AutoBuffer(_bits);
         while(true) {
           int nodeType = ab.get1();
