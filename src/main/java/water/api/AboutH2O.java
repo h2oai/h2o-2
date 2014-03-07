@@ -2,12 +2,12 @@ package water.api;
 
 import water.AbstractBuildVersion;
 import water.H2O;
-import water.util.Log;
 
 /**
  * Print some information about H2O.
  */
 public class AboutH2O extends HTMLOnlyRequest {
+  @Override
   protected String build(Response response) {
     AbstractBuildVersion abv = H2O.getBuildVersion();
     String build_branch = abv.branchName();
