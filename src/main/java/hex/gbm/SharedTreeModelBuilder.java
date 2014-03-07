@@ -12,8 +12,7 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
-import water.util.MRUtils;
-import water.util.Utils;
+import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -221,9 +220,18 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Double update - after scoring
     model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
-                      sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null));
+                      sc==null ? null : (_nclass>1  ? new ConfusionMatrix(sc._cm) : null),
+                      sc==null ? null : (_nclass==2 ? toCMArray(sc._cms) : null)
+                     );
     model.update(self());
     return model;
+  }
+
+  ConfusionMatrix[] toCMArray(long[][][] cms) {
+    int n = cms.length;
+    ConfusionMatrix[] res = new ConfusionMatrix[n];
+    for (int i = 0; i < n; i++) res[i] = new ConfusionMatrix(cms[i]);
+    return res;
   }
 
   // --------------------------------------------------------------------------
@@ -566,6 +574,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     /* @OUT */ long    _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     /* @OUT */ double  _sum;                           // Sum-squared-error
     /* @OUT */ long    _snrows;                        // Count of voted-on rows
+    /* @OUT */ long    _cms[/*threshold*/][/*actual*/][/*predicted*/]; // Compute CM per threshold for binary classifiers
     /* @IN */  boolean _oob;
     /* @IN */  boolean _validation;
     /* @IN */  int     _cmlen;
@@ -637,6 +646,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       Chunk ays = _cavr ? chks[_ncols+1+_nclass+1] : ys; // Remember adapted response
       _cm = new long[_cmlen][_cmlen];
       float fs[] = new float[_nclass+1]; // Array to hold prediction and distribution given by the model.
+      // For binary classifier allocate cms for individual thresholds
+      _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
         if( ays.isNA0(row) ) continue; // Ignore missing response vars only if it was actual NA
@@ -675,11 +686,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         assert !Double.isNaN(_sum);
         // Pick highest prob for our prediction.
         if (_nclass > 1) { // fill CM only for classification
-          /*
           if(_nclass == 2) { // Binomial classification -> compute AUC, draw ROC
-            for(int i = 0; i < _cms.length; ++i)
-              _cms[i].add(yact, ( (1 - (fs[yact+1] / sum) )>= DEFAULT_THRESHOLDS[i])?1:0);
-          }*/
+            for(int i = 0; i < _cms.length; i++)
+              _cms[i][yact][( (1 - (fs[yact+1] / sum) ) >= ModelUtils.DEFAULT_THRESHOLDS[i]) ? 1 : 0]++;
+          }
           int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
           _cm[yact][ypred]++;      // actual v. predicted
         }
@@ -687,7 +697,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       }
     }
 
-    @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); _snrows += t._snrows;}
+    @Override public void reduce( Score t ) {
+      _sum += t._sum;
+      Utils.add(_cm,t._cm);
+      _snrows += t._snrows;
+      if (_cms!=null)
+        for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], t._cms[i]);
+    }
 
     public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
@@ -718,7 +734,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract TM buildModel( TM initialModel, Frame fr, String names[], String domains[][], Timer t_build );
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, ConfusionMatrix[] auccms);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
