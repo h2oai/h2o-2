@@ -231,6 +231,10 @@ public class Quantiles extends Iced {
 
   public void finishUp(Vec vec) {
     nacnt = _stat0._nas;
+    // below, we force it to ignore length and only do [0]
+    // need to figure out if we need to do a list and how that's returned
+    _pctile = new double[DEFAULT_PERCENTILES.length];
+
     if (_type == T_ENUM) {
       // Compute majority items for enum data
       computeMajorities();
