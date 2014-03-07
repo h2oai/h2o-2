@@ -891,13 +891,11 @@ h2o.predict <- function(object, newdata) {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
     new("H2OParsedDataVA", h2o=object@data@h2o, key=res$key)
-    # new("H2OPredDataVA", h2o=object@data@h2o, key=res$key, model=object, data=newdata)
   } else if(class(object) == "H2OKMeansModelVA") {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
     .h2o.__waitOnJob(object@data@h2o, res$response$redirect_request_args$job)
     res2 = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$destination_key)
     new("H2OParsedDataVA", h2o=object@data@h2o, key=res2$key)
-    # new("H2OPredDataVA", h2o=object@data@h2o, key=res2$key, model=object, data=newdata)
   } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel")) {
     # Set randomized prediction key
     key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
@@ -906,7 +904,6 @@ h2o.predict <- function(object, newdata) {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
     new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
-    # new("H2OPredData", h2o=object@data@h2o, key=rand_pred_key, model=object, data=newdata)
   } else if(class(object) == "H2OPCAModel") {
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
@@ -915,7 +912,6 @@ h2o.predict <- function(object, newdata) {
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
     new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
-    # new("H2OPredData", h2o=object@data@h2o, key=rand_pred_key, model=object, data=newdata)
   } else
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
@@ -929,6 +925,46 @@ h2o.confusionMatrix <- function(data, reference) {
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CONFUSION, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0)
   cm = lapply(res$cm[-length(res$cm)], function(x) { x[-length(x)] })
   .build_cm(cm, res$actual_domain, res$predicted_domain, transpose = FALSE)
+}
+
+h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+  if(!class(reference) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("reference must be an H2O parsed dataset")
+  if(ncol(data) != 1) stop("Must specify exactly one column for data")
+  if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
+  if(!measure %in% c("F1", "accuracy", "precision", "recall", "specificity", "max_per_class_error"))
+    stop("measure must be one of [F1, accuracy, precision, recall, specificity, max_per_class_error]")
+  if(!missing(thresholds) && !is.numeric(thresholds)) stop("thresholds must be a numeric vector")
+  
+  criterion = switch(measure, F1 = "maximum_F1", accuracy = "maximum_Accuracy", precision = "maximum_Precision", 
+                     recall = "maximum_Recall", specificity = "maximum_Specificity", max_per_class_error = "minimizing_max_per_class_Error")
+  if(missing(thresholds))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, threshold_criterion = criterion)
+  else
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, thresholds = .seq_to_string(thresholds), threshold_criterion = criterion)
+
+  result = list()
+  result$auc = res$AUC
+  result$gini = res$Gini
+  idx = which(gsub("_", " ", criterion) == res$threshold_criteria)
+  result$best_cutoff = res$threshold_for_criteria[[idx]]
+  result$F1 = res$F1_for_criteria[[idx]]
+  result$accuracy = res$accuracy_for_criteria[[idx]]
+  result$precision = res$precision_for_criteria[[idx]]
+  result$recall = res$recall_for_criteria[[idx]]
+  result$specificity = res$specificity_for_criteria[[idx]]
+  result$max_per_class_err = res$max_per_class_error_for_criteria[[idx]]
+  result = lapply(result, function(x) { if(x == "NaN") x = NaN; return(x) })   # HACK: NaN's are returned as strings, not numeric values
+  
+  # Note: Currently, Java assumes actual_domain = predicted_domain, but this may not always be true. Need to fix.
+  result$confusion = .build_cm(res$confusion_matrix_for_criteria[[idx]], res$actual_domain)
+  perf = new("H2OPerfModel", cutoffs = res$thresholds, measure = as.numeric(res[[measure]]), perf = measure, model = result)
+}
+
+plot.H2OPerfModel <- function(x, ...) {
+  xaxis = "Cutoff"; yaxis = .toupperFirst(x@perf)
+  plot(x@cutoffs, x@measure, main = paste(yaxis, "vs.", xaxis), xlab = xaxis, ylab = yaxis, ...)
+  abline(v = x@model$best_cutoff, lty = 2)
 }
 
 # ------------------------------- Helper Functions ---------------------------------------- #
@@ -1028,4 +1064,8 @@ h2o.confusionMatrix <- function(data, reference) {
       return(paste(min(vec), max(vec), vec_diff[1], sep = ":"))
   }
   return(paste(vec, collapse = ","))
+}
+
+.toupperFirst <- function(str) {
+  paste(toupper(substring(str, 1, 1)), substring(str, 2), sep = "")
 }
