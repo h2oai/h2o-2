@@ -562,7 +562,7 @@ public class DTree extends Iced {
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
       if (varimpSD != null) this.varimpSD  = varimpSD; else this.varimpSD  = prior.varimpSD;
-      if (cms      != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
+      if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
     }
 
     public TreeModel(TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {

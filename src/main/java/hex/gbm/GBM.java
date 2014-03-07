@@ -98,8 +98,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
     return new GBMModel(outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
   }
-  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, ConfusionMatrix[] auccms) {
-    return new GBMModel(model, err, cm, auccms!=null ? new water.api.AUC(auccms, ModelUtils.DEFAULT_THRESHOLDS) : null);
+  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, water.api.AUC validAUC) {
+    return new GBMModel(model, err, cm, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
     return new GBMModel(model, ktrees, tstats);
