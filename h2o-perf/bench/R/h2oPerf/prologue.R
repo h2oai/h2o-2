@@ -210,6 +210,18 @@ function(pkey, dataPath) {
 }
 
 #Modeling
+runSummary.VA<-
+function() {
+  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  summary(data)
+}
+
+runSummary.FV<-
+function() {
+  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
+  summary(data)
+}
+
 runGBM<-
 function(x, y, distribution='multinomial', 
          n.trees=10, interaction.depth=5, 

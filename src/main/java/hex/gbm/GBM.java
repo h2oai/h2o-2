@@ -10,11 +10,8 @@ import water.api.DocGen;
 import water.api.GBMProgressPage;
 import water.fvec.Chunk;
 import water.fvec.Frame;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.RString;
-import water.util.SB;
-import water.util.Utils;
 
 import java.util.Arrays;
 
@@ -50,8 +47,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       super(prior, trees, tstats);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm) {
-      super(prior, err, cm);
+    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm, water.api.AUC validAUC) {
+      super(prior, err, cm, validAUC);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
 
@@ -101,8 +98,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
     return new GBMModel(outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
   }
-  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm) {
-    return new GBMModel(model, err, cm);
+  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, water.api.AUC validAUC) {
+    return new GBMModel(model, err, cm, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
     return new GBMModel(model, ktrees, tstats);
