@@ -119,7 +119,7 @@ function() {
   f <- function(it) {
     return(grepl(it, path))
   }
-  pa <- sapply(c("Parse", "Model", "Predict"), f)
+  pa <- sapply(c("parse", "model", "predict"), f)
   phase <<- tolower(names(pa[pa == TRUE]))
   if(phase == "parse") {
     if (file.exists(".RData")) file.remove(".RData")

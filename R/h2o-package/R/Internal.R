@@ -112,6 +112,7 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__HACK_SETCOLNAMES = "SetColumnNames.json"
 .h2o.__HACK_SETCOLNAMES2 = "2/SetColumnNames2.json"
 .h2o.__PAGE_CONFUSION = "2/ConfusionMatrix.json"
+.h2o.__PAGE_AUC = "2/AUC.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"

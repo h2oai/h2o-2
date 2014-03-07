@@ -1,7 +1,6 @@
 package hex.glm;
 
 import hex.FrameTask.DataInfo;
-import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
@@ -19,17 +18,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  @API(help="lambda max, smallest lambda which drives all coefficients to zero")
+  final double  lambda_max;
   @API(help="mean of response in the training dataset")
   final double     ymu;
 
   @API(help="job key assigned to the job building this model")
   final Key job_key;
-
-  @API(help="predicate applied to the response column to turn it into 0/1")
-  final CaseMode  _caseMode;
-
-  @API(help="value used to co compare agains using case-predicate to turn the response into 0/1")
-  final double _caseVal;
 
   @API(help="Input data info")
   DataInfo data_info;
@@ -71,6 +66,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
+    if(warnings != null)res.warnings = warnings.clone();
     return res;
   }
 
@@ -146,7 +142,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
+  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
     super(selfKey,null,dinfo._adaptedFrame);
     job_key = jobKey;
     this.ymu = ymu;
@@ -155,10 +151,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     this.data_info = dinfo;
     this.warnings = null;
     this.alpha = alpha;
+    this.lambda_max = lambda_max;
     this.lambdas = lambda;
     this.beta_eps = beta_eps;
-    _caseVal = caseVal;
-    _caseMode = caseMode;
     submodels = new Submodel[lambda.length];
     for(int i = 0; i < submodels.length; ++i)
       submodels[i] = new Submodel(null, null, 0, 0);
@@ -239,8 +234,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         }
         _model.score0(row, preds,_lambdaIdx);
         double response = chunks[chunks.length-1].at0(i);
-        if(_model._caseMode != CaseMode.none)
-          response = _model._caseMode.isCase(response, _model._caseVal)?1:0;
         _res.add(response, _model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
       _res.avg_err /= _res.nobs;
@@ -278,8 +271,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         final GLMValidation val = _xvals[mid];
         model.score0(row, preds);
         double response = chunks[chunks.length-1].at80(i);
-        if(model._caseMode != CaseMode.none)
-          response = model._caseMode.isCase(response, model._caseVal)?1:0;
         val.add(response, model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
       for(GLMValidation val:_xvals)

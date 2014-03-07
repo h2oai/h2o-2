@@ -125,6 +125,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new Parse2());
       registerRequest(new Inspect2());
       registerRequest(new SummaryPage2());
+      registerRequest(new QuantilesPage());
       registerRequest(new hex.LR2());
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
@@ -133,6 +134,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
@@ -281,6 +283,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith(".png")) return;
       if (uri.endsWith(".ico")) return;
       if (uri.startsWith("/Typeahead")) return;
+      if (uri.startsWith("/2/Typeahead")) return;
       if (uri.startsWith("/Cloud.json")) return;
       if (uri.endsWith("LogAndEcho.json")) return;
       if (uri.contains("Progress")) return;

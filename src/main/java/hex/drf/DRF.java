@@ -82,8 +82,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-    private DRFModel(DRF params, DRFModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD) {
-      super(prior, err, cm, varimp, varimpSD);
+    private DRFModel(DRF params, DRFModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, ConfusionMatrix[] auccms) {
+      super(prior, err, cm, varimp, varimpSD, auccms);
       this.parameters = params;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
@@ -124,8 +124,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
     return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
   }
-  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD) {
-    return new DRFModel(this, model, err, cm, varimp, varimpSD);
+  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, ConfusionMatrix[] auccms) {
+    return new DRFModel(this, model, err, cm, varimp, varimpSD, auccms);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
     return new DRFModel(this, model, ktrees, tstats);

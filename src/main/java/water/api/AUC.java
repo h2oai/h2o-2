@@ -9,6 +9,7 @@ import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Utils;
 
 import java.util.HashSet;
 
@@ -35,10 +36,10 @@ public class AUC extends Request2 {
   @API(help = "Thresholds (optional, e.g. 0:1:0.01 or 0.0,0.2,0.4,0.6,0.8,1.0).", required = false, filter = Default.class, json = true)
   public float[] thresholds;
 
-  @API(help = "Criterion for choosing optimal threshold", filter = Default.class, json = true)
+  @API(help = "Threshold criterion", filter = Default.class, json = true)
   public ThresholdCriterion threshold_criterion = ThresholdCriterion.maximum_F1;
 
-  enum ThresholdCriterion {
+  public enum ThresholdCriterion {
     maximum_F1,
     maximum_Accuracy,
     maximum_Precision,
@@ -49,33 +50,83 @@ public class AUC extends Request2 {
 
   @API(help="domain of the actual response")
   private String [] actual_domain;
-  @API(help="AUC")
+  @API(help="AUC (ROC)")
   public double AUC;
+  @API(help="Gini")
+  public double Gini;
 
-  @API(help="F1 values at thresholds")
+  @API(help = "Confusion Matrices for all thresholds")
+  public long[][][] confusion_matrices;
+  @API(help = "F1 for all thresholds")
   public float[] F1;
-  @API(help="Classification errors at thresholds")
-  public float[] err;
+  @API(help = "Accuracy for all thresholds")
+  public float[] accuracy;
+  @API(help = "Precision for all thresholds")
+  public float[] precision;
+  @API(help = "Recall for all thresholds")
+  public float[] recall;
+  @API(help = "Specificity for all thresholds")
+  public float[] specificity;
+  @API(help = "Max per class error for all thresholds")
+  public float[] max_per_class_error;
+
   @API(help="Threshold criteria")
   String[] threshold_criteria;
-  @API(help="Optimal thresholds (for different threshold criteria)")
-  private float[] optimal_thresholds;
-  @API(help="Confusion Matrices (for different threshold criteria")
-  private long[][][] optimal_cms;
+  @API(help="Optimal thresholds for criteria")
+  private float[] threshold_for_criteria;
+  @API(help="F1 for threshold criteria")
+  private float[] F1_for_criteria;
+  @API(help="Accuracy for threshold criteria")
+  private float[] accuracy_for_criteria;
+  @API(help="Precision for threshold criteria")
+  private float[] precision_for_criteria;
+  @API(help="Recall for threshold criteria")
+  private float[] recall_for_criteria;
+  @API(help="Specificity for threshold criteria")
+  private float[] specificity_for_criteria;
+  @API(help="Maximum per class Error for threshold criteria")
+  private float[] max_per_class_error_for_criteria;
+  @API(help="Confusion Matrices for threshold criteria")
+  private long[][][] confusion_matrix_for_criteria;
+
+  /**
+   * Clean out large JSON fields. Only keep AUC and Gini. Useful for models that score often.
+   */
+  public void clear() {
+    actual_domain = null;
+    threshold_criteria = null;
+    thresholds = null;
+    confusion_matrices = null;
+    F1 = null;
+    accuracy = null;
+    precision = null;
+    recall = null;
+    specificity = null;
+    max_per_class_error = null;
+    threshold_for_criteria = null;
+    F1_for_criteria = null;
+    accuracy_for_criteria = null;
+    precision_for_criteria = null;
+    recall_for_criteria = null;
+    specificity_for_criteria = null;
+    max_per_class_error_for_criteria = null;
+    confusion_matrix_for_criteria = null;
+  }
 
   /* Independent on thresholds */
   public double AUC() { return AUC; }
-  public double Gini() { return 2*AUC-1; }
+  public double Gini() { return Gini; }
 
   /* Return the metrics for given criterion */
-  public double F1(ThresholdCriterion criter) { return F1[criter.ordinal()]; }
+  public double F1(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].F1(); }
   public double err(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].err(); }
   public double precision(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].precision(); }
   public double recall(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].recall(); }
   public double specificity(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].specificity(); }
   public double accuracy(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].accuracy(); }
-  public float threshold(ThresholdCriterion criter) { return optimal_thresholds[criter.ordinal()]; }
-  public long[][] cm(ThresholdCriterion criter) { return optimal_cms[criter.ordinal()]; }
+  public double max_per_class_error(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].max_per_class_error(); }
+  public float threshold(ThresholdCriterion criter) { return threshold_for_criteria[criter.ordinal()]; }
+  public long[][] cm(ThresholdCriterion criter) { return confusion_matrix_for_criteria[criter.ordinal()]; }
 
 
   /* Return the metrics for chosen threshold criterion */
@@ -85,6 +136,7 @@ public class AUC extends Request2 {
   public double recall() { return recall(threshold_criterion); }
   public double specificity() { return specificity(threshold_criterion); }
   public double accuracy() { return accuracy(threshold_criterion); }
+  public double max_per_class_error() { return max_per_class_error(threshold_criterion); }
   public float threshold() { return threshold(threshold_criterion); }
   public long[][] cm() { return cm(threshold_criterion); }
   public ConfusionMatrix CM() { return _cms[idxCriter[threshold_criterion.ordinal()]]; }
@@ -107,9 +159,13 @@ public class AUC extends Request2 {
    * @param thresh Thresholds
    */
   public AUC(hex.ConfusionMatrix[] cms, float[] thresh) {
-    assert(_cms.length == thresholds.length);
     _cms = cms;
     thresholds = thresh;
+    assert(_cms.length == thresholds.length):("incompatible lengths of thresholds and confusion matrices: " + _cms.length + " != " + thresholds.length);
+    // compute AUC and best thresholds
+    computeAUC();
+    findBestThresholds();
+    computeMetrics();
   }
 
   @Override public Response serve() {
@@ -134,7 +190,11 @@ public class AUC extends Request2 {
       }
 
       // compute thresholds, if not user-given
-      if (thresholds == null) {
+      if (thresholds != null) {
+        if (_cms == null) sort(thresholds); //otherwise assume that thresholds and CMs are in the same order
+        if (Utils.minValue(thresholds) < 0) throw new InvalidArgumentException("Minimum threshold cannot be negative.");
+        if (Utils.maxValue(thresholds) > 1) throw new InvalidArgumentException("Maximum threshold cannot be greater than 1.");
+      } else {
         HashSet hs = new HashSet();
         final int bins = (int)Math.min(vpredict.length(), 200l);
         final long stride = Math.max(vpredict.length() / bins, 1);
@@ -148,13 +208,16 @@ public class AUC extends Request2 {
         sort(thresholds);
       }
       // compute CMs
-      if (_cms == null) {
+      if (_cms != null) {
+        if (_cms.length != thresholds.length) throw new InvalidArgumentException("Number of thresholds differs from number of confusion matrices.");
+      } else {
         AUCTask at = new AUCTask(thresholds).doAll(va,vp);
         _cms = at.getCMs();
       }
       // compute AUC and best thresholds
       computeAUC();
       findBestThresholds();
+      computeMetrics();
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -184,6 +247,7 @@ public class AUC extends Request2 {
     AUC += trapezoid_area(FPR_pre, 0, TPR_pre, 0);
     assert(AUC > -1e-5 && AUC < 1.+1e-5); //check numerical sanity
     AUC = Math.max(0., Math.min(AUC, 1.)); //clamp to 0...1
+    Gini = 2*AUC-1;
   }
 
   /* return true if a is better than b with respect to criterion criter */
@@ -200,7 +264,7 @@ public class AUC extends Request2 {
     } else if (criter == ThresholdCriterion.maximum_Accuracy) {
       return a.accuracy() > b.accuracy();
     } else if (criter == ThresholdCriterion.minimizing_max_per_class_Error) {
-      return (Math.max(a.classErr(0),a.classErr(1)) < Math.max(b.classErr(0), b.classErr(1)));
+      return a.max_per_class_error() < b.max_per_class_error();
     } else if (criter == ThresholdCriterion.maximum_Specificity) {
       return (!Double.isNaN(a.specificity()) &&
               (Double.isNaN(b.specificity()) || a.specificity() > b.specificity()));
@@ -218,26 +282,56 @@ public class AUC extends Request2 {
       hs.add(criter);
       threshold_criteria[i++] = criter.toString().replace("_", " ");
     }
-    optimal_cms = new long[hs.size()][][];
+    confusion_matrix_for_criteria = new long[hs.size()][][];
     idxCriter = new int[hs.size()];
-    optimal_thresholds = new float[hs.size()];
-    F1 = new float[hs.size()];
-    err = new float[hs.size()];
+    threshold_for_criteria = new float[hs.size()];
+    F1_for_criteria = new float[hs.size()];
+    accuracy_for_criteria = new float[hs.size()];
+    precision_for_criteria = new float[hs.size()];
+    recall_for_criteria = new float[hs.size()];
+    specificity_for_criteria = new float[hs.size()];
+    max_per_class_error_for_criteria = new float[hs.size()];
 
     for (ThresholdCriterion criter : hs) {
       final int id = criter.ordinal();
       idxCriter[id] = 0;
-      optimal_thresholds[id] = thresholds[0];
+      threshold_for_criteria[id] = thresholds[0];
       for(i = 1; i < _cms.length; ++i) {
         if (isBetter(_cms[i], _cms[idxCriter[id]], criter)) {
           idxCriter[id] = i;
-          optimal_thresholds[id] = thresholds[i];
+          threshold_for_criteria[id] = thresholds[i];
         }
       }
       // Set members for JSON, float to save space
-      optimal_cms[id] = _cms[idxCriter[id]]._arr;
-      F1[id] = (float)_cms[idxCriter[id]].F1();
-      err[id] = (float)_cms[idxCriter[id]].err();
+      confusion_matrix_for_criteria[id] = _cms[idxCriter[id]]._arr;
+      F1_for_criteria[id] = (float)_cms[idxCriter[id]].F1();
+      accuracy_for_criteria[id] = (float)_cms[idxCriter[id]].accuracy();
+      precision_for_criteria[id] = (float)_cms[idxCriter[id]].precision();
+      recall_for_criteria[id] = (float)_cms[idxCriter[id]].recall();
+      specificity_for_criteria[id] = (float)_cms[idxCriter[id]].specificity();
+      max_per_class_error_for_criteria[id] = (float)_cms[idxCriter[id]].max_per_class_error();
+    }
+  }
+
+  /**
+   * Populate requested JSON fields
+   */
+  private void computeMetrics() {
+    confusion_matrices = new long[_cms.length][][];
+    if (threshold_criterion == ThresholdCriterion.maximum_F1) F1 = new float[_cms.length];
+    if (threshold_criterion == ThresholdCriterion.maximum_Accuracy) accuracy = new float[_cms.length];
+    if (threshold_criterion == ThresholdCriterion.maximum_Precision) precision = new float[_cms.length];
+    if (threshold_criterion == ThresholdCriterion.maximum_Recall) recall = new float[_cms.length];
+    if (threshold_criterion == ThresholdCriterion.maximum_Specificity) specificity = new float[_cms.length];
+    if (threshold_criterion == ThresholdCriterion.minimizing_max_per_class_Error) max_per_class_error = new float[_cms.length];
+    for(int i=0;i<_cms.length;++i) {
+      confusion_matrices[i] = _cms[i]._arr;
+      if (threshold_criterion == ThresholdCriterion.maximum_F1) F1[i] = (float)_cms[i].F1();
+      if (threshold_criterion == ThresholdCriterion.maximum_Accuracy) accuracy[i] = (float)_cms[i].accuracy();
+      if (threshold_criterion == ThresholdCriterion.maximum_Precision) precision[i] = (float)_cms[i].precision();
+      if (threshold_criterion == ThresholdCriterion.maximum_Recall) recall[i] = (float)_cms[i].recall();
+      if (threshold_criterion == ThresholdCriterion.maximum_Specificity) specificity[i] = (float)_cms[i].specificity();
+      if (threshold_criterion == ThresholdCriterion.minimizing_max_per_class_Error) max_per_class_error[i] = (float)_cms[i].max_per_class_error();
     }
   }
 
@@ -258,12 +352,13 @@ public class AUC extends Request2 {
     sb.append("];\n");
     sb.append("var criterion = " + threshold_criterion.ordinal() + ";\n"); //which one
     sb.append("var criteria = ["); for(String c:threshold_criteria) sb.append("\"" + c + "\","); sb.append(" ];\n");
-    sb.append("var thresholds = ["); for(double t:optimal_thresholds) sb.append((float)t + ","); sb.append(" ];\n");
+    sb.append("var thresholds = ["); for(double t: threshold_for_criteria) sb.append((float)t + ","); sb.append(" ];\n");
     sb.append("var F1_values = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].F1() + ","); sb.append(" ];\n");
     sb.append("var accuracy = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].accuracy() + ","); sb.append(" ];\n");
     sb.append("var precision = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].precision() + ","); sb.append(" ];\n");
     sb.append("var recall = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].recall() + ","); sb.append(" ];\n");
     sb.append("var specificity = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].specificity() + ","); sb.append(" ];\n");
+    sb.append("var max_per_class_error = ["); for(int i=0;i<_cms.length;++i) sb.append((float)_cms[i].max_per_class_error() + ","); sb.append(" ];\n");
     sb.append("var idxCriter = ["); for(int i:idxCriter) sb.append(i + ","); sb.append(" ];\n");
     sb.append("</script>\n");
 
@@ -283,6 +378,7 @@ public class AUC extends Request2 {
     sb.append("<th>Precision  </th>");
     sb.append("<th>Recall     </th>");
     sb.append("<th>Specificity</th>");
+    sb.append("<th>Max per class Error</th>");
     sb.append("<tr class='warning'>");
     sb.append("<td>" + String.format("%.5f", AUC()) + "</td>"
             + "<td>" + String.format("%.5f", Gini()) + "</td>"
@@ -292,6 +388,7 @@ public class AUC extends Request2 {
             + "<td id='precision'>" + String.format("%.7f", precision()) + "</td>"
             + "<td id='recall'>" + String.format("%.7f", recall()) + "</td>"
             + "<td id='specificity'>" + String.format("%.7f", specificity()) + "</td>"
+            + "<td id='max_per_class_error'>" + String.format("%.7f", max_per_class_error()) + "</td>"
     );
     DocGen.HTML.arrayTail(sb);
 //    sb.append("<div id='BestConfusionMatrix'>");
@@ -318,6 +415,7 @@ public class AUC extends Request2 {
     sb.append("\t" + "document.getElementById('precision').innerHTML = precision[i];\n");
     sb.append("\t" + "document.getElementById('recall').innerHTML = recall[i];\n");
     sb.append("\t" + "document.getElementById('specificity').innerHTML = specificity[i];\n");
+    sb.append("\t" + "document.getElementById('max_per_class_error').innerHTML = max_per_class_error[i];\n");
     sb.append("\t" + "update(dataset);\n");
     sb.append("}\n");
     sb.append("function set_criterion(i, idx){\n");
@@ -338,8 +436,11 @@ public class AUC extends Request2 {
     sb.append("AUC: " + String.format("%.5f", AUC()));
     sb.append(", Gini: " + String.format("%.5f", Gini()));
     sb.append(", F1: " + String.format("%.5f", F1()));
+    sb.append(", Accuracy: " + String.format("%.5f", accuracy()));
+    sb.append(", Precision: " + String.format("%.5f", precision()));
+    sb.append(", Recall: " + String.format("%.5f", recall()));
+    sb.append(", Specificity: " + String.format("%.5f", specificity()));
     sb.append(", Threshold for " + threshold_criterion.toString().replace("_", " ") + ": " + String.format("%g", threshold()));
-    sb.append(", Classification Error: " + String.format("%.5f", err()));
     return AUC();
   }
 
@@ -496,7 +597,7 @@ public class AUC extends Request2 {
                     "  else if (i == activeIdx) {\n"+
                     "    return \"green\"\n"+
                     "  }\n" +
-                    "  else if (d[0] != d[1] && d[0] != 0) {\n"+
+                    "  else if (d[0] != d[1] || d[0] == 0 || d[1] == 0) {\n"+
                     "    return \"blue\"\n"+
                     "  }\n" +
                     "  else {\n"+
@@ -510,7 +611,7 @@ public class AUC extends Request2 {
                     "  else if (i == activeIdx) {\n"+
                     "    return 6\n"+
                     "  }\n" +
-                    "  else if (d[0] != d[1] && d[0] != 0) {\n"+
+                    "  else if (d[0] != d[1] || d[0] == 0 || d[1] == 0) {\n"+
                     "    return 1.5\n"+
                     "  }\n"+
                     "  else {\n"+

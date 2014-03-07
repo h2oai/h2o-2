@@ -927,6 +927,46 @@ h2o.confusionMatrix <- function(data, reference) {
   .build_cm(cm, res$actual_domain, res$predicted_domain, transpose = FALSE)
 }
 
+h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+  if(!class(reference) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("reference must be an H2O parsed dataset")
+  if(ncol(data) != 1) stop("Must specify exactly one column for data")
+  if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
+  if(!measure %in% c("F1", "accuracy", "precision", "recall", "specificity", "max_per_class_error"))
+    stop("measure must be one of [F1, accuracy, precision, recall, specificity, max_per_class_error]")
+  if(!missing(thresholds) && !is.numeric(thresholds)) stop("thresholds must be a numeric vector")
+  
+  criterion = switch(measure, F1 = "maximum_F1", accuracy = "maximum_Accuracy", precision = "maximum_Precision", 
+                     recall = "maximum_Recall", specificity = "maximum_Specificity", max_per_class_error = "minimizing_max_per_class_Error")
+  if(missing(thresholds))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, threshold_criterion = criterion)
+  else
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, thresholds = .seq_to_string(thresholds), threshold_criterion = criterion)
+
+  result = list()
+  result$auc = res$AUC
+  result$gini = res$Gini
+  idx = which(gsub("_", " ", criterion) == res$threshold_criteria)
+  result$best_cutoff = res$threshold_for_criteria[[idx]]
+  result$F1 = res$F1_for_criteria[[idx]]
+  result$accuracy = res$accuracy_for_criteria[[idx]]
+  result$precision = res$precision_for_criteria[[idx]]
+  result$recall = res$recall_for_criteria[[idx]]
+  result$specificity = res$specificity_for_criteria[[idx]]
+  result$max_per_class_err = res$max_per_class_error_for_criteria[[idx]]
+  result = lapply(result, function(x) { if(x == "NaN") x = NaN; return(x) })   # HACK: NaN's are returned as strings, not numeric values
+  
+  # Note: Currently, Java assumes actual_domain = predicted_domain, but this may not always be true. Need to fix.
+  result$confusion = .build_cm(res$confusion_matrix_for_criteria[[idx]], res$actual_domain)
+  perf = new("H2OPerfModel", cutoffs = res$thresholds, measure = as.numeric(res[[measure]]), perf = measure, model = result)
+}
+
+plot.H2OPerfModel <- function(x, ...) {
+  xaxis = "Cutoff"; yaxis = .toupperFirst(x@perf)
+  plot(x@cutoffs, x@measure, main = paste(yaxis, "vs.", xaxis), xlab = xaxis, ylab = yaxis, ...)
+  abline(v = x@model$best_cutoff, lty = 2)
+}
+
 # ------------------------------- Helper Functions ---------------------------------------- #
 # Used to verify data, x, y and turn into the appropriate things
 .verify_dataxy <- function(data, x, y) {
@@ -1024,4 +1064,8 @@ h2o.confusionMatrix <- function(data, reference) {
       return(paste(min(vec), max(vec), vec_diff[1], sep = ":"))
   }
   return(paste(vec, collapse = ","))
+}
+
+.toupperFirst <- function(str) {
+  paste(toupper(substring(str, 1, 1)), substring(str, 2), sep = "")
 }

@@ -100,12 +100,6 @@ h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, f
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, alpha = 0.1)
-
-# Run GLM of IsDepDelayed ~ Distance + Origin + Dest + UniqueCarrier on airlines dataset in HDFS
-airlines.hex =  h2o.importURL(localH2O, path = paste("https://raw.github.com", 
-  "0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip", sep = "/"), version = 2)
-h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', 
-  family = 'binomial', data = airlines.hex, version = 2)
 h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
