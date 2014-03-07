@@ -32,7 +32,6 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     .h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!.h2o.__isDone(data@h2o, "GBM", res)) { Sys.sleep(1) }
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBMModelView, '_modelKey'=res$destination_key)
-    
     result = .h2o.__getGBMResults(res2$gbm_model, params)
     new("H2OGBMModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
@@ -71,6 +70,12 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
     result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
+
+    if(!is.null(res$validAUC)) {
+      tmp <- .h2o.__getPerfResults(res$validAUC)
+      tmp$confusion <- NULL
+      result <- c(result, tmp)
+    }
   } else
     result$classification <- F
 
@@ -943,10 +948,19 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   else
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, thresholds = .seq_to_string(thresholds), threshold_criterion = criterion)
 
+  meas = as.numeric(res[[measure]])
+  result = .h2o.__getPerfResults(res, criterion)
+  new("H2OPerfModel", cutoffs = res$thresholds, measure = meas, perf = measure, model = result)
+}
+
+.h2o.__getPerfResults <- function(res, criterion) {
+  if(missing(criterion)) criterion = res$threshold_criterion
+  criterion = gsub("_", " ", res$threshold_criterion)    # Note: For some reason, underscores turned into spaces in JSON threshold_criteria
+  idx = which(criterion == res$threshold_criteria)
+  
   result = list()
   result$auc = res$AUC
   result$gini = res$Gini
-  idx = which(gsub("_", " ", criterion) == res$threshold_criteria)
   result$best_cutoff = res$threshold_for_criteria[[idx]]
   result$F1 = res$F1_for_criteria[[idx]]
   result$accuracy = res$accuracy_for_criteria[[idx]]
@@ -958,10 +972,13 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   
   # Note: Currently, Java assumes actual_domain = predicted_domain, but this may not always be true. Need to fix.
   result$confusion = .build_cm(res$confusion_matrix_for_criteria[[idx]], res$actual_domain)
-  perf = new("H2OPerfModel", cutoffs = res$thresholds, measure = as.numeric(res[[measure]]), perf = measure, model = result)
+  return(result)
 }
 
-plot.H2OPerfModel <- function(x, ...) {
+plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
+  if(!type %in% c("cutoffs", "roc")) stop("type must be either 'cutoffs' or 'roc'")
+  if(type == "roc") stop("Unimplemented")
+  
   xaxis = "Cutoff"; yaxis = .toupperFirst(x@perf)
   plot(x@cutoffs, x@measure, main = paste(yaxis, "vs.", xaxis), xlab = xaxis, ylab = yaxis, ...)
   abline(v = x@model$best_cutoff, lty = 2)
