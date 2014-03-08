@@ -80,7 +80,7 @@ public class ConfusionMatrix extends Request2 {
     try {
       if (classification) {
         // Create a new vectors - it is cheap since vector are only adaptation vectors
-        va = vactual.toEnum(); // always returns TransfVec
+        va = vactual .toEnum(); // always returns TransfVec
         actual_domain = va._domain;
         vp = vpredict.toEnum(); // always returns TransfVec
         predicted_domain = vp._domain;
