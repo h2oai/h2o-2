@@ -51,7 +51,7 @@ h2o.shutdown <- function(client, prompt = TRUE) {
       stop(paste("Unable to shutdown H2O. Server returned the following error:\n", res$error))
   }
   
-  if((ip == "localhost" || ip == "127.0.0.1") && exists(".startedH2O") && .startedH2O) 
+  if((client@ip == "localhost" || client@ip == "127.0.0.1") && exists(".startedH2O") && .startedH2O) 
     .startedH2O <<- FALSE
 }
 
