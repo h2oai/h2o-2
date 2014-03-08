@@ -211,7 +211,9 @@ class Basic(unittest.TestCase):
             # okay to get more cols than we want
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
-            q = h2o.nodes[0].quantiles(source_key=hex_key, column=1, quantile='0.1', max_qbins=3)
+            quantile = 0.5 if DO_MEDIAN else .999
+            q = h2o.nodes[0].quantiles(source_key=hex_key, column=1, quantile=quantile, max_qbins=3)
+            h2p.blue_print("h2o quantiles page:", q['result'])
             print h2o.dump_json(q)
 
             summaries = summaryResult['summaries']

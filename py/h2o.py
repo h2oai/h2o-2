@@ -1832,7 +1832,7 @@ class H2O(object):
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
-    def quantiles(self, timeoutSecs=300, print_params=False, **kwargs):
+    def quantiles(self, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'source_key': None,
             'column': None,

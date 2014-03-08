@@ -86,7 +86,20 @@ public class QuantilesPage extends Request2 {
     // not used on the single pass approx. will use on multipass iterations
     double valStart = vecs[0].min();
     double valEnd = vecs[0].max();
-    qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
+    boolean multiPass = false;
+    qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, multiPass).doAll(fr)._qbins;
+
+    // Have to get this internal state, and copy this state for the next iteration
+    // in order to multipass
+    // I guess forward as params to next iteration
+    // while ( (iteration <= maxIterations) && !done ) {
+    //  valStart   = newValStart;
+    //  valEnd     = newValEnd;
+
+    // These 3 are available for viewing, but not necessary to iterate
+    //  valRange   = newValRange;
+    //  valBinSize = newValBinSize;
+    //  valLowCnt  = newValLowCnt;
 
     if (qbins != null) {
       qbins[0].finishUp(vecs[0], max_qbins);
@@ -97,9 +110,12 @@ public class QuantilesPage extends Request2 {
     }
 
     // just see we can do another iteration with same values
-    if (false) {
-        qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
-    }
+    // This would normally be up above in a conditional loop
+    int iteration = 0;
+    // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
+    // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
+    int MAX_ITERATIONS = 32; 
+    // qbins2 = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, multiPass).doAll(fr)._qbins;
 
     return Response.done(this);
   }
