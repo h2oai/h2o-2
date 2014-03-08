@@ -3,12 +3,13 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b, h2o_print as h2p
 import h2o_summ
 
+print "same as test_summary2_unifiles.py but using local runif_.csv single col for comparison testing"
 DO_TRY_SCIPY = False
 if  getpass.getuser() == 'kevin':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
-MAX_QBINS = 10
+MAX_QBINS = 1000
 
 def twoDecimals(l):
     if isinstance(l, list):
@@ -39,7 +40,8 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     # data is last column
     # drop the output
     print dataset.shape
-    target = [x[col] for x in dataset]
+    # target = [x[col] for x in dataset]
+    target = dataset
     # we may have read it in as a string. coerce to number
     targetFP = np.array(target, np.float)
     # targetFP = target
@@ -107,80 +109,17 @@ class Basic(unittest.TestCase):
         # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_summary2_unifiles(self):
+    def test_summary2_unifiles2(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-
-        # old with 20 bins
-        tryList = [
-            # colname, (min, 25th, 50th, 75th, max)
-            ('cars.csv', 'c.hex', [
-                ('name', None),
-                ('economy (mpg)', None),
-                ('cylinders', None),
-            ],
-            ),
-            ('runif.csv', 'x.hex', [
-                ('' ,  1.00, 5000.0, 10000.0, 15000.0, 20000.00),
-                ('D', -5000.00, -3750.0, -2445, -1200.0, 99),
-                ('E', -100000.0, -50000.0, 1775.0, 50000.0, 100000.0),
-                ('F', -1.00, -0.48, 0.0087, 0.50, 1.00),
-            ],
-            ),
-
-            ('runifA.csv', 'A.hex', [
-                ('',  1.00, 25.00, 50.00, 75.00, 100.0),
-                ('x', -99.0, -45.0, 7.43, 58.00, 91.7),
-            ],
-            ),
-
-            ('runifB.csv', 'B.hex', [
-                ('',  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
-                ('x', -100.00, -50.0, 0.95, 51.7, 100,00),
-            ],
-            ),
-
-            ('runifC.csv', 'C.hex', [
-                ('',  1.00, 25002.00, 50002.00, 75002.00, 100000.00),
-                ('x', -100.00, -50.45, -1.13, 49.28, 100.00),
-            ],
-            ),
-        ]
         # new with 1000 bins. copy expected from R
         tryList = [
-            ('cars.csv', 'c.hex', [
-                ('name', None,None,None,None,None),
-                ('economy (mpg)', None,None,None,None,None),
-                ('cylinders', None,None,None,None,None),
-            ],
-            ),
             # colname, (min, 25th, 50th, 75th, max)
-            ('runif.csv', 'x.hex', [
-                ('' ,  1.00, 5000.0, 10000.0, 15000.0, 20000.00),
-                ('D', -5000.00, -3735.0, -2443, -1187.0, 99.8),
-                ('E', -100000.0, -49208.0, 1783.8, 50621.9, 100000.0),
-                ('F', -1.00, -0.4886, 0.00868, 0.5048, 1.00),
+            ('runif_.csv', 'x.hex', [
+                ('C1', -5000.00, -3735.0, -2443, -1187.0, 99.8),
             ],
             ),
 
-            ('runifA.csv', 'A.hex', [
-                ('',  1.00, None, 50.00, 75.00, 100.0),
-                ('x', -99.0, -44.7, 7.43, 58.00, 91.7),
-            ],
-            ),
-
-            ('runifB.csv', 'B.hex', [
-                ('',  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
-                ('x', -100.00, -50.0, 0.95, 51.7, 100,00),
-            ],
-            ),
-
-            ('runifC.csv', 'C.hex', [
-                ('',  1.00, 25002.00, 50002.00, 75002.00, 100000.00),
-                ('x', -100.00, -50.45, -1.135, 49.28, 100.00),
-            ],
-            ),
         ]
-
 
         timeoutSecs = 10
         trial = 1
@@ -193,8 +132,8 @@ class Basic(unittest.TestCase):
             h2o.beta_features = False
 
             csvPathname = csvFilename
-            csvPathnameFull = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
-            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname,
+            csvPathnameFull = h2i.find_folder_and_filename('.', csvPathname, returnFullPath=True)
+            parseResult = h2i.import_parse(bucket='.', path=csvPathname,
                 schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
 
             print csvFilename, 'parse time:', parseResult['response']['time']
@@ -221,7 +160,6 @@ class Basic(unittest.TestCase):
                     self.assertEqual(colname, expected[0])
 
                 quantile = 0.5 if DO_MEDIAN else .999
-                # h2o has problem if a list of columns (or dictionary) is passed to 'column' param
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
                     quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
                 h2p.blue_print("h2o quantiles result:", q['result'])
@@ -231,7 +169,6 @@ class Basic(unittest.TestCase):
                 print h2o.dump_json(q)
 
                 # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
-
                 coltype = column['type']
                 nacnt = column['nacnt']
 

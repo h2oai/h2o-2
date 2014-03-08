@@ -1838,6 +1838,7 @@ class H2O(object):
             'column': None,
             'quantile': None,
             'max_qbins': None,
+            'multiple_pass': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'quantiles', print_params)
         a = self.__do_json_request('2/QuantilesPage.json', timeout=timeoutSecs, params=params_dict)

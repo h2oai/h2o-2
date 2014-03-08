@@ -136,7 +136,6 @@ class Basic(unittest.TestCase):
             h2o.beta_features = False
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
-
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
@@ -149,7 +148,6 @@ class Basic(unittest.TestCase):
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
-
             numRows = inspect["num_rows"]
             numCols = inspect["num_cols"]
 
@@ -165,29 +163,24 @@ class Basic(unittest.TestCase):
 
             coltype = column['type']
             nacnt = column['nacnt']
-
             stats = column['stats']
             stattype= stats['type']
 
             # FIX! we should compare mean and sd to expected?
             mean = stats['mean']
             sd = stats['sd']
-
             print "colname:", colname, "mean (2 places): %s", twoDecimals(mean)
             print "colname:", colname, "std dev. (2 places): %s", twoDecimals(sd)
 
             zeros = stats['zeros']
-
             mins = stats['mins']
             h2o_util.assertApproxEqual(mins[0], expected[1], tol=maxDelta, msg='min is not approx. expected')
-
             maxs = stats['maxs']
             h2o_util.assertApproxEqual(maxs[0], expected[5], tol=maxDelta, msg='max is not approx. expected')
 
             pct = stats['pct']
             # the thresholds h2o used, should match what we expected
             expectedPct = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
-
             pctile = stats['pctile']
             h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxDelta, msg='25th percentile is not approx. expected')
             h2o_util.assertApproxEqual(pctile[5], expected[3], tol=maxDelta, msg='50th percentile (median) is not approx. expected')
@@ -199,8 +192,6 @@ class Basic(unittest.TestCase):
             hcnt = column['hcnt']
 
             print "pct:", pct
-            print ""
-
             print "hcnt:", hcnt
             print "len(hcnt)", len(hcnt)
 
@@ -226,7 +217,6 @@ class Basic(unittest.TestCase):
             print "mins colname:", colname, "(2 places):", mn
 
             trial += 1
-
             h2p.blue_print("\nTrying exec quantile")
             # thresholds = "c(0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99)"
             # do the equivalent exec quantile?
