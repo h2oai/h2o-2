@@ -39,21 +39,16 @@ class Basic(unittest.TestCase):
         family    = 'binomial'
         alpha     = '0.5'
         lambda_   = '1E-4'
-        nfolds    = '5' # fails
         nfolds    = '0'
-        case_mode = '='
-        case_val  = '1'
         f         = 'prostate'
         modelKey  = 'GLM_' + f
 
-        kwargs = {       'response'          : y,
+        kwargs = {       'response'           : y,
                          'ignored_cols'       : x,
                          'family'             : family,
                          'lambda'             : lambda_,
                          'alpha'              : alpha,
                          'n_folds'            : nfolds, # passes if 0, fails otherwise
-                         #'case_mode'          : case_mode,
-                         #'case_val'           : case_val, 
                          'destination_key'    : modelKey,
                  }
 

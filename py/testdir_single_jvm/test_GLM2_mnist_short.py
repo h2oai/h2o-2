@@ -73,8 +73,6 @@ class Basic(unittest.TestCase):
                 'ignored_cols': ignoreX, 
                 # first column is pixel value
                 'response': 'C' + str(y+1),
-                # 'case_mode': '=',
-                # 'case_val': 0,
                 'family': 'binomial',
                 'lambda': 0.5,
                 'alpha': 1e-4,
