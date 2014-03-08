@@ -14,7 +14,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
   if(!url.exists(myURL)) {
     if(!startH2O)
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
-    else if(ip=="localhost" || ip=="127.0.0.1") {
+    else if(ip == "localhost" || ip == "127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
       .h2o.startJar(Xmx, beta)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
@@ -38,16 +38,21 @@ h2o.shutdown <- function(client, prompt = TRUE) {
   
   myURL = paste("http://", client@ip, ":", client@port, sep="")
   if(!url.exists(myURL)) stop(paste("There is no H2O instance running at", myURL))
+  
   if(prompt) {
     ans = readline(paste("Are you sure you want to shutdown the H2O instance running at", myURL, "(Y/N)? "))
     temp = substr(ans, 1, 1)
   } else temp = "y"
+  
   if(temp == "Y" || temp == "y") {
     res = getURLContent(paste(myURL, .h2o.__PAGE_SHUTDOWN, sep="/"))
     res = fromJSON(res)
     if(!is.null(res$error))
       stop(paste("Unable to shutdown H2O. Server returned the following error:\n", res$error))
   }
+  
+  if((ip == "localhost" || ip == "127.0.0.1") && exists(".startedH2O") && .startedH2O) 
+    .startedH2O <<- FALSE
 }
 
 # ----------------------- Diagnostics ----------------------- #
@@ -83,6 +88,7 @@ h2o.clusterStatus <- function(client) {
 
 #---------------------------- H2O Jar Initialization -------------------------------#
 .h2o.pkg.path <- NULL
+.h2o.jar.env <- new.env()    # Dummy variable used to shutdown H2O when R exits
 
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
@@ -124,42 +130,24 @@ h2o.clusterStatus <- function(client) {
     sep = "")
   packageStartupMessage(msg)
   
-  # TODO: Might need to be careful if .LastOriginal exists. Also, user can override .Last manually and break hack.
+  # Shut down local H2O when user exits from R
   .startedH2O <<- FALSE
-  .LastOriginal <<- function() { return(NULL) }
-  if(exists(".Last", envir = .GlobalEnv)) {
-    .LastOriginal <<- get(".Last", envir = .GlobalEnv)
-    assign(".Last", function(..., envir = parent.frame()) {
-        ip = "127.0.0.1"; port = 54321
-        myURL = paste("http://", ip, ":", port, sep = "")
-        
-        # require(RCurl); require(rjson)
-        if(exists(".startedH2O") && .startedH2O && url.exists(myURL)) {
-          h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
-          .startedH2O <<- FALSE
-        }
-        eval(.LastOriginal(...), envir = envir)
-      }, envir = .GlobalEnv)
-  } else {
-    assign(".Last", function() {
-        ip = "127.0.0.1"; port = 54321
-        myURL = paste("http://", ip, ":", port, sep = "")
-        
-        # require(RCurl); require(rjson)
-        if(exists(".startedH2O") && .startedH2O && url.exists(myURL)) {
-          h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
-          .startedH2O <<- FALSE
-        }
-      }, envir = .GlobalEnv)
-  }
+  reg.finalizer(.h2o.jar.env, function(e) {
+    ip = "127.0.0.1"; port = 54321
+    myURL = paste("http://", ip, ":", port, sep = "")
+            
+    # require(RCurl); require(rjson)
+    if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
+      h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
+  }, onexit = TRUE)
 }
 
-.onDetach <- function(libpath) {
-  if(exists(".LastOriginal", mode = "function"))
-     assign(".Last", get(".LastOriginal"), envir = .GlobalEnv)
-  else if(exists(".Last", envir = .GlobalEnv))
-    rm(".Last", envir = .GlobalEnv)
-}
+# .onDetach <- function(libpath) {
+#   if(exists(".LastOriginal", mode = "function"))
+#      assign(".Last", get(".LastOriginal"), envir = .GlobalEnv)
+#   else if(exists(".Last", envir = .GlobalEnv))
+#     rm(".Last", envir = .GlobalEnv)
+# }
 
 # .onUnload <- function(libpath) {
 #   ip = "127.0.0.1"; port = 54321

@@ -7,17 +7,11 @@ test.rdocpredict.golden <- function(H2Oserver) {
 prostate.hex = h2o.importURL.VA(H2Oserver, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family="binomial", nfolds = 10, alpha = 0.5)
 prostate.fit = h2o.predict(object = prostate.glm, newdata = prostate.hex)
-prost<- summary(prostate.fit)
-covPath = system.file("extdata", "covtype.csv", package="h2o")
-covtype.hex = h2o.importFile(H2Oserver, path = covPath)
-covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
-covtype.clusters = h2o.predict(object = covtype.km, newdata = covtype.hex)
-cov<- summary(covtype.clusters)
+prost <- summary(prostate.fit)
 
 
 Log.info("Print output from as.data.frame call")
 Log.info(paste("H2O Summary Prostate  :" ,prost))
-Log.info(paste("H2O Summary Cov  :" ,cov))
 
 testEnd()
 }
