@@ -12,6 +12,8 @@ import water.util.Utils;
 
 import java.util.Arrays;
 
+import static water.util.Utils.printConfusionMatrix;
+
 /**
  *  Compare two categorical columns, reporting a grid of co-occurrences.
  *
@@ -56,6 +58,7 @@ public class ConfusionMatrix extends Request2 {
   @API(help="domain of the predicted response")
   String [] predicted_domain;
   @API(help="union of domains")
+  public
   String [] domain;
   @API(help="Confusion Matrix (or co-occurrence matrix)")
   public long cm[][];
@@ -162,143 +165,27 @@ public class ConfusionMatrix extends Request2 {
     }
   }
 
-  public static String[] show( long xs[], String ds[] ) {
-    String ss[] = new String[xs.length]; // the same length
-    for( int i=0; i<ds.length; i++ )
-      if( xs[i] >= 0 || (ds[i] != null && ds[i].length() > 0) && !Integer.toString(i).equals(ds[i]) )
-        ss[i] = ds[i];
-    if( xs[xs.length-1] > 0 )
-      ss[xs.length-1] = "NA";
-    return ss;
-  }
-
   @Override public boolean toHTML( StringBuilder sb ) {
     if (classification) {
       DocGen.HTML.section(sb,"Confusion Matrix");
       if( cm == null ) return true;
-    }
-    else {
+      printConfusionMatrix(sb, cm, domain, true);
+    } else{
       DocGen.HTML.section(sb,"Mean Squared Error");
       if( mse == Double.NaN ) return true;
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr class='warning'><td>" + mse + "</td></tr>");
+      DocGen.HTML.arrayTail(sb);
     }
-
-    DocGen.HTML.arrayHead(sb);
-    if (classification) {
-      // Sum up predicted & actuals
-      long acts [] = new long[cm   .length];
-      long preds[] = new long[cm[0].length];
-      for( int a=0; a<cm.length; a++ ) {
-        long sum=0;
-        for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
-        acts[a] = sum;
-      }
-
-      String adomain[] = show(acts , domain);
-      String pdomain[] = show(preds, domain);
-      assert adomain.length == pdomain.length : "The confusion matrix should have the same length for both directions.";
-
-      // Top row of CM
-      sb.append("<tr class='warning'>");
-      sb.append("<th>Actual / Predicted</th>"); // Row header
-      for( int p=0; p<pdomain.length; p++ )
-        if( pdomain[p] != null )
-          sb.append("<th>").append(pdomain[p]).append("</th>");
-      sb.append("<th>Error</th>");
-      sb.append("</tr>");
-
-      // Main CM Body
-      long terr=0;
-      for( int a=0; a<cm.length; a++ ) { // Actual loop
-        if( adomain[a] == null ) continue;
-        sb.append("<tr>");
-        sb.append("<th>").append(adomain[a]).append("</th>");// Row header
-        long correct=0;
-        for( int p=0; p<pdomain.length; p++ ) { // Predicted loop
-          if( pdomain[p] == null ) continue;
-          boolean onDiag = adomain[a].equals(pdomain[p]);
-          if( onDiag ) correct = cm[a][p];
-          sb.append(onDiag ? "<td style='background-color:LightGreen'>":"<td>").append(cm[a][p]).append("</td>");
-        }
-        long err = acts[a]-correct;
-        terr += err;              // Bump totals
-        sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/acts[a], err, acts[a]));
-        sb.append("</tr>");
-      }
-
-      // Last row of CM
-      sb.append("<tr>");
-      sb.append("<th>Totals</th>");// Row header
-      for( int p=0; p<pdomain.length; p++ ) { // Predicted loop
-        if( pdomain[p] == null ) continue;
-        sb.append("<td>").append(preds[p]).append("</td>");
-      }
-      sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/vactual.length(), terr, vactual.length()));
-      sb.append("</tr>");
-    } else{
-      // Regression
-      sb.append("<tr class='warning'><td>" + mse + "</td></tr>"); // Row header
-    }
-    DocGen.HTML.arrayTail(sb);
     return true;
   }
 
-  public double toASCII( StringBuilder sb ) {
-    if( cm == null && classification) return 1.0;
-    if( !classification) {
+  public void toASCII( StringBuilder sb ) {
+    if (classification) {
+      if(cm == null) return;
+      printConfusionMatrix(sb, cm, domain, false);
+    } else {
       sb.append("MSE: " + mse);
-      return mse;
     }
-
-    // Sum up predicted & actuals
-    long acts [] = new long[cm   .length];
-    long preds[] = new long[cm[0].length];
-    for( int a=0; a<cm.length; a++ ) {
-      long sum=0;
-      for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
-      acts[a] = sum;
-    }
-
-    String adomain[] = show(acts , domain);
-    String pdomain[] = show(preds, domain);
-
-    // determine max length of each space-padded field
-    int maxlen = 0;
-    for( String s : pdomain ) if( s != null ) maxlen = Math.max(maxlen, s.length());
-    long sum = 0;
-    for( int a=0; a<cm.length; a++ ) {
-      if( adomain[a] == null ) continue;
-      for( int p=0; p<pdomain.length; p++ ) { if( pdomain[p] == null ) continue; sum += cm[a][p]; }
-    }
-    maxlen = Math.max(8, Math.max(maxlen, String.valueOf(sum).length()) + 2);
-    final String fmt  = "%" + maxlen + "d";
-    final String fmtS = "%" + maxlen + "s";
-
-    sb.append(String.format(fmtS, "Act/Prd"));
-    for( String s : pdomain ) if( s != null ) sb.append(String.format(fmtS, s));
-    sb.append("   " + String.format(fmtS, "Error\n"));
-
-    long terr=0;
-    for( int a=0; a<cm.length; a++ ) {
-      if( adomain[a] == null ) continue;
-      sb.append(String.format(fmtS,adomain[a]));
-      long correct=0;
-      for( int p=0; p<pdomain.length; p++ ) {
-        if( pdomain[p] == null ) continue;
-        boolean onDiag = adomain[a].equals(pdomain[p]);
-        if( onDiag ) correct = cm[a][p];
-        sb.append(String.format(fmt,cm[a][p]));
-      }
-      long err = acts[a]-correct;
-      terr += err;            // Bump totals
-      sb.append("   " + String.format("%5.3f = %d / %d\n", (double)err/acts[a], err, acts[a]));
-    }
-    sb.append(String.format(fmtS, "Totals"));
-    for( int p=0; p<pdomain.length; p++ )
-      if( pdomain[p] != null )
-        sb.append(String.format(fmt, preds[p]));
-    double total_err_rate = (double)terr/vactual.length();
-    sb.append("   " + String.format("%5.3f = %d / %d\n", total_err_rate, terr, vactual.length()));
-
-    return total_err_rate;
   }
 }

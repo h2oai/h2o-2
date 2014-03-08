@@ -70,18 +70,38 @@ public class QuantilesPage extends Request2 {
     Frame fr = new Frame(names, vecs);
 
     Futures fs = new Futures();
-    for( Vec vec : vecs) vec.rollupStats(fs);
+    for( Vec vec : vecs) {
+        vec.rollupStats(fs);
+        // just to see, move to using these rather than the min/max/mean from basicStats
+        double vmax = vec.max();
+        double vmin = vec.min();
+        double vmean = vec.mean();
+        double vsigma = vec.sigma();
+        long vnaCnt = vec.naCnt();
+        boolean visInt = vec.isInt();
+    }
     fs.blockForPending();
 
+    // for now, keep rolling our own min/max (that's all that's used)
     Quantiles.BasicStat basicStats[] = new Quantiles.PrePass().doAll(fr).finishUp()._basicStats;
-    Quantiles[] summaries;
-    summaries = new Quantiles.SummaryTask2(basicStats, quantile, max_qbins).doAll(fr)._summaries;
-    if (summaries != null) {
-      summaries[0].finishUp(vecs[0]);
-      column_name = summaries[0].colname;
-      quantile_requested = summaries[0].QUANTILES_TO_DO[0];
+    Quantiles[] qbins;
+
+    // not used on the single pass approx. will use on multipass iterations
+    double valStart = vecs[0].min();
+    double valEnd = vecs[0].max();
+    qbins = new Quantiles.BinTask2(basicStats, quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
+
+    if (qbins != null) {
+      qbins[0].finishUp(vecs[0], max_qbins);
+      column_name = qbins[0].colname;
+      quantile_requested = qbins[0].QUANTILES_TO_DO[0];
       interpolation_type_requested = interpolation_type;
-      result = summaries[0]._pctile[0];
+      result = qbins[0]._pctile[0];
+    }
+
+    // just see we can do another iteration with same values
+    if (false) {
+        qbins = new Quantiles.BinTask2(basicStats, quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
     }
 
     return Response.done(this);

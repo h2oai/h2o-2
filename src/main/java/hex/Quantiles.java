@@ -5,6 +5,7 @@ import water.api.*;
 import water.api.Request.API;
 import water.fvec.*;
 import water.util.Utils;
+import water.util.Log;
 
 /**
  * Quantile of a column.
@@ -25,13 +26,25 @@ public class Quantiles extends Iced {
   private static final int   T_REAL = 0;
   private static final int   T_INT  = 1;
   private static final int   T_ENUM = 2;
+
   public BasicStat           _stat0;     /* Basic Vec stats collected by PrePass. */
   public final int           _type;      // 0 - real; 1 - int; 2 - enum
   long                       _gprows;    // non-empty rows per group
 
   final transient String[]   _domain;
+
+  // used in approxQuantilesOnePass only
   final transient double     _start2;
   final transient double     _binsz2;    // 2nd finer grained histogram used for quantile estimates for numerics
+
+  // used to feed the next iteration for multipass?
+  // used in exactQuantilesMultiPass only
+  public transient double     _valStart = 0; // FIX! I shouldn't need init here
+  public transient double     _valEnd = 0; // FIX! I shouldn't need init here
+  // just for info on current pass?
+  public transient double     _valRange = 0; // FIX! I shouldn't need init here
+  public transient double     _valBinSize = 0; // FIX! I shouldn't need init here
+
   public transient double[]  _pctile;
 
 
@@ -64,12 +77,15 @@ public class Quantiles extends Iced {
   @API(help="name"        ) public String    colname;
   @API(help="type"        ) public String    type;
   // Basic stats
-  @API(help="NAs"         ) public long      nacnt;
+  @API(help="NAs"         ) public long      nacnt; // FIX! do we really want this here?
   @API(help="Base Stats"  ) public Stats     stats;
 
   public long[]  hcnt2; // finer histogram. not visible
   public double[]  hcnt2_min; // min actual for each bin
   public double[]  hcnt2_max; // max actual for each bin
+  public long  hcnt2_low; // count below current binning
+  public long  hcnt2_high; // count above current binning
+  public double hcnt2_high_min; // min above current binning
 
   public static class BasicStat extends Iced {
     public long _len;   /* length of vec */
@@ -155,23 +171,37 @@ public class Quantiles extends Iced {
     }
   }
 
-  public static class SummaryTask2 extends MRTask2<SummaryTask2> {
-    private BasicStat[] _basics;
-    private double _quantile;
-    private int _max_qbins;
-    public Quantiles _summaries[];
-    public SummaryTask2 (BasicStat[] basicStats, double quantile, int max_qbins) 
-      { _basics = basicStats; _quantile = quantile; _max_qbins = max_qbins; }
+  public static class BinTask2 extends MRTask2<BinTask2> {
+    private final BasicStat[] _basics; // don't modify object while running
+    private final double _quantile;
+    private final int _max_qbins;
+    private final double _valStart;
+    private final double _valEnd;
+
+    public Quantiles _qbins[];
+
+    public BinTask2 (BasicStat[] basicStats, double quantile, int max_qbins,
+      double valStart, double valEnd)
+      { 
+        _basics = basicStats;
+        _quantile = quantile; 
+        _max_qbins = max_qbins; 
+        _valStart = valStart; 
+        _valEnd = valEnd; 
+      }
+
     @Override public void map(Chunk[] cs) {
-      _summaries = new Quantiles[cs.length];
+      _qbins = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _summaries[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], 
-          _basics[i], _quantile, _max_qbins).add(cs[i]);
+        _qbins[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], _basics[i], _quantile, _max_qbins,
+          _valStart, _valEnd).add(cs[i]);
     }
-    @Override public void reduce(SummaryTask2 other) {
-      for (int i = 0; i < _summaries.length; i++)
-        _summaries[i].add(other._summaries[i]);
+
+    @Override public void reduce(BinTask2 other) {
+      for (int i = 0; i < _qbins.length; i++)
+        _qbins[i].add(other._qbins[i]);
     }
+
   }
 
   // FIX! do we need this?
@@ -188,7 +218,8 @@ public class Quantiles extends Iced {
     return s;
   }
 
-  public void finishUp(Vec vec) {
+  public void finishUp(Vec vec, long max_qbins) {
+    // FIX! not using this. Should I put it in NumStats below for general info?
     nacnt = _stat0._nas;
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
@@ -197,16 +228,26 @@ public class Quantiles extends Iced {
     if (_type == T_ENUM) {
       ;
     } else {
-      approxQuantiles1Pass(_pctile,QUANTILES_TO_DO);
+      if ( false ) {
+        // FIX! how to pass this corectly
+        long desiredBinCnt = max_qbins + 1;
+        exactQuantilesMultiPass(_pctile, QUANTILES_TO_DO, desiredBinCnt);
+      } else {
+        approxQuantilesOnePass(_pctile, QUANTILES_TO_DO);
+      }
+
       this.stats = 
+        // FIX! why is this in the final results. And why not use zero count from vec.*
+        // maybe it doesn't exist there?
         new NumStats(vec.mean(), vec.sigma(), _stat0._zeros, _pctile, QUANTILES_TO_DO);
     }
   }
 
-  public Quantiles(Vec vec, String name, BasicStat stat0, double quantile, int max_qbins) {
+  public Quantiles(Vec vec, String name, BasicStat stat0, double quantile, int max_qbins, 
+        double valStart, double valEnd) {
     colname = name;
     _stat0 = stat0;
-    _type = vec.isEnum()?2:vec.isInt()?1:0;
+    _type = vec.isEnum() ? 2 : vec.isInt() ? 1 : 0;
     _domain = vec.isEnum() ? vec.domain() : null;
     _gprows = 0;
     QUANTILES_TO_DO = new double[1];
@@ -248,7 +289,7 @@ public class Quantiles extends Iced {
   }
 
   public Quantiles(Vec vec, String name, BasicStat stat0) {
-    this(vec, name, stat0, 0.0, 1000);
+    this(vec, name, stat0, 0.5, 1000, stat0._min2, stat0._max2);
   }
 
   public Quantiles add(Chunk chk) {
@@ -343,22 +384,161 @@ public class Quantiles extends Iced {
   }
 
   // need to count >4B rows
-  private long htot2() { // same but for the finer histogram
+  private long htot2(long low, long high) {
     long cnt = 0;
     for (int i = 0; i < hcnt2.length; i++) cnt+=hcnt2[i];
+    // add the stuff outside the bins, 0,0 for single pass
+    cnt = cnt + low + high;
     return cnt;
   }
 
-  private void approxQuantiles1Pass(double[] qtiles, double[] thres){
+
+  private void exactQuantilesMultiPass(double[] qtiles, double[] thres, long desiredBinCnt) {
+    // do we need all of these as output?
+    double newValStart, newValEnd, newValRange, newValBinSize;
+    // FIX! figure out where unitialized can be used
+    newValStart = Double.NaN; 
+    newValEnd = Double.NaN;
+    newValRange = Double.NaN;
+    newValBinSize = Double.NaN;
+    long newValLowCnt;
+
+    long maxBinCnt = desiredBinCnt + 1;
+
+    // FIX! what about inteerpolate_type (mean vs linear)
+    assert _type != T_ENUM;
+    if( hcnt2.length == 0 ) return;
+     // playing with creating relative NUDGE values to make sure bin range
+    // is always inclusive of target.
+    // ratio it down from valBinSize?  It doesn't need to be as big as valBinSize.
+    // can't seem to make it work yet. leave NUDGE=0
+    double NUDGE = 0;
+    //  everything should either be in low, the bins, or high
+    double threshold = thres[0];
+    long totalRows = _gprows;
+    long totalBinnedRows = htot2(hcnt2_low, hcnt2_high);
+    assert totalRows==totalBinnedRows : totalRows+" "+totalBinnedRows;
+
+    //  now walk thru and find out what bin to look inside
+    long currentCnt = hcnt2_low;
+    double targetCntFull = threshold * (totalRows-1);  //  zero based indexing
+    long targetCntInt = (long) (Math.floor(threshold * (totalRows-1)));
+    double targetCntFract = targetCntFull  - targetCntInt;
+    assert (targetCntFract>=0) && (targetCntFract<=1);
+    Log.info("targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
+
+    int k = 0;
+    while((currentCnt + hcnt2[k]) <= targetCntInt) {
+      currentCnt += hcnt2[k];
+      ++k;
+      assert k<=maxBinCnt : "k too large, k:"+k+" maxBinCnt: "+maxBinCnt;
+    }
+
+    assert hcnt2[k]!=1 || hcnt2_min[k]==hcnt2_max[k];
+
+    //  some possibily interpolating guesses first, in guess we have to iterate (best guess)
+    boolean done = false;
+    double guess = (hcnt2_max[k] - hcnt2_min[k]) / 2;
+
+    if ( currentCnt==targetCntInt ) {
+      if ( hcnt2[k]>2 ) {
+        guess = hcnt2_min[k];
+        done = true;
+        Log.info("Guess A "+guess);
+
+      } else if ( hcnt2[k]==2 ) {
+        //  no mattter what size the fraction it would be on this number
+        guess = (hcnt2_max[k] + hcnt2_min[k]) / 2.0;
+        done = true;
+        Log.info("Guess B"+guess);
+
+      } else if ( (hcnt2[k]==1) && (targetCntFract==0) ) {
+        assert hcnt2_min[k]==hcnt2_max[k];
+        guess = hcnt2_min[k];
+        done = true;
+        Log.info("k"+k);
+        Log.info("Guess C"+guess);
+
+      } else if ( hcnt2[k]==1 && targetCntFract!=0 ) {
+        assert hcnt2_min[k]==hcnt2_max[k];
+        Log.info("Single value in this bin, but fractional means we need to interpolate to next non-zero");
+        int nextK;
+        if ( k<maxBinCnt ) nextK = k + 1; //  could put it over maxBinCnt
+        else nextK = k;
+
+        while ( (nextK<maxBinCnt) && (hcnt2[nextK]==0) ) ++nextK;
+
+        //  have the "extra bin" for this
+        double nextVal;
+        if ( nextK >= maxBinCnt ) {
+          assert hcnt2_high!=0;
+          Log.info("Using hcnt2_high_min for interpolate:"+hcnt2_high_min);
+          nextVal = hcnt2_high_min;
+        } else {
+          Log.info("Using nextK for interpolate:"+nextK);
+          assert hcnt2[nextK]!=0;
+          nextVal = hcnt2_min[nextK];
+        }
+
+        guess = (hcnt2_max[k] + nextVal) / 2.0;
+        done = true; //  has to be one above us when needed. (or we're at end)
+
+        Log.info("k"+"hcnt2_max[k]"+"nextVal");
+        Log.info("hello3:"+k+hcnt2_max[k]+nextVal);
+        Log.info("\nInterpolating result using nextK: "+nextK+ " nextVal: "+nextVal);
+      }
+    }
+    if ( !done ) {
+      newValStart = hcnt2_min[k] - NUDGE; //  FIX! should we nudge a little?
+      newValEnd   = hcnt2_max[k] + NUDGE; //  FIX! should we nudge a little?
+      newValRange = newValEnd - newValStart ;
+
+      //  maxBinCnt is always binCount + 1, since we might cover over due to rounding/fp issues?
+      newValBinSize = newValRange / (desiredBinCnt + 0.0);
+      newValLowCnt = currentCnt;
+      if ( newValBinSize==0 ) {
+        //  assert done or newValBinSize!=0 and live with current guess
+        Log.info("Assuming done because newValBinSize is 0.");
+        Log.info("newValRange: "+newValRange+
+          " hcnt2[k]: "+hcnt2[k]+
+          " hcnt2_min[k]: "+hcnt2_min[k]+
+          " hcnt2_max[k]: "+hcnt2_max[k]);
+        guess = newValStart;
+        Log.info("Guess E "+guess);
+        done = true;
+      }
+      //  if we have to interpolate
+      //  if it falls into this bin, interpolate to this bin means one answer?
+      //  cover the case above with multiple entris in a bin, all the same value
+      //  will be zero on the last pass?
+      //  assert newValBinSize != 0 or done
+      //  need the count up to but not including newValStart
+    }
+
+    // ++iteration;
+
+    // Log.info("Ending Pass "+iteration);
+    Log.info("guess: "+guess+" done: "+done+" hcnt2[k]: "+hcnt2[k]);
+    Log.info("currentCnt: "+currentCnt+" targetCntInt: "+targetCntInt+" hcnt2_low: "+hcnt2_low+"hcnt2_high: "+hcnt2_high);
+    Log.info("was "+_valStart+" "+_valEnd+" "+_valRange+" "+_valBinSize);
+    Log.info("next "+newValStart+" "+newValEnd+" "+newValRange+" "+newValBinSize);
+
+    qtiles[0] = guess;
+  // might have fp tolerance issues here? but fp numbers should be exactly same?
+  // Log.info(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
+  //  " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
+
+  }
+
+  private void approxQuantilesOnePass(double[] qtiles, double[] thres){
     // not called for enums
     assert _type != T_ENUM;
     if( hcnt2.length == 0 ) return;
 
-    int k = 0;
-    long s = 0;
+    int k = 0; long s = 0;
     double guess = 0;
     double actualBinWidth = 0;
-    assert _gprows==htot2() : "_gprows: "+_gprows+" htot2(): "+htot2();
+    assert _gprows==htot2(0, 0) : "_gprows: "+_gprows+" htot2(): "+htot2(0, 0);
 
     // A 'perfect' quantile definition, for comparison. 
     // Given a set of N ordered values {v[1], v[2], ...} and a requirement to 
@@ -372,7 +552,7 @@ public class Quantiles extends Iced {
     // walk up until we're at the bin that starts with the threshold, or right before
     // only do thres[0]. how do we make a list of thresholds work?
     // for(int j = 0; j < thres.length; ++j) {
-     for(int j = 0; j <=0; ++j) {
+    for(int j = 0; j <=0; ++j) {
       // 0 okay for threshold?
       assert 0 <= thres[j] && thres[j] <= 1;
       double s1 = Math.floor(thres[j] * (double) _gprows); 
@@ -422,11 +602,16 @@ public class Quantiles extends Iced {
         // compared to using the bin boundaries
         // Note actualBinWidth is 0 when all values are the same in a bin
         // Interesting how we have a gap that we jump between max of one bin, and min of another.
-        guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
+        guess = hcnt2_min[k] + actualBinWidth * ((s1 - s) / hcnt2[k]);
         // Log.info("Guess D: "+guess+" "+k+" "+hcnt2_min[k]+" "+actualBinWidth+" "+s+" "+s1+" "+hcnt2[k]);
       }
 
       qtiles[j] = guess;
+
+      // Don't need these any more
+      hcnt2 = null;
+      hcnt2_min = null;
+      hcnt2_max = null;
 
       // might have fp tolerance issues here? but fp numbers should be exactly same?
       // Log.info(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+

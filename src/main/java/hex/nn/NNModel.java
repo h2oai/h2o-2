@@ -657,7 +657,8 @@ public class NNModel extends Model {
       cm.predict = fpreds;
       cm.vpredict = fpreds.vecs()[0]; //ditto
       cm.serve();
-      error = cm.toASCII(sb); //either classification error or MSE
+      cm.toASCII(sb);
+      error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
     }
     if (printCM && (cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
       Log.info("Scoring on " + label + " data:");
