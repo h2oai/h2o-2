@@ -82,14 +82,11 @@ public class QuantilesPage extends Request2 {
     }
     fs.blockForPending();
 
-    // for now, keep rolling our own min/max (that's all that's used)
-    Quantiles.BasicStat basicStats[] = new Quantiles.PrePass().doAll(fr).finishUp()._basicStats;
     Quantiles[] qbins;
-
     // not used on the single pass approx. will use on multipass iterations
     double valStart = vecs[0].min();
     double valEnd = vecs[0].max();
-    qbins = new Quantiles.BinTask2(basicStats, quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
+    qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
 
     if (qbins != null) {
       qbins[0].finishUp(vecs[0], max_qbins);
@@ -101,7 +98,7 @@ public class QuantilesPage extends Request2 {
 
     // just see we can do another iteration with same values
     if (false) {
-        qbins = new Quantiles.BinTask2(basicStats, quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
+        qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
     }
 
     return Response.done(this);

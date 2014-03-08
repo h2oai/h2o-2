@@ -19,17 +19,18 @@ public class Quantiles extends Iced {
   static final String DOC_GET = "Returns a quantile of a fluid-vec frame";
 
   public static final int    MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
-  // updated boundaries to be 0.1% 1%...99%, 99.9% so R code didn't have to change
-  // ideally we extend the array here, and just update the R extraction of 25/50/75 percentiles
-  // note python tests (junit?) may look at result
+  // just use [0] here?
   public final double QUANTILES_TO_DO[];
-  private static final int   T_REAL = 0;
-  private static final int   T_INT  = 1;
-  private static final int   T_ENUM = 2;
 
-  public BasicStat           _stat0;     /* Basic Vec stats collected by PrePass. */
-  public final int           _type;      // 0 - real; 1 - int; 2 - enum
   long                       _gprows;    // non-empty rows per group
+  // FIX! not sure if I need to save these here from vec
+  final transient double     _max;
+  final transient double     _min;
+  final transient double     _mean;
+  final transient double     _sigma;
+  final transient long       _naCnt;
+  final transient boolean    _isInt;
+  final transient boolean    _isEnum;
 
   final transient String[]   _domain;
 
@@ -47,38 +48,9 @@ public class Quantiles extends Iced {
 
   public transient double[]  _pctile;
 
-
-  static abstract class Stats extends Iced {
-    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-
-    @API(help="stats type"   ) public String type;
-    Stats(String type) { this.type = type; }
-  }
-  static class NumStats extends Stats {
-    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-    public NumStats( double mean, double sigma, long zeros, double[] pctile, double[] pct) {
-      super("Numeric");
-      this.mean  = mean;
-      this.sd    = sigma;
-      this.zeros = zeros;
-      this.pctile = pctile;
-      this.pct   = pct;
-    }
-    @API(help="mean"        ) public final double   mean;
-    @API(help="sd"          ) public final double   sd;
-    @API(help="#zeros"      ) public final long     zeros;
-    @API(help="percentile thresholds" ) public final double[] pct;
-    @API(help="percentiles" ) public final double[] pctile;
-  }
   // OUTPUTS
   // Basic info
   @API(help="name"        ) public String    colname;
-  @API(help="type"        ) public String    type;
-  // Basic stats
-  @API(help="NAs"         ) public long      nacnt; // FIX! do we really want this here?
-  @API(help="Base Stats"  ) public Stats     stats;
 
   public long[]  hcnt2; // finer histogram. not visible
   public double[]  hcnt2_min; // min actual for each bin
@@ -87,92 +59,7 @@ public class Quantiles extends Iced {
   public long  hcnt2_high; // count above current binning
   public double hcnt2_high_min; // min above current binning
 
-  public static class BasicStat extends Iced {
-    public long _len;   /* length of vec */
-    /// FIX! can NAs vs NaNs be distinguished? Do we care for quantile?
-    public long _nas;   /* number of NA's */
-    public long _nans;   /* number of NaN's */
-
-    public long _pinfs;   /* number of positive infinity's */
-    public long _ninfs;   /* number of positive infinity's */
-    public long _zeros;   /* number of zeros */
-    public double _min1;   /* if there's -Inf, then -Inf, o/w min2 */
-    public double _max1;   /* if there's Inf, then Inf, o/w max2 */
-    public double _min2;   /* min of the finite numbers. NaN if there's none. */
-    public double _max2;   /* max of the finite numbers. NaN if there's none. */
-    public BasicStat( ) {
-      _len = 0;
-      _nas = 0;
-      _nans = 0;
-      _pinfs = 0;
-      _ninfs = 0;
-      _zeros = 0;
-      _min1 = Double.NaN;
-      _max1 = Double.NaN;
-      _min2 = Double.NaN;
-      _max2 = Double.NaN;
-    }
-    public BasicStat add(Chunk chk) {
-      _len = chk._len;
-      for(int i = 0; i < chk._len; i++) {
-        double val;
-        if (chk.isNA0(i)) { _nas++; continue; }
-        if (Double.isNaN(val = chk.at0(i))) { _nans++; continue; }
-        if      (val == Double.POSITIVE_INFINITY) _pinfs++;
-        else if (val == Double.NEGATIVE_INFINITY) _ninfs++;
-        else {
-          _min2 = Double.isNaN(_min2)? val : Math.min(_min2,val);
-          _max2 = Double.isNaN(_max2)? val : Math.max(_max2,val);
-          if (val == .0) _zeros++;
-        }
-      }
-      return this;
-    }
-    public BasicStat add(BasicStat other) {
-      _len += other._len;
-      _nas += other._nas;
-      _nans += other._nans;
-      _pinfs += other._pinfs;
-      _ninfs += other._ninfs;
-      _zeros += other._zeros;
-      if (Double.isNaN(_min2)) _min2 = other._min2;
-      else if (!Double.isNaN(other._min2)) _min2 = Math.min(_min2,other._min2);
-      if (Double.isNaN(_max2)) _max2 = other._max2;
-      else if (!Double.isNaN(other._max2)) _max2 = Math.max(_max2, other._max2);
-      return this;
-    }
-    public BasicStat finishUp() {
-      _min1 = _ninfs>0?               Double.NEGATIVE_INFINITY   /* there's -Inf */
-              : !Double.isNaN(_min2)? _min2                      /* min is finite */
-              : _pinfs>0?             Double.POSITIVE_INFINITY   /* Only Infs exist */
-              :                       Double.NaN;                /* All NaN's or NAs */
-      _max1 = _pinfs>0?               Double.POSITIVE_INFINITY   /* there's Inf */
-              : !Double.isNaN(_max2)? _max2                      /* max is finite */
-              : _ninfs>0?             Double.NEGATIVE_INFINITY   /* Only -Infs exist */
-              :                       Double.NaN;                /* All NaN's or NAs */
-      return this;
-    }
-  }
-
-  public static class PrePass extends MRTask2<PrePass> {
-    public BasicStat _basicStats[];
-    @Override public void map(Chunk[] cs) {
-      _basicStats = new BasicStat[cs.length];
-      for (int c=0; c < cs.length; c++)
-        _basicStats[c] = new BasicStat().add(cs[c]);
-    }
-    @Override public void reduce(PrePass other){
-      for (int c = 0; c < _basicStats.length; c++)
-        _basicStats[c].add(other._basicStats[c]);
-    }
-    public PrePass finishUp() {
-      for (BasicStat stat : _basicStats) stat.finishUp();
-      return this;
-    }
-  }
-
   public static class BinTask2 extends MRTask2<BinTask2> {
-    private final BasicStat[] _basics; // don't modify object while running
     private final double _quantile;
     private final int _max_qbins;
     private final double _valStart;
@@ -180,10 +67,8 @@ public class Quantiles extends Iced {
 
     public Quantiles _qbins[];
 
-    public BinTask2 (BasicStat[] basicStats, double quantile, int max_qbins,
-      double valStart, double valEnd)
+    public BinTask2 (double quantile, int max_qbins, double valStart, double valEnd)
       { 
-        _basics = basicStats;
         _quantile = quantile; 
         _max_qbins = max_qbins; 
         _valStart = valStart; 
@@ -193,7 +78,7 @@ public class Quantiles extends Iced {
     @Override public void map(Chunk[] cs) {
       _qbins = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _qbins[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], _basics[i], _quantile, _max_qbins,
+        _qbins[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], _quantile, _max_qbins,
           _valStart, _valEnd).add(cs[i]);
     }
 
@@ -204,28 +89,12 @@ public class Quantiles extends Iced {
 
   }
 
-  // FIX! do we need this?
-  @Override public String toString() {
-    String s = "";
-    if( stats instanceof NumStats ) {
-      double pct   [] = ((NumStats)stats).pct   ;
-      double pctile[] = ((NumStats)stats).pctile;
-      for( int i=0; i<pct.length; i++ )
-        s += ""+(pct[i]*100)+"%="+pctile[i]+", ";
-    } else {
-      s = "enums no longer here?";
-    }
-    return s;
-  }
-
   public void finishUp(Vec vec, long max_qbins) {
-    // FIX! not using this. Should I put it in NumStats below for general info?
-    nacnt = _stat0._nas;
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
     _pctile = new double[QUANTILES_TO_DO.length];
 
-    if (_type == T_ENUM) {
+    if ( _isEnum ) {
       ;
     } else {
       if ( false ) {
@@ -235,24 +104,24 @@ public class Quantiles extends Iced {
       } else {
         approxQuantilesOnePass(_pctile, QUANTILES_TO_DO);
       }
-
-      this.stats = 
-        // FIX! why is this in the final results. And why not use zero count from vec.*
-        // maybe it doesn't exist there?
-        new NumStats(vec.mean(), vec.sigma(), _stat0._zeros, _pctile, QUANTILES_TO_DO);
     }
   }
 
-  public Quantiles(Vec vec, String name, BasicStat stat0, double quantile, int max_qbins, 
+  public Quantiles(Vec vec, String name, double quantile, int max_qbins, 
         double valStart, double valEnd) {
     colname = name;
-    _stat0 = stat0;
-    _type = vec.isEnum() ? 2 : vec.isInt() ? 1 : 0;
+    _isEnum = vec.isEnum();
+    _isInt = vec.isInt();
     _domain = vec.isEnum() ? vec.domain() : null;
+    _max = vec.max();
+    _min = vec.min();
+    _mean = vec.mean();
+    _sigma = vec.sigma();
+    _naCnt = vec.naCnt();
+
     _gprows = 0;
     QUANTILES_TO_DO = new double[1];
     QUANTILES_TO_DO[0] = quantile;
-    double sigma = Double.isNaN(vec.sigma()) ? 0 : vec.sigma();
 
     if( vec.isEnum() && _domain.length < MAX_ENUM_SIZE ) {
       _start2 = 0;
@@ -260,26 +129,26 @@ public class Quantiles extends Iced {
       hcnt2 = new long[_domain.length];
       hcnt2_min = new double[_domain.length];
       hcnt2_max = new double[_domain.length];
-    } else if (!Double.isNaN(stat0._min2)) {
+    } else if (!Double.isNaN(_min)) {
 
       // okay if 1 more than max_qbins gets created
       // _binsz2 = _binsz / (max_qbins / nbin);
       assert max_qbins > 0 && max_qbins <= 1000000 : "max_qbins must be >0 and <= 1000000";
-      _binsz2 = (stat0._max2 + (vec.isInt()?.5:0) - stat0._min2) / max_qbins;
-      _start2 = _binsz2 * Math.floor(stat0._min2/_binsz2);
-      int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
+      _binsz2 = (_max + (vec.isInt()?.5:0) - _min) / max_qbins;
+      _start2 = _binsz2 * Math.floor(_min/_binsz2);
+      int nbin2 = (int)(Math.round((_max + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
+      assert nbin2 > 0;
 
       // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
       // Log.info("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
-      // Log.info("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
-
+      // Log.info("_min "+_min+" _max "+_max);
       // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
-      assert nbin2 > 0;
-
       hcnt2 = new long[nbin2];
       hcnt2_min = new double[nbin2];
       hcnt2_max = new double[nbin2];
+
     } else { // vec does not contain finite numbers
+
       _start2 = vec.min();
       _binsz2 = Double.POSITIVE_INFINITY;
       hcnt2 = new long[1];
@@ -288,8 +157,8 @@ public class Quantiles extends Iced {
     }
   }
 
-  public Quantiles(Vec vec, String name, BasicStat stat0) {
-    this(vec, name, stat0, 0.5, 1000, stat0._min2, stat0._max2);
+  public Quantiles(Vec vec, String name) {
+    this(vec, name, 0.5, 1000, vec.min(), vec.max());
   }
 
   public Quantiles add(Chunk chk) {
@@ -301,7 +170,7 @@ public class Quantiles extends Iced {
   public void add(double val) {
     if( Double.isNaN(val) ) return;
     _gprows++;
-    if ( _type == T_ENUM ) return;
+    if ( _isEnum ) return;
 
     int index;
     long binIdx2;
@@ -336,7 +205,7 @@ public class Quantiles extends Iced {
 
   public Quantiles add(Quantiles other) {
     _gprows += other._gprows;
-    if (_type == T_ENUM) return this;
+    if ( _isEnum ) return this;
 
     // merge hcnt2 per-bin mins 
     // other must be same length, but use it's length for safety
@@ -405,8 +274,7 @@ public class Quantiles extends Iced {
 
     long maxBinCnt = desiredBinCnt + 1;
 
-    // FIX! what about inteerpolate_type (mean vs linear)
-    assert _type != T_ENUM;
+    assert !_isEnum;
     if( hcnt2.length == 0 ) return;
      // playing with creating relative NUDGE values to make sure bin range
     // is always inclusive of target.
@@ -532,7 +400,7 @@ public class Quantiles extends Iced {
 
   private void approxQuantilesOnePass(double[] qtiles, double[] thres){
     // not called for enums
-    assert _type != T_ENUM;
+    assert !_isEnum;
     if( hcnt2.length == 0 ) return;
 
     int k = 0; long s = 0;
