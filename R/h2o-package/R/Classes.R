@@ -457,7 +457,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
 # right now, all things must be H2OParsedData
 cbind.H2OParsedData <- function(...){
   l <- list(...)
-  if( length(l) == 0 ) stop('cbind requires an H2o parsed dataset')
+  if( length(l) == 0 ) stop('cbind requires an H2O parsed dataset')
   klass <- 'H2OParsedData'
   h2o <- l[[1]]@h2o
   nrows <- nrow(l[[1]])

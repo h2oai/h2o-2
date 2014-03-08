@@ -1,5 +1,5 @@
 library(h2o)
-myIP = "192.168.1.161"; myPort = 60024
+myIP = "192.168.1.162"; myPort = 54545
 # myIP = "23.22.188.100"; myPort = 54321
 remoteH2O = h2o.init(ip = myIP, port = myPort, startH2O = FALSE)
 
