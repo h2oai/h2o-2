@@ -1096,7 +1096,6 @@ public class Utils {
   public static void printConfusionMatrix(StringBuilder sb, long[][] cm, String[] domain, boolean html) {
     assert(cm != null);
     assert(domain != null);
-    assert(domain.length+1 == cm.length); //extra padding for NAs
     for (int i=0; i<cm.length; ++i) assert(cm.length == cm[i].length);
     if (html) DocGen.HTML.arrayHead(sb);
     // Sum up predicted & actuals
