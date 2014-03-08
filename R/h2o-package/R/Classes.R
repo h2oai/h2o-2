@@ -104,10 +104,10 @@ setMethod("show", "H2OGrid", function(object) {
 
 setMethod("show", "H2OGLMModel", function(object) {
   print(object@data)
-  cat("GLM2 Model Key:", object@key, "\n\n")
+  cat("GLM2 Model Key:", object@key)
 
   model = object@model
-  cat("Coefficients:\n"); print(round(model$coefficients,5))
+  cat("\n\nCoefficients:\n"); print(round(model$coefficients,5))
   if(!is.null(model$normalized_coefficients)) {
     cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
   }
@@ -166,9 +166,16 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("Distributed Random Forest Model Key:", object@key)
 
   model = object@model
-  cat("\nNumber of trees:", model$params$ntree)
+  cat("\n\nNumber of trees:", model$params$ntree)
   cat("\nTree statistics:\n"); print(model$forest)
-  cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+  
+  if(model$params$classification) {
+    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n")
+    print(model$confusion)
+    if(!is.null(model$auc) && !is.null(model$gini))
+      cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
+  }
+  cat("\nMean-squared Error by tree:\n"); print(model$mse)
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
@@ -192,7 +199,7 @@ setMethod("show", "H2OGBMModel", function(object) {
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
-  cat("\nMean Squared error by tree:\n"); print(model$err)
+  cat("\nMean-squared Error by tree:\n"); print(model$err)
 })
 
 setMethod("show", "H2OPerfModel", function(object) {
@@ -447,13 +454,10 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   x
 }
 
-
-
-
 # right now, all things must be H2OParsedData
 cbind.H2OParsedData <- function(...){
   l <- list(...)
-  if( length(l) == 0 ) stop('cbind requires an h2o data')
+  if( length(l) == 0 ) stop('cbind requires an H2o parsed dataset')
   klass <- 'H2OParsedData'
   h2o <- l[[1]]@h2o
   nrows <- nrow(l[[1]])
