@@ -68,7 +68,7 @@ public class ConfusionMatrix extends Iced {
     _predErr = err();
   }
 
-  public synchronized void add(int i, int j) {
+  public void add(int i, int j) {
     _arr[i][j]++;
   }
 
@@ -99,7 +99,7 @@ public class ConfusionMatrix extends Iced {
     return n;
   }
 
-  public synchronized void add(ConfusionMatrix other) {
+  public void add(ConfusionMatrix other) {
     water.util.Utils.add(_arr, other._arr);
   }
 

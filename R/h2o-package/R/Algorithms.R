@@ -868,6 +868,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   params$depth = res$max_depth
   params$nbins = res$nbins
   params$sample.rate = res$sample_rate
+  params$classification = ifelse(res$parameters$classification == "true", TRUE, FALSE)
   
   result$params = params
   treeStats = unlist(res$treeStats)
@@ -875,11 +876,18 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   colnames(rf_matrix) = c("Min.", "Max.", "Mean.")
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
-
-  class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
-  result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   result$mse = as.numeric(res$errs)
-  # result$ntree = res$N
+  
+  if(params$classification) {
+    if(!is.null(res$validAUC)) {
+      tmp <- .h2o.__getPerfResults(res$validAUC)
+      tmp$confusion <- NULL
+      result <- c(result, tmp)
+    }
+
+    class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
+    result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
+  }
   return(result)
 }
 

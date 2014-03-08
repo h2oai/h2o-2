@@ -724,7 +724,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         if (_nclass > 1) { // fill CM only for classification
           if(_nclass == 2) { // Binomial classification -> compute AUC, draw ROC
             for(int i = 0; i < _cms.length; i++)
-              _cms[i][yact][( (1 - (fs[yact+1] / sum) ) >= ModelUtils.DEFAULT_THRESHOLDS[i]) ? 1 : 0]++;
+              _cms[i][yact][( fs[2] >= ModelUtils.DEFAULT_THRESHOLDS[i]) ? 1 : 0]++;
           }
           int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
           _cm[yact][ypred]++;      // actual v. predicted
