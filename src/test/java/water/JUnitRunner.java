@@ -40,10 +40,6 @@ public class JUnitRunner {
     tests.remove(NNvsNeuralNet.class);
     tests.remove(NeuralNetIrisTest.class); //old NeuralNet
     tests.remove(NeuralNetSpiralsTest.class); //old NeuralNet
-    // getting failures on 3/7/14. kbn
-    tests.remove(hex.NeuralNetSpiralsTest2.class);
-    tests.remove(hex.NeuralNetProstateTest.class);
-
     // Pure JUnit test
 //    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);
