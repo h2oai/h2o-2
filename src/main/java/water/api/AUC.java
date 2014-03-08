@@ -1,17 +1,16 @@
 package water.api;
 
 import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
-
 import hex.ConfusionMatrix;
-
 import org.apache.commons.lang.StringEscapeUtils;
-
-import water.*;
-import water.api.Request.API;
-import water.fvec.*;
+import water.MRTask2;
+import water.Request2;
+import water.UKV;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Utils;
 
-import java.util.Arrays;
 import java.util.HashSet;
 
 import static java.util.Arrays.sort;
@@ -51,10 +50,6 @@ public class AUC extends Request2 {
 
   @API(help="domain of the actual response")
   private String [] actual_domain;
-  @API(help="domain of the predicted response")
-  private String [] predicted_domain;
-  @API(help="union of domains")
-  private String [] domain;
   @API(help="AUC (ROC)")
   public double AUC;
   @API(help="Gini")
@@ -99,8 +94,6 @@ public class AUC extends Request2 {
    */
   public void clear() {
     actual_domain = null;
-    predicted_domain = null;
-    domain = null;
     threshold_criteria = null;
     thresholds = null;
     confusion_matrices = null;
@@ -190,15 +183,7 @@ public class AUC extends Request2 {
     try {
       va = vactual.toEnum(); // always returns TransfVec
       actual_domain = va._domain;
-      vp = vpredict.toEnum();
-      predicted_domain = vp._domain;
-      if (!Arrays.equals(actual_domain, predicted_domain)) {
-        domain = Utils.union(actual_domain, predicted_domain);
-        int[][] vamap = Model.getDomainMapping(domain, actual_domain, true);
-        va = TransfVec.compose( (TransfVec) va, vamap, domain, false ); // delete original va
-        int[][] vpmap = Model.getDomainMapping(domain, predicted_domain, true);
-        vp = TransfVec.compose( (TransfVec) vp, vpmap, domain, false ); // delete original vp
-      } else domain = actual_domain;
+      vp = vpredict;
       // The vectors are from different groups => align them, but properly delete it after computation
       if (!va.group().equals(vp.group())) {
         vp = va.align(vp);
