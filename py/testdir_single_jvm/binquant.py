@@ -4,9 +4,18 @@ import h2o_print as h2p, h2o_summ
 import numpy as np
 import scipy as sp
 import math
+import argparse
 OTHER_T = 0.5
 BIN_COUNT = 20
 BIN_COUNT = 1
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
+args = parser.parse_args()
+
+# disable colors if we pipe this into a file to avoid extra chars
+if args.nocolor:
+    h2p.disable_colors()
 
 # Defintion (this defn. seems odd. for the case of real quantiles, it should be a  floor, not a round up?)
 # This definition may be correct for 1-based indexing. (we do zero-based indexing in the code below, so it looks different)
@@ -145,6 +154,7 @@ def findQuantile(d, dmin, dmax, threshold):
             elif val > valEnd:
                 if (hcnt2_high==0) or (val < hcnt2_high_min):
                     hcnt2_high_min = val;
+                    print "hcnt2_high_min update:", hcnt2_high_min
                 hcnt2_high += 1
             else:
                 # where are we zeroing in? (start)
@@ -159,6 +169,11 @@ def findQuantile(d, dmin, dmax, threshold):
                 if hcnt2[binIdx2]==0 or (val > hcnt2_max[binIdx2]):
                     hcnt2_max[binIdx2] = val;
                 hcnt2[binIdx2] += 1
+
+            # check the legal states for these two
+            # we don't have None for checking hcnt2_high_min in java
+            assert hcnt2_high==0 or (hcnt2_high_min is not None)
+            assert (hcnt2_high_min is None) or hcnt2_high!=0
 
         # everything should either be in low, the bins, or high
         totalBinnedRows = htot2()
@@ -238,6 +253,12 @@ def findQuantile(d, dmin, dmax, threshold):
                 print "Guess D", guess
 
         if not done:
+            print "Not done, setting new range",\
+                "k: ", k,\
+                "currentCnt: ", currentCnt,\
+                "hcnt2_min[k]: ", hcnt2_min[k],\
+                "hcnt2_max[k]: ", hcnt2_max[k]
+
             newValStart = hcnt2_min[k] - NUDGE # FIX! should we nudge a little?
             newValEnd   = hcnt2_max[k] + NUDGE # FIX! should we nudge a little?
             newValRange = newValEnd - newValStart 
@@ -295,6 +316,7 @@ csvPathname = './d.csv'
 csvPathname = './runif_.csv'
 csvPathname = './covtype1.data'
 csvPathname = './runif_.csv'
+csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
 col = 0
 
 print "Reading csvPathname"
@@ -307,14 +329,20 @@ dataset = np.genfromtxt(
 print dataset.shape
 # target = [x[col] for x in dataset]
 # one column
-target = dataset
+print dataset.shape
+col = 0
+if len(dataset.shape)==1:
+    target = dataset
+else:
+    target = [x[col] for x in dataset]
+
 targetFP = np.array(target, np.float)
 
 n_features = len(dataset) - 1
 print "n_features:", n_features
 
 print "histogram of target"
-print target
+# print target
 print sp.histogram(target)
 
 thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
@@ -323,6 +351,10 @@ thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
 # h2o
 #*****************************************************************
 d = target
+
+
+    # target = dataset
+
 dmin = min(d)
 dmax = max(d)
 thresholdList = [OTHER_T]
@@ -339,9 +371,16 @@ a1 = stats.scoreatpercentile(target, per=100*OTHER_T, interpolation_method='frac
 h2p.red_print("stats.scoreatpercentile:", a1)
 a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T])
 h2p.red_print("scipy stats.mstats.mquantiles:", a2)
-
-# looking at the sorted list here
-targetFP.sort()
 b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T)
-h2p.blue_print( "from scipy:", a2)
+h2p.red_print("sort algo:", b)
+h2p.red_print( "from h2o (multi):", quantiles[0])
+
+print "Now looking at the sorted list..same thing"
+targetFP.sort()
+h2p.blue_print("stats.scoreatpercentile:", a1)
+a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T])
+h2p.blue_print("scipy stats.mstats.mquantiles:", a2)
+b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T)
+h2p.blue_print("sort algo:", b)
+h2p.blue_print( "from h2o (multi):", quantiles[0])
 
