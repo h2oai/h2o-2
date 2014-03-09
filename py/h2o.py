@@ -1551,7 +1551,7 @@ class H2O(object):
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
-    def jobs_admin(self, timeoutSecs=20, **kwargs):
+    def jobs_admin(self, timeoutSecs=120, **kwargs):
         params_dict = {
             # 'expression': None,
             }
@@ -1562,7 +1562,7 @@ class H2O(object):
         verboseprint("\njobs_admin result:", dump_json(a))
         return a
 
-    def jobs_cancel(self, timeoutSecs=20, **kwargs):
+    def jobs_cancel(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'key': None,
             }
