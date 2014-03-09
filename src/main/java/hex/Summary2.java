@@ -789,8 +789,15 @@ public class Summary2 extends Iced {
   }
 
   public void toHTML( Vec vec, String cname, StringBuilder sb ) {
+    // should be a better way/place to decode this back to string.
+    String typeStr;
+    if ( _type == T_REAL) typeStr = "Real";
+    else if ( _type == T_INT) typeStr = "Int";
+    else if ( _type == T_ENUM) typeStr = "Enum";
+    else typeStr = "Undefined";
+
     sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'>" +
-    "<div class='alert-success'><h4>Column: " + cname + " (type: " + type + ")</h4></div>\n");
+    "<div class='alert-success'><h4>Column: " + cname + " (type: " + typeStr + ")</h4></div>\n");
     if ( _stat0._len == _stat0._nas ) {
       sb.append("<div class='alert'>Empty column, no summary!</div></div>\n");
       return;
