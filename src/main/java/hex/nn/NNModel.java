@@ -789,13 +789,13 @@ public class NNModel extends Model {
       }
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
-    long time_so_far = model_info().job().isDone() ?
-            error.training_time_ms : System.currentTimeMillis() - model_info.parameters.start_time;
+    final boolean isEnded = model_info().job().isEnded(model_info().job().self());
+    long time_so_far = isEnded ? error.training_time_ms : System.currentTimeMillis() - model_info.parameters.start_time;
     if (time_so_far > 0) {
       DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");
     }
     DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(time_so_far, true));
-    if (progress > 0 && !model_info.get_params().isDone())
+    if (progress > 0 && !isEnded)
       DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(time_so_far*(1-progress)/progress), true));
 
     long score_train = error.score_training_samples;

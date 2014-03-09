@@ -3,6 +3,7 @@ package hex.nn;
 import hex.FrameTask;
 import water.H2O;
 import water.H2O.H2OCountedCompleter;
+import water.Job;
 import water.util.Log;
 
 import java.util.Arrays;
@@ -42,6 +43,7 @@ public class NNTask extends FrameTask<NNTask> {
   }
 
   @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
+    if(_output.get_params().self() != null && !Job.isRunning(_output.get_params().self())) throw new Job.JobCancelledException();
     if (H2O.CLOUD.size()==1) {
       seed += model_info().get_processed_global(); //avoid periodicity
     } else {
