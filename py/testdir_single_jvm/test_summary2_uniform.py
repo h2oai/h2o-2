@@ -7,7 +7,7 @@ if  getpass.getuser() == 'kevin':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = False
-MAX_QBINS = 10000000
+MAX_QBINS = 1000000
 ROWS = 100000
 
 def twoDecimals(l): 
@@ -168,35 +168,38 @@ class Basic(unittest.TestCase):
 
             numRows = inspect["num_rows"]
             numCols = inspect["num_cols"]
-
             h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             # only one column
             column = summaryResult['summaries'][0]
-
             colname = column['colname']
             self.assertEqual(colname, expected[0])
 
+            quantile = 0.5 if DO_MEDIAN else .999
+            q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
+                quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
+            h2p.blue_print("h2o quantiles result:", q['result'])
+            h2p.blue_print("h2o quantiles result2:", q['result2'])
+            h2p.blue_print("h2o quantiles iterations:", q['iterations'])
+            h2p.blue_print("h2o quantiles interpolated:", q['interpolated'])
+            print h2o.dump_json(q)
+
             coltype = column['type']
             nacnt = column['nacnt']
-
             stats = column['stats']
             stattype= stats['type']
 
             # FIX! we should compare mean and sd to expected?
             mean = stats['mean']
             sd = stats['sd']
-
             print "colname:", colname, "mean (2 places):", twoDecimals(mean)
             print "colname:", colname, "std dev. (2 places):", twoDecimals(sd)
 
             zeros = stats['zeros']
-
             mins = stats['mins']
             h2o_util.assertApproxEqual(mins[0], expected[1], tol=maxDelta, msg='min is not approx. expected')
-
             maxs = stats['maxs']
             h2o_util.assertApproxEqual(maxs[0], expected[5], tol=maxDelta, msg='max is not approx. expected')
 
@@ -215,8 +218,6 @@ class Basic(unittest.TestCase):
             hcnt = column['hcnt']
 
             print "pct:", pct
-            print ""
-
             print "hcnt:", hcnt
             print "len(hcnt)", len(hcnt)
 

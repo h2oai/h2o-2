@@ -1109,7 +1109,17 @@ public final class H2O {
         // Enabling SO_REUSEADDR prior to binding the socket using bind(SocketAddress)
         // allows the socket to be bound even though a previous connection is in a timeout state.
         // cnc: this is busted on windows.  Back to the old code.
-        _apiSocket = new ServerSocket(API_PORT);
+
+        // If the user specified the -ip flag, honor it for the Web UI interface bind.
+        // Otherwise bind to all interfaces.
+        if (OPT_ARGS.ip != null) {
+          int defaultBacklog = -1;
+          _apiSocket = new ServerSocket(API_PORT, defaultBacklog, SELF_ADDRESS);
+        }
+        else {
+          _apiSocket = new ServerSocket(API_PORT);
+        }
+
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
         _udpSocket.socket().bind(new InetSocketAddress(SELF_ADDRESS, UDP_PORT));
@@ -1128,7 +1138,7 @@ public final class H2O {
       API_PORT += 2;
     }
     SELF = H2ONode.self(SELF_ADDRESS);
-    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
+    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http://",SELF_ADDRESS.getHostAddress(),":"+_apiSocket.getLocalPort()+"/");
 
     String embeddedConfigFlatfile = null;
     AbstractEmbeddedH2OConfig ec = getEmbeddedH2OConfig();

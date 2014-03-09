@@ -17,13 +17,24 @@ initList = [
 
 exprListFull = [
         'r[,1]=r[,1]+r[,3];',
+        'r[,1]=ifelse(r[,1],r[,2], ifelse(r[,1],r[,2],r[,3]));',
+        'r[,1]=ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],r[,3])))));',
+        ]
+
+fail = [
+        'r[,1]=\
+            ifelse(r[,1],r[,2],\
+            ifelse(r[,1],r[,2],\
+            ifelse(r[,1],r[,2],\
+            ifelse(r[,1],r[,2],\
+            ifelse(r[,1],r[,2],r[,3])))));'
         ]
 
 
 # incrementally concatenate
 exprList = []
 expr = ""
-for i in range(100):
+for i in range(10):
     expr += random.choice(exprListFull)
     exprList.append(expr)
 

@@ -79,7 +79,8 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       CM.vpredict = pred.vecs()[0];
       CM.serve();
       StringBuilder sb = new StringBuilder();
-      double error = CM.toASCII(sb);
+      CM.toASCII(sb);
+      double error = new ConfusionMatrix(CM.cm).err();
       Log.info(sb);
       if (error != 0) {
         Assert.fail("Classification error is not 0, but " + error + ".");

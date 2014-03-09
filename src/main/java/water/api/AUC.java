@@ -337,6 +337,7 @@ public class AUC extends Request2 {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     if (thresholds == null) return false;
+    if (actual_domain == null) actual_domain = new String[]{"false","true"};
 
     sb.append("<div>");
     DocGen.HTML.section(sb, "Scoring for Binary Classification");

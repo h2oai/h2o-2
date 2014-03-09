@@ -3,6 +3,7 @@ package water.api;
 import hex.Quantiles;
 import water.*;
 import water.util.RString;
+import water.util.Log;
 import water.fvec.*;
 
 public class QuantilesPage extends Request2 {
@@ -26,6 +27,9 @@ public class QuantilesPage extends Request2 {
   @API(help = "Number of bins for quantile (1-1000000)", filter = Default.class, lmin = 1, lmax = 1000000)
   public int max_qbins = 1000;
 
+  @API(help = "Enable multiple passes", filter = Default.class, lmin = 0, lmax = 1)
+  public int multiple_pass  = 0;
+
   @API(help = "Type 2 (discont.) and type 7 (cont.) are supported (like R)", filter = Default.class)
   public int interpolation_type = 7;
 
@@ -46,6 +50,9 @@ public class QuantilesPage extends Request2 {
 
   @API(help = "Result.")
   double result;
+
+  @API(help = "Multiple pass Result.")
+  double result2;
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='QuantilesPage.query?source=%$key'>"+content+"</a>");
@@ -82,28 +89,102 @@ public class QuantilesPage extends Request2 {
     }
     fs.blockForPending();
 
-    // for now, keep rolling our own min/max (that's all that's used)
-    Quantiles.BasicStat basicStats[] = new Quantiles.PrePass().doAll(fr).finishUp()._basicStats;
-    Quantiles[] qbins;
-
     // not used on the single pass approx. will use on multipass iterations
     double valStart = vecs[0].min();
     double valEnd = vecs[0].max();
-    qbins = new Quantiles.BinTask2(basicStats, quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
+    boolean multiPass = false;
+    Quantiles[] qbins;
+    qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, multiPass).doAll(fr)._qbins;
+    // can we just overwrite it with a new one?
+    Log.info("for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
-    if (qbins != null) {
+    // Have to get this internal state, and copy this state for the next iteration
+    // in order to multipass
+    // I guess forward as params to next iteration
+    // while ( (iteration <= maxIterations) && !done ) {
+    //  valStart   = newValStart;
+    //  valEnd     = newValEnd;
+
+    // These 3 are available for viewing, but not necessary to iterate
+    //  valRange   = newValRange;
+    //  valBinSize = newValBinSize;
+    //  valLowCnt  = newValLowCnt;
+
+    double approxResult;
+    double exactResult;
+    boolean done;
+    if (qbins != null) { // if it's enum it will be null?
       qbins[0].finishUp(vecs[0], max_qbins);
       column_name = qbins[0].colname;
       quantile_requested = qbins[0].QUANTILES_TO_DO[0];
       interpolation_type_requested = interpolation_type;
-      result = qbins[0]._pctile[0];
+      done = qbins[0]._done;
+      approxResult = qbins[0]._pctile[0];
+      interpolated = qbins[0]._interpolated;
+    }
+    else {
+      column_name = "";
+      quantile_requested = qbins[0].QUANTILES_TO_DO[0];
+      interpolation_type_requested = interpolation_type;
+      iterations = 0;
+      done = false;
+      approxResult = Double.NaN;
+      interpolated = false;
     }
 
-    // just see we can do another iteration with same values
-    if (false) {
-        qbins = new Quantiles.BinTask2(basicStats, quantile, max_qbins, valStart, valEnd).doAll(fr)._qbins;
-    }
+    result = approxResult;
 
+    // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
+    // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
+    // done with that!
+    qbins = null;
+    
+    final int MAX_ITERATIONS = 16; 
+    if ( multiple_pass == 1) {
+      // try a second pass
+      Quantiles[] qbins2;
+      multiPass = true;
+      int iteration;
+      
+      qbins2 = null;
+      for (int b = 0; b < MAX_ITERATIONS; b++) {
+        qbins2 = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, multiPass).doAll(fr)._qbins;
+        iterations = b + 1;
+        if ( qbins2 != null ) {
+          qbins2[0].finishUp(vecs[0], max_qbins);
+          // for printing?
+          double valRange = qbins2[0]._valRange;
+          double valBinSize = qbins2[0]._valBinSize;
+          Log.info("\nmultipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
+          Log.info("valBinSize: "+valBinSize);
+
+          valStart = qbins2[0]._newValStart;
+          valEnd = qbins2[0]._newValEnd;
+          done = qbins2[0]._done;
+          if ( done ) break;
+        }
+      }
+      if (qbins2 != null) { // if it's enum it will be null?
+        column_name = qbins2[0].colname;
+        quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
+        interpolation_type_requested = interpolation_type;
+        done = qbins2[0]._done;
+        exactResult = qbins2[0]._pctile[0];
+        interpolated = qbins2[0]._interpolated;
+      }
+      else {
+        column_name = "";
+        quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
+        interpolation_type_requested = interpolation_type;
+        iterations = 0;
+        done = false;
+        exactResult = Double.NaN;
+        interpolated = false;
+      }
+
+      qbins2 = null;
+      result2 = exactResult;
+    }
     return Response.done(this);
   }
 }

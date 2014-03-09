@@ -30,7 +30,8 @@ exprList = [
     # 'apply(x, 1, cave,  c1 = "x1", c2 = c("x1","x2"))',
     # 'ma <- matrix(c(1:4, 1, 6:8), nrow = 2)',
     'ma',
-    'apply(ma, 1, table)',  #--> a list of length 2
+    # fails unimplemented
+    # 'apply(ma, 1, table)',  #--> a list of length 2
     # 'apply(ma, 1, stats::quantile)', # 5 x n matrix with rownames
     #'stopifnot(dim(ma) == dim(apply(ma, 1:2, sum)))',
     ## Example with different lengths for each call

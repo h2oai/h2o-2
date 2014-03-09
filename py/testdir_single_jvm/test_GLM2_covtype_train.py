@@ -70,8 +70,6 @@ class Basic(unittest.TestCase):
             'alpha': 0.1, 
             'lambda': 1e-5, 
             'family': 'binomial',
-            # 'case_mode': '=', 
-            # 'case_val': 4,
             'classification': 1,
         }
         timeoutSecs = 60

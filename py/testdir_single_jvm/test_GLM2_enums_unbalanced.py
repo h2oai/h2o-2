@@ -126,8 +126,6 @@ class Basic(unittest.TestCase):
                 'n_folds': 0, 
                 'alpha': 0, 
                 'lambda': 0, 
-                # 'case_mode': '=', 
-                # 'case': 0,
                 }
 
             start = time.time()

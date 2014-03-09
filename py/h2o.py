@@ -774,7 +774,7 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
     if not all(cloudHealthy):
         msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
         if not ignoreHealth: 
-            raise Exception(msg=msg)
+            raise Exception(msg)
 
     # gather up all the node_healthy status too
     for i,c in enumerate(cloudStatus):
@@ -783,7 +783,7 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
             print "node %s cloud status: %s" % (i, dump_json(c))
             msg = "node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy)
             if not ignoreHealth: 
-                raise Exception(msg=msg)
+                raise Exception(msg)
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
@@ -1832,12 +1832,13 @@ class H2O(object):
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
-    def quantiles(self, timeoutSecs=300, print_params=False, **kwargs):
+    def quantiles(self, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'source_key': None,
             'column': None,
             'quantile': None,
             'max_qbins': None,
+            'multiple_pass': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'quantiles', print_params)
         a = self.__do_json_request('2/QuantilesPage.json', timeout=timeoutSecs, params=params_dict)

@@ -4,8 +4,6 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_glm, h2o_exec as h2e, h2o
 
 print "Comparing GLM1 and GLM2 on covtype, with different alpha/lamba combinations"
 print "Will also compare predicts, but having gotten that far without miscompare on training"
-USE_EXEC = False
-
 MAX_ITER= 50
 # 'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
 LSM_SOLVER = 'GenGradient'
@@ -165,11 +163,9 @@ class Basic(unittest.TestCase):
 
         # do the binomial conversion with Exec2, for both training and test (h2o won't work otherwise)
         trainKey = parseResult['destination_key']
-        CLASS=1
 
         # just to check. are there any NA/constant cols?
         ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
-
 
         #**************************************************************************
         # first glm1
@@ -185,24 +181,17 @@ class Basic(unittest.TestCase):
             'max_iter': MAX_ITER,
             'beta_epsilon': BETA_EPSILON}
 
-        if USE_EXEC:
-            # maybe go back to simpler exec here. this was from when Exec failed unless this was used
-            execExpr="A.hex=%s" % trainKey
+        CLASS=1
+        # maybe go back to simpler exec here. this was from when Exec failed unless this was used
+        execExpr="A.hex=%s" % parseResult['destination_key']
+        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+        # class 1=1, all else 0
+        if FAMILY == 'binomial':
+            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-            # class 1=1, all else 0
-            if FAMILY == 'binomial':
-                execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
-                h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-            aHack = {'destination_key': 'A.hex'}
-        else:
-            # since we're not using predict, we can use case_mode/val to get the binomial output class
-            if FAMILY == 'binomial':
-                kwargs.update({'case_mode': '=', 'case': 1})
-            aHack = {'destination_key': hexKey}
+        aHack = {'destination_key': 'A.hex'}
         
         timeoutSecs = 120
-        kwargs.update({'case_mode': '=', 'case': 1})
-
         kwargs.update({'alpha': TRY_ALPHA, 'lambda': TRY_LAMBDA})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         # bad model (auc=0.5)

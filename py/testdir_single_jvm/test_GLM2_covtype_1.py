@@ -33,7 +33,6 @@ class Basic(unittest.TestCase):
         #     "    num_cols:", "{:,}".format(inspect['num_cols'])
 
         x = ""
-
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         max_iter = 8
 
@@ -45,12 +44,18 @@ class Basic(unittest.TestCase):
             'family': 'binomial',
             # 'link': 'logit', # 2 doesn't support
             'n_folds': 2,
-            'case_mode': '>',
-            'case_val': 1, # 2
             'max_iter': max_iter,
             'beta_epsilon': 1e-3,
             'destination_key': modelKey
             }
+
+        # maybe go back to simpler exec here. this was from when Exec failed unless this was used
+        execExpr="A.hex=%s" % parseResult['destination_key']
+        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+        # class 1=1, all else 0
+        execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % (y+1, y+1, 1)
+        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+        aHack = {'destination_key': 'A.hex'}
 
         timeoutSecs = 120
         # L2 
@@ -68,7 +73,7 @@ class Basic(unittest.TestCase):
 
             # print "GLM result from completion_redirect:", h2o.dump_json(a)
     
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
+        glmFirstResult = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
         completionHack(glmFirstResult['job_key'], modelKey)
         print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         ## h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
@@ -76,7 +81,7 @@ class Basic(unittest.TestCase):
         # Elastic
         kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         start = time.time()
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
+        glmFirstResult = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
         completionHack(glmFirstResult['job_key'], modelKey)
         print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         ## h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
@@ -84,7 +89,7 @@ class Basic(unittest.TestCase):
         # L1
         kwargs.update({'alpha': 1, 'lambda': 1e-4})
         start = time.time()
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
+        glmFirstResult = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
         completionHack(glmFirstResult['job_key'], modelKey)
         print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         ## h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
