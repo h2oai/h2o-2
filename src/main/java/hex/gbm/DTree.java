@@ -518,7 +518,7 @@ public class DTree extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
     @API(help="MSE rate as trees are added")       public final double [] errs;
-    @API(help="Keys of actual trees built")        public final Key [/*N*/][/*nclass*/] treeKeys;
+    @API(help="Keys of actual trees built")        public final Key [/*N*/][/*nclass*/] treeKeys; // Always filled, but 2-binary classifiers can contain null for 2nd class
     @API(help="Maximum tree depth")                public final int max_depth;
     @API(help = "Fewest allowed observations in a leaf") public final int min_rows;
     @API(help = "Bins in the histograms")          public final int nbins;
@@ -624,7 +624,8 @@ public class DTree extends Iced {
       if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[numTrees()][];
       Key[] k = treeKeys[tidx];
       CompressedTree[] ctree = new CompressedTree[nclasses()];
-      for (int i = 0; i < nclasses(); i++) ctree[i] = UKV.get(k[i]);
+      for (int i = 0; i < nclasses(); i++) // binary classifiers can contains null for second tree
+        if (k[i]!=null) ctree[i] = UKV.get(k[i]);
       _treeBitsCache[tidx] = ctree;
       return ctree;
     }
@@ -634,6 +635,27 @@ public class DTree extends Iced {
       for( int c=0; c<ts.length; c++ )
         if( ts[c] != null )
           preds[ts.length==1?0:c+1] += ts[c].score(data);
+    }
+
+    /** Delete model trees */
+    public void delete_trees() {
+      Futures fs = new Futures();
+      delete_trees(fs);
+      fs.blockForPending();
+    }
+    public Futures delete_trees(Futures fs) {
+      for (int tid = 0; tid < treeKeys.length; tid++) /* over all trees */
+          for (int cid = 0; cid < treeKeys[tid].length; cid++) /* over all classes */
+            // 2-binary classifiers can contain null for the second
+            if (treeKeys[tid][cid]!=null) DKV.remove(treeKeys[tid][cid], fs);
+      return fs;
+    }
+
+    // If model is deleted then all trees has to be delete as well
+    @Override public Futures delete_impl(Futures fs) {
+      delete_trees(fs);
+      super.delete_impl(fs);
+      return fs;
     }
 
     public void generateHTML(String title, StringBuilder sb) {
