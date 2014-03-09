@@ -9,6 +9,8 @@ OTHER_T = 0.5
 BIN_COUNT = 20
 BIN_COUNT = 1
 
+print "Using max_qbins: ", BIN_COUNT, "threshold:", OTHER_T
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
 args = parser.parse_args()
@@ -148,18 +150,24 @@ def findQuantile(d, dmin, dmax, threshold):
         for val in d:
             # Need to count the stuff outside the bin-gathering, 
             # since threshold compare is based on total row compare
+            # on first pass, shouldn't see anything exceed the start/end bounds
+            # since those are min/max for the column? (shouldn't be any fp precision issue? or ??)
+            # oh wait, this valOffset math creates possible precision issue?
+            # maybe we should address it with the NUDGE value below? but what about first pass?
             valOffset = val - valStart
             if valOffset < 0:
                 hcnt2_low += 1
             elif val > valEnd:
                 if (hcnt2_high==0) or (val < hcnt2_high_min):
                     hcnt2_high_min = val;
-                    print "hcnt2_high_min update:", hcnt2_high_min
+                    print "\nhcnt2_high_min update:", hcnt2_high_min, valOffset, val, valStart, hcnt2_high, val, valEnd,"\n"
                 hcnt2_high += 1
             else:
                 # where are we zeroing in? (start)
                 # print valOffset, valBinSize
-                binIdx2 = int(math.floor((valOffset * 1000000.0) / valBinSize) / 1000000.0)
+                # shouldn't need this. plenty of fp precision
+                # binIdx2 = int(math.floor((valOffset * 1000000.0) / valBinSize) / 1000000.0)
+                binIdx2 = int(math.floor(valOffset / (valBinSize + 0.0))) # make sure it's always an fp divide?
                 # print "(multi) val: ",val," valOffset: ",valOffset," valBinSize: ",valBinSize
 
                 assert binIdx2 >=0 and binIdx2<=maxBinCnt, "val %s %s %s %s binIdx2: %s maxBinCnt: %s valBinSize: %s" % \
@@ -170,6 +178,11 @@ def findQuantile(d, dmin, dmax, threshold):
                     hcnt2_max[binIdx2] = val;
                 hcnt2[binIdx2] += 1
 
+                # check if we went into the magic extra bin
+                if binIdx2 == (maxBinCnt-1):
+                    print "\nFP! val went into the extra maxBinCnt bin:", \
+                    binIdx2, hcnt2_high_min, valOffset, val, valStart, hcnt2_high, val, valEnd,"\n"
+        
             # check the legal states for these two
             # we don't have None for checking hcnt2_high_min in java
             assert hcnt2_high==0 or (hcnt2_high_min is not None)
@@ -259,12 +272,33 @@ def findQuantile(d, dmin, dmax, threshold):
                 "hcnt2_min[k]: ", hcnt2_min[k],\
                 "hcnt2_max[k]: ", hcnt2_max[k]
 
-            newValStart = hcnt2_min[k] - NUDGE # FIX! should we nudge a little?
-            newValEnd   = hcnt2_max[k] + NUDGE # FIX! should we nudge a little?
-            newValRange = newValEnd - newValStart 
+            # possible bin leakage at start/end edges due to fp arith.
+            # the bin index arith may resolve OVER the boundary created by the compare for hcnt2_high compare
+            # rather than using NUDGE, see if there's a non-zero bin below (min) or above (max) you.
+            # Just need to check the one bin below and above k, if they exist. 
+            if k > 0 and hcnt2[k-1]>0 and (hcnt2_min[k-1]<hcnt2_min[k]):
+                newValStart = hcnt2_min[k-1]
+            else:
+                newValStart = hcnt2_min[k]
+
+            # subtle. we do put stuff in the extra end bin (see the print above that happens)
+            # k might be pointing to one less than that (like k=0 for 1 bin case)
+            if k < maxBinCnt and hcnt2[k+1]>0 and (hcnt2_max[k+1]>hcnt2_max[k]):
+                print "hello"
+                newValEnd = hcnt2_max[k+1]
+            else:
+                newValEnd = hcnt2_max[k]
             
+            newValRange = newValEnd - newValStart 
             # maxBinCnt is always binCount + 1, since we might cover over due to rounding/fp issues?
             newValBinSize = newValRange / (desiredBinCnt + 0.0)
+            
+            # the start/end should never change if we're just using one bin
+            # this is a bin leakage test, if you use one bin. (we should never resolve exactly stop at max iterations
+            # assumes NUDGE is 0
+            if NUDGE == 0.0:
+                assert desiredBinCnt>1 or (valStart==newValStart and valEnd==newValEnd),\
+                    "if 1 bin, should be no per-pass edge leakage %s %s %s %s %s %s" % (k, hcnt2_high, valStart, newValStart, valEnd, newValEnd)
             newLowCount = currentCnt
             if newValBinSize==0:
                 # assert done or newValBinSize!=0 and live with current guess
