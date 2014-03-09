@@ -168,7 +168,7 @@ public class NNModel extends Model {
 
     // helpers for AdaDelta
     private float[][] E_dx2;
-    private double[][] E_g2;
+    private float[][] E_g2;
 
     // compute model size (number of model parameters required for making predictions)
     // momenta are not counted here, but they are needed for model building
@@ -187,7 +187,7 @@ public class NNModel extends Model {
     public final float[] get_weights_momenta(int i) { return weights_momenta[i]; }
     public final double[] get_biases_momenta(int i) { return biases_momenta[i]; }
     public final float[] get_E_dx2(int i) { return E_dx2[i]; }
-    public final double[] get_E_g2(int i) { return E_g2[i]; }
+    public final float[] get_E_g2(int i) { return E_g2[i]; }
 
     @API(help = "Model parameters", json = true)
     final private NN parameters;
@@ -276,8 +276,8 @@ public class NNModel extends Model {
         if (E_dx2 != null) return;
         E_dx2 = new float[weights.length][];
         for (int i=0; i<E_dx2.length; ++i) E_dx2[i] = new float[units[i]*units[i+1]];
-        E_g2 = new double[weights.length][];
-        for (int i=0; i<E_g2.length; ++i) E_g2[i] = new double[units[i]*units[i+1]];
+        E_g2 = new float[weights.length][];
+        for (int i=0; i<E_g2.length; ++i) E_g2[i] = new float[units[i]*units[i+1]];
       }
     }
     public void delete() {
@@ -384,7 +384,7 @@ public class NNModel extends Model {
       }
       if (adaDelta()) {
         for (float[] dx2 : E_dx2) Utils.div(dx2, (float) N);
-        for (double[] g2 : E_g2) Utils.div(g2, N);
+        for (float[] g2 : E_g2) Utils.div(g2, (float) N);
       }
     }
     double uniformDist(Random rand, double min, double max) {
@@ -487,7 +487,9 @@ public class NNModel extends Model {
     errors[0].validation = (params.validation != null);
   }
 
-  transient private long _now, _timeLastScoreStart, _timeLastScoreEnd, _timeLastPrintStart;
+  transient private long _timeLastScoreStart;
+  transient private long _timeLastScoreEnd;
+  transient private long _timeLastPrintStart;
   /**
    *
    * @param train training data from which the model is built (for epoch counting only)
@@ -501,15 +503,15 @@ public class NNModel extends Model {
     epoch_counter = (float)model_info().get_processed_total()/train.numRows();
     run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().get_params().epochs);
-    _now = System.currentTimeMillis();
-    final long sinceLastScore = _now-_timeLastScoreStart;
-    final long sinceLastPrint = _now-_timeLastPrintStart;
+    long now = System.currentTimeMillis();
+    final long sinceLastScore = now -_timeLastScoreStart;
+    final long sinceLastPrint = now -_timeLastPrintStart;
     final long samples = model_info().get_processed_total();
     if (sinceLastPrint > model_info().get_params().score_interval*1000) {
-      _timeLastPrintStart = _now;
-      Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
+      _timeLastPrintStart = now;
+      Log.info("Training time: " + PrettyPrint.msecs(now - start_time, true)
               + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
+              + " Speed: " + String.format("%.3f", (double)samples/((now - start_time)/1000.)) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
     if( !keep_running ||
@@ -517,12 +519,12 @@ public class NNModel extends Model {
         &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
       final boolean printme = !model_info().get_params().quiet_mode;
       if (printme) Log.info("Scoring the model.");
-      _timeLastScoreStart = _now;
+      _timeLastScoreStart = now;
       // compute errors
       Errors err = new Errors();
       err.classification = isClassifier();
       assert(err.classification == model_info().get_params().classification);
-      err.training_time_ms = _now - timeStart;
+      err.training_time_ms = now - timeStart;
       err.epoch_counter = epoch_counter;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
@@ -584,7 +586,7 @@ public class NNModel extends Model {
       _timeLastScoreEnd = System.currentTimeMillis();
       // print the freshly scored model to ASCII
       for (String s : toString().split("\n")) Log.info(s);
-      if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
+      if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -789,7 +791,7 @@ public class NNModel extends Model {
       }
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
-    final boolean isEnded = model_info().job().isEnded(model_info().job().self());
+    final boolean isEnded = Job.isEnded(model_info().job().self());
     long time_so_far = isEnded ? error.training_time_ms : System.currentTimeMillis() - model_info.parameters.start_time;
     if (time_so_far > 0) {
       DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");
