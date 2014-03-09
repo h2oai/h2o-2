@@ -4,13 +4,15 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b, 
 import h2o_summ
 
 print "same as test_summary2_unifiles.py but using local runif_.csv single col for comparison testing"
+print "Should really add something that sees we go to 16 with no answer, if bins are set to 1"
+print "Answer not guaranteed (for any data) if max iterations is 16 in h2o and max_qbins is small"
 DO_TRY_SCIPY = False
 if  getpass.getuser() == 'kevin':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
 MAX_QBINS = 1000
-MAX_QBINS = 2
+MAX_QBINS = 5
 
 def twoDecimals(l):
     if isinstance(l, list):
@@ -179,11 +181,16 @@ class Basic(unittest.TestCase):
                     quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
                 qresult = q['result']
                 qresult_multi = q['result_multi']
+                qresult_iterations = q['iterations']
+                qresult_interpolated = q['interpolated']
                 h2p.blue_print("h2o quantiles result:", qresult)
                 h2p.blue_print("h2o quantiles result_multi:", qresult_multi)
-                h2p.blue_print("h2o quantiles iterations:", q['iterations'])
-                h2p.blue_print("h2o quantiles interpolated:", q['interpolated'])
+                h2p.blue_print("h2o quantiles iterations:", qresult_iterations)
+                h2p.blue_print("h2o quantiles interpolated:", qresult_interpolated)
                 print h2o.dump_json(q)
+
+                self.assertLess(qresult_iterations, 16, 
+                    msg="h2o does max of 16 iterations. likely no result_multi if we hit max. is bins=1?")
 
                 # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
                 coltype = column['type']

@@ -1,8 +1,7 @@
 import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
-import h2o_sandbox
-import h2o_print as h2p
+import h2o_sandbox, h2o_print as h2p
 import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
@@ -189,9 +188,15 @@ def parse_our_args():
     parser.add_argument('-dts', '--disable_time_stamp', help='Disable the timestamp on all stdout. Useful when trying to capture some stdout (like json prints) for use elsewhere', action='store_true')
     parser.add_argument('-debug_rest', '--debug_rest', help='Print REST API interactions to rest.log', action='store_true')
 
-    parser.add_argument('unittest_args', nargs='*')
+    parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
 
+    parser.add_argument('unittest_args', nargs='*')
     args = parser.parse_args()
+
+    # disable colors if we pipe this into a file to avoid extra chars
+    if args.nocolor:
+        h2p.disable_colors()
+
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
     global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
 

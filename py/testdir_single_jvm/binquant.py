@@ -4,9 +4,20 @@ import h2o_print as h2p, h2o_summ
 import numpy as np
 import scipy as sp
 import math
+import argparse
 OTHER_T = 0.5
 BIN_COUNT = 20
 BIN_COUNT = 1
+
+print "Using max_qbins: ", BIN_COUNT, "threshold:", OTHER_T
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
+args = parser.parse_args()
+
+# disable colors if we pipe this into a file to avoid extra chars
+if args.nocolor:
+    h2p.disable_colors()
 
 # Defintion (this defn. seems odd. for the case of real quantiles, it should be a  floor, not a round up?)
 # This definition may be correct for 1-based indexing. (we do zero-based indexing in the code below, so it looks different)
@@ -139,17 +150,24 @@ def findQuantile(d, dmin, dmax, threshold):
         for val in d:
             # Need to count the stuff outside the bin-gathering, 
             # since threshold compare is based on total row compare
+            # on first pass, shouldn't see anything exceed the start/end bounds
+            # since those are min/max for the column? (shouldn't be any fp precision issue? or ??)
+            # oh wait, this valOffset math creates possible precision issue?
+            # maybe we should address it with the NUDGE value below? but what about first pass?
             valOffset = val - valStart
             if valOffset < 0:
                 hcnt2_low += 1
             elif val > valEnd:
                 if (hcnt2_high==0) or (val < hcnt2_high_min):
                     hcnt2_high_min = val;
+                    print "\nhcnt2_high_min update:", hcnt2_high_min, valOffset, val, valStart, hcnt2_high, val, valEnd,"\n"
                 hcnt2_high += 1
             else:
                 # where are we zeroing in? (start)
                 # print valOffset, valBinSize
-                binIdx2 = int(math.floor((valOffset * 1000000.0) / valBinSize) / 1000000.0)
+                # shouldn't need this. plenty of fp precision
+                # binIdx2 = int(math.floor((valOffset * 1000000.0) / valBinSize) / 1000000.0)
+                binIdx2 = int(math.floor(valOffset / (valBinSize + 0.0))) # make sure it's always an fp divide?
                 # print "(multi) val: ",val," valOffset: ",valOffset," valBinSize: ",valBinSize
 
                 assert binIdx2 >=0 and binIdx2<=maxBinCnt, "val %s %s %s %s binIdx2: %s maxBinCnt: %s valBinSize: %s" % \
@@ -159,6 +177,16 @@ def findQuantile(d, dmin, dmax, threshold):
                 if hcnt2[binIdx2]==0 or (val > hcnt2_max[binIdx2]):
                     hcnt2_max[binIdx2] = val;
                 hcnt2[binIdx2] += 1
+
+                # check if we went into the magic extra bin
+                if binIdx2 == (maxBinCnt-1):
+                    print "\nFP! val went into the extra maxBinCnt bin:", \
+                    binIdx2, hcnt2_high_min, valOffset, val, valStart, hcnt2_high, val, valEnd,"\n"
+        
+            # check the legal states for these two
+            # we don't have None for checking hcnt2_high_min in java
+            assert hcnt2_high==0 or (hcnt2_high_min is not None)
+            assert (hcnt2_high_min is None) or hcnt2_high!=0
 
         # everything should either be in low, the bins, or high
         totalBinnedRows = htot2()
@@ -238,12 +266,39 @@ def findQuantile(d, dmin, dmax, threshold):
                 print "Guess D", guess
 
         if not done:
-            newValStart = hcnt2_min[k] - NUDGE # FIX! should we nudge a little?
-            newValEnd   = hcnt2_max[k] + NUDGE # FIX! should we nudge a little?
-            newValRange = newValEnd - newValStart 
+            print "Not done, setting new range",\
+                "k: ", k,\
+                "currentCnt: ", currentCnt,\
+                "hcnt2_min[k]: ", hcnt2_min[k],\
+                "hcnt2_max[k]: ", hcnt2_max[k]
+
+            # possible bin leakage at start/end edges due to fp arith.
+            # the bin index arith may resolve OVER the boundary created by the compare for hcnt2_high compare
+            # rather than using NUDGE, see if there's a non-zero bin below (min) or above (max) you.
+            # Just need to check the one bin below and above k, if they exist. 
+            if k > 0 and hcnt2[k-1]>0 and (hcnt2_min[k-1]<hcnt2_min[k]):
+                newValStart = hcnt2_min[k-1]
+            else:
+                newValStart = hcnt2_min[k]
+
+            # subtle. we do put stuff in the extra end bin (see the print above that happens)
+            # k might be pointing to one less than that (like k=0 for 1 bin case)
+            if k < maxBinCnt and hcnt2[k+1]>0 and (hcnt2_max[k+1]>hcnt2_max[k]):
+                print "hello"
+                newValEnd = hcnt2_max[k+1]
+            else:
+                newValEnd = hcnt2_max[k]
             
+            newValRange = newValEnd - newValStart 
             # maxBinCnt is always binCount + 1, since we might cover over due to rounding/fp issues?
             newValBinSize = newValRange / (desiredBinCnt + 0.0)
+            
+            # the start/end should never change if we're just using one bin
+            # this is a bin leakage test, if you use one bin. (we should never resolve exactly stop at max iterations
+            # assumes NUDGE is 0
+            if NUDGE == 0.0:
+                assert desiredBinCnt>1 or (valStart==newValStart and valEnd==newValEnd),\
+                    "if 1 bin, should be no per-pass edge leakage %s %s %s %s %s %s" % (k, hcnt2_high, valStart, newValStart, valEnd, newValEnd)
             newLowCount = currentCnt
             if newValBinSize==0:
                 # assert done or newValBinSize!=0 and live with current guess
@@ -295,6 +350,7 @@ csvPathname = './d.csv'
 csvPathname = './runif_.csv'
 csvPathname = './covtype1.data'
 csvPathname = './runif_.csv'
+csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
 col = 0
 
 print "Reading csvPathname"
@@ -307,14 +363,20 @@ dataset = np.genfromtxt(
 print dataset.shape
 # target = [x[col] for x in dataset]
 # one column
-target = dataset
+print dataset.shape
+col = 0
+if len(dataset.shape)==1:
+    target = dataset
+else:
+    target = [x[col] for x in dataset]
+
 targetFP = np.array(target, np.float)
 
 n_features = len(dataset) - 1
 print "n_features:", n_features
 
 print "histogram of target"
-print target
+# print target
 print sp.histogram(target)
 
 thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
@@ -323,6 +385,10 @@ thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
 # h2o
 #*****************************************************************
 d = target
+
+
+    # target = dataset
+
 dmin = min(d)
 dmax = max(d)
 thresholdList = [OTHER_T]
@@ -339,9 +405,16 @@ a1 = stats.scoreatpercentile(target, per=100*OTHER_T, interpolation_method='frac
 h2p.red_print("stats.scoreatpercentile:", a1)
 a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T])
 h2p.red_print("scipy stats.mstats.mquantiles:", a2)
-
-# looking at the sorted list here
-targetFP.sort()
 b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T)
-h2p.blue_print( "from scipy:", a2)
+h2p.red_print("sort algo:", b)
+h2p.red_print( "from h2o (multi):", quantiles[0])
+
+print "Now looking at the sorted list..same thing"
+targetFP.sort()
+h2p.blue_print("stats.scoreatpercentile:", a1)
+a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T])
+h2p.blue_print("scipy stats.mstats.mquantiles:", a2)
+b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T)
+h2p.blue_print("sort algo:", b)
+h2p.blue_print( "from h2o (multi):", quantiles[0])
 
