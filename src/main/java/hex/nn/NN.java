@@ -420,6 +420,11 @@ public class NN extends Job.ValidatedJob {
       Log.info("Finished training the Neural Net model.");
       return model;
     }
+    catch(JobCancelledException ex) {
+      Log.info("Neural Net model building was cancelled.");
+      model = UKV.get(dest());
+      return model;
+    }
     catch(Exception ex) {
       ex.printStackTrace();
       throw new RuntimeException(ex);
