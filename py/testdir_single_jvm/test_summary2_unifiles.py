@@ -248,8 +248,8 @@ class Basic(unittest.TestCase):
                     mins = stats['mins']
                     maxs = stats['maxs']
 
-                    print "colname:", colname, "mean (2 places): %s", twoDecimals(mean)
-                    print "colname:", colname, "std dev. (2 places): %s", twoDecimals(sd)
+                    print "colname:", colname, "mean (2 places):", twoDecimals(mean)
+                    print "colname:", colname, "std dev. (2 places):",  twoDecimals(sd)
 
                     pct = stats['pct']
                     print "pct:", pct

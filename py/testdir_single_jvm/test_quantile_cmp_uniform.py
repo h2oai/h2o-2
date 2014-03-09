@@ -169,8 +169,8 @@ class Basic(unittest.TestCase):
             # FIX! we should compare mean and sd to expected?
             mean = stats['mean']
             sd = stats['sd']
-            print "colname:", colname, "mean (2 places): %s", twoDecimals(mean)
-            print "colname:", colname, "std dev. (2 places): %s", twoDecimals(sd)
+            print "colname:", colname, "mean (2 places):", twoDecimals(mean)
+            print "colname:", colname, "std dev. (2 places):", twoDecimals(sd)
 
             zeros = stats['zeros']
             mins = stats['mins']

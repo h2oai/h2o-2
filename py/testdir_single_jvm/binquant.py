@@ -73,7 +73,7 @@ def findQuantile(d, dmin, dmax, threshold):
     newValEnd   = dmax
     newValRange = newValEnd - newValStart
     desiredBinCnt = BIN_COUNT # Could do per-pass adjustment, but fixed works fine.
-    newBinSize  = newValRange / (desiredBinCnt + 0.0)
+    newValBinSize  = newValRange / (desiredBinCnt + 0.0)
     newLowCount = 0 # count of rows below the bins
     # yes there is no newHighCount. Created during the pass, though.
 
@@ -86,7 +86,7 @@ def findQuantile(d, dmin, dmax, threshold):
     hcnt2_low = 0
     hcnt2_high = 0
 
-    assert newBinSize != 0 # can be negative
+    assert newValBinSize != 0 # can be negative
     assert newValEnd > newValStart
     assert newValRange > 0
 
@@ -104,23 +104,23 @@ def findQuantile(d, dmin, dmax, threshold):
         h2p.green_print("newValStart", newValStart)
         h2p.green_print("newValEnd", newValEnd)
         h2p.green_print("newValRange", newValRange)
-        h2p.green_print("newBinSize", newBinSize)
+        h2p.green_print("newValBinSize", newValBinSize)
         h2p.green_print("newLowCount", newLowCount)
         h2p.green_print("threshold", threshold)
 
         valStart = newValStart
         valEnd   = newValEnd
         valRange = newValRange
-        binSize = newBinSize
+        valBinSize = newValBinSize
         lowCount = newLowCount
         desiredBinCnt = BIN_COUNT
         maxBinCnt = desiredBinCnt + 1 # might go one over due to FP issues
 
         # playing with creating relative NUDGE values to make sure bin range
         # is always inclusive of target.
-        # ratio it down from binSize. 
-        # It doesn't need to be as big as binSize.
-        # implicitly, it shouldn't need to be as large as binSize
+        # ratio it down from valBinSize. 
+        # It doesn't need to be as big as valBinSize.
+        # implicitly, it shouldn't need to be as large as valBinSize
         # can't seem to make it work yet. leave NUDGE=0
         NUDGE = 0
 
@@ -147,10 +147,12 @@ def findQuantile(d, dmin, dmax, threshold):
                 hcnt2_high += 1
             else:
                 # where are we zeroing in? (start)
-                # print valOffset, binSize
-                binIdx2 = int(math.floor((valOffset * 1000000.0) / binSize) / 1000000.0)
-                assert binIdx2 >=0 and binIdx2<=maxBinCnt, "val %s %s %s %s binIdx2: %s maxBinCnt: %s binSize: %s" % \
-                    (val, valStart, valEnd, valOffset, binIdx2, maxBinCnt, binSize)
+                # print valOffset, valBinSize
+                binIdx2 = int(math.floor((valOffset * 1000000.0) / valBinSize) / 1000000.0)
+                # print "(multi) val: ",val," valOffset: ",valOffset," valBinSize: ",valBinSize
+
+                assert binIdx2 >=0 and binIdx2<=maxBinCnt, "val %s %s %s %s binIdx2: %s maxBinCnt: %s valBinSize: %s" % \
+                    (val, valStart, valEnd, valOffset, binIdx2, maxBinCnt, valBinSize)
                 if hcnt2[binIdx2]==0 or (val < hcnt2_min[binIdx2]):
                     hcnt2_min[binIdx2] = val;
                 if hcnt2[binIdx2]==0 or (val > hcnt2_max[binIdx2]):
@@ -159,7 +161,11 @@ def findQuantile(d, dmin, dmax, threshold):
 
         # everything should either be in low, the bins, or high
         totalBinnedRows = htot2()
-        assert totalRows==totalBinnedRows, "totalRows: %s htot2() %s not equal" % (totalRows, totalBinnedRows) 
+        print "totalRows check: %s htot2(): %s should be equal. hcnt2_low: %s hcnt2_high: %s" % \
+            (totalRows, totalBinnedRows, hcnt2_low, hcnt2_high) 
+
+        assert totalRows==totalBinnedRows, "totalRows: %s htot2() %s not equal. hcnt2_low: %s hcnt2_high: %s" % \
+            (totalRows, totalBinnedRows, hcnt2_low, hcnt2_high) 
 
         # now walk thru and find out what bin to look inside
         currentCnt = hcnt2_low
@@ -236,11 +242,11 @@ def findQuantile(d, dmin, dmax, threshold):
             newValRange = newValEnd - newValStart 
             
             # maxBinCnt is always binCount + 1, since we might cover over due to rounding/fp issues?
-            newBinSize = newValRange / (desiredBinCnt + 0.0)
+            newValBinSize = newValRange / (desiredBinCnt + 0.0)
             newLowCount = currentCnt
-            if newBinSize==0:
-                # assert done or newBinSize!=0 and live with current guess
-                print "Assuming done because newBinSize is 0."
+            if newValBinSize==0:
+                # assert done or newValBinSize!=0 and live with current guess
+                print "Assuming done because newValBinSize is 0."
                 print "newValRange: %s, hcnt2[k]: %s hcnt2_min[k]: %s hcnt2_max[k]: %s" %\
                      (newValRange, hcnt2[k], hcnt2_min[k], hcnt2_max[k])
                 guess = newValStart
@@ -252,7 +258,7 @@ def findQuantile(d, dmin, dmax, threshold):
 
             # cover the case above with multiple entris in a bin, all the same value
             # will be zero on the last pass?
-            # assert newBinSize != 0 or done
+            # assert newValBinSize != 0 or done
             # need the count up to but not including newValStart
 
         best_result.append(guess)
@@ -261,8 +267,8 @@ def findQuantile(d, dmin, dmax, threshold):
         h2p.blue_print("Ending Pass", iteration)
         h2p.blue_print("best_result:", best_result, "done:", done, "hcnt2[k]", hcnt2[k])
         print "currentCnt", currentCnt, "targetCntInt", targetCntInt, "hcnt2_low", hcnt2_low, "hcnt2_high", hcnt2_high
-        print "was", valStart, valEnd, valRange, binSize
-        print "next", newValStart, newValEnd, newValRange, newBinSize
+        print "was", valStart, valEnd, valRange, valBinSize
+        print "next", newValStart, newValEnd, newValRange, newValBinSize
 
     return best_result[-1]
 
@@ -286,6 +292,7 @@ csvPathname = './syn_binary_100x1.csv'
 csvPathname = './syn_binary_100000x1.csv'
 csvPathname = './d.csv'
 csvPathname = './runif_.csv'
+csvPathname = './covtype1.data'
 col = 0
 
 print "Reading csvPathname"

@@ -21,17 +21,17 @@ public class QuantilesPage extends Request2 {
   public Vec column;
   class responseFilter extends VecClassSelect { responseFilter() { super("source_key"); } }
 
-  @API(help = "Quantile to calculate (0.0-1.0)", filter = Default.class, dmin = 0, dmax = 1)
-  public double quantile = 0.0;
+  @API(help = "Quantile desired (0.0-1.0). Median is 0.5. 0 and 1 are min/max", filter = Default.class, dmin = 0, dmax = 1)
+  public double quantile = 0.5;
 
-  @API(help = "Number of bins for quantile (1-1000000)", filter = Default.class, lmin = 1, lmax = 1000000)
+  @API(help = "Number of bins used (1-1000000). 1000 recommended", filter = Default.class, lmin = 1, lmax = 1000000)
   public int max_qbins = 1000;
 
-  @API(help = "Enable multiple passes", filter = Default.class, lmin = 0, lmax = 1)
+  @API(help = "Enable multiple passes (always exact)", filter = Default.class, lmin = 0, lmax = 1)
   public int multiple_pass  = 0;
 
-  @API(help = "Type 2 (discont.) and type 7 (cont.) are supported (like R)", filter = Default.class)
-  public int interpolation_type = 7;
+  @API(help = "Interpolation between rows. Type 2 (mean) or 7 (linear).", filter = Default.class)
+  public int interpolation_type = 2;
 
   @API(help = "Column name.")
   String column_name;
@@ -39,8 +39,8 @@ public class QuantilesPage extends Request2 {
   @API(help = "Quantile requested.")
   double quantile_requested;
 
-  @API(help = "Interpolation type.")
-  int interpolation_type_requested;
+  @API(help = "Interpolation type used (7 not supported yet).")
+  int interpolation_type_used;
 
   @API(help = "False if an exact result is provided, True if the answer is interpolated.")
   boolean interpolated;
@@ -52,7 +52,7 @@ public class QuantilesPage extends Request2 {
   double result;
 
   @API(help = "Multiple pass Result.")
-  double result2;
+  double result_multi;
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='QuantilesPage.query?source=%$key'>"+content+"</a>");
@@ -66,8 +66,9 @@ public class QuantilesPage extends Request2 {
     if (column.isEnum()) {
       throw new IllegalArgumentException("Column is an enum");
     }
-    if (! ((interpolation_type == 2) || (interpolation_type == 7))) {
-      throw new IllegalArgumentException("Unsupported interpolation type");
+    // if (! ((interpolation_type == 2) || (interpolation_type == 7))) {
+    if ( interpolation_type != 2 ) {
+      throw new IllegalArgumentException("Unsupported interpolation type. Currently only allow 2");
     }
 
     Vec[] vecs = new Vec[1];
@@ -96,7 +97,7 @@ public class QuantilesPage extends Request2 {
     Quantiles[] qbins;
     qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, multiPass).doAll(fr)._qbins;
     // can we just overwrite it with a new one?
-    Log.info("for approx. valStart: "+valStart+" valEnd: "+valEnd);
+    Log.info("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
     // Have to get this internal state, and copy this state for the next iteration
     // in order to multipass
@@ -113,11 +114,13 @@ public class QuantilesPage extends Request2 {
     double approxResult;
     double exactResult;
     boolean done;
+    // interpolation_type_used = interpolation_type;
+    interpolation_type_used = 2 ; // h2o always uses mean if interpolating, right now
+
     if (qbins != null) { // if it's enum it will be null?
       qbins[0].finishUp(vecs[0], max_qbins);
       column_name = qbins[0].colname;
       quantile_requested = qbins[0].QUANTILES_TO_DO[0];
-      interpolation_type_requested = interpolation_type;
       done = qbins[0]._done;
       approxResult = qbins[0]._pctile[0];
       interpolated = qbins[0]._interpolated;
@@ -125,7 +128,6 @@ public class QuantilesPage extends Request2 {
     else {
       column_name = "";
       quantile_requested = qbins[0].QUANTILES_TO_DO[0];
-      interpolation_type_requested = interpolation_type;
       iterations = 0;
       done = false;
       approxResult = Double.NaN;
@@ -140,6 +142,7 @@ public class QuantilesPage extends Request2 {
     qbins = null;
     
     final int MAX_ITERATIONS = 16; 
+    result_multi = Double.NaN; // default in response if not run
     if ( multiple_pass == 1) {
       // try a second pass
       Quantiles[] qbins2;
@@ -155,8 +158,8 @@ public class QuantilesPage extends Request2 {
           // for printing?
           double valRange = qbins2[0]._valRange;
           double valBinSize = qbins2[0]._valBinSize;
-          Log.info("\nmultipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
-          Log.info("valBinSize: "+valBinSize);
+          Log.info("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
+          Log.info("Q_ valBinSize: "+valBinSize);
 
           valStart = qbins2[0]._newValStart;
           valEnd = qbins2[0]._newValEnd;
@@ -164,10 +167,11 @@ public class QuantilesPage extends Request2 {
           if ( done ) break;
         }
       }
+      // interpolation_type_used = interpolation_type;
+      interpolation_type_used = 2 ; // h2o always uses mean if interpolating, right now
       if (qbins2 != null) { // if it's enum it will be null?
         column_name = qbins2[0].colname;
         quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
-        interpolation_type_requested = interpolation_type;
         done = qbins2[0]._done;
         exactResult = qbins2[0]._pctile[0];
         interpolated = qbins2[0]._interpolated;
@@ -175,7 +179,6 @@ public class QuantilesPage extends Request2 {
       else {
         column_name = "";
         quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
-        interpolation_type_requested = interpolation_type;
         iterations = 0;
         done = false;
         exactResult = Double.NaN;
@@ -183,7 +186,7 @@ public class QuantilesPage extends Request2 {
       }
 
       qbins2 = null;
-      result2 = exactResult;
+      result_multi = exactResult;
     }
     return Response.done(this);
   }

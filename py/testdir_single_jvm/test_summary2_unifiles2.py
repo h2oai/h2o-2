@@ -19,7 +19,7 @@ def twoDecimals(l):
 
 # have to match the csv file?
 # dtype=['string', 'float');
-def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=None, csvFilename=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -28,7 +28,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     dataset = np.genfromtxt(
         open(csvPathname, 'r'),
         delimiter=',',
-        skip_header=1,
+        skip_header=0, # no header!
         dtype=None); # guess!
 
     print "csv read for training, done"
@@ -40,8 +40,13 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     # data is last column
     # drop the output
     print dataset.shape
-    # target = [x[col] for x in dataset]
-    target = dataset
+    print csvFilename
+    if csvFilename == 'runif_.csv':
+        target = dataset
+    else:
+        target = [x[col] for x in dataset]
+
+    # target = dataset
     # we may have read it in as a string. coerce to number
     targetFP = np.array(target, np.float)
     # targetFP = target
@@ -78,7 +83,8 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
     h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o:", h2oMedian)
+    h2p.blue_print(label, "from h2o singlepass:", h2oMedian)
+    h2p.blue_print(label, "from h2o multipass:", h2oMedian2)
     # see if scipy changes. nope. it doesn't
     if 1==0:
         a = stats.mstats.mquantiles(targetFP, prob=per)
@@ -114,10 +120,9 @@ class Basic(unittest.TestCase):
         # new with 1000 bins. copy expected from R
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            ('runif_.csv', 'x.hex', [
-                ('C1', -5000.00, -3735.0, -2443, -1187.0, 99.8),
-            ],
-            ),
+            ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
+            ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            
 
         ]
 
@@ -128,12 +133,16 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (csvFilename, hex_key, expectedCols) in tryList:
+        for (csvFilename, hex_key, expectedCols, bucket, pathPrefix) in tryList:
             h2o.beta_features = False
 
-            csvPathname = csvFilename
-            csvPathnameFull = h2i.find_folder_and_filename('.', csvPathname, returnFullPath=True)
-            parseResult = h2i.import_parse(bucket='.', path=csvPathname,
+            if pathPrefix:
+                csvPathname = pathPrefix + "/" + csvFilename
+            else:
+                csvPathname = csvFilename
+
+            csvPathnameFull = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, 
                 schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
 
             print csvFilename, 'parse time:', parseResult['response']['time']
@@ -162,8 +171,10 @@ class Basic(unittest.TestCase):
                 quantile = 0.5 if DO_MEDIAN else .999
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
                     quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
-                h2p.blue_print("h2o quantiles result:", q['result'])
-                h2p.blue_print("h2o quantiles result2:", q['result2'])
+                qresult = q['result']
+                qresult_multi = q['result_multi']
+                h2p.blue_print("h2o quantiles result:", qresult)
+                h2p.blue_print("h2o quantiles result_multi:", qresult_multi)
                 h2p.blue_print("h2o quantiles iterations:", q['iterations'])
                 h2p.blue_print("h2o quantiles interpolated:", q['interpolated'])
                 print h2o.dump_json(q)
@@ -185,8 +196,8 @@ class Basic(unittest.TestCase):
                     mins = stats['mins']
                     maxs = stats['maxs']
 
-                    print "colname:", colname, "mean (2 places): %s", twoDecimals(mean)
-                    print "colname:", colname, "std dev. (2 places): %s", twoDecimals(sd)
+                    print "colname:", colname, "mean (2 places):", twoDecimals(mean)
+                    print "colname:", colname, "std dev. (2 places):", twoDecimals(sd)
 
                     pct = stats['pct']
                     print "pct:", pct
@@ -234,12 +245,15 @@ class Basic(unittest.TestCase):
                     print "mins colname:", colname, "(2 places):", mn
 
                     ## ignore for blank colnames, issues with quoted numbers
-                    if DO_TRY_SCIPY and colname!='':
+                    # covtype is too big to do in scipy
+                    if DO_TRY_SCIPY and colname!='' and (csvFilename != 'covtype.data'):
+                        print "Going to try with scipy"
                         # don't do for enums
                         # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                         print scipyCol, pctile[10]
                         generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                            h2oMedian=pctile[5 if DO_MEDIAN else 10])
+                            # h2oMedian=pctile[5 if DO_MEDIAN else 10], result_multi)
+                            h2oMedian=qresult, h2oMedian2=qresult_multi, csvFilename=csvFilename)
 
                 scipyCol += 1
 
