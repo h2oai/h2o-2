@@ -160,8 +160,8 @@ public class Quantiles extends Iced {
 
       if ( multiPass ) {
         assert maxBinCnt > 0;
-        Log.info("Q_ Multipass histogram starts at "+_valStart);
-        Log.info("Q_ _min "+_min+" _max "+_max);
+        // Log.info("Q_ Multiple pass histogram starts at "+_valStart);
+        // Log.info("Q_ _min "+_min+" _max "+_max);
         // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
         hcnt2 = new long[maxBinCnt];
         hcnt2_min = new double[maxBinCnt];
@@ -172,9 +172,9 @@ public class Quantiles extends Iced {
         // _binsz2 = _binsz / (max_qbins / nbin);
         int nbin2 = (int)(Math.round((_max + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
         assert nbin2 > 0;
-        Log.info("Q_ Single pass histogram has "+nbin2+" bins");
-        Log.info("Q_ Single pass histogram starts at "+_start2);
-        Log.info("Q_ _min "+_min+" _max "+_max);
+        // Log.info("Q_ Single pass histogram has "+nbin2+" bins");
+        // Log.info("Q_ Single pass histogram starts at "+_start2);
+        // Log.info("Q_ _min "+_min+" _max "+_max);
         // can't make any assertion about _start2 vs _min (either can be slightly smaller: fp)
         hcnt2 = new long[nbin2];
         hcnt2_min = new double[nbin2];
