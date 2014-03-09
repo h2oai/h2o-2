@@ -16,7 +16,7 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -74,7 +74,8 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
     h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o:", h2oMedian)
+    h2p.blue_print(label, "from h2o summary2:", h2oMedian)
+    h2p.blue_print(label, "from h2o quantile multipass:", h2oMedian2)
     # see if scipy changes. nope. it doesn't 
     if 1==0:
         a = stats.mstats.mquantiles(targetFP, prob=per)
@@ -180,8 +181,10 @@ class Basic(unittest.TestCase):
             quantile = 0.5 if DO_MEDIAN else .999
             q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
                 quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
-            h2p.blue_print("h2o quantiles result:", q['result'])
-            h2p.blue_print("h2o quantiles result2:", q['result2'])
+            qresult = q['result']
+            qresult_multi = q['result_multi']
+            h2p.blue_print("h2o quantiles result:", qresult)
+            h2p.blue_print("h2o quantiles result_multi:", qresult_multi)
             h2p.blue_print("h2o quantiles iterations:", q['iterations'])
             h2p.blue_print("h2o quantiles interpolated:", q['interpolated'])
             print h2o.dump_json(q)
@@ -251,7 +254,7 @@ class Basic(unittest.TestCase):
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                 print scipyCol, pctile[10]
                 generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                    h2oMedian=pctile[5 if DO_MEDIAN else 10])
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10], h2oMedian2=qresult_multi)
 
 
 

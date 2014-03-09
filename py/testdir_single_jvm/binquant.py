@@ -5,7 +5,7 @@ import numpy as np
 import scipy as sp
 import math
 OTHER_T = 0.5
-BIN_COUNT = 1000
+BIN_COUNT = 20
 
 # Defintion (this defn. seems odd. for the case of real quantiles, it should be a  floor, not a round up?)
 # This definition may be correct for 1-based indexing. (we do zero-based indexing in the code below, so it looks different)
@@ -293,6 +293,7 @@ csvPathname = './syn_binary_100000x1.csv'
 csvPathname = './d.csv'
 csvPathname = './runif_.csv'
 csvPathname = './covtype1.data'
+csvPathname = './runif_.csv'
 col = 0
 
 print "Reading csvPathname"
