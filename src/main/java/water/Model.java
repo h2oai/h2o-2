@@ -176,7 +176,7 @@ public abstract class Model extends Lockable<Model> {
     }
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        double tmp [] = new double[_names.length];
+        double tmp [] = new double[_names.length-1]; // We do not need the last field representing response
         float preds[] = new float [nclasses()==1?1:nclasses()+1];
         int len = chks[0]._len;
         for( int row=0; row<len; row++ ) {
@@ -353,7 +353,7 @@ public abstract class Model extends Lockable<Model> {
    *  subclass scoring logic. */
   protected float[] score0( Chunk chks[], int row_in_chunk, double[] tmp, float[] preds ) {
     assert chks.length>=_names.length; // Last chunk is for the response
-    for( int i=0; i<_names.length; i++ )
+    for( int i=0; i<_names.length-1; i++ ) // Do not include last value since it can contains a response
       tmp[i] = chks[i].at0(row_in_chunk);
     float[] scored = score0(tmp,preds);
     // Correct probabilities obtained from training on oversampled data back to original distribution
