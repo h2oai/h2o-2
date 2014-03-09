@@ -16,19 +16,6 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.MRUtils;
-import water.util.Utils;
-
-import java.util.Arrays;
-import java.util.Random;
-
-import static water.util.ModelUtils.getPrediction;
-import water.util.*;
-
-import java.util.Arrays;
-import java.util.Random;
-
-import static water.util.ModelUtils.getPrediction;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
@@ -88,7 +75,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
+    return m == null ? 0 : m.numTrees() / (float) m.N;
   }
 
   // Verify input parameters
@@ -761,13 +748,24 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public long speedValue() {
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    long numTreesBuiltSoFar = m == null ? 0 : m.treeBits.length;
+    long numTreesBuiltSoFar = m == null ? 0 : m.numTrees();
     long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
     return sv;
   }
 
+  /** Returns a log tag for a particular model builder (e.g., DRF, GBM) */
   protected abstract water.util.Log.Tag.Sys logTag();
-  protected abstract TM buildModel( TM initialModel, Frame fr, String names[], String domains[][], Timer t_build );
+  /**
+   * Builds model
+   * @param initialModel initial model created by {@link #makeModel(Key, Key, Key, String[], String[][], String[])} method.
+   * @param trainFr training dataset which can contain additional temporary vectors prepared by {@link #buildModel()} method.
+   * @param names names of columns in <code>trainFr</code> used for model training
+   * @param domains domains of columns in <code>trainFr</code> used for model training
+   * @param t_build timer to measure model building process
+   * @return resulting model
+   * @see #buildModel()
+   */
+  protected abstract TM buildModel( TM initialModel, Frame trainFr, String names[], String domains[][], Timer t_build );
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD,  water.api.AUC validAUC);
