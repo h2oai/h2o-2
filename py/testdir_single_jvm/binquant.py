@@ -6,6 +6,7 @@ import scipy as sp
 import math
 OTHER_T = 0.5
 BIN_COUNT = 20
+BIN_COUNT = 1
 
 # Defintion (this defn. seems odd. for the case of real quantiles, it should be a  floor, not a round up?)
 # This definition may be correct for 1-based indexing. (we do zero-based indexing in the code below, so it looks different)
@@ -190,10 +191,10 @@ def findQuantile(d, dmin, dmax, threshold):
         guess = (hcnt2_max[k] - hcnt2_min[k]) / 2
 
         if currentCnt==targetCntInt:
-            if hcnt2[k]>2:
+            if hcnt2[k]>2 and (hcnt2_min[k]==hcnt2_max[k]):
                 guess = hcnt2_min[k]
                 done = True
-                print "Guess A", guess
+                print "Guess A", guess, k, hcnt2[k]
 
             if hcnt2[k]==2:
                 # no mattter what size the fraction it would be on this number

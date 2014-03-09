@@ -404,7 +404,7 @@ public class Quantiles extends Iced {
     boolean interpolated = false;
 
     if ( currentCnt==targetCntInt ) {
-      if ( hcnt2[k]>2 ) {
+      if ( hcnt2[k]>2 && (hcnt2_min[k]==hcnt2_max[k]) ) {
         guess = hcnt2_min[k];
         done = true;
         Log.info("Q_ Guess A "+guess);

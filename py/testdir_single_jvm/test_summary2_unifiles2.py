@@ -10,6 +10,7 @@ if  getpass.getuser() == 'kevin':
 
 DO_MEDIAN = True
 MAX_QBINS = 1000
+MAX_QBINS = 2
 
 def twoDecimals(l):
     if isinstance(l, list):
@@ -82,9 +83,14 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
-    h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
+    s = a[5 if DO_MEDIAN else 10]
+    h2p.blue_print(label, "from scipy:", s)
     h2p.blue_print(label, "from h2o singlepass:", h2oMedian)
     h2p.blue_print(label, "from h2o multipass:", h2oMedian2)
+    # they should be identical. keep a tight absolute tolerance
+    h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
+    h2o_util.assertApproxEqual(h2oMedian2, s, tol=0.0000002, msg='h2o quantile multipass is not approx. same as scipy algo')
+
     # see if scipy changes. nope. it doesn't
     if 1==0:
         a = stats.mstats.mquantiles(targetFP, prob=per)
