@@ -97,7 +97,7 @@ class PerfRunner:
             if isEC2:
                 raise Exception("Unimplemented: AWS support under construction...")
 
-            cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
+            cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
             self.cloud.append(cloud)
             PerfUtils.start_cloud(self, test.remote_hosts)
             test.port = self.cloud[0].get_port()
