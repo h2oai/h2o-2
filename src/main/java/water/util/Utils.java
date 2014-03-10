@@ -1,8 +1,17 @@
 package water.util;
 
-import hex.rng.*;
+import hex.rng.H2ORandomRNG;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
+import hex.rng.MersenneTwisterRNG;
+import hex.rng.XorShiftRNG;
+import sun.misc.Unsafe;
+import water.*;
+import water.api.DocGen;
+import water.api.DocGen.FieldDoc;
+import water.nbhm.UtilUnsafe;
+import water.parser.ParseDataset;
+import water.parser.ParseDataset.Compression;
 
 import java.io.*;
 import java.net.Socket;
@@ -11,15 +20,10 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.*;
-
-import sun.misc.Unsafe;
-
-import water.*;
-import water.api.DocGen.FieldDoc;
-import water.nbhm.UtilUnsafe;
-import water.parser.ParseDataset.Compression;
-import water.parser.ParseDataset;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -684,7 +688,6 @@ public class Utils {
   /**
    * Simple wrapper around HashMap with support for H2O serialization
    * @author tomasnykodym
-   * @param <T>
    */
   public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
     @Override public AutoBuffer write(AutoBuffer bb) {
@@ -1087,5 +1090,120 @@ public class Utils {
     String[] res = new String[ary.length];
     for(int i=0; i<ary.length; i++) res[i] = ary[sortOrder[i]];
     return res;
+  }
+
+  public static String[] createConfusionMatrixHeader( long xs[], String ds[] ) {
+    String ss[] = new String[xs.length]; // the same length
+    for( int i=0; i<ds.length; i++ )
+      if( xs[i] >= 0 || (ds[i] != null && ds[i].length() > 0) && !Integer.toString(i).equals(ds[i]) )
+        ss[i] = ds[i];
+    if( ds.length == xs.length-1 && xs[xs.length-1] > 0 )
+      ss[xs.length-1] = "NA";
+    return ss;
+  }
+
+  public static void printConfusionMatrix(StringBuilder sb, long[][] cm, String[] domain, boolean html) {
+    assert(cm != null);
+    assert(domain != null);
+    for (int i=0; i<cm.length; ++i) assert(cm.length == cm[i].length);
+    if (html) DocGen.HTML.arrayHead(sb);
+    // Sum up predicted & actuals
+    long acts [] = new long[cm   .length];
+    long preds[] = new long[cm[0].length];
+    for( int a=0; a<cm.length; a++ ) {
+      long sum=0;
+      for( int p=0; p<cm[a].length; p++ ) {
+        sum += cm[a][p];
+        preds[p] += cm[a][p];
+      }
+      acts[a] = sum;
+    }
+    String adomain[] = createConfusionMatrixHeader(acts , domain);
+    String pdomain[] = createConfusionMatrixHeader(preds, domain);
+    assert adomain.length == pdomain.length : "The confusion matrix should have the same length for both directions.";
+
+    String fmt = "";
+    String fmtS = "";
+
+    // Header
+    if (html) {
+      sb.append("<tr class='warning'>");
+      sb.append("<th>Actual / Predicted</th>");
+      for( int p=0; p<pdomain.length; p++ )
+        if( pdomain[p] != null )
+          sb.append("<th>").append(pdomain[p]).append("</th>");
+      sb.append("<th>Error</th>");
+      sb.append("</tr>");
+    } else {
+      // determine max length of each space-padded field
+      int maxlen = 0;
+      for( String s : pdomain ) if( s != null ) maxlen = Math.max(maxlen, s.length());
+      long lsum = 0;
+      for( int a=0; a<cm.length; a++ ) {
+        if( adomain[a] == null ) continue;
+        for( int p=0; p<pdomain.length; p++ ) { if( pdomain[p] == null ) continue; lsum += cm[a][p]; }
+      }
+      maxlen = Math.max(8, Math.max(maxlen, String.valueOf(lsum).length()) + 2);
+      fmt  = "%" + maxlen + "d";
+      fmtS = "%" + maxlen + "s";
+      sb.append(String.format(fmtS, "Act/Prd"));
+      for( String s : pdomain ) if( s != null ) sb.append(String.format(fmtS, s));
+      sb.append("   " + String.format(fmtS, "Error\n"));
+    }
+
+    // Main CM Body
+    long terr=0;
+    for( int a=0; a<cm.length; a++ ) {
+      if( adomain[a] == null ) continue;
+      if (html) {
+        sb.append("<tr>");
+        sb.append("<th>").append(adomain[a]).append("</th>");
+      } else {
+        sb.append(String.format(fmtS,adomain[a]));
+      }
+      long correct=0;
+      for( int p=0; p<pdomain.length; p++ ) {
+        if( pdomain[p] == null ) continue;
+        boolean onDiag = adomain[a].equals(pdomain[p]);
+        if( onDiag ) correct = cm[a][p];
+        String id = "";
+        if (html) {
+          sb.append(onDiag ? "<td style='background-color:LightGreen' "+id+">":"<td "+id+">").append(String.format("%,d", cm[a][p])).append("</td>");
+        } else {
+          sb.append(String.format(fmt,cm[a][p]));
+        }
+      }
+      long err = acts[a]-correct;
+      terr += err;
+      if (html) {
+        sb.append(String.format("<th>%5.3f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
+      } else {
+        sb.append("   " + String.format("%5.3f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
+      }
+    }
+
+    // Last row of CM
+    if (html) {
+      sb.append("<tr><th>Totals</th>");
+    } else {
+      sb.append(String.format(fmtS, "Totals"));
+    }
+    for( int p=0; p<pdomain.length; p++ ) {
+      if( pdomain[p] == null ) continue;
+      if (html) {
+        sb.append("<td>").append(String.format("%,d", preds[p])).append("</td>");
+      } else {
+        sb.append(String.format(fmt, preds[p]));
+      }
+    }
+    long nrows = 0;
+    for (long n : acts) nrows += n;
+
+    if (html) {
+      sb.append(String.format("<th>%5.3f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
+      DocGen.HTML.arrayTail(sb);
+    } else {
+      sb.append("   " + String.format("%5.3f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
+    }
   }
 }

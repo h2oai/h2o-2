@@ -7,7 +7,7 @@ print "useful for analyzing small datasets, like with 3 values (ints reals, what
 print "Actually, we'll pass rowCount, if not None, we'll do random.choice from the 3 values for that RowCount"
 
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin':
+if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
@@ -29,7 +29,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     dataset = np.genfromtxt(
         open(csvPathname, 'r'),
         delimiter=',',
-        skip_header=1,
+        # skip_header=1,
         dtype=None); # guess!
 
     print "csv read for training, done"
@@ -41,8 +41,11 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     # data is last column
     # drop the output
     print dataset.shape
-    # target = [x[col] for x in dataset]
-    target = dataset
+    if len(dataset.shape) > 1:
+        target = [x[col] for x in dataset]
+    else:
+        target = dataset
+
     # we may have read it in as a string. coerce to number
     targetFP = np.array(target, np.float)
 
@@ -62,23 +65,21 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
         print target[1]
 
     thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
-    # per = [100 * t for t in thresholds]
-    per = [1 * t for t in thresholds]
-    print "scipy per:", per
+    print "scipy per:", thresholds
     from scipy import stats
     # a = stats.scoreatpercentile(target, per=per)
-    a = stats.mstats.mquantiles(targetFP, prob=per)
+    a = stats.mstats.mquantiles(targetFP, prob=thresholds)
     a2 = ["%.2f" % v for v in a]
     h2p.red_print("scipy stats.mstats.mquantiles:", a2)
 
     # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
     # inplace sort
     targetFP.sort()
-    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
     label = '50%' if DO_MEDIAN else '99.9%'
-    h2p.blue_print(label, "from sort:", b)
+    h2p.blue_print(label, "from sort (mean):", b)
     h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o:", h2oMedian)
+    h2p.blue_print(label, "from h2o summary:", h2oMedian)
     # see if scipy changes. nope. it doesn't 
     if 1==0:
         a = stats.mstats.mquantiles(targetFP, prob=per)

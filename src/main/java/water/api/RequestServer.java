@@ -14,7 +14,7 @@ import hex.glm.GLM2;
 import hex.glm.GLMGridView;
 import hex.glm.GLMModelView;
 import hex.glm.GLMProgress;
-import hex.nn.NN;
+import hex.deeplearning.DeepLearning;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
@@ -88,7 +88,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
-    Request.addToNavbar(registerRequest(new NN()),          "NN (Beta)",                  "Model");
+    Request.addToNavbar(registerRequest(new DeepLearning()),          "Deep Learning (Beta)",       "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
@@ -158,8 +158,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetModelView());
     registerRequest(new NeuralNetProgressPage());
-    registerRequest(new NNModelView());
-    registerRequest(new NNProgressPage());
+    registerRequest(new DeepLearningModelView());
+    registerRequest(new DeepLearningProgressPage());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
     registerRequest(new PCAProgressPage());
@@ -338,7 +338,7 @@ public class RequestServer extends NanoHTTPD {
   // Returns the response containing the given uri with the appropriate mime
   // type.
   private NanoHTTPD.Response getResource(String uri) {
-    byte[] bytes = null; //_cache.get(uri);
+    byte[] bytes = _cache.get(uri);
     if( bytes == null ) {
       InputStream resource = Boot._init.getResource2(uri);
       if (resource != null) {

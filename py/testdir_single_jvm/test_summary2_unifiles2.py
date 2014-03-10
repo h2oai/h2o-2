@@ -3,24 +3,16 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b, h2o_print as h2p
 import h2o_summ
 
+print "same as test_summary2_unifiles.py but using local runif_.csv single col for comparison testing"
+print "Should really add something that sees we go to 16 with no answer, if bins are set to 1"
+print "Answer not guaranteed (for any data) if max iterations is 16 in h2o and max_qbins is small"
 DO_TRY_SCIPY = False
 if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
-
-# FIX!. we seem to lose accuracy with fewer bins -> more iterations. Maybe we're leaking or ??
-# this test failed (if run as user kevin) with 10 bins
-MAX_QBINS = 1000 # pass
-MAX_QBINS = 100 # pass
-
-# this one doesn't fail with 10 bins
-# this failed. interestingly got same number as 1000 bin summary2 (the 7.433..
-# on runifA.csv (2nd col?)
-# MAX_QBINS = 20
-# Exception: h2o quantile multipass is not approx. same as sort algo. h2o_util.assertApproxEqual failed comparing 7.43337413296 and 8.26268245. {'tol': 2e-07}.
-
-MAX_QBINS = 20
+MAX_QBINS = 1000
+MAX_QBINS = 1000
 
 def twoDecimals(l):
     if isinstance(l, list):
@@ -30,7 +22,7 @@ def twoDecimals(l):
 
 # have to match the csv file?
 # dtype=['string', 'float');
-def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=None):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=None, csvFilename=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -39,7 +31,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     dataset = np.genfromtxt(
         open(csvPathname, 'r'),
         delimiter=',',
-        skip_header=1,
+        skip_header=0, # no header!
         dtype=None); # guess!
 
     print "csv read for training, done"
@@ -51,7 +43,13 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     # data is last column
     # drop the output
     print dataset.shape
-    target = [x[col] for x in dataset]
+    print csvFilename
+    if len(dataset.shape)==1:
+        target = dataset
+    else:
+        target = [x[col] for x in dataset]
+
+    # target = dataset
     # we may have read it in as a string. coerce to number
     targetFP = np.array(target, np.float)
     # targetFP = target
@@ -84,16 +82,16 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
     # inplace sort
     targetFP.sort()
-    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
     s = a[5 if DO_MEDIAN else 10]
     h2p.blue_print(label, "from scipy:", s)
-    h2p.blue_print(label, "from h2o summary2:", h2oMedian)
-    h2p.blue_print(label, "from h2o quantile multipass:", h2oMedian2)
+    h2p.blue_print(label, "from h2o multipass:", h2oMedian)
+    h2p.blue_print(label, "from h2o singlepass:", h2oMedian2)
     # they should be identical. keep a tight absolute tolerance
-    h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
-    h2o_util.assertApproxEqual(h2oMedian2, s, tol=0.0000002, msg='h2o quantile multipass is not approx. same as scipy algo')
+    h2o_util.assertApproxEqual(h2oMedian, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
+    h2o_util.assertApproxEqual(h2oMedian, s, tol=0.0000002, msg='h2o quantile multipass is not approx. same as scipy algo')
 
     # see if scipy changes. nope. it doesn't
     if 1==0:
@@ -125,43 +123,17 @@ class Basic(unittest.TestCase):
         # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_summary2_unifiles(self):
+    def test_summary2_unifiles2(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-
         # new with 1000 bins. copy expected from R
         tryList = [
-            ('cars.csv', 'c.hex', [
-                (None, None,None,None,None,None),
-                ('economy (mpg)', None,None,None,None,None),
-                ('cylinders', None,None,None,None,None),
-            ],
-            ),
-            ('runifA.csv', 'A.hex', [
-                ('',  1.00, None, 50.00, 75.00, 100.0),
-                ('x', -99.0, -44.7, 7.43, 58.00, 91.7),
-            ],
-            ),
             # colname, (min, 25th, 50th, 75th, max)
-            ('runif.csv', 'x.hex', [
-                ('' ,  1.00, 5000.0, 10000.0, 15000.0, 20000.00),
-                ('D', -5000.00, -3735.0, -2443, -1187.0, 99.8),
-                ('E', -100000.0, -49208.0, 1783.8, 50621.9, 100000.0),
-                ('F', -1.00, -0.4886, 0.00868, 0.5048, 1.00),
-            ],
-            ),
-            ('runifB.csv', 'B.hex', [
-                ('',  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
-                ('x', -100.00, -50.0, 0.97, 51.7, 100,00),
-            ],
-            ),
+            ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            # ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
+            # ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            
 
-            ('runifC.csv', 'C.hex', [
-                ('',  1.00, 25002.00, 50002.00, 75002.00, 100000.00),
-                ('x', -100.00, -50.45, -1.135, 49.28, 100.00),
-            ],
-            ),
         ]
-
 
         timeoutSecs = 10
         trial = 1
@@ -170,12 +142,16 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (csvFilename, hex_key, expectedCols) in tryList:
+        for (csvFilename, hex_key, expectedCols, bucket, pathPrefix) in tryList:
             h2o.beta_features = False
 
-            csvPathname = csvFilename
-            csvPathnameFull = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
-            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname,
+            if pathPrefix:
+                csvPathname = pathPrefix + "/" + csvFilename
+            else:
+                csvPathname = csvFilename
+
+            csvPathnameFull = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, 
                 schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
 
             print csvFilename, 'parse time:', parseResult['response']['time']
@@ -190,36 +166,34 @@ class Basic(unittest.TestCase):
 
             h2o.beta_features = True
             # okay to get more cols than we want
-            # summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
-            print "keep summary2 with results for 1000 qbins, so it's accuracy doesn't degrade when fewer are used for 2/Quantile"
-            summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=1000)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
+
             summaries = summaryResult['summaries']
 
             scipyCol = 0
             for expected, column in zip(expectedCols, summaries):
                 colname = column['colname']
-                if expected[0]:
-                    self.assertEqual(colname, expected[0]), colname, expected[0]
-                else:
-                    # if the colname is None, skip it (so we don't barf on strings on the h2o quantile page
-                    scipyCol += 1
-                    continue
+                if expected:
+                    self.assertEqual(colname, expected[0])
 
                 quantile = 0.5 if DO_MEDIAN else .999
-                # h2o has problem if a list of columns (or dictionary) is passed to 'column' param
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
-                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1, interpolation_type=2) # mean
+                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
                 qresult = q['result']
                 qresult_single = q['result_single']
+                qresult_iterations = q['iterations']
+                qresult_interpolated = q['interpolated']
                 h2p.blue_print("h2o quantiles result:", qresult)
                 h2p.blue_print("h2o quantiles result_single:", qresult_single)
-                h2p.blue_print("h2o quantiles iterations:", q['iterations'])
-                h2p.blue_print("h2o quantiles interpolated:", q['interpolated'])
+                h2p.blue_print("h2o quantiles iterations:", qresult_iterations)
+                h2p.blue_print("h2o quantiles interpolated:", qresult_interpolated)
                 print h2o.dump_json(q)
 
-                # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
+                self.assertLess(qresult_iterations, 16, 
+                    msg="h2o does max of 16 iterations. likely no result_single if we hit max. is bins=1?")
 
+                # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
                 coltype = column['type']
                 nacnt = column['nacnt']
 
@@ -237,7 +211,7 @@ class Basic(unittest.TestCase):
                     maxs = stats['maxs']
 
                     print "colname:", colname, "mean (2 places):", twoDecimals(mean)
-                    print "colname:", colname, "std dev. (2 places):",  twoDecimals(sd)
+                    print "colname:", colname, "std dev. (2 places):", twoDecimals(sd)
 
                     pct = stats['pct']
                     print "pct:", pct
@@ -285,12 +259,15 @@ class Basic(unittest.TestCase):
                     print "mins colname:", colname, "(2 places):", mn
 
                     ## ignore for blank colnames, issues with quoted numbers
-                    if DO_TRY_SCIPY and expected[0] and colname!='':
+                    # covtype is too big to do in scipy
+                    if DO_TRY_SCIPY and colname!='' and (csvFilename != 'covtype.data'):
+                        print "Going to try with scipy"
                         # don't do for enums
                         # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                         print scipyCol, pctile[10]
                         generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                            h2oMedian=pctile[5 if DO_MEDIAN else 10], h2oMedian2=qresult)
+                            # h2oMedian=pctile[5 if DO_MEDIAN else 10], result_single)
+                            h2oMedian=qresult, h2oMedian2=qresult_single, csvFilename=csvFilename)
 
                 scipyCol += 1
 

@@ -1,7 +1,7 @@
 package hex;
 
-import hex.nn.NN;
-import hex.nn.NNModel;
+import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
@@ -13,7 +13,7 @@ import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
 import water.util.Log;
 
-public class NeuralNetProstateTest extends TestUtil {
+public class DeepLearningProstateTest extends TestUtil {
   @BeforeClass public static void stall() {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
@@ -26,7 +26,7 @@ public class NeuralNetProstateTest extends TestUtil {
 
     // build the model, with all kinds of shuffling/rebalancing/sampling
     {
-      NN p = new NN();
+      DeepLearning p = new DeepLearning();
       p.epochs = 1000;
       p.source = frame;
       p.response = frame.vecs()[1];
@@ -55,7 +55,7 @@ public class NeuralNetProstateTest extends TestUtil {
 
     // score and check result
     {
-      NNModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+      DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
       Frame pred = mymodel.score(frame);
       water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
       CM.actual = frame;
@@ -64,7 +64,8 @@ public class NeuralNetProstateTest extends TestUtil {
       CM.vpredict = pred.vecs()[0];
       CM.serve();
       StringBuilder sb = new StringBuilder();
-      double error = CM.toASCII(sb);
+      CM.toASCII(sb);
+      double error = new ConfusionMatrix(CM.cm).err();
       Log.info(sb);
 //      if (error != 0) {
 //        Assert.fail("Classification error is not 0, but " + error + ".");

@@ -3,11 +3,12 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p, h2o_summ
 
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin':
+if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = False
-MAX_QBINS = 10000000
+MAX_QBINS = 1000000
+MAX_QBINS = 100000
 ROWS = 100000
 
 def twoDecimals(l): 
@@ -16,7 +17,7 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -25,7 +26,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     dataset = np.genfromtxt(
         open(csvPathname, 'r'),
         delimiter=',',
-        skip_header=1,
+        # skip_header=1, // deadly if I skip a row on accuracy. shows up with linear interpolation.
         dtype=None); # guess!
 
     print "csv read for training, done"
@@ -58,27 +59,81 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
         print target[1]
 
     thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
+    # http://docs.scipy.org/doc/numpy-dev/reference/generated/numpy.percentile.html
+    # numpy.percentile has simple linear interpolate and midpoint
+    # need numpy 1.9 for interpolation. numpy 1.8 doesn't have
+    # p = np.percentile(targetFP, 50 if DO_MEDIAN else 99.9, interpolation='midpoint')
+    # 1.8
+    p = np.percentile(targetFP, 50 if DO_MEDIAN else 99.9)
+    h2p.red_print("numpy.percentile", p)
+
     # per = [100 * t for t in thresholds]
-    per = [1 * t for t in thresholds]
-    print "scipy per:", per
     from scipy import stats
-    # a = stats.scoreatpercentile(target, per=per)
-    a = stats.mstats.mquantiles(targetFP, prob=per)
-    a2 = ["%.2f" % v for v in a]
-    h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+    a = stats.scoreatpercentile(targetFP, per=50 if DO_MEDIAN else 99.9)
+    h2p.red_print("scipy stats.scoreatpercentile", a)
+
+    # scipy apparently doesn't have the use of means (type 2)
+    # http://en.wikipedia.org/wiki/Quantile
+    # it has median (R-8) with 1/3, 1/3
+
+    # type 6
+    alphap=0
+    betap=0
+
+    # type 5 okay but not perfect
+    alphap=0.5
+    betap=0.5
+
+    # type 8
+    alphap=1/3.0
+    betap=1/3.0
+
+    # an approx? (was good when comparing to h2o type 2)
+    alphap=0.4
+    betap=0.4
+
+    # this is type 7
+    alphap=1
+    betap=1
+
+    per = [1 * t for t in thresholds]
+    print "scipy per", per
+    a = stats.mstats.mquantiles(targetFP, prob=per, alphap=alphap, betap=betap)
+    # http://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mstats.mquantiles.html
+    # type 7 
+    # alphap=0.4, betap=0.4, 
+    # type 2 not available? (mean)
+    # alphap=1/3.0, betap=1/3.0 is approx median?
+
+    a2 = [v for v in a]
+    h2p.red_print("scipy stats.mstats.mquantiles type 8 (don't have type 2):", a2)
 
     # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
     # inplace sort
     targetFP.sort()
-    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+
+    # this matches scipy type 7 (linear)
+    # b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='linear')
+    # this matches h2o type 2 (mean)
+    # b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='linear')
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
-    h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o:", h2oMedian)
+    s = a[5 if DO_MEDIAN else 10]
+    h2p.blue_print(label, "from scipy:", s)
+    h2p.blue_print(label, "from numpy:", p)
+    h2p.blue_print(label, "from h2o summary:", h2oMedian)
+    h2p.blue_print(label, "from h2o multipass:", h2oMedian2)
+    # they should be identical. keep a tight absolute tolerance
+    h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
+    h2o_util.assertApproxEqual(h2oMedian2, p, rel=0.01, msg='h2o quantile multipass is not approx. same as numpy algo')
+    # give us some slack compared to the scipy use of median
+    h2o_util.assertApproxEqual(h2oMedian2, s, rel=0.01, msg='h2o quantile multipass is not approx. same as scipy algo')
+
     # see if scipy changes. nope. it doesn't 
     if 1==0:
-        a = stats.mstats.mquantiles(targetFP, prob=per)
-        a2 = ["%.2f" % v for v in a]
+        a = stats.mstats.mquantiles(targetFP, prob=per, alphap=alphap, betap=betap)
+        a2 = [v for v in a]
         h2p.red_print("after sort")
         h2p.red_print("scipy stats.mstats.mquantiles:", a2)
 
@@ -168,35 +223,40 @@ class Basic(unittest.TestCase):
 
             numRows = inspect["num_rows"]
             numCols = inspect["num_cols"]
-
             h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
             # only one column
             column = summaryResult['summaries'][0]
-
             colname = column['colname']
             self.assertEqual(colname, expected[0])
 
+            quantile = 0.5 if DO_MEDIAN else .999
+            q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
+                quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1, interpolation_type=7) # linear
+            qresult = q['result']
+            qresult_single = q['result_single']
+            h2p.blue_print("h2o quantiles result:", qresult)
+            h2p.blue_print("h2o quantiles result_single:", qresult_single)
+            h2p.blue_print("h2o quantiles iterations:", q['iterations'])
+            h2p.blue_print("h2o quantiles interpolated:", q['interpolated'])
+            print h2o.dump_json(q)
+
             coltype = column['type']
             nacnt = column['nacnt']
-
             stats = column['stats']
             stattype= stats['type']
 
             # FIX! we should compare mean and sd to expected?
             mean = stats['mean']
             sd = stats['sd']
-
             print "colname:", colname, "mean (2 places):", twoDecimals(mean)
             print "colname:", colname, "std dev. (2 places):", twoDecimals(sd)
 
             zeros = stats['zeros']
-
             mins = stats['mins']
             h2o_util.assertApproxEqual(mins[0], expected[1], tol=maxDelta, msg='min is not approx. expected')
-
             maxs = stats['maxs']
             h2o_util.assertApproxEqual(maxs[0], expected[5], tol=maxDelta, msg='max is not approx. expected')
 
@@ -215,8 +275,6 @@ class Basic(unittest.TestCase):
             hcnt = column['hcnt']
 
             print "pct:", pct
-            print ""
-
             print "hcnt:", hcnt
             print "len(hcnt)", len(hcnt)
 
@@ -250,7 +308,7 @@ class Basic(unittest.TestCase):
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                 print scipyCol, pctile[10]
                 generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                    h2oMedian=pctile[5 if DO_MEDIAN else 10])
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10], h2oMedian2=qresult)
 
 
 

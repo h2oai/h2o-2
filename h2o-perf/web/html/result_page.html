@@ -27,17 +27,17 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div id="results_table">
-        <script>
-          $(document).ready(function() {
-            doQuery('../prototype/php/getJSON.php');
-            //doQuery('../prototype/php/last_n_builds.php');
-          });
-        </script>
-        </div>
-        <button class="btn btn-primary" onclick="new_query()">Make Another Query</button>
-
+            <div id="results_table">
+              <script>
+                $(document).ready(function() {
+                  doQuery('../prototype/php/getJSON.php');
+                  //doQuery('../prototype/php/last_n_builds.php');
+                });
+              </script>
+              </div>
+              <br />
+              <button class="btn btn-primary" onclick="new_query()">Make Another Query</button>
+            </div>
         </div>
     </body>
 </html>

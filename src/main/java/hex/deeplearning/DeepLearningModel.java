@@ -1,4 +1,4 @@
-package hex.nn;
+package hex.deeplearning;
 
 import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask.DataInfo;
@@ -15,14 +15,16 @@ import water.util.Utils;
 import java.util.Arrays;
 import java.util.Random;
 
-public class NNModel extends Model {
+import static java.lang.Double.isNaN;
+
+public class DeepLearningModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help="Model info", json = true)
-  private volatile NNModelInfo model_info;
-  void set_model_info(NNModelInfo mi) { model_info = mi; }
-  final public NNModelInfo model_info() { return model_info; }
+  private volatile DeepLearningModelInfo model_info;
+  void set_model_info(DeepLearningModelInfo mi) { model_info = mi; }
+  final public DeepLearningModelInfo model_info() { return model_info; }
 
   @API(help="Job that built the model", json = true)
   final private Key jobKey;
@@ -147,7 +149,7 @@ public class NNModel extends Model {
 
   // This describes the model, together with the parameters
   // This will be shared: one per node
-  public static class NNModelInfo extends Iced {
+  public static class DeepLearningModelInfo extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -160,7 +162,7 @@ public class NNModel extends Model {
     final private double[][] biases; //one 1D bias array per layer
 
     // helpers for storing previous step deltas
-    // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in NNTask.initLocal()
+    // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in DeepLearningTask.initLocal()
     // But then, after each reduction, the weights would be lost and would have to restart afresh -> not *exactly* right, but close...
     private float[][] weights_momenta;
     private double[][] biases_momenta;
@@ -168,7 +170,7 @@ public class NNModel extends Model {
 
     // helpers for AdaDelta
     private float[][] E_dx2;
-    private double[][] E_g2;
+    private float[][] E_g2;
 
     // compute model size (number of model parameters required for making predictions)
     // momenta are not counted here, but they are needed for model building
@@ -187,12 +189,12 @@ public class NNModel extends Model {
     public final float[] get_weights_momenta(int i) { return weights_momenta[i]; }
     public final double[] get_biases_momenta(int i) { return biases_momenta[i]; }
     public final float[] get_E_dx2(int i) { return E_dx2[i]; }
-    public final double[] get_E_g2(int i) { return E_g2[i]; }
+    public final float[] get_E_g2(int i) { return E_g2[i]; }
 
     @API(help = "Model parameters", json = true)
-    final private NN parameters;
-    public final NN get_params() { return parameters; }
-    public final NN job() { return get_params(); }
+    final private DeepLearning parameters;
+    public final DeepLearning get_params() { return parameters; }
+    public final DeepLearning job() { return get_params(); }
 
     @API(help = "Mean rate", json = true)
     private double[] mean_rate;
@@ -233,7 +235,7 @@ public class NNModel extends Model {
     // package local helpers
     final int[] units; //number of neurons per layer, extracted from parameters and from datainfo
 
-    public NNModelInfo(final NN params, final DataInfo dinfo) {
+    public DeepLearningModelInfo(final DeepLearning params, final DataInfo dinfo) {
       data_info = dinfo;
       final int num_input = dinfo.fullN();
       final int num_output = params.classification ? dinfo._adaptedFrame.lastVec().domain().length : 1;
@@ -276,8 +278,8 @@ public class NNModel extends Model {
         if (E_dx2 != null) return;
         E_dx2 = new float[weights.length][];
         for (int i=0; i<E_dx2.length; ++i) E_dx2[i] = new float[units[i]*units[i+1]];
-        E_g2 = new double[weights.length][];
-        for (int i=0; i<E_g2.length; ++i) E_g2[i] = new double[units[i]*units[i+1]];
+        E_g2 = new float[weights.length][];
+        for (int i=0; i<E_g2.length; ++i) E_g2[i] = new float[units[i]*units[i+1]];
       }
     }
     public void delete() {
@@ -290,7 +292,7 @@ public class NNModel extends Model {
       if (parameters.diagnostics) {
         computeStats();
         if (!parameters.quiet_mode) {
-          Neurons[] neurons = NNTask.makeNeuronsForTesting(this);
+          Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
           sb.append("Status of Neuron Layers:\n");
           sb.append("#  Units         Type      Dropout    L1       L2    " + (parameters.adaptive_rate ? "  Rate (Mean,RMS)   " : "  Rate      Momentum") + "   Weight (Mean, RMS)      Bias (Mean,RMS)\n");
           final String format = "%7g";
@@ -346,21 +348,21 @@ public class NNModel extends Model {
       //TODO: determine good/optimal/best initialization scheme for biases
       // hidden layers
       for (int i=0; i<parameters.hidden.length; ++i) {
-        if (parameters.activation == NN.Activation.Rectifier
-                || parameters.activation == NN.Activation.RectifierWithDropout
-                || parameters.activation == NN.Activation.Maxout
-                || parameters.activation == NN.Activation.MaxoutWithDropout
+        if (parameters.activation == DeepLearning.Activation.Rectifier
+                || parameters.activation == DeepLearning.Activation.RectifierWithDropout
+                || parameters.activation == DeepLearning.Activation.Maxout
+                || parameters.activation == DeepLearning.Activation.MaxoutWithDropout
                 ) {
 //          Arrays.fill(biases[i], 1.); //old behavior
           Arrays.fill(biases[i], i == 0 ? 0.5 : 1.); //new behavior, might be slightly better
         }
-        else if (parameters.activation == NN.Activation.Tanh || parameters.activation == NN.Activation.TanhWithDropout) {
+        else if (parameters.activation == DeepLearning.Activation.Tanh || parameters.activation == DeepLearning.Activation.TanhWithDropout) {
           Arrays.fill(biases[i], 0.0);
         }
       }
       Arrays.fill(biases[biases.length-1], 0.0); //output layer
     }
-    public void add(NNModelInfo other) {
+    public void add(DeepLearningModelInfo other) {
       Utils.add(weights, other.weights);
       Utils.add(biases,  other.biases);
       if (has_momenta()) {
@@ -384,7 +386,7 @@ public class NNModel extends Model {
       }
       if (adaDelta()) {
         for (float[] dx2 : E_dx2) Utils.div(dx2, (float) N);
-        for (double[] g2 : E_g2) Utils.div(g2, N);
+        for (float[] g2 : E_g2) Utils.div(g2, (float) N);
       }
     }
     double uniformDist(Random rand, double min, double max) {
@@ -394,16 +396,16 @@ public class NNModel extends Model {
       for (int i=0; i<weights.length; ++i) {
         final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD5EED + i+1); //to match NeuralNet behavior
         for( int j = 0; j < weights[i].length; j++ ) {
-          if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.UniformAdaptive) {
+          if (parameters.initial_weight_distribution == DeepLearning.InitialWeightDistribution.UniformAdaptive) {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
             final double range = Math.sqrt(6. / (units[i] + units[i+1]));
             weights[i][j] = (float)uniformDist(rng, -range, range);
             if (i==weights.length-1 && parameters.classification) weights[i][j] *= 4; //Softmax might need an extra factor 4, since it's like a sigmoid
           }
-          else if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.Uniform) {
+          else if (parameters.initial_weight_distribution == DeepLearning.InitialWeightDistribution.Uniform) {
             weights[i][j] = (float)uniformDist(rng, -parameters.initial_weight_scale, parameters.initial_weight_scale);
           }
-          else if (parameters.initial_weight_distribution == NN.InitialWeightDistribution.Normal) {
+          else if (parameters.initial_weight_distribution == DeepLearning.InitialWeightDistribution.Normal) {
             weights[i][j] = (float)(rng.nextGaussian() * parameters.initial_weight_scale);
           }
         }
@@ -462,32 +464,34 @@ public class NNModel extends Model {
         rms_weight[y] = Math.sqrt(rms_weight[y]/weights[y-1].length);
         if (rate != null) rms_rate[y] = Math.sqrt(rms_rate[y]/rate[y-1].length);
 
-        unstable |= Double.isNaN(mean_bias[y])  || Double.isNaN(rms_bias[y])
-                || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
+        unstable |= isNaN(mean_bias[y])  || isNaN(rms_bias[y])
+                || isNaN(mean_weight[y]) || isNaN(rms_weight[y]);
 
         // Abort the run if weights or biases are unreasonably large (Note that all input values are normalized upfront)
         // This can happen with Rectifier units when L1/L2/max_w2 are all set to 0, especially when using more than 1 hidden layer.
         final double thresh = 1e10;
-        unstable |= mean_bias[y] > thresh  || Double.isNaN(mean_bias[y])
-                || rms_bias[y] > thresh    || Double.isNaN(rms_bias[y])
-                || mean_weight[y] > thresh || Double.isNaN(mean_weight[y])
-                || rms_weight[y] > thresh  || Double.isNaN(rms_weight[y]);
+        unstable |= mean_bias[y] > thresh  || isNaN(mean_bias[y])
+                || rms_bias[y] > thresh    || isNaN(rms_bias[y])
+                || mean_weight[y] > thresh || isNaN(mean_weight[y])
+                || rms_weight[y] > thresh  || isNaN(rms_weight[y]);
       }
     }
   }
 
-  public NNModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, NN params, float[] priorDist) {
+  public DeepLearningModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, DeepLearning params, float[] priorDist) {
     super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
-    model_info = new NNModelInfo(params, dinfo);
+    model_info = new DeepLearningModelInfo(params, dinfo);
     errors = new Errors[1];
     errors[0] = new Errors();
     errors[0].validation = (params.validation != null);
   }
 
-  transient private long _now, _timeLastScoreStart, _timeLastScoreEnd, _timeLastPrintStart;
+  transient private long _timeLastScoreStart;
+  transient private long _timeLastScoreEnd;
+  transient private long _timeLastPrintStart;
   /**
    *
    * @param train training data from which the model is built (for epoch counting only)
@@ -501,15 +505,15 @@ public class NNModel extends Model {
     epoch_counter = (float)model_info().get_processed_total()/train.numRows();
     run_time = (System.currentTimeMillis()-start_time);
     boolean keep_running = (epoch_counter < model_info().get_params().epochs);
-    _now = System.currentTimeMillis();
-    final long sinceLastScore = _now-_timeLastScoreStart;
-    final long sinceLastPrint = _now-_timeLastPrintStart;
+    long now = System.currentTimeMillis();
+    final long sinceLastScore = now -_timeLastScoreStart;
+    final long sinceLastPrint = now -_timeLastPrintStart;
     final long samples = model_info().get_processed_total();
     if (sinceLastPrint > model_info().get_params().score_interval*1000) {
-      _timeLastPrintStart = _now;
-      Log.info("Training time: " + PrettyPrint.msecs(_now - start_time, true)
+      _timeLastPrintStart = now;
+      Log.info("Training time: " + PrettyPrint.msecs(now - start_time, true)
               + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", (double)samples/((_now - start_time)/1000.)) + " samples/sec.");
+              + " Speed: " + String.format("%.3f", (double)samples/((now - start_time)/1000.)) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
     if( !keep_running ||
@@ -517,12 +521,12 @@ public class NNModel extends Model {
         &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
       final boolean printme = !model_info().get_params().quiet_mode;
       if (printme) Log.info("Scoring the model.");
-      _timeLastScoreStart = _now;
+      _timeLastScoreStart = now;
       // compute errors
       Errors err = new Errors();
       err.classification = isClassifier();
       assert(err.classification == model_info().get_params().classification);
-      err.training_time_ms = _now - timeStart;
+      err.training_time_ms = now - timeStart;
       err.epoch_counter = epoch_counter;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
@@ -584,7 +588,7 @@ public class NNModel extends Model {
       _timeLastScoreEnd = System.currentTimeMillis();
       // print the freshly scored model to ASCII
       for (String s : toString().split("\n")) Log.info(s);
-      if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - _now, true));
+      if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -618,9 +622,9 @@ public class NNModel extends Model {
    * @return preds, can contain NaNs
    */
   @Override public float[] score0(double[] data, float[] preds) {
-    Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info);
+    Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
     ((Neurons.Input)neurons[0]).setInput(-1, data);
-    NNTask.step(-1, neurons, model_info, false, null);
+    DeepLearningTask.step(-1, neurons, model_info, false, null);
     double[] out = neurons[neurons.length - 1]._a;
     if (isClassifier()) {
       assert(preds.length == out.length+1);
@@ -657,7 +661,8 @@ public class NNModel extends Model {
       cm.predict = fpreds;
       cm.vpredict = fpreds.vecs()[0]; //ditto
       cm.serve();
-      error = cm.toASCII(sb); //either classification error or MSE
+      cm.toASCII(sb);
+      error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
     }
     if (printCM && (cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
       Log.info("Scoring on " + label + " data:");
@@ -687,7 +692,7 @@ public class NNModel extends Model {
             + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", " +
-            NN.link(_dataKey, "Compute new model") + "</div>");
+            DeepLearning.link(_dataKey, "Compute new model") + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
     DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
@@ -726,7 +731,7 @@ public class NNModel extends Model {
       sb.append("<th>").append("Weight (Mean, RMS)").append("</th>");
       sb.append("<th>").append("Bias (Mean, RMS)").append("</th>");
       sb.append("</tr>");
-      Neurons[] neurons = NNTask.makeNeuronsForTesting(model_info()); //link the weights to the neurons, for easy access
+      Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info()); //link the weights to the neurons, for easy access
       for (int i=0; i<neurons.length; ++i) {
         sb.append("<tr>");
         sb.append("<td>").append("<b>").append(i+1).append("</b>").append("</td>");
@@ -788,13 +793,13 @@ public class NNModel extends Model {
       }
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
-    long time_so_far = model_info().job().isDone() ?
-            error.training_time_ms : System.currentTimeMillis() - model_info.parameters.start_time;
+    final boolean isEnded = Job.isEnded(model_info().job().self());
+    long time_so_far = isEnded ? error.training_time_ms : System.currentTimeMillis() - model_info.parameters.start_time;
     if (time_so_far > 0) {
       DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");
     }
     DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(time_so_far, true));
-    if (progress > 0 && !model_info.get_params().isDone())
+    if (progress > 0 && !isEnded)
       DocGen.HTML.paragraph(sb, "Estimated time left: " +PrettyPrint.msecs((long)(time_so_far*(1-progress)/progress), true));
 
     long score_train = error.score_training_samples;
@@ -959,7 +964,7 @@ public class NNModel extends Model {
 
   private static String formatPct(double pct) {
     String s = "N/A";
-    if( !Double.isNaN(pct) )
+    if( !isNaN(pct) )
       s = String.format("%5.2f %%", 100 * pct);
     return s;
   }

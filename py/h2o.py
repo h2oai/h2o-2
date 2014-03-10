@@ -1,8 +1,7 @@
 import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
-import h2o_sandbox
-import h2o_print as h2p
+import h2o_sandbox, h2o_print as h2p
 import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
@@ -189,9 +188,15 @@ def parse_our_args():
     parser.add_argument('-dts', '--disable_time_stamp', help='Disable the timestamp on all stdout. Useful when trying to capture some stdout (like json prints) for use elsewhere', action='store_true')
     parser.add_argument('-debug_rest', '--debug_rest', help='Print REST API interactions to rest.log', action='store_true')
 
-    parser.add_argument('unittest_args', nargs='*')
+    parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
 
+    parser.add_argument('unittest_args', nargs='*')
     args = parser.parse_args()
+
+    # disable colors if we pipe this into a file to avoid extra chars
+    if args.nocolor:
+        h2p.disable_colors()
+
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
     global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
 
@@ -774,7 +779,7 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
     if not all(cloudHealthy):
         msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
         if not ignoreHealth: 
-            raise Exception(msg=msg)
+            raise Exception(msg)
 
     # gather up all the node_healthy status too
     for i,c in enumerate(cloudStatus):
@@ -783,7 +788,7 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
             print "node %s cloud status: %s" % (i, dump_json(c))
             msg = "node %s says some node is not reporting node_healthy: %s" % (c['node_name'], nodesHealthy)
             if not ignoreHealth: 
-                raise Exception(msg=msg)
+                raise Exception(msg)
 
     if expectedSize==0 or len(cloudSizes)==0 or len(cloudConsensus)==0:
         print "\nexpectedSize:", expectedSize
@@ -1551,7 +1556,7 @@ class H2O(object):
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
-    def jobs_admin(self, timeoutSecs=20, **kwargs):
+    def jobs_admin(self, timeoutSecs=120, **kwargs):
         params_dict = {
             # 'expression': None,
             }
@@ -1562,7 +1567,7 @@ class H2O(object):
         verboseprint("\njobs_admin result:", dump_json(a))
         return a
 
-    def jobs_cancel(self, timeoutSecs=20, **kwargs):
+    def jobs_cancel(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'key': None,
             }
@@ -1832,12 +1837,14 @@ class H2O(object):
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
-    def quantiles(self, timeoutSecs=300, print_params=False, **kwargs):
+    def quantiles(self, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'source_key': None,
             'column': None,
             'quantile': None,
             'max_qbins': None,
+            'interpolation_type': None,
+            'multiple_pass': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'quantiles', print_params)
         a = self.__do_json_request('2/QuantilesPage.json', timeout=timeoutSecs, params=params_dict)
@@ -2154,7 +2161,7 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def neural_net2(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+    def deep_learning(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
@@ -2163,40 +2170,53 @@ class H2O(object):
             'validation'                   : None,
             'classification'               : None,
             'response'                     : None,
+            'expert_mode'                  : None,
             'activation'                   : None,
-            'input_dropout_ratio'          : None,
             'hidden'                       : None,
+            'epochs'                       : None,
+            'mini_batch'                   : None,
+            'seed'                         : None,
+            'adaptive_rate'                : None,
+            'rho'                          : None,
+            'epsilon'                      : None,
             'rate'                         : None,
             'rate_annealing'               : None,
+            'rate_decay'                   : None,
             'momentum_start'               : None,
             'momentum_ramp'                : None,
             'momentum_stable'              : None,
+            'nesterov_accelerated_gradient': None,
+            'input_dropout_ratio'          : None,
             'l1'                           : None,
             'l2'                           : None,
-            'seed'                         : None,
+            'max_w2'                       : None,
             'initial_weight_distribution'  : None,
             'initial_weight_scale'         : None,
             'loss'                         : None,
-            'rate_decay'                   : None,
-            'max_w2'                       : None,
-            'epochs'                       : None,
+            'score_interval'               : None,
             'score_training_samples'       : None,
             'score_validation_samples'     : None,
-            'score_interval'               : None,
-            'mini_batch'                   : None,
+            'score_duty_cycle'             : None,
+            'classification_stop'          : None,
+            'regression_stop'              : None,
+            'quiet_mode'                   : None,
+            'max_confusion_matrix_size'    : None,
+            'balance_classes'              : None,
+            'max_after_balance_size'       : None,
+            'score_validation_sampling'    : None,
             'diagnostics'                  : None,
             'fast_mode'                    : None,
             'ignore_const_cols'            : None,
+            'force_load_balance'           : None,
             'shuffle_training_data'        : None,
-            'nesterov_accelerated_gradient': None,
         }
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'neural_net2', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'deep_learning', print_params)
         if 'validation' not in kwargs:
             kwargs['validation'] = data_key
 
         start = time.time()
-        a = self.__do_json_request('2/NN.json',timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/DeepLearning.json',timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
             a['python_elapsed'] = time.time() - start

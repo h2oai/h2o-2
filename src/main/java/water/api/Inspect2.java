@@ -3,7 +3,7 @@ package water.api;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
-import hex.nn.NN;
+import hex.deeplearning.DeepLearning;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -105,7 +105,7 @@ public class Inspect2 extends Request2 {
               DRF.link(skey, "Distributed Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
               GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
-              NN.link(skey, "Neural Net (beta)") +", "+
+              DeepLearning.link(skey, "Deep Learning (beta)") +", "+
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV") +
@@ -143,13 +143,13 @@ public class Inspect2 extends Request2 {
     for( int i=0; i<cols.length; i++ ) {
       if(cols[i].type==ColType.Int) {
         String btn = "<a href='ToEnum2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
-                + "<button type='submit' class='btn btn-success'>As Factor</button>";
+                + "<button type='submit' class='btn btn-custom'>As Factor</button>";
         sb.append("<td><b>").append(btn).append("</b></td>");
         continue;
       }
       if(src_key.vecs()[i] instanceof TransfVec) {
         String btn2 = "<a href='ToInt2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
-                + "<button type='submit' class='btn btn-success'>As Integer</button>";
+                + "<button type='submit' class='btn btn-custom'>As Integer</button>";
         sb.append("<td><b>").append(btn2).append("</b></td>");
         continue;
       }

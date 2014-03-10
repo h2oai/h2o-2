@@ -183,11 +183,12 @@ else:
         "r.hex[,1]",
         "r.hex[1,]",
         "r.hex[,1]+1",
-        "r.hex[1,]+1",
+        # unimplemented
+        # "r.hex[1,]+1",
         "r.hex[,1]=3.3;r.hex",  #  Replace a col with a constant
-        "r.hex[1,]=3.3;r.hex",
+        # "r.hex[1,]=3.3;r.hex",
         "r.hex[,1]=r.hex[,1]+1",#  Replace a col
-        "r.hex[1,]=r.hex[1,]+1",
+        # "r.hex[1,]=r.hex[1,]+1",
         "r.hex[,ncol(r.hex)+1]=4",#  Extend a col
         "r.hex[nrow(r.hex)+1,]=4",
         "a=ncol(r.hex); r.hex[,c(a+1,a+2)]=5",#  Extend two cols

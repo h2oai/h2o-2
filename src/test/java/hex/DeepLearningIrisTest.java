@@ -1,9 +1,9 @@
 package hex;
 
-import hex.nn.NN;
-import hex.nn.NNModel;
-import hex.nn.NNTask;
-import hex.nn.Neurons;
+import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
+import hex.deeplearning.DeepLearningTask;
+import hex.deeplearning.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -20,7 +20,7 @@ import java.util.Random;
 
 import static water.util.ModelUtils.getPrediction;
 
-public class NeuralNetIrisTest2 extends TestUtil {
+public class DeepLearningIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
   Frame _train, _test;
 
@@ -49,12 +49,12 @@ public class NeuralNetIrisTest2 extends TestUtil {
       // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
       // Note: Initial weight distributions are copied, but what is tested is the stability behavior.
 
-      NN.Activation[] activations = { NN.Activation.Tanh, NN.Activation.Rectifier };
-      NN.Loss[] losses = { NN.Loss.MeanSquare, NN.Loss.CrossEntropy };
-      NN.InitialWeightDistribution[] dists = {
-//              NN.InitialWeightDistribution.Normal,
-//              NN.InitialWeightDistribution.Uniform,
-              NN.InitialWeightDistribution.UniformAdaptive
+      DeepLearning.Activation[] activations = { DeepLearning.Activation.Tanh, DeepLearning.Activation.Rectifier };
+      DeepLearning.Loss[] losses = { DeepLearning.Loss.MeanSquare, DeepLearning.Loss.CrossEntropy };
+      DeepLearning.InitialWeightDistribution[] dists = {
+//              DeepLearning.InitialWeightDistribution.Normal,
+//              DeepLearning.InitialWeightDistribution.Uniform,
+              DeepLearning.InitialWeightDistribution.UniformAdaptive
       };
       double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
       double[] holdout_ratios = { 0.1 + new Random().nextDouble() * 0.8 };
@@ -64,9 +64,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
       double[] rates = { 0.01, 1e-5 + new Random().nextDouble() * .1 };
 
       int num_runs = 0;
-      for (NN.Activation activation : activations) {
-        for (NN.Loss loss : losses) {
-          for (NN.InitialWeightDistribution dist : dists) {
+      for (DeepLearning.Activation activation : activations) {
+        for (DeepLearning.Loss loss : losses) {
+          for (DeepLearning.InitialWeightDistribution dist : dists) {
             for (double scale : initial_weight_scales) {
               for (double holdout_ratio : holdout_ratios) {
                 for (double momentum : momenta) {
@@ -85,7 +85,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         Frame frame = ParseDataset2.parse(Key.make("iris_nn2"), new Key[] { file });
 
                         Frame fr = null;
-                        NN p;
+                        DeepLearning p;
                         Random rand;
 
                         int trial = 0;
@@ -117,7 +117,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                           _train = frame(names, Utils.subarray(rows, 0, limit));
                           _test = frame(names, Utils.subarray(rows, limit, (int) frame.numRows() - limit));
 
-                          p = new NN();
+                          p = new DeepLearning();
                           p.source = _train;
                           p.response = _train.lastVec();
                           p.ignored_cols = null;
@@ -129,7 +129,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         while (dinfo._adaptedFrame.lastVec().domain().length < 3);
 
                         // use the same seed for the reference implementation
-                        NeuralNetMLPReference2 ref = new NeuralNetMLPReference2();
+                        DeepLearningMLPReference ref = new DeepLearningMLPReference();
                         ref.init(activation, Utils.getDeterRNG(seed), holdout_ratio, hidden);
 
                         p.seed = seed;
@@ -164,9 +164,9 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
                         p.force_load_balance = false; //keep just 1 chunk for reproducibility
-                        NNModel mymodel = p.initModel(); //randomize weights, but don't start training yet
+                        DeepLearningModel mymodel = p.initModel(); //randomize weights, but don't start training yet
 
-                        Neurons[] neurons = NNTask.makeNeuronsForTraining(mymodel.model_info());
+                        Neurons[] neurons = DeepLearningTask.makeNeuronsForTraining(mymodel.model_info());
 
                         // use the same random weights for the reference implementation
                         Neurons l = neurons[1];
@@ -203,7 +203,7 @@ public class NeuralNetIrisTest2 extends TestUtil {
                         /**
                          * Compare weights and biases in hidden layer
                          */
-                        neurons = NNTask.makeNeuronsForTesting(mymodel.model_info()); //link the weights to the neurons, for easy access
+                        neurons = DeepLearningTask.makeNeuronsForTesting(mymodel.model_info()); //link the weights to the neurons, for easy access
                         l = neurons[1];
                         for( int o = 0; o < l._a.length; o++ ) {
                           for( int i = 0; i < l._previous._a.length; i++ ) {

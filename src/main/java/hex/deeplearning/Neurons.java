@@ -1,4 +1,4 @@
-package hex.nn;
+package hex.deeplearning;
 
 import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask;
@@ -9,7 +9,7 @@ import water.util.Utils;
 
 import java.util.Arrays;
 
-import static hex.nn.NN.Loss;
+import static hex.deeplearning.DeepLearning.Loss;
 
 /**
  * This class implements the concept of a Neuron layer in a Neural Network
@@ -44,7 +44,7 @@ public abstract class Neurons {
   /**
    * Parameters (deep-cloned() from the user input, can be modified here, e.g. learning rate decay)
    */
-  protected NN params;
+  protected DeepLearning params;
 
   /**
    * Layer state (one per neuron): activity, error
@@ -55,7 +55,7 @@ public abstract class Neurons {
    * References for feed-forward connectivity
    */
   public Neurons _previous; // previous layer of neurons
-  NNModel.NNModelInfo _minfo; //reference to shared model info
+  DeepLearningModel.DeepLearningModelInfo _minfo; //reference to shared model info
   public float[] _w; //reference to _minfo.weights[layer] for convenience
   public double[] _b; //reference to _minfo.biases[layer] for convenience
 
@@ -65,7 +65,7 @@ public abstract class Neurons {
 
   // AdaDelta
   private float[] _E_dx2; //reference to _minfo.E_dx2[layer] for convenience
-  private double[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
+  private float[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
 
   /**
    * For Dropout training
@@ -119,8 +119,8 @@ public abstract class Neurons {
    * @param minfo Model information (weights/biases and their momenta)
    * @param training Whether training is done or just testing (no need for dropout)
    */
-  public final void init(Neurons[] neurons, int index, NN p, final NNModel.NNModelInfo minfo, boolean training) {
-    params = (NN)p.clone();
+  public final void init(Neurons[] neurons, int index, DeepLearning p, final DeepLearningModel.DeepLearningModelInfo minfo, boolean training) {
+    params = (DeepLearning)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new double[units];
     if (!(this instanceof Output) && !(this instanceof Input)) {
@@ -181,7 +181,7 @@ public abstract class Neurons {
       if (_E_dx2 != null && _E_g2 != null) {
         assert(_wm == null && _bm == null);
         final double grad = d;
-        _E_g2[w] = params.rho * _E_g2[w] + (1.-params.rho)*grad*grad;
+        _E_g2[w] = (float)(params.rho * _E_g2[w] + (1.-params.rho)*grad*grad);
         final double RMS_dx = Math.sqrt(_E_dx2[w]+params.epsilon);
         final double RMS_g = Math.sqrt(_E_g2[w]+params.epsilon);
         r = RMS_dx/RMS_g;

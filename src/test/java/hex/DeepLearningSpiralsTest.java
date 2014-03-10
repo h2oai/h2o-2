@@ -1,7 +1,7 @@
 package hex;
 
-import hex.nn.NN;
-import hex.nn.NNModel;
+import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -14,7 +14,7 @@ import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
 import water.util.Log;
 
-public class NeuralNetSpiralsTest2 extends TestUtil {
+public class DeepLearningSpiralsTest extends TestUtil {
   @BeforeClass public static void stall() {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
@@ -27,22 +27,22 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
 
     // build the model
     {
-      NN p = new NN();
+      DeepLearning p = new DeepLearning();
       p.seed = 0xbabe;
       p.rate = 0.007;
       p.rate_annealing = 0;
       p.epochs = 3000;
       p.hidden = new int[]{100};
-      p.activation = NN.Activation.Tanh;
+      p.activation = DeepLearning.Activation.Tanh;
       p.max_w2 = Double.MAX_VALUE;
       p.l1 = 0;
       p.l2 = 0;
       p.momentum_start = 0;
       p.momentum_ramp = 0;
       p.momentum_stable = 0;
-      p.initial_weight_distribution = NN.InitialWeightDistribution.Normal;
+      p.initial_weight_distribution = DeepLearning.InitialWeightDistribution.Normal;
       p.initial_weight_scale = 2.5;
-      p.loss = NN.Loss.CrossEntropy;
+      p.loss = DeepLearning.Loss.CrossEntropy;
       p.source = frame;
       p.response = frame.lastVec();
       p.validation = null;
@@ -70,7 +70,7 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
 
     // score and check result
     {
-      NNModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+      DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
       Frame pred = mymodel.score(frame);
       water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
       CM.actual = frame;
@@ -79,7 +79,8 @@ public class NeuralNetSpiralsTest2 extends TestUtil {
       CM.vpredict = pred.vecs()[0];
       CM.serve();
       StringBuilder sb = new StringBuilder();
-      double error = CM.toASCII(sb);
+      CM.toASCII(sb);
+      double error = new ConfusionMatrix(CM.cm).err();
       Log.info(sb);
       if (error != 0) {
         Assert.fail("Classification error is not 0, but " + error + ".");

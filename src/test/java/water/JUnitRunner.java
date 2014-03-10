@@ -1,6 +1,6 @@
 package water;
 
-import hex.NNvsNeuralNet;
+import hex.DeepLearningVsNeuralNet;
 import hex.NeuralNetIrisTest;
 import hex.NeuralNetSpiralsTest;
 import org.apache.commons.lang.ArrayUtils;
@@ -37,7 +37,7 @@ public class JUnitRunner {
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
-    tests.remove(NNvsNeuralNet.class);
+    tests.remove(DeepLearningVsNeuralNet.class);
     tests.remove(NeuralNetIrisTest.class); //old NeuralNet
     tests.remove(NeuralNetSpiralsTest.class); //old NeuralNet
     // Pure JUnit test

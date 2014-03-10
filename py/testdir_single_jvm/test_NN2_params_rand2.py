@@ -68,15 +68,15 @@ class Basic(unittest.TestCase):
         for trial in range(5):
             # params is mutable. This is default.
             params = {'response': 'C55'}
-            h2o_nn.pickRandNNParams(paramDict, params)
+            h2o_nn.pickRandDeepLearningParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            nn = h2o_cmd.runNNet2(timeoutSecs=70, parseResult=parseResult, **kwargs)
+            nn = h2o_cmd.runDeepLearning(timeoutSecs=70, parseResult=parseResult, **kwargs)
             print "nn result:", h2o.dump_json(nn)
             h2o.check_sandbox_for_errors()
             # FIX! simple check?
 
-            print "NN2 end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "Deep Learning end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "Trial #", trial, "completed\n"
 
 if __name__ == '__main__':

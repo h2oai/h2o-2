@@ -1,4 +1,4 @@
-package hex.nn;
+package hex.deeplearning;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
@@ -7,7 +7,7 @@ import water.Job;
 import water.Key;
 import water.UKV;
 import water.api.DocGen;
-import water.api.NNProgressPage;
+import water.api.DeepLearningProgressPage;
 import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Log;
@@ -20,12 +20,12 @@ import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
 
 /**
- * NN - Neural Net implementation based on MRTask2
+ * Deep Learning Neural Net implementation based on MRTask2
  */
-public class NN extends Job.ValidatedJob {
+public class DeepLearning extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   public static DocGen.FieldDoc[] DOC_FIELDS;
-  public static final String DOC_GET = "NN";
+  public static final String DOC_GET = "Deep Learning";
 
   @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
   public boolean expert_mode = false;
@@ -272,7 +272,7 @@ public class NN extends Job.ValidatedJob {
     }
   }
 
-  public Frame score( Frame fr ) { return ((NNModel)UKV.get(dest())).score(fr);  }
+  public Frame score( Frame fr ) { return ((DeepLearningModel)UKV.get(dest())).score(fr);  }
 
   /** Print model parameters as JSON */
   @Override public boolean toHTML(StringBuilder sb) {
@@ -281,7 +281,7 @@ public class NN extends Job.ValidatedJob {
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
-    NN req = new NN();
+    DeepLearning req = new DeepLearning();
     RString rs = new RString("<a href='" + req.href() + ".query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", "source");
     rs.replace("key", k.toString());
@@ -291,7 +291,7 @@ public class NN extends Job.ValidatedJob {
 
   @Override public float progress(){
     if(UKV.get(dest()) == null)return 0;
-    NNModel m = UKV.get(dest());
+    DeepLearningModel m = UKV.get(dest());
     if (m != null && m.model_info()!=null )
       return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
     return 0;
@@ -304,7 +304,7 @@ public class NN extends Job.ValidatedJob {
   }
 
   @Override protected Response redirect() {
-    return NNProgressPage.redirect(this, self(), dest());
+    return DeepLearningProgressPage.redirect(this, self(), dest());
   }
 
   private boolean _fakejob;
@@ -340,14 +340,14 @@ public class NN extends Job.ValidatedJob {
    * Create an initial NN model, typically to be trained by trainModel(model)
    * @return Randomly initialized model
    */
-  public final NNModel initModel() {
+  public final DeepLearningModel initModel() {
     try {
       lock_data();
       checkParams();
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
       float[] priorDist = classification ? new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist() : null;
-      final NNModel model = new NNModel(dest(), self(), source._key, dinfo, this, priorDist);
+      final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
       return model;
     }
@@ -361,7 +361,7 @@ public class NN extends Job.ValidatedJob {
    * @param model Input model (e.g., from initModel(), or from a previous training run)
    * @return Trained model
    */
-  public final NNModel trainModel(NNModel model) {
+  public final DeepLearningModel trainModel(DeepLearningModel model) {
     Frame valid = null, validScoreFrame = null;
     Frame train = null, trainScoreFrame = null;
     try {
@@ -410,14 +410,19 @@ public class NN extends Job.ValidatedJob {
 
       if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
 
-      Log.info("Starting to train the Neural Net model.");
+      Log.info("Starting to train the Deep Learning model.");
       long timeStart = System.currentTimeMillis();
 
       //main loop
-      do model.set_model_info(new NNTask(model.model_info(), sync_fraction).doAll(train).model_info());
+      do model.set_model_info(new DeepLearningTask(model.model_info(), sync_fraction).doAll(train).model_info());
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, timeStart, self()));
 
-      Log.info("Finished training the Neural Net model.");
+      Log.info("Finished training the Deep Learning model.");
+      return model;
+    }
+    catch(JobCancelledException ex) {
+      Log.info("Deep Learning model building was cancelled.");
+      model = UKV.get(dest());
       return model;
     }
     catch(Exception ex) {

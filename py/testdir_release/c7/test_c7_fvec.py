@@ -60,8 +60,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         kwargs = {
             'response': y,
-            # 'case_mode': '>',
-            # 'case': 0,
             'family': 'binomial',
             'lambda': 1.0E-5,
             'alpha': 0.5,

@@ -1,4 +1,4 @@
-package hex.nn;
+package hex.deeplearning;
 
 import junit.framework.Assert;
 import org.junit.Test;

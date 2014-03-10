@@ -1,6 +1,6 @@
 package samples;
 
-import hex.nn.NN;
+import hex.deeplearning.DeepLearning;
 import water.Job;
 import water.TestUtil;
 import water.fvec.Frame;
@@ -13,9 +13,9 @@ import static water.util.MRUtils.sampleFrame;
 /**
  * Runs a neural network on the MNIST dataset.
  */
-public class NeuralNetMnist2 extends Job {
+public class DeepLearningMnist extends Job {
   public static void main(String[] args) throws Exception {
-    Class job = NeuralNetMnist2.class;
+    Class job = DeepLearningMnist.class;
 //    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
@@ -37,15 +37,15 @@ public class NeuralNetMnist2 extends Job {
     Frame testf = sampleFrame(TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz"), (long)(10000*fraction), seed+1);
     Log.info("Done.");
 
-    NN p = new NN();
+    DeepLearning p = new DeepLearning();
     // Hinton parameters -> should lead to ~1 % test error after a few dozen million samples
     p.seed = seed;
     p.hidden = new int[]{1024,1024,2048};
 //    p.hidden = new int[]{128,128,256};
     p.rate = 0.01;
     p.rate_annealing = 1e-6;
-    p.activation = NN.Activation.RectifierWithDropout;
-    p.loss = NN.Loss.CrossEntropy;
+    p.activation = DeepLearning.Activation.RectifierWithDropout;
+    p.loss = DeepLearning.Loss.CrossEntropy;
     p.input_dropout_ratio = 0.2;
     p.max_w2 = 15;
     p.epochs = 10000;
@@ -54,7 +54,7 @@ public class NeuralNetMnist2 extends Job {
     p.momentum_start = 0.5;
     p.momentum_ramp = 1800000;
     p.momentum_stable = 0.99;
-    p.initial_weight_distribution = NN.InitialWeightDistribution.UniformAdaptive;
+    p.initial_weight_distribution = DeepLearning.InitialWeightDistribution.UniformAdaptive;
 //    p.initial_weight_scale = 0.01
     p.classification = true;
     p.diagnostics = true;

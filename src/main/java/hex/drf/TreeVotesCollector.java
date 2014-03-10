@@ -21,7 +21,7 @@ import water.util.Utils;
  */
 public class TreeVotesCollector extends MRTask2<TreeVotesCollector> {
   /* @IN */ final private float     _rate;
-  /* @IN */ final private CompressedTree[/*N*/][/*nclasses*/] _trees; // FIXME: Pass only tree-keys since serialized trees are passed over wire !!!
+  /* @IN */       private CompressedTree[/*N*/][/*nclasses*/] _trees; // FIXME: Pass only tree-keys since serialized trees are passed over wire !!!
   /* @IN */ final private int       _var;
   /* @IN */ final private boolean   _oob;
   /* @IN */ final private int       _ncols;
@@ -84,6 +84,8 @@ public class TreeVotesCollector extends MRTask2<TreeVotesCollector> {
         //if (_var<0) System.err.println("VARIMP OOB row: " + (cresp._start+row) + " : " + Arrays.toString(data) + " tree/actu: " + pred + "/" + actu);
       }
     }
+    // Clean-up
+    _trees = null;
   }
   @Override public void reduce( TreeVotesCollector t ) { Utils.add(_treeCVotes,t._treeCVotes); Utils.add(_nrows, t._nrows); }
 
@@ -113,7 +115,9 @@ public class TreeVotesCollector extends MRTask2<TreeVotesCollector> {
    * @return
    */
   public static TreeVotes collect(TreeModel tmodel, Frame f, int ncols, float rate, int variable) {
-    return new TreeVotesCollector(tmodel.treeBits, tmodel.nclasses(), ncols, rate, variable).doAll(f).result();
+    CompressedTree[][] trees = new CompressedTree[tmodel.numTrees()][];
+    for (int tidx = 0; tidx < tmodel.numTrees(); tidx++) trees[tidx] = tmodel.ctree(tidx);
+    return new TreeVotesCollector(trees, tmodel.nclasses(), ncols, rate, variable).doAll(f).result();
   }
 
   public static TreeVotes collect(CompressedTree[/*nclass*/] tree, int nclasses, Frame f, int ncols, float rate, int variable) {

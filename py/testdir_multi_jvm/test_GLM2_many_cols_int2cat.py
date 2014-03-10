@@ -92,7 +92,7 @@ class Basic(unittest.TestCase):
                 paramDict2[k] = paramDict[k][0]
             # since we add the output twice, it's no longer colCount-1
             y = colCount
-            kwargs = {'response': 'C' + str(y), 'max_iter': 50, 'case_val': 1}
+            kwargs = {'response': 'C' + str(y), 'max_iter': 50}
             kwargs.update(paramDict2)
 
             start = time.time()

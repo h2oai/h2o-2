@@ -279,10 +279,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override
   protected float[][] doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain) {
     // Check if we have already serialized 'ktrees'-trees in the model
-    assert model.treeBits.length-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
+    assert model.numTrees()-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
     assert _treeVotesOnOOB.npredictors()-1 == tid : "Tree votes over OOB rows for this tree (var ktrees) were not found!";
     // Compute tree votes over shuffled data
-    final CompressedTree[/*nclass*/] theTree = model.treeBits[tid]; // get the last tree
+    final CompressedTree[/*nclass*/] theTree = model.ctree(tid); // get the last tree FIXME we should pass only keys
     final int nclasses = model.nclasses();
     H2OCountedCompleter[] computers = new H2OCountedCompleter[_ncols];
     for (int var=0; var<_ncols; var++) {

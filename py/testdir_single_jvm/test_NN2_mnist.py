@@ -48,6 +48,7 @@ class Basic(unittest.TestCase):
             'activation'                   : 'RectifierWithDropout',
             'input_dropout_ratio'          : 0.2,
             'hidden'                       : '117,131,129',
+            'adaptive_rate'                : 0,
             'rate'                         : 0.005,
             'rate_annealing'               : 1e-6,
             'momentum_start'               : 0.5,
@@ -70,7 +71,7 @@ class Basic(unittest.TestCase):
 
         timeoutSecs = 600
         start = time.time()
-        nn = h2o_cmd.runNNet2(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+        nn = h2o_cmd.runDeepLearning(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
         predict_key = 'score_' + identifier + '.hex'

@@ -1,9 +1,9 @@
 package hex;
 
-import hex.nn.NN;
-import hex.nn.NNModel;
-import hex.nn.NNTask;
-import hex.nn.Neurons;
+import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
+import hex.deeplearning.DeepLearningTask;
+import hex.deeplearning.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -20,7 +20,7 @@ import java.util.Random;
 import static hex.NeuralNet.*;
 import static water.util.MRUtils.sampleFrame;
 
-public class NNvsNeuralNet extends TestUtil {
+public class DeepLearningVsNeuralNet extends TestUtil {
   Frame _train, _test;
 
   @BeforeClass public static void stall() {
@@ -45,22 +45,22 @@ public class NNvsNeuralNet extends TestUtil {
   }
 
   @Test public void compare() throws Exception {
-    NN.Activation[] activations = {
-            NN.Activation.Maxout,
-            NN.Activation.MaxoutWithDropout,
-            NN.Activation.RectifierWithDropout,
-            NN.Activation.Tanh,
-            NN.Activation.Rectifier,
-            NN.Activation.TanhWithDropout
+    DeepLearning.Activation[] activations = {
+            DeepLearning.Activation.Maxout,
+            DeepLearning.Activation.MaxoutWithDropout,
+            DeepLearning.Activation.RectifierWithDropout,
+            DeepLearning.Activation.Tanh,
+            DeepLearning.Activation.Rectifier,
+            DeepLearning.Activation.TanhWithDropout
     };
-    NN.Loss[] losses = {
-            NN.Loss.MeanSquare,
-            NN.Loss.CrossEntropy
+    DeepLearning.Loss[] losses = {
+            DeepLearning.Loss.MeanSquare,
+            DeepLearning.Loss.CrossEntropy
     };
-    NN.InitialWeightDistribution[] dists = {
-            NN.InitialWeightDistribution.Normal,
-            NN.InitialWeightDistribution.Uniform,
-            NN.InitialWeightDistribution.UniformAdaptive
+    DeepLearning.InitialWeightDistribution[] dists = {
+            DeepLearning.InitialWeightDistribution.Normal,
+            DeepLearning.InitialWeightDistribution.Uniform,
+            DeepLearning.InitialWeightDistribution.UniformAdaptive
     };
     double[] initial_weight_scales = {
             1e-3 + 1e-2 * new Random().nextFloat()
@@ -98,13 +98,13 @@ public class NNvsNeuralNet extends TestUtil {
     boolean threaded = false;
     int num_repeats = 1;
 
-    // TODO: test that NN and NeuralNet agree for Mnist dataset
+    // TODO: test that Deep Learning and NeuralNet agree for Mnist dataset
 //    String[] files = { "smalldata/mnist/train.csv" };
 //    hiddens = new int[][]{ {50,50} };
 //    threaded = true;
 //    num_repeats = 5;
 
-    // TODO: test that NN and NeuralNet agree for covtype dataset
+    // TODO: test that Deep Learning and NeuralNet agree for covtype dataset
 //    String[] files = { "smalldata/covtype/covtype.20k.data.my" };
 //    hiddens = new int[][]{ {100,100} };
 //    epochs = new int[]{ 50 };
@@ -113,9 +113,9 @@ public class NNvsNeuralNet extends TestUtil {
 
     String[] files = { "smalldata/iris/iris.csv", "smalldata/neural/two_spiral.data" };
 
-    for (NN.Activation activation : activations) {
-      for (NN.Loss loss : losses) {
-        for (NN.InitialWeightDistribution dist : dists) {
+    for (DeepLearning.Activation activation : activations) {
+      for (DeepLearning.Loss loss : losses) {
+        for (DeepLearning.InitialWeightDistribution dist : dists) {
           for (double scale : initial_weight_scales) {
             for (double holdout_ratio : holdout_ratios) {
               for (double input_dropout : input_dropouts) {
@@ -144,11 +144,11 @@ public class NNvsNeuralNet extends TestUtil {
                           _train = sampleFrame(frame, (long)(frame.numRows()*holdout_ratio), seed);
                           _test = sampleFrame(frame, (long)(frame.numRows()*(1-holdout_ratio)), seed+1);
 
-                          // Train new NN
+                          // Train new Deep Learning
                           Neurons[] neurons;
-                          NNModel mymodel;
+                          DeepLearningModel mymodel;
                           {
-                            NN p = new NN();
+                            DeepLearning p = new DeepLearning();
                             p.source = (Frame)_train.clone();
                             p.response = _train.lastVec();
                             p.ignored_cols = null;
@@ -185,7 +185,7 @@ public class NNvsNeuralNet extends TestUtil {
                             p.execImpl();
 
                             mymodel = UKV.get(p.dest());
-                            neurons = NNTask.makeNeuronsForTesting(mymodel.model_info());
+                            neurons = DeepLearningTask.makeNeuronsForTesting(mymodel.model_info());
                           }
 
                           // Reference: NeuralNet
@@ -208,34 +208,34 @@ public class NNvsNeuralNet extends TestUtil {
                             p.momentum_start = p0;
                             p.momentum_ramp = pR;
                             p.momentum_stable = p1;
-                            if (dist == NN.InitialWeightDistribution.Normal) p.initial_weight_distribution = InitialWeightDistribution.Normal;
-                            else if (dist == NN.InitialWeightDistribution.Uniform) p.initial_weight_distribution = InitialWeightDistribution.Uniform;
-                            else if (dist == NN.InitialWeightDistribution.UniformAdaptive) p.initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
+                            if (dist == DeepLearning.InitialWeightDistribution.Normal) p.initial_weight_distribution = InitialWeightDistribution.Normal;
+                            else if (dist == DeepLearning.InitialWeightDistribution.Uniform) p.initial_weight_distribution = InitialWeightDistribution.Uniform;
+                            else if (dist == DeepLearning.InitialWeightDistribution.UniformAdaptive) p.initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
                             p.initial_weight_scale = scale;
                             p.diagnostics = true;
                             p.classification = true;
-                            if (loss == NN.Loss.MeanSquare) p.loss = Loss.MeanSquare;
-                            else if (loss == NN.Loss.CrossEntropy) p.loss = Loss.CrossEntropy;
+                            if (loss == DeepLearning.Loss.MeanSquare) p.loss = Loss.MeanSquare;
+                            else if (loss == DeepLearning.Loss.CrossEntropy) p.loss = Loss.CrossEntropy;
 
                             ls = new Layer[hidden.length+2];
                             ls[0] = new Layer.VecsInput(data, null);
                             for (int i=0; i<hidden.length; ++i) {
-                              if (activation == NN.Activation.Tanh) {
+                              if (activation == DeepLearning.Activation.Tanh) {
                                 p.activation = NeuralNet.Activation.Tanh;
                                 ls[1+i] = new Layer.Tanh(hidden[i]);
-                              } else if (activation == NN.Activation.TanhWithDropout) {
+                              } else if (activation == DeepLearning.Activation.TanhWithDropout) {
                                 p.activation = Activation.TanhWithDropout;
                                 ls[1+i] = new Layer.TanhDropout(hidden[i]);
-                              } else if (activation == NN.Activation.Rectifier) {
+                              } else if (activation == DeepLearning.Activation.Rectifier) {
                                 p.activation = Activation.Rectifier;
                                 ls[1+i] = new Layer.Rectifier(hidden[i]);
-                              } else if (activation == NN.Activation.RectifierWithDropout) {
+                              } else if (activation == DeepLearning.Activation.RectifierWithDropout) {
                                 p.activation = Activation.RectifierWithDropout;
                                 ls[1+i] = new Layer.RectifierDropout(hidden[i]);
-                              } else if (activation == NN.Activation.Maxout) {
+                              } else if (activation == DeepLearning.Activation.Maxout) {
                                 p.activation = Activation.Maxout;
                                 ls[1+i] = new Layer.Maxout(hidden[i]);
-                              } else if (activation == NN.Activation.MaxoutWithDropout) {
+                              } else if (activation == DeepLearning.Activation.MaxoutWithDropout) {
                                 p.activation = Activation.MaxoutWithDropout;
                                 ls[1+i] = new Layer.MaxoutDropout(hidden[i]);
                               }
@@ -279,7 +279,7 @@ public class NNvsNeuralNet extends TestUtil {
                            * Note: Reference and H2O each do their internal data normalization,
                            * so we must use their "own" test data, which is assumed to be created correctly.
                            */
-                          // NN scoring
+                          // Deep Learning scoring
                           {
                             Frame fpreds = mymodel.score(_train); //[0] is label, [1]...[4] are the probabilities
                             water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
@@ -289,7 +289,8 @@ public class NNvsNeuralNet extends TestUtil {
                             CM.vpredict = fpreds.vecs()[0];
                             CM.serve();
                             StringBuilder sb = new StringBuilder();
-                            trainerr += CM.toASCII(sb);
+                            CM.toASCII(sb);
+                            trainerr += new ConfusionMatrix(CM.cm).err();
                             for (String s : sb.toString().split("\n")) Log.info(s);
                             fpreds.delete();
 
@@ -301,7 +302,7 @@ public class NNvsNeuralNet extends TestUtil {
                             CM.vpredict = fpreds2.vecs()[0];
                             CM.serve();
                             sb = new StringBuilder();
-                            testerr += CM.toASCII(sb);
+                            testerr += new ConfusionMatrix(CM.cm).err();
                             for (String s : sb.toString().split("\n")) Log.info(s);
                             fpreds2.delete();
                           }
@@ -349,20 +350,20 @@ public class NNvsNeuralNet extends TestUtil {
                         final double releps = threaded ? 1e-2 : 1e-13;
 
                         // training set scoring
-                        Log.info("NeuralNet train error " + reftrainerr);
-                        Log.info("NN        train error " + trainerr);
+                        Log.info("NeuralNet     train error " + reftrainerr);
+                        Log.info("Deep Learning train error " + trainerr);
                         compareVal(reftrainerr, trainerr, abseps, releps);
                         // test set scoring
-                        Log.info("NeuralNet test error " + reftesterr);
-                        Log.info("NN        test error " + testerr);
+                        Log.info("NeuralNet     test error " + reftesterr);
+                        Log.info("Deep Learning test error " + testerr);
                         compareVal(reftrainerr, trainerr, abseps, releps);
 
                         // mean weights/biases
                         for (int n=1; n<hidden.length+2; ++n) {
-                          Log.info("NeuralNet mean weight for layer " + n + ": " + a[n]/numweights);
-                          Log.info("NN        mean weight for layer " + n + ": " + b[n]/numweights);
-                          Log.info("NeuralNet mean bias for layer " + n + ": " + ba[n]/numbiases);
-                          Log.info("NN        mean bias for layer " + n + ": " + bb[n]/numbiases);
+                          Log.info("NeuralNet     mean weight for layer " + n + ": " + a[n]/numweights);
+                          Log.info("Deep Learning mean weight for layer " + n + ": " + b[n]/numweights);
+                          Log.info("NeuralNet     mean bias for layer " + n + ": " + ba[n]/numbiases);
+                          Log.info("Deep Learning mean bias for layer " + n + ": " + bb[n]/numbiases);
                           compareVal(a[n]/numweights, b[n]/numweights, abseps, releps);
                           compareVal(ba[n]/numbiases, bb[n]/numbiases, abseps, releps);
                         }
