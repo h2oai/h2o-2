@@ -5,11 +5,11 @@ import numpy as np
 import scipy as sp
 import math
 import argparse
-OTHER_T = 0.50
+OTHER_T = 0.999
 BIN_COUNT = 20
 BIN_COUNT = 50
-BIN_COUNT = 10
-INTERPOLATION_TYPE=2
+BIN_COUNT = 100000
+INTERPOLATION_TYPE=7
 
 print "Using max_qbins: ", BIN_COUNT, "threshold:", OTHER_T
 
@@ -212,6 +212,7 @@ def findQuantile(d, dmin, dmax, threshold):
 
         k = 0
         while ((currentCnt + hcnt2[k]) <= targetCntInt): 
+            # print "looping for k (multi): ",k," ",currentCnt," ",targetCntInt," ",totalRows," ",hcnt2[k]," ",hcnt2_min[k]," ",hcnt2_max[k]
             currentCnt += hcnt2[k]
             # ugly but have to break out if we'd cycle along with == adding h0's until we go too far
             # are we supposed to advance to a none zero bin?
@@ -233,10 +234,10 @@ def findQuantile(d, dmin, dmax, threshold):
         if currentCnt==targetCntInt:
             if hcnt2[k]>2 and (hcnt2_min[k]==hcnt2_max[k]):
                 guess = hcnt2_min[k]
-                done = True
                 print "Guess A", guess, k, hcnt2[k]
 
             if hcnt2[k]==2:
+                print "\nTwo values in this bin but we could be aligned to the 2nd. so can't stop"
                 # no mattter what size the fraction it would be on this number
                 guess = (hcnt2_max[k] + hcnt2_min[k]) / 2.0
                 # no mattter what size the fraction it would be on this number
@@ -249,9 +250,9 @@ def findQuantile(d, dmin, dmax, threshold):
                   # adds possible errors related to the arithmetic on the total # of rows.
                   dDiff = hcnt2_max[k] - hcnt2_min[k] # two adjacent..as if sorted!
                   pctDiff = targetCntFract # This is the fraction of total rows
-                  guess = hcnt2_max[k] + (pctDiff * dDiff)
+                  guess = hcnt2_min[k] + (pctDiff * dDiff)
 
-                done = True
+                done = False
                 print "Guess B", guess
 
             if hcnt2[k]==1 and targetCntFract==0:
@@ -452,13 +453,14 @@ alphap=1/3.0
 betap=1/3.0
 
 
-# this is type 7
-alphap=1
-betap=1
 
 # an approx? (was good when comparing to h2o type 2)
 alphap=0.4
 betap=0.4
+
+# this is type 7
+alphap=1
+betap=1
 
 
 from scipy import stats
@@ -466,16 +468,16 @@ a1 = stats.scoreatpercentile(target, per=100*OTHER_T, interpolation_method='frac
 h2p.red_print("stats.scoreatpercentile:", a1)
 a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T], alphap=alphap, betap=betap)
 h2p.red_print("scipy stats.mstats.mquantiles:", a2)
-b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T, interpolate='mean')
+targetFP.sort()
+b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T, interpolate='linear')
 h2p.red_print("sort algo:", b)
 h2p.red_print( "from h2o (multi):", quantiles[0])
 
 print "Now looking at the sorted list..same thing"
-targetFP.sort()
 h2p.blue_print("stats.scoreatpercentile:", a1)
 a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T], alphap=alphap, betap=betap)
 h2p.blue_print("scipy stats.mstats.mquantiles:", a2)
-b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T, interpolate='mean')
+b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T, interpolate='linear')
 h2p.blue_print("sort algo:", b)
 h2p.blue_print( "from h2o (multi):", quantiles[0])
 

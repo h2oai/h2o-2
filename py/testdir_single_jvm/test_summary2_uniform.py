@@ -6,9 +6,9 @@ DO_TRY_SCIPY = False
 if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
-DO_MEDIAN = True
+DO_MEDIAN = False
 MAX_QBINS = 1000000
-MAX_QBINS = 1000
+MAX_QBINS = 100000
 ROWS = 100000
 
 def twoDecimals(l): 

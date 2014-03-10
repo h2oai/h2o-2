@@ -258,11 +258,13 @@ public class Quantiles extends Iced {
       int binIdx2Int = (int) binIdx2;
 
       // we always need the start condition in the bins?
-      if ( valOffset < 0 ) {
+      // if ( valOffset < 0 ) {
+      if ( binIdx2Int < 0 ) {
         ++hcnt2_low;
       }
       // we always need the end condition in the bins?
-      else if ( val > _valEnd ) {
+      // else if ( val > _valEnd ) {
+      else if ( binIdx2Int >= maxBinCnt ) {
         if ( (hcnt2_high==0) || (val < hcnt2_high_min) ) hcnt2_high_min = val;
         ++hcnt2_high;
       } 
@@ -448,7 +450,7 @@ public class Quantiles extends Iced {
           // adds possible errors related to the arithmetic on the total # of rows.
           dDiff = hcnt2_max[k] - hcnt2_min[k]; // two adjacent..as if sorted!
           pctDiff = targetCntFract; // This is the fraction of total rows
-          guess = hcnt2_max[k] + (pctDiff * dDiff);
+          guess = hcnt2_min[k] + (pctDiff * dDiff);
         }
         done = true;
         Log.info("Q_ Guess B "+guess+" with type "+_interpolationType+" targetCntFract: "+targetCntFract);
