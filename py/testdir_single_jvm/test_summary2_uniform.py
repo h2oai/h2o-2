@@ -59,27 +59,69 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
 
     thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
     # per = [100 * t for t in thresholds]
-    per = [1 * t for t in thresholds]
-    print "scipy per:", per
     from scipy import stats
-    # a = stats.scoreatpercentile(target, per=per)
-    a = stats.mstats.mquantiles(targetFP, prob=per)
-    a2 = ["%.2f" % v for v in a]
-    h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+    a = stats.scoreatpercentile(targetFP, per=50 if DO_MEDIAN else 99.9)
+    h2p.red_print("scipy stats.scoreatpercentile", a)
+
+    # scipy apparently doesn't have the use of means (type 2)
+    # http://en.wikipedia.org/wiki/Quantile
+    # it has median (R-8) with 1/3, 1/3
+
+    # type 6
+    alphap=0
+    betap=0
+
+    # type 5 okay but not perfect
+    alphap=0.5
+    betap=0.5
+
+    # type 8
+    alphap=1/3.0
+    betap=1/3.0
+
+    # this is type 7
+    alphap=1
+    betap=1
+
+    # an approx?
+    alphap=0.4
+    betap=0.4
+
+    per = [1 * t for t in thresholds]
+    print "scipy per", per
+    a = stats.mstats.mquantiles(targetFP, prob=per, alphap=alphap, betap=betap)
+    # http://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mstats.mquantiles.html
+    # type 7 
+    # alphap=0.4, betap=0.4, 
+    # type 2 not available? (mean)
+    # alphap=1/3.0, betap=1/3.0 is approx median?
+
+    a2 = [v for v in a]
+    h2p.red_print("scipy stats.mstats.mquantiles type 8 (don't have type 2):", a2)
 
     # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
     # inplace sort
     targetFP.sort()
-    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+
+    # this matches scipy type 7 (linear)
+    # b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='linear')
+    # this matches h2o type 2 (mean)
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
-    h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o summary2:", h2oMedian)
-    h2p.blue_print(label, "from h2o quantile multipass:", h2oMedian2)
+    s = a[5 if DO_MEDIAN else 10]
+    h2p.blue_print(label, "from scipy:", s)
+    h2p.blue_print(label, "from h2o singlepass:", h2oMedian)
+    h2p.blue_print(label, "from h2o multipass:", h2oMedian2)
+    # they should be identical. keep a tight absolute tolerance
+    h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
+    # give us some slack compared to the scipy use of median
+    h2o_util.assertApproxEqual(h2oMedian2, s, rel=0.01, msg='h2o quantile multipass is not approx. same as scipy algo')
+
     # see if scipy changes. nope. it doesn't 
     if 1==0:
-        a = stats.mstats.mquantiles(targetFP, prob=per)
-        a2 = ["%.2f" % v for v in a]
+        a = stats.mstats.mquantiles(targetFP, prob=per, alphap=alphap, betap=betap)
+        a2 = [v for v in a]
         h2p.red_print("after sort")
         h2p.red_print("scipy stats.mstats.mquantiles:", a2)
 
