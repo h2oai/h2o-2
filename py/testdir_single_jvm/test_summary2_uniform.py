@@ -58,6 +58,14 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
         print target[1]
 
     thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
+    # http://docs.scipy.org/doc/numpy-dev/reference/generated/numpy.percentile.html
+    # numpy.percentile has simple linear interpolate and midpoint
+    # need numpy 1.9 for interpolation. numpy 1.8 doesn't have
+    # p = np.percentile(targetFP, 50 if DO_MEDIAN else 99.9, interpolation='midpoint')
+    # 1.8
+    p = np.percentile(targetFP, 50 if DO_MEDIAN else 99.9)
+    h2p.red_print("numpy.percentile", p)
+
     # per = [100 * t for t in thresholds]
     from scipy import stats
     a = stats.scoreatpercentile(targetFP, per=50 if DO_MEDIAN else 99.9)
@@ -111,10 +119,12 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     h2p.blue_print(label, "from sort:", b)
     s = a[5 if DO_MEDIAN else 10]
     h2p.blue_print(label, "from scipy:", s)
+    h2p.blue_print(label, "from numpy:", p)
     h2p.blue_print(label, "from h2o singlepass:", h2oMedian)
     h2p.blue_print(label, "from h2o multipass:", h2oMedian2)
     # they should be identical. keep a tight absolute tolerance
     h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
+    h2o_util.assertApproxEqual(h2oMedian2, p, rel=0.01, msg='h2o quantile multipass is not approx. same as numpy algo')
     # give us some slack compared to the scipy use of median
     h2o_util.assertApproxEqual(h2oMedian2, s, rel=0.01, msg='h2o quantile multipass is not approx. same as scipy algo')
 
