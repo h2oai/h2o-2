@@ -129,9 +129,9 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
 .h2o.__PAGE_KM2Progress = "2/KMeans2Progress.json"
 .h2o.__PAGE_KM2ModelView = "2/KMeans2ModelView.json"
-.h2o.__PAGE_NN = "2/NN.json"
-.h2o.__PAGE_NNProgress = "2/NNProgressPage.json"
-.h2o.__PAGE_NNModelView = "2/NNModelView.json"
+.h2o.__PAGE_DeepLearning = "2/DeepLearning.json"
+.h2o.__PAGE_DeepLearningProgress = "2/DeepLearningProgressPage.json"
+.h2o.__PAGE_DeepLearningModelView = "2/DeepLearningModelView.json"
 .h2o.__PAGE_PCA = "2/PCA.json"
 .h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 .h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
@@ -274,10 +274,10 @@ h2o.__changeLogPath <- function(path, type) {
 
 # For checking progress from each algorithm's progress page (no longer used)
 # .h2o.__isDone <- function(client, algo, resH) {
-#   if(!algo %in% c("GBM", "KM", "RF1", "RF2", "NN", "GLM1", "GLM2", "GLM1Grid", "PCA")) stop(algo, " is not a supported algorithm")
+#   if(!algo %in% c("GBM", "KM", "RF1", "RF2", "DeepLearning", "GLM1", "GLM2", "GLM1Grid", "PCA")) stop(algo, " is not a supported algorithm")
 #   version = ifelse(algo %in% c("RF1", "GLM1", "GLM1Grid"), 1, 2)
 #   page = switch(algo, GBM = .h2o.__PAGE_GBMProgress, KM = .h2o.__PAGE_KM2Progress, RF1 = .h2o.__PAGE_RFVIEW, 
-#                 RF2 = .h2o.__PAGE_DRFProgress, NN = .h2o.__PAGE_NNProgress, GLM1 = .h2o.__PAGE_GLMProgress, 
+#                 RF2 = .h2o.__PAGE_DRFProgress, DeepLearning = .h2o.__PAGE_DeepLearningProgress, GLM1 = .h2o.__PAGE_GLMProgress, 
 #                 GLM1Grid = .h2o.__PAGE_GLMGridProgress, GLM2 = .h2o.__PAGE_GLM2Progress, PCA = .h2o.__PAGE_PCAProgress)
 #   
 #   if(version == 1) {

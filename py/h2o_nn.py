@@ -1,7 +1,7 @@
 import h2o_cmd, h2o, h2o_util
 import re, random, math
 
-def pickRandNNParams(paramDict, params):
+def pickRandDeepLearningParams(paramDict, params):
     randomGroupSize = random.randint(1,len(paramDict))
     for i in range(randomGroupSize):
         randomKey = random.choice(paramDict.keys())
@@ -16,7 +16,7 @@ def pickRandNNParams(paramDict, params):
 def checkLastValidationError(self, model, rows, expectedErr, relTol, **kwargs):
 
     errsLast = model['validation_errors'][-1] # last scoring result
-    h2o.verboseprint("NN 'Last scoring on test set:'", h2o.dump_json(errsLast))
+    h2o.verboseprint("Deep Learning 'Last scoring on test set:'", h2o.dump_json(errsLast))
     expectedSamples = rows * kwargs['epochs']
     print 'Expecting ' + format(expectedSamples) + ' training samples'
     if errsLast['training_samples'] != expectedSamples:

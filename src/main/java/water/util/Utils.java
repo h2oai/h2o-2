@@ -676,6 +676,15 @@ public class Utils {
     }
     @Override public int hashCode() { return (int)_val; }
   }
+  public static class IcedDouble extends Iced {
+    public final double _val;
+    public IcedDouble(double v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedDouble) ) return false;
+      return ((IcedDouble)o)._val == _val;
+    }
+    @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
+  }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
    * @author tomasnykodym

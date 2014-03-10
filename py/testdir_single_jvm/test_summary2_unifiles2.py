@@ -7,12 +7,12 @@ print "same as test_summary2_unifiles.py but using local runif_.csv single col f
 print "Should really add something that sees we go to 16 with no answer, if bins are set to 1"
 print "Answer not guaranteed (for any data) if max iterations is 16 in h2o and max_qbins is small"
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin':
+if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
 MAX_QBINS = 1000
-MAX_QBINS = 5
+MAX_QBINS = 1000
 
 def twoDecimals(l):
     if isinstance(l, list):
@@ -44,7 +44,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     # drop the output
     print dataset.shape
     print csvFilename
-    if csvFilename == 'runif_.csv':
+    if len(dataset.shape)==1:
         target = dataset
     else:
         target = [x[col] for x in dataset]
@@ -87,11 +87,11 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     h2p.blue_print(label, "from sort:", b)
     s = a[5 if DO_MEDIAN else 10]
     h2p.blue_print(label, "from scipy:", s)
-    h2p.blue_print(label, "from h2o singlepass:", h2oMedian)
-    h2p.blue_print(label, "from h2o multipass:", h2oMedian2)
+    h2p.blue_print(label, "from h2o multipass:", h2oMedian)
+    h2p.blue_print(label, "from h2o singlepass:", h2oMedian2)
     # they should be identical. keep a tight absolute tolerance
-    h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
-    h2o_util.assertApproxEqual(h2oMedian2, s, tol=0.0000002, msg='h2o quantile multipass is not approx. same as scipy algo')
+    h2o_util.assertApproxEqual(h2oMedian, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
+    h2o_util.assertApproxEqual(h2oMedian, s, tol=0.0000002, msg='h2o quantile multipass is not approx. same as scipy algo')
 
     # see if scipy changes. nope. it doesn't
     if 1==0:
@@ -128,8 +128,9 @@ class Basic(unittest.TestCase):
         # new with 1000 bins. copy expected from R
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
-            ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            # ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
+            # ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
             
 
         ]
@@ -180,17 +181,17 @@ class Basic(unittest.TestCase):
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
                     quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
                 qresult = q['result']
-                qresult_multi = q['result_multi']
+                qresult_single = q['result_single']
                 qresult_iterations = q['iterations']
                 qresult_interpolated = q['interpolated']
                 h2p.blue_print("h2o quantiles result:", qresult)
-                h2p.blue_print("h2o quantiles result_multi:", qresult_multi)
+                h2p.blue_print("h2o quantiles result_single:", qresult_single)
                 h2p.blue_print("h2o quantiles iterations:", qresult_iterations)
                 h2p.blue_print("h2o quantiles interpolated:", qresult_interpolated)
                 print h2o.dump_json(q)
 
                 self.assertLess(qresult_iterations, 16, 
-                    msg="h2o does max of 16 iterations. likely no result_multi if we hit max. is bins=1?")
+                    msg="h2o does max of 16 iterations. likely no result_single if we hit max. is bins=1?")
 
                 # ('',  '1.00', '25002.00', '50002.00', '75002.00', '100000.00'),
                 coltype = column['type']
@@ -265,8 +266,8 @@ class Basic(unittest.TestCase):
                         # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                         print scipyCol, pctile[10]
                         generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                            # h2oMedian=pctile[5 if DO_MEDIAN else 10], result_multi)
-                            h2oMedian=qresult, h2oMedian2=qresult_multi, csvFilename=csvFilename)
+                            # h2oMedian=pctile[5 if DO_MEDIAN else 10], result_single)
+                            h2oMedian=qresult, h2oMedian2=qresult_single, csvFilename=csvFilename)
 
                 scipyCol += 1
 

@@ -5,9 +5,11 @@ import numpy as np
 import scipy as sp
 import math
 import argparse
-OTHER_T = 0.5
+OTHER_T = 0.999
 BIN_COUNT = 20
-BIN_COUNT = 1
+BIN_COUNT = 50
+BIN_COUNT = 100000
+INTERPOLATION_TYPE=7
 
 print "Using max_qbins: ", BIN_COUNT, "threshold:", OTHER_T
 
@@ -155,22 +157,26 @@ def findQuantile(d, dmin, dmax, threshold):
             # oh wait, this valOffset math creates possible precision issue?
             # maybe we should address it with the NUDGE value below? but what about first pass?
             valOffset = val - valStart
-            if valOffset < 0:
+            # where are we zeroing in? (start)
+            binIdx2 = int(math.floor(valOffset / (valBinSize + 0.0))) # make sure it's always an fp divide?
+
+            if valOffset < 0 or binIdx2<0:
+            # if valOffset < 0:
+            # if binIdx2<0:
                 hcnt2_low += 1
-            elif val > valEnd:
+            # prevent the extra bin from being used..i.e. eliminate the fuzziness for sure!
+            # have to use both compares, since can wrap the index (due to start/end shift)
+            elif val > valEnd or binIdx2>=(maxBinCnt-1):
+            # elif val > valEnd:
+            # elif binIdx2>=(maxBinCnt-1):
                 if (hcnt2_high==0) or (val < hcnt2_high_min):
                     hcnt2_high_min = val;
-                    print "\nhcnt2_high_min update:", hcnt2_high_min, valOffset, val, valStart, hcnt2_high, val, valEnd,"\n"
+                    print "hcnt2_high_min update:", hcnt2_high_min, valOffset, val, valStart, hcnt2_high, val, valEnd
                 hcnt2_high += 1
             else:
-                # where are we zeroing in? (start)
-                # print valOffset, valBinSize
-                # shouldn't need this. plenty of fp precision
-                # binIdx2 = int(math.floor((valOffset * 1000000.0) / valBinSize) / 1000000.0)
-                binIdx2 = int(math.floor(valOffset / (valBinSize + 0.0))) # make sure it's always an fp divide?
                 # print "(multi) val: ",val," valOffset: ",valOffset," valBinSize: ",valBinSize
 
-                assert binIdx2 >=0 and binIdx2<=maxBinCnt, "val %s %s %s %s binIdx2: %s maxBinCnt: %s valBinSize: %s" % \
+                assert binIdx2 >=0 and binIdx2<=(maxBinCnt-1), "val %s %s %s %s binIdx2: %s maxBinCnt: %s valBinSize: %s" % \
                     (val, valStart, valEnd, valOffset, binIdx2, maxBinCnt, valBinSize)
                 if hcnt2[binIdx2]==0 or (val < hcnt2_min[binIdx2]):
                     hcnt2_min[binIdx2] = val;
@@ -205,10 +211,17 @@ def findQuantile(d, dmin, dmax, threshold):
         print "targetCntInt:", targetCntInt, "targetCntFract", targetCntFract
 
         k = 0
-        while((currentCnt + hcnt2[k]) <= targetCntInt): 
+        while ((currentCnt + hcnt2[k]) <= targetCntInt): 
+            # print "looping for k (multi): ",k," ",currentCnt," ",targetCntInt," ",totalRows," ",hcnt2[k]," ",hcnt2_min[k]," ",hcnt2_max[k]
             currentCnt += hcnt2[k]
-            k += 1
-            assert k<=maxBinCnt, "k too large, k: %s maxBinCnt %s" % (k, maxBinCnt)
+            # ugly but have to break out if we'd cycle along with == adding h0's until we go too far
+            # are we supposed to advance to a none zero bin?
+            k += 1 # goes over in the equal case?
+            # if currentCnt >= targetCntInt:
+            #     break
+            if k==maxBinCnt:
+                break
+            assert k<maxBinCnt, "k too large, k: %s maxBinCnt %s %s %s %s" % (k, maxBinCnt, currentCnt, targetCntInt, hcnt2[k-1])
 
         # format string to match java Log.info() in Quantiles.java
         print "Found k (multi): ",k," ",currentCnt," ",targetCntInt," ",totalRows," ",hcnt2[k]," ",hcnt2_min[k]," ",hcnt2_max[k]
@@ -221,13 +234,25 @@ def findQuantile(d, dmin, dmax, threshold):
         if currentCnt==targetCntInt:
             if hcnt2[k]>2 and (hcnt2_min[k]==hcnt2_max[k]):
                 guess = hcnt2_min[k]
-                done = True
                 print "Guess A", guess, k, hcnt2[k]
 
             if hcnt2[k]==2:
+                print "\nTwo values in this bin but we could be aligned to the 2nd. so can't stop"
                 # no mattter what size the fraction it would be on this number
                 guess = (hcnt2_max[k] + hcnt2_min[k]) / 2.0
-                done = True
+                # no mattter what size the fraction it would be on this number
+
+                if INTERPOLATION_TYPE==2: # type 2 (mean)
+                  guess = (hcnt2_max[k] + hcnt2_min[k]) / 2.0
+
+                else: # default to type 7 (linear interpolation)
+                  # Unlike mean, which just depends on two adjacent values, this adjustment  
+                  # adds possible errors related to the arithmetic on the total # of rows.
+                  dDiff = hcnt2_max[k] - hcnt2_min[k] # two adjacent..as if sorted!
+                  pctDiff = targetCntFract # This is the fraction of total rows
+                  guess = hcnt2_min[k] + (pctDiff * dDiff)
+
+                done = False
                 print "Guess B", guess
 
             if hcnt2[k]==1 and targetCntFract==0:
@@ -258,6 +283,17 @@ def findQuantile(d, dmin, dmax, threshold):
                     nextVal = hcnt2_min[nextK]
 
                 guess = (hcnt2_max[k] + nextVal) / 2.0
+                # OH! fixed bin as opposed to sort. Of course there are gaps between k and nextK
+
+                if INTERPOLATION_TYPE==2: # type 2 (mean)
+                    guess = (hcnt2_max[k] + nextVal) / 2.0
+                    pctDiff = 0.5
+                else: # default to type 7 (linear interpolation)
+                    dDiff = nextVal - hcnt2_max[k] # two adjacent, as if sorted!
+                    pctDiff = targetCntFract # This is the fraction of total rows
+                    guess = hcnt2_max[k] + (pctDiff * dDiff)
+
+
                 done = True # has to be one above us when needed. (or we're at end)
 
                 print 'k', 'hcnt2_max[k]', 'nextVal'
@@ -276,16 +312,16 @@ def findQuantile(d, dmin, dmax, threshold):
             # the bin index arith may resolve OVER the boundary created by the compare for hcnt2_high compare
             # rather than using NUDGE, see if there's a non-zero bin below (min) or above (max) you.
             # Just need to check the one bin below and above k, if they exist. 
-            if k > 0 and hcnt2[k-1]>0 and (hcnt2_min[k-1]<hcnt2_min[k]):
-                newValStart = hcnt2_min[k-1]
+            if k > 0 and hcnt2[k-1]>0 and (hcnt2_max[k-1]<hcnt2_min[k]):
+                newValStart = hcnt2_max[k-1]
             else:
                 newValStart = hcnt2_min[k]
 
             # subtle. we do put stuff in the extra end bin (see the print above that happens)
             # k might be pointing to one less than that (like k=0 for 1 bin case)
-            if k < maxBinCnt and hcnt2[k+1]>0 and (hcnt2_max[k+1]>hcnt2_max[k]):
+            if k < maxBinCnt and hcnt2[k+1]>0 and (hcnt2_min[k+1]>hcnt2_max[k]):
                 print "hello"
-                newValEnd = hcnt2_max[k+1]
+                newValEnd = hcnt2_min[k+1]
             else:
                 newValEnd = hcnt2_max[k]
             
@@ -351,6 +387,7 @@ csvPathname = './runif_.csv'
 csvPathname = './covtype1.data'
 csvPathname = './runif_.csv'
 csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
+csvPathname = './syn_binary_100000x1.csv'
 col = 0
 
 print "Reading csvPathname"
@@ -399,22 +436,48 @@ h2p.red_print('\nthis b result:', quantiles)
 # for comparison
 #*****************************************************************
 # perPrint = ["%.2f" % v for v in a]
+# scipy apparently doesn't have the use of means (type 2)
+# http://en.wikipedia.org/wiki/Quantile
+# it has median (R-8) with 1/3, 1/3
+
+# type 6
+alphap=0
+betap=0
+
+# type 5 okay but not perfect
+alphap=0.5
+betap=0.5
+
+# type 8
+alphap=1/3.0
+betap=1/3.0
+
+
+
+# an approx? (was good when comparing to h2o type 2)
+alphap=0.4
+betap=0.4
+
+# this is type 7
+alphap=1
+betap=1
+
 
 from scipy import stats
 a1 = stats.scoreatpercentile(target, per=100*OTHER_T, interpolation_method='fraction')
 h2p.red_print("stats.scoreatpercentile:", a1)
-a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T])
+a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T], alphap=alphap, betap=betap)
 h2p.red_print("scipy stats.mstats.mquantiles:", a2)
-b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T)
+targetFP.sort()
+b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T, interpolate='linear')
 h2p.red_print("sort algo:", b)
 h2p.red_print( "from h2o (multi):", quantiles[0])
 
 print "Now looking at the sorted list..same thing"
-targetFP.sort()
 h2p.blue_print("stats.scoreatpercentile:", a1)
-a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T])
+a2 = stats.mstats.mquantiles(targetFP, prob=[OTHER_T], alphap=alphap, betap=betap)
 h2p.blue_print("scipy stats.mstats.mquantiles:", a2)
-b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T)
+b = h2o_summ.percentileOnSortedList(targetFP, OTHER_T, interpolate='linear')
 h2p.blue_print("sort algo:", b)
 h2p.blue_print( "from h2o (multi):", quantiles[0])
 

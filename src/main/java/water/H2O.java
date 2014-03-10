@@ -1664,7 +1664,7 @@ public final class H2O {
 
     // Timing things that can be tuned if needed.
     final private int maxFailureSeconds = 180;
-    final private int maxConsecutiveFailures = 6;
+    final private int maxConsecutiveFailures = 9999999;
     final private int checkIntervalSeconds = 10;
     final private int timeoutSeconds = 30;
     final private int millisPerSecond = 1000;
@@ -1741,34 +1741,23 @@ public final class H2O {
     // Do the watchdog check.
     private void check() {
       final Socket s = new Socket();
-      final InetSocketAddress apiIpPort = new InetSocketAddress("127.0.0.1"/*H2O.SELF_ADDRESS*/, H2O.API_PORT);
-
+      final InetSocketAddress apiIpPort = new InetSocketAddress(H2O.SELF_ADDRESS, H2O.API_PORT);
+      Exception e=null;
+      String msg=null;
       try {
         s.connect (apiIpPort, timeoutMillis);
         reset();
       }
-      catch (SocketTimeoutException e) {
-        if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Timed out trying to connect to REST API IP and Port (" +
-                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ", " + timeoutMillis + " ms)");
-        failed();
-      }
-      catch (IOException e) {
-        if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Failed to connect to REST API IP and Port (" +
-                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")");
-        Log.err(threadName + ": " + e.getMessage());
-        failed();
-      }
-      catch (Exception e) {
-        if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Failed unexpectedly trying to connect to REST API IP and Port (" +
-                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")",
-                e);
-        failed();
-      }
+      catch (SocketTimeoutException se) { e= se; msg=": Timed out"; }
+      catch (IOException           ioe) { e=ioe; msg=": Failed"; }
+      catch (Exception              ee) { e= ee; msg=": Failed unexpectedly"; }
       finally {
         if (gracefulShutdownInitiated) { return; }
+        if( e != null ) {
+          Log.err(threadName+msg+" trying to connect to REST API IP and Port (" +
+                  H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ", " + timeoutMillis + " ms)");
+          fail();
+        }
         testForFailureShutdown();
         try { s.close(); } catch (Exception _) {}
       }

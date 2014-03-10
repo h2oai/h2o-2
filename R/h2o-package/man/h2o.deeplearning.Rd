@@ -1,15 +1,15 @@
-\name{h2o.nn}
-\alias{h2o.nn}
+\name{h2o.deeplearning}
+\alias{h2o.deeplearning}
 \title{
-H2O: Neural Networks
+H2O: Deep Learning Neural Networks
 }
 \description{
-Performs neural networks on an \code{\linkS4class{H2OParsedData}} object.
+Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
-h2o.nn(x, y, data, classification = TRUE, activation = "Tanh", dropout = as.numeric(NA), 
+h2o.deeplearning(x, y, data, classification = TRUE, activation = "Tanh", dropout = as.numeric(NA), 
   layers = 500, rate = 0.01, annealing_rate = 1e-6, l1_reg = 1e-4, l2_reg = 0.0010, 
-  mom_start = 0.5, mom_ramp = 1e6, mom_stable = 0.99, epochs = 100, validation)
+  mom_start = 0.0, mom_ramp = 1e6, mom_stable = 0.0, epochs = 100, validation)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -27,7 +27,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 (Optional) A logical value indicating whether the algorithm should conduct classification.
 }
   \item{activation}{
-(Optional) A string indicating the activation function to use. Must be either "Tanh", "Rectifier", or "Maxout".
+(Optional) A string indicating the activation function to use. Must be either "Tanh", 'TanhDropout", "Rectifier", "RectifierDropout", "Maxout" or "MaxoutDropout".
 }
   \item{dropout}{
 (Optional) Input layer dropout ratio.
@@ -77,6 +77,6 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
-h2o.nn(x = 1:4, y = 5, data = iris.hex, activation = "Rectifier", rate = 0.05)
+h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", rate = 0.05)
 h2o.shutdown(localH2O)
 }

@@ -365,10 +365,12 @@ function(modelType, datatype = "VA") {
 
 .predict<-
 function(model) {
+  print("SPENCER!!!!")
+  print(model)
   if( class(model)[1] == "H2OGLMModelVA") {
     res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT, model_key = model@key, data_key=testData@key, destination_key = "h2opreds.hex")
   } else {
-    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
+    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data="test.hex", prediction = "h2opreds.hex")
   }
   h2opred <- new("H2OParsedData", h2o = h, key = "h2opreds.hex")
   if (predict_type == "binomial") 
@@ -381,22 +383,27 @@ function(model) {
 
 .calcBinomResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = testData@key, 
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = testData@key,
                           vactual = response, predict = h2opred@key,
                           vpredict = response)
-  cm <- res$cm
+
+  print("RESULT!!")
+  print(res)
+  cm <- res$confusion_matrix_for_criteria[[2]]
   confusion_matrix    <<- t(matrix(unlist(cm), 2 ,2))
   precision           <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[1,2])
   recall              <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[2,1])
   error_rate          <<- -1 #confusion_matrix[3,3]
   minority_error_rate <<- -1 #confusion_matrix[2,3]
   auc                 <<- res$AUC
+  cm.json             <<- cm
+  levels.json         <<- res$actual_domain
 }
 
 .calcMultinomResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
-                          vactual = response, predict = h2opred@key,
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = "test.hex", 
+                          vactual = response, predict = "h2opreds.hex",
                           vpredict = "predict")
   .buildcm2(res)
 }
@@ -416,7 +423,7 @@ function() {
     return(0)
   }
   print("PREDICT TYPE:")
-  if (grepl("GLM", h2o.ls(h))) {
+  if (any(grepl("GLM", h2o.ls(h)))) {
     if(model@model$params$family[[1]] != "binomial") {
       cat("regression\n")
       predict_type <<- "regression"
@@ -427,7 +434,7 @@ function() {
       return(0)
     }   
   }
-  if (grepl("GBM", h2o.ls(h))) {
+  if (any(grepl("GBM", h2o.ls(h)))) {
     if(model@model$params$distribution == "gaussian") {
       cat("regression")
       predict_type <<- "regression"
@@ -438,17 +445,17 @@ function() {
       return(0)
     }   
   }
-  if (grepl("NeuralNet", h2o.ls(h))) {
+  if (any(grepl("NeuralNet", h2o.ls(h)))) {
     cat("multinomial")
     predict_type <<- "multinomial"
     return(0)
   }
-  if (grepl("RF", h2o.ls(h))) {
+  if (any(grepl("RF", h2o.ls(h)))) {
     cat("multinomial\n")
     predict_type <<- "multinomial"
     return(0)
   }
-  if (grepl("PCA", h2o.ls(h)) || grepl("KMeans", h2o.ls(h))) {
+  if (any(grepl("PCA", h2o.ls(h)) || grepl("KMeans", h2o.ls(h)))) {
     cat("no predict\n")
     predict_type <<- "no predict"
     return(0)
@@ -475,8 +482,8 @@ function() {
 .buildcm2<-
 function(res) {
   cm <- res$cm
-  remove_nth <- length(res$response_domain) + 1
-  cm <- .build_cm(cm)[-remove_nth, -remove_nth]
+  #remove_nth <- length(res$response_domain) + 1
+  cm <- .build_cm(cm) #[-remove_nth, -remove_nth]
   confusion_matrix <<- cm
   cm.json <<- res$cm
   levels.json <<- res$response_domain
