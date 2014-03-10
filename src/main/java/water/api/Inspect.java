@@ -484,20 +484,14 @@ public class Inspect extends Request {
           // enums have mu = sigma = NaN, unless they are just transformed int column.
           if(!Double.isNaN(_va._cols[i]._mean) && !Double.isNaN(_va._cols[i]._sigma)){
             String btn = "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=false" + "'>"
-              + "<button type='submit' class='btn btn-success'>As Integer</button>";
+              + "<button type='submit' class='btn btn-custom'>As Integer</button>";
             row.addProperty(_va._cols[i]._name, btn);
           } else row.addProperty(_va._cols[i]._name, "");
           continue;
         }
 
-
-        //TODO: Logic for going Enum -> Int. Needs the button below: (btn2)
-        //String btn2 = "<a href='ToInt2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
-        //+ "<button type='submit' class='btn btn-success'>As Integer</button>";
-
-
         String btn = "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=true" + "'>"
-                + "<button type='submit' class='btn btn-success'>As Factor</button>";
+                + "<button type='submit' class='btn btn-custom'>As Factor</button>";
         row.addProperty(_va._cols[i]._name, btn);
       }
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
