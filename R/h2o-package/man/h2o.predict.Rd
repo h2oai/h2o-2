@@ -27,7 +27,7 @@ A \code{\linkS4class{H2OParsedData}} or \code{\linkS4class{H2OParsedDataVA}} obj
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{h2o.glm}, \link{h2o.kmeans}, \link{h2o.randomForest}, \link{h2o.prcomp}, \link{h2o.gbm}, \link{h2o.nn}}
+\code{\link{h2o.glm}, \link{h2o.kmeans}, \link{h2o.randomForest}, \link{h2o.prcomp}, \link{h2o.gbm}, \link{h2o.deeplearning}}
 }
 \examples{
 library(h2o)

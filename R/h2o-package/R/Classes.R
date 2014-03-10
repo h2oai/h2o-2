@@ -13,7 +13,7 @@ setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", pe
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
-setClass("H2ONNModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
@@ -22,7 +22,7 @@ setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OGBMGrid", contains="H2OGrid")
 setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
-setClass("H2ONNGrid", contains="H2OGrid")
+setClass("H2ODeepLearningGrid", contains="H2OGrid")
 
 setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character"))
 # setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
@@ -149,9 +149,9 @@ setMethod("show", "H2OKMeansModel", function(object) {
   cat("\nAvailable components:\n\n"); print(names(model))
 })
 
-setMethod("show", "H2ONNModel", function(object) {
+setMethod("show", "H2ODeepLearningModel", function(object) {
   print(object@data)
-  cat("Neural Net Model Key:", object@key)
+  cat("Deep Learning Model Key:", object@key)
 
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
