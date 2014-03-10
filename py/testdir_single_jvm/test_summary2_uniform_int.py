@@ -7,7 +7,7 @@ print "Like test_summary_uniform, but with integers only"
 
 DO_MEDIAN = False
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin': 
+if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 MAX_QBINS = 1

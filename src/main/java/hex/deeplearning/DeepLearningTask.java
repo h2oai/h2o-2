@@ -1,4 +1,4 @@
-package hex.nn;
+package hex.deeplearning;
 
 import hex.FrameTask;
 import water.H2O;
@@ -9,18 +9,18 @@ import water.util.Log;
 import java.util.Arrays;
 import java.util.Random;
 
-public class NNTask extends FrameTask<NNTask> {
+public class DeepLearningTask extends FrameTask<DeepLearningTask> {
   final private boolean _training;
-  private NNModel.NNModelInfo _input;
-  NNModel.NNModelInfo _output;
-  final public NNModel.NNModelInfo model_info() { return _output; }
+  private hex.deeplearning.DeepLearningModel.DeepLearningModelInfo _input;
+  hex.deeplearning.DeepLearningModel.DeepLearningModelInfo _output;
+  final public hex.deeplearning.DeepLearningModel.DeepLearningModelInfo model_info() { return _output; }
 
   transient Neurons[] _neurons;
 
   int _chunk_node_count = 1;
 
-  public NNTask(NNModel.NNModelInfo input, float fraction){this(input,fraction,null);}
-  private NNTask(NNModel.NNModelInfo input, float fraction, H2OCountedCompleter cmp){
+  public DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction){this(input,fraction,null);}
+  private DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, H2OCountedCompleter cmp){
     super(input.job(),input.data_info(),cmp);
     _training=true;
     _input=input;
@@ -53,7 +53,7 @@ public class NNTask extends FrameTask<NNTask> {
     step(seed, _neurons, _output, _training, responses);
   }
 
-  @Override public void reduce(NNTask other){
+  @Override public void reduce(DeepLearningTask other){
     if (other._output.get_processed_local() > 0 //other NNTask was active (its model_info should be used for averaging)
             && other._output != _output) //other NNTask worked on a different model_info
     {
@@ -88,17 +88,17 @@ public class NNTask extends FrameTask<NNTask> {
     assert(_input == null);
   }
 
-  public static Neurons[] makeNeuronsForTraining(final NNModel.NNModelInfo minfo) {
+  public static Neurons[] makeNeuronsForTraining(final DeepLearningModel.DeepLearningModelInfo minfo) {
     return makeNeurons(minfo, true);
   }
-  public static Neurons[] makeNeuronsForTesting(final NNModel.NNModelInfo minfo) {
+  public static Neurons[] makeNeuronsForTesting(final DeepLearningModel.DeepLearningModelInfo minfo) {
     return makeNeurons(minfo, false);
   }
 
   // Helper
-  private static Neurons[] makeNeurons(final NNModel.NNModelInfo minfo, boolean training) {
+  private static Neurons[] makeNeurons(final DeepLearningModel.DeepLearningModelInfo minfo, boolean training) {
     DataInfo dinfo = minfo.data_info();
-    final NN params = minfo.get_params();
+    final DeepLearning params = minfo.get_params();
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output
     // input
@@ -143,7 +143,7 @@ public class NNTask extends FrameTask<NNTask> {
 
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
-  public static void step(long seed, Neurons[] neurons, NNModel.NNModelInfo minfo, boolean training, double[] responses) {
+  public static void step(long seed, Neurons[] neurons, DeepLearningModel.DeepLearningModelInfo minfo, boolean training, double[] responses) {
     for (int i=1; i<neurons.length-1; ++i) {
       neurons[i].fprop(seed, training);
     }

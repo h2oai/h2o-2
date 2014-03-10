@@ -544,14 +544,14 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
   return(result)
 }
 
-# ------------------------------- Neural Network ------------------------------------ #
-h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=as.numeric(NA), layers=500, rate=0.01, annealing_rate=1e-6, l1_reg=1e-4, l2_reg=0.0010, mom_start=0.0, mom_ramp=1e6, mom_stable=0.0, epochs=100, validation) {
+# ---------------------------- Deep Learning - Neural Network ------------------------- #
+h2o.deeplearning <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=as.numeric(NA), layers=500, rate=0.01, annealing_rate=1e-6, l1_reg=1e-4, l2_reg=0.0010, mom_start=0.0, mom_ramp=1e6, mom_stable=0.0, epochs=100, validation) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.logical(classification)) stop('classification must be true or false')
-  if(!is.character(activation)) stop('activation must be [Tanh, Rectifier, Maxout]')
-  if(!(activation %in% c('Tanh', 'Rectifier', 'Maxout')))
-    stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier, Maxout] are supported"))
+  if(!is.character(activation)) stop('activation must be [Tanh, TanhDropout, Rectifier, RectifierDropout, Maxout, MaxoutDropout]')
+  if(!(activation %in% c('Tanh', 'TanhDropout', 'Rectifier', 'RectifierDropout', 'Maxout', 'MaxoutDropout')))
+    stop(paste(activation, "is not a valid activation; only [Tanh, TanhDropout, Rectifier, RectifierDropout, Maxout, MaxoutDropout] are supported"))
   if(!is.numeric(dropout)) stop("dropout ratio must be numeric")
   if(!is.na(dropout) && any(dropout < 0 | dropout > 1)) stop("dropout ratio must be in [0,1]")
   if(!is.numeric(layers)) stop('layers must be numeric')
@@ -578,7 +578,7 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=a
   if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
   if(!is.na(dropout)) activation = paste(activation, "WithDropout", sep = "")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NN, source=data@key, response=args$y, ignored_cols=args$x_ignore,
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DeepLearning, source=data@key, response=args$y, ignored_cols=args$x_ignore,
                          classification=as.numeric(classification), input_dropout_ratio=ifelse(any(is.na(dropout)), "", dropout), activation=activation, rate=rate, 
                          rate_annealing=annealing_rate, hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, momentum_start=mom_start, momentum_ramp=mom_ramp, 
                          momentum_stable=mom_stable, epochs=epochs, validation=validation@key)
@@ -586,18 +586,18 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=a
   
   if(length(dropout) == 1 && length(rate) == 1 && length(annealing_rate) == 1 && length(l1_reg) == 1 && length(l2_reg) == 1 && length(mom_start) == 1 && length(mom_ramp) == 1 && length(mom_stable) == 1 && length(epochs) == 1) {
     .h2o.__waitOnJob(data@h2o, res$job_key)
-    res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NNModelView, '_modelKey'=res$destination_key)
+    res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DeepLearningModelView, '_modelKey'=res$destination_key)
 
-    # result = .h2o.__getNNResults(res2$neuralnet_model, params)
-    result = .h2o.__getNNResults(res2$neuralnet_model)
-    new("H2ONNModel", key=res$destination_key, data=data, model=result, valid=validation)
+    # result = .h2o.__getDeepLearningResults(res2$deeplearning_model, params)
+    result = .h2o.__getDeepLearningResults(res2$deeplearning_model)
+    new("H2ODeepLearningModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
-    # .h2o.gridsearch.internal("NN", data, res, validation, params)
-    .h2o.gridsearch.internal("NN", data, res, validation)
+    # .h2o.gridsearch.internal("DeepLearning", data, res, validation, params)
+    .h2o.gridsearch.internal("DeepLearning", data, res, validation)
   }
 }
 
-.h2o.__getNNSummary <- function(res) {
+.h2o.__getDeepLearningSummary <- function(res) {
   mySum = list()
   resP = res$parameters
   
@@ -618,7 +618,7 @@ h2o.nn <- function(x, y, data, classification=TRUE, activation='Tanh', dropout=a
   return(mySum)
 }
 
-.h2o.__getNNResults <- function(res, params = list()) {
+.h2o.__getDeepLearningResults <- function(res, params = list()) {
   result = list()
 #   model_params = res$model_info$parameters
 #   params$activation = model_params$activation
@@ -1030,8 +1030,8 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
 
 # .h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
 .h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, params = list()) {
-  if(!algo %in% c("GBM", "KM", "RF", "NN")) stop("General grid search not supported for ", algo)
-  prog_view = switch(algo, GBM = .h2o.__PAGE_GBMProgress, KM = .h2o.__PAGE_KM2Progress, RF = .h2o.__PAGE_DRFProgress, NN = .h2o.__PAGE_NNProgress)
+  if(!algo %in% c("GBM", "KM", "RF", "DeepLearning")) stop("General grid search not supported for ", algo)
+  prog_view = switch(algo, GBM = .h2o.__PAGE_GBMProgress, KM = .h2o.__PAGE_KM2Progress, RF = .h2o.__PAGE_DRFProgress, DeepLearning = .h2o.__PAGE_DeepLearningProgress)
   
   job_key = response$job_key
   dest_key = response$destination_key
@@ -1040,9 +1040,9 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GRIDSEARCH, job_key=job_key, destination_key=dest_key)
   allModels = res2$jobs; allErrs = res2$prediction_error
 
-  model_obj = switch(algo, GBM = "H2OGBMModel", KM = "H2OKMeansModel", RF = "H2ODRFModel", NN = "H2ONNModel")
-  grid_obj = switch(algo, GBM = "H2OGBMGrid", KM = "H2OKMeansGrid", RF = "H2ODRFGrid", NN = "H2ONNGrid")
-  model_view = switch(algo, GBM = .h2o.__PAGE_GBMModelView, KM = .h2o.__PAGE_KM2ModelView, RF = .h2o.__PAGE_DRFModelView, NN = .h2o.__PAGE_NNModelView)
+  model_obj = switch(algo, GBM = "H2OGBMModel", KM = "H2OKMeansModel", RF = "H2ODRFModel", DeepLearning = "H2ODeepLearningModel")
+  grid_obj = switch(algo, GBM = "H2OGBMGrid", KM = "H2OKMeansGrid", RF = "H2ODRFGrid", DeepLearning = "H2ODeepLearningGrid")
+  model_view = switch(algo, GBM = .h2o.__PAGE_GBMModelView, KM = .h2o.__PAGE_KM2ModelView, RF = .h2o.__PAGE_DRFModelView, DeepLearning = .h2o.__PAGE_DeepLearningModelView)
 
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
@@ -1051,10 +1051,10 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
     else
       resH = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=allModels[[i]]$destination_key)
 
-    myModelSum[[i]] = switch(algo, GBM = .h2o.__getGBMSummary(resH[[3]], params), KM = .h2o.__getKM2Summary(resH[[3]]), RF = .h2o.__getDRFSummary(resH[[3]]), NN = .h2o.__getNNSummary(resH[[3]]))
+    myModelSum[[i]] = switch(algo, GBM = .h2o.__getGBMSummary(resH[[3]], params), KM = .h2o.__getKM2Summary(resH[[3]]), RF = .h2o.__getDRFSummary(resH[[3]]), DeepLearning = .h2o.__getDeepLearningSummary(resH[[3]]))
     myModelSum[[i]]$prediction_error = allErrs[[i]]
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
-    modelOrig = switch(algo, GBM = .h2o.__getGBMResults(resH[[3]], params), KM = .h2o.__getKM2Results(resH[[3]], data, params), RF = .h2o.__getDRFResults(resH[[3]], params), NN = .h2o.__getNNResults(resH[[3]], params))
+    modelOrig = switch(algo, GBM = .h2o.__getGBMResults(resH[[3]], params), KM = .h2o.__getKM2Results(resH[[3]], data, params), RF = .h2o.__getDRFResults(resH[[3]], params), DeepLearning = .h2o.__getDeepLearningResults(resH[[3]], params))
 
     if(algo == "KM")
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig)

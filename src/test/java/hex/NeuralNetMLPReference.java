@@ -646,7 +646,7 @@ public class NeuralNetMLPReference {
       // 4. update hidden-output weights
       for( int i = 0; i < hoWeights.length; ++i ) {
         for( int j = 0; j < hoWeights[0].length; ++j ) {
-          // see above: hOutputs are inputs to the nn outputs
+          // see above: hOutputs are inputs to the deeplearning outputs
           double delta = learnRate * oGrads[j] * hOutputs[i];
           hoWeights[i][j] += delta;
           hoWeights[i][j] += momentum * hoPrevWeightsDelta[i][j]; // momentum
