@@ -792,8 +792,8 @@ public class DTree extends Iced {
       DocGen.HTML.arrayTail(sb);
       // Generate a graph - horrible code
       DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
-          DocGen.HTML.toJSArray(new StringBuilder(), Utils.sortAccording(Arrays.copyOf(_names, _names.length-1), sortOrder) ),
-          DocGen.HTML.toJSArray(new StringBuilder(), Utils.sortAccording(varimp, sortOrder))
+          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1) ),
+          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
           );
     }
 
