@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b, 
 import h2o_summ
 
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin':
+if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
@@ -84,7 +84,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
     # inplace sort
     targetFP.sort()
-    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
     s = a[5 if DO_MEDIAN else 10]
@@ -209,7 +209,7 @@ class Basic(unittest.TestCase):
                 quantile = 0.5 if DO_MEDIAN else .999
                 # h2o has problem if a list of columns (or dictionary) is passed to 'column' param
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
-                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1, interpolation_type=7)
+                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1, interpolation_type=2) # mean
                 qresult = q['result']
                 qresult_multi = q['result_multi']
                 h2p.blue_print("h2o quantiles result:", qresult)

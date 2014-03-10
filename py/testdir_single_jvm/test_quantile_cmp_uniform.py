@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util
 import h2o_print as h2p, h2o_exec as h2e
 
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin': 
+if  getpass.getuser() == 'kevin' or getpass.getuser() == 'jenkins': 
     DO_TRY_SCIPY = True
 
 print "This test will try to compare exec quantiles to summary2 quantiles"

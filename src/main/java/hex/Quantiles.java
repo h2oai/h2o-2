@@ -379,10 +379,11 @@ public class Quantiles extends Iced {
 
     assert !_isEnum;
     if( hcnt2.length == 0 ) return false;
-     // playing with creating relative NUDGE values to make sure bin range
+    // playing with creating relative NUDGE values to make sure bin range
     // is always inclusive of target.
     // ratio it down from valBinSize?  It doesn't need to be as big as valBinSize.
     // can't seem to make it work yet. leave NUDGE=0
+    // Doesn't seem necessary? getting exact comparisons to other tools with NUDGE=0
     double NUDGE = 0;
     //  everything should either be in low, the bins, or high
     double threshold = thres[0];

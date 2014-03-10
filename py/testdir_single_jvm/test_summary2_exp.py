@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p, h
 
 print "Same as test_summary2_uniform.py but with exponential distribution on the data"
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin':
+if  getpass.getuser() == 'kevin' or getpass.getuser() == 'jenkins':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
