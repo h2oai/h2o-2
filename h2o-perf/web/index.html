@@ -53,22 +53,24 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                            <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                                FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                                tr.test_name,
-                                                (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                                tr.train_dataset_name,
-                                                tr.num_train_rows,
-                                                tr.num_explan_cols,
-                                                tr.build_date,
-                                                tr.build_branch,
-                                                tr.cpus_per_host,
-                                                tr.heap_bytes_per_node
-                                                FROM test_run tr
-                                                INNER JOIN test_run_phase_result tp
-                                                ON tr.test_run_id = tp.test_run_id
-                                                WHERE tp.phase_name = 'parse'
-                                                ORDER BY tr.start_epoch_ms;</textarea>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'parse'
+ORDER BY tr.start_epoch_ms;
+                                            </textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -85,22 +87,24 @@
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                            <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                                FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                                tr.test_name,
-                                                (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                                tr.train_dataset_name,
-                                                tr.num_train_rows,
-                                                tr.num_explan_cols,
-                                                tr.build_date,
-                                                tr.build_branch,
-                                                tr.cpus_per_host,
-                                                tr.heap_bytes_per_node
-                                                FROM test_run tr
-                                                INNER JOIN test_run_phase_result tp
-                                                ON tr.test_run_id = tp.test_run_id
-                                                WHERE tp.phase_name = 'parse'
-                                                ORDER BY tr.start_epoch_ms;</textarea>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'parse'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -126,22 +130,24 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                            <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                                FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                                tr.test_name,
-                                                (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                                tr.train_dataset_name,
-                                                tr.num_train_rows,
-                                                tr.num_explan_cols,
-                                                tr.build_date,
-                                                tr.build_branch,
-                                                tr.cpus_per_host,
-                                                tr.heap_bytes_per_node
-                                                FROM test_run tr
-                                                INNER JOIN test_run_phase_result tp
-                                                ON tr.test_run_id = tp.test_run_id
-                                                WHERE tp.phase_name = 'parse'
-                                                ORDER BY tr.start_epoch_ms;</textarea>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 summary_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%summary%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -158,22 +164,25 @@
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                            <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                                FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                                tr.test_name,
-                                                (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                                tr.train_dataset_name,
-                                                tr.num_train_rows,
-                                                tr.num_explan_cols,
-                                                tr.build_date,
-                                                tr.build_branch,
-                                                tr.cpus_per_host,
-                                                tr.heap_bytes_per_node
-                                                FROM test_run tr
-                                                INNER JOIN test_run_phase_result tp
-                                                ON tr.test_run_id = tp.test_run_id
-                                                WHERE tp.phase_name = 'parse'
-                                                ORDER BY tr.start_epoch_ms;</textarea>
+                                            <textarea name="parse_1" style="width: 700px; height: 650px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 summary_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%summary%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -199,22 +208,24 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                            <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                                FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                                tr.test_name,
-                                                (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                                tr.train_dataset_name,
-                                                tr.num_train_rows,
-                                                tr.num_explan_cols,
-                                                tr.build_date,
-                                                tr.build_branch,
-                                                tr.cpus_per_host,
-                                                tr.heap_bytes_per_node
-                                                FROM test_run tr
-                                                INNER JOIN test_run_phase_result tp
-                                                ON tr.test_run_id = tp.test_run_id
-                                                WHERE tp.phase_name = 'parse'
-                                                ORDER BY tr.start_epoch_ms;</textarea>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 pca_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%pca%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -231,22 +242,25 @@
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                            tr.test_name,
-                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                            tr.train_dataset_name,
-                                            tr.num_train_rows,
-                                            tr.num_explan_cols,
-                                            tr.build_date,
-                                            tr.build_branch,
-                                            tr.cpus_per_host,
-                                            tr.heap_bytes_per_node
-                                            FROM test_run tr
-                                            INNER JOIN test_run_phase_result tp
-                                            ON tr.test_run_id = tp.test_run_id
-                                            WHERE tp.phase_name = 'parse'
-                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <textarea name="parse_1" style="width: 700px; height: 600px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 pca_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%pca%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -273,22 +287,24 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                            tr.test_name,
-                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                            tr.train_dataset_name,
-                                            tr.num_train_rows,
-                                            tr.num_explan_cols,
-                                            tr.build_date,
-                                            tr.build_branch,
-                                            tr.cpus_per_host,
-                                            tr.heap_bytes_per_node
-                                            FROM test_run tr
-                                            INNER JOIN test_run_phase_result tp
-                                            ON tr.test_run_id = tp.test_run_id
-                                            WHERE tp.phase_name = 'parse'
-                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <textarea name="parse_1" style="width: 700px; height: 650px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 glm_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%glm%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -305,22 +321,25 @@
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                            <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                                FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                                tr.test_name,
-                                                (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                                tr.train_dataset_name,
-                                                tr.num_train_rows,
-                                                tr.num_explan_cols,
-                                                tr.build_date,
-                                                tr.build_branch,
-                                                tr.cpus_per_host,
-                                                tr.heap_bytes_per_node
-                                                FROM test_run tr
-                                                INNER JOIN test_run_phase_result tp
-                                                ON tr.test_run_id = tp.test_run_id
-                                                WHERE tp.phase_name = 'parse'
-                                                ORDER BY tr.start_epoch_ms;</textarea>
+                                            <textarea name="parse_1" style="width: 700px; height: 600px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 glm_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%glm%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -347,22 +366,24 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                            tr.test_name,
-                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                            tr.train_dataset_name,
-                                            tr.num_train_rows,
-                                            tr.num_explan_cols,
-                                            tr.build_date,
-                                            tr.build_branch,
-                                            tr.cpus_per_host,
-                                            tr.heap_bytes_per_node
-                                            FROM test_run tr
-                                            INNER JOIN test_run_phase_result tp
-                                            ON tr.test_run_id = tp.test_run_id
-                                            WHERE tp.phase_name = 'parse'
-                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">i
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 kmeans_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%kmeans%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -379,22 +400,25 @@
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                            tr.test_name,
-                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                            tr.train_dataset_name,
-                                            tr.num_train_rows,
-                                            tr.num_explan_cols,
-                                            tr.build_date,
-                                            tr.build_branch,
-                                            tr.cpus_per_host,
-                                            tr.heap_bytes_per_node
-                                            FROM test_run tr
-                                            INNER JOIN test_run_phase_result tp
-                                            ON tr.test_run_id = tp.test_run_id
-                                            WHERE tp.phase_name = 'parse'
-                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <textarea name="parse_1" style="width: 700px; height: 600px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 kmeans_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%kmeans%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -421,22 +445,24 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                            tr.test_name,
-                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                            tr.train_dataset_name,
-                                            tr.num_train_rows,
-                                            tr.num_explan_cols,
-                                            tr.build_date,
-                                            tr.build_branch,
-                                            tr.cpus_per_host,
-                                            tr.heap_bytes_per_node
-                                            FROM test_run tr
-                                            INNER JOIN test_run_phase_result tp
-                                            ON tr.test_run_id = tp.test_run_id
-                                            WHERE tp.phase_name = 'parse'
-                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 drf_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%rf%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -446,29 +472,33 @@
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <h4 class="panel-title">
-                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelf2">Show results for 1B row DRF.</a>
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelf2">Compare MNIST8M results on RF.VA and RF.FV.</a>
                             </h4>
                         </div>
                         <div id="panelf2" class="panel-collapse collapse">
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                            tr.test_name,
-                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                            tr.train_dataset_name,
-                                            tr.num_train_rows,
-                                            tr.num_explan_cols,
-                                            tr.build_date,
-                                            tr.build_branch,
-                                            tr.cpus_per_host,
-                                            tr.heap_bytes_per_node
-                                            FROM test_run tr
-                                            INNER JOIN test_run_phase_result tp
-                                            ON tr.test_run_id = tp.test_run_id
-                                            WHERE tp.phase_name = 'parse'
-                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (p.end_epoch_ms - p.start_epoch_ms) / 1000 drf_time_s,
+    tr.train_dataset_name,
+    tr.test_run_id,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_branch,
+    tr.build_version,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result p
+ON tr.test_run_id = p.test_run_id
+WHERE tr.test_name LIKE '%rf%'
+AND p.phase_name = 'model'
+ORDER BY tr.test_name, tr.test_run_id; 
+                                        </textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -495,28 +525,32 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
-                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-                                            tr.test_name,
-                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
-                                            tr.train_dataset_name,
-                                            tr.num_train_rows,
-                                            tr.num_explan_cols,
-                                            tr.build_date,
-                                            tr.build_branch,
-                                            tr.cpus_per_host,
-                                            tr.heap_bytes_per_node
-                                            FROM test_run tr
-                                            INNER JOIN test_run_phase_result tp
-                                            ON tr.test_run_id = tp.test_run_id
-                                            WHERE tp.phase_name = 'parse'
-                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 gbm_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%gbm%'
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
+
+<!--
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <h4 class="panel-title">
@@ -527,14 +561,14 @@
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">SELECT
                                             FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
                                             tr.test_name,
                                             (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
                                             tr.train_dataset_name,
                                             tr.num_train_rows,
                                             tr.num_explan_cols,
-                                            tr.build_date,
+                                            tr.build_version,
                                             tr.build_branch,
                                             tr.cpus_per_host,
                                             tr.heap_bytes_per_node
@@ -549,6 +583,7 @@
                             </div>
                         </div>
                     </div>
+-->
                 </div>
 
             </div>
@@ -557,6 +592,7 @@
                 <div class="page-header">
                     <h1>Neural Net Performance</h1>
                 </div>
+<!--
                 <div class="panel-group" id="accordionh">
                     <div class="panel panel-default">
                         <div class="panel-heading">
@@ -569,14 +605,14 @@
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">SELECT
                                             FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
                                             tr.test_name,
                                             (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
                                             tr.train_dataset_name,
                                             tr.num_train_rows,
                                             tr.num_explan_cols,
-                                            tr.build_date,
+                                            tr.build_version,
                                             tr.build_branch,
                                             tr.cpus_per_host,
                                             tr.heap_bytes_per_node
@@ -601,14 +637,14 @@
                             <div class="panel-body">
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
-                                        <textarea name="parse_1" style="width: 600px; height: 600px;">SELECT
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">SELECT
                                             FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
                                             tr.test_name,
                                             (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
                                             tr.train_dataset_name,
                                             tr.num_train_rows,
                                             tr.num_explan_cols,
-                                            tr.build_date,
+                                            tr.build_version,
                                             tr.build_branch,
                                             tr.cpus_per_host,
                                             tr.heap_bytes_per_node
@@ -624,6 +660,8 @@
                         </div>
                     </div>
                 </div>
+-->
+            <p> <h4><b>No Neural Net Tests Exist Yet</b> </h4></p>
             </div>
 
             <div class="tab-pane" id="i">
