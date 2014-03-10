@@ -15,8 +15,8 @@ import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
-import hex.nn.NN;
-import hex.nn.NNModel;
+import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.rf.RFModel;
@@ -165,8 +165,8 @@ public class Inspect extends Request {
 //      return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
       return NeuralNetModelView.redirect(this, key);
-    if(f instanceof NNModel)
-      return NNModelView.redirect(this, key);
+    if(f instanceof DeepLearningModel)
+      return DeepLearningModelView.redirect(this, key);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
@@ -342,7 +342,7 @@ public class Inspect extends Request {
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", "
           + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
-          + NN.link(key, NN.DOC_GET) + "<br />"
+          + DeepLearning.link(key, DeepLearning.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, "0.0", "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
