@@ -50,6 +50,8 @@ class PerfRunner:
         Create a Test object and push it onto the queue.
         """
         config_file = os.path.abspath(os.path.join(self.test_root_dir,testDir,testDir + ".cfg"))
+        print "USING CONFIGURATION FROM THIS FILE: "
+        print config_file
         parse_file = "parse.R" #testDir + "_Parse.R"
         model_file = "model.R" #testDir + "_Model.R"
         predict_file = None
