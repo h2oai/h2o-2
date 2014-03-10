@@ -65,7 +65,7 @@ public abstract class Neurons {
 
   // AdaDelta
   private float[] _E_dx2; //reference to _minfo.E_dx2[layer] for convenience
-  private double[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
+  private float[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
 
   /**
    * For Dropout training
@@ -181,7 +181,7 @@ public abstract class Neurons {
       if (_E_dx2 != null && _E_g2 != null) {
         assert(_wm == null && _bm == null);
         final double grad = d;
-        _E_g2[w] = params.rho * _E_g2[w] + (1.-params.rho)*grad*grad;
+        _E_g2[w] = (float)(params.rho * _E_g2[w] + (1.-params.rho)*grad*grad);
         final double RMS_dx = Math.sqrt(_E_dx2[w]+params.epsilon);
         final double RMS_g = Math.sqrt(_E_g2[w]+params.epsilon);
         r = RMS_dx/RMS_g;
