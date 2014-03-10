@@ -27,8 +27,8 @@ public class QuantilesPage extends Request2 {
   @API(help = "Number of bins used (1-1000000). 1000 recommended", filter = Default.class, lmin = 1, lmax = 1000000)
   public int max_qbins = 1000;
 
-  @API(help = "Enable multiple passes (always exact)", filter = Default.class, lmin = 0, lmax = 1)
-  public int multiple_pass  = 0;
+  @API(help = "1: Iterate for exact result. 0: One pass approx.", filter = Default.class, lmin = 0, lmax = 1)
+  public int multiple_pass  = 1;
 
   @API(help = "Interpolation between rows. Type 2 (mean) or 7 (linear).", filter = Default.class)
   public int interpolation_type = 7;
@@ -51,8 +51,8 @@ public class QuantilesPage extends Request2 {
   @API(help = "Result.")
   double result;
 
-  @API(help = "Multiple pass Result.")
-  double result_multi;
+  @API(help = "Single pass Result.")
+  double result_single;
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='QuantilesPage.query?source=%$key'>"+content+"</a>");
@@ -111,14 +111,15 @@ public class QuantilesPage extends Request2 {
     //  valBinSize = newValBinSize;
     //  valLowCnt  = newValLowCnt;
 
-    double approxResult;
-    double exactResult;
-    boolean done;
+    double approxResult = Double.NaN;
+    double exactResult = Double.NaN;
+    boolean done = false;
 
     if (qbins != null) { // if it's enum it will be null?
       qbins[0].finishUp(vecs[0]);
       column_name = qbins[0].colname;
       quantile_requested = qbins[0].QUANTILES_TO_DO[0];
+      iterations = 1;
       done = qbins[0]._done;
       approxResult = qbins[0]._pctile[0];
       interpolated = qbins[0]._interpolated;
@@ -134,8 +135,8 @@ public class QuantilesPage extends Request2 {
       interpolation_type_used = interpolation_type;
     }
 
-    exactResult = Double.NaN;
-    result = approxResult;
+    result_single = approxResult;
+    if ( multiple_pass != 1) result = approxResult;
 
     // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
     // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
@@ -143,8 +144,8 @@ public class QuantilesPage extends Request2 {
     qbins = null;
     
     final int MAX_ITERATIONS = 16; 
-    result_multi = Double.NaN; // default in response if not run
     if ( multiple_pass == 1) {
+      result = Double.NaN; 
       // try a second pass
       Quantiles[] qbins2;
       multiPass = true;
@@ -189,9 +190,11 @@ public class QuantilesPage extends Request2 {
         interpolation_type_used = interpolation_type;
       }
 
+      // all done with it
       qbins2 = null;
-      result_multi = exactResult;
+      result = exactResult;
     }
+
     return Response.done(this);
   }
 }

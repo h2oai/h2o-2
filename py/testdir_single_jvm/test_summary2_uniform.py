@@ -235,9 +235,9 @@ class Basic(unittest.TestCase):
             q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
                 quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1, interpolation_type=7) # linear
             qresult = q['result']
-            qresult_multi = q['result_multi']
+            qresult_single = q['result_single']
             h2p.blue_print("h2o quantiles result:", qresult)
-            h2p.blue_print("h2o quantiles result_multi:", qresult_multi)
+            h2p.blue_print("h2o quantiles result_single:", qresult_single)
             h2p.blue_print("h2o quantiles iterations:", q['iterations'])
             h2p.blue_print("h2o quantiles interpolated:", q['interpolated'])
             print h2o.dump_json(q)
@@ -307,7 +307,7 @@ class Basic(unittest.TestCase):
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                 print scipyCol, pctile[10]
                 generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                    h2oMedian=pctile[5 if DO_MEDIAN else 10], h2oMedian2=qresult_multi)
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10], h2oMedian2=qresult)
 
 
 
