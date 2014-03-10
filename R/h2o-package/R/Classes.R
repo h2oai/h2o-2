@@ -645,6 +645,8 @@ ddply <- h2o.ddply
   structure( as.list(mm), class='H2Oquoted')
 }
 
+`h2o..` <- `.`
+
 h2o.addFunction <- function(object, fun, name){
   if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
   if( missing(fun) ) stop('must specify fun')
