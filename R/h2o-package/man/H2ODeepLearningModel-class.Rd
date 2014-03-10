@@ -1,15 +1,15 @@
-\name{H2ONNModel-class}
+\name{H2ODeepLearningModel-class}
 \Rdversion{1.1}
 \docType{class}
-\alias{H2ONNModel-class}
-\alias{show,H2ONNModel-method}
+\alias{H2ODeepLearningModel-class}
+\alias{show,H2ODeepLearningModel-method}
 
-\title{Class \code{"H2ONNModel"}}
+\title{Class \code{"H2ODeepLearningModel"}}
 \description{
-A class for representing neural network models.
+A class for representing Deep Learning neural network models.
 }
 \section{Objects from the Class}{
-Objects can be created by calls of the form \code{new("H2ONNModel", ...)}.
+Objects can be created by calls of the form \code{new("H2ODeepLearningModel", ...)}.
 %%  ~~ describe objects here ~~ 
 }
 \section{Slots}{
@@ -35,15 +35,15 @@ Class \code{"\linkS4class{H2OModel}"}, directly.
 }
 \section{Methods}{
   \describe{
-    \item{show}{\code{signature(object = "H2ONNModel")}: ... }
+    \item{show}{\code{signature(object = "H2ODeepLearningModel")}: ... }
 	 }
 }
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
-\code{\link{h2o.nn}}
+\code{\link{h2o.deeplearning}}
 }
 \examples{
-showClass("H2ONNModel")
+showClass("H2ODeepLearningModel")
 }
 \keyword{classes}

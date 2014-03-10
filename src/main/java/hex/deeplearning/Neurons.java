@@ -1,4 +1,4 @@
-package hex.nn;
+package hex.deeplearning;
 
 import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask;
@@ -9,7 +9,7 @@ import water.util.Utils;
 
 import java.util.Arrays;
 
-import static hex.nn.NN.Loss;
+import static hex.deeplearning.DeepLearning.Loss;
 
 /**
  * This class implements the concept of a Neuron layer in a Neural Network
@@ -44,7 +44,7 @@ public abstract class Neurons {
   /**
    * Parameters (deep-cloned() from the user input, can be modified here, e.g. learning rate decay)
    */
-  protected NN params;
+  protected DeepLearning params;
 
   /**
    * Layer state (one per neuron): activity, error
@@ -55,7 +55,7 @@ public abstract class Neurons {
    * References for feed-forward connectivity
    */
   public Neurons _previous; // previous layer of neurons
-  NNModel.NNModelInfo _minfo; //reference to shared model info
+  DeepLearningModel.DeepLearningModelInfo _minfo; //reference to shared model info
   public float[] _w; //reference to _minfo.weights[layer] for convenience
   public double[] _b; //reference to _minfo.biases[layer] for convenience
 
@@ -119,8 +119,8 @@ public abstract class Neurons {
    * @param minfo Model information (weights/biases and their momenta)
    * @param training Whether training is done or just testing (no need for dropout)
    */
-  public final void init(Neurons[] neurons, int index, NN p, final NNModel.NNModelInfo minfo, boolean training) {
-    params = (NN)p.clone();
+  public final void init(Neurons[] neurons, int index, DeepLearning p, final DeepLearningModel.DeepLearningModelInfo minfo, boolean training) {
+    params = (DeepLearning)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new double[units];
     if (!(this instanceof Output) && !(this instanceof Input)) {

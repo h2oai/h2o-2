@@ -2161,7 +2161,7 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def neural_net2(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+    def deep_learning(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
@@ -2170,40 +2170,53 @@ class H2O(object):
             'validation'                   : None,
             'classification'               : None,
             'response'                     : None,
+            'expert_mode'                  : None,
             'activation'                   : None,
-            'input_dropout_ratio'          : None,
             'hidden'                       : None,
+            'epochs'                       : None,
+            'mini_batch'                   : None,
+            'seed'                         : None,
+            'adaptive_rate'                : None,
+            'rho'                          : None,
+            'epsilon'                      : None,
             'rate'                         : None,
             'rate_annealing'               : None,
+            'rate_decay'                   : None,
             'momentum_start'               : None,
             'momentum_ramp'                : None,
             'momentum_stable'              : None,
+            'nesterov_accelerated_gradient': None,
+            'input_dropout_ratio'          : None,
             'l1'                           : None,
             'l2'                           : None,
-            'seed'                         : None,
+            'max_w2'                       : None,
             'initial_weight_distribution'  : None,
             'initial_weight_scale'         : None,
             'loss'                         : None,
-            'rate_decay'                   : None,
-            'max_w2'                       : None,
-            'epochs'                       : None,
+            'score_interval'               : None,
             'score_training_samples'       : None,
             'score_validation_samples'     : None,
-            'score_interval'               : None,
-            'mini_batch'                   : None,
+            'score_duty_cycle'             : None,
+            'classification_stop'          : None,
+            'regression_stop'              : None,
+            'quiet_mode'                   : None,
+            'max_confusion_matrix_size'    : None,
+            'balance_classes'              : None,
+            'max_after_balance_size'       : None,
+            'score_validation_sampling'    : None,
             'diagnostics'                  : None,
             'fast_mode'                    : None,
             'ignore_const_cols'            : None,
+            'force_load_balance'           : None,
             'shuffle_training_data'        : None,
-            'nesterov_accelerated_gradient': None,
         }
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'neural_net2', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'deep_learning', print_params)
         if 'validation' not in kwargs:
             kwargs['validation'] = data_key
 
         start = time.time()
-        a = self.__do_json_request('2/NN.json',timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/DeepLearning.json',timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
             a['python_elapsed'] = time.time() - start

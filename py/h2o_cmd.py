@@ -89,16 +89,16 @@ def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, **kwargs):
     return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, **kwargs)
 
 def runNNet(node=None, parseResult=None, timeoutSecs=600, **kwargs):
-    if not parseResult: raise Exception('No parseResult for NN')
+    if not parseResult: raise Exception('No parseResult for Neural Net')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
     return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
-def runNNet2(node=None, parseResult=None, timeoutSecs=600, **kwargs):
-    if not parseResult: raise Exception('No parseResult for NN2')
+def runDeepLearning(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+    if not parseResult: raise Exception('No parseResult for Deep Learning')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.neural_net2(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
+    return node.deep_learning(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
 def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')

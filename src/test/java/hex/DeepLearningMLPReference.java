@@ -1,7 +1,6 @@
 package hex;
 
-import hex.nn.NN;
-import water.Model;
+import hex.deeplearning.DeepLearning;
 
 import java.text.DecimalFormat;
 import java.util.Random;
@@ -15,14 +14,14 @@ import static water.util.ModelUtils.getPrediction;
  * <nl>
  * http://channel9.msdn.com/Events/Build/2013/2-401
  */
-public class NeuralNetMLPReference2 {
+public class DeepLearningMLPReference {
   static final DecimalFormat _format = new DecimalFormat("0.000");
 
   double[][] _trainData;
   double[][] _testData;
   NeuralNetwork _nn;
 
-  void init(NN.Activation activation, Random rand, double holdout_ratio, int numHidden) {
+  void init(DeepLearning.Activation activation, Random rand, double holdout_ratio, int numHidden) {
     double[][] ds = new double[150][];
     int r = 0;
     ds[r++] = new double[] { 5.1, 3.5, 1.4, 0.2, 0, 0, 1 };
@@ -221,7 +220,7 @@ public class NeuralNetMLPReference2 {
     _nn.InitializeWeights();
   }
 
-  void train(int maxEpochs, double learnRate, double momentum, NN.Loss loss) {
+  void train(int maxEpochs, double learnRate, double momentum, DeepLearning.Loss loss) {
     _nn.Train(_trainData, maxEpochs, learnRate, momentum, loss);
   }
 
@@ -286,7 +285,7 @@ public class NeuralNetMLPReference2 {
   }
 
   public static class NeuralNetwork {
-    NN.Activation activation = NN.Activation.Tanh;
+    DeepLearning.Activation activation = DeepLearning.Activation.Tanh;
     int numInput;
     int numHidden;
     int numOutput;
@@ -312,7 +311,7 @@ public class NeuralNetMLPReference2 {
     float[][] hoPrevWeightsDelta;
     double[] oPrevBiasesDelta;
 
-    public NeuralNetwork(NN.Activation activationType, int numInput, int numHidden, int numOutput) {
+    public NeuralNetwork(DeepLearning.Activation activationType, int numInput, int numHidden, int numOutput) {
       this.activation = activationType;
       this.numInput = numInput;
       this.numHidden = numHidden;
@@ -523,9 +522,9 @@ public class NeuralNetMLPReference2 {
 
       for( int i = 0; i < numHidden; ++i )
         // apply activation
-        if (activation == NN.Activation.Tanh || activation == NN.Activation.TanhWithDropout) {
+        if (activation == DeepLearning.Activation.Tanh || activation == DeepLearning.Activation.TanhWithDropout) {
           hOutputs[i] = HyperTanFunction(hSums[i]);
-        } else if (activation == NN.Activation.Rectifier || activation == NN.Activation.RectifierWithDropout) {
+        } else if (activation == DeepLearning.Activation.Rectifier || activation == DeepLearning.Activation.RectifierWithDropout) {
           hOutputs[i] = Rectifier(hSums[i]);
         } else throw new RuntimeException("invalid activation.");
 
@@ -577,7 +576,7 @@ public class NeuralNetMLPReference2 {
 
     // ----------------------------------------------------------------------------------------
 
-    private void UpdateWeights(double[] tValues, double learnRate, double momentum, NN.Loss loss) {
+    private void UpdateWeights(double[] tValues, double learnRate, double momentum, DeepLearning.Loss loss) {
       // update the weights and biases using back-propagation, with target values, eta (learning
 // rate),
       // alpha (momentum)
@@ -591,9 +590,9 @@ public class NeuralNetMLPReference2 {
       for( int i = 0; i < oGrads.length; ++i ) {
         // derivative of softmax = (1 - y) * y (same as log-sigmoid)
         double derivative = (1 - outputs[i]) * outputs[i];
-        if (loss == NN.Loss.CrossEntropy) {
+        if (loss == DeepLearning.Loss.CrossEntropy) {
           oGrads[i] = tValues[i] - outputs[i];
-        } else if (loss == NN.Loss.MeanSquare) {
+        } else if (loss == DeepLearning.Loss.MeanSquare) {
           // 'mean squared error version'. research suggests cross-entropy is better here . . .
           oGrads[i] = derivative * (tValues[i] - outputs[i]);
         } else throw new RuntimeException("invalid loss function");
@@ -602,9 +601,9 @@ public class NeuralNetMLPReference2 {
       // 2. compute hidden gradients
       for( int i = 0; i < hGrads.length; ++i ) {
         double derivative = 1;
-        if (activation == NN.Activation.Tanh || activation == NN.Activation.TanhWithDropout) {
+        if (activation == DeepLearning.Activation.Tanh || activation == DeepLearning.Activation.TanhWithDropout) {
           derivative = (1 - hOutputs[i]) * (1 + hOutputs[i]); // derivative of tanh (y) = (1 - y) * (1 + y)
-        } else if (activation == NN.Activation.Rectifier || activation == NN.Activation.RectifierWithDropout) {
+        } else if (activation == DeepLearning.Activation.Rectifier || activation == DeepLearning.Activation.RectifierWithDropout) {
           derivative = hOutputs[i] <= 0 ? 0 : 1;
         } else throw new RuntimeException("invalid activation.");
 
@@ -646,7 +645,7 @@ public class NeuralNetMLPReference2 {
       // 4. update hidden-output weights
       for( int i = 0; i < hoWeights.length; ++i ) {
         for( int j = 0; j < hoWeights[0].length; ++j ) {
-          // see above: hOutputs are inputs to the nn outputs
+          // see above: hOutputs are inputs to the deeplearning outputs
           double delta = learnRate * oGrads[j] * hOutputs[i];
           hoWeights[i][j] += delta;
           hoWeights[i][j] += momentum * hoPrevWeightsDelta[i][j]; // momentum
@@ -667,7 +666,7 @@ public class NeuralNetMLPReference2 {
 
     // ----------------------------------------------------------------------------------------
 
-    public void Train(double[][] trainData, int maxEprochs, double learnRate, double momentum, NN.Loss loss) {
+    public void Train(double[][] trainData, int maxEprochs, double learnRate, double momentum, DeepLearning.Loss loss) {
       // train a back-prop style NN classifier using learning rate and momentum
       // no weight decay
       int epoch = 0;
