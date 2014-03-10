@@ -98,9 +98,14 @@ public class DeepLearningModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (classification) {
-        sb.append("Error on training data (misclassification): " + String.format("%.2f", 100*train_err) + "%");
+        sb.append("Error on training data (misclassification)"
+                + (trainAUC != null ? " [using threshold for " + trainAUC.threshold_criterion.toString().replace("_"," ") +"]: ": ": ")
+                + String.format("%.2f", 100*train_err) + "%");
+
         if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
-        if (validation) sb.append("\nError on validation data (misclassification): " + String.format("%.2f", (100 * valid_err)) + "%");
+        if (validation) sb.append("\nError on validation data (misclassification)"
+                + (validAUC != null ? " [using threshold for " + validAUC.threshold_criterion.toString().replace("_"," ") +"]: ": ": ")
+                + String.format("%.2f", (100 * valid_err)) + "%");
         if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else {
         sb.append("Error on training data (MSE): " + train_mse);
@@ -544,6 +549,7 @@ public class DeepLearningModel extends Model {
       final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC);
       if (isClassifier()) err.train_err = trainErr;
       else err.train_mse = trainErr;
+
       trainPredict.delete();
 
       if (err.validation) {
@@ -591,16 +597,10 @@ public class DeepLearningModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
-      assert(err.train_err == last_scored().train_err);
-      update(job_key);
-      assert(err.train_err == ((DeepLearningModel)UKV.get(_key)).last_scored().train_err);
-
       _timeLastScoreEnd = System.currentTimeMillis();
       // print the freshly scored model to ASCII
       for (String s : toString().split("\n")) Log.info(s);
       if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
-    } else {
-      update(job_key);
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -611,7 +611,7 @@ public class DeepLearningModel extends Model {
       Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
       keep_running = false;
     }
-//    update(job_key);
+    update(job_key);
 //    System.out.println(this);
     return keep_running;
   }
@@ -659,18 +659,36 @@ public class DeepLearningModel extends Model {
     return preds;
   }
 
+  /**
+   * Compute the model error for a given test data set
+   * For multi-class classification, this is the classification error based on assigning labels for the highest predicted per-class probability.
+   * For binary classification, this is the classification error based on assigning labels using the optimal threshold for maximizing the F1 score.
+   * For regression, this is the mean squared error (MSE).
+   * @param ftest Frame containing test data
+   * @param fpreds Frame containing predicted data (classification: label + per-class probabilities, regression: target)
+   * @param label Name for the scored data set
+   * @param printCM Whether to print the confusion matrix to stdout
+   * @param cm Confusion Matrix object to populate for multi-class classification (also used for regression)
+   * @param auc AUC object to populate for binary classification
+   * @return model error, see description above
+   */
   public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc) {
     StringBuilder sb = new StringBuilder();
     double error;
+
+    // populate AUC
     if (auc != null) {
       auc.actual = ftest;
       auc.vactual = ftest.lastVec();
       auc.predict = fpreds;
       auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
+      auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
       auc.serve();
       auc.toASCII(sb);
-      error = auc.err();
-    } else {
+      error = auc.err(); //using optimal threshold for F1
+    }
+    // populate CM
+    else {
       if (cm == null) cm = new ConfusionMatrix();
       cm.actual = ftest;
       cm.vactual = ftest.lastVec(); //original vector or adapted response (label) if CM adaptation was done
@@ -680,7 +698,7 @@ public class DeepLearningModel extends Model {
       cm.toASCII(sb);
       error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
     }
-    if (printCM && (cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
+    if (printCM && (auc != null || cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
       Log.info("Scoring on " + label + " data:");
       for (String s : sb.toString().split("\n")) Log.info(s);
     }
