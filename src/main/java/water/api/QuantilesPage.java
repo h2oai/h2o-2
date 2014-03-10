@@ -27,7 +27,7 @@ public class QuantilesPage extends Request2 {
   @API(help = "Number of bins used (1-1000000). 1000 recommended", filter = Default.class, lmin = 1, lmax = 1000000)
   public int max_qbins = 1000;
 
-  @API(help = "1: Iterate for exact result. 0: One pass approx.", filter = Default.class, lmin = 0, lmax = 1)
+  @API(help = "1: Exact result (iterate max 16). 0: One pass approx. 2: Provide both results", filter = Default.class, lmin = 0, lmax = 2)
   public int multiple_pass  = 1;
 
   @API(help = "Interpolation between rows. Type 2 (mean) or 7 (linear).", filter = Default.class)
@@ -92,63 +92,73 @@ public class QuantilesPage extends Request2 {
     // not used on the single pass approx. will use on multipass iterations
     double valStart = vecs[0].min();
     double valEnd = vecs[0].max();
-    boolean multiPass = false;
+    boolean multiPass;
     Quantiles[] qbins;
-    qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
-      multiPass, interpolation_type).doAll(fr)._qbins;
-    // can we just overwrite it with a new one?
-    Log.info("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
-    // Have to get this internal state, and copy this state for the next iteration
-    // in order to multipass
-    // I guess forward as params to next iteration
-    // while ( (iteration <= maxIterations) && !done ) {
-    //  valStart   = newValStart;
-    //  valEnd     = newValEnd;
-
-    // These 3 are available for viewing, but not necessary to iterate
-    //  valRange   = newValRange;
-    //  valBinSize = newValBinSize;
-    //  valLowCnt  = newValLowCnt;
-
-    double approxResult = Double.NaN;
-    double exactResult = Double.NaN;
+    double approxResult;
+    double exactResult;
+    result_single = Double.NaN; 
+    result = Double.NaN; 
     boolean done = false;
+    // approx (fully independent from the multipass)
+    if ( multiple_pass == 0 || multiple_pass == 2 ) {
+      multiPass = false;
+      result_single = Double.NaN; 
+      if ( multiple_pass == 0) result = Double.NaN;
 
-    if (qbins != null) { // if it's enum it will be null?
-      qbins[0].finishUp(vecs[0]);
-      column_name = qbins[0].colname;
-      quantile_requested = qbins[0].QUANTILES_TO_DO[0];
-      iterations = 1;
-      done = qbins[0]._done;
-      approxResult = qbins[0]._pctile[0];
-      interpolated = qbins[0]._interpolated;
-      interpolation_type_used = qbins[0]._interpolationType;
+      qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
+        multiPass, interpolation_type).doAll(fr)._qbins;
+      // can we just overwrite it with a new one?
+      Log.info("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
+
+      // Have to get this internal state, and copy this state for the next iteration
+      // in order to multipass
+      // I guess forward as params to next iteration
+      // while ( (iteration <= maxIterations) && !done ) {
+      //  valStart   = newValStart;
+      //  valEnd     = newValEnd;
+
+      // These 3 are available for viewing, but not necessary to iterate
+      //  valRange   = newValRange;
+      //  valBinSize = newValBinSize;
+      //  valLowCnt  = newValLowCnt;
+
+      if (qbins != null) { // if it's enum it will be null?
+        qbins[0].finishUp(vecs[0]);
+        column_name = qbins[0].colname;
+        quantile_requested = qbins[0].QUANTILES_TO_DO[0];
+        iterations = 1;
+        done = qbins[0]._done;
+        approxResult = qbins[0]._pctile[0];
+        interpolated = qbins[0]._interpolated;
+        interpolation_type_used = qbins[0]._interpolationType;
+      }
+      else {
+        column_name = "";
+        quantile_requested = qbins[0].QUANTILES_TO_DO[0];
+        iterations = 0;
+        done = false;
+        approxResult = Double.NaN;
+        interpolated = false;
+        interpolation_type_used = interpolation_type;
+      }
+
+      result_single = approxResult;
+      // only the best result if we only ran the approx
+      if ( multiple_pass == 0) result = approxResult;
+
+      // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
+      // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
+      // done with that!
+      qbins = null;
     }
-    else {
-      column_name = "";
-      quantile_requested = qbins[0].QUANTILES_TO_DO[0];
-      iterations = 0;
-      done = false;
-      approxResult = Double.NaN;
-      interpolated = false;
-      interpolation_type_used = interpolation_type;
-    }
-
-    result_single = approxResult;
-    if ( multiple_pass != 1) result = approxResult;
-
-    // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
-    // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
-    // done with that!
-    qbins = null;
     
-    final int MAX_ITERATIONS = 16; 
-    if ( multiple_pass == 1) {
-      result = Double.NaN; 
+    if ( multiple_pass == 1 || multiple_pass == 2 ) {
+      final int MAX_ITERATIONS = 16; 
+      multiPass = true;
+      exactResult = Double.NaN; 
       // try a second pass
       Quantiles[] qbins2;
-      multiPass = true;
       int iteration;
       
       qbins2 = null;
@@ -171,7 +181,6 @@ public class QuantilesPage extends Request2 {
         }
       }
 
-
       if (qbins2 != null) { // if it's enum it will be null?
         column_name = qbins2[0].colname;
         quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
@@ -192,9 +201,9 @@ public class QuantilesPage extends Request2 {
 
       // all done with it
       qbins2 = null;
+      // always the best result if we ran here
       result = exactResult;
     }
-
     return Response.done(this);
   }
 }

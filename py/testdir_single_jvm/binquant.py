@@ -9,6 +9,7 @@ OTHER_T = 0.999
 BIN_COUNT = 20
 BIN_COUNT = 50
 BIN_COUNT = 100000
+BIN_COUNT = 2
 INTERPOLATION_TYPE=7
 
 print "Using max_qbins: ", BIN_COUNT, "threshold:", OTHER_T
@@ -160,13 +161,29 @@ def findQuantile(d, dmin, dmax, threshold):
             # where are we zeroing in? (start)
             binIdx2 = int(math.floor(valOffset / (valBinSize + 0.0))) # make sure it's always an fp divide?
 
+            # do some close looking for possible fp arith issues
+            cA = valOffset < 0
+            cB = binIdx2 < 0
+            t = {True: 1, False: 0}
+            # we get the 10 case
+            if ((cA and not cB) or (not cA and cB)):
+                h2p.red_print("AB Interesting lower bin edge case %s%s" % (t[cA], t[cB]), "cA", cA, "cB", cB, "valOffSet", valOffSet, \
+                    "binIdx2", binIdx2)
+            cC = val > valEnd
+            cD = binIdx2 >= (maxBinCnt-1) # tighten the compare for printing
+            if ((cC and not cD) or (not cC and cD)):
+                h2p.red_print("CD Interesting upper bin edge case %s%s" % (t[cC], t[cD]), "cC", cC, "cB", cD, "val", val, "valEnd", valEnd, \
+                    "binIdx2", binIdx2, "maxBinCnt", maxBinCnt)
+                
             if valOffset < 0 or binIdx2<0:
             # if valOffset < 0:
             # if binIdx2<0:
                 hcnt2_low += 1
             # prevent the extra bin from being used..i.e. eliminate the fuzziness for sure!
             # have to use both compares, since can wrap the index (due to start/end shift)
-            elif val > valEnd or binIdx2>=(maxBinCnt-1):
+            # elif val > valEnd or binIdx2>=(maxBinCnt-1):
+            # should this really be a valOffset compare?
+            elif val > valEnd or binIdx2 >= maxBinCnt:
             # elif val > valEnd:
             # elif binIdx2>=(maxBinCnt-1):
                 if (hcnt2_high==0) or (val < hcnt2_high_min):

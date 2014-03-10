@@ -259,12 +259,17 @@ public class Quantiles extends Iced {
 
       // we always need the start condition in the bins?
       // if ( valOffset < 0 ) {
-      if ( binIdx2Int < 0 ) {
+      // if ( binIdx2Int < 0 ) { // works 3/10/14
+      // maybe some redundancy in two compares
+      if ( valOffset < 0 || binIdx2Int<0 ) { 
         ++hcnt2_low;
       }
       // we always need the end condition in the bins?
       // else if ( val > _valEnd ) {
-      else if ( binIdx2Int >= maxBinCnt ) {
+      // else if ( binIdx2Int >= maxBinCnt ) { // works 3/10/14
+      // would using valOffset here be less accurate? maybe some redundancy in two compares
+      // can't use maxBinCnt-1, because the extra bin is used for one value (the bounds)
+      else if ( val > _valEnd || binIdx2>=maxBinCnt ) { 
         if ( (hcnt2_high==0) || (val < hcnt2_high_min) ) hcnt2_high_min = val;
         ++hcnt2_high;
       } 
