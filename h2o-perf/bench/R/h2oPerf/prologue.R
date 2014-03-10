@@ -383,16 +383,21 @@ function(model) {
 
 .calcBinomResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = "test.hex",
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = testData@key,
                           vactual = response, predict = h2opred@key,
                           vpredict = response)
-  cm <- res$cm
+
+  print("RESULT!!")
+  print(res)
+  cm <- res$confusion_matrix_for_criteria[[2]]
   confusion_matrix    <<- t(matrix(unlist(cm), 2 ,2))
   precision           <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[1,2])
   recall              <<- confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[2,1])
   error_rate          <<- -1 #confusion_matrix[3,3]
   minority_error_rate <<- -1 #confusion_matrix[2,3]
   auc                 <<- res$AUC
+  cm.json             <<- cm
+  levels.json         <<- res$actual_domain
 }
 
 .calcMultinomResults<-
@@ -418,7 +423,7 @@ function() {
     return(0)
   }
   print("PREDICT TYPE:")
-  if (grepl("GLM", h2o.ls(h))) {
+  if (any(grepl("GLM", h2o.ls(h)))) {
     if(model@model$params$family[[1]] != "binomial") {
       cat("regression\n")
       predict_type <<- "regression"
@@ -429,7 +434,7 @@ function() {
       return(0)
     }   
   }
-  if (grepl("GBM", h2o.ls(h))) {
+  if (any(grepl("GBM", h2o.ls(h)))) {
     if(model@model$params$distribution == "gaussian") {
       cat("regression")
       predict_type <<- "regression"
@@ -440,17 +445,17 @@ function() {
       return(0)
     }   
   }
-  if (grepl("NeuralNet", h2o.ls(h))) {
+  if (any(grepl("NeuralNet", h2o.ls(h)))) {
     cat("multinomial")
     predict_type <<- "multinomial"
     return(0)
   }
-  if (grepl("RF", h2o.ls(h))) {
+  if (any(grepl("RF", h2o.ls(h)))) {
     cat("multinomial\n")
     predict_type <<- "multinomial"
     return(0)
   }
-  if (grepl("PCA", h2o.ls(h)) || grepl("KMeans", h2o.ls(h))) {
+  if (any(grepl("PCA", h2o.ls(h)) || grepl("KMeans", h2o.ls(h)))) {
     cat("no predict\n")
     predict_type <<- "no predict"
     return(0)
