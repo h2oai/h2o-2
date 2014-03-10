@@ -17,8 +17,8 @@ source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
 # Binary columns start with 'b' and are 0/1.
 # Distribution columns start with 'd' and are reals.
 
-num_binary_cols = 4
-num_rows = 1000000
+num_binary_cols = 3
+num_rows = 100000
 
 # Uniform distribution variable.
 max_price = 1000000
