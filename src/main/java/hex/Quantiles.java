@@ -45,7 +45,7 @@ public class Quantiles extends Iced {
   final double     _valEnd;
   final long       _valMaxBinCnt;
   final boolean    _multiPass;
-  public final int _interpolationType; // shown in output 
+  public int       _interpolationType; // shown in output 
 
   // just for info on current pass?
   public double    _valRange;
@@ -103,7 +103,7 @@ public class Quantiles extends Iced {
   }
 
   // FIX! should use _max_qbins if available?
-  public void finishUp(Vec vec, long max_qbins) {
+  public void finishUp(Vec vec) {
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
     _pctile = new double[QUANTILES_TO_DO.length];
@@ -115,10 +115,7 @@ public class Quantiles extends Iced {
         _done = approxQuantilesOnePass(_pctile, QUANTILES_TO_DO);
       } 
       else {
-        // FIX! should this be passed as param or ?
-        // I suppose this allows us to change it for the next pass..but don't need to.
-        long desiredBinCnt = max_qbins;
-        _done = exactQuantilesMultiPass(_pctile, QUANTILES_TO_DO, desiredBinCnt);
+        _done = exactQuantilesMultiPass(_pctile, QUANTILES_TO_DO);
       }
     }
   }
@@ -366,7 +363,7 @@ public class Quantiles extends Iced {
     return cnt;
   }
 
-  private boolean exactQuantilesMultiPass(double[] qtiles, double[] thres, long desiredBinCnt) {
+  private boolean exactQuantilesMultiPass(double[] qtiles, double[] thres) {
     // do we need all of these as output?
     double newValStart, newValEnd, newValRange, newValBinSize;
     // FIX! figure out where unitialized can be used
@@ -376,6 +373,8 @@ public class Quantiles extends Iced {
     newValBinSize = Double.NaN;
     long newValLowCnt;
     long maxBinCnt = _valMaxBinCnt;
+    assert maxBinCnt>1;
+    long desiredBinCnt = maxBinCnt - 1;
 
     assert !_isEnum;
     if( hcnt2.length == 0 ) return false;
@@ -516,20 +515,20 @@ public class Quantiles extends Iced {
       // See if there's a non-zero bin below (min) or above (max) you, to avoid shrinking wrong.
       // Just need to check the one bin below and above k, if they exist. 
       // They might have zero entries, but then it's okay to ignore them.
-      if ( k > 0 && hcnt2[k-1]>0 && (hcnt2_min[k-1]<hcnt2_min[k]) ) {
+      newValStart = hcnt2_min[k];
+      if ( k > 0 ) {
+        if ( hcnt2[k-1]>0 && (hcnt2_min[k-1]<hcnt2_min[k]) ) {
           newValStart = hcnt2_min[k-1];
-      }
-      else {
-          newValStart = hcnt2_min[k];
+        }
       }
 
       // subtle. we do sometimes put stuff in the extra end bin (see above)
       // k might be pointing to one less than that (like k=0 for 1 bin case)
-      if ( k < maxBinCnt && hcnt2[k+1]>0 && (hcnt2_max[k+1]>hcnt2_max[k]) ) {
+      newValEnd = hcnt2_max[k];
+      if ( k < (maxBinCnt-1) )  {
+        if ( hcnt2[k+1]>0 && (hcnt2_max[k+1]>hcnt2_max[k]) ) {
           newValEnd = hcnt2_max[k+1];
-      }
-      else {
-          newValEnd = hcnt2_max[k];
+        }
       }
 
       newValRange = newValEnd - newValStart ;
@@ -554,7 +553,6 @@ public class Quantiles extends Iced {
     Log.info("Q_ currentCnt: "+currentCnt+" targetCntInt: "+targetCntInt+" hcnt2_low: "+hcnt2_low+" hcnt2_high: "+hcnt2_high);
     Log.info("Q_ was "+_valStart+" "+_valEnd+" "+_valRange+" "+_valBinSize);
     Log.info("Q_ next "+newValStart+" "+newValEnd+" "+newValRange+" "+newValBinSize);
-    
 
     qtiles[0] = guess;
     // Log.info(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+

@@ -31,7 +31,7 @@ public class QuantilesPage extends Request2 {
   public int multiple_pass  = 0;
 
   @API(help = "Interpolation between rows. Type 2 (mean) or 7 (linear).", filter = Default.class)
-  public int interpolation_type = 2;
+  public int interpolation_type = 7;
 
   @API(help = "Column name.")
   String column_name;
@@ -116,7 +116,7 @@ public class QuantilesPage extends Request2 {
     boolean done;
 
     if (qbins != null) { // if it's enum it will be null?
-      qbins[0].finishUp(vecs[0], max_qbins);
+      qbins[0].finishUp(vecs[0]);
       column_name = qbins[0].colname;
       quantile_requested = qbins[0].QUANTILES_TO_DO[0];
       done = qbins[0]._done;
@@ -156,7 +156,7 @@ public class QuantilesPage extends Request2 {
           multiPass, interpolation_type).doAll(fr)._qbins;
         iterations = b + 1;
         if ( qbins2 != null ) {
-          qbins2[0].finishUp(vecs[0], max_qbins);
+          qbins2[0].finishUp(vecs[0]);
           // for printing?
           double valRange = qbins2[0]._valRange;
           double valBinSize = qbins2[0]._valBinSize;
@@ -169,14 +169,15 @@ public class QuantilesPage extends Request2 {
           if ( done ) break;
         }
       }
-      // interpolation_type_used = interpolation_type;
-      interpolation_type_used = 2 ; // h2o always uses mean if interpolating, right now
+
+
       if (qbins2 != null) { // if it's enum it will be null?
         column_name = qbins2[0].colname;
         quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
         done = qbins2[0]._done;
         exactResult = qbins2[0]._pctile[0];
         interpolated = qbins2[0]._interpolated;
+        interpolation_type_used = qbins2[0]._interpolationType;
       }
       else {
         column_name = "";
@@ -185,6 +186,7 @@ public class QuantilesPage extends Request2 {
         done = false;
         exactResult = Double.NaN;
         interpolated = false;
+        interpolation_type_used = interpolation_type;
       }
 
       qbins2 = null;
