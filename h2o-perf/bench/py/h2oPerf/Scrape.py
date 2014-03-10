@@ -390,7 +390,7 @@ class PredictScraper(Scraper):
                     cm_r = json.loads(line)
                     flag = False
                     break
-                if "CM" in line and "print" not in line:
+                if "CM RESULTS JSON" in line and "print" not in line:
                     flag = True
         self.test_run_cm_result = TableRow("test_run_cm_result", self.perfdb)
         self.test_run_cm_result.row.update(cm_r["cm_json"])
