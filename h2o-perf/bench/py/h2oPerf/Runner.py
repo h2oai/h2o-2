@@ -55,8 +55,8 @@ class PerfRunner:
         parse_file = "parse.R" #testDir + "_Parse.R"
         model_file = "model.R" #testDir + "_Model.R"
         predict_file = None
-        if os.path.exists(os.path.join(self.test_root_dir, testDir, testDir + "_Predict.R")):
-            predict_file = "predict.R" #testDir + "_Predict.R"
+        if os.path.exists(os.path.join(self.test_root_dir, testDir, "predict.R")):
+            predict_file = "predict.R" 
 
         test_dir = os.path.join(self.test_root_dir, testDir)
         test_short_dir = testDir
@@ -86,18 +86,18 @@ class PerfRunner:
             test = self.tests_not_started.pop(0)
             print "Beginning test " + test.test_name
 
-            self.isEC2 = test.aws
-            self.xmx = test.heap_bytes_per_node
-            self.ip = test.ip
-            self.base_port = test.port
-            self.nodes_in_cloud = test.total_nodes
-            self.hosts_in_cloud = test.hosts  #this will be used to support multi-machine / aws
+            isEC2 = test.aws
+            xmx = test.heap_bytes_per_node
+            ip = test.ip
+            base_port = test.port
+            nodes_in_cloud = test.total_nodes
+            hosts_in_cloud = test.hosts  #this will be used to support multi-machine / aws
             #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
 
-            if self.isEC2:
+            if isEC2:
                 raise Exception("Unimplemented: AWS support under construction...")
 
-            cloud = H2OCloud(1, self.hosts_in_cloud, self.nodes_in_cloud, self.h2o_jar, self.base_port, self.output_dir, self.isEC2, test.remote_hosts)
+            cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
             self.cloud.append(cloud)
             PerfUtils.start_cloud(self, test.remote_hosts)
             test.port = self.cloud[0].get_port()
@@ -110,6 +110,7 @@ class PerfRunner:
             test.test_run.row['test_name'] = test.test_name
             test.test_run.update(True)
             PerfUtils.stop_cloud(self, test.remote_hosts)
+            self.cloud.pop(0)
             self.perfdb.this_test_run_id += 1
 
     def __get_instance_type__(self):
