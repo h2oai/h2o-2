@@ -25,7 +25,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     dataset = np.genfromtxt(
         open(csvPathname, 'r'),
         delimiter=',',
-        skip_header=1,
+        # skip_header=1, // deadly if I skip a row on accuracy. shows up with linear interpolation.
         dtype=None); # guess!
 
     print "csv read for training, done"
@@ -87,13 +87,13 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     alphap=1/3.0
     betap=1/3.0
 
+    # an approx? (was good when comparing to h2o type 2)
+    alphap=0.4
+    betap=0.4
+
     # this is type 7
     alphap=1
     betap=1
-
-    # an approx?
-    alphap=0.4
-    betap=0.4
 
     per = [1 * t for t in thresholds]
     print "scipy per", per
@@ -114,7 +114,8 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     # this matches scipy type 7 (linear)
     # b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='linear')
     # this matches h2o type 2 (mean)
-    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
+    # b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='linear')
     label = '50%' if DO_MEDIAN else '99.9%'
     h2p.blue_print(label, "from sort:", b)
     s = a[5 if DO_MEDIAN else 10]
@@ -232,7 +233,7 @@ class Basic(unittest.TestCase):
 
             quantile = 0.5 if DO_MEDIAN else .999
             q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
-                quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
+                quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1, interpolation_type=7) # linear
             qresult = q['result']
             qresult_multi = q['result_multi']
             h2p.blue_print("h2o quantiles result:", qresult)

@@ -39,7 +39,7 @@ public class QuantilesPage extends Request2 {
   @API(help = "Quantile requested.")
   double quantile_requested;
 
-  @API(help = "Interpolation type used (7 not supported yet).")
+  @API(help = "Interpolation type used.")
   int interpolation_type_used;
 
   @API(help = "False if an exact result is provided, True if the answer is interpolated.")
@@ -66,9 +66,8 @@ public class QuantilesPage extends Request2 {
     if (column.isEnum()) {
       throw new IllegalArgumentException("Column is an enum");
     }
-    // if (! ((interpolation_type == 2) || (interpolation_type == 7))) {
-    if ( interpolation_type != 2 ) {
-      throw new IllegalArgumentException("Unsupported interpolation type. Currently only allow 2");
+    if (! ((interpolation_type == 2) || (interpolation_type == 7))) {
+      throw new IllegalArgumentException("Unsupported interpolation type. Currently only allow 2 or 7");
     }
 
     Vec[] vecs = new Vec[1];
@@ -95,7 +94,8 @@ public class QuantilesPage extends Request2 {
     double valEnd = vecs[0].max();
     boolean multiPass = false;
     Quantiles[] qbins;
-    qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, multiPass).doAll(fr)._qbins;
+    qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
+      multiPass, interpolation_type).doAll(fr)._qbins;
     // can we just overwrite it with a new one?
     Log.info("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
@@ -114,8 +114,6 @@ public class QuantilesPage extends Request2 {
     double approxResult;
     double exactResult;
     boolean done;
-    // interpolation_type_used = interpolation_type;
-    interpolation_type_used = 2 ; // h2o always uses mean if interpolating, right now
 
     if (qbins != null) { // if it's enum it will be null?
       qbins[0].finishUp(vecs[0], max_qbins);
@@ -124,6 +122,7 @@ public class QuantilesPage extends Request2 {
       done = qbins[0]._done;
       approxResult = qbins[0]._pctile[0];
       interpolated = qbins[0]._interpolated;
+      interpolation_type_used = qbins[0]._interpolationType;
     }
     else {
       column_name = "";
@@ -132,8 +131,10 @@ public class QuantilesPage extends Request2 {
       done = false;
       approxResult = Double.NaN;
       interpolated = false;
+      interpolation_type_used = interpolation_type;
     }
 
+    exactResult = Double.NaN;
     result = approxResult;
 
     // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
@@ -151,7 +152,8 @@ public class QuantilesPage extends Request2 {
       
       qbins2 = null;
       for (int b = 0; b < MAX_ITERATIONS; b++) {
-        qbins2 = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, multiPass).doAll(fr)._qbins;
+        qbins2 = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
+          multiPass, interpolation_type).doAll(fr)._qbins;
         iterations = b + 1;
         if ( qbins2 != null ) {
           qbins2[0].finishUp(vecs[0], max_qbins);

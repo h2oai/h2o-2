@@ -194,7 +194,6 @@ class Basic(unittest.TestCase):
             print "keep summary2 with results for 1000 qbins, so it's accuracy doesn't degrade when fewer are used for 2/Quantile"
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=1000)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
-
             summaries = summaryResult['summaries']
 
             scipyCol = 0
@@ -210,7 +209,7 @@ class Basic(unittest.TestCase):
                 quantile = 0.5 if DO_MEDIAN else .999
                 # h2o has problem if a list of columns (or dictionary) is passed to 'column' param
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
-                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
+                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1, interpolation_type=7)
                 qresult = q['result']
                 qresult_multi = q['result_multi']
                 h2p.blue_print("h2o quantiles result:", qresult)

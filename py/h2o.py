@@ -1843,6 +1843,7 @@ class H2O(object):
             'column': None,
             'quantile': None,
             'max_qbins': None,
+            'interpolation_type': None,
             'multiple_pass': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'quantiles', print_params)
