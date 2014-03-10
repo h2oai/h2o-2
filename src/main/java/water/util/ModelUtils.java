@@ -50,7 +50,7 @@ public class ModelUtils {
     float res = preds[best];    // One of the tied best results
     long hash = 0;              // hash for tie-breaking
     if( data != null )
-      for( double d : data ) hash ^= Double.doubleToRawLongBits(d) >> 16; // drop least significants bits
+      for( double d : data ) hash ^= Double.doubleToRawLongBits(d) >> 6; // drop 6 least significants bits of mantisa (layout of long is: 1b sign, 11b exp, 52b mantisa)
     int idx = (int)hash%(tieCnt+1);  // Which of the ties we'd like to keep
     for( best=1; best<preds.length; best++)
       if( res == preds[best] && --idx < 0 )
