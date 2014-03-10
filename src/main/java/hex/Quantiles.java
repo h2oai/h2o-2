@@ -243,35 +243,35 @@ public class Quantiles extends Iced {
       // I suppose the hcnt2.length must be big enough?
     }
     else { // multi pass exact. Should be able to do this for both, if the valStart param is correct
-
-      //  Need to count the stuff outside the bin-gathering, 
-      //  since threshold compare is based on total row compare
+      long binIdx2;
+      // Need to count the stuff outside the bin-gathering, 
+      // since threshold compare is based on total row compare
       double valOffset = val - _valStart;
+
+      // FIX! do we really need this special case? Not hurting.
+      if (hcnt2.length==1) {
+        binIdx2 = 0;
+      }
+      else {
+        binIdx2 = (int) Math.floor(valOffset / _valBinSize);
+      }
+      int binIdx2Int = (int) binIdx2;
+
+      // we always need the start condition in the bins?
       if ( valOffset < 0 ) {
         ++hcnt2_low;
       }
+      // we always need the end condition in the bins?
       else if ( val > _valEnd ) {
         if ( (hcnt2_high==0) || (val < hcnt2_high_min) ) hcnt2_high_min = val;
         ++hcnt2_high;
       } 
       else {
-        long binIdx2;
-        if (hcnt2.length==1) {
-          binIdx2 = 0; // not used
-        }
-        else {
-          // FIX! talks about precision loss if I use Math.floor() here. Want floor
-          // binIdx2 = Math.floor((valOffset * 1000000.0) / _valBinSize) / 1000000;
-          binIdx2 = (int) Math.floor(valOffset / _valBinSize);
-        }
-
-        int binIdx2Int = (int) binIdx2;
         assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
           "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
-
-        // where are we zeroing in? (start)
         // Log.info("Q_ (multi) val: "+val+" valOffset: "+valOffset+" _valBinSize: "+_valBinSize);
         assert (binIdx2Int>=0) && (binIdx2Int<=maxBinCnt) : "binIdx2Int "+binIdx2Int+" out of range";
+
         if ( hcnt2[binIdx2Int]==0 || (val < hcnt2_min[binIdx2Int]) ) hcnt2_min[binIdx2Int] = val;
         if ( hcnt2[binIdx2Int]==0 || (val > hcnt2_max[binIdx2Int]) ) hcnt2_max[binIdx2Int] = val;
         ++hcnt2[binIdx2Int];
@@ -400,9 +400,13 @@ public class Quantiles extends Iced {
 
     int k = 0;
     while((currentCnt + hcnt2[k]) <= targetCntInt) {
+      // Log.info("Q_ Looping for k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
       currentCnt += hcnt2[k];
-      ++k;
-      assert k<=maxBinCnt : "k too large, k: "+k+" maxBinCnt: "+maxBinCnt;
+      ++k; // goes over in the equal case?
+      // have to keep cycling till we get to a non-zero hcnt
+      // but need to break if we get to the end (into the extra bin)
+      if ( k == maxBinCnt ) break;
+      assert k<maxBinCnt : "k too large, k: "+k+" maxBinCnt: "+maxBinCnt+" "+currentCnt+" "+targetCntInt;
     }
     Log.info("Q_ Found k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 

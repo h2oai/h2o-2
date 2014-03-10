@@ -12,7 +12,7 @@ if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
 
 DO_MEDIAN = True
 MAX_QBINS = 1000
-MAX_QBINS = 5
+MAX_QBINS = 1000
 
 def twoDecimals(l):
     if isinstance(l, list):
@@ -44,7 +44,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     # drop the output
     print dataset.shape
     print csvFilename
-    if csvFilename == 'runif_.csv':
+    if len(dataset.shape)==1:
         target = dataset
     else:
         target = [x[col] for x in dataset]
@@ -128,8 +128,9 @@ class Basic(unittest.TestCase):
         # new with 1000 bins. copy expected from R
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
-            ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            # ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
+            # ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
             
 
         ]
