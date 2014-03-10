@@ -255,10 +255,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     final float[] varimp = new float[_ncols]; // output variable importance
     final float[] varimpSD = new float[_ncols]; // output variable importance sd
     // For each variable launch one FJ-task to compute variable importance.
-    H2OCountedCompleter[] computers = new H2OCountedCompleter[_ncols];
+    Futures fs = new Futures();
     for (int var=0; var<_ncols; var++) {
       final int variable = var;
-      computers[var] = new H2OCountedCompleter() {
+      H2OCountedCompleter task4var = new H2OCountedCompleter() {
         @Override public void compute2() {
           Frame wf = new Frame(f); // create a copy of frame
           // Compute prediction error per tree on shuffled OOB sample
@@ -269,8 +269,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
           tryComplete();
         }
       };
+      H2O.submitTask(task4var); // Fork the computation task
+      fs.add(task4var);
     }
-    ForkJoinTask.invokeAll(computers);
+    fs.blockForPending(); // Randez-vous
     // after all varimp contains variable importance of all columns used by a model.
     return makeModel(model, varimp, varimpSD);
   }
@@ -284,10 +286,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Compute tree votes over shuffled data
     final CompressedTree[/*nclass*/] theTree = model.ctree(tid); // get the last tree FIXME we should pass only keys
     final int nclasses = model.nclasses();
-    H2OCountedCompleter[] computers = new H2OCountedCompleter[_ncols];
+    Futures fs = new Futures();
     for (int var=0; var<_ncols; var++) {
       final int variable = var;
-      computers[var] = new H2OCountedCompleter() {
+      H2OCountedCompleter task4var = new H2OCountedCompleter() {
         @Override public void compute2() {
           // Compute this tree votes over all data over given variable
           TreeVotes cd = TreeVotesCollector.collect(theTree, nclasses, fTrain, _ncols, sample_rate, variable);
@@ -296,8 +298,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
           tryComplete();
         }
       };
+      H2O.submitTask(task4var); // Fork computation
+      fs.add(task4var);
     }
-    ForkJoinTask.invokeAll(computers); // Fork computation and wait for results
+    fs.blockForPending(); // Wait for results
     // Compute varimp for individual features (_ncols)
     final float[] varimp   = new float[_ncols]; // output variable importance
     final float[] varimpSD = new float[_ncols]; // output variable importance sd
