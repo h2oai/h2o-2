@@ -365,10 +365,12 @@ function(modelType, datatype = "VA") {
 
 .predict<-
 function(model) {
+  print("SPENCER!!!!")
+  print(model)
   if( class(model)[1] == "H2OGLMModelVA") {
     res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT, model_key = model@key, data_key=testData@key, destination_key = "h2opreds.hex")
   } else {
-    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data=testData@key, prediction = "h2opreds.hex")
+    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data="test.hex", prediction = "h2opreds.hex")
   }
   h2opred <- new("H2OParsedData", h2o = h, key = "h2opreds.hex")
   if (predict_type == "binomial") 
@@ -381,7 +383,7 @@ function(model) {
 
 .calcBinomResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = testData@key, 
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_AUC, actual = "test.hex",
                           vactual = response, predict = h2opred@key,
                           vpredict = response)
   cm <- res$cm
@@ -395,8 +397,8 @@ function(h2opred) {
 
 .calcMultinomResults<-
 function(h2opred) {
-  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = testData@key, 
-                          vactual = response, predict = h2opred@key,
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_CM, actual = "test.hex", 
+                          vactual = response, predict = "h2opreds.hex",
                           vpredict = "predict")
   .buildcm2(res)
 }
@@ -475,8 +477,8 @@ function() {
 .buildcm2<-
 function(res) {
   cm <- res$cm
-  remove_nth <- length(res$response_domain) + 1
-  cm <- .build_cm(cm)[-remove_nth, -remove_nth]
+  #remove_nth <- length(res$response_domain) + 1
+  cm <- .build_cm(cm) #[-remove_nth, -remove_nth]
   confusion_matrix <<- cm
   cm.json <<- res$cm
   levels.json <<- res$response_domain
