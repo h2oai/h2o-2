@@ -160,8 +160,8 @@ public class Quantiles extends Iced {
 
       if ( multiPass ) {
         assert maxBinCnt > 0;
-        Log.info("Q_ Multipass histogram starts at "+_valStart);
-        Log.info("Q_ _min "+_min+" _max "+_max);
+        // Log.info("Q_ Multiple pass histogram starts at "+_valStart);
+        // Log.info("Q_ _min "+_min+" _max "+_max);
         // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
         hcnt2 = new long[maxBinCnt];
         hcnt2_min = new double[maxBinCnt];
@@ -172,9 +172,9 @@ public class Quantiles extends Iced {
         // _binsz2 = _binsz / (max_qbins / nbin);
         int nbin2 = (int)(Math.round((_max + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
         assert nbin2 > 0;
-        Log.info("Q_ Single pass histogram has "+nbin2+" bins");
-        Log.info("Q_ Single pass histogram starts at "+_start2);
-        Log.info("Q_ _min "+_min+" _max "+_max);
+        // Log.info("Q_ Single pass histogram has "+nbin2+" bins");
+        // Log.info("Q_ Single pass histogram starts at "+_start2);
+        // Log.info("Q_ _min "+_min+" _max "+_max);
         // can't make any assertion about _start2 vs _min (either can be slightly smaller: fp)
         hcnt2 = new long[nbin2];
         hcnt2_min = new double[nbin2];
@@ -235,6 +235,8 @@ public class Quantiles extends Iced {
         hcnt2_max[binIdx2Int] = val;
       }
       ++hcnt2[binIdx2Int];
+      // don't care about bin edge leaks on the one pass algo
+      // I suppose the hcnt2.length must be big enough?
     }
     else { // multi pass exact. Should be able to do this for both, if the valStart param is correct
 
@@ -263,12 +265,21 @@ public class Quantiles extends Iced {
         assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
           "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
 
-        //  where are we zeroing in? (start)
+        // where are we zeroing in? (start)
         // Log.info("Q_ (multi) val: "+val+" valOffset: "+valOffset+" _valBinSize: "+_valBinSize);
         assert (binIdx2Int>=0) && (binIdx2Int<=maxBinCnt) : "binIdx2Int "+binIdx2Int+" out of range";
         if ( hcnt2[binIdx2Int]==0 || (val < hcnt2_min[binIdx2Int]) ) hcnt2_min[binIdx2Int] = val;
         if ( hcnt2[binIdx2Int]==0 || (val > hcnt2_max[binIdx2Int]) ) hcnt2_max[binIdx2Int] = val;
         ++hcnt2[binIdx2Int];
+
+        // For debug/info, can report when it goes into extra bin needed due to fp fuzziness
+        // not an error! should be protected by newValEnd below, and nextK 
+        // estimates should go into the extra bin if interpolation is needed
+        if ( false && (binIdx2 == (maxBinCnt-1)) ) {
+            Log.info("\nQ_ FP! val went into the extra maxBinCnt bin:"+
+              binIdx2+" "+hcnt2_high_min+" "+valOffset+" "+
+              val+" "+_valStart+" "+hcnt2_high+" "+val+" "+_valEnd,"\n");
+        }
       }
     }
   } 
@@ -404,7 +415,7 @@ public class Quantiles extends Iced {
     boolean interpolated = false;
 
     if ( currentCnt==targetCntInt ) {
-      if ( hcnt2[k]>2 ) {
+      if ( hcnt2[k]>2 && (hcnt2_min[k]==hcnt2_max[k]) ) {
         guess = hcnt2_min[k];
         done = true;
         Log.info("Q_ Guess A "+guess);
@@ -429,6 +440,7 @@ public class Quantiles extends Iced {
         int nextK;
         if ( k<maxBinCnt ) nextK = k + 1; //  could put it over maxBinCnt
         else nextK = k;
+        // definitely see stuff going into the extra bin, so search that too!
         while ( (nextK<maxBinCnt) && (hcnt2[nextK]==0) ) ++nextK;
 
         //  have the "extra bin" for this
@@ -460,8 +472,28 @@ public class Quantiles extends Iced {
       }
     }
     if ( !done ) {
-      newValStart = hcnt2_min[k] - NUDGE; //  FIX! should we nudge a little?
-      newValEnd   = hcnt2_max[k] + NUDGE; //  FIX! should we nudge a little?
+
+      // possible bin leakage at start/end edges due to fp arith.
+      // bin index arith may resolve OVER the boundary created by the compare for hcnt2_high compare.
+      // See if there's a non-zero bin below (min) or above (max) you, to avoid shrinking wrong.
+      // Just need to check the one bin below and above k, if they exist. 
+      // They might have zero entries, but then it's okay to ignore them.
+      if ( k > 0 && hcnt2[k-1]>0 && (hcnt2_min[k-1]<hcnt2_min[k]) ) {
+          newValStart = hcnt2_min[k-1];
+      }
+      else {
+          newValStart = hcnt2_min[k];
+      }
+
+      // subtle. we do sometimes put stuff in the extra end bin (see the print above that happens)
+      // k might be pointing to one less than that (like k=0 for 1 bin case)
+      if ( k < maxBinCnt && hcnt2[k+1]>0 && (hcnt2_max[k+1]>hcnt2_max[k]) ) {
+          newValEnd = hcnt2_max[k+1];
+      }
+      else {
+          newValEnd = hcnt2_max[k];
+      }
+
       newValRange = newValEnd - newValStart ;
 
       //  maxBinCnt is always binCount + 1, since we might cover over due to rounding/fp issues?

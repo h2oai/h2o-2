@@ -6,7 +6,7 @@
 import math
 import functools
 
-def percentileOnSortedList(N, percent, key=lambda x:x, interpolate='linear'):
+def percentileOnSortedList(N, percent, key=lambda x:x, interpolate='mean'):
     # 5 ways of resolving fractional
     # floor, ceil, funky, linear, mean
     interpolateChoices = ['floor', 'ceil', 'funky', 'linear', 'mean']
