@@ -147,8 +147,7 @@ public abstract class Persist {
 
   private static StringBuilder escapeBytes(byte[] bytes, int i, StringBuilder sb) {
     for( ; i < bytes.length; i++ ) {
-      byte b = bytes[i];
-      char c=0;
+      char b = (char)bytes[i], c=0;
       switch( b ) {
       case '%': c='%'; break;
       case '.': c='d'; break;
