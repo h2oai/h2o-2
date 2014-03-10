@@ -515,10 +515,12 @@ public class Quantiles extends Iced {
       // See if there's a non-zero bin below (min) or above (max) you, to avoid shrinking wrong.
       // Just need to check the one bin below and above k, if they exist. 
       // They might have zero entries, but then it's okay to ignore them.
+      // update: use the closest edge in the next bin. better forward progress for small bin counts
+      // This code may make the practical min bin count around 4 or so (not 2)
       newValStart = hcnt2_min[k];
       if ( k > 0 ) {
-        if ( hcnt2[k-1]>0 && (hcnt2_min[k-1]<hcnt2_min[k]) ) {
-          newValStart = hcnt2_min[k-1];
+        if ( hcnt2[k-1]>0 && (hcnt2_max[k-1]<hcnt2_min[k]) ) {
+          newValStart = hcnt2_max[k-1];
         }
       }
 
@@ -526,8 +528,8 @@ public class Quantiles extends Iced {
       // k might be pointing to one less than that (like k=0 for 1 bin case)
       newValEnd = hcnt2_max[k];
       if ( k < (maxBinCnt-1) )  {
-        if ( hcnt2[k+1]>0 && (hcnt2_max[k+1]>hcnt2_max[k]) ) {
-          newValEnd = hcnt2_max[k+1];
+        if ( hcnt2[k+1]>0 && (hcnt2_min[k+1]>hcnt2_max[k]) ) {
+          newValEnd = hcnt2_min[k+1];
         }
       }
 

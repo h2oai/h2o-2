@@ -8,6 +8,7 @@ if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
 
 DO_MEDIAN = False
 MAX_QBINS = 1000000
+MAX_QBINS = 20
 ROWS = 100000
 
 def twoDecimals(l): 
@@ -121,7 +122,7 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=Non
     s = a[5 if DO_MEDIAN else 10]
     h2p.blue_print(label, "from scipy:", s)
     h2p.blue_print(label, "from numpy:", p)
-    h2p.blue_print(label, "from h2o singlepass:", h2oMedian)
+    h2p.blue_print(label, "from h2o summary:", h2oMedian)
     h2p.blue_print(label, "from h2o multipass:", h2oMedian2)
     # they should be identical. keep a tight absolute tolerance
     h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')

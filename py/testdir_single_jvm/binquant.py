@@ -7,7 +7,7 @@ import math
 import argparse
 OTHER_T = 0.5
 BIN_COUNT = 20
-BIN_COUNT = 1
+BIN_COUNT = 3
 
 print "Using max_qbins: ", BIN_COUNT, "threshold:", OTHER_T
 
@@ -276,16 +276,16 @@ def findQuantile(d, dmin, dmax, threshold):
             # the bin index arith may resolve OVER the boundary created by the compare for hcnt2_high compare
             # rather than using NUDGE, see if there's a non-zero bin below (min) or above (max) you.
             # Just need to check the one bin below and above k, if they exist. 
-            if k > 0 and hcnt2[k-1]>0 and (hcnt2_min[k-1]<hcnt2_min[k]):
-                newValStart = hcnt2_min[k-1]
+            if k > 0 and hcnt2[k-1]>0 and (hcnt2_max[k-1]<hcnt2_min[k]):
+                newValStart = hcnt2_max[k-1]
             else:
                 newValStart = hcnt2_min[k]
 
             # subtle. we do put stuff in the extra end bin (see the print above that happens)
             # k might be pointing to one less than that (like k=0 for 1 bin case)
-            if k < maxBinCnt and hcnt2[k+1]>0 and (hcnt2_max[k+1]>hcnt2_max[k]):
+            if k < maxBinCnt and hcnt2[k+1]>0 and (hcnt2_min[k+1]>hcnt2_max[k]):
                 print "hello"
-                newValEnd = hcnt2_max[k+1]
+                newValEnd = hcnt2_min[k+1]
             else:
                 newValEnd = hcnt2_max[k]
             
@@ -351,6 +351,7 @@ csvPathname = './runif_.csv'
 csvPathname = './covtype1.data'
 csvPathname = './runif_.csv'
 csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
+csvPathname = './syn_binary_100000x1.csv'
 col = 0
 
 print "Reading csvPathname"
