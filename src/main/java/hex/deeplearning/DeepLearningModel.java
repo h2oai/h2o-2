@@ -42,6 +42,8 @@ public class DeepLearningModel extends Model {
   @API(help = "Scoring during model building")
   private Errors[] errors;
 
+  public Errors last_scored() { return errors[errors.length-1]; }
+
   @Override public void delete() {
     super.delete();
     model_info.delete();
@@ -124,7 +126,7 @@ public class DeepLearningModel extends Model {
   /** for grid search error reporting */
   @Override
   public hex.ConfusionMatrix cm() {
-    final Errors lasterror = errors[errors.length-1];
+    final Errors lasterror = last_scored();
     if (errors == null) return null;
     water.api.ConfusionMatrix cm = lasterror.validation ?
             lasterror.valid_confusion_matrix :
@@ -142,9 +144,7 @@ public class DeepLearningModel extends Model {
   @Override
   public double mse() {
     if (errors == null) return super.mse();
-    return errors[errors.length-1].validation ?
-            errors[errors.length-1].valid_mse :
-            errors[errors.length-1].train_mse;
+    return last_scored().validation ? last_scored().valid_mse : last_scored().train_mse;
   }
 
   // This describes the model, together with the parameters
@@ -322,27 +322,33 @@ public class DeepLearningModel extends Model {
           }
         }
       }
-
-      // DEBUGGING
-//      for (int i=0; i<weights.length; ++i)
-//        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i]));
-//      for (int i=0; i<biases.length; ++i)
-//        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
-////      if (weights_momenta != null) {
-////        for (int i=0; i<weights_momenta.length; ++i)
-////          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i]));
-////      }
-////      if (biases_momenta != null) {
-////        for (int i=0; i<biases_momenta.length; ++i)
-////          sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
-////      }
-////      sb.append("\nunits[]="+Arrays.toString(units));
-////      sb.append("\nprocessed global: "+get_processed_global());
-////      sb.append("\nprocessed local:  "+get_processed_local());
-////      sb.append("\nprocessed total:  " + get_processed_total());
-//      sb.append("\n");
       return sb.toString();
     }
+
+    // DEBUGGING
+    public String toStringAll() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(toString());
+      for (int i=0; i<weights.length; ++i)
+        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i]));
+      for (int i=0; i<biases.length; ++i)
+        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i]));
+      if (weights_momenta != null) {
+        for (int i=0; i<weights_momenta.length; ++i)
+          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i]));
+      }
+      if (biases_momenta != null) {
+        for (int i=0; i<biases_momenta.length; ++i)
+          sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i]));
+      }
+      sb.append("\nunits[]="+Arrays.toString(units));
+      sb.append("\nprocessed global: "+get_processed_global());
+      sb.append("\nprocessed local:  "+get_processed_local());
+      sb.append("\nprocessed total:  " + get_processed_total());
+      sb.append("\n");
+      return sb.toString();
+    }
+
     void initializeMembers() {
       randomizeWeights();
       //TODO: determine good/optimal/best initialization scheme for biases
@@ -533,12 +539,12 @@ public class DeepLearningModel extends Model {
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
       if (err.classification && nclasses()==2) err.trainAUC = new AUC();
+      model_info().toString();
       final Frame trainPredict = score(ftrain, false);
       final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC);
-      trainPredict.delete();
-
-      if (err.classification) err.train_err = err.trainAUC != null ? err.trainAUC.err() : trainErr;
+      if (isClassifier()) err.train_err = trainErr;
       else err.train_mse = trainErr;
+      trainPredict.delete();
 
       if (err.validation) {
         assert ftest != null;
@@ -558,15 +564,15 @@ public class DeepLearningModel extends Model {
           validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
         }
         final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC);
-        validPredict.delete();
-        if (err.classification) err.valid_err = err.validAUC != null ? err.validAUC.err() : validErr;
+        if (isClassifier()) err.valid_err = validErr;
         else err.valid_mse = validErr;
+        validPredict.delete();
       }
 
       // keep output JSON small
       if (errors.length > 1) {
-        if (errors[errors.length-1].trainAUC != null) errors[errors.length-1].trainAUC.clear();
-        if (errors[errors.length-1].validAUC != null) errors[errors.length-1].validAUC.clear();
+        if (last_scored().trainAUC != null) last_scored().trainAUC.clear();
+        if (last_scored().validAUC != null) last_scored().validAUC.clear();
       }
 
       // only keep confusion matrices for the last step if there are fewer than specified number of output classes
@@ -585,33 +591,42 @@ public class DeepLearningModel extends Model {
         err2[err2.length-1] = err;
         errors = err2;
       }
+      assert(err.train_err == last_scored().train_err);
+      update(job_key);
+      assert(err.train_err == ((DeepLearningModel)UKV.get(_key)).last_scored().train_err);
+
       _timeLastScoreEnd = System.currentTimeMillis();
       // print the freshly scored model to ASCII
       for (String s : toString().split("\n")) Log.info(s);
       if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
+    } else {
+      update(job_key);
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
       Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
       keep_running = false;
-    } else if ( (model_info().get_params().classification && errors[errors.length-1].train_err <= model_info().get_params().classification_stop)
-        || (!model_info().get_params().classification && errors[errors.length-1].train_mse <= model_info().get_params().regression_stop) ) {
+    } else if ( (isClassifier() && last_scored().train_err <= model_info().get_params().classification_stop)
+        || (!isClassifier() && last_scored().train_mse <= model_info().get_params().regression_stop) ) {
       Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
       keep_running = false;
     }
-    update(job_key);
+//    update(job_key);
 //    System.out.println(this);
     return keep_running;
   }
 
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-//    sb.append(super.toString());
-//    sb.append("\n"+data_info.toString()); //not implemented yet
     sb.append(model_info.toString());
-    sb.append(errors[errors.length - 1].toString());
-//    sb.append("\nrun time: " + PrettyPrint.msecs(run_time, true));
-//    sb.append("\nepoch counter: " + epoch_counter);
+    sb.append(last_scored().toString());
+    return sb.toString();
+  }
+
+  public String toStringAll() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(model_info.toStringAll());
+    sb.append(last_scored().toString());
     return sb.toString();
   }
 
@@ -653,7 +668,8 @@ public class DeepLearningModel extends Model {
       auc.predict = fpreds;
       auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
       auc.serve();
-      error = auc.toASCII(sb);
+      auc.toASCII(sb);
+      error = auc.err();
     } else {
       if (cm == null) cm = new ConfusionMatrix();
       cm.actual = ftest;
@@ -681,7 +697,7 @@ public class DeepLearningModel extends Model {
 //    final String cross_entropy_format = "%2.6f";
 
     // stats for training and validation
-    final Errors error = errors[errors.length - 1];
+    final Errors error = last_scored();
 
     DocGen.HTML.title(sb, title);
 

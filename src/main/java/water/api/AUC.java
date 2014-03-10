@@ -432,7 +432,7 @@ public class AUC extends Request2 {
     return true;
   }
 
-  public double toASCII( StringBuilder sb ) {
+  public void toASCII( StringBuilder sb ) {
     sb.append(CM().toString());
     sb.append("AUC: " + String.format("%.5f", AUC()));
     sb.append(", Gini: " + String.format("%.5f", Gini()));
@@ -442,7 +442,6 @@ public class AUC extends Request2 {
     sb.append(", Recall: " + String.format("%.5f", recall()));
     sb.append(", Specificity: " + String.format("%.5f", specificity()));
     sb.append(", Threshold for " + threshold_criterion.toString().replace("_", " ") + ": " + String.format("%g", threshold()));
-    return AUC();
   }
 
   void plotROC(StringBuilder sb) {

@@ -2,6 +2,7 @@ package hex;
 
 import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
@@ -58,6 +59,9 @@ public class DeepLearningProstateTest extends TestUtil {
       DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
       Frame pred = mymodel.score(frame);
       water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+      final double trainErr = mymodel.calcError(frame, pred, "training", true, CM, null);
+      // test ConfusionMatrix accuracy computation
+      CM = new water.api.ConfusionMatrix();
       CM.actual = frame;
       CM.vactual = frame.vecs()[1];
       CM.predict = pred;
@@ -66,10 +70,12 @@ public class DeepLearningProstateTest extends TestUtil {
       StringBuilder sb = new StringBuilder();
       CM.toASCII(sb);
       double error = new ConfusionMatrix(CM.cm).err();
+      assert(error == mymodel.last_scored().train_err);
       Log.info(sb);
-//      if (error != 0) {
-//        Assert.fail("Classification error is not 0, but " + error + ".");
-//      }
+      Assert.assertEquals(trainErr, error, 1e-10);
+      if (error != 0) {
+        Assert.fail("Classification error is not 0, but " + error + ".");
+      }
       pred.delete();
       mymodel.delete();
     }

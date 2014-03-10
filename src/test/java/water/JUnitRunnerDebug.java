@@ -42,7 +42,7 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       // tests = JUnitRunner.all();
-//      tests.add(NNvsNeuralNet.class); //only passes for NODES=1, not clear why
+//      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
       tests.add(NeuralNetSpiralsTest.class); //compare NeuralNet vs reference
       tests.add(NeuralNetIrisTest.class); //compare NeuralNet vs reference
       tests.add(DeepLearningSpiralsTest.class); //compare NN vs reference

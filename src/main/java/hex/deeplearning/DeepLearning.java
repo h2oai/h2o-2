@@ -337,7 +337,7 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   /**
-   * Create an initial NN model, typically to be trained by trainModel(model)
+   * Create an initial Deep Learning model, typically to be trained by trainModel(model)
    * @return Randomly initialized model
    */
   public final DeepLearningModel initModel() {
@@ -357,7 +357,7 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   /**
-   * Train a NN model
+   * Train a Deep Learning neural net model
    * @param model Input model (e.g., from initModel(), or from a previous training run)
    * @return Trained model
    */
@@ -405,7 +405,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.warn("Setting mini_batch (" + mini_batch
                 + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");
       }
-      // determines the number of rows processed during NNTask, affects synchronization (happens at the end of each NNTask)
+      // determines the number of rows processed during DeepLearningTask, affects synchronization (happens at the end of each DeepLearningTask)
       final float sync_fraction = mini_batch == 0l ? 1.0f : (float)mini_batch / train.numRows();
 
       if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
@@ -459,6 +459,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Delete job related keys
    */
   public void delete() {
+    cleanup();
     if (_fakejob) UKV.remove(job_key);
     remove();
   }
@@ -471,7 +472,7 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   private Frame reBalance(final Frame fr, long seed) {
     Frame f = force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
-//    if (f != fr) tocleanup(f); //triggers assert since vector groups won't match
+    if (f != fr) ltrash(f);
     return f;
   }
 
