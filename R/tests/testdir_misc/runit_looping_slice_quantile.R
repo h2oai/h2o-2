@@ -2,8 +2,9 @@
 # Purpose:  This test exercises slices and quantiles from R.
 #----------------------------------------------------------------------
 
-setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_misc")
-# setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
+options(error=traceback, warn=1)
+# setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_misc")
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 options(echo=TRUE)
 TEST_ROOT_DIR <- ".."
 source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
@@ -16,7 +17,7 @@ source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
 # Binary columns start with 'b' and are 0/1.
 # Distribution columns start with 'd' and are reals.
 
-num_binary_cols = 5
+num_binary_cols = 4
 num_rows = 1000000
 
 # Uniform distribution variable.
@@ -82,6 +83,7 @@ df.gen <- function() {
 
 set.seed(556677)
 df = df.gen()
+df = as.h2o(conn, df, key = "orig.hex")
 
 
 #----------------------------------------------------------------------
@@ -143,6 +145,16 @@ slices = slices.gen()
 
 heading("Doing each slice and calculating the quantile...")
 
+h2o.removeLastValues <- function(conn) {
+    df <- h2o.ls(conn)
+    keys_to_remove <- grep("^Last\\.value\\.", perl=TRUE, x=df$Key, value=TRUE)
+    # TODO: Why are there duplicates?  Probably a bug.
+    unique_keys_to_remove = unique(keys_to_remove)
+    if (length(unique_keys_to_remove) > 0) {
+        h2o.rm(conn, unique_keys_to_remove)
+    }
+}
+
 for (i in 1:nrow(slices)) {
     slice = slices[i,]
     print(slice)
@@ -164,11 +176,12 @@ for (i in 1:nrow(slices)) {
 
     # Create the slice.
     statement = sprintf("slice.df = df[%s,]", predicate)
-    # cat("SLICE: ", statement, "\n")
+    cat("SLICE: ", statement, "\n")
     
     start_sec = Sys.time()
     eval(parse(text=statement))
-    print(nrow(slice.df))
+    print(dim(df))
+    print(dim(slice.df))
 
     # Calculate the quantiles.
     q1 = quantile(x = slice.df$d1, probs = c(0.999))
@@ -181,12 +194,23 @@ for (i in 1:nrow(slices)) {
     slices[i,"d2_quantile_result"] = q2
     slices[i,"d3_quantile_result"] = q3
     slices[i,"wallclock_sec"] = delta_sec
+    print(slices[i,])
+    
+    cat("Removing last values...\n")
+    slice.df = 0
+    gc()
+    h2o.removeLastValues(conn)
 }
 
 print(slices)
+
 
 #----------------------------------------------------------------------
 # Clean up.
 #----------------------------------------------------------------------
 
 PASS_BANNER()
+
+
+# library(debug)
+# mtrace(.h2o.__remoteSend)
