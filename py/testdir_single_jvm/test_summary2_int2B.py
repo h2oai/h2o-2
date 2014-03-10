@@ -9,7 +9,7 @@ print "focuses on numbers from 2B to 3B, which seem to have been dropped by anot
 
 DO_MEDIAN = False
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin': 
+if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 MAX_QBINS = 1

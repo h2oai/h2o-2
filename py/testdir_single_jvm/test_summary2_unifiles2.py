@@ -7,7 +7,7 @@ print "same as test_summary2_unifiles.py but using local runif_.csv single col f
 print "Should really add something that sees we go to 16 with no answer, if bins are set to 1"
 print "Answer not guaranteed (for any data) if max iterations is 16 in h2o and max_qbins is small"
 DO_TRY_SCIPY = False
-if  getpass.getuser() == 'kevin':
+if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
     DO_TRY_SCIPY = True
 
 DO_MEDIAN = True
