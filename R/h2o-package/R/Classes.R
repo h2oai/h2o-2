@@ -625,7 +625,7 @@ h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
     idx <- .variables
   } else if( class(.variables) == 'numeric' ){   # this will happen eg c(1,2,3)
     vars <- .variables
-    idx <- as.integer(variables)
+    idx <- as.integer(.variables)
   }
 
   bad <- is.na(idx) | idx < 1 | idx > ncol(.data)
