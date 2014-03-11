@@ -142,14 +142,18 @@ public class Inspect2 extends Request2 {
     sb.append("<td>").append("Change Type").append("</td>");
     for( int i=0; i<cols.length; i++ ) {
       if(cols[i].type==ColType.Int) {
-        String btn = "<a href='ToEnum2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
-                + "<button type='submit' class='btn btn-custom'>As Factor</button>";
+        String btn = "<span class='btn_custom'>\n";
+        btn += "<a href='ToEnum2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
+                + "<button type='submit' class='btn btn-custom'>As Factor</button>\n";
+        btn += "</span>\n";
         sb.append("<td><b>").append(btn).append("</b></td>");
         continue;
       }
       if(src_key.vecs()[i] instanceof TransfVec) {
-        String btn2 = "<a href='ToInt2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
-                + "<button type='submit' class='btn btn-custom'>As Integer</button>";
+        String btn2 = "<span class='btn_custom'>\n";
+        btn2 += "<a href='ToInt2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
+                + "<button type='submit' class='btn btn-custom'>As Integer</button>\n";
+        btn2 += "</span>\n";
         sb.append("<td><b>").append(btn2).append("</b></td>");
         continue;
       }

@@ -34,7 +34,7 @@ body {
 .btn-custom {
   border-radius: 5px;
   padding: 0px 12px;
-  background-color: hsl(193, 25%, 82%) !important;
+  background-color: #D9EDF7 !important;
   background-repeat: repeat-x;
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#D9EDF7", endColorstr="#D9EDF7");
   background-image: -khtml-gradient(linear, left top, left bottom, from(#D9EDF7), to(#D9EDF7));
@@ -50,12 +50,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-td {
+td, th {
   min-width: 115px;
 }
 
-/*.table th, .table td {*/
-  /*text-align: left;*/
-/*}*/
+
+span.btn_custom{
+    display: block;
+    width: 95px;
+    height: 100%;
+    margin: 0 auto;
+}
 
 

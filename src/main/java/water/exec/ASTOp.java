@@ -549,8 +549,7 @@ abstract class ASTBinOp extends ASTOp {
     }
     final boolean lf = fr0 != null;
     final boolean rf = fr1 != null;
-    final double fd0 = d0;
-    final double fd1 = d1;
+    final double df0 = d0, df1 = d1;
     Frame fr  = null;           // Do-All frame
     int ncols = 0;              // Result column count
     if( fr0 !=null ) {          // Left?
@@ -574,18 +573,21 @@ abstract class ASTBinOp extends ASTOp {
         @Override public void map( Chunk chks[], NewChunk nchks[] ) {
           for( int i=0; i<nchks.length; i++ ) {
             NewChunk n =nchks[i];
-            Chunk c0= !lf ? null : chks[i];
-            Chunk c1= !rf ? null : chks[i+(lf?nchks.length:0)];
-            int rlen = (lf ? c0 : c1)._len;
-            for( int r=0; r<rlen; r++ ) {
-              if(chks[i]._vec.isEnum())
-                n.addNA(); //slam in NA if op on enum; same as R
-              else
-                n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
+            int rlen = chks[0]._len;
+            Chunk c0 = chks[i];
+            if( (!c0._vec.isEnum() &&
+                 !(lf && rf && chks[i+nchks.length]._vec.isEnum())) ||
+                bin instanceof ASTEQ ||
+                bin instanceof ASTNE ) {
+              for( int r=0; r<rlen; r++ )
+                n.addNum(bin.op(lf ? chks[i                      ].at0(r) : df0, 
+                                rf ? chks[i+(lf ? nchks.length:0)].at0(r) : df1));
+            } else {
+              for( int r=0; r<rlen; r++ )  n.addNA();
             }
           }
         }
-      }.doAll(ncols,fr).outputFrame((lf ? fr0 : fr1)._names,(lf ? fr0 : fr1).domains());
+      }.doAll(ncols,fr).outputFrame((lf ? fr0 : fr1)._names,null);
     if( fr0 != null ) env.subRef(fr0,k0);
     if( fr1 != null ) env.subRef(fr1,k1);
     env.pop();
