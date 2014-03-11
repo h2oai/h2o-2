@@ -28,8 +28,8 @@ MULTI_PASS = 1
 
 def random_enum(n, randChars=randChars, quoteChars=quoteChars):
     # randomly return None 10% of the time
-    if random.randint(0,9)==0:
-        return 'NA' # empty string doesn't work for exec compare?
+    # if random.randint(0,9)==0:
+    #    return 'huh' # empty string doesn't work for exec compare?
 
     choiceStr = randChars + quoteChars
     mightBeNumberOrWhite = True
@@ -136,11 +136,16 @@ class Basic(unittest.TestCase):
                 # init cutValue. None means no compare
                 cutValue = [None for i in range(iColCount)]
                 # build up a random cut expression
-                cols = random.sample(range(iColCount), random.randint(0,iColCount))
+                cols = random.sample(range(iColCount), random.randint(1,iColCount))
                 for c in cols:
                     # possible choices within the column
                     cel = colEnumList[c]
-                    celChoice = random.choice(cel)
+                    # for now the cutValues are numbers for the enum mappings
+                    if 1==1:
+                        # FIX! hack. don't use encoding 0, maps to NA here? h2o doesn't like
+                        celChoice = str(random.choice(range(len(cel))))
+                    else:
+                        celChoice = random.choice(cel)
                     cutValue[c] = celChoice
     
                 cutExprList = []
@@ -148,19 +153,20 @@ class Basic(unittest.TestCase):
                     if c is None:   
                         continue
                     else:
-                        cutExprList.append('C'+str(i)+'=='+c)
+                        # new ...ability to reference cols
+                        # src[ src$age<17 && src$zip=95120 && ... , ]
+                        cutExprList.append('p$C'+str(i+1)+'=='+c)
 
-                cutExpr = ' & '.join(cutExprList)
-                print "cutExpr", cutExpr    
+                cutExpr = ' && '.join(cutExprList)
+                print "cutExpr:", cutExpr    
 
                 # should be two different keys in the sample
                 e = random.sample(eKeys,2)
                 fKey = e[0]
                 eKey = e[1]
 
-                function(x){cutExpr}
-                rowExpr = '%s=%s[%s,];' % (fKey, hex_key, cutExpr)
-                print rowExpr
+                rowExpr = '%s[%s,];' % (hex_key, cutExpr)
+                print "rowExpr:", rowExpr
                 rowExprList.append(rowExpr)
 
 
@@ -214,33 +220,41 @@ class Basic(unittest.TestCase):
                 fKey = e[0]
                 eKey = e[1]
 
-                start = time.time()
-                e = h2o.nodes[0].exec_query(str='%s=%s[,%s]' % (fKey, hex_key, randOCol+1))
+                if 1==0:
+                    start = time.time()
+                    e = h2o.nodes[0].exec_query(str='%s=%s[,%s]' % (fKey, hex_key, randOCol+1))
 
-                elapsed = time.time() - start
-                print "exec 1 took", elapsed, "seconds."
-                execTime = elapsed
+                    elapsed = time.time() - start
+                    print "exec 1 took", elapsed, "seconds."
+                    execTime = elapsed
+
+                if 1==1:
+                    start = time.time()
+                    h2o.nodes[0].exec_query(str="%s=%s" % (fKey, random.choice(rowExprList)))
+                    elapsed = time.time() - start
+                    execTime = elapsed
+                    print "exec 2 took", elapsed, "seconds."
                 
                 if 1==0:
                     gKey = random.choice(eKeys)
                     # do a 2nd random to see if things blow up
                     start = time.time()
                     h2o.nodes[0].exec_query(str="%s=%s" % (gKey, fKey))
-                    print "exec 2 took", elapsed, "seconds."
                     elapsed = time.time() - start
+                    print "exec 3 took", elapsed, "seconds."
 
                 if 1==1:
-                    start = time.time()
-                    h2o.nodes[0].exec_query(str="%s" % (random.choice(rowExprList)))
-                    print "exec 3 took", elapsed, "seconds."
-                    elapsed = time.time() - start
+                    inspect = h2o_cmd.runInspect(key=fKey)
+                    h2o_cmd.infoFromInspect(inspect, csvPathname)
+
 
                 # QUANTILE*******************************************************
                 quantile = 0.5 if DO_MEDIAN else .999
                 # first output col. always fed by an exec cut, so 0?
-                column = 0
+                column = iColCount
                 start = time.time()
-                q = h2o.nodes[0].quantiles(source_key=fKey, column=column, quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=MULTI_PASS)
+                q = h2o.nodes[0].quantiles(source_key=fKey, column=column, 
+                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=MULTI_PASS)
                 h2p.red_print("quantile", quantile, q['result'])
                 elapsed = time.time() - start
                 print "quantile end on ", csvFilename, 'took', elapsed, 'seconds.'

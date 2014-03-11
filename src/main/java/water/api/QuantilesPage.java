@@ -190,8 +190,11 @@ public class QuantilesPage extends Request2 {
         interpolation_type_used = qbins2[0]._interpolationType;
       }
       else {
+        // enums must come this way. Right now we don't seem 
+        // to create everything for the normal response, if we reject an enum col.
+        // should fix that. For now, just hack it to not look for stuff
         column_name = "";
-        quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
+        quantile_requested = quantile;
         iterations = 0;
         done = false;
         exactResult = Double.NaN;
