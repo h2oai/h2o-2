@@ -62,10 +62,11 @@ Getting Started
   localH2O <- h2o.init(ip = "localhost", port = 54321)
 
 Users may see a response message in R indicating that the instance of
-H2O running is a different version than that of the corresponding H2O
-R package. Users can resolve the version conflict by simply entering
-“YES” at the prompt, and allowing the correct version of the package
-to automatically install.
+H\ :sub:`2`\ O running is a different version than that of the corresponding 
+H\ :sub:`2`\ O R package. This error will look similar to the picture below. 
+If you get this error, it can be resolved by downloading the correct version of 
+H\ :sub:`2`\ O from http://0xdata.com/downloadtable/. Users should follow the 
+installation instructions on the download page. 
 
 .. image:: UpdateR.png
    :width: 70%
