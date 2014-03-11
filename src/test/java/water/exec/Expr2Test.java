@@ -25,6 +25,7 @@ public class Expr2Test extends TestUtil {
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
 
+
       // Simple numbers & simple expressions
       checkStr("1.23",1.23);
       checkStr(" 1.23 + 2.34",3.57);
@@ -246,6 +247,10 @@ public class Expr2Test extends TestUtil {
       checkStr("ddply(h.hex,NA,sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,NA,3),sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,99,3),sum)","Column 99 out of range for frame columns 17");
+
+      checkStr("nrow(unique(h.hex[,5]))",3);
+      checkStr("nrow(unique(h.hex[,6]))",2);
+      checkStr("nrow(unique(h.hex[,c(5,6)]))",4); // multi-column unique
 
       // Newlines as statement-ends
       checkStr("3*4+5*6",42);

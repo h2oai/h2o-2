@@ -129,6 +129,16 @@ public class Vec extends Iced {
     fs.blockForPending();
     return v0;
   }
+  public static Vec makeSeq( int len ) {
+    Futures fs = new Futures();
+    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
+    NewChunk nc = new NewChunk(av,0);
+    for (int r = 0; r < len; r++) nc.addNum(r+1);
+    nc.close(0,fs);
+    Vec v = av.close(fs);
+    fs.blockForPending();
+    return v;
+  }
 
   /** Create a vector transforming values according given domain map.
    * @see Vec#makeTransf(int[], int[], String[])
