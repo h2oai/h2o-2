@@ -309,13 +309,13 @@ h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
 ddply <- h2o.ddply
 
 # TODO: how to avoid masking plyr?
-. <- function(...) {
+`h2o..` <- function(...) {
   mm <- match.call()
   mm <- mm[-1]
   structure( as.list(mm), class='H2Oquoted')
 }
 
-`h2o..` <- `.`
+`.` <- `h2o..`
 
 h2o.addFunction <- function(object, fun, name){
   if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
@@ -330,6 +330,26 @@ h2o.addFunction <- function(object, fun, name){
   exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
   res <- .h2o.__exec2(object, exec_cmd)
 }
+
+h2o.unique <- function(x, incomparables=F, ...){
+  # NB: we do nothing with incomparables right now
+  # NB: we only support MARGIN=2 (which is the default)
+
+  if(!class(x) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('h2o.unique: x is of the wrong type')
+  if( nrow(x) == 0 | ncol(x) == 0) return(NULL) 
+  if( nrow(x) == 1) return(x)
+
+  args <- list(...)
+  if( 'MARGIN' %in% names(args) && args[['MARGIN']] != 2 ) stop('h2o unique: only MARGIN 2 supported')
+
+  uniq <- function(df){1}
+  h2o.addFunction(l, uniq)
+  res <- h2o.ddply(x, 1:ncol(x), uniq)
+
+  res[,1:(ncol(res)-1)]
+}
+unique.H2OParsedDataVA <- h2o.unique
+unique.H2OParsedData <- h2o.unique
 
 h2o.runif <- function(x, min = 0, max = 1) {
   if(missing(x)) stop("Must specify data set")
