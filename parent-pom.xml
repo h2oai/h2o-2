@@ -2,17 +2,17 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.Oxdata</groupId>
+  <groupId>ai.h2o</groupId>
   <artifactId>h2o-parent</artifactId>
   <version>0.3-SNAPSHOT</version>
   <packaging>pom</packaging>
   
   <name>H2O Project Parent POM</name>
   <description>H2O - the distributed platform for large data analysis.</description>
-  <url>http://0xdata.com/</url>
+  <url>http://h2o.ai/</url>
   <organization>
     <name>0xdata</name>
-    <url>http://0xdata.com/</url>
+    <url>http://h2o.ai/</url>
   </organization>
   <inceptionYear>2013</inceptionYear>
   <licenses>

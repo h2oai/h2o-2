@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <!-- Share H2O-parent POM -->
   <parent>
-    <groupId>com.Oxdata</groupId>
+    <groupId>ai.h2o</groupId>
     <artifactId>h2o-parent</artifactId>
     <version>0.3-SNAPSHOT</version>
     <relativePath>./parent-pom.xml</relativePath>
