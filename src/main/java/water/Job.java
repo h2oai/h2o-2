@@ -4,13 +4,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
-import water.Job.ColumnsJob.colsFilter;
-import water.Job.ColumnsJob.colsNamesFilter;
-import water.Job.ColumnsJob.colsNamesIdxFilter;
-import water.Job.HexJob.source_keyFilter;
-import water.Job.ModelJob.myClassFilter;
-import water.Job.ModelJob.responseFilter;
-import water.Job.ValidatedJob.Response2CMAdaptor;
 import water.api.Constants;
 import water.api.DocGen;
 import water.api.Progress2;
@@ -24,7 +17,9 @@ import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 
 import static water.util.Utils.difference;
 import static water.util.Utils.isEmpty;
@@ -107,7 +102,7 @@ public abstract class Job extends Request2 {
   }
   /** User call which empty local trash of vectors. */
   protected final void emptyLTrash() {
-    if (!_lVecTrash.isEmpty()) return;
+    if (_lVecTrash.isEmpty()) return;
     Futures fs = new Futures();
     cleanupTrash(_lVecTrash, fs);
     fs.blockForPending();

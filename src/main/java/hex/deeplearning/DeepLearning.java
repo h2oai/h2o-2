@@ -413,7 +413,6 @@ public class DeepLearning extends Job.ValidatedJob {
         if (valid != validScoreFrame) ltrash(validScoreFrame);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
-      emptyLTrash();
       model.training_rows = train.numRows();
       if (mini_batch > train.numRows()) {
         Log.warn("Setting mini_batch (" + mini_batch
@@ -432,6 +431,7 @@ public class DeepLearning extends Job.ValidatedJob {
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, timeStart, self()));
 
       Log.info("Finished training the Deep Learning model.");
+      emptyLTrash();
       return model;
     }
     catch(JobCancelledException ex) {
