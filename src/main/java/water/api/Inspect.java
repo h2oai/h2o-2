@@ -653,6 +653,6 @@ public class Inspect extends Request {
 
   @Override
   public RequestServer.API_VERSION[] supportedVersions() {
-    return SUPPORTS_V1_V2;
+    return SUPPORTS_ONLY_V1;
   }
 }
