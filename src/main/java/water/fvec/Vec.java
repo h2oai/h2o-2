@@ -60,7 +60,7 @@ public class Vec extends Iced {
   /** Time parse, index into Utils.TIME_PARSE, or -1 for not-a-time */
   public byte _time;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
-  double _min, _max, _mean, _sigma;
+  private double _min, _max, _mean, _sigma;
   long _size;
   boolean _isInt;
   /** The count of missing elements.... or -2 if we have active writers and no
@@ -128,6 +128,16 @@ public class Vec extends Iced {
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
+  }
+  public static Vec makeSeq( int len ) {
+    Futures fs = new Futures();
+    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
+    NewChunk nc = new NewChunk(av,0);
+    for (int r = 0; r < len; r++) nc.addNum(r+1);
+    nc.close(0,fs);
+    Vec v = av.close(fs);
+    fs.blockForPending();
+    return v;
   }
 
   /** Create a vector transforming values according given domain map.

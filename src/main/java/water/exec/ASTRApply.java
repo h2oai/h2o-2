@@ -136,11 +136,9 @@ class ASTSApply extends ASTRApply {
 
 class ASTddply extends ASTOp {
   static final String VARS[] = new String[]{ "#RxN", "RxC", "subC", "fcn_subRxC"};
-  ASTddply( ) { super(VARS,
-                      new Type[]{ Type.ARY, Type.ARY, Type.dblary(), Type.fcn(new Type[]{Type.dblary(),Type.ARY}) },
-                      OPF_PREFIX,
-                      OPP_PREFIX,
-                      OPA_RIGHT); }
+  ASTddply( ) { this(VARS, new Type[]{ Type.ARY, Type.ARY, Type.dblary(), Type.fcn(new Type[]{Type.dblary(),Type.ARY}) }); }
+  ASTddply(String vars[], Type types[] ) { super(vars,types,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); }
+
   @Override String opStr(){ return "ddply";}
   @Override ASTOp make() {return new ASTddply();}
   @Override void apply(Env env, int argcnt) {
@@ -513,15 +511,17 @@ class ASTddply extends ASTOp {
     // Local (per-Node) work.  Gather the chunks together into the Vecs
     @Override public void lcompute() {
       NewChunk nchks[] = RemoteExec._results.remove(_envkey);
-      if( nchks.length != _avs.length )
-        throw new IllegalArgumentException("Results of ddply must return the same column count, but one group returned "+nchks.length+" columns and this group is returning "+_avs.length);
-      Futures fs = new Futures();
-      for( int i=0; i<_avs.length; i++ ) {
-        NewChunk nc = nchks[i];
-        nc._vec = _avs[i];      // Assign a proper vector
-        nc.close(fs);           // Close & compress chunk
+      if( nchks != null ) {
+        if( nchks.length != _avs.length )
+          throw new IllegalArgumentException("Results of ddply must return the same column count, but one group returned "+nchks.length+" columns and this group is returning "+_avs.length);
+        Futures fs = new Futures();
+        for( int i=0; i<_avs.length; i++ ) {
+          NewChunk nc = nchks[i];
+          nc._vec = _avs[i];      // Assign a proper vector
+          nc.close(fs);           // Close & compress chunk
+        }
+        fs.blockForPending();
       }
-      fs.blockForPending();
       _envkey = null;           // No need to return these
       tryComplete();
     }
@@ -543,4 +543,24 @@ class ASTddply extends ASTOp {
   // associated with any Vec.  We'll fold these into a Vec later when we know
   // cluster-wide what the Groups (and hence Vecs) are.
   private static NewChunk makeNC( ) { return new NewChunk(null,H2O.SELF.index()); }
+}
+
+
+// --------------------------------------------------------------------------
+// unique(ary)
+// Returns only the unique rows
+
+class ASTUnique extends ASTddply {
+  static final String VARS[] = new String[]{ "", "ary"};
+  ASTUnique( ) { super(VARS, new Type[]{ Type.ARY, Type.ARY }); }
+  @Override String opStr(){ return "unique";}
+  @Override ASTOp make() {return new ASTUnique();}
+  @Override void apply(Env env, int argcnt) {
+    int ncols = env.peekAry().numCols();
+    env.push(new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(ncols)}));
+    env.push(new ASTNrow());  // Just return counts
+    super.apply(env,4);
+    Frame fru = env.peekAry();
+    env.subRef(fru.remove(fru.numCols()-1),null); // Drop dummy col
+  }
 }

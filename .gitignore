@@ -39,3 +39,4 @@ R/.RData
 R/.Rhistory
 R/tests/Rsandbox/
 Rsandbox
+h2o-perf/perf-target/*jar

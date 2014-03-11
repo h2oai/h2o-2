@@ -134,6 +134,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTRApply());
     putPrefix(new ASTSApply());
     putPrefix(new ASTddply ());
+    putPrefix(new ASTUnique());
     putPrefix(new ASTRunif ());
     putPrefix(new ASTCut   ());
     putPrefix(new ASTPrint ());
@@ -892,14 +893,7 @@ class ASTSeq extends ASTOp {
     int len = (int)env.popDbl();
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
-    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
-    AppendableVec av = new AppendableVec(key);
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(r+1);
-    nc.close(0,null);
-    Vec v = av.close(null);
-    env.pop();
-    env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+    env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
   }
 }
 
