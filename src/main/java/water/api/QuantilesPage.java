@@ -135,7 +135,7 @@ public class QuantilesPage extends Request2 {
       }
       else {
         column_name = "";
-        quantile_requested = qbins[0].QUANTILES_TO_DO[0];
+        quantile_requested = quantile;
         iterations = 0;
         done = false;
         approxResult = Double.NaN;
