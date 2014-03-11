@@ -94,9 +94,9 @@ public abstract class Job extends Request2 {
 
   /** A set containing a temporary vectors which are <strong>automatically</strong> deleted when job is done.
    *  Deletion is by {@link #cleanup()} call. */
-  private transient HashSet<Vec> _gVecTrash = new HashSet<Vec>();
+  private transient HashSet<Key> _gVecTrash = new HashSet<Key>();
   /** Local trash which can be deleted by user call */
-  private transient HashSet<Vec> _lVecTrash = new HashSet<Vec>();
+  private transient HashSet<Key> _lVecTrash = new HashSet<Key>();
   /** Clean-up code which is executed after each {@link Job#exec()} call in any case (normal/exceptional). */
   protected void cleanup() {
     // Clean-up global list of temporary vectors
@@ -127,12 +127,12 @@ public abstract class Job extends Request2 {
   protected final void ltrash(Vec ...vec) { appendToTrash(_lVecTrash, vec); }
 
   /** Put given vectors into a given trash. */
-  private void appendToTrash(HashSet<Vec> t, Vec[] vec) {
-    for (Vec v : vec) t.add(v);
+  private void appendToTrash(HashSet<Key> t, Vec[] vec) {
+    for (Vec v : vec) t.add(v._key);
   }
   /** Delete all vectors in given trash. */
-  private void cleanupTrash(HashSet<Vec> trash, Futures fs) {
-    for (Vec v : trash) UKV.remove(v._key, fs);
+  private void cleanupTrash(HashSet<Key> trash, Futures fs) {
+    for (Key k : trash) UKV.remove(k, fs);
   }
 
   protected Key defaultJobKey() {
