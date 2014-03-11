@@ -779,9 +779,10 @@ public class DeepLearningModel extends Model {
           sb.append("<td></td>");
           sb.append("<td></td>");
           sb.append("<td></td>");
+          if (!model_info.get_params().adaptive_rate) sb.append("<td></td>");
           sb.append("<td></td>");
           sb.append("<td></td>");
-          sb.append("<td></td>");
+          sb.append("</tr>");
           continue;
         }
         else if (i < neurons.length-1) {
