@@ -483,15 +483,18 @@ public class Inspect extends Request {
           // technically I should check if the whole domain is ints, I just check mu and sigma instead.
           // enums have mu = sigma = NaN, unless they are just transformed int column.
           if(!Double.isNaN(_va._cols[i]._mean) && !Double.isNaN(_va._cols[i]._sigma)){
-            String btn = "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=false" + "'>"
-              + "<button type='submit' class='btn btn-custom'>As Integer</button>";
+            String btn = "<span class='btn_custom'>\n";
+            btn += "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=false" + "'>\n"
+              + "<button type='submit' class='btn btn-custom'>As Integer</button>\n";
+            btn += "</span>\n";
             row.addProperty(_va._cols[i]._name, btn);
           } else row.addProperty(_va._cols[i]._name, "");
           continue;
         }
-
-        String btn = "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=true" + "'>"
+        String btn = "<span class='btn_custom'>\n";
+        btn += "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=true" + "'>"
                 + "<button type='submit' class='btn btn-custom'>As Factor</button>";
+        btn += "</span>\n";
         row.addProperty(_va._cols[i]._name, btn);
       }
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));

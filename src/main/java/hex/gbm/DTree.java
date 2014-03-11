@@ -687,39 +687,39 @@ public class DTree extends Iced {
         }
 
         DocGen.HTML.arrayHead(sb);
-        sb.append("<tr class='warning'>");
-        sb.append("<th>Actual / Predicted</th>"); // Row header
+        sb.append("<tr class='warning' style='min-width:60px'>");
+        sb.append("<th style='min-width:60px'>Actual / Predicted</th>"); // Row header
         for( int i=0; i<cm._arr.length; i++ )
-          sb.append("<th>").append(domain[i]).append("</th>");
-        sb.append("<th>Error</th>");
+          sb.append("<th style='min-width:60px'>").append(domain[i]).append("</th>");
+        sb.append("<th style='min-width:60px'>Error</th>");
         sb.append("</tr>");
 
         // Main CM Body
         long tsum=0, terr=0;               // Total observations & errors
         for( int i=0; i<cm._arr.length; i++ ) { // Actual loop
-          sb.append("<tr>");
-          sb.append("<th>").append(domain[i]).append("</th>");// Row header
+          sb.append("<tr style='min-width:60px'>");
+          sb.append("<th style='min-width:60px'>").append(domain[i]).append("</th>");// Row header
           long sum=0, err=0;                     // Per-class observations & errors
           for( int j=0; j<cm._arr[i].length; j++ ) { // Predicted loop
-            sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
+            sb.append(i==j ? "<td style='background-color:LightGreen; min-width:60px;'>":"<td style='min-width:60px'>");
             sb.append(cm._arr[i][j]).append("</td>");
             sum += cm._arr[i][j];              // Per-class observations
             if( i != j ) err += cm._arr[i][j]; // and errors
           }
-          sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
+          sb.append(String.format("<th style='min-width:60px'>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
           tsum += sum;  terr += err; // Bump totals
         }
         sb.append("</tr>");
 
         // Last row of CM
-        sb.append("<tr>");
-        sb.append("<th>Totals</th>");// Row header
+        sb.append("<tr style='min-width:60px'>");
+        sb.append("<th style='min-width:60px'>Totals</th>");// Row header
         for( int j=0; j<cm._arr.length; j++ ) { // Predicted loop
           long sum=0;
           for( int i=0; i<cm._arr.length; i++ ) sum += cm._arr[i][j];
-          sb.append("<td>").append(sum).append("</td>");
+          sb.append("<td style='min-width:60px'>").append(sum).append("</td>");
         }
-        sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
+        sb.append(String.format("<th style='min-width:60px'>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }
@@ -727,14 +727,14 @@ public class DTree extends Iced {
       if( errs != null ) {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
-        sb.append("<tr><th>Trees</th>");
+        sb.append("<tr style='min-width:60px'><th>Trees</th>");
         last = isClassifier() ? last : errs.length-1; // for regressor reports all errors
         for( int i=last; i>=0; i-- )
-          sb.append("<td>").append(i).append("</td>");
+          sb.append("<td style='min-width:60px'>").append(i).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
         for( int i=last; i>=0; i-- )
-          sb.append(!Double.isNaN(errs[i]) ? String.format("<td>%5.3f</td>",errs[i]) : "<td>---</td>");
+          sb.append(!Double.isNaN(errs[i]) ? String.format("<td style='min-width:60px'>%5.3f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }

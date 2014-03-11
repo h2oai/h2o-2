@@ -50,12 +50,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-td {
+td, th {
   min-width: 115px;
 }
 
-/*.table th, .table td {*/
-  /*text-align: left;*/
-/*}*/
+
+span.btn_custom{
+    display: block;
+    width: 95px;
+    height: 100%;
+    margin: 0 auto;
+}
 
 

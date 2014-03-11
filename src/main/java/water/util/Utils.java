@@ -1127,11 +1127,11 @@ public class Utils {
 
     // Header
     if (html) {
-      sb.append("<tr class='warning'>");
+      sb.append("<tr class='warning' style='min-width:60px'>");
       sb.append("<th>Actual / Predicted</th>");
       for( int p=0; p<pdomain.length; p++ )
         if( pdomain[p] != null )
-          sb.append("<th>").append(pdomain[p]).append("</th>");
+          sb.append("<th style='min-width:60px'>").append(pdomain[p]).append("</th>");
       sb.append("<th>Error</th>");
       sb.append("</tr>");
     } else {
@@ -1156,8 +1156,8 @@ public class Utils {
     for( int a=0; a<cm.length; a++ ) {
       if( adomain[a] == null ) continue;
       if (html) {
-        sb.append("<tr>");
-        sb.append("<th>").append(adomain[a]).append("</th>");
+        sb.append("<tr style='min-width:60px'>");
+        sb.append("<th style='min-width:60px'>").append(adomain[a]).append("</th>");
       } else {
         sb.append(String.format(fmtS,adomain[a]));
       }
@@ -1168,7 +1168,7 @@ public class Utils {
         if( onDiag ) correct = cm[a][p];
         String id = "";
         if (html) {
-          sb.append(onDiag ? "<td style='background-color:LightGreen' "+id+">":"<td "+id+">").append(String.format("%,d", cm[a][p])).append("</td>");
+          sb.append(onDiag ? "<td style='min-width: 60px; background-color:LightGreen' "+id+">":"<td style='min-width: 60px;'"+id+">").append(String.format("%,d", cm[a][p])).append("</td>");
         } else {
           sb.append(String.format(fmt,cm[a][p]));
         }
@@ -1176,7 +1176,7 @@ public class Utils {
       long err = acts[a]-correct;
       terr += err;
       if (html) {
-        sb.append(String.format("<th>%5.3f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
+        sb.append(String.format("<th  style='min-width: 60px;'>%5.3f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
       } else {
         sb.append("   " + String.format("%5.3f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
       }
@@ -1184,14 +1184,14 @@ public class Utils {
 
     // Last row of CM
     if (html) {
-      sb.append("<tr><th>Totals</th>");
+      sb.append("<tr style='min-width:60px'><th>Totals</th>");
     } else {
       sb.append(String.format(fmtS, "Totals"));
     }
     for( int p=0; p<pdomain.length; p++ ) {
       if( pdomain[p] == null ) continue;
       if (html) {
-        sb.append("<td>").append(String.format("%,d", preds[p])).append("</td>");
+        sb.append("<td style='min-width:60px'>").append(String.format("%,d", preds[p])).append("</td>");
       } else {
         sb.append(String.format(fmt, preds[p]));
       }
@@ -1200,7 +1200,7 @@ public class Utils {
     for (long n : acts) nrows += n;
 
     if (html) {
-      sb.append(String.format("<th>%5.3f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
+      sb.append(String.format("<th style='min-width:60px'>%5.3f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
       DocGen.HTML.arrayTail(sb);
     } else {
       sb.append("   " + String.format("%5.3f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
