@@ -51,11 +51,11 @@ body {
 }
 
 td {
-  min-width: 125px;
+  min-width: 115px;
 }
 
-.table th, .table td {
-  text-align: center;
-}
+/*.table th, .table td {*/
+  /*text-align: left;*/
+/*}*/
 
 

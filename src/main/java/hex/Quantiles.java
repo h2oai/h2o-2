@@ -187,11 +187,13 @@ public class Quantiles extends Iced {
     } 
     else { // vec does not contain finite numbers
       // do we care here? have to think about whether multiPass is disabled/
+      // okay this one entry hcnt2 stuff is making the algo die ( I guess the min was nan above)
+      // for now, just make it length 2
       _start2 = vec.min();
       _binsz2 = Double.POSITIVE_INFINITY;
-      hcnt2 = new long[1];
-      hcnt2_min = new double[1];
-      hcnt2_max = new double[1];
+      hcnt2 = new long[2];
+      hcnt2_min = new double[2];
+      hcnt2_max = new double[2];
     }
     hcnt2_low = 0;
     hcnt2_high = 0;
@@ -527,7 +529,8 @@ public class Quantiles extends Iced {
       // Just need to check the one bin below and above k, if they exist. 
       // They might have zero entries, but then it's okay to ignore them.
       // update: use the closest edge in the next bin. better forward progress for small bin counts
-      // This code may make the practical min bin count around 4 or so (not 2)
+      // This code may make the practical min bin count around 4 or so (not 2).
+      // what has length 1 hcnt2 that makese this fail? Enums? shouldn't get here.
       newValStart = hcnt2_min[k];
       if ( k > 0 ) {
         if ( hcnt2[k-1]>0 && (hcnt2_max[k-1]<hcnt2_min[k]) ) {
@@ -539,6 +542,7 @@ public class Quantiles extends Iced {
       // k might be pointing to one less than that (like k=0 for 1 bin case)
       newValEnd = hcnt2_max[k];
       if ( k < (maxBinCnt-1) )  {
+        assert k+1 < hcnt2.length : k+" "+hcnt2.length+" "+_valMaxBinCnt+" "+_isEnum+" "+_isInt;
         if ( hcnt2[k+1]>0 && (hcnt2_min[k+1]>hcnt2_max[k]) ) {
           newValEnd = hcnt2_min[k+1];
         }
