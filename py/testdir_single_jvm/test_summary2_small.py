@@ -20,7 +20,7 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
+def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None, h2oMedian2=None):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     # from numpy import loadtxt, genfromtxt, savetxt
     import numpy as np
@@ -75,17 +75,23 @@ def generate_scipy_comparison(csvPathname, col=0, h2oMedian=None):
     # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
     # inplace sort
     targetFP.sort()
-    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='linear')
     label = '50%' if DO_MEDIAN else '99.9%'
-    h2p.blue_print(label, "from sort (mean):", b)
-    h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
-    h2p.blue_print(label, "from h2o summary:", h2oMedian)
+    h2p.blue_print(label, "from sort:", b)
+    s = a[5 if DO_MEDIAN else 10]
+    h2p.blue_print(label, "from scipy:", s)
+    h2p.blue_print(label, "from h2o summary2:", h2oMedian)
+    h2p.blue_print(label, "from h2o quantile multipass:", h2oMedian2)
+    # they should be identical. keep a tight absolute tolerance
+    h2o_util.assertApproxEqual(h2oMedian2, b, tol=0.0000002, msg='h2o quantile multipass is not approx. same as sort algo')
+    h2o_util.assertApproxEqual(h2oMedian2, s, tol=0.0000002, msg='h2o quantile multipass is not approx. same as scipy algo')
     # see if scipy changes. nope. it doesn't 
     if 1==0:
-        a = stats.mstats.mquantiles(targetFP, prob=per)
+        a = stats.mstats.mquantiles(targetFP, prob=per, alphab=1, betab=1)
         a2 = ["%.2f" % v for v in a]
         h2p.red_print("after sort")
         h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+
 
 def write_syn_dataset(csvPathname, rowCount, colCount, values, SEED):
     r1 = random.Random(SEED)
@@ -187,6 +193,23 @@ class Basic(unittest.TestCase):
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS, timeoutSecs=45)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
+            quantile = 0.5 if DO_MEDIAN else .999
+            q = h2o.nodes[0].quantiles(source_key=hex_key, column=0, interpolation_type=7,
+                quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
+            qresult = q['result']
+            qresult_single = q['result_single']
+            qresult_iterations = q['iterations']
+            qresult_interpolated = q['interpolated']
+            h2p.blue_print("h2o quantiles result:", qresult)
+            h2p.blue_print("h2o quantiles result_single:", qresult_single)
+            h2p.blue_print("h2o quantiles iterations:", qresult_iterations)
+            h2p.blue_print("h2o quantiles interpolated:", qresult_interpolated)
+            print h2o.dump_json(q)
+
+            self.assertLess(qresult_iterations, 16,
+                msg="h2o does max of 16 iterations. likely no result_single if we hit max. is bins=1?")
+
+
             # only one column
             column = summaryResult['summaries'][0]
 
@@ -267,7 +290,10 @@ class Basic(unittest.TestCase):
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                 print scipyCol, pctile[10]
                 generate_scipy_comparison(csvPathnameFull, col=scipyCol,
-                    h2oMedian=pctile[5 if DO_MEDIAN else 10])
+                     # h2oMedian=pctile[5 if DO_MEDIAN else 10], result_single)
+                    h2oMedian=pctile[5 if DO_MEDIAN else 10], h2oMedian2=qresult)
+
+
 
             h2i.delete_keys_at_all_nodes()
 

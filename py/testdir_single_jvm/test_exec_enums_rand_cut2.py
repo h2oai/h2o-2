@@ -15,7 +15,7 @@ quoteChars = "\'\""
 # don't use any quote characters. We'd have to protect combinations
 quoteChars = ""
 MIN_ENUM_WIDTH = 2
-MAX_ENUM_WIDTH = 8
+MAX_ENUM_WIDTH = 2
 RAND_ENUM_LENGTH = True
 CUT_EXPR_CNT = 200
 
@@ -136,7 +136,10 @@ class Basic(unittest.TestCase):
                 # init cutValue. None means no compare
                 cutValue = [None for i in range(iColCount)]
                 # build up a random cut expression
-                cols = random.sample(range(iColCount), random.randint(1,iColCount))
+                # cols = random.sample(range(iColCount), random.randint(1,iColCount))
+                # don't constrain it so much ..only use a handful of cols 4?
+                # want to get "something"
+                cols = random.sample(range(iColCount-1), random.randint(1,4))
                 for c in cols:
                     # possible choices within the column
                     cel = colEnumList[c]
@@ -155,7 +158,11 @@ class Basic(unittest.TestCase):
                     else:
                         # new ...ability to reference cols
                         # src[ src$age<17 && src$zip=95120 && ... , ]
-                        cutExprList.append('p$C'+str(i+1)+'=='+c)
+                        # randomly pick == or !=
+                        if random.randint(0,1)==0:
+                            cutExprList.append('p$C'+str(i+1)+'!='+c)
+                        else:
+                            cutExprList.append('p$C'+str(i+1)+'=='+c)
 
                 cutExpr = ' && '.join(cutExprList)
                 print "cutExpr:", cutExpr    
