@@ -292,8 +292,14 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
             missingValuesDict[k] = c[keyNA]
             printMsg = True
 
-        if c['min']==c['max'] and c['type']!='enum':
+        if c['min']==c['max'] and (c['type']!='Enum' and c['type']!='enum'):
             msg += (" constant value (min=max): %s" % c['min'])
+            constantValuesDict[k] = c['min']
+            printMsg = True
+
+        # if the naCnt = num_rows, that means it's likely forced NAs..so detect that
+        if c[keyNA]==num_rows:
+            msg += (" constant value (na count = num rows): %s" % c['min'])
             constantValuesDict[k] = c['min']
             printMsg = True
 

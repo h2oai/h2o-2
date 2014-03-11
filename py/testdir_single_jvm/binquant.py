@@ -174,6 +174,8 @@ def findQuantile(d, dmin, dmax, threshold):
             if ((cC and not cD) or (not cC and cD)):
                 h2p.red_print("CD Interesting upper bin edge case %s%s" % (t[cC], t[cD]), "cC", cC, "cB", cD, "val", val, "valEnd", valEnd, \
                     "binIdx2", binIdx2, "maxBinCnt", maxBinCnt)
+                # example hits this case..i.e. the max value
+                # CD Interesting upper bin edge case 01 cC False cB True val 100.995097486 valEnd 100.995097486 binIdx2 2 maxBinCnt 3
                 
             if valOffset < 0 or binIdx2<0:
             # if valOffset < 0:
