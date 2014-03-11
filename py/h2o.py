@@ -1542,14 +1542,14 @@ class H2O(object):
         return a
 
     # 'destination_key', 'escape_nan' 'expression'
-    def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
+    def exec_query(self, timeoutSecs=20, ignoreH2oError=False, print_params=True, **kwargs):
         # only v2 now
         params_dict = {
             'str': None,
             }
 
         browseAlso = kwargs.pop('browseAlso',False)
-        check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=True)
+        check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=print_params)
         verboseprint("\nexec_query:", params_dict)
         a = self.__do_json_request('2/Exec2.json',
             timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)

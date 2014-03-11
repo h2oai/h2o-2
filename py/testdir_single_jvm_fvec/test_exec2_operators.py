@@ -2,6 +2,9 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
+# new ...ability to reference cols
+# src[ src$age<17 && src$zip=95120 && ... , ]
+# can specify values for enums ..values are 0 thru n-1 for n enums
 initList = [
         # ('r.1', 'r.1=c(1.3,0,1,2,3,4,5)'),
         # ('r2.hex', 'r2.hex=c(2.3,0,1,2,3,4,5)'),

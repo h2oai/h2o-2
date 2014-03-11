@@ -128,9 +128,9 @@ class Basic(unittest.TestCase):
         # new with 1000 bins. copy expected from R
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
-            # ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
-            # ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            # ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
+            ('runif_.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
             
 
         ]
