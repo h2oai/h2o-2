@@ -60,7 +60,7 @@ public class Vec extends Iced {
   /** Time parse, index into Utils.TIME_PARSE, or -1 for not-a-time */
   public byte _time;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
-  double _min, _max, _mean, _sigma;
+  private double _min, _max, _mean, _sigma;
   long _size;
   boolean _isInt;
   /** The count of missing elements.... or -2 if we have active writers and no
