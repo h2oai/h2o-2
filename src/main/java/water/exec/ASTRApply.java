@@ -511,15 +511,17 @@ class ASTddply extends ASTOp {
     // Local (per-Node) work.  Gather the chunks together into the Vecs
     @Override public void lcompute() {
       NewChunk nchks[] = RemoteExec._results.remove(_envkey);
-      if( nchks.length != _avs.length )
-        throw new IllegalArgumentException("Results of ddply must return the same column count, but one group returned "+nchks.length+" columns and this group is returning "+_avs.length);
-      Futures fs = new Futures();
-      for( int i=0; i<_avs.length; i++ ) {
-        NewChunk nc = nchks[i];
-        nc._vec = _avs[i];      // Assign a proper vector
-        nc.close(fs);           // Close & compress chunk
+      if( nchks != null ) {
+        if( nchks.length != _avs.length )
+          throw new IllegalArgumentException("Results of ddply must return the same column count, but one group returned "+nchks.length+" columns and this group is returning "+_avs.length);
+        Futures fs = new Futures();
+        for( int i=0; i<_avs.length; i++ ) {
+          NewChunk nc = nchks[i];
+          nc._vec = _avs[i];      // Assign a proper vector
+          nc.close(fs);           // Close & compress chunk
+        }
+        fs.blockForPending();
       }
-      fs.blockForPending();
       _envkey = null;           // No need to return these
       tryComplete();
     }

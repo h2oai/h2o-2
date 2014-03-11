@@ -249,8 +249,8 @@ public class Expr2Test extends TestUtil {
       checkStr("ddply(h.hex,c(1,99,3),sum)","Column 99 out of range for frame columns 17");
 
       checkStr("nrow(unique(h.hex[,5]))",3);
-      checkStr("nrow(unique(h.hex[,3]))",2);
-      checkStr("nrow(unique(h.hex[,c(3,5)]))",5);
+      checkStr("nrow(unique(h.hex[,6]))",2);
+      checkStr("nrow(unique(h.hex[,c(5,6)]))",4); // multi-column unique
 
       // Newlines as statement-ends
       checkStr("3*4+5*6",42);
