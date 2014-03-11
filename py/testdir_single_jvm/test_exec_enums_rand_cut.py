@@ -1,6 +1,8 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+import h2o_gbm
+import getpass
 
 # details:
 # we want to seed a random dictionary for our enums
@@ -16,6 +18,13 @@ quoteChars = ""
 MIN_ENUM_WIDTH = 2
 MAX_ENUM_WIDTH = 8
 RAND_ENUM_LENGTH = True
+
+DO_PLOT = getpass.getuser()=='kevin'
+
+DO_MEDIAN = True
+MAX_QBINS = 1000
+MULTI_PASS = 1
+
 def random_enum(n, randChars=randChars, quoteChars=quoteChars):
     # randomly return None 10% of the time
     if random.randint(0,9)==0:
@@ -74,6 +83,7 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
         dsf.write(rowDataCsv)
     dsf.close()
 
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -90,7 +100,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ### time.sleep(3600)
+        h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_exec_enums_rand_cut(self):
@@ -104,9 +114,18 @@ class Basic(unittest.TestCase):
             (n, 10, 9, 'cE', 300), 
             ]
 
-        ### h2b.browseTheCloud()
+        # create key names to use for exec
+        eKeys = ['e%s' % i for i in range(10)]
+
+        h2b.browseTheCloud()
+        trial = 0
+        xList = []
+        eList = []
+        fList = []
         for repeat in range(10):
             for (rowCount, iColCount, oColCount, hex_key, timeoutSecs) in tryList:
+
+                # CREATE DATASET*******************************************
                 colCount = iColCount + oColCount
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = 'syn_enums_' + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -115,7 +134,13 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname
                 write_syn_dataset(csvPathname, rowCount, iColCount, oColCount, SEEDPERFILE)
 
-                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
+                # PARSE*******************************************************
+                # should be two different keys in the sample
+                e = random.sample(eKeys,2)
+                fKey = e[0]
+                eKey = e[1]
+
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=eKey, timeoutSecs=30)
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
                 print h2o.dump_json(inspect)
@@ -126,12 +151,56 @@ class Basic(unittest.TestCase):
                 # error if any col has constant values
                 if len(constantValuesDict) != 0:
                     raise Exception("Probably got a col NA'ed and constant values as a result %s" % constantValuesDict)
-                
+
+                # EXEC*******************************************************
+                # don't use exec_expr to avoid issues with Inspect following etc.
+                randICol = random.randint(0,iColCount-1)
+                randOCol = random.randint(iColCount, iColCount+oColCount-1)
 
                 start = time.time()
+                h2o.nodes[0].exec_query(str='%s=%s[%s,]' % (fKey, eKey, randOCol))
                 elapsed = time.time() - start
-                print "predict end on ", csvFilename, 'took', elapsed, 'seconds.'
+                print "exec1 end on ", csvFilename, 'took', elapsed, 'seconds.'
+                execTime = elapsed
+                
+                gKey = random.choice(eKeys)
+
+                start = time.time()
+                h2o.nodes[0].exec_query(str='%s=%s' % (gKey, fKey))
+                print "exec2 end on ", csvFilename, 'took', elapsed, 'seconds.'
+                elapsed = time.time() - start
+                execTime = elapsed
+
+                # QUANTILE*******************************************************
+                quantile = 0.5 if DO_MEDIAN else .999
+                # first output col
+                column = iColCount
+                start = time.time()
+                q = h2o.nodes[0].quantiles(source_key=fKey, column=column, quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=MULTI_PASS)
+                elapsed = time.time() - start
+                print "quantile end on ", csvFilename, 'took', elapsed, 'seconds.'
+                quantileTime = elapsed
+
+
+                # remove all keys*******************************************************
+                start = time.time()
                 h2o.nodes[0].remove_all_keys()
+                elapsed = time.time() - start
+                print "remove all keys end on ", csvFilename, 'took', elapsed, 'seconds.'
+
+                trial += 1
+                xList.append(trial)
+                eList.append(execTime)
+                fList.append(quantileTime)
+
+        if DO_PLOT:
+            xLabel = 'trial'
+            eLabel = 'exec cut time'
+            fLabel = 'quantile time'
+            eListTitle = ""
+            fListTitle = ""
+            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
+
 
 
 if __name__ == '__main__':
