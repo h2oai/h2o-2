@@ -89,7 +89,10 @@ public class RequestStatics extends Constants {
    */
   public static String JSON2HTML(String name) {
     if( name.length() < 1 ) return name;
-    return name.substring(0,1).toUpperCase()+name.replace("_"," ").substring(1);
+    if(name == "row") {
+      return name.substring(0,1).toUpperCase()+ name.replace("_"," ").substring(1);
+    }
+    return name.substring(0,1)+name.replace("_"," ").substring(1);
   }
 
   public static String Str2JSON( String x ) {

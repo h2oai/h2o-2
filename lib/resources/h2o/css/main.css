@@ -34,7 +34,7 @@ body {
 .btn-custom {
   border-radius: 5px;
   padding: 0px 12px;
-  background-color: hsl(193, 25%, 82%) !important;
+  background-color: #D9EDF7 !important;
   background-repeat: repeat-x;
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#D9EDF7", endColorstr="#D9EDF7");
   background-image: -khtml-gradient(linear, left top, left bottom, from(#D9EDF7), to(#D9EDF7));
