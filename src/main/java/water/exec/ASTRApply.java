@@ -136,11 +136,9 @@ class ASTSApply extends ASTRApply {
 
 class ASTddply extends ASTOp {
   static final String VARS[] = new String[]{ "#RxN", "RxC", "subC", "fcn_subRxC"};
-  ASTddply( ) { super(VARS,
-                      new Type[]{ Type.ARY, Type.ARY, Type.dblary(), Type.fcn(new Type[]{Type.dblary(),Type.ARY}) },
-                      OPF_PREFIX,
-                      OPP_PREFIX,
-                      OPA_RIGHT); }
+  ASTddply( ) { this(VARS, new Type[]{ Type.ARY, Type.ARY, Type.dblary(), Type.fcn(new Type[]{Type.dblary(),Type.ARY}) }); }
+  ASTddply(String vars[], Type types[] ) { super(vars,types,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); }
+
   @Override String opStr(){ return "ddply";}
   @Override ASTOp make() {return new ASTddply();}
   @Override void apply(Env env, int argcnt) {
@@ -543,4 +541,24 @@ class ASTddply extends ASTOp {
   // associated with any Vec.  We'll fold these into a Vec later when we know
   // cluster-wide what the Groups (and hence Vecs) are.
   private static NewChunk makeNC( ) { return new NewChunk(null,H2O.SELF.index()); }
+}
+
+
+// --------------------------------------------------------------------------
+// unique(ary)
+// Returns only the unique rows
+
+class ASTUnique extends ASTddply {
+  static final String VARS[] = new String[]{ "", "ary"};
+  ASTUnique( ) { super(VARS, new Type[]{ Type.ARY, Type.ARY }); }
+  @Override String opStr(){ return "unique";}
+  @Override ASTOp make() {return new ASTUnique();}
+  @Override void apply(Env env, int argcnt) {
+    int ncols = env.peekAry().numCols();
+    env.push(new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(ncols)}));
+    env.push(new ASTNrow());  // Just return counts
+    super.apply(env,4);
+    Frame fru = env.peekAry();
+    env.subRef(fru.remove(fru.numCols()-1),null); // Drop dummy col
+  }
 }

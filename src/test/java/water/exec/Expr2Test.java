@@ -25,6 +25,7 @@ public class Expr2Test extends TestUtil {
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
 
+
       // Simple numbers & simple expressions
       checkStr("1.23",1.23);
       checkStr(" 1.23 + 2.34",3.57);
@@ -186,7 +187,7 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){h.hex})","apply requires that ary fun(ary x) return 1 column");
       checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
-      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",183.96); // Row-wise apply on mean
+      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",184.96); // Row-wise apply on mean
 
       // Conditional selection; 
       checkStr("ifelse(0,1,2)",2);
@@ -246,6 +247,10 @@ public class Expr2Test extends TestUtil {
       checkStr("ddply(h.hex,NA,sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,NA,3),sum)","NA not a valid column");
       checkStr("ddply(h.hex,c(1,99,3),sum)","Column 99 out of range for frame columns 17");
+
+      checkStr("nrow(unique(h.hex[,5]))",3);
+      checkStr("nrow(unique(h.hex[,3]))",2);
+      checkStr("nrow(unique(h.hex[,c(3,5)]))",5);
 
       // Newlines as statement-ends
       checkStr("3*4+5*6",42);
