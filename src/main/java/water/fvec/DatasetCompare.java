@@ -26,7 +26,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
     final Key vaKey = ValueArray.getArrayKey(key);
     final Vec [] vecs = _fr.vecs();
     for(int i  = 0; i < vecs.length; ++i)
-      assert vecs[i] != null:"missing vector[" + i + "] "+ _fr._names[i] + ", keys = " + Arrays.toString(_fr._keys) + ", vecs = " + Arrays.toString(_fr._vecs);
+      assert vecs[i] != null:"missing vector[" + i + "] "+ _fr.names()[i] + ", keys = " + Arrays.toString(_fr._keys) + ", vecs = " + Arrays.toString(_fr.vecs());
     ValueArray va = DKV.get(vaKey).get();
     AutoBuffer bits = va.getChunk(key);
     final int rows = va.rpc(cidx);
