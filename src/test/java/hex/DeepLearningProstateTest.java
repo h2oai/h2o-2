@@ -26,31 +26,30 @@ public class DeepLearningProstateTest extends TestUtil {
     Key dest = Key.make("prostate");
 
     // build the model, with all kinds of shuffling/rebalancing/sampling
-    DeepLearning p = new DeepLearning();
-    p.epochs = 17;
-    p.source = frame;
-    p.response = frame.vecs()[1];
-    p.destination_key = dest;
-    p.seed = 0xC01DF337;
+    {
+      DeepLearning p = new DeepLearning();
+      p.epochs = 35;
+      p.source = frame;
+      p.validation = frame;
+      p.response = frame.vecs()[1];
+      p.destination_key = dest;
+      p.seed = 0xC01DF337;
 
-    // Leaky
-//      p.force_load_balance = true;
-//      p.balance_classes = true;
-//      p.shuffle_training_data = true;
-//      p.score_training_samples = 100;
-//      NNModel mymodel = p.initModel();
-//      p.trainModel(mymodel);
-//      p.trainModel(mymodel);
-//      p.delete();
+      p.force_load_balance = true; //rebalance for multi-threading
+      p.shuffle_training_data = true; //shuffle training data
+      p.score_training_samples = 100; //sample training data for scoring
+//      p.balance_classes = true; //rebalance classes for higher accuracy
+//      p.score_validation_sampling = DeepLearning.ClassSamplingMethod.Stratified; //stratified sampling of validation set for scoring
 
-    // No leaks
-    p.force_load_balance = false;
-    p.balance_classes = false;
-    p.shuffle_training_data = false;
-    p.score_training_samples = 0;
-    p.execImpl();
+      // Train the model via checkpointing
+      DeepLearningModel mymodel = p.initModel();
+      p.trainModel(mymodel);
+      p.trainModel(mymodel, p.epochs); //incremental training
+      p.trainModel(mymodel, p.epochs); //incremental training
+      p.delete();
+    }
 
-    // score and check result
+    // score and check result (on full data)
     {
       DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
       Frame pred = mymodel.score(frame);
@@ -66,10 +65,6 @@ public class DeepLearningProstateTest extends TestUtil {
       auc.toASCII(sb);
       final double threshold = auc.threshold();
       final double error = auc.err();
-
-      // check absolute value for default operation
-      if (!p.force_load_balance && !p.shuffle_training_data && !p.balance_classes && p.score_training_samples == 0)
-        Assert.assertEquals(0.25263157894736843, error, 1e-15);
 
       // check that auc.cm() is the right CM
       Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);

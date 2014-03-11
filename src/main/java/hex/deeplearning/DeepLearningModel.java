@@ -520,7 +520,7 @@ public class DeepLearningModel extends Model {
     final long sinceLastScore = now -_timeLastScoreStart;
     final long sinceLastPrint = now -_timeLastPrintStart;
     final long samples = model_info().get_processed_total();
-    if (sinceLastPrint > model_info().get_params().score_interval*1000) {
+    if (!keep_running || sinceLastPrint > model_info().get_params().score_interval*1000) {
       _timeLastPrintStart = now;
       Log.info("Training time: " + PrettyPrint.msecs(now - start_time, true)
               + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."

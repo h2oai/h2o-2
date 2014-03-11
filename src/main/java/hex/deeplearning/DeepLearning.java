@@ -6,8 +6,8 @@ import water.H2O;
 import water.Job;
 import water.Key;
 import water.UKV;
-import water.api.DocGen;
 import water.api.DeepLearningProgressPage;
+import water.api.DocGen;
 import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Log;
@@ -357,6 +357,17 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   /**
+   * Incrementally train an existing model
+   * @param model Initial model
+   * @param epochs How many epochs to train for
+   * @return Updated model
+   */
+  public final DeepLearningModel trainModel(DeepLearningModel model, double epochs) {
+    model.model_info().get_params().epochs += epochs;
+    return trainModel(model);
+  }
+
+  /**
    * Train a Deep Learning neural net model
    * @param model Input model (e.g., from initModel(), or from a previous training run)
    * @return Trained model
@@ -384,6 +395,7 @@ public class DeepLearning extends Job.ValidatedJob {
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
       trainScoreFrame = sampleFrame(train, score_training_samples, seed); //training scoring dataset is always sampled uniformly from the training dataset
+      if (train != trainScoreFrame) ltrash(trainScoreFrame);
 
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
@@ -398,8 +410,10 @@ public class DeepLearning extends Job.ValidatedJob {
         } else {
           validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
         }
+        if (valid != validScoreFrame) ltrash(validScoreFrame);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
+      emptyLTrash();
       model.training_rows = train.numRows();
       if (mini_batch > train.numRows()) {
         Log.warn("Setting mini_batch (" + mini_batch
@@ -431,8 +445,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     finally {
       if (model != null) model.unlock(self());
-      if (validScoreFrame != null && validScoreFrame != valid) validScoreFrame.delete();
-      if (trainScoreFrame != null && trainScoreFrame != train) trainScoreFrame.delete();
       unlock_data();
     }
   }
