@@ -19,7 +19,7 @@ import water.fvec.Vec.VectorGroup;
 public class Frame extends Lockable<Frame> {
   public String[] _names;
   Key[] _keys;          // Keys for the vectors
-  transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
+  private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
   public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
@@ -55,7 +55,8 @@ public class Frame extends Lockable<Frame> {
     return new Frame(names,vecs);
   }
   public final Vec[] vecs() {
-    if( _vecs != null ) return _vecs;
+    Vec[] tvecs = _vecs; // read the content
+    if( tvecs != null ) return tvecs; // compare and return directly
     // Load all Vec headers; load them all in parallel by spawning F/J tasks.
     final Vec [] vecs = new Vec[_keys.length];
     Futures fs = new Futures();
