@@ -4,7 +4,6 @@ import hex.NewRowVecTask.DataFrame;
 
 import java.util.Arrays;
 
-import junit.framework.Assert;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
@@ -66,7 +65,7 @@ public abstract class PCAScoreTask {
   public static Frame standardize(final DataFrame data) {
     // Extract only the columns in the associated model
     Frame subset = data.modelAsFrame();
-    Assert.assertEquals(subset.numCols(), data._normSub.length);
+    assert subset.numCols() == data._normSub.length;
     return standardize(subset, data._normSub, data._normMul);
   }
 

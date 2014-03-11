@@ -6,7 +6,6 @@ import java.util.Comparator;
 import org.apache.commons.lang.ArrayUtils;
 
 import jsr166y.CountedCompleter;
-import junit.framework.Assert;
 import hex.DGLM.*;
 import hex.DGLM.GLMModel.Status;
 import hex.NewRowVecTask.DataFrame;
