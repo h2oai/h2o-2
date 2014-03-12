@@ -1,6 +1,5 @@
 package hex.deeplearning;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask.DataInfo;
 import water.*;
 import water.api.*;
@@ -247,7 +246,7 @@ public class DeepLearningModel extends Model {
       assert(num_input > 0);
       assert(num_output > 0);
       parameters = params;
-      if (has_momenta() && adaDelta()) throw new InvalidArgumentException("Cannot have non-zero momentum and non-zero AdaDelta parameters at the same time.");
+      if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and non-zero AdaDelta parameters at the same time.");
       final int layers=parameters.hidden.length;
       // units (# neurons for each layer)
       units = new int[layers+2];
@@ -488,6 +487,13 @@ public class DeepLearningModel extends Model {
       }
     }
   }
+
+  /**
+   * Constructor to restart from a checkpointed model
+   * @param cp Checkpoint to restart from
+   * @param selfKey New destination key for the model
+   * @param jobKey New job key (job which updates the model)
+   */
   public DeepLearningModel(DeepLearningModel cp, Key selfKey, Key jobKey) {
     super(selfKey, cp._dataKey, cp.model_info().data_info()._adaptedFrame, cp._priorClassDist);
     this.jobKey = jobKey;
@@ -495,7 +501,13 @@ public class DeepLearningModel extends Model {
     model_info.parameters.destination_key = selfKey;
     model_info.parameters.job_key = jobKey;
     start_time = cp.start_time;
+    run_time = cp.run_time;
     errors = cp.errors.clone();
+    model_info.parameters.start_time = System.currentTimeMillis(); //for displaying the model progress
+    _timeLastScoreEnter = System.currentTimeMillis();
+    _timeLastScoreStart = 0;
+    _timeLastScoreEnd = 0;
+    _timeLastPrintStart = 0;
   }
 
   public DeepLearningModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, DeepLearning params, float[] priorDist) {
@@ -503,6 +515,7 @@ public class DeepLearningModel extends Model {
     this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
+    _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
     errors = new Errors[1];
     errors[0] = new Errors();
@@ -548,7 +561,7 @@ public class DeepLearningModel extends Model {
       Errors err = new Errors();
       err.classification = isClassifier();
       assert(err.classification == model_info().get_params().classification);
-      err.training_time_ms = now - timeStart;
+      err.training_time_ms = run_time;
       err.epoch_counter = epoch_counter;
       err.validation = ftest != null;
       err.training_samples = model_info().get_processed_total();
@@ -733,12 +746,13 @@ public class DeepLearningModel extends Model {
     model_info.job().toHTML(sb);
     Inspect2 is2 = new Inspect2();
     sb.append("<div class='alert'>Actions: "
-            + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Stop training") + ", " : "")
+            + (Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null) + ", "
-            + (Job.isEnded(jobKey) ? DeepLearning.link(_dataKey, "Continue training this model", _key) : "")
+            + DeepLearning.link(_dataKey, "Compute new model", null, null) + ", "
+            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>"
+            + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName()) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
@@ -842,7 +856,7 @@ public class DeepLearningModel extends Model {
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
     final boolean isEnded = Job.isEnded(model_info().job().self());
-    long time_so_far = isEnded ? error.training_time_ms : System.currentTimeMillis() - model_info.parameters.start_time;
+    final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
       DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");
     }

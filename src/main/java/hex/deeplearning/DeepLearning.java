@@ -1,6 +1,5 @@
 package hex.deeplearning;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
 import water.H2O;
@@ -208,7 +207,7 @@ public class DeepLearning extends Job.ValidatedJob {
         arg.disable("Taken from model checkpoint.");
         final DeepLearningModel cp_model = UKV.get(checkpoint);
         if (cp_model.model_info().unstable()) {
-          throw new InvalidArgumentException("Checkpointed model was unstable. Not restarting.");
+          throw new IllegalArgumentException("Checkpointed model was unstable. Not restarting.");
         }
         final DeepLearning cp = cp_model.model_info().get_params();
 //        destination_key = cp.destination_key; //continue training the SAME model
@@ -315,17 +314,29 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /**
    * Return a query link to this page
-   * @param k Key
-   * @param content String to display
-   * @param cp Key to checkpoint to continue training with (optional)
+   * @param k Model Key
+   * @param content Link text
    * @return HTML Link
    */
-  public static String link(Key k, String content, Key cp) {
+  public static String link(Key k, String content) {
+    return link(k, content, null, null);
+  }
+
+  /**
+   * Return a query link to this page
+   * @param k Model Key
+   * @param content Link text
+   * @param cp Key to checkpoint to continue training with (optional)
+   * @param response Response
+   * @return HTML Link
+   */
+  public static String link(Key k, String content, Key cp, String response) {
     DeepLearning req = new DeepLearning();
-    RString rs = new RString("<a href='" + req.href() + ".query?source=%$key&checkpoint=%$cp'>%content</a>");
+    RString rs = new RString("<a href='" + req.href() + ".query?source=%$key&checkpoint=%$cp&response=%$resp'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
     rs.replace("cp", cp == null ? "null" : cp.toString());
+    rs.replace("resp", response == null ? "null" : response);
     return rs.toString();
   }
 
@@ -347,19 +358,19 @@ public class DeepLearning extends Job.ValidatedJob {
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
         if (source != previous.model_info().get_params().source) {
-          throw new InvalidArgumentException("source must be the same as for the checkpointed model.");
+          throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
         }
         if (response != previous.model_info().get_params().response) {
-          throw new InvalidArgumentException("response must be the same as for the checkpointed model.");
+          throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
         }
         if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0) {
-          throw new InvalidArgumentException("ignored_cols must be the same as for the checkpointed model.");
+          throw new IllegalArgumentException("ignored_cols must be the same as for the checkpointed model.");
         }
         if (validation != previous.model_info().get_params().validation) {
-          throw new InvalidArgumentException("validation must be the same as for the checkpointed model.");
+          throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
         }
         if (classification != previous.model_info().get_params().classification) {
-          throw new InvalidArgumentException("classification must be the same as for the checkpointed model.");
+          throw new IllegalArgumentException("classification must be the same as for the checkpointed model.");
         }
         // the following parameters might have been modified when restarting from a checkpoint
         cp.model_info().get_params().expert_mode = expert_mode;
