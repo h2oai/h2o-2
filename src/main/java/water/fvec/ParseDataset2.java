@@ -581,6 +581,7 @@ public final class ParseDataset2 extends Job {
     }
     public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
+      _nCols = Math.max(_nCols,dout._nCols);
       if(dout._vecs.length > _vecs.length){
         AppendableVec [] v = _vecs;
         _vecs = dout._vecs;
