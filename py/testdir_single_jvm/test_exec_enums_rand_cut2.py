@@ -18,21 +18,25 @@ MIN_ENUM_WIDTH = 2
 MAX_ENUM_WIDTH = 5
 assert MAX_ENUM_WIDTH > MIN_ENUM_WIDTH
 RAND_ENUM_LENGTH = True
-CUT_EXPR_CNT = 50
-CUT_LOOP_CNT = 10
+CUT_EXPR_CNT = 150
+CUT_LOOP_CNT = 50
 
 # minimize chance of repeats by making enough cut expressions
 # as long as you have enough features and enums per features..should be random enough
 assert CUT_EXPR_CNT > 2 * CUT_LOOP_CNT
 
+
 if getpass.getuser()=='kevin': #10M
     ROWS=1000000 # 1M
-    CAT_ITERATE = 8 # repeated cat to to get 2**N bigger
+    WRITE_REPEAT = 10
+    # note we have a 10 way upload repeat too...for 200M rows
+    CAT_ITERATE = 0 # repeated cat to to get 2**N bigger
 else: # 1M
-    CAT_ITERATE = 6 # repeated cat to to get 2**N bigger
+    CAT_ITERATE = 0 # repeated cat to to get 2**N bigger
+    WRITE_REPEAT = 10
     ROWS=10000
 
-assert CAT_ITERATE >= 1
+assert CAT_ITERATE >= 0
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -106,10 +110,17 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
     if CAT_ITERATE==0:
         dsf = open(csvPathname, "w+")
     else:
-        tmpFd, tmpPathname = h2o.tmp_file("cat",".csv")
+        tmpFd, tmpPathname = h2o.tmp_file("cat",".csv", tmp_dir="/tmp")
         dsf = open(tmpPathname, "w+")
 
+    global WRITE_REPEAT
+    if not (WRITE_REPEAT>=1 and WRITE_REPEAT <=100):
+        print "Forcing WRITE_REPEAT to 1"
+        WRITE_REPEAT = 1
     for row in range(rowCount):
+        if ((WRITE_REPEAT*row) % 100000)== 0:
+            print "Wrote", WRITE_REPEAT*row, "lines"
+                
         # doesn't guarantee that 10000 rows have 10000 unique enums in a column
         # essentially sampling with replacement
         rowData = []
@@ -126,7 +137,9 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
         # use the new Hive separator
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         ### sys.stdout.write(rowDataCsv)
-        dsf.write(rowDataCsv)
+        # faster for creating big files? doesn't need to be fully random
+        for i in range(WRITE_REPEAT):
+            dsf.write(rowDataCsv)
     dsf.close()
 
     if CAT_ITERATE > 0:
@@ -168,7 +181,8 @@ class Basic(unittest.TestCase):
 
         n = ROWS
         tryList = [
-            (n, 10, 9, 'cE', 300), 
+            # (n, 10, 9, 'cE', 300), 
+            (n, 1, 1, 'cE', 300), 
             ]
 
         # create key names to use for exec
@@ -189,8 +203,8 @@ class Basic(unittest.TestCase):
                 # init cutValue. None means no compare
                 cutValue = [None for i in range(iColCount)]
                 # build up a random cut expression
-                MAX_COLS_IN_EXPR = iColCount-1
-                cols = random.sample(range(iColCount-1), random.randint(1,MAX_COLS_IN_EXPR))
+                MAX_COLS_IN_EXPR = iColCount
+                cols = random.sample(range(MAX_COLS_IN_EXPR), random.randint(1,MAX_COLS_IN_EXPR))
                 for c in cols:
                     # possible choices within the column
                     cel = colEnumList[c]
@@ -234,10 +248,25 @@ class Basic(unittest.TestCase):
 
             # PARSE*******************************************************
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
+            src_key = csvFilename
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='A'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='B'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='C'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='D'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='E'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='F'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='G'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='H'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='I'+src_key, timeoutSecs=200)
+            parseResult = h2i.import_only(path=csvPathname, schema='put', src_key='J'+src_key, timeoutSecs=200)
+
+            parseResult = h2i.parse_only(pattern='*'+src_key, hex_key=hex_key, timeoutSecs=800)
+
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
+            pNumRows = inspect['numRows']
+            pNumCols = inspect['numCols']
             # print h2o.dump_json(inspect)
             levels = h2o.nodes[0].levels(source=hex_key)
             print "levels result:", h2o.dump_json(levels)
@@ -335,14 +364,30 @@ class Basic(unittest.TestCase):
                 fList.append(quantileTime)
 
 
-        # just get a plot of the last one (biggest)
+
+        #****************************************************************
+        # QUANTILE APPROX. BASELINE FOR SINGLE COL WALK FULL DATASET
+        print "QUANTILE APPROX. BASELINE FOR SINGLE COL WALK FULL DATASET. Although it's a real col, not an enum col"
+        quantile = 0.5 if DO_MEDIAN else .999
+        # first output col. always fed by an exec cut, so 0?
+        column = iColCount
+        start = time.time()
+        q = h2o.nodes[0].quantiles(source_key=hex_key, column='C'+str(iColCount+1), 
+            quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=0)
+        elapsed = time.time() - start
+        h2p.red_print(hex_key, pNumRows, "rows Baseline: quantile single col (C" + str(iColCount+1) + ")", "one iteration", elapsed, "secs. threshold:", quantile, q['result'])
+        print "quantile single col 1 iteration end on", hex_key, "took", elapsed, 'seconds.'
+        quantileTime = elapsed
+
+        #****************************************************************
+        # PLOTS. look for eplot.jpg and fplot.jpg in local dir?
         if DO_PLOT:
             xLabel = 'trial'
             eLabel = 'exec cut time'
             fLabel = 'quantile time'
             eListTitle = ""
             fListTitle = ""
-            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
+            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel, server=True)
 
 
 

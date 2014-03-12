@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(3, java_heap_GB=4)
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(8, java_heap_GB=3)
 
     @classmethod
     def tearDownClass(cls):
@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s[,378] = %s[,378]>15 ? 1 : 0' % (trainKey, trainKey)
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=180)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=500)
 
             # Parse (test)****************************************
             if h2o.beta_features:
@@ -99,8 +99,9 @@ class Basic(unittest.TestCase):
             print "test parse result:", parseTestResult['destination_key']
 
             # Make col 378 it something we can do binomial regression on!
+            print "Slow! exec is converting all imported keys?, not just what was parsed"
             execExpr = '%s[,378] = %s[,378]>15 ? 1 : 0' % (testKey, testKey, testKey)
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=180)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=300)
 
             # Note ..no inspect of test data here..so translate happens later?
 
