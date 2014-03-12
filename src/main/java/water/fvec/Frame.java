@@ -567,37 +567,23 @@ public class Frame extends Lockable<Frame> {
   final int MAX_EQ2_COLS = 100000;      // FIXME.  Put this in a better spot.
   public Frame deepSlice( Object orows, Object ocols ) {
     // ocols is either a long[] or a Frame-of-1-Vec
-    long[] cols;
-    if( ocols == null ) {
-      cols = (long[])ocols;
-      assert cols == null;
-    }
-    else {
-      if (ocols instanceof long[]) {
-        cols = (long[])ocols;
-      }
-      else if (ocols instanceof Frame) {
-        Frame fr = (Frame) ocols;
-        if (fr.numCols() != 1) {
-          throw new IllegalArgumentException("Columns Frame must have only one column (actually has " + fr.numCols() + " columns)");
-        }
-
-        long n = fr.anyVec().length();
-        if (n > MAX_EQ2_COLS) {
-          throw new IllegalArgumentException("Too many requested columns (requested " + n +", max " + MAX_EQ2_COLS + ")");
-        }
-
-        cols = new long[(int)n];
-        Vec v = fr.anyVec();
-        for (long i = 0; i < v.length(); i++) {
-          cols[(int)i] = v.at8(i);
-        }
-      }
-      else {
-        throw new IllegalArgumentException("Columns is specified by an unsupported data type (" + ocols.getClass().getName() + ")");
-      }
-    }
-
+    long[] cols = null;
+    if( ocols == null ) cols = null;
+    else if (ocols instanceof long[]) cols = (long[])ocols;
+    else if (ocols instanceof Frame) {
+      Frame fr = (Frame) ocols;
+      if (fr.numCols() != 1)
+        throw new IllegalArgumentException("Columns Frame must have only one column (actually has " + fr.numCols() + " columns)");
+      long n = fr.anyVec().length();
+      if (n > MAX_EQ2_COLS)
+        throw new IllegalArgumentException("Too many requested columns (requested " + n +", max " + MAX_EQ2_COLS + ")");
+      cols = new long[(int)n];
+      Vec v = fr.anyVec();
+      for (long i = 0; i < v.length(); i++)
+        cols[(int)i] = v.at8(i);
+    } else
+      throw new IllegalArgumentException("Columns is specified by an unsupported data type (" + ocols.getClass().getName() + ")");
+    
     // Since cols is probably short convert to a positive list.
     int c2[] = null;
     if( cols==null ) {
