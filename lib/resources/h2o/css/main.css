@@ -62,4 +62,8 @@ span.btn_custom{
     margin: 0 auto;
 }
 
+.table-bordered {
 
+    border-collapse: collapse;
+
+}
