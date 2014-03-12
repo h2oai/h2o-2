@@ -1,4 +1,6 @@
 
+echo "Warning..other people who use the python scripts will ssh as user 0xdiag, so this will kill them"
+sleep 3
 # the 0xdiag ones may be shared with other people doing python tests, so this will whack them
 
 #****************************************************************************
