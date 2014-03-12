@@ -739,8 +739,9 @@ class ASTCbind extends ASTOp {
         env.addRef(v);
       }
     }
-    env._ary[env._sp-argcnt] = fr;
+    env._ary[env._sp-argcnt] = fr;  env._fcn[env._sp-argcnt] = null;
     env._sp -= argcnt-1;
+    Arrays.fill(env._ary,env._sp,env._sp+(argcnt-1),null);
     assert env.check_refcnt(fr.anyVec());
   }
 }
@@ -895,18 +896,14 @@ class ASTMMult extends ASTOp {
   @Override String opStr() { return "%*%"; }
   ASTMMult( ) {
     super(new String[]{"", "x", "y"},
-          new Type[]{Type.dblary(),Type.dblary(),Type.dblary()},
+          new Type[]{Type.ARY,Type.ARY,Type.ARY},
           OPF_PREFIX,
           OPP_MUL,
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTMMult(); }
   @Override void apply(Env env, int argcnt) {
-    if(!env.isAry(-2) || !env.isAry(-1))
-      throw new IllegalArgumentException("Operation requires two frames.");
-    Matrix fr1 = new Matrix(env.ary(-2));
-    Frame out = fr1.mult(env.ary(-1));
-    env.push(out);
+    env.poppush(3,new Matrix(env.ary(-2)).mult(env.ary(-1)),null);
   }
 }
 

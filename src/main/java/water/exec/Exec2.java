@@ -197,23 +197,10 @@ public class Exec2 {
       return _str.substring(x,_x);
     }
 
-    // Check for super-special operators that are three chars.
-    //
-    // For some reason, we need to look at chars in _buf[_x-1] instead of _buf[_x] here?
-    // I don't know why, but that's what looking at the arr in the debugger says...
-    //
-    if ((_x > 0) && (_x + 3) > _buf.length) {
-      // Buffer is not long enough.  Do nothing.
-    }
-    else {
-      char[] carr = new char[3];
-      carr[0] = _buf[_x-1+0];
-      carr[1] = _buf[_x-1+1];
-      carr[2] = _buf[_x-1+2];
-      String s = new String(carr);
-      if (s.equals("%*%")) {
-        return s;
-      }
+    // Check for super-special operators that are three chars of the form %*%.
+    // These are calls to R's matrix operators.
+    if( _x+2 <= _buf.length && c == '%' && _buf[_x+1] == '%' ) {
+      if( _buf[_x] == '*' ) { _x+=2; return "%*%"; }
     }
 
     // If first char is special, accept 1 or 2 special chars.
