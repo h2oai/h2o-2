@@ -27,7 +27,7 @@ public class DeepLearningModel extends Model {
   final public DeepLearningModelInfo model_info() { return model_info; }
 
   @API(help="Job that built the model", json = true)
-  final private Key jobKey;
+  public Key jobKey;
 
   @API(help="Time to build the model", json = true)
   private long run_time;
@@ -488,6 +488,15 @@ public class DeepLearningModel extends Model {
       }
     }
   }
+  public DeepLearningModel(DeepLearningModel cp, Key selfKey, Key jobKey) {
+    super(selfKey, cp._dataKey, cp.model_info().data_info()._adaptedFrame, cp._priorClassDist);
+    this.jobKey = jobKey;
+    model_info = (DeepLearningModelInfo)cp.model_info.clone();
+    model_info.parameters.destination_key = selfKey;
+    model_info.parameters.job_key = jobKey;
+    start_time = cp.start_time;
+    errors = cp.errors.clone();
+  }
 
   public DeepLearningModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, DeepLearning params, float[] priorDist) {
     super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
@@ -500,6 +509,7 @@ public class DeepLearningModel extends Model {
     errors[0].validation = (params.validation != null);
   }
 
+  transient private long _timeLastScoreEnter;
   transient private long _timeLastScoreStart;
   transient private long _timeLastScoreEnd;
   transient private long _timeLastPrintStart;
@@ -513,18 +523,19 @@ public class DeepLearningModel extends Model {
    * @return true if model building is ongoing
    */
   boolean doScoring(Frame train, Frame ftrain, Frame ftest, long timeStart, Key job_key) {
+    final long now = System.currentTimeMillis();
     epoch_counter = (float)model_info().get_processed_total()/train.numRows();
-    run_time = (System.currentTimeMillis()-start_time);
+    run_time += now-_timeLastScoreEnter;
+    _timeLastScoreEnter = now;
     boolean keep_running = (epoch_counter < model_info().get_params().epochs);
-    long now = System.currentTimeMillis();
     final long sinceLastScore = now -_timeLastScoreStart;
     final long sinceLastPrint = now -_timeLastPrintStart;
     final long samples = model_info().get_processed_total();
     if (!keep_running || sinceLastPrint > model_info().get_params().score_interval*1000) {
       _timeLastPrintStart = now;
-      Log.info("Training time: " + PrettyPrint.msecs(now - start_time, true)
+      Log.info("Training time: " + PrettyPrint.msecs(run_time, true)
               + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", (double)samples/((now - start_time)/1000.)) + " samples/sec.");
+              + " Speed: " + String.format("%.3f", 1000.*samples/run_time) + " samples/sec.");
     }
     // this is potentially slow - only do every so often
     if( !keep_running ||
@@ -725,8 +736,10 @@ public class DeepLearningModel extends Model {
             + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Stop training") + ", " : "")
             + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
-            + water.api.Predict.link(_key, "Score on dataset") + ", " +
-            DeepLearning.link(_dataKey, "Compute new model") + "</div>");
+            + water.api.Predict.link(_key, "Score on dataset") + ", "
+            + DeepLearning.link(_dataKey, "Compute new model", null) + ", "
+            + (Job.isEnded(jobKey) ? DeepLearning.link(_dataKey, "Continue training this model", _key) : "")
+            + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
     DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
@@ -827,7 +840,7 @@ public class DeepLearningModel extends Model {
         DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
       }
     }
-    DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + model_info.parameters.epochs);
+    DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
     final boolean isEnded = Job.isEnded(model_info().job().self());
     long time_so_far = isEnded ? error.training_time_ms : System.currentTimeMillis() - model_info.parameters.start_time;
     if (time_so_far > 0) {

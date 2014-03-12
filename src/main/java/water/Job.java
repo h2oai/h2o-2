@@ -34,7 +34,7 @@ public abstract class Job extends Request2 {
   private static final int[] EMPTY = new int[0];
 
   @API(help = "Job key")
-  protected Key job_key;
+  public Key job_key;
   @API(help = "Destination key", filter = Default.class, json = true, validator = DestKeyValidator.class)
   public Key destination_key; // Key holding final value after job is removed
   static class DestKeyValidator extends NOPValidator<Key> {
