@@ -15,11 +15,20 @@ quoteChars = "\'\""
 # don't use any quote characters. We'd have to protect combinations
 quoteChars = ""
 MIN_ENUM_WIDTH = 2
-MAX_ENUM_WIDTH = 2
+MAX_ENUM_WIDTH = 5
+assert MAX_ENUM_WIDTH > MIN_ENUM_WIDTH
 RAND_ENUM_LENGTH = True
-CUT_EXPR_CNT = 200
+CUT_EXPR_CNT = 50
+CUT_LOOP_CNT = 10
 
-ROWS=10000000
+# minimize chance of repeats by making enough cut expressions
+# as long as you have enough features and enums per features..should be random enough
+assert CUT_EXPR_CNT > 2 * CUT_LOOP_CNT
+
+if getpass.getuser()=='kevin':
+    ROWS=1000000
+else:
+    ROWS=10000000
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -27,7 +36,10 @@ DO_MEDIAN = True
 MAX_QBINS = 1000
 MULTI_PASS = 1
 
-def random_enum(n, randChars=randChars, quoteChars=quoteChars):
+# weights = [2,3,5]
+#     d = random_data[h2o_util.weighted_choice(weights)]
+
+def random_enum(width, randChars=randChars, quoteChars=quoteChars):
     # randomly return None 10% of the time
     # if random.randint(0,9)==0:
     #    return 'huh' # empty string doesn't work for exec compare?
@@ -37,28 +49,48 @@ def random_enum(n, randChars=randChars, quoteChars=quoteChars):
     while mightBeNumberOrWhite:
         # H2O doesn't seem to tolerate random single or double quote in the first two rows.
         # disallow that by not passing quoteChars for the first two rows (in call to here)
-        r = ''.join(random.choice(choiceStr) for x in range(n))
+        r = ''.join(random.choice(choiceStr) for x in range(width))
         mightBeNumberOrWhite = h2o_util.might_h2o_think_number_or_whitespace(r)
 
     return r
 
-def create_enum_list(n=4, **kwargs):
+def create_enum_list(n=4, minWidth=1, maxWidth=2, **kwargs):
     # Allowing length one, we sometimes form single digit numbers that cause the whole column to NA
     # see DparseTask.java for this effect
     # FIX! if we allow 0, then we allow NA?. I guess we check for no missing, so can't allow NA
-    # too many retries allowing 1. try 2 min.
-    if RAND_ENUM_LENGTH:
-        enumList = [random_enum(n=random.randint(MIN_ENUM_WIDTH, MAX_ENUM_WIDTH), **kwargs) for i in range(n)]
-    else:
-        # a fixed width is sometimes good for finding badness
-        enumList = [random_enum(n=MAX_ENUM_WIDTH, **kwargs) for i in range(n)]
+
+    # list of unique random enums
+    enumList = []
+    while len(enumList)!= n:
+        enum = random_enum(width=random.randint(int(minWidth), int(maxWidth)))
+        if enum not in enumList:
+            enumList.append(enum)
     return enumList
 
 def create_col_enum_list(inCount):
-    # create the per-column choice lists
+    # the enum width is independent from the # of choices
+    widthChoice = random.randint(MIN_ENUM_WIDTH, MAX_ENUM_WIDTH)
+
+    MAX_CHOICES = 4
+    weights = [1.0]
+    numChoiceList = [2]
+    # always need 2 choices since we do == and not equal
+    for i in range(3, MAX_CHOICES):
+        print "weights:", weights
+        # each choice is 1/2th the previous
+        w = weights[-1]/2.0
+        assert w!=0
+        weights.append(w)
+        numChoiceList.append(i)
+    
+    print "numChoiceList", numChoiceList
     colEnumList = []
     for col in range(inCount):
-        enumList = create_enum_list(n=random.randint(1,4), quoteChars=quoteChars)
+        numChoice = numChoiceList[h2o_util.weighted_choice(weights)]
+        print "numChoice:", numChoice
+    
+        # create the per-column choice lists
+        enumList = create_enum_list(n=numChoice, minWidth=MIN_ENUM_WIDTH, maxWidth=widthChoice, quoteChars=quoteChars)
         colEnumList.append(enumList)
     return colEnumList
     
@@ -131,15 +163,13 @@ class Basic(unittest.TestCase):
 
             # create 100 possible cut expressions here, so we don't waste time below
             rowExprList = []
+            print "Creating", CUT_EXPR_CNT, 'cut expressions'
             for i in range(CUT_EXPR_CNT):
-                print "Creating", CUT_EXPR_CNT, 'cut expressions'
                 # init cutValue. None means no compare
                 cutValue = [None for i in range(iColCount)]
                 # build up a random cut expression
-                # cols = random.sample(range(iColCount), random.randint(1,iColCount))
-                # don't constrain it so much ..only use a handful of cols 4?
-                # want to get "something"
-                cols = random.sample(range(iColCount-1), random.randint(1,4))
+                MAX_COLS_IN_EXPR = iColCount-1
+                cols = random.sample(range(iColCount-1), random.randint(1,MAX_COLS_IN_EXPR))
                 for c in cols:
                     # possible choices within the column
                     cel = colEnumList[c]
@@ -164,16 +194,12 @@ class Basic(unittest.TestCase):
                         else:
                             cutExprList.append('p$C'+str(i+1)+'=='+c)
 
-                cutExpr = ' && '.join(cutExprList)
-                print "cutExpr:", cutExpr    
-
-                # should be two different keys in the sample
-                e = random.sample(eKeys,2)
-                fKey = e[0]
-                eKey = e[1]
+                cutExpr = ' & '.join(cutExprList)
+                # print "cutExpr:", cutExpr    
 
                 rowExpr = '%s[%s,];' % (hex_key, cutExpr)
-                print "rowExpr:", rowExpr
+                # print "rowExpr:", rowExpr
+                print rowExpr
                 rowExprList.append(rowExpr)
 
 
@@ -192,6 +218,8 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             # print h2o.dump_json(inspect)
+            levels = h2o.nodes[0].levels(source=hex_key)
+            print "levels result:", h2o.dump_json(levels)
 
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
@@ -216,7 +244,7 @@ class Basic(unittest.TestCase):
             xList = []
             eList = []
             fList = []
-            for repeat in range(200):
+            for repeat in range(CUT_LOOP_CNT):
                 # EXEC*******************************************************
                 # don't use exec_expr to avoid issues with Inspect following etc.
                 randICol = random.randint(0,iColCount-1)

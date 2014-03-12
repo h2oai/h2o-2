@@ -215,7 +215,8 @@ setMethod("show", "H2OPerfModel", function(object) {
 h2o.year <- function(x){
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
-  .h2o.__unop2('year', x)
+  res1 <- .h2o.__unop2('year', x)
+  .h2o.__binop2("-", res1, 1900)
 }
 
 h2o.month <- function(x){
