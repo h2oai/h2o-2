@@ -25,7 +25,10 @@ CUT_LOOP_CNT = 10
 # as long as you have enough features and enums per features..should be random enough
 assert CUT_EXPR_CNT > 2 * CUT_LOOP_CNT
 
-ROWS=10000000
+if getpass.getuser()=='kevin':
+    ROWS=1000000
+else:
+    ROWS=10000000
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -66,8 +69,7 @@ def create_enum_list(n=4, minWidth=1, maxWidth=2, **kwargs):
 
 def create_col_enum_list(inCount):
     # the enum width is independent from the # of choices
-    widthChoices = range(MIN_ENUM_WIDTH, MAX_ENUM_WIDTH)
-    widthChoice = random.choice(widthChoices)
+    widthChoice = random.randint(MIN_ENUM_WIDTH, MAX_ENUM_WIDTH)
 
     MAX_CHOICES = 4
     weights = [1.0]
