@@ -522,7 +522,7 @@ public class DeepLearningModel extends Model {
     errors[0].validation = (params.validation != null);
   }
 
-  transient private long _timeLastScoreEnter;
+  private long _timeLastScoreEnter; //not transient: needed for HTML display page
   transient private long _timeLastScoreStart;
   transient private long _timeLastScoreEnd;
   transient private long _timeLastPrintStart;
