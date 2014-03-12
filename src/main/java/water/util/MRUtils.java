@@ -83,28 +83,37 @@ public class MRUtils {
     if( vecs[0].nChunks() < splits || shuffle ) {
       long[] idx = null;
       if (shuffle) {
-        idx = new long[(int)fr.numRows()]; //HACK: should be a long
+        idx = new long[splits];
         for (int r=0; r<idx.length; ++r) idx[r] = r;
         Utils.shuffleArray(idx, seed);
       }
       Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
-      for( int v = 0; v < vecs.length; v++ ) {
-        AppendableVec vec = new AppendableVec(keys[v]);
-        final long rows = fr.numRows();
-        for( int split = 0; split < splits; split++ ) {
-          long off = rows * split / splits;
-          long lim = rows * (split + 1) / splits;
-          assert(lim <= Integer.MAX_VALUE);
-          NewChunk chunk = new NewChunk(vec, split);
-          for( long r = off; r < lim; r++ ) {
-            if (shuffle) chunk.addNum(fr.vecs()[v].at(idx[(int)r]));
-            else chunk.addNum(fr.vecs()[v].at(r));
+      final long rows_per_new_chunk = fr.numRows() / splits;
+      //loop over cols (same indexing for each column)
+      for(int col=0; col<vecs.length; col++) {
+        AppendableVec vec = new AppendableVec(keys[col]);
+        // create outgoing chunks for this col
+        NewChunk[] outCkg = new NewChunk[splits];
+        for(int i=0; i<splits; ++i)
+          outCkg[i] = new NewChunk(vec, i);
+        //loop over all incoming chunks
+        long off = 0;
+        for( int ckg = 0; ckg < vecs[col].nChunks(); ckg++ ) {
+          final Chunk inCkg = vecs[col].chunk(ckg);
+          // loop over local rows of incoming chunks (fast path)
+          for (int row = 0; row < inCkg._len; ++row) {
+            int outCkgIdx = (int)((off + row) / rows_per_new_chunk); // destination chunk idx
+            if (shuffle) outCkgIdx = (int)(idx[outCkgIdx]); //shuffle: choose a different output chunk
+            assert(outCkgIdx >= 0 && outCkgIdx < splits);
+            outCkg[outCkgIdx].addNum(inCkg.at0(row));
           }
-          chunk.close(split, null);
+          off += inCkg._len;
         }
+        for(int i=0; i<outCkg.length; ++i)
+          outCkg[i].close(i, null);
         Vec t = vec.close(null);
-        t._domain = vecs[v]._domain;
-        vecs[v] = t;
+        t._domain = vecs[col]._domain;
+        vecs[col] = t;
       }
     }
     fr.reloadVecs();
