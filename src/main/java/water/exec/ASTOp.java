@@ -895,8 +895,8 @@ class ASTMMult extends ASTOp {
   @Override String opStr() { return "%*%"; }
   ASTMMult( ) {
     super(new String[]{"", "x", "y"},
-          new Type[]{Type.ARY,Type.ARY,Type.ARY},
-          OPF_INFIX,
+          new Type[]{Type.dblary(),Type.dblary(),Type.dblary()},
+          OPF_PREFIX,
           OPP_MUL,
           OPA_RIGHT);
   }
