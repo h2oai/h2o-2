@@ -26,7 +26,7 @@ public class ParserTest2 extends TestUtil {
     return Math.abs(a-b)/Math.max(Math.abs(a),Math.abs(b)) < threshold;
   }
   public static void testParsed(Key inputKey, double[][] expected) {
-    testParsed(ParseDataset2.parse(Key.make(), new Key[]{inputKey}),expected, expected.length);
+    testParsed(ParseDataset2.parse(Key.make("parsed"), new Key[]{inputKey}),expected, expected.length);
   }
 
   public static void testParsed(Frame fr, double[][] expected, int len) {
@@ -41,7 +41,7 @@ public class ParserTest2 extends TestUtil {
                             Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
         }
     } finally {
-      fr.delete();
+//      fr.delete();
     }
   }
 
@@ -488,20 +488,24 @@ public class ParserTest2 extends TestUtil {
 
   @Test public void testSVMLight() {
     String[] data = new String[] {
-        "1 2:.2 5:.5 9:.9\n",
-        "-1 7:.7 8:.8 9:.9\n",
-        "+1 1:.1 5:.5 6:.6\n"
+        "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
+        "1 2:.2 5:.5 9:.9\n1 3:.3 6:.6\n",
+        "-1 7:.7 8:.8 9:.9\n1 20:2.\n",
+        "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9"
     };
 
     double[][] exp = new double[][] {
-        d( 1., .0, .2, .0, .0, .5, .0, .0, .0, .9),
-        d(-1., .0, .0, .0, .0, .0, .0, .7, .8, .9),
-        d( 1., .1, .0, .0, .0, .5, .6, .0, .0, .0),
+        d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d( -1., .1, .0, .0, .4, .0, .0, .0, .8, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .0, .3, .0, .0, .6, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d( -1., .0, .0, .0, .0, .0, .0, .7, .8, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0,2.0),
+        d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
     };
     String[] dataset = data;
-    StringBuilder sb = new StringBuilder();
-    for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
-    Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+    Key k = FVecTest.makeByteVec(Key.make("svmtest_bits").toString(),dataset);
     testParsed(k,exp);
   }
 

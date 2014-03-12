@@ -321,7 +321,7 @@ class ASTNamedCol extends AST {
     Frame ary=env.peekAry();
     int cidx = ary.find(_colname);
     if( cidx== -1 ) throw new IllegalArgumentException("Missing column "+_colname+" in frame "+ary.toStringNames());
-    Frame fr2 = ary.deepSlice(null,new long[]{cidx+1});
+    Frame fr2 = new Frame(new String[]{ary._names[cidx]}, new Vec[]{ary.vecs()[cidx]});
     env.poppush(1,fr2,null);
   }
   @Override public String toString() { return "$"+_colname; }

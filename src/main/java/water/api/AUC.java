@@ -1,6 +1,5 @@
 package water.api;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.ConfusionMatrix;
 import org.apache.commons.lang.StringEscapeUtils;
 import water.MRTask2;
@@ -192,8 +191,8 @@ public class AUC extends Request2 {
       // compute thresholds, if not user-given
       if (thresholds != null) {
         if (_cms == null) sort(thresholds); //otherwise assume that thresholds and CMs are in the same order
-        if (Utils.minValue(thresholds) < 0) throw new InvalidArgumentException("Minimum threshold cannot be negative.");
-        if (Utils.maxValue(thresholds) > 1) throw new InvalidArgumentException("Maximum threshold cannot be greater than 1.");
+        if (Utils.minValue(thresholds) < 0) throw new IllegalArgumentException("Minimum threshold cannot be negative.");
+        if (Utils.maxValue(thresholds) > 1) throw new IllegalArgumentException("Maximum threshold cannot be greater than 1.");
       } else {
         HashSet hs = new HashSet();
         final int bins = (int)Math.min(vpredict.length(), 200l);
@@ -209,7 +208,7 @@ public class AUC extends Request2 {
       }
       // compute CMs
       if (_cms != null) {
-        if (_cms.length != thresholds.length) throw new InvalidArgumentException("Number of thresholds differs from number of confusion matrices.");
+        if (_cms.length != thresholds.length) throw new IllegalArgumentException("Number of thresholds differs from number of confusion matrices.");
       } else {
         AUCTask at = new AUCTask(thresholds).doAll(va,vp);
         _cms = at.getCMs();
@@ -270,7 +269,7 @@ public class AUC extends Request2 {
               (Double.isNaN(b.specificity()) || a.specificity() > b.specificity()));
     }
     else {
-      throw new InvalidArgumentException("Unknown threshold criterion.");
+      throw new IllegalArgumentException("Unknown threshold criterion.");
     }
   }
 
