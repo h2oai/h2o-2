@@ -67,7 +67,7 @@ public class MRUtils {
   }
 
   /**
-   * Global redistribution of a Frame (balancing of chunks), done my calling process (all-to-one + one-to-all)
+   * Global redistribution of a Frame (balancing of chunks), done by calling process (all-to-one + one-to-all)
    * @param fr Input frame
    * @param seed RNG seed
    * @param shuffle whether to shuffle the data globally
@@ -77,7 +77,7 @@ public class MRUtils {
     int cores = 0;
     for( H2ONode node : H2O.CLOUD._memary )
       cores += node._heartbeat._num_cpus;
-    final int splits = cores;
+    final int splits = 4*cores;
 
     Vec[] vecs = fr.vecs();
     if( vecs[0].nChunks() < splits || shuffle ) {

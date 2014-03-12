@@ -232,10 +232,10 @@ public class DeepLearning extends Job.ValidatedJob {
       loss = Loss.MeanSquare;
     }
     if (H2O.CLOUD.size()>1) {
-      if (expert_mode && arg._name.equals("force_load_balance")) {
-        force_load_balance = false;
-        arg.disable("Only for single-node operation.");
-      }
+//      if (expert_mode && arg._name.equals("force_load_balance")) {
+//        force_load_balance = false;
+//        arg.disable("Only for single-node operation.");
+//      }
       if (arg._name.equals("seed")) {
         arg.disable("Only for single-node operation.");
       }
