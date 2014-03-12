@@ -591,7 +591,8 @@ public class Quantiles extends Iced {
     if( hcnt2.length == 0 ) return false;
 
     int k = 0; long s = 0;
-    double guess = 0;
+    double guess = Double.NaN;
+    _interpolated = false;
     double actualBinWidth = 0;
     assert _totalRows==htot2(0, 0) : "_totalRows: "+_totalRows+" htot2(): "+htot2(0, 0);
 
@@ -657,6 +658,7 @@ public class Quantiles extends Iced {
         // Note actualBinWidth is 0 when all values are the same in a bin
         // Interesting how we have a gap that we jump between max of one bin, and min of another.
         guess = hcnt2_min[k] + actualBinWidth * ((s1 - s) / hcnt2[k]);
+        _interpolated = true;
         // Log.info("Q_ Guess D: "+guess+" "+k+" "+hcnt2_min[k]+" "+actualBinWidth+" "+s+" "+s1+" "+hcnt2[k]);
       }
 
@@ -672,7 +674,6 @@ public class Quantiles extends Iced {
       hcnt2_max = null;
 
     }
-    _interpolated = true;
     return true;
   }
 }
