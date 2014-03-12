@@ -244,7 +244,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   protected abstract float[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame);
 
-  ConfusionMatrix[] toCMArray(long[][][] cms) {
+  private ConfusionMatrix[] toCMArray(long[][][] cms) {
     int n = cms.length;
     ConfusionMatrix[] res = new ConfusionMatrix[n];
     for (int i = 0; i < n; i++) res[i] = new ConfusionMatrix(cms[i]);
