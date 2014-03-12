@@ -750,7 +750,7 @@ public class DeepLearningModel extends Model {
             + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null, null) + ", "
+            + DeepLearning.link(_dataKey, "Compute new model", null, responseName()) + ", "
             + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>"
             + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName()) : "")
             + "</div>");

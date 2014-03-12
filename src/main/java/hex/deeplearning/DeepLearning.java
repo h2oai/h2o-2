@@ -332,11 +332,14 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   public static String link(Key k, String content, Key cp, String response) {
     DeepLearning req = new DeepLearning();
-    RString rs = new RString("<a href='" + req.href() + ".query?source=%$key&checkpoint=%$cp&response=%$resp'>%content</a>");
+    RString rs = new RString("<a href='" + req.href() + ".query?source=%$key" +
+            (cp == null ? "" : "&checkpoint=%$cp") +
+            (response == null ? "" : "&response=%$resp") +
+            "'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
-    rs.replace("cp", cp == null ? "null" : cp.toString());
-    rs.replace("resp", response == null ? "null" : response);
+    if (cp != null) rs.replace("cp", cp.toString());
+    if (response != null) rs.replace("resp", response);
     return rs.toString();
   }
 
