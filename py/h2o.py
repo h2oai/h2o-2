@@ -1055,7 +1055,7 @@ class H2O(object):
     def levels(self, source=None):
         return self.__do_json_request(
             '2/Levels2.json',
-            params={"source": key, },
+            params={"source": source},
             )
 
     def put_file(self, f, key=None, timeoutSecs=60):
