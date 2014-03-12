@@ -25,7 +25,16 @@ CUT_LOOP_CNT = 10
 # as long as you have enough features and enums per features..should be random enough
 assert CUT_EXPR_CNT > 2 * CUT_LOOP_CNT
 
-ROWS=10000000
+
+if getpass.getuser()=='kevin': #10M
+    ROWS=1000000 # 1M
+    CAT_ITERATE = 8 # repeated cat to to get 2**N bigger
+else: # 1M
+    CAT_ITERATE = 6 # repeated cat to to get 2**N bigger
+    ROWS=10000
+
+assert CAT_ITERATE >= 1
+
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -97,7 +106,12 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
         colSepChar=",", rowSepChar="\n", quoteChars="", colEnumList=None):
     r1 = random.Random(SEED)
 
-    dsf = open(csvPathname, "w+")
+    if CAT_ITERATE==0:
+        dsf = open(csvPathname, "w+")
+    else:
+        tmpFd, tmpPathname = h2o.tmp_file("cat",".csv")
+        dsf = open(tmpPathname, "w+")
+
     for row in range(rowCount):
         # doesn't guarantee that 10000 rows have 10000 unique enums in a column
         # essentially sampling with replacement
@@ -117,6 +131,18 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
         ### sys.stdout.write(rowDataCsv)
         dsf.write(rowDataCsv)
     dsf.close()
+
+    if CAT_ITERATE > 0:
+        for c in range(CAT_ITERATE+1):
+            if c==CAT_ITERATE:
+                print "Doubling", tmpPathname, "into", csvPathname
+                h2o_util.file_cat(tmpPathname, tmpPathname, csvPathname)
+            else:
+                tmp2Fd, tmp2Pathname = h2o.tmp_file()
+                print "Doubling", tmpPathname, "into", tmp2Pathname
+                h2o_util.file_cat(tmpPathname, tmpPathname, tmp2Pathname)
+                tmpPathname = tmp2Pathname
+
     return colEnumList
 
 
