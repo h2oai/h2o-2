@@ -10,9 +10,12 @@ import water.Key;
 import water.TestUtil;
 import water.UKV;
 import water.api.AUC;
+import water.exec.Env;
+import water.exec.Exec2;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
+import water.util.Log;
 
 public class DeepLearningProstateTest extends TestUtil {
   @BeforeClass public static void stall() {
@@ -65,37 +68,77 @@ public class DeepLearningProstateTest extends TestUtil {
       auc.toASCII(sb);
       final double threshold = auc.threshold();
       final double error = auc.err();
+      Log.info(sb);
 
       // check that auc.cm() is the right CM
       Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
 
       // check that calcError() is consistent as well (for CM=null, AUC!=null)
-      Assert.assertEquals(mymodel.calcError(frame, pred, "training", true, null, auc), error, 1e-15);
+      Assert.assertEquals(mymodel.calcError(frame, pred, "training", false, null, auc), error, 1e-15);
 
       // Now create labels using the same threshold as the AUC object and compute the CM
 
-      /*
-      // Version 1: Exec2
-//      new Frame(Key.make("pred"), pred.names(), pred.vecs()).delete_and_lock(Key.make("job")); //put prediction into KV store
-//      Frame labels = Exec2.exec("pred[,0]=pred[,2]>=" + threshold).popAry(); //apply threshold criterion
+      double CMerrorOrig;
+      {
+        sb = new StringBuilder();
+        water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+        CM.actual = frame;
+        CM.vactual = frame.vecs()[1];
+        CM.predict = pred;
+        CM.vpredict = pred.vecs()[0];
+        CM.serve();
+        sb.append("\n");
+        CM.toASCII(sb);
+        Log.info(sb);
+        CMerrorOrig = new ConfusionMatrix(CM.cm).err();
+      }
 
-      // Version 2: Without mapreduce (OK since tiny data)
-      for (int i=0; i<pred.numRows(); ++i)
-        pred.vecs()[0].set(i, pred.vecs()[2].at(i) >= threshold ? 1 : 0);
+      {
+        // confirm that orig CM was made with threshold 0.5
+        // put pred2 into UKV, and allow access
+        Frame pred2 = new Frame(Key.make("pred2"), pred.names(), pred.vecs());
+        pred2.delete_and_lock(null);
+        pred2.unlock(null);
 
-      water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
-      CM.actual = frame;
-      CM.vactual = frame.vecs()[1];
-      CM.predict = pred;
-      CM.vpredict = pred.vecs()[0];
-      CM.serve();
-      sb.append("\n");
-      CM.toASCII(sb);
-      Log.info(sb);
+        // make labels with 0.5 threshold
+        Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
+        pred2 = ev.popAry();
+        ev.subRef(pred2, "pred2");
+        ev.remove_and_unlock();
 
-      // check that threshold-specific CM matches the AUC-reported CM
-      Assert.assertEquals(new ConfusionMatrix(CM.cm).err(), error, 1e-15);
-      */
+        water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+        CM.actual = frame;
+        CM.vactual = frame.vecs()[1];
+        CM.predict = pred2;
+        CM.vpredict = pred2.vecs()[0];
+        CM.serve();
+        sb = new StringBuilder();
+        sb.append("\n");
+        CM.toASCII(sb);
+        Log.info(sb);
+        double threshErr = new ConfusionMatrix(CM.cm).err();
+        Assert.assertEquals(threshErr, CMerrorOrig, 1e-15);
+
+        // make labels with AUC-given threshold for best F1
+        ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + threshold);
+        pred2 = ev.popAry();
+        ev.subRef(pred2, "pred2");
+        ev.remove_and_unlock();
+
+        CM = new water.api.ConfusionMatrix();
+        CM.actual = frame;
+        CM.vactual = frame.vecs()[1];
+        CM.predict = pred2;
+        CM.vpredict = pred2.vecs()[0];
+        CM.serve();
+        sb = new StringBuilder();
+        sb.append("\n");
+        CM.toASCII(sb);
+        Log.info(sb);
+        double threshErr2 = new ConfusionMatrix(CM.cm).err();
+        Assert.assertEquals(threshErr2, error, 1e-15);
+        pred2.delete();
+      }
 
       pred.delete();
       mymodel.delete();

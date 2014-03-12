@@ -1,4 +1,4 @@
-# Class definitions
+#--------------------------------- Class Definitions ----------------------------------#
 # WARNING: Do NOT touch the env slot! It is used to link garbage collection between R and H2O
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
@@ -78,7 +78,7 @@ setClass("H2ORFModelVA", contains="H2OModelVA")
 #   return(.Object)
 # })
 
-# Class display functions
+#--------------------------------- Class Display Functions ----------------------------------#
 setMethod("show", "H2OClient", function(object) {
   cat("IP Address:", object@ip, "\n")
   cat("Port      :", object@port, "\n")
@@ -210,27 +210,176 @@ setMethod("show", "H2OPerfModel", function(object) {
   cat("\n\nConfusion matrix:\n"); print(model$confusion)
 })
 
-summary.H2OPCAModel <- function(object, ...) {
-  # TODO: Save propVar and cumVar from the Java output instead of computing here
-  myVar = object@model$sdev^2
-  myProp = myVar/sum(myVar)
-  result = rbind(object@model$sdev, myProp, cumsum(myProp))   # Need to limit decimal places to 4
-  colnames(result) = paste("PC", seq(1, length(myVar)), sep="")
-  rownames(result) = c("Standard deviation", "Proportion of Variance", "Cumulative Proportion")
-
-  cat("Importance of components:\n")
-  print(result)
+#--------------------------------- Unique H2O Methods ----------------------------------#
+# TODO: s4 year, month impls as well?
+h2o.year <- function(x){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
+  .h2o.__unop2('year', x)
 }
 
-screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type = "barplot", main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ...) {
-  if(type == "barplot")
-    barplot(x@model$sdev[1:npcs]^2, main = main, ylab = "Variances", ...)
-  else if(type == "lines")
-    lines(x@model$sdev[1:npcs]^2, main = main, ylab = "Variances", ...)
+h2o.month <- function(x){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
+  .h2o.__unop2('month', x)
+}
+
+year <- function(x) UseMethod('year', x)
+year.H2OParsedData <- h2o.year
+month <- function(x) UseMethod('month', x)
+month.H2OParsedData <- h2o.month
+
+as.h2o <- function(client, object, key = "", header, sep = "") {
+  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")
+  if(!is.character(key)) stop("key must be of class character")
+  if(missing(key) || nchar(key) == 0) {
+    key = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
+    .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
+  }
+  
+  if(is.numeric(object) && is.vector(object)) {
+    res <- .h2o.__exec2_dest_key(client, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""), key)
+    return(new("H2OParsedData", h2o=client, key=res$dest_key))
+  } else {
+    tmpf <- tempfile(fileext=".csv")
+    write.csv(object, file=tmpf, quote=F, row.names=F)
+    h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
+    unlink(tmpf)
+    return(h2f)
+  }
+}
+
+h2o.cut <- function(x, breaks) {
+  if(missing(x)) stop("Must specify data set")
+  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(missing(breaks) || !is.numeric(breaks)) stop("breaks must be a numeric vector")
+  
+  nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
+  expr = paste("cut(", x@key, ",", nums, ")", sep="")
+  res = .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    return(res$scalar)
+  new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
+}
+
+# TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
+h2o.table <- function(x) {
+  if(missing(x)) stop("Must specify data set")
+  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(ncol(x) > 2) stop("Unimplemented")
+  .h2o.__unop2("table", x)
+}
+
+h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
+  if( missing(.data) ) stop('must specify .data')
+  if( !(class(.data) %in% c('H2OParsedData', 'H2OParsedDataVA')) ) stop('.data must be an h2o data object')
+  if( missing(.variables) ) stop('must specify .variables')
+  if( missing(.fun) ) stop('must specify .fun')
+  
+  mm <- match.call()
+  
+  # we accept eg .(col1, col2), c('col1', 'col2'), 1:2, c(1,2)
+  # as column names.  This is a bit complicated
+  if( class(.variables) == 'character'){
+    vars <- .variables
+    idx <- match(vars, colnames(.data))
+  } else if( class(.variables) == 'H2Oquoted' ){
+    vars <- as.character(.variables)
+    idx <- match(vars, colnames(.data))
+  } else if( class(.variables) == 'quoted' ){ # plyr overwrote our . fn
+    vars <- names(.variables)
+    idx <- match(vars, colnames(.data))
+  } else if( class(.variables) == 'integer' ){
+    vars <- .variables
+    idx <- .variables
+  } else if( class(.variables) == 'numeric' ){   # this will happen eg c(1,2,3)
+    vars <- .variables
+    idx <- as.integer(.variables)
+  }
+  
+  bad <- is.na(idx) | idx < 1 | idx > ncol(.data)
+  if( any(bad) ) stop( sprintf('can\'t recognize .variables %s', paste(vars[bad], sep=',')) )
+  
+  fun_name <- mm[[ '.fun' ]]
+  exec_cmd <- sprintf('ddply(%s,c(%s),%s)', .data@key, paste(idx, collapse=','), as.character(fun_name))
+  res <- .h2o.__exec2(.data@h2o, exec_cmd)
+  new('H2OParsedData', h2o=.data@h2o, key=res$dest_key)
+}
+ddply <- h2o.ddply
+
+# TODO: how to avoid masking plyr?
+`h2o..` <- function(...) {
+  mm <- match.call()
+  mm <- mm[-1]
+  structure( as.list(mm), class='H2Oquoted')
+}
+
+`.` <- `h2o..`
+
+h2o.addFunction <- function(object, fun, name){
+  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
+  if( missing(fun) ) stop('must specify fun')
+  if( !missing(name) ){
+    if( class(name) != 'character' ) stop('name must be a name')
+    fun_name <- name
+  } else {
+    fun_name <- match.call()[['fun']]
+  }
+  src <- paste(deparse(fun), collapse='\n')
+  exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
+  res <- .h2o.__exec2(object, exec_cmd)
+}
+
+h2o.unique <- function(x, incomparables=F, ...){
+  # NB: we do nothing with incomparables right now
+  # NB: we only support MARGIN=2 (which is the default)
+
+  if(!class(x) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('h2o.unique: x is of the wrong type')
+  if( nrow(x) == 0 | ncol(x) == 0) return(NULL) 
+  if( nrow(x) == 1) return(x)
+
+  args <- list(...)
+  if( 'MARGIN' %in% names(args) && args[['MARGIN']] != 2 ) stop('h2o unique: only MARGIN 2 supported')
+
+  uniq <- function(df){1}
+  h2o.addFunction(l, uniq)
+  res <- h2o.ddply(x, 1:ncol(x), uniq)
+
+  res[,1:(ncol(res)-1)]
+}
+unique.H2OParsedDataVA <- h2o.unique
+unique.H2OParsedData <- h2o.unique
+
+h2o.runif <- function(x, min = 0, max = 1) {
+  if(missing(x)) stop("Must specify data set")
+  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(!is.numeric(min)) stop("min must be a single number")
+  if(!is.numeric(max)) stop("max must be a single number")
+  if(length(min) > 1 || length(max) > 1) stop("Unimplemented")
+  if(min > max) stop("min must be a number less than or equal to max")
+  expr = paste("runif(", x@key, ")*(", max - min, ")+", min, sep = "")
+  res = .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
   else
-    stop("type must be either 'barplot' or 'lines'")
+    return(new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE))
 }
 
+h2o.anyFactor <- function(x) {
+  # if(class(x) != "H2OParsedData") stop("x must be an H2OParsedData object")
+  if(!inherits(x, "H2OParsedData")) stop("x must be an H2O parsed data object")
+  as.logical(.h2o.__unop2("any.factor", x))
+}
+
+setMethod("colnames", "H2OParsedData", function(x, do.NULL = TRUE, prefix = "col") {
+  if(!do.NULL) stop("Unimplemented: Auto-generated colnames are C1, C2, ...")
+  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
+  unlist(lapply(res$cols, function(y) y$name))
+})
+
+#--------------------------------- Overloaded R Methods ----------------------------------#
+#--------------------------------- Slicing ----------------------------------#
 # i are the rows, j are the columns. These can be vectors of integers or character strings, or a single logical data object
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   numRows = nrow(x); numCols = ncol(x)
@@ -383,42 +532,6 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
-`[[.H2OParsedDataVA` <- function(x, ..., exact=TRUE){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
-
-  cols <- sapply(as.list(...), function(x) x)
-  if( length(cols) == 0 )
-  return(x)
-  if( length(cols) > 1 ) stop('[[]] may only select one column')
-  if( ! cols[1] %in% colnames(x) )
-    return(NULL)
-
-  x[, cols]
-}
-
-`[[<-.H2OParsedDataVA` <- function(x, i, j, value){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
-  if( !class(value) == 'H2OParsedDataVA') stop('can only append h2o data to h2o data')
-  if( ncol(value) > 1 ) stop('may only set a single column')
-  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
-
-  mm <- match.call()
-  col_name <- as.list(i)[[1]]
-
-  cc <- colnames(x)
-  if( col_name %in% cc ){
-    x[, match( col_name, cc ) ] <- value
-  } else {
-    x <- cbind(x, value)
-    cc <- c( cc, col_name )
-    colnames(x) <- cc
-  }
-  x
-}
-
-
 `[[.H2OParsedData` <- function(x, ..., exact=TRUE){
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
@@ -454,7 +567,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   x
 }
 
-# right now, all things must be H2OParsedData
+# Note: right now, all things must be H2OParsedData
 cbind.H2OParsedData <- function(...){
   l <- list(...)
   if( length(l) == 0 ) stop('cbind requires an H2o parsed dataset')
@@ -466,29 +579,13 @@ cbind.H2OParsedData <- function(...){
 
   if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same h2o instance'))}
 
-  # todo: if cbind(x,x), fix up the column names so unique.  sigh.
+  # TODO: if cbind(x,x), fix up the column names so unique.  sigh.
   exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
   res <- .h2o.__exec2(h2o, exec_cmd)
   new('H2OParsedData', h2o=h2o, key=res$dest_key)
 }
 
-cbind.H2OParsedDataVA <- function(...){
-  l <- list(...)
-  if( length(l) == 0 ) stop('cbind requires an h2o data')
-  klass <- 'H2OParsedDataVA'
-  h2o <- l[[1]]@h2o
-  nrows <- nrow(l[[1]])
-  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem)}, l)
-  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
-
-  if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same h2o instance'))}
-
-  # todo: if cbind(x,x), fix up the column names so unique.  sigh.
-  exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
-  res <- .h2o.__exec2(h2o, exec_cmd)
-  new('H2OParsedDataVA', h2o=h2o, key=res$dest_key)
-}
-
+#--------------------------------- Arithmetic ----------------------------------#
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
 setMethod("-", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("-", e1, e2) })
 setMethod("*", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("*", e1, e2) })
@@ -541,147 +638,6 @@ setMethod("log", "H2OParsedData", function(x) { .h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { .h2o.__unop2("exp", x) })
 setMethod("is.na", "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
 
-# TODO: s4 year, month impls as well?
-h2o.year <- function(x){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
-  .h2o.__unop2('year', x)
-}
-
-h2o.month <- function(x){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
-  .h2o.__unop2('month', x)
-}
-
-year <- function(x) UseMethod('year', x)
-year.H2OParsedData <- h2o.year
-month <- function(x) UseMethod('month', x)
-month.H2OParsedData <- h2o.month
-
-as.h2o <- function(client, object, key = "", header, sep = "") {
-  if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
-  if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")
-  if(!is.character(key)) stop("key must be of class character")
-  if(missing(key) || nchar(key) == 0) {
-    key = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
-    .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
-  }
-  
-  if(is.numeric(object) && is.vector(object)) {
-    res <- .h2o.__exec2_dest_key(client, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""), key)
-    return(new("H2OParsedData", h2o=client, key=res$dest_key))
-  } else {
-    tmpf <- tempfile(fileext=".csv")
-    write.csv(object, file=tmpf, quote=F, row.names=F)
-    h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
-    unlink(tmpf)
-    return(h2f)
-  }
-}
-
-h2o.cut <- function(x, breaks) {
-  if(missing(x)) stop("Must specify data set")
-  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
-  if(missing(breaks) || !is.numeric(breaks)) stop("breaks must be a numeric vector")
-  
-  nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
-  expr = paste("cut(", x@key, ",", nums, ")", sep="")
-  res = .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    return(res$scalar)
-  new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
-}
-
-# TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
-h2o.table <- function(x) {
-  if(missing(x)) stop("Must specify data set")
-  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
-  if(ncol(x) > 2) stop("Unimplemented")
-  .h2o.__unop2("table", x)
-}
-
-h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
-  if( missing(.data) ) stop('must specify .data')
-  if( !(class(.data) %in% c('H2OParsedData', 'H2OParsedDataVA')) ) stop('.data must be an h2o data object')
-  if( missing(.variables) ) stop('must specify .variables')
-  if( missing(.fun) ) stop('must specify .fun')
-
-  mm <- match.call()
-
-  # we accept eg .(col1, col2), c('col1', 'col2'), 1:2, c(1,2)
-  # as column names.  This is a bit complicated
-  if( class(.variables) == 'character'){
-    vars <- .variables
-    idx <- match(vars, colnames(.data))
-  } else if( class(.variables) == 'H2Oquoted' ){
-    vars <- as.character(.variables)
-    idx <- match(vars, colnames(.data))
-  } else if( class(.variables) == 'quoted' ){ # plyr overwrote our . fn
-    vars <- names(.variables)
-    idx <- match(vars, colnames(.data))
-  } else if( class(.variables) == 'integer' ){
-    vars <- .variables
-    idx <- .variables
-  } else if( class(.variables) == 'numeric' ){   # this will happen eg c(1,2,3)
-    vars <- .variables
-    idx <- as.integer(.variables)
-  }
-
-  bad <- is.na(idx) | idx < 1 | idx > ncol(.data)
-  if( any(bad) ) stop( sprintf('can\'t recognize .variables %s', paste(vars[bad], sep=',')) )
-
-  fun_name <- mm[[ '.fun' ]]
-  exec_cmd <- sprintf('ddply(%s,c(%s),%s)', .data@key, paste(idx, collapse=','), as.character(fun_name))
-  res <- .h2o.__exec2(.data@h2o, exec_cmd)
-  new('H2OParsedData', h2o=.data@h2o, key=res$dest_key)
-}
-ddply <- h2o.ddply
-
-# TODO: how to avoid masking plyr?
-. <- function(...) {
-  mm <- match.call()
-  mm <- mm[-1]
-  structure( as.list(mm), class='H2Oquoted')
-}
-
-`h2o..` <- `.`
-
-h2o.addFunction <- function(object, fun, name){
-  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
-  if( missing(fun) ) stop('must specify fun')
-  if( !missing(name) ){
-  if( class(name) != 'character' ) stop('name must be a name')
-    fun_name <- name
-  } else {
-    fun_name <- match.call()[['fun']]
-  }
-  src <- paste(deparse(fun), collapse='\n')
-  exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
-  res <- .h2o.__exec2(object, exec_cmd)
-}
-
-h2o.runif <- function(x, min = 0, max = 1) {
-  if(missing(x)) stop("Must specify data set")
-  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
-  if(!is.numeric(min)) stop("min must be a single number")
-  if(!is.numeric(max)) stop("max must be a single number")
-  if(length(min) > 1 || length(max) > 1) stop("Unimplemented")
-  if(min > max) stop("min must be a number less than or equal to max")
-  expr = paste("runif(", x@key, ")*(", max - min, ")+", min, sep = "")
-  res = .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(res$scalar)
-  else
-    return(new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE))
-}
-
-setMethod("colnames", "H2OParsedData", function(x, do.NULL = TRUE, prefix = "col") {
-  if(!do.NULL) stop("Unimplemented: Auto-generated colnames are C1, C2, ...")
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
-  unlist(lapply(res$cols, function(y) y$name))
-})
-
 setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {
     if(class(value) == "H2OParsedDataVA") stop("value must be a FluidVecs object")
@@ -709,6 +665,15 @@ setMethod("nrow", "H2OParsedData", function(x) {
 
 setMethod("ncol", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
+
+setMethod("length", "H2OParsedData", function(x) { ncol(x) })
+
+setMethod("dim", "H2OParsedData", function(x) {
+  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
+  as.numeric(c(res$numRows, res$numCols))
+})
+
+setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 # setMethod("min", "H2OParsedData", function(x, ..., na.rm = FALSE) {
 #   if(na.rm) stop("Unimplemented")
@@ -778,15 +743,6 @@ setMethod("range", "H2OParsedData", function(x) {
   c(min(temp[1,]), max(temp[2,]))
 })
 
-# setMethod("colMeans", "H2OParsedData", function(x, na.rm = FALSE, dims = 1) {
-#   if(dims != 1) stop("Unimplemented")
-#   if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
-#   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
-#   temp = sapply(res$cols, function(x) { x$mean })
-#   names(temp) = sapply(res$cols, function(x) { x$name })
-#   temp
-# })
-
 mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
   if(length(x) != 1 || trim != 0) stop("Unimplemented")
   if(h2o.anyFactor(x) || dim(x)[2] != 1) {
@@ -803,13 +759,6 @@ setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
   if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
   .h2o.__unop2("sd", x)
 })
-
-setMethod("dim", "H2OParsedData", function(x) {
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
-  as.numeric(c(res$numRows, res$numCols))
-})
-
-setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), sep='')
@@ -900,24 +849,20 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
 
-h2o.anyFactor <- function(x) {
-  # if(class(x) != "H2OParsedData") stop("x must be an H2OParsedData object")
-  if(!inherits(x, "H2OParsedData")) stop("x must be an H2O parsed data object")
-  as.logical(.h2o.__unop2("any.factor", x))
-}
-
-quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, ...) {
+quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {
   if((numCols = ncol(x)) != 1) stop("quantile only operates on a single column")
   if(is.factor(x)) stop("factors are not allowed")
+  if(!na.rm && .h2o.__unop2("any.na", x)) stop("missing values and NaN's not allowed if 'na.rm' is FALSE")
   if(!is.numeric(probs)) stop("probs must be a numeric vector")
   if(any(probs < 0 | probs > 1)) stop("probs must fall in the range of [0,1]")
-  if(!na.rm && .h2o.__unop2("any.na", x)) stop("missing values and NaN's not allowed if 'na.rm' is FALSE")
+  if(type != 2 && type != 7) stop("type must be either 2 (mean interpolation) or 7 (linear interpolation)")
   
-  myFeat <- colnames(x)
   myProbs <- paste("c(", paste(probs, collapse = ","), ")", sep = "")
   expr = paste("quantile(", x@key, ",", myProbs, ")", sep = "")
-  
   res = .h2o.__exec2(x@h2o, expr)
+  # res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_QUANTILES, source_key = x@key, column = 0, quantile = paste(probs, collapse = ","), interpolation_type = type, ...)
+  # return(res$result)
+  
   # col <- as.numeric(strsplit(res$result, "\n")[[1]][-1])
   # if(numCols > .MAX_INSPECT_COL_VIEW)
   #   warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
@@ -976,6 +921,27 @@ summary.H2OParsedData <- function(object, ...) {
   result
 }
 
+summary.H2OPCAModel <- function(object, ...) {
+  # TODO: Save propVar and cumVar from the Java output instead of computing here
+  myVar = object@model$sdev^2
+  myProp = myVar/sum(myVar)
+  result = rbind(object@model$sdev, myProp, cumsum(myProp))   # Need to limit decimal places to 4
+  colnames(result) = paste("PC", seq(1, length(myVar)), sep="")
+  rownames(result) = c("Standard deviation", "Proportion of Variance", "Cumulative Proportion")
+  
+  cat("Importance of components:\n")
+  print(result)
+}
+
+screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type = "barplot", main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ...) {
+  if(type == "barplot")
+    barplot(x@model$sdev[1:npcs]^2, main = main, ylab = "Variances", ...)
+  else if(type == "lines")
+    lines(x@model$sdev[1:npcs]^2, main = main, ylab = "Variances", ...)
+  else
+    stop("type must be either 'barplot' or 'lines'")
+}
+
 setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
   # if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
   if(!(is.numeric(yes) || inherits(yes, "H2OParsedData")) || !(is.numeric(no) || inherits(no, "H2OParsedData")))
@@ -998,6 +964,19 @@ setMethod("levels", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key)
   res$levels[[1]]
 })
+
+unique.H2OParsedData <- function(x, incomparables = FALSE, MARGIN = 1, fromLast = FALSE, ...) {
+  if(!is.logical(incomparables) || incomparables) stop("Unimplemented")
+  if(MARGIN != 1) stop("Unimplemented")
+  if(fromLast) stop("Unimplemented")
+  .h2o.__unop2("unique", x)
+}
+
+merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all) {
+  if(!inherits(y, "H2OParsedData")) stop("y must be a H2O parsed data object")
+  if(!is.character(by)) stop("by must be of class character")
+  if(!is.logical(all)) stop("all must be of class logical")
+}
 
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Need to change ... to environment variables and pass to substitute method,
@@ -1165,6 +1144,41 @@ setMethod("show", "H2ORFModelVA", function(object) {
   cat("\nTree Stats:\n"); print(model$tree_sum)
 })
 
+`[[.H2OParsedDataVA` <- function(x, ..., exact=TRUE){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
+  
+  cols <- sapply(as.list(...), function(x) x)
+  if( length(cols) == 0 )
+    return(x)
+  if( length(cols) > 1 ) stop('[[]] may only select one column')
+  if( ! cols[1] %in% colnames(x) )
+    return(NULL)
+  
+  x[, cols]
+}
+
+`[[<-.H2OParsedDataVA` <- function(x, i, j, value){
+  if( missing(x) ) stop('must specify x')
+  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
+  if( !class(value) == 'H2OParsedDataVA') stop('can only append h2o data to h2o data')
+  if( ncol(value) > 1 ) stop('may only set a single column')
+  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
+  
+  mm <- match.call()
+  col_name <- as.list(i)[[1]]
+  
+  cc <- colnames(x)
+  if( col_name %in% cc ){
+    x[, match( col_name, cc ) ] <- value
+  } else {
+    x <- cbind(x, value)
+    cc <- c( cc, col_name )
+    colnames(x) <- cc
+  }
+  x
+}
+
 setMethod("colnames", "H2OParsedDataVA", function(x) {
   if(ncol(x) > .MAX_INSPECT_COL_VIEW)
     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
@@ -1197,7 +1211,22 @@ setMethod("dim", "H2OParsedDataVA", function(x) {
   as.numeric(c(res$num_rows, res$num_cols))
 })
 
-setMethod("length", "H2OParsedData", function(x) { ncol(x) })
+cbind.H2OParsedDataVA <- function(...){
+  l <- list(...)
+  if( length(l) == 0 ) stop('cbind requires an h2o data')
+  klass <- 'H2OParsedDataVA'
+  h2o <- l[[1]]@h2o
+  nrows <- nrow(l[[1]])
+  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem)}, l)
+  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
+  
+  if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same h2o instance'))}
+  
+  # todo: if cbind(x,x), fix up the column names so unique.  sigh.
+  exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
+  res <- .h2o.__exec2(h2o, exec_cmd)
+  new('H2OParsedDataVA', h2o=h2o, key=res$dest_key)
+}
 
 head.H2OParsedDataVA <- function(x, n = 6L, ...) {
   numRows = nrow(x)

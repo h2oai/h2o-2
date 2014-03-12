@@ -7,7 +7,8 @@ export('h2o.shutdown', 'h2o.init', 'h2o.glm', 'h2o.glm.FV', 'h2o.kmeans', 'h2o.r
        'h2o.importURL.VA', 'h2o.uploadFile.VA', 'h2o.parseRaw.VA', 'h2o.ls', 'h2o.rm',
        'summary.H2OParsedData', 'summary.H2OParsedDataVA', 'screeplot.H2OPCAModel', 'h2o.cut', '.', 'h2o..',
        'cbind.H2OParsedData', 'cbind.H2OParsedDataVA',
-       '[[.H2OParsedData', '[[.H2OParsedDataVA', '[[<-.H2OParsedData', '[[<-.H2OParsedDataVA')
+       '[[.H2OParsedData', '[[.H2OParsedDataVA', '[[<-.H2OParsedData', '[[<-.H2OParsedDataVA',
+       'unique.H2OParsedDataVA', 'unique.H2OParsedData')
 exportMethods(
   "colnames",
   "show",
