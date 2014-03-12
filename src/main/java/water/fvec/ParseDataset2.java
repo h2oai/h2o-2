@@ -596,6 +596,10 @@ public final class ParseDataset2 extends Job {
       fs.blockForPending();
       return this;
     }
+     public void check(){
+       if(_nvs != null) for(NewChunk nv:_nvs)
+        assert (nv._len2 == _nLines):"unexpected number of lines in NewChunk, got " + nv._len2 + ", but expected " + _nLines;
+    }
     @Override public FVecDataOut close(Futures fs){
       if( _nvs == null ) return this; // Might call close twice
       for(NewChunk nv:_nvs)nv.close(_cidx, fs);
@@ -610,6 +614,16 @@ public final class ParseDataset2 extends Job {
       Futures fs = new Futures();
       _closedVecs = true;
       Vec [] res = new Vec[_vecs.length];
+      for(int i = 0; i < _vecs[0]._espc.length; ++i){
+        int j = 0;
+        while(j < _vecs.length && _vecs[j]._espc[i] == 0)++j;
+        if(j == _vecs.length)break;
+        final long clines = _vecs[j]._espc[i];
+        for(AppendableVec v:_vecs) {
+          if(v._espc[i] == 0)v._espc[i] = clines;
+          else assert v._espc[i] == clines:"incompatible number of lines: " +  v._espc[i] +  " != " + clines;
+        }
+      }
       for(int i = 0; i < _vecs.length; ++i)
         res[i] = _vecs[i].close(fs);
       _vecs = null;  // Free for GC
