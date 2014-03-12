@@ -28,6 +28,7 @@ assert CUT_EXPR_CNT > 2 * CUT_LOOP_CNT
 
 if getpass.getuser()=='kevin': #10M
     ROWS=1000000 # 1M
+    ROWS=10000 # 10k
     WRITE_REPEAT = 10
     # note we have a 10 way upload repeat too...for 200M rows
     CAT_ITERATE = 0 # repeated cat to to get 2**N bigger
@@ -232,7 +233,8 @@ class Basic(unittest.TestCase):
                 cutExpr = ' & '.join(cutExprList)
                 # print "cutExpr:", cutExpr    
 
-                rowExpr = '%s[%s,];' % (hex_key, cutExpr)
+                # just extract one output col (the first one)
+                rowExpr = '%s[%s,%s];' % (hex_key, cutExpr, iColCount+1)
                 # print "rowExpr:", rowExpr
                 print rowExpr
                 rowExprList.append(rowExpr)
@@ -305,34 +307,16 @@ class Basic(unittest.TestCase):
                 fKey = e[0]
                 eKey = e[1]
 
-                if 1==0:
-                    start = time.time()
-                    e = h2o.nodes[0].exec_query(str='%s=%s[,%s]' % (fKey, hex_key, randOCol+1))
-
-                    elapsed = time.time() - start
-                    print "exec 1 took", elapsed, "seconds."
-                    execTime = elapsed
-
-                if 1==1:
-                    start = time.time()
-                    h2o.nodes[0].exec_query(str="%s=%s" % (fKey, random.choice(rowExprList)))
-                    elapsed = time.time() - start
-                    execTime = elapsed
-                    print "exec 2 took", elapsed, "seconds."
-                
-                if 1==0:
-                    gKey = random.choice(eKeys)
-                    # do a 2nd random to see if things blow up
-                    start = time.time()
-                    h2o.nodes[0].exec_query(str="%s=%s" % (gKey, fKey))
-                    elapsed = time.time() - start
-                    print "exec 3 took", elapsed, "seconds."
-
-                if 1==1:
-                    inspect = h2o_cmd.runInspect(key=fKey)
-                    h2o_cmd.infoFromInspect(inspect, fKey)
-                    numRows = inspect['numRows']
-                    numCols = inspect['numCols']
+                start = time.time()
+                h2o.nodes[0].exec_query(str="%s=%s" % (fKey, random.choice(rowExprList)))
+                elapsed = time.time() - start
+                execTime = elapsed
+                print "exec 2 took", elapsed, "seconds."
+            
+                inspect = h2o_cmd.runInspect(key=fKey)
+                h2o_cmd.infoFromInspect(inspect, fKey)
+                numRows = inspect['numRows']
+                numCols = inspect['numCols']
 
                 if numRows==0 or numCols!=colCount:
                     h2p.red_print("Warning: Cut resulted in", numRows, "rows and", numCols, "cols. Quantile will abort")
@@ -341,6 +325,7 @@ class Basic(unittest.TestCase):
                 quantile = 0.5 if DO_MEDIAN else .999
                 # first output col. always fed by an exec cut, so 0?
                 column = iColCount
+                column = 0
                 start = time.time()
                 q = h2o.nodes[0].quantiles(source_key=fKey, column=column, 
                     quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=MULTI_PASS)
