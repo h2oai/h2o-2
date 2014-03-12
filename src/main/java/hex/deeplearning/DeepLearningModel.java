@@ -1,6 +1,5 @@
 package hex.deeplearning;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask.DataInfo;
 import water.*;
 import water.api.*;
@@ -247,7 +246,7 @@ public class DeepLearningModel extends Model {
       assert(num_input > 0);
       assert(num_output > 0);
       parameters = params;
-      if (has_momenta() && adaDelta()) throw new InvalidArgumentException("Cannot have non-zero momentum and non-zero AdaDelta parameters at the same time.");
+      if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and non-zero AdaDelta parameters at the same time.");
       final int layers=parameters.hidden.length;
       // units (# neurons for each layer)
       units = new int[layers+2];
@@ -733,12 +732,13 @@ public class DeepLearningModel extends Model {
     model_info.job().toHTML(sb);
     Inspect2 is2 = new Inspect2();
     sb.append("<div class='alert'>Actions: "
-            + (Job.isRunning(jobKey) ? Cancel.link(jobKey, "Stop training") + ", " : "")
+            + (Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null) + ", "
-            + (Job.isEnded(jobKey) ? DeepLearning.link(_dataKey, "Continue training this model", _key) : "")
+            + DeepLearning.link(_dataKey, "Compute new model", null, null) + ", "
+            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>"
+            + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName()) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);

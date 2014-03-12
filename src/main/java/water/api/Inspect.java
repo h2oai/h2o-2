@@ -342,7 +342,7 @@ public class Inspect extends Request {
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", "
           + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
-          + DeepLearning.link(key, DeepLearning.DOC_GET, null) + "<br />"
+          + DeepLearning.link(key, DeepLearning.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, "0.0", "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
