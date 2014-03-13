@@ -400,15 +400,20 @@ public class Summary2 extends Iced {
 
       // _binsz = 0 means min/max are equal for reals?. Just make it a little number
       // this won't show up in browser display, since bins are labelled by start value
-      _binsz = (binszSuggest!=0) ? binszSuggest : (vec.isInt() ? 1 : 1e-13d); 
+
+      // Now that we know the best bin size that will fit..Floor the _binsz if integer so visible
+      // histogram looks good for integers. This is our final best bin size.
+      double binsz = (binszSuggest!=0) ? binszSuggest : (vec.isInt() ? 1 : 1e-13d); 
+      _binsz = vec.isInt() ? Math.floor(binsz) : binsz;
 
       // This equation creates possibility of some of the first bins being empty
       // also: _binsz means many _binsz2 could be empty at the start if we resused _start there
       // FIX! is this okay if the dynamic range is > 2**32
       // align to bin size?
       int nbin = (int) Math.ceil((stat0._max2 - _start)/_binsz) + 1;
-      double impliedBinEnd = _start + (nbin * _binsz);
+      
 
+      double impliedBinEnd = _start + (nbin * _binsz);
       String assertMsg = _start+" "+_stat0._min2+" "+_stat0._max2+
         " "+impliedBinEnd+" "+_binsz+" "+nbin+" "+binCase;
       // Log.info("Summary2 bin1. "+assertMsg);
@@ -418,6 +423,7 @@ public class Summary2 extends Iced {
 
       // just for double checking we're okay (nothing outside the bin rang)
       assert impliedBinEnd>=_stat0._max2 : assertMsg;
+
 
       // create a 2nd finer grained historam for quantile estimates.
       // okay if it is approx. 1000 bins (+-1)
