@@ -336,6 +336,7 @@ public class GLM2 extends ModelJob {
       double [] newBeta = glmt._beta != null?glmt._beta.clone():MemoryManager.malloc8d(glmt._xy.length);
       double [] newBetaDeNorm = null;
       ADMMSolver slvr = new ADMMSolver(lambda[_lambdaIdx],alpha[0], _addedL2);
+      slvr._n = glmt._n;
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
