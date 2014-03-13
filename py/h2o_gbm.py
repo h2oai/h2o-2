@@ -7,6 +7,7 @@ def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fLis
 
     # Force matplotlib to not use any Xwindows backend.
     if server:
+        import matplotlib
         matplotlib.use('Agg')
 
     import pylab as plt

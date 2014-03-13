@@ -32,6 +32,7 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
+            ('/home/0xdiag/datasets/airlines/year2013.csv', None, None, 'cE', 300), 
             ('/home/kevin/Downloads/t.csv', 15, 11, 'cE', 300), 
             ]
 
@@ -42,7 +43,6 @@ class Basic(unittest.TestCase):
         fList = []
         
         for (csvPathname, iColCount, oColCount, hex_key, timeoutSecs) in tryList:
-            colCount = iColCount + oColCount
 
             # PARSE*******************************************************
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=200, doSummary=False)
@@ -54,6 +54,13 @@ class Basic(unittest.TestCase):
             numRows = inspect['numRows']
             numCols = inspect['numCols']
 
+            if not oColCount:
+                iColCount = 0
+
+            if not oColCount:
+                oColCount = numCols
+
+            colCount = iColCount + oColCount
             for i in range (0,numCols):
                 print "Column", i, "summary"
                 h2o_cmd.runSummary(key=hex_key, max_qbins=1, cols=i);
