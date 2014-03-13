@@ -32,7 +32,7 @@ public final class ParseDataset2 extends Job {
   public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
     Key k = keys[0];
     ByteVec v = (ByteVec)getVec(k);
-    byte [] bits = v.elem2BV(0).getBytes();
+    byte [] bits = v.chunkForChunkIdx(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
     globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
     if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
@@ -320,7 +320,7 @@ public final class ParseDataset2 extends Job {
 
   public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
     ByteVec vec = (ByteVec) getVec(key);
-    byte [] bits = vec.elem2BV(0)._mem;
+    byte [] bits = vec.chunkForChunkIdx(0)._mem;
     Compression cpr = Utils.guessCompressionMethod(bits);
     return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader)._setup;
   }
@@ -380,7 +380,7 @@ public final class ParseDataset2 extends Job {
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
-      byte [] bits = vec.elem2BV(0)._mem;
+      byte [] bits = vec.chunkForChunkIdx(0)._mem;
       final int chunkStartIdx = _fileChunkOffsets.get(key)._val;
       Compression cpr = Utils.guessCompressionMethod(bits);
       CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
@@ -576,7 +576,7 @@ public final class ParseDataset2 extends Job {
       _vecIdStart = vecIdStart;
       _ctypes = MemoryManager.malloc1(ncols);
       for(int i = 0; i < ncols; ++i)
-        _nvs[i] = (NewChunk)(_vecs[i] = new AppendableVec(vg.vecKey(vecIdStart + i))).elem2BV(_cidx);
+        _nvs[i] = (NewChunk)(_vecs[i] = new AppendableVec(vg.vecKey(vecIdStart + i))).chunkForChunkIdx(_cidx);
 
     }
     public FVecDataOut reduce(StreamDataOut sdout){
@@ -726,7 +726,7 @@ public final class ParseDataset2 extends Job {
     }
     @Override public byte[] getChunkData(int cidx) {
       if(cidx != _idx)
-        _chk = cidx < _vec.nChunks()?_vec.elem2BV(_idx=cidx):null;
+        _chk = cidx < _vec.nChunks()?_vec.chunkForChunkIdx(_idx = cidx):null;
       return (_chk == null)?null:_chk._mem;
     }
     @Override public int  getChunkDataStart(int cidx) { return -1; }

@@ -9,8 +9,6 @@ import org.junit.Test;
 import water.*;
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.parser.CustomParser;
-import water.parser.CustomParser.ParserType;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }
@@ -444,11 +442,11 @@ public class ParserTest2 extends TestUtil {
     Class [] expectedTypes = new Class[]{C1Chunk.class,C1SChunk.class,C2Chunk.class,C2SChunk.class,C4Chunk.class,C4FChunk.class,C8Chunk.class,C8DChunk.class, C1Chunk.class};
     assertTrue(fr.numCols() == expectedTypes.length);
 //    for(int i = 0; i < expectedTypes.length; ++i)
-//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].elem2BV(0)));
+//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].chunkForChunkIdx(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].chunkForChunkIdx(0)));
     assertEquals(9,nlines);
     for(int i = 0; i < nlines-2; ++i)
       for( Vec v : fr.vecs() )
-        assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),
+        assertTrue("error at line "+i+", vec " + v.chunkForChunkIdx(0).getClass().getSimpleName(),
                    !Double.isNaN(v.at(i)) && !v.isNA(i) );
     int j = 0;
     for( Vec v:fr.vecs() ) {

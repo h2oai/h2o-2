@@ -382,7 +382,7 @@ public class Frame extends Lockable<Frame> {
     if( v0 == null ) return s;
     int nc = v0.nChunks();
     s += "Chunk starts: {";
-    for( int i=0; i<nc; i++ ) s += v0.elem2BV(i)._start+",";
+    for( int i=0; i<nc; i++ ) s += v0.chunkForChunkIdx(i)._start+",";
     s += "}";
     return s;
   }
@@ -414,14 +414,14 @@ public class Frame extends Lockable<Frame> {
         w = Math.min(w,10);
         fs[c] = "%"+w+"."+w+"s";
       } else {
-        Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+        Chunk C = _vecs[c].chunkForChunkIdx(0);   // 1st Chunk
         // Possible situation: 1) vec is INT - C is has no floats => OK
         // 2) vec is INT - C has floats => IMPOSSIBLE,
         // 3) vec is FLOAT - C has floats => OK,
         // 4) vec is FLOAT - C has no floats => find the first chunk with floats
         if (!_vecs[c].isInt() &&  !C.hasFloat()) {
           for (int i=1; i<_vecs[c].nChunks(); i++) {
-            C=_vecs[c].elem2BV(i);
+            C=_vecs[c].chunkForChunkIdx(i);
             if (C.hasFloat()) break;
           }
         }
@@ -463,7 +463,7 @@ public class Frame extends Lockable<Frame> {
         sb.append(String.format(fs[c],s));
       } else if( vec.isInt() ) {
         if( vec.isNA(idx) ) {
-          Chunk C = vec.elem2BV(0);   // 1st Chunk
+          Chunk C = vec.chunkForChunkIdx(0);   // 1st Chunk
           int len = C.pformat_len0();  // Printable width
           for( int i=0; i<len; i++ ) sb.append('-');
         } else {
@@ -669,7 +669,7 @@ public class Frame extends Lockable<Frame> {
       Chunk[] last_cs = new Chunk[vecs.length];       // ...         last chunks
       for (int c = 0; c < _cols.length; c++) {
         vecs[c] = _base.vecs()[_cols[c]];
-        last_cs[c] = vecs[c].elem2BV(last_ci);
+        last_cs[c] = vecs[c].chunkForChunkIdx(last_ci);
       }
       for (int i = 0; i < ix[0]._len; i++) {
         // select one row
@@ -683,7 +683,7 @@ public class Frame extends Lockable<Frame> {
             last_c0 = anyv._espc[last_ci];
             last_c1 = anyv._espc[last_ci + 1];
             for (int c = 0; c < vecs.length; c++)
-              last_cs[c] = vecs[c].elem2BV(last_ci);
+              last_cs[c] = vecs[c].chunkForChunkIdx(last_ci);
           }
           for (int c = 0; c < vecs.length; c++)
             ncs[c].addNum(last_cs[c].at(r));

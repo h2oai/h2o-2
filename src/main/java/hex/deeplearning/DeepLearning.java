@@ -332,11 +332,14 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   public static String link(Key k, String content, Key cp, String response) {
     DeepLearning req = new DeepLearning();
-    RString rs = new RString("<a href='" + req.href() + ".query?source=%$key&checkpoint=%$cp&response=%$resp'>%content</a>");
+    RString rs = new RString("<a href='" + req.href() + ".query?source=%$key" +
+            (cp == null ? "" : "&checkpoint=%$cp") +
+            (response == null ? "" : "&response=%$resp") +
+            "'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
-    rs.replace("cp", cp == null ? "null" : cp.toString());
-    rs.replace("resp", response == null ? "null" : response);
+    if (cp != null) rs.replace("cp", cp.toString());
+    if (response != null) rs.replace("resp", response);
     return rs.toString();
   }
 
@@ -357,16 +360,16 @@ public class DeepLearning extends Job.ValidatedJob {
       try {
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
-        if (source != previous.model_info().get_params().source) {
+        if (source._key != previous.model_info().get_params().source._key) {
           throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
         }
-        if (response != previous.model_info().get_params().response) {
+        if (response._key != previous.model_info().get_params().response._key) {
           throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
         }
         if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0) {
           throw new IllegalArgumentException("ignored_cols must be the same as for the checkpointed model.");
         }
-        if (validation != previous.model_info().get_params().validation) {
+        if (validation._key != previous.model_info().get_params().validation._key) {
           throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
         }
         if (classification != previous.model_info().get_params().classification) {

@@ -18,8 +18,8 @@ public class SubsetVec extends WrappedVec {
   }
 
   // A subset chunk
-  @Override public Chunk elem2BV(int cidx) {
-    Chunk crows = rows().elem2BV(cidx);
+  @Override public Chunk chunkForChunkIdx(int cidx) {
+    Chunk crows = rows().chunkForChunkIdx(cidx);
     return new SubsetChunk(crows,this,masterVec());
   }
 
