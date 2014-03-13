@@ -90,7 +90,7 @@ def percentileOnSortedList_25_50_75( N, key=lambda x:x):
 
 #***************************************************************************
 def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float', h2oSummary2=None, 
-   h2oQuantilesApprox=None, h2oQuantilesExact=None, interpolate='linear', quantile=0.50, use_genfromtxt=True):
+   h2oQuantilesApprox=None, h2oQuantilesExact=None, interpolate='linear', quantile=0.50, use_genfromtxt=False):
     SCIPY_INSTALLED = True
     try:
         import scipy as sp

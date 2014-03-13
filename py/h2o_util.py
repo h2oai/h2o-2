@@ -169,7 +169,8 @@ def file_read_csv_col(csvPathname, col=0, skipHeader=True, datatype='float', pre
                     dataList.append(colData)
                 rowNum += 1
                 if rowNum%10==0:
-                    print rowNum
+                    # print rowNum
+                    pass
                 lastRowLength = len(row)
         except csv.Error, e:
             sys.exit('file %s, line %d: %s' % (csvPathname, reader.line_num, e))
