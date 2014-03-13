@@ -168,7 +168,7 @@ public abstract class LSMSolver extends Iced{
 
 
   public static final class ADMMSolver extends LSMSolver {
-
+  public long _n;
     //public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
     public double _orlx = 1;//1.4; // over relaxation param
