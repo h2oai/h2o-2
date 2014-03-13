@@ -2559,7 +2559,7 @@ class H2O(object):
             args += [ '%s' % self.java_extra_args ]
 
 
-        # args += ["-ea"]
+        args += ["-ea"]
 
         if self.use_maprfs:
             args += ["-Djava.library.path=/opt/mapr/lib"]
