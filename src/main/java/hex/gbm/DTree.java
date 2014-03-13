@@ -1,8 +1,8 @@
 package hex.gbm;
 
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
+import hex.*;
 import hex.ConfusionMatrix;
-import hex.VariableImportance;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 
@@ -124,6 +124,16 @@ public class DTree extends Iced {
     public final int   bin() { return _bin; }
     public final long  rowsLeft () { return _n0; }
     public final long  rowsRight() { return _n1; }
+    /** Returns empirical improvement in mean-squared error.
+     *
+     *  Formula for node splittin space into two subregions R1,R2 with predictions y1, y2:
+     *    i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2
+     *
+     * @see (35), (45) in J. Friedman - Greedy Function Approximation: A Gradient boosting machine */
+    public final float improvement() {
+      double d = (_p0-_p1);
+      return (float) ( d*d*_n0*_n1 / (_n0+_n1) );
+    }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -520,8 +530,8 @@ public class DTree extends Iced {
     @API(help="MSE rate as trees are added")       public final double [] errs;
     @API(help="Keys of actual trees built")        public final Key [/*N*/][/*nclass*/] treeKeys; // Always filled, but 2-binary classifiers can contain null for 2nd class
     @API(help="Maximum tree depth")                public final int max_depth;
-    @API(help = "Fewest allowed observations in a leaf") public final int min_rows;
-    @API(help = "Bins in the histograms")          public final int nbins;
+    @API(help="Fewest allowed observations in a leaf") public final int min_rows;
+    @API(help="Bins in the histograms")            public final int nbins;
 
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be separate).
@@ -529,8 +539,7 @@ public class DTree extends Iced {
     // Confusion matrix per each generated tree or null
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
     @API(help="Confusion matrix domain.")                                             public final String[]        cmDomain;
-    @API(help="Unscaled variable importance for individual input variables.")         public final float []        varimp;
-    @API(help="Standard deviation of variable importance for input variables.")       public final float []        varimpSD;
+    @API(help="Variable importance for individual input variables.")                  public final VarImp          varimp;
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
     @API(help="AUC for validation dataset")                                           public final AUC             validAUC;
 
@@ -545,11 +554,10 @@ public class DTree extends Iced {
       treeStats = null;
       this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
       this.varimp = null;
-      this.varimpSD = null;
       this.validAUC = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, float[] varimp, float[] varimpSD, AUC validAUC) {
+    private TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -562,23 +570,18 @@ public class DTree extends Iced {
       if (cms      != null) this.cms       = cms;      else this.cms       = prior.cms;
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
-      if (varimpSD != null) this.varimpSD  = varimpSD; else this.varimpSD  = prior.varimpSD;
       if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
     }
 
     public TreeModel(TreeModel prior, DTree[] tree, double err, ConfusionMatrix cm, TreeStats tstats) {
-      this(prior, append(prior.treeKeys, tree), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null, null, null);
+      this(prior, append(prior.treeKeys, tree), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null, null);
     }
     public TreeModel(TreeModel prior, DTree[] tree, TreeStats tstats) {
-      this(prior, append(prior.treeKeys, tree), null, null, tstats, null, null, null);
+      this(prior, append(prior.treeKeys, tree), null, null, tstats, null, null);
     }
 
-    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
-      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, varimpSD, validAUC);
-    }
-
-    public TreeModel(TreeModel prior, float[] varimp, float[] varimpSD) {
-      this(prior, null, null, null, null, varimp, varimpSD, null);
+    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, validAUC);
     }
 
     private static final Key[][] append(Key[][] prior, DTree[] tree ) {
@@ -592,8 +595,8 @@ public class DTree extends Iced {
       return prior;
     }
 
-    // Number of trees actually in the model (instead of expected/planned)
-    public int numTrees() { return treeKeys.length; }
+    /** Number of trees in current model. */
+    public int ntrees() { return treeKeys.length; }
     // Most recent ConfusionMatrix
     @Override public ConfusionMatrix cm() {
       ConfusionMatrix[] cms = this.cms; // Avoid racey update; read it once
@@ -603,7 +606,8 @@ public class DTree extends Iced {
         return cms[n] == null?null:cms[n];
       } else return null;
     }
-    @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
+
+    @Override public VarImp varimp() { return varimp; }
     @Override public double mse() {
       if(errs != null && errs.length > 0){
         int n = errs.length-1;
@@ -621,7 +625,7 @@ public class DTree extends Iced {
     /** Returns i-th tree represented by an array of k-trees. */
     public final synchronized CompressedTree[] ctree(int tidx) {
       if (_treeBitsCache!=null && _treeBitsCache[tidx]!=null) return _treeBitsCache[tidx];
-      if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[numTrees()][];
+      if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[ntrees()][];
       Key[] k = treeKeys[tidx];
       CompressedTree[] ctree = new CompressedTree[nclasses()];
       for (int i = 0; i < nclasses(); i++) // binary classifiers can contains null for second tree
@@ -767,34 +771,11 @@ public class DTree extends Iced {
     }
 
     protected void generateHTMLVarImp(StringBuilder sb) {
-      DocGen.HTML.section(sb,"Unscaled Variable Importance");
-      DocGen.HTML.arrayHead(sb);
-      // Create a sort order
-      Integer[] sortOrder = new Integer[varimp.length];
-      for(int i=0; i<sortOrder.length; i++) sortOrder[i] = i;
-
-      Arrays.sort(sortOrder, new Comparator<Integer>() {
-        @Override public int compare(Integer o1, Integer o2) { float f = varimp[o1]-varimp[o2]; return f<0 ? 1 : (f>0 ? -1 : 0); }
-      });
-
-      sb.append("<tr><th>Variable</th>");
-      for( int i=0; i<varimp.length; i++ )
-        sb.append("<td>").append(_names[sortOrder[i]]).append("</td>");
-      sb.append("</tr>");
-      sb.append("<tr><th class='warning'>Mean Decrease Accuracy</th>");
-      for( int i=0; i<varimp.length; i++ )
-        sb.append(String.format("<td>%5.4f</td>",varimp[sortOrder[i]]));
-      sb.append("</tr>");
-      sb.append("<tr><th class='warning'>SD</th>");
-      for( int i=0; i<varimpSD.length; i++ )
-        sb.append(String.format("<td>%5.4f</td>",varimpSD[sortOrder[i]]));
-      sb.append("</tr>");
-      DocGen.HTML.arrayTail(sb);
-      // Generate a graph - horrible code
-      DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
-          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1) ),
-          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
-          );
+      if (varimp!=null) {
+        // Set up variable names for importance
+        varimp.setVariables(Arrays.copyOf(_names, _names.length-1));
+        varimp.toHTML(sb);
+      }
     }
 
     protected void generateHTMLAUC(StringBuilder sb) {
@@ -976,7 +957,7 @@ public class DTree extends Iced {
                 "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
 
-      if( numTrees() * treeStats.meanLeaves > 5000 ) {
+      if( ntrees() * treeStats.meanLeaves > 5000 ) {
         String modelName = JCodeGen.toJavaId(_key.toString());
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
@@ -1008,8 +989,8 @@ public class DTree extends Iced {
       sb.di(1);
       sb.p(TO_JAVA_BENCH_FUNC);
 
-      JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
-      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
+      JCodeGen.toStaticVar(sb, "NTREES", ntrees(), "Number of trees in this model.");
+      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", ntrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
       if( _dataKey != null ) {

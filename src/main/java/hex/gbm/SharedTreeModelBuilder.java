@@ -2,6 +2,7 @@ package hex.gbm;
 
 import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.rng.MersenneTwisterRNG;
 
 import java.util.Arrays;
@@ -50,6 +51,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   protected boolean importance = false; // compute variable importance
 
+  @API(help = "Scale variable importance measures.", filter = Default.class )
+  protected boolean scale_importance = false;
+
 //  @API(help = "Active feature columns")
   protected int _ncols;
 
@@ -75,7 +79,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : m.numTrees() / (float) m.N;
+    return m == null ? 0 : m.ntrees() / (float) m.N;
   }
 
   // Verify input parameters
@@ -167,6 +171,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     prepareValidationWithModel(model);
 
     try {
+      // Initialized algorithm
+      initAlgo(model);
       // Compute the model
       model = buildModel(model, fr, names, domains, bm_timer);
     //} catch (Throwable t) { t.printStackTrace();
@@ -221,13 +227,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     }
 
     // Compute variable importance for this tree if necessary
-    float[] varimp   = null;
-    float[] varimpSD = null;
+    VarImp varimp = null;
     if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
       Timer vi_timer = new Timer();
-      float[][] vi = doVarImpCalc(model, ktrees, tid-1, fTrain);
-      varimp   = vi[0];
-      varimpSD = vi[1];
+      varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, scale_importance);
       Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring
@@ -235,16 +238,15 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
                       sc==null ? Double.NaN : sc.mse(),
                       sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null),
                       varimp,
-                      varimpSD,
                       sc==null ? null : (_nclass==2 ? makeAUC(toCMArray(sc._cms), ModelUtils.DEFAULT_THRESHOLDS) : null)
                       );
     model.update(self());
     return model;
   }
 
-  protected abstract float[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame);
+  protected abstract VarImp doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale);
 
-  ConfusionMatrix[] toCMArray(long[][][] cms) {
+  private ConfusionMatrix[] toCMArray(long[][][] cms) {
     int n = cms.length;
     ConfusionMatrix[] res = new ConfusionMatrix[n];
     for (int i = 0; i < n; i++) res[i] = new ConfusionMatrix(cms[i]);
@@ -684,6 +686,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
           sum = score1(chks,fs,row);
         }
         float err;  int yact=0; // actual response from dataset
+        int yact_orig = 0; // actual response from dataset before potential scaling
         if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
           if( sum == 0 ) {       // This tree does not predict this row *at all*?
@@ -692,7 +695,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
             if (_cavr && ys.isNA0(row)) { // Handle adapted validation response - actual response was adapted but does not contain NA - it is implicit misprediction,
               err = 1f;
             } else { // No adaptation of validation response
-              yact = (int) ys.at80(row); // Pick an actual prediction adapted to model values <0, nclass-1)
+              yact = yact_orig = (int) ys.at80(row); // Pick an actual prediction adapted to model values <0, nclass-1)
               assert 0 <= yact && yact < _nclass : "weird ycls="+yact+", y="+ys.at0(row);
               err = Float.isInfinite(sum)
                 ? (Float.isInfinite(fs[yact+1]) ? 0f : 1f)
@@ -710,8 +713,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         // Pick highest prob for our prediction.
         if (_nclass > 1) { // fill CM only for classification
           if(_nclass == 2) { // Binomial classification -> compute AUC, draw ROC
-            for(int i = 0; i < _cms.length; i++)
-              _cms[i][yact][( fs[2] >= ModelUtils.DEFAULT_THRESHOLDS[i]) ? 1 : 0]++;
+            float snd = (!Float.isInfinite(sum) ? fs[2] / sum : Float.isInfinite(fs[2]) ? 1 : 0);
+            for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
+              int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+              _cms[i][yact_orig][p]++; // Increase matrix
+            }
           }
           int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
           _cm[yact][ypred]++;      // actual v. predicted
@@ -748,7 +754,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public long speedValue() {
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    long numTreesBuiltSoFar = m == null ? 0 : m.numTrees();
+    long numTreesBuiltSoFar = m == null ? 0 : m.ntrees();
     long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
     return sv;
   }
@@ -766,9 +772,15 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    * @see #buildModel()
    */
   protected abstract TM buildModel( TM initialModel, Frame trainFr, String names[], String domains[][], Timer t_build );
+  /**
+   * Initialize algorithm - e.g., allocate algorithm specific datastructure.
+   *
+   * @param initialModel
+   */
+  protected abstract void initAlgo( TM initialModel);
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD,  water.api.AUC validAUC);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {

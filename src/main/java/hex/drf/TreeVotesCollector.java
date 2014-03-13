@@ -115,8 +115,8 @@ public class TreeVotesCollector extends MRTask2<TreeVotesCollector> {
    * @return
    */
   public static TreeVotes collect(TreeModel tmodel, Frame f, int ncols, float rate, int variable) {
-    CompressedTree[][] trees = new CompressedTree[tmodel.numTrees()][];
-    for (int tidx = 0; tidx < tmodel.numTrees(); tidx++) trees[tidx] = tmodel.ctree(tidx);
+    CompressedTree[][] trees = new CompressedTree[tmodel.ntrees()][];
+    for (int tidx = 0; tidx < tmodel.ntrees(); tidx++) trees[tidx] = tmodel.ctree(tidx);
     return new TreeVotesCollector(trees, tmodel.nclasses(), ncols, rate, variable).doAll(f).result();
   }
 
