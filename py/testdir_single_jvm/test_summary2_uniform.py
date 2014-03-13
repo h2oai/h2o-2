@@ -171,7 +171,6 @@ class Basic(unittest.TestCase):
             print "mins colname:", colname, "(2 places):", mn
 
             trial += 1
-            h2o.nodes[0].remove_all_keys()
 
             # don't check if colname is empty..means it's a string and scipy doesn't parse right?
             if colname!='':
@@ -187,6 +186,7 @@ class Basic(unittest.TestCase):
                     h2oQuantilesExact=qresult,
                     )
 
+            h2o.nodes[0].remove_all_keys()
 
 
 if __name__ == '__main__':

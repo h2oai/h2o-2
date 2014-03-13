@@ -2345,8 +2345,6 @@ class H2O(object):
                 'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_variance_power': None,
                 'n_folds': None,
-                'case_mode': None,
-                'case_val': None, 
                 # 'weight': None,
                 # 'thresholds': None,
                 # only GLMGrid has this..we should complain about it on GLM?
@@ -2561,7 +2559,7 @@ class H2O(object):
             args += [ '%s' % self.java_extra_args ]
 
 
-        args += ["-ea"]
+        # args += ["-ea"]
 
         if self.use_maprfs:
             args += ["-Djava.library.path=/opt/mapr/lib"]

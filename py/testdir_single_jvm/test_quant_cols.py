@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
-import h2o_print as h2p, h2o_gbm
+import h2o_print as h2p, h2o_gbm, h2o_summ
 
 DO_PLOT = getpass.getuser()=='kevin'
 DO_MEDIAN = False
@@ -46,13 +46,15 @@ class Basic(unittest.TestCase):
 
             # PARSE*******************************************************
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=200, doSummary=False)
+            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
+
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             numRows = inspect['numRows']
             numCols = inspect['numCols']
 
-            for i in range (1,numCols):
+            for i in range (0,numCols):
                 print "Column", i, "summary"
                 h2o_cmd.runSummary(key=hex_key, max_qbins=1, cols=i);
 
@@ -79,11 +81,33 @@ class Basic(unittest.TestCase):
                 # file has headers. use col index
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column,
                     quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
+                qresult = q['result']
                 h2p.red_print("result:", q['result'], "quantile", quantile, 
                     "interpolated:", q['interpolated'], "iterations", q['iterations'])
                 elapsed = time.time() - start
                 print "quantile end on ", hex_key, 'took', elapsed, 'seconds.'
                 quantileTime = elapsed
+
+                # don't do for enums
+                # also get the median with a sort (h2o_summ.percentileOnSortedlist()
+                if 1==0:
+                    h2o_summ.quantile_comparisons(
+                        csvPathnameFull,
+                        skipHeader=True,
+                        col=column, # what col to extract from the csv
+                        datatype='float',
+                        quantile=0.5 if DO_MEDIAN else 0.999,
+                        # h2oSummary2=pctile[5 if DO_MEDIAN else 10],
+                        # h2oQuantilesApprox=qresult_single,
+                        h2oQuantilesExact=qresult,
+                        use_genfromtxt=True,
+                        )
+
+                trial += 1
+                execTime = 0
+                xList.append(column)
+                eList.append(execTime)
+                fList.append(quantileTime)
 
                 # remove all keys*******************************************************
                 # what about hex_key?
@@ -92,14 +116,6 @@ class Basic(unittest.TestCase):
                     h2o.nodes[0].remove_all_keys()
                     elapsed = time.time() - start
                     print "remove all keys end on ", csvFilename, 'took', elapsed, 'seconds.'
-
-                trial += 1
-                execTime = 0
-                xList.append(column)
-                eList.append(execTime)
-                fList.append(quantileTime)
-
-
 
         #****************************************************************
         # PLOTS. look for eplot.jpg and fplot.jpg in local dir?
