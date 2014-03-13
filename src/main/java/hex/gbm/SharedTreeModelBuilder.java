@@ -716,8 +716,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         // Pick highest prob for our prediction.
         if (_nclass > 1) { // fill CM only for classification
           if(_nclass == 2) { // Binomial classification -> compute AUC, draw ROC
-            for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++)
-              _cms[i][yact_orig][( fs[2] >= ModelUtils.DEFAULT_THRESHOLDS[i]) ? 1 : 0]++;
+            float snd = (!Float.isInfinite(sum) ? fs[2] / sum : Float.isInfinite(fs[2]) ? 1 : 0);
+            for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
+              int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+              _cms[i][yact_orig][p]++; // Increase matrix
+            }
           }
           int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
           _cm[yact][ypred]++;      // actual v. predicted
