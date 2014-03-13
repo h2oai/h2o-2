@@ -100,6 +100,8 @@ public abstract class Model extends Lockable<Model> {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
   }
+  /** Returns number of input features */
+  public int nfeatures() { return _names.length - 1; }
 
   /** For classifiers, confusion matrix on validation set. */
   public ConfusionMatrix cm() { return null; }
