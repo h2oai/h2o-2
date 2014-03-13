@@ -345,7 +345,8 @@ public class Summary2 extends Iced {
       hcnt2 = new long[_domain.length];
       hcnt2_min = new double[_domain.length];
       hcnt2_max = new double[_domain.length];
-    } else if (!Double.isNaN(stat0._min2)) {
+    } 
+    else if (!(Double.isNaN(stat0._min2) || Double.isNaN(stat0._max2))) {
       // guard against improper parse (date type) or zero c._sigma
       long N = _stat0._len - stat0._nas - stat0._nans - stat0._pinfs - stat0._ninfs;
       double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(N));
@@ -357,12 +358,66 @@ public class Summary2 extends Iced {
 
       // tweak for integers
       if (d < 1. && vec.isInt()) d = 1.;
-      _binsz = d;
-      // This equation means the first N bin can be empty?
-      // also: _binsz means many _binsz2 could be empty at the start if we just had _start. 
+
+      // Result from the dynamic bin sizing equations
+      double startSuggest = d * Math.floor(stat0._min2 / d);
+      double binszSuggest = d;
+      int nbinSuggest = (int)(Math.round((stat0._max2 + (vec.isInt() ? .5 : 0) - startSuggest) / d)) + 1;
+      
+      // Protect against massive binning. browser doesn't need
+      int BROWSER_BIN_TARGET = 100;
+
+      //  _binsz/_start is used in the histogramming. 
+      // nbin is used in the array declaration. must be big enough. 
+      // the resulting nbin, could be really large number. We need to cap it. 
+      // should also be obsessive and check that it's not 0 and force to 1.
+      // Since nbin is implied by _binsz, ratio _binsz and recompute nbin
+      int binCase = 0; // keep track in case we assert
+      if ( nbinSuggest > BROWSER_BIN_TARGET ) {
+        // switch to a static equation with a fixed bin count, and recompute binszSuggest
+        // one more bin than necessary for the range (99 exact. causes one extra
+        binszSuggest = (stat0._max2 - stat0._min2) / (BROWSER_BIN_TARGET - 1.0);
+        _start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
+        binCase = 1;
+      }
+      // minimum 1. Also 1 if there is only one value.
+      else if ( stat0._max2==stat0._min2 || nbinSuggest<1 ) {
+        binszSuggest = 0; // fixed next with other 0 cases.
+        _start = stat0._min2;
+        binCase = 2;
+      }
+      // minimum 2 if min/max different
+      else if ( stat0._max2!=stat0._min2 && nbinSuggest<2 ) {
+        binszSuggest = (stat0._max2 - stat0._min2) / 2.0;
+        _start = stat0._min2;
+        binCase = 3;
+      }
+      else {
+        // align to binszSuggest boundary
+        _start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
+        binCase = 4;
+      }
+
+      // _binsz = 0 means min/max are equal for reals?. Just make it a little number
+      // this won't show up in browser display, since bins are labelled by start value
+      _binsz = (binszSuggest!=0) ? binszSuggest : (vec.isInt() ? 1 : 1e-13d); 
+
+      // This equation creates possibility of some of the first bins being empty
+      // also: _binsz means many _binsz2 could be empty at the start if we resused _start there
       // FIX! is this okay if the dynamic range is > 2**32
-      _start = _binsz * Math.floor(stat0._min2/_binsz);
-      int nbin = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
+      // align to bin size?
+      int nbin = (int) Math.ceil((stat0._max2 - _start)/_binsz) + 1;
+      double impliedBinEnd = _start + (nbin * _binsz);
+
+      String assertMsg = _start+" "+_stat0._min2+" "+_stat0._max2+
+        " "+impliedBinEnd+" "+_binsz+" "+nbin+" "+binCase;
+      // Log.info("Summary2 bin1. "+assertMsg);
+      assert _start <= _stat0._min2 : assertMsg;
+      // just in case, make sure it's big enough
+      assert nbin > 0: assertMsg;
+
+      // just for double checking we're okay (nothing outside the bin rang)
+      assert impliedBinEnd>=_stat0._max2 : assertMsg;
 
       // create a 2nd finer grained historam for quantile estimates.
       // okay if it is approx. 1000 bins (+-1)
@@ -370,28 +425,42 @@ public class Summary2 extends Iced {
       assert max_qbins > 0 && max_qbins <= 10000000 : "max_qbins must be >0 and <= 10000000";
 
       // okay if 1 more than max_qbins gets created
-      // _binsz2 = _binsz / (max_qbins / nbin);
-      _binsz2 = (stat0._max2 + (vec.isInt()?.5:0) - stat0._min2) / max_qbins;
-      _start2 = _binsz2 * Math.floor(stat0._min2/_binsz2);
-      int nbin2 = (int)(Math.round((stat0._max2 + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
+      double d2 = (stat0._max2 - stat0._min2) / max_qbins;
+      // _binsz2 = 0 means min/max are equal for reals?. Just make it a little number
+      // this won't show up in browser display, since bins are labelled by start value
+      _binsz2 = (d2!=0) ? d2 : (vec.isInt() ? 1 : 1e-13d); 
+      _start2 = stat0._min2;
+      int nbin2 = (int) Math.ceil((stat0._max2 - _start2)/_binsz2) + 1;
+      double impliedBinEnd2 = _start2 + (nbin2 * _binsz2);
 
-      // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
-      // Log.info("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
-      // Log.info("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
-
+      assertMsg = _start2+" "+_stat0._min2+" "+_stat0._max2+
+        " "+impliedBinEnd2+" "+_binsz2+" "+nbin2;
+      // Log.info("Summary2 bin2. "+assertMsg);
+      assert _start2 <= stat0._min2 : assertMsg;
+      assert nbin2 > 0 : assertMsg;
       // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
-      assert nbin > 0;
-      assert nbin2 > 0;
+      assert impliedBinEnd2>=_stat0._max2 : assertMsg;
 
       hcnt = new long[nbin];
       hcnt2 = new long[nbin2];
       hcnt2_min = new double[nbin2];
       hcnt2_max = new double[nbin2];
+
+      // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
+      // Log.info("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
+      // Log.info("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
+
     } else { // vec does not contain finite numbers
-      _start = vec.min();
-      _start2 = vec.min();
-      _binsz = Double.POSITIVE_INFINITY;
-      _binsz2 = Double.POSITIVE_INFINITY;
+      Log.info("Summary2: NaN in stat0._min2: "+stat0._min2+" or stat0._max2: "+stat0._max2);
+      // vec.min() wouldn't be any better here. It could be NaN? 4/13/14
+      // _start = vec.min();
+      // _start2 = vec.min();
+      // _binsz = Double.POSITIVE_INFINITY;
+      // _binsz2 = Double.POSITIVE_INFINITY;
+      _start = Double.NaN;
+      _start2 = Double.NaN;
+      _binsz = Double.NaN;
+      _binsz2 = Double.NaN;
       hcnt = new long[1];
       hcnt2 = new long[1];
       hcnt2_min = new double[1];
@@ -662,7 +731,9 @@ public class Summary2 extends Iced {
   private void approxQuantiles(double[] qtiles, double[] thres){
     // not called for enums
     assert _type != T_ENUM;
-    if( hcnt2.length == 0 ) return;
+    if ( hcnt2.length==0 ) return;
+    // this would imply we didn't get anything correctly. Maybe real col with all NA?
+    if ( (hcnt2.length==1) && (hcnt2[0]==0) )  return;
 
     int k = 0;
     long s = 0;

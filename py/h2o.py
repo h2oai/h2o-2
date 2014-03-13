@@ -288,11 +288,12 @@ def clean_sandbox_stdout_stderr():
             os.remove(f)
 
 def tmp_file(prefix='', suffix='', tmp_dir=None):
-    if not dir:
+    if not tmp_dir:
         tmpdir = LOG_DIR
     else:
         tmpdir = tmp_dir
-        fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=tmpdir)
+
+    fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=tmpdir)
     # make sure the file now exists
     # os.open(path, 'a').close()
     # give everyone permission to read it (jenkins running as 
