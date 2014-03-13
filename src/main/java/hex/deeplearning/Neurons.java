@@ -1,6 +1,5 @@
 package hex.deeplearning;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.FrameTask;
 import water.MemoryManager;
 import water.api.DocGen;
@@ -97,8 +96,8 @@ public abstract class Neurons {
         assert(_E_g2 == null);
       }
       if (params.rho > 0 || params.epsilon > 0) {
-        if (params.rho == 0) throw new InvalidArgumentException("rho must be > 0 if epsilon is >0.");
-        if (params.epsilon == 0) throw new InvalidArgumentException("epsilon must be > 0 if rho is >0.");
+        if (params.rho == 0) throw new IllegalArgumentException("rho must be > 0 if epsilon is >0.");
+        if (params.epsilon == 0) throw new IllegalArgumentException("epsilon must be > 0 if rho is >0.");
         assert(_minfo.adaDelta());
         assert(_E_dx2 != null);
         assert(_E_g2 != null);

@@ -1,7 +1,7 @@
 import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
-import h2o_summ
+import h2o_summ, h2o_browse as h2b
 
 print "Like test_summary_uniform, but with integers only"
 
@@ -13,6 +13,91 @@ if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
 MAX_QBINS = 1
 MAX_QBINS = 1000000
 DO_REAL = False
+
+ROWS = 10000 # passes
+ROWS = 100000 # passes
+ROWS = 1000000 # corrupted hcnt2_min/max and ratio 5
+NA_ROW_RATIO = 1
+
+def twoDecimals(l): 
+    if isinstance(l, list):
+        return ["%.2f" % v for v in l] 
+    else:
+        return "%.2f" % l
+
+# have to match the csv file?
+# dtype=['string', 'float');
+def generate_scipy_comparison(csvPathname, col, h2oMedian):
+    # this is some hack code for reading the csv and doing some percentile stuff in scipy
+    # from numpy import loadtxt, genfromtxt, savetxt
+    import numpy as np
+    import scipy as sp
+
+    dataset = np.genfromtxt(
+        open(csvPathname, 'r'),
+        delimiter=',',
+        skip_header=1,
+        dtype=None); # guess!
+
+    print "csv read for training, done"
+    # we're going to strip just the last column for percentile work
+    # used below
+    NUMCLASSES = 10
+    print "csv read for training, done"
+
+    # data is last column
+    # drop the output
+    print dataset.shape
+    # single col dataset?
+    target = dataset
+    # target = [x[col] for x in dataset]
+
+    # we may have read it in as a string. coerce to number
+    # targetFP = np.array(target, np.float)
+    targetFP = target
+
+    if 1==0:
+        n_features = len(dataset[0]) - 1;
+        print "n_features:", n_features
+
+        # get the end
+        # target = [x[-1] for x in dataset]
+        # get the 2nd col
+
+        print "histogram of target"
+        print target
+        print sp.histogram(target, bins=NUMCLASSES)
+
+        print target[0]
+        print target[1]
+
+    thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
+    # per = [100 * t for t in thresholds]
+    per = [1 * t for t in thresholds]
+    print "scipy per:", per
+    from scipy import stats
+    # a = stats.scoreatpercentile(target, per=per)
+    a = stats.mstats.mquantiles(targetFP, prob=per)
+    a2 = ["%.2f" % v for v in a]
+    h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+
+    # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
+    # inplace sort
+    targetFP.sort()
+    b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999)
+    label = '50%' if DO_MEDIAN else '99.9%'
+    h2p.blue_print(label, "from sort:", b)
+    h2p.blue_print(label, "from scipy:", a[5 if DO_MEDIAN else 10])
+    h2p.blue_print(label, "from h2o:", h2oMedian)
+
+    # see if scipy changes. nope. it doesn't 
+    if 1==0:
+        a = stats.mstats.mquantiles(targetFP, prob=per)
+        a2 = ["%.2f" % v for v in a]
+        h2p.red_print("after sort")
+        h2p.red_print("scipy stats.mstats.mquantiles:", a2)
+
+
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
@@ -28,7 +113,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
         for j in range(colCount):
             rowData.append(ri)
         rowDataCsv = ",".join(map(str,rowData))
-        dsf.write(rowDataCsv + "\n")
+        for k in range(NA_ROW_RATIO):
+          dsf.write(rowDataCsv + "\n")
 
     dsf.close()
 
@@ -41,33 +127,40 @@ class Basic(unittest.TestCase):
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
+        # just to get a browser with beta tab
+        h2o.beta_features = True
         if (localhost):
             h2o.build_cloud(node_count=1, base_port=54327)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.beta_features = False
+        h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
+        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_summary2_uniform_int(self):
+    def test_summary2_uniform_int_w_NA(self):
+        h2o.beta_features = False
         SYNDATASETS_DIR = h2o.make_syn_dir()
+        M = 100
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (1000000, 1, 'B.hex', 1, 1000,            ('C1',  1.0, 250.0, 500.0, 750.0, 1000.0)),
-            (1000000, 1, 'x.hex', 0, 1000000000,      ('C1',  0.0, 250000000.0, 500000000.0, 750000000.0, 1000000000.0)),
-            (1000000, 1, 'x.hex', 1, 20000,           ('C1',  1.0, 5000.0, 10000.0, 15000.0, 20000.0)),
-            (1000000, 1, 'x.hex', -5000, 0,           ('C1', -5000.00, -3750.0, -2500.0, -1250.0, 0)),
-            (1000000, 1, 'x.hex', -100000, 100000,    ('C1',  -100000.0, -50000.0, 0, 50000.0, 100000.0)),
+            (ROWS, 1, 'B.hex', 1, 1000*M,            ('C1',  1.0*M, 250.0*M, 500.0*M, 750.0*M, 1000.0*M)),
+            (ROWS, 1, 'B.hex', 1, 1000,            ('C1',  1.0, 250.0, 500.0, 750.0, 1000.0)),
+            (ROWS, 1, 'x.hex', 1, 20000,           ('C1',  1.0, 5000.0, 10000.0, 15000.0, 20000.0)),
+            (ROWS, 1, 'x.hex', -5000, 0,           ('C1', -5000.00, -3750.0, -2500.0, -1250.0, 0)),
+            (ROWS, 1, 'x.hex', -100000, 100000,    ('C1',  -100000.0, -50000.0, 0, 50000.0, 100000.0)),
 
-            # (1000000, 1, 'A.hex', 1, 101,             ('C1',   1.0, 26.00, 51.00, 76.00, 101.0)),
-            # (1000000, 1, 'A.hex', -99, 99,            ('C1',  -99, -49.0, 0, 49.00, 99)),
+            # (ROWS, 1, 'A.hex', 1, 101,             ('C1',   1.0, 26.00, 51.00, 76.00, 101.0)),
+            # (ROWS, 1, 'A.hex', -99, 99,            ('C1',  -99, -49.0, 0, 49.00, 99)),
 
-            (1000000, 1, 'B.hex', 1, 10000,           ('C1',   1.0, 2501.0, 5001.0, 7501.0, 10000.0)),
-            (1000000, 1, 'B.hex', -100, 100,          ('C1',  -100.0, -50.0, 0.0, 50.0, 100.0)),
+            (ROWS, 1, 'B.hex', 1, 10000,           ('C1',   1.0, 2501.0, 5001.0, 7501.0, 10000.0)),
+            (ROWS, 1, 'B.hex', -100, 100,          ('C1',  -100.0, -50.0, 0.0, 50.0, 100.0)),
 
-            (1000000, 1, 'C.hex', 1, 100000,          ('C1',   1.0, 25001.0, 50001.0, 75001.0, 100000.0)),
-            # (1000000, 1, 'C.hex', -101, 101,          ('C1',  -101, -51, -1, 49.0, 100.0)),
+            (ROWS, 1, 'C.hex', 1, 100000,          ('C1',   1.0, 25001.0, 50001.0, 75001.0, 100000.0)),
+            # (ROWS, 1, 'C.hex', -101, 101,          ('C1',  -101, -51, -1, 49.0, 100.0)),
         ]
         if not DO_REAL:
             # only 3 integer values!
@@ -94,7 +187,6 @@ class Basic(unittest.TestCase):
             maxShift = distMean * .01
             maxDelta = maxDelta + maxShift
 
-            h2o.beta_features = False
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
 
@@ -133,8 +225,8 @@ class Basic(unittest.TestCase):
             mean = stats['mean']
             sd = stats['sd']
 
-            print "colname:", colname, "mean (2 places):", h2o_util.twoDecimals(mean)
-            print "colname:", colname, "std dev. (2 places):", h2o_util.twoDecimals(sd)
+            print "colname:", colname, "mean (2 places):", twoDecimals(mean)
+            print "colname:", colname, "std dev. (2 places):", twoDecimals(sd)
 
             zeros = stats['zeros']
             mins = stats['mins']
@@ -168,9 +260,9 @@ class Basic(unittest.TestCase):
                 self.assertAlmostEqual(b, rowCount/len(hcnt), delta=.01*rowCount, 
                     msg="Bins not right. b: %s e: %s" % (b, e))
 
-            pt = h2o_util.twoDecimals(pctile)
-            mx = h2o_util.twoDecimals(maxs)
-            mn = h2o_util.twoDecimals(mins)
+            pt = twoDecimals(pctile)
+            mx = twoDecimals(maxs)
+            mn = twoDecimals(mins)
             print "colname:", colname, "pctile (2 places):", pt
             print "colname:", colname, "maxs: (2 places):", mx
             print "colname:", colname, "mins: (2 places):", mn
@@ -184,20 +276,12 @@ class Basic(unittest.TestCase):
             trial += 1
 
             scipyCol = 0 
-            if colname!='' and expected[scipyCol]:
-                # don't do for enums
-                # also get the median with a sort (h2o_summ.percentileOnSortedlist()
-                h2o_summ.quantile_comparisons(
-                    csvPathnameFull,
-                    skipHeader=True,
-                    col=scipyCol,
-                    datatype='float',
-                    quantile=0.5 if DO_MEDIAN else 0.999,
-                    h2oSummary2=pctile[5 if DO_MEDIAN else 10],
-                    # h2oQuantilesApprox=qresult_single,
-                    # h2oQuantilesExact=qresult,
-                    )
-
+            if DO_TRY_SCIPY:
+                csvPathname1 = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
+                # always use the last col here
+                # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
+                generate_scipy_comparison(csvPathnameFull, col=scipyCol,
+                            h2oMedian=pctile[5 if DO_MEDIAN else 10])
 
 
 if __name__ == '__main__':

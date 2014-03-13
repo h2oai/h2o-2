@@ -151,7 +151,7 @@ public class AppendableVec extends Vec {
   @Override
   public boolean writable() { return true ; }
 
-  @Override public Chunk elem2BV( int cidx ) { return new NewChunk(this,cidx); }
+  @Override public Chunk chunkForChunkIdx(int cidx) { return new NewChunk(this,cidx); }
 
   // None of these are supposed to be called while building the new vector
   @Override

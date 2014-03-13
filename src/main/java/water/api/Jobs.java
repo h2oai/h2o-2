@@ -72,7 +72,7 @@ public class Jobs extends Request {
           html = "<button disabled class='btn btn-mini'>X</button>";
         else {
           String keyParam = KEY + "=" + elm.getAsString();
-          html = "<a href='Cancel.html?" + keyParam + "'><button class='btn btn-danger btn-mini'>X</button></a>";
+          html = "<a href='/Cancel.html?" + keyParam + "'><button class='btn btn-danger btn-mini'>X</button></a>";
         }
         return html;
       }
@@ -85,7 +85,7 @@ public class Jobs extends Request {
         try {
           key = URLEncoder.encode(str,"UTF-8");
         } catch( UnsupportedEncodingException e ) { key = str; }
-        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : "<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
+        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : "<a href='/Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
       }
     });
     r.setBuilder(JOBS + "." + START_TIME, new ArrayRowElementBuilder() {

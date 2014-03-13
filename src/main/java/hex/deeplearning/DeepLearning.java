@@ -13,7 +13,9 @@ import water.fvec.Frame;
 import water.util.Log;
 import water.util.MRUtils;
 import water.util.RString;
+import water.util.Utils;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import static water.util.MRUtils.sampleFrame;
@@ -26,6 +28,9 @@ public class DeepLearning extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Deep Learning";
+
+  @API(help = "Model checkpoint to resume training with.", filter= Default.class, json = true, gridable = false)
+  public Key checkpoint;
 
   @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
   public boolean expert_mode = false;
@@ -147,8 +152,8 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
-  @API(help = "Force extra load balancing to increase training speed for small datasets (beta)", filter = Default.class, json = true)
-  public boolean force_load_balance = false;
+  @API(help = "Force extra load balancing to increase training speed for small datasets", filter = Default.class, json = true)
+  public boolean force_load_balance = true;
 
   @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
@@ -181,7 +186,8 @@ public class DeepLearning extends Job.ValidatedJob {
     super.registered(ver);
     for (Argument arg : _arguments) {
       if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")
-              || arg._name.equals("expert_mode") || arg._name.equals("adaptive_rate") || arg._name.equals("balance_classes")) {
+              || arg._name.equals("expert_mode") || arg._name.equals("adaptive_rate")
+              || arg._name.equals("balance_classes") || arg._name.equals("checkpoint")) {
         arg.setRefreshOnChange();
       }
     }
@@ -189,6 +195,34 @@ public class DeepLearning extends Job.ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
+    if (!arg._name.equals("checkpoint")
+            && !arg._name.equals("epochs")
+            && !arg._name.equals("expert_mode")
+            && !arg._name.equals("seed")
+            && !arg._name.equals("score_interval")
+            && !arg._name.equals("score_duty_cycle")
+            && !arg._name.equals("quiet_mode")
+            && !arg._name.equals("diagnostics")
+            ) {
+      if (checkpoint != null) {
+        arg.disable("Taken from model checkpoint.");
+        final DeepLearningModel cp_model = UKV.get(checkpoint);
+        if (cp_model.model_info().unstable()) {
+          throw new IllegalArgumentException("Checkpointed model was unstable. Not restarting.");
+        }
+        final DeepLearning cp = cp_model.model_info().get_params();
+//        destination_key = cp.destination_key; //continue training the SAME model
+        // the following parameters are needed in the DeepLearning class for training
+        balance_classes = cp.balance_classes;
+        score_validation_sampling = cp.score_validation_sampling;
+        max_after_balance_size = cp.max_after_balance_size;
+        score_training_samples = cp.score_training_samples;
+        score_validation_samples = cp.score_validation_samples;
+        state = JobState.RUNNING;
+        return;
+      }
+    }
+
     if(arg._name.equals("initial_weight_scale") &&
             (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
@@ -199,10 +233,10 @@ public class DeepLearning extends Job.ValidatedJob {
       loss = Loss.MeanSquare;
     }
     if (H2O.CLOUD.size()>1) {
-      if (expert_mode && arg._name.equals("force_load_balance")) {
-        force_load_balance = false;
-        arg.disable("Only for single-node operation.");
-      }
+//      if (expert_mode && arg._name.equals("force_load_balance")) {
+//        force_load_balance = false;
+//        arg.disable("Only for single-node operation.");
+//      }
       if (arg._name.equals("seed")) {
         arg.disable("Only for single-node operation.");
       }
@@ -279,13 +313,37 @@ public class DeepLearning extends Job.ValidatedJob {
     return makeJsonBox(sb);
   }
 
-  /** Return the query link to this page */
+  /**
+   * Return a query link to this page
+   * @param k Model Key
+   * @param content Link text
+   * @return HTML Link
+   */
   public static String link(Key k, String content) {
+    return link(k, content, null, null, null);
+  }
+
+  /**
+   * Return a query link to this page
+   * @param k Model Key
+   * @param content Link text
+   * @param cp Key to checkpoint to continue training with (optional)
+   * @param response Response
+   * @param val Validation data set key
+   * @return HTML Link
+   */
+  public static String link(Key k, String content, Key cp, String response, Key val) {
     DeepLearning req = new DeepLearning();
-    RString rs = new RString("<a href='" + req.href() + ".query?%key_param=%$key'>%content</a>");
-    rs.replace("key_param", "source");
+    RString rs = new RString("<a href='" + req.href() + ".query?source=%$key" +
+            (cp == null ? "" : "&checkpoint=%$cp") +
+            (response == null ? "" : "&response=%$resp") +
+            (val == null ? "" : "&validation=%$valkey") +
+            "'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
+    if (cp != null) rs.replace("cp", cp.toString());
+    if (response != null) rs.replace("resp", response);
+    if (val != null) rs.replace("valkey", val);
     return rs.toString();
   }
 
@@ -298,7 +356,44 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   @Override public JobState execImpl() {
-    trainModel(initModel());
+    DeepLearningModel cp;
+    if (checkpoint == null) cp = initModel();
+    else {
+      final DeepLearningModel previous = UKV.get(checkpoint);
+      cp = new DeepLearningModel(previous, destination_key, job_key);
+      try {
+        cp.write_lock(self());
+        assert(state==JobState.RUNNING);
+        if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
+          throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
+        }
+        if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+          throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
+        }
+        if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0) {
+          throw new IllegalArgumentException("ignored_cols must be the same as for the checkpointed model.");
+        }
+        if ((validation!=null) != (previous.model_info().get_params().validation != null)
+                || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
+          throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
+        }
+        if (classification != previous.model_info().get_params().classification) {
+          throw new IllegalArgumentException("classification must be the same as for the checkpointed model.");
+        }
+        // the following parameters might have been modified when restarting from a checkpoint
+        cp.model_info().get_params().expert_mode = expert_mode;
+        cp.model_info().get_params().seed = seed;
+        cp.model_info().get_params().epochs = previous.epoch_counter + epochs; //add previously processed epochs to total epochs
+        cp.model_info().get_params().score_interval = score_interval;
+        cp.model_info().get_params().score_duty_cycle = score_duty_cycle;
+        cp.model_info().get_params().quiet_mode = quiet_mode;
+        cp.model_info().get_params().diagnostics = diagnostics;
+        cp.update(self());
+      } finally {
+        cp.unlock(self());
+      }
+    }
+    trainModel(cp);
     delete();
     return JobState.DONE;
   }
@@ -394,6 +489,7 @@ public class DeepLearning extends Job.ValidatedJob {
         train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*train.numRows()), seed, true, false);
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
+      model.training_rows = train.numRows();
       trainScoreFrame = sampleFrame(train, score_training_samples, seed); //training scoring dataset is always sampled uniformly from the training dataset
       if (train != trainScoreFrame) ltrash(trainScoreFrame);
 
@@ -413,7 +509,6 @@ public class DeepLearning extends Job.ValidatedJob {
         if (valid != validScoreFrame) ltrash(validScoreFrame);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
-      model.training_rows = train.numRows();
       if (mini_batch > train.numRows()) {
         Log.warn("Setting mini_batch (" + mini_batch
                 + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");

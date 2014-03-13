@@ -224,9 +224,6 @@ public class Quantiles extends Iced {
         binIdx2 = 0; // not used
       }
       else {
-        // FIX! why is this round not floor? 
-        // binIdx2 = Math.floor(((val - _start2) * 1000000.0) / _binsz2) / 1000000;
-        // No benefit to mult/div of 1000000. plenty of precision in fp  
         binIdx2 = (int) Math.floor((val - _start2) / _binsz2);
       }
 
@@ -387,7 +384,7 @@ public class Quantiles extends Iced {
 
     assert !_isEnum;
     if( hcnt2.length == 0 ) return false;
-    // playing with creating relative NUDGE values to make sure bin range
+    // Tried creating relative NUDGE values to make sure bin range
     // is always inclusive of target.
     // ratio it down from valBinSize?  It doesn't need to be as big as valBinSize.
     // can't seem to make it work yet. leave NUDGE=0
@@ -524,7 +521,10 @@ public class Quantiles extends Iced {
 
       // Possible bin leakage at start/end edges due to fp arith.
       // bin index arith may resolve OVER the boundary created by the compare for 
-      // hcnt2_high compare.
+      // hcnt2_high compare. 
+      // I suppose just one value should be in desiredBinCnt+1 bin -> the end value?)
+
+      // To cover possible fp issues:
       // See if there's a non-zero bin below (min) or above (max) you, to avoid shrinking wrong.
       // Just need to check the one bin below and above k, if they exist. 
       // They might have zero entries, but then it's okay to ignore them.
@@ -596,7 +596,7 @@ public class Quantiles extends Iced {
     double actualBinWidth = 0;
     assert _totalRows==htot2(0, 0) : "_totalRows: "+_totalRows+" htot2(): "+htot2(0, 0);
 
-    // A 'perfect' quantile definition, for comparison. 
+    // A quantile definition. (linear interpolation?)
     // Given a set of N ordered values {v[1], v[2], ...} and a requirement to 
     // calculate the pth percentile, do the following:
     // Calculate l = p(N-1) + 1

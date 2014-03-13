@@ -1,10 +1,13 @@
 import h2o_cmd, h2o
 import re, random, math
 
-
-def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fListTitle=None, fList=None, fLabel=None):
+def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fListTitle=None, fList=None, fLabel=None, server=False):
     if h2o.python_username!='kevin':
         return
+
+    # Force matplotlib to not use any Xwindows backend.
+    if server:
+        matplotlib.use('Agg')
 
     import pylab as plt
     print "xList", xList
@@ -17,6 +20,7 @@ def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fLis
     ### plt.rc('font', **font)
     plt.rcdefaults()
 
+
     if eList:
         if eListTitle:
             plt.title(eListTitle)
@@ -25,6 +29,8 @@ def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fLis
         plt.xlabel(xLabel)
         plt.ylabel(eLabel)
         plt.draw()
+        plt.savefig('eplot.jpg',format='jpg')
+        # Image.open('testplot.jpg').save('eplot.jpg','JPEG')
 
     if fList:
         if fListTitle:
@@ -34,6 +40,8 @@ def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fLis
         plt.xlabel(xLabel)
         plt.ylabel(fLabel)
         plt.draw()
+        plt.savefig('fplot.jpg',format='jpg')
+        # Image.open('fplot.jpg').save('fplot.jpg','JPEG')
 
     if eList or fList:
         plt.show()
