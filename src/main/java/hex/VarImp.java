@@ -13,7 +13,7 @@ public class VarImp extends Iced {
 
   /** Variable importance measurement method. */
   enum VarImpMethod {
-    PERMUTATION_IMPORTANCE("Mean Decrease Accuracy"),
+    PERMUTATION_IMPORTANCE("Mean decrease accuracy"),
     RELATIVE_IMPORTANCE("Relative importance");
     private final String title;
     VarImpMethod(String title) { this.title = title; }
@@ -41,7 +41,7 @@ public class VarImp extends Iced {
 
   /** Generate variable importance HTML code. */
   public final StringBuilder toHTML(StringBuilder sb) {
-    DocGen.HTML.section(sb,"Variable importance of input variables");
+    DocGen.HTML.section(sb,"Variable importance of input variables: " + method);
     DocGen.HTML.arrayHead(sb);
     // Create a sort order
     Integer[] sortOrder = new Integer[varimp.length];
