@@ -50,6 +50,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   protected boolean importance = false; // compute variable importance
 
+  @API(help = "Scale variable importance measures.", filter = Default.class )
+  protected boolean scale_importance = false;
+
 //  @API(help = "Active feature columns")
   protected int _ncols;
 
@@ -167,6 +170,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     prepareValidationWithModel(model);
 
     try {
+      // Initialized algorithm
+      initAlgo(model);
       // Compute the model
       model = buildModel(model, fr, names, domains, bm_timer);
     //} catch (Throwable t) { t.printStackTrace();
@@ -225,7 +230,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     float[] varimpSD = null;
     if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
       Timer vi_timer = new Timer();
-      float[][] vi = doVarImpCalc(model, ktrees, tid-1, fTrain);
+      float[][] vi = doVarImpCalc(model, ktrees, tid-1, fTrain, scale_importance);
       varimp   = vi[0];
       varimpSD = vi[1];
       Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
@@ -242,7 +247,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     return model;
   }
 
-  protected abstract float[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame);
+  protected abstract float[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale);
 
   private ConfusionMatrix[] toCMArray(long[][][] cms) {
     int n = cms.length;
@@ -766,6 +771,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    * @see #buildModel()
    */
   protected abstract TM buildModel( TM initialModel, Frame trainFr, String names[], String domains[][], Timer t_build );
+  /**
+   * Initialize algorithm - e.g., allocate algorithm specific datastructure.
+   *
+   * @param initialModel
+   */
+  protected abstract void initAlgo( TM initialModel);
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD,  water.api.AUC validAUC);

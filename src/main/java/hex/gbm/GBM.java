@@ -1,8 +1,7 @@
 package hex.gbm;
 
 import hex.ConfusionMatrix;
-import hex.gbm.DTree.DecidedNode;
-import hex.gbm.DTree.LeafNode;
+import hex.gbm.DTree.*;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
 import water.*;
@@ -31,6 +30,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @API(help = "Grid search parallelism", filter = Default.class, lmax = 4, gridable=false)
   public int grid_parallelism = 1;
 
+  /** Sum of variable empirical improvement in squared-error. The value is not scaled! */
+  private transient float[/*nfeatures*/] _improvPerVar;
+
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -47,8 +49,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       super(prior, trees, tstats);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm, water.api.AUC validAUC) {
-      super(prior, err, cm, null, null, validAUC);
+    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
+      super(prior, err, cm, varimp, varimpSD, validAUC);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
 
@@ -99,12 +101,12 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return new GBMModel(outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
-    return new GBMModel(model, err, cm, validAUC);
+    return new GBMModel(model, err, cm, varimp, varimpSD, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
     return new GBMModel(model, ktrees, tstats);
   }
-  public GBM() { description = "Distributed GBM"; }
+  public GBM() { description = "Distributed GBM"; scale_importance = true; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -128,6 +130,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return GBMProgressPage.redirect(this, self(), dest());
   }
 
+  @Override protected void initAlgo( GBMModel initialModel) {
+    // Initialize gbm-specific data structures
+    if (importance) _improvPerVar = new float[initialModel.nfeatures()];
+  }
   // ==========================================================================
   // Compute a GBM tree.
 
@@ -137,7 +143,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
   @Override protected GBMModel buildModel( GBMModel model, final Frame fr, String names[], String domains[][], Timer t_build ) {
-
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
 
@@ -489,7 +494,37 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected int size() { return 4; }
   }
 
-  @Override protected float[][] doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame) {
-    throw new RuntimeException("GBM does not support varimp now!");
+  /** Compute relative variable importance for GBM model.
+   *
+   *  See (45), (35) formulas in Friedman: Greedy Function Approximation: A Gradient boosting machine.
+   *  Algo used here can be used for computation individual importance of features per output class. */
+  @Override protected float[][] doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale) {
+    assert model.numTrees()-1 == tid : "varimp computation expect model with already serialized trees: tid="+tid;
+    // Iterates over k-tree
+    for (DTree t : ktrees) { // Iterate over trees
+      if (t!=null) {
+        for (int n = 0; n< t.len()-t.leaves; n++)
+          if (t.node(n) instanceof DecidedNode) { // it is split node
+            Split split = t.decided(n)._split;
+            _improvPerVar[split._col] += split.improvement(); // least squares improvement
+          }
+      }
+    }
+    // Compute variable importance for all trees in model
+    float[] varimp   = new float[model.nfeatures()];
+
+    int   ntreesTotal = model.numTrees() * model.nclasses();
+    int   maxVar = 0;
+    for (int var=0; var<_improvPerVar.length; var++) {
+      varimp[var] = _improvPerVar[var] / ntreesTotal;
+      if (varimp[maxVar] > varimp[var]) maxVar = var;
+    }
+    // GBM scale varimp to scale 0..100
+    if (scale) {
+      float maxVal = varimp[maxVar];
+      for (int var=0; var<varimp.length; var++) varimp[var] /= maxVal;
+    }
+
+    return new float[][] { varimp, null };
   }
 }

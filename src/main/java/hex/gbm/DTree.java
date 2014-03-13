@@ -124,6 +124,16 @@ public class DTree extends Iced {
     public final int   bin() { return _bin; }
     public final long  rowsLeft () { return _n0; }
     public final long  rowsRight() { return _n1; }
+    /** Returns empirical improvement in mean-squared error.
+     *
+     *  Formula for node splittin space into two subregions R1,R2 with predictions y1, y2:
+     *    i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2
+     *
+     * @see (35), (45) in J. Friedman - Greedy Function Approximation: A Gradient boosting machine */
+    public final float improvement() {
+      double d = (_p0-_p1);
+      return (float) ( d*d*_n0*_n1 / (_n0+_n1) );
+    }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -785,10 +795,12 @@ public class DTree extends Iced {
       for( int i=0; i<varimp.length; i++ )
         sb.append(String.format("<td>%5.4f</td>",varimp[sortOrder[i]]));
       sb.append("</tr>");
-      sb.append("<tr><th class='warning'>SD</th>");
-      for( int i=0; i<varimpSD.length; i++ )
-        sb.append(String.format("<td>%5.4f</td>",varimpSD[sortOrder[i]]));
-      sb.append("</tr>");
+      if (varimpSD!=null) {
+        sb.append("<tr><th class='warning'>SD</th>");
+        for( int i=0; i<varimpSD.length; i++ )
+          sb.append(String.format("<td>%5.4f</td>",varimpSD[sortOrder[i]]));
+        sb.append("</tr>");
+      }
       DocGen.HTML.arrayTail(sb);
       // Generate a graph - horrible code
       DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
