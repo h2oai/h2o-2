@@ -35,11 +35,20 @@ ddplytest <- function(conn){
   h2o.addFunction(conn, fn4)
   df.h.4 <- ddply(df.h, .(colgroup, colgroup2), fn4)
 
+  Log.info('testing all column address modes')
+  df.h.4b <- ddply(df.h, c('colgroup', 'colgroup2'), fn4)
+  df.h.4c <- ddply(df.h, 1:2, fn4)
+  df.h.4d <- ddply(df.h, h2o..('colgroup', 'colgroup2'), fn4)
+
+
   Log.info('pulling data locally')
   df.1 <- as.data.frame( df.h.1 )
   df.2 <- as.data.frame( df.h.2 )
   df.3 <- as.data.frame( df.h.3 )
   df.4 <- as.data.frame( df.h.4 )
+  df.4b <- as.data.frame( df.h.4b )
+  df.4c <- as.data.frame( df.h.4c )
+  df.4d <- as.data.frame( df.h.4d )
 
   Log.info('avoid factor issues by making grouping columns into character')
   df.1$colgroup <- as.character(df.1$colgroup)
@@ -49,6 +58,12 @@ ddplytest <- function(conn){
   df.2$colgroup2 <- as.character(df.2$colgroup2)
   df.4$colgroup2 <- as.character(df.4$colgroup2)
 
+  df.4b$colgroup <- as.character(df.4b$colgroup)
+  df.4b$colgroup2 <- as.character(df.4b$colgroup2)
+  df.4c$colgroup <- as.character(df.4c$colgroup)
+  df.4c$colgroup2 <- as.character(df.4c$colgroup2)
+  df.4d$colgroup <- as.character(df.4d$colgroup)
+  df.4d$colgroup2 <- as.character(df.4d$colgroup2)
 
 
   # h2o doesnt sort
@@ -56,6 +71,9 @@ ddplytest <- function(conn){
   df.2 <- df.2[order(df.2$colgroup, df.2$colgroup2), ]
   df.3 <- df.3[order(df.3$colgroup), ]
   df.4 <- df.4[order(df.4$colgroup, df.4$colgroup2), ]
+  df.4b <- df.4b[order(df.4b$colgroup, df.4b$colgroup2), ]
+  df.4c <- df.4c[order(df.4c$colgroup, df.4c$colgroup2), ]
+  df.4d <- df.4d[order(df.4d$colgroup, df.4d$colgroup2), ]
 
   Log.info('testing')
   expect_that( dim(df.1), equals( c(3,2) ) )
@@ -78,6 +96,11 @@ ddplytest <- function(conn){
   expect_that(df.4[,1], equals(c('a', 'b', 'b', 'c', 'c')) )
   expect_that(df.4[,2], equals(paste('group', c(1,1,3,1,2), sep='')) )
   expect_that(df.4[,3], equals(c(3,7,18,11,11)) )
+
+  # column addressing options
+  expect_that( all(df.4b == df.4), equals(T))
+  expect_that( all(df.4c == df.4), equals(T))
+  expect_that( all(df.4d == df.4), equals(T))
 
 
   testEnd()

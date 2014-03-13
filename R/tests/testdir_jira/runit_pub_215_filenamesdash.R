@@ -14,7 +14,7 @@ dash_filename_test <- function(conn){
   Log.info('printing from h2o')
   Log.info( head(df.h) )
 
-  res <- as.data.frame(table(df.h$l>0))
+  res <- as.data.frame(h2o.table(df.h$l>0))
 
   testEnd()
 }
