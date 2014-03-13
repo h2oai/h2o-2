@@ -1,48 +1,10 @@
 import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o_summ
 
 
-DO_SCIPY_COMPARE = False
-
-def generate_scipy_comparison(csvPathname):
-    # this is some hack code for reading the csv and doing some percentile stuff in scipy
-    from numpy import loadtxt, genfromtxt, savetxt
-
-    dataset = loadtxt(
-        open(csvPathname, 'r'),
-        delimiter=',',
-        dtype='int16');
-
-    print "csv read for training, done"
-    # we're going to strip just the last column for percentile work
-    # used below
-    NUMCLASSES = 10
-    print "csv read for training, done"
-
-    # data is last column
-    # drop the output
-    print dataset.shape
-    if 1==1:
-        n_features = len(dataset[0]) - 1;
-        print "n_features:", n_features
-
-        # get the end
-        target = [x[-1] for x in dataset]
-
-        print "histogram of target"
-        from scipy import histogram
-        print histogram(target, bins=NUMCLASSES)
-
-        print target[0]
-        print target[1]
-
-    from scipy import stats
-    thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
-    per = [100 * t for t in thresholds]
-    print "scipy per:", per
-    a = stats.scoreatpercentile(dataset, per=per)
-    print "scipy percentiles:", a
+DO_MEDIAN = True
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
@@ -107,6 +69,7 @@ class Basic(unittest.TestCase):
         
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
             h2o.beta_features = False
+            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -121,6 +84,7 @@ class Basic(unittest.TestCase):
                 print "summaryResult:", h2o.dump_json(summaryResult)
 
             summaries = summaryResult['summaries']
+            scipyCol = 0
             for column in summaries:
                 colname = column['colname']
                 coltype = column['type']
@@ -170,8 +134,22 @@ class Basic(unittest.TestCase):
 
             trial += 1
 
-            if DO_SCIPY_COMPARE:
-                generate_scipy_comparison(csvPathname)
+            # if colname!='' and expected[scipyCol]:
+            if colname!='':
+                # don't do for enums
+                # also get the median with a sort (h2o_summ.percentileOnSortedlist()
+                h2o_summ.quantile_comparisons(
+                    csvPathnameFull,
+                    skipHeader=True,
+                    col=scipyCol,
+                    datatype='float',
+                    quantile=0.5 if DO_MEDIAN else 0.999,
+                    h2oSummary2=pctile[5 if DO_MEDIAN else 10],
+                    # h2oQuantilesApprox=qresult_single,
+                    # h2oQuantilesExact=qresult,
+                    )
+            scipyCol += 1
+
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -1,7 +1,17 @@
 import subprocess
 import gzip, shutil, random, time, re
-import os, zipfile, simplejson as json
+import os, zipfile, simplejson as json, csv
 import h2o
+
+
+
+# takes fp or list of fp and returns same with just two digits of precision
+# using print rounding
+def twoDecimals(l):
+    if isinstance(l, list):
+        return ["%.2f" % v for v in l]
+    else:
+        return "%.2f" % l
 
 # a short quick version for relative comparion. But it's probably better to use approx_equal below
 # the subsequent ones might be prefered, especially assertAlmostEqual(
@@ -124,6 +134,44 @@ def choice_with_probability(tupleList):
         if n < 0: 
             raise Exception("h2o_util.choice_with_probability() error, prob's sum > 1")
     return item
+
+# this reads a single col out a csv file into a list, without using numpy
+# so we can port some jenkins tests without needing numpy
+def file_read_csv_col(csvPathname, col=0, skipHeader=True, datatype='float', preview=5):
+    # only can skip one header line. numpy provides a number N. could update to that.
+    with open(csvPathname, 'rb') as f:
+        reader = csv.reader(f, quoting=csv.QUOTE_NONE) # no extra handling for quotes
+        print "csv read of", csvPathname, "column", col
+        # print "Preview of 1st %s lines:" % preview
+        rowNum = 0
+        dataList = []
+        lastRowLength = None
+        for row in reader:
+            if skipHeader and rowNum==0:
+                print "Skipping header in this csv"
+            else:
+                if col >= len(row):
+                    print "col (zero indexed): %s points past the # entries in this row %s" % (col, row)
+                if lastRowLength and len(row)!=lastRowLength:
+                    print "Current row length: %s is different than last row length: %s" % (row, lastRowLength)
+                colData = row[col]
+                # only print first 5 for seeing
+                # don't print big col cases
+                if rowNum < preview and len(row) <= 10: 
+                    print colData
+                dataList.append(colData)
+            rowNum += 1
+            lastRowLength = len(row)
+
+        # now we have a list of strings
+        # change them to float if asked for, or int
+        # elimate empty strings
+        if datatype=='float':
+            D1 = [float(i) for i in dataList if i]
+        if datatype=='int':
+            D1 = [int(i) for i in dataList if i]
+        print "D1 done"
+    return D1
 
 def file_line_count(fname):
     return sum(1 for line in open(fname))
