@@ -489,6 +489,7 @@ public class DeepLearning extends Job.ValidatedJob {
         train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*train.numRows()), seed, true, false);
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
+      model.training_rows = train.numRows();
       trainScoreFrame = sampleFrame(train, score_training_samples, seed); //training scoring dataset is always sampled uniformly from the training dataset
       if (train != trainScoreFrame) ltrash(trainScoreFrame);
 
@@ -508,7 +509,6 @@ public class DeepLearning extends Job.ValidatedJob {
         if (valid != validScoreFrame) ltrash(validScoreFrame);
         Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
       }
-      model.training_rows = train.numRows();
       if (mini_batch > train.numRows()) {
         Log.warn("Setting mini_batch (" + mini_batch
                 + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");

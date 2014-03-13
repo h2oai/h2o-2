@@ -503,6 +503,7 @@ public class DeepLearningModel extends Model {
     start_time = cp.start_time;
     run_time = cp.run_time;
     errors = cp.errors.clone();
+    training_rows = cp.training_rows; //copy the value to display the right number on the model page before training has started
     model_info.parameters.start_time = System.currentTimeMillis(); //for displaying the model progress
     _timeLastScoreEnter = System.currentTimeMillis();
     _timeLastScoreStart = 0;
