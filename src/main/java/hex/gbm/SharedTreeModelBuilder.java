@@ -51,7 +51,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   protected boolean importance = false; // compute variable importance
 
-  @API(help = "Scale variable importance measures.", filter = Default.class )
+  //@API(help = "Scale variable importance measures.", filter = Default.class )
   protected boolean scale_importance = false;
 
 //  @API(help = "Active feature columns")
