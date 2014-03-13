@@ -97,6 +97,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTAnyFactor());   // For Runit testing
     putPrefix(new ASTAnyNA());
     putPrefix(new ASTIsTRUE());
+    putPrefix(new ASTMTrans());
 
     putPrefix(new ASTCos());  // Trigonometric functions
     putPrefix(new ASTSin());
@@ -116,7 +117,6 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMinute());
     putPrefix(new ASTSecond());
     putPrefix(new ASTMillis());
-
 
     // More generic reducers
     putPrefix(new ASTMin ());
@@ -904,6 +904,35 @@ class ASTMMult extends ASTOp {
   @Override ASTOp make() { return new ASTMMult(); }
   @Override void apply(Env env, int argcnt) {
     env.poppush(3,new Matrix(env.ary(-2)).mult(env.ary(-1)),null);
+  }
+}
+
+// Brute force implementation of matrix transpose
+class ASTMTrans extends ASTOp {
+  @Override String opStr() { return "t"; }
+  ASTMTrans( ) {
+   super(new String[]{"", "x"},
+         new Type[]{Type.ARY,Type.dblary()},
+         OPF_PREFIX,
+         OPP_PREFIX,
+         OPA_RIGHT);
+  }
+  @Override ASTOp make() { return new ASTMTrans(); }
+  @Override void apply(Env env, int argcnt) {
+    if(!env.isAry(-1)) {
+      Key k = new Vec.VectorGroup().addVec();
+      Futures fs = new Futures();
+      AppendableVec avec = new AppendableVec(k);
+      NewChunk chunk = new NewChunk(avec, 0);
+      chunk.addNum(env.dbl(-1));
+      chunk.close(0, fs);
+      Vec vec = avec.close(fs);
+      fs.blockForPending();
+      vec._domain = null;
+      Frame fr = new Frame(new String[] {"C1"}, new Vec[] {vec});
+      env.poppush(2,new Matrix(fr).trans(),null);
+    } else
+      env.poppush(2,new Matrix(env.ary(-1)).trans(),null);
   }
 }
 
