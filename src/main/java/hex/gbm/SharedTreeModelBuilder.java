@@ -2,6 +2,7 @@ package hex.gbm;
 
 import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.rng.MersenneTwisterRNG;
 
 import java.util.Arrays;
@@ -78,7 +79,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : m.numTrees() / (float) m.N;
+    return m == null ? 0 : m.ntrees() / (float) m.N;
   }
 
   // Verify input parameters
@@ -226,13 +227,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     }
 
     // Compute variable importance for this tree if necessary
-    float[] varimp   = null;
-    float[] varimpSD = null;
+    VarImp varimp = null;
     if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
       Timer vi_timer = new Timer();
-      float[][] vi = doVarImpCalc(model, ktrees, tid-1, fTrain, scale_importance);
-      varimp   = vi[0];
-      varimpSD = vi[1];
+      varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, scale_importance);
       Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring
@@ -240,14 +238,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
                       sc==null ? Double.NaN : sc.mse(),
                       sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null),
                       varimp,
-                      varimpSD,
                       sc==null ? null : (_nclass==2 ? makeAUC(toCMArray(sc._cms), ModelUtils.DEFAULT_THRESHOLDS) : null)
                       );
     model.update(self());
     return model;
   }
 
-  protected abstract float[][] doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale);
+  protected abstract VarImp doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale);
 
   private ConfusionMatrix[] toCMArray(long[][][] cms) {
     int n = cms.length;
@@ -757,7 +754,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public long speedValue() {
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    long numTreesBuiltSoFar = m == null ? 0 : m.numTrees();
+    long numTreesBuiltSoFar = m == null ? 0 : m.ntrees();
     long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
     return sv;
   }
@@ -783,7 +780,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract void initAlgo( TM initialModel);
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD,  water.api.AUC validAUC);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
   protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {

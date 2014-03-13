@@ -3,6 +3,7 @@ package hex.drf;
 import static water.util.Utils.div;
 import static water.util.Utils.sum;
 import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.drf.TreeVotesCollector.TreeVotes;
 import hex.gbm.*;
 import hex.gbm.DTree.DecidedNode;
@@ -83,23 +84,17 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.seed = prior.seed;
     }
 
-    private DRFModel(DRF params, DRFModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
-      super(prior, err, cm, varimp, varimpSD, validAUC);
+    private DRFModel(DRF params, DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+      super(prior, err, cm, varimp, validAUC);
       this.parameters = params;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-    private DRFModel(DRF params, DRFModel prior, float[] varimp, float[] varimpSD) {
-      super(prior, varimp, varimpSD);
-      this.parameters = params;
-      this.mtries = prior.mtries;
-      this.sample_rate = prior.sample_rate;
-      this.seed = prior.seed;
-    }
+
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
-      int ntrees = numTrees();
+      int ntrees = ntrees();
       if (p.length==1) { if (ntrees>0) div(p, ntrees); } // regression - compute avg over all trees
       else { // classification
         float s = sum(p);
@@ -110,9 +105,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
-    }
-    @Override protected void generateHTMLVarImp(StringBuilder sb) {
-      generateHTMLVarImp(sb, "Unscaled Variable Importance", "Mean Decrease Accuracy", true);
     }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
       if (isClassifier()) {
@@ -129,14 +121,11 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
   }
 
-  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
-    return new DRFModel(this, model, err, cm, varimp, varimpSD, validAUC);
+  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    return new DRFModel(this, model, err, cm, varimp, validAUC);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
     return new DRFModel(this, model, ktrees, tstats);
-  }
-  protected DRFModel makeModel( DRFModel model, float[] varimp, float[] varimpSD) {
-    return new DRFModel(this, model, varimp, varimpSD);
   }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 999; min_rows = 1; }
 
@@ -222,18 +211,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Make sure that we did not miss any votes
     assert !importance || _treeVotesOnOOB.npredictors() == _treeVotesOnSOOB[0/*variable*/].npredictors() : "Missing some tree votes in variable importance voting?!";
 
-    Log.info(Sys.DRF__, "Var. importance: "+Arrays.toString(model.varimp));
-    /*
-    // Compute variable importance if required
-    if (classification && importance) {
-      Timer vi_timer = new Timer();
-      Log.info(Sys.DRF__, "Computing variable importance...");
-      model = doVarImp(model, fr);
-      Log.info(Sys.DRF__, "Computation of variable importance took: " + vi_timer.toString());
-      Log.info(Sys.DRF__, "Var. importance: "+Arrays.toString(model.varimp));
-      Log.info(Sys.DRF__, "==========================");
-    }*/
-
     return model;
   }
 
@@ -243,36 +220,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     _treeVotesOnOOB  = new TreeVotes(ntrees);
     _treeVotesOnSOOB = new TreeVotes[_ncols];
     for (int i=0; i<_ncols; i++) _treeVotesOnSOOB[i] = new TreeVotes(ntrees);
-  }
-
-  private DRFModel doVarImp(final DRFModel model, final Frame f) {
-    // Score a dataset as usual but collects properties per tree.
-    final TreeVotes cx = TreeVotesCollector.collect(model, f, _ncols, sample_rate, -1);
-    final int ntrees = model.numTrees();
-    assert cx.treeCVotes().length == ntrees && cx.nrows().length == ntrees; // make sure that numbers of trees correspond
-    final float[] varimp = new float[_ncols]; // output variable importance
-    final float[] varimpSD = new float[_ncols]; // output variable importance sd
-    // For each variable launch one FJ-task to compute variable importance.
-    Futures fs = new Futures();
-    for (int var=0; var<_ncols; var++) {
-      final int variable = var;
-      H2OCountedCompleter task4var = new H2OCountedCompleter() {
-        @Override public void compute2() {
-          Frame wf = new Frame(f); // create a copy of frame
-          // Compute prediction error per tree on shuffled OOB sample
-          TreeVotes cd = TreeVotesCollector.collect(model, wf, _ncols, sample_rate, variable);
-          double[] result = cd.imp(cx);
-          varimp  [variable] = (float) result[0]; // importance
-          varimpSD[variable] = (float) result[1]; // SD for importance
-          tryComplete();
-        }
-      };
-      H2O.submitTask(task4var); // Fork the computation task
-      fs.add(task4var);
-    }
-    fs.blockForPending(); // Randez-vous
-    // after all varimp contains variable importance of all columns used by a model.
-    return makeModel(model, varimp, varimpSD);
   }
 
   /* On-the-fly version for varimp. After generation a new tree, its tree votes are collected on shuffled
@@ -286,9 +233,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
    * The average of this number over all trees in the forest is the raw importance score for variable m.
    * */
   @Override
-  protected float[][] doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain, boolean scale) {
+  protected VarImp doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain, boolean scale) {
     // Check if we have already serialized 'ktrees'-trees in the model
-    assert model.numTrees()-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
+    assert model.ntrees()-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
     assert _treeVotesOnOOB.npredictors()-1 == tid : "Tree votes over OOB rows for this tree (var ktrees) were not found!";
     // Compute tree votes over shuffled data
     final CompressedTree[/*nclass*/] theTree = model.ctree(tid); // get the last tree FIXME we should pass only keys
@@ -317,7 +264,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       varimp  [var] = (float) imp[0];
       varimpSD[var] = (float) imp[1];
     }
-    return new float[][] {varimp, varimpSD};
+    return new VarImp.VarImpMDA(varimp, varimpSD, model.ntrees());
   }
 
   /** Fill work columns:

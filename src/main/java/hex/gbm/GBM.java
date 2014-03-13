@@ -1,6 +1,7 @@
 package hex.gbm;
 
 import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.gbm.DTree.*;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
@@ -49,8 +50,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       super(prior, trees, tstats);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
-      super(prior, err, cm, varimp, varimpSD, validAUC);
+    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+      super(prior, err, cm, varimp, validAUC);
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
 
@@ -81,9 +82,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       DocGen.HTML.paragraph(sb,"Learn rate: "+learn_rate);
     }
 
-    @Override protected void generateHTMLVarImp(StringBuilder sb) {
-      generateHTMLVarImp(sb, "Relative importance of input variables", "Rel. Var. Importance", true);
-    }
     @Override protected void toJavaUnifyPreds(SB bodyCtxSB) {
       if (isClassifier()) {
         bodyCtxSB.i().p("// Compute Probabilities for classifier (scale via http://www.hongliangjie.com/2011/01/07/logsum/)").nl();
@@ -103,8 +101,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
     return new GBMModel(outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
   }
-  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, float[] varimp, float[] varimpSD, water.api.AUC validAUC) {
-    return new GBMModel(model, err, cm, varimp, varimpSD, validAUC);
+  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    return new GBMModel(model, err, cm, varimp, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
     return new GBMModel(model, ktrees, tstats);
@@ -501,8 +499,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
    *
    *  See (45), (35) formulas in Friedman: Greedy Function Approximation: A Gradient boosting machine.
    *  Algo used here can be used for computation individual importance of features per output class. */
-  @Override protected float[][] doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale) {
-    assert model.numTrees()-1 == tid : "varimp computation expect model with already serialized trees: tid="+tid;
+  @Override protected VarImp doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale) {
+    assert model.ntrees()-1 == tid : "varimp computation expect model with already serialized trees: tid="+tid;
     // Iterates over k-tree
     for (DTree t : ktrees) { // Iterate over trees
       if (t!=null) {
@@ -516,7 +514,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Compute variable importance for all trees in model
     float[] varimp   = new float[model.nfeatures()];
 
-    int   ntreesTotal = model.numTrees() * model.nclasses();
+    int   ntreesTotal = model.ntrees() * model.nclasses();
     int   maxVar = 0;
     for (int var=0; var<_improvPerVar.length; var++) {
       varimp[var] = _improvPerVar[var] / ntreesTotal;
@@ -528,6 +526,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       for (int var=0; var<varimp.length; var++) varimp[var] /= maxVal;
     }
 
-    return new float[][] { varimp, null };
+    return new VarImp(varimp);
   }
 }
