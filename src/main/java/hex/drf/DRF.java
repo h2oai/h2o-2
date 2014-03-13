@@ -1,6 +1,7 @@
 package hex.drf;
 
-import static water.util.Utils.*;
+import static water.util.Utils.div;
+import static water.util.Utils.sum;
 import hex.ConfusionMatrix;
 import hex.drf.TreeVotesCollector.TreeVotes;
 import hex.gbm.*;
@@ -13,7 +14,6 @@ import hex.gbm.DTree.UndecidedNode;
 import java.util.Arrays;
 import java.util.Random;
 
-import jsr166y.ForkJoinTask;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
@@ -180,15 +180,17 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // Out-of-bag trees counter - only one since it is shared via k-trees
   protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
+  @Override protected void initAlgo(DRFModel initialModel) {
+    // Initialize TreeVotes
+    if (importance) initTreeVotes();
+  }
+
   @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
     // Append number of trees participating in on-the-fly scoring
     fr.add("OUT_BAG_TREES", response.makeZero());
 
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
-
-    // Initialize TreeVotes
-    if (importance) initTreeVotes();
 
     // Prepare working columns
     new SetWrkTask().doAll(fr);
@@ -240,13 +242,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     for (int i=0; i<_ncols; i++) _treeVotesOnSOOB[i] = new TreeVotes(ntrees);
   }
 
-  /* From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp
-   * In every tree grown in the forest, put down the oob cases and count the number of votes cast for the correct class.
-   * Now randomly permute the values of variable m in the oob cases and put these cases down the tree.
-   * Subtract the number of votes for the correct class in the variable-m-permuted oob data from the number of votes
-   * for the correct class in the untouched oob data.
-   * The average of this number over all trees in the forest is the raw importance score for variable m.
-   * */
   private DRFModel doVarImp(final DRFModel model, final Frame f) {
     // Score a dataset as usual but collects properties per tree.
     final TreeVotes cx = TreeVotesCollector.collect(model, f, _ncols, sample_rate, -1);
@@ -277,9 +272,18 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     return makeModel(model, varimp, varimpSD);
   }
 
-  // On-the-fly version for varimp
+  /* On-the-fly version for varimp. After generation a new tree, its tree votes are collected on shuffled
+   * OOB rows and variable importance is recomputed.
+   *
+   * From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp
+   * In every tree grown in the forest, put down the oob cases and count the number of votes cast for the correct class.
+   * Now randomly permute the values of variable m in the oob cases and put these cases down the tree.
+   * Subtract the number of votes for the correct class in the variable-m-permuted oob data from the number of votes
+   * for the correct class in the untouched oob data.
+   * The average of this number over all trees in the forest is the raw importance score for variable m.
+   * */
   @Override
-  protected float[][] doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain) {
+  protected float[][] doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain, boolean scale) {
     // Check if we have already serialized 'ktrees'-trees in the model
     assert model.numTrees()-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
     assert _treeVotesOnOOB.npredictors()-1 == tid : "Tree votes over OOB rows for this tree (var ktrees) were not found!";
