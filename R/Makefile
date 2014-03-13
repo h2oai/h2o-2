@@ -40,7 +40,7 @@ build_rh2o:
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
-	-R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
+	-R CMD Rd2pdf --force --output="h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
 	rm -rf h2o-package/inst/java
 	mkdir -p h2o-package/inst/java/tmp
@@ -106,7 +106,7 @@ check:
 
 clean:
 	rm -f h2o-package/DESCRIPTION
-	rm -f h2o-package/h2o_package.pdf
+	rm -f h2o_package.pdf
 	rm -f h2o-package/man/h2o-package.Rd
 	rm -fr h2o-package/inst/java
 	rm -f h2o_*.tar.gz
