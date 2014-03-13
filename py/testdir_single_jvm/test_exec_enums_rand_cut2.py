@@ -25,7 +25,6 @@ CUT_LOOP_CNT = 50
 # as long as you have enough features and enums per features..should be random enough
 assert CUT_EXPR_CNT > 2 * CUT_LOOP_CNT
 
-
 if getpass.getuser()=='kevin': #10M
     ROWS=1000000 # 1M
     ROWS=10000 # 10k
