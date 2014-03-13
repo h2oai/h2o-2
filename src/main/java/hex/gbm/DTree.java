@@ -1,8 +1,8 @@
 package hex.gbm;
 
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
+import hex.*;
 import hex.ConfusionMatrix;
-import hex.VariableImportance;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 
@@ -614,7 +614,7 @@ public class DTree extends Iced {
       } else return null;
     }
 
-    @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
+    @Override public VarImp varimp() { return varimp == null ? null : new VarImp(varimp, _names); }
     @Override public double mse() {
       if(errs != null && errs.length > 0){
         int n = errs.length-1;

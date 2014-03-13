@@ -1,7 +1,6 @@
 package water;
 
-import hex.ConfusionMatrix;
-import hex.VariableImportance;
+import hex.*;
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -107,8 +106,8 @@ public abstract class Model extends Lockable<Model> {
   public ConfusionMatrix cm() { return null; }
   /** Returns mse for validation set. */
   public double mse() { return Double.NaN; }
-  /** Variable importance of individual variables measured by this model. */
-  public VariableImportance varimp() { return null; }
+  /** Variable importance of individual input features measured by this model. */
+  public VarImp varimp() { return null; }
 
   /** Bulk score for given <code>fr<code> frame.
    * The frame is always adapted to this model.
