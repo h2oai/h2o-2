@@ -520,7 +520,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     int   maxVar = 0;
     for (int var=0; var<_improvPerVar.length; var++) {
       varimp[var] = _improvPerVar[var] / ntreesTotal;
-      if (varimp[maxVar] > varimp[var]) maxVar = var;
+      if (varimp[var] > varimp[maxVar]) maxVar = var;
     }
     // GBM scale varimp to scale 0..100
     if (scale) {
