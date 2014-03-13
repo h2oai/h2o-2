@@ -689,6 +689,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
           sum = score1(chks,fs,row);
         }
         float err;  int yact=0; // actual response from dataset
+        int yact_orig = 0; // actual response from dataset before potential scaling
         if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
           if( sum == 0 ) {       // This tree does not predict this row *at all*?
@@ -697,7 +698,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
             if (_cavr && ys.isNA0(row)) { // Handle adapted validation response - actual response was adapted but does not contain NA - it is implicit misprediction,
               err = 1f;
             } else { // No adaptation of validation response
-              yact = (int) ys.at80(row); // Pick an actual prediction adapted to model values <0, nclass-1)
+              yact = yact_orig = (int) ys.at80(row); // Pick an actual prediction adapted to model values <0, nclass-1)
               assert 0 <= yact && yact < _nclass : "weird ycls="+yact+", y="+ys.at0(row);
               err = Float.isInfinite(sum)
                 ? (Float.isInfinite(fs[yact+1]) ? 0f : 1f)
@@ -715,8 +716,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         // Pick highest prob for our prediction.
         if (_nclass > 1) { // fill CM only for classification
           if(_nclass == 2) { // Binomial classification -> compute AUC, draw ROC
-            for(int i = 0; i < _cms.length; i++)
-              _cms[i][yact][( fs[2] >= ModelUtils.DEFAULT_THRESHOLDS[i]) ? 1 : 0]++;
+            for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++)
+              _cms[i][yact_orig][( fs[2] >= ModelUtils.DEFAULT_THRESHOLDS[i]) ? 1 : 0]++;
           }
           int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
           _cm[yact][ypred]++;      // actual v. predicted
