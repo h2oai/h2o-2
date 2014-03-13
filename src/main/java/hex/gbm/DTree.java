@@ -530,8 +530,8 @@ public class DTree extends Iced {
     @API(help="MSE rate as trees are added")       public final double [] errs;
     @API(help="Keys of actual trees built")        public final Key [/*N*/][/*nclass*/] treeKeys; // Always filled, but 2-binary classifiers can contain null for 2nd class
     @API(help="Maximum tree depth")                public final int max_depth;
-    @API(help = "Fewest allowed observations in a leaf") public final int min_rows;
-    @API(help = "Bins in the histograms")          public final int nbins;
+    @API(help="Fewest allowed observations in a leaf") public final int min_rows;
+    @API(help="Bins in the histograms")            public final int nbins;
 
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be separate).
@@ -613,6 +613,7 @@ public class DTree extends Iced {
         return cms[n] == null?null:cms[n];
       } else return null;
     }
+
     @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
     @Override public double mse() {
       if(errs != null && errs.length > 0){
@@ -776,22 +777,26 @@ public class DTree extends Iced {
       DocGen.HTML.arrayTail(sb);
     }
 
-    protected void generateHTMLVarImp(StringBuilder sb) {
-      DocGen.HTML.section(sb,"Unscaled Variable Importance");
+    protected abstract void generateHTMLVarImp(StringBuilder sb);
+
+    protected void generateHTMLVarImp(StringBuilder sb, String title, String varimpType, boolean sort) {
+      DocGen.HTML.section(sb,title);
       DocGen.HTML.arrayHead(sb);
       // Create a sort order
       Integer[] sortOrder = new Integer[varimp.length];
       for(int i=0; i<sortOrder.length; i++) sortOrder[i] = i;
 
-      Arrays.sort(sortOrder, new Comparator<Integer>() {
-        @Override public int compare(Integer o1, Integer o2) { float f = varimp[o1]-varimp[o2]; return f<0 ? 1 : (f>0 ? -1 : 0); }
-      });
+      if (sort) {
+        Arrays.sort(sortOrder, new Comparator<Integer>() {
+          @Override public int compare(Integer o1, Integer o2) { float f = varimp[o1]-varimp[o2]; return f<0 ? 1 : (f>0 ? -1 : 0); }
+        });
+      }
 
       sb.append("<tr><th>Variable</th>");
       for( int i=0; i<varimp.length; i++ )
         sb.append("<td>").append(_names[sortOrder[i]]).append("</td>");
       sb.append("</tr>");
-      sb.append("<tr><th class='warning'>Mean Decrease Accuracy</th>");
+      sb.append("<tr><th class='warning'>").append(varimpType).append("</th>");
       for( int i=0; i<varimp.length; i++ )
         sb.append(String.format("<td>%5.4f</td>",varimp[sortOrder[i]]));
       sb.append("</tr>");

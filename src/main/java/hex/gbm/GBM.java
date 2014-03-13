@@ -81,6 +81,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       DocGen.HTML.paragraph(sb,"Learn rate: "+learn_rate);
     }
 
+    @Override protected void generateHTMLVarImp(StringBuilder sb) {
+      generateHTMLVarImp(sb, "Relative importance of input variables", "Rel. Var. Importance", true);
+    }
     @Override protected void toJavaUnifyPreds(SB bodyCtxSB) {
       if (isClassifier()) {
         bodyCtxSB.i().p("// Compute Probabilities for classifier (scale via http://www.hongliangjie.com/2011/01/07/logsum/)").nl();

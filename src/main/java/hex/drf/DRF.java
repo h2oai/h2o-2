@@ -111,6 +111,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
     }
+    @Override protected void generateHTMLVarImp(StringBuilder sb) {
+      generateHTMLVarImp(sb, "Unscaled Variable Importance", "Mean Decrease Accuracy", true);
+    }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
       if (isClassifier()) {
         bodySb.i().p("float sum = 0;").nl();
