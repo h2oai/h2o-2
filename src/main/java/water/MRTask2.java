@@ -334,7 +334,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
           if( vecs[i] != null ) {
             assert _run_local || vecs[i].chunkKey(_lo).home()
               : "Chunk="+_lo+" v0="+v0+", k="+v0.chunkKey(_lo)+"   v["+i+"]="+vecs[i]+", k="+vecs[i].chunkKey(_lo);
-            bvs[i] = vecs[i].elem2BV(_lo);
+            bvs[i] = vecs[i].chunkForChunkIdx(_lo);
           }
         if(_noutputs > 0){
           final VectorGroup vg = vecs[0].group();
@@ -342,7 +342,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
           appendableChunks = new NewChunk[_noutputs];
           for(int i = 0; i < _appendables.length; ++i){
             _appendables[i] = new AppendableVec(vg.vecKey(_vid+i));
-            appendableChunks[i] = (NewChunk)_appendables[i].elem2BV(_lo);
+            appendableChunks[i] = (NewChunk)_appendables[i].chunkForChunkIdx(_lo);
           }
         }
         // Call all the various map() calls that apply

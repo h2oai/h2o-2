@@ -20,5 +20,5 @@ public abstract class WrappedVec extends Vec {
     return _masterVec;
   }
   // Map from chunk-index to Chunk.  These wrappers are making custom Chunks
-  abstract public Chunk elem2BV(int cidx);
+  abstract public Chunk chunkForChunkIdx(int cidx);
 }

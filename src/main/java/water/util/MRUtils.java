@@ -81,6 +81,7 @@ public class MRUtils {
 
     Vec[] vecs = fr.vecs();
     if( vecs[0].nChunks() < splits || shuffle ) {
+      Log.info("Load balancing dataset: splitting into " + splits + " chunks.");
       long[] idx = null;
       if (shuffle) {
         idx = new long[splits];
@@ -88,7 +89,7 @@ public class MRUtils {
         Utils.shuffleArray(idx, seed);
       }
       Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
-      final long rows_per_new_chunk = fr.numRows() / splits;
+      final long rows_per_new_chunk = (long)(Math.ceil((double)fr.numRows()/splits));
       //loop over cols (same indexing for each column)
       for(int col=0; col<vecs.length; col++) {
         AppendableVec vec = new AppendableVec(keys[col]);
@@ -97,17 +98,15 @@ public class MRUtils {
         for(int i=0; i<splits; ++i)
           outCkg[i] = new NewChunk(vec, i);
         //loop over all incoming chunks
-        long off = 0;
         for( int ckg = 0; ckg < vecs[col].nChunks(); ckg++ ) {
-          final Chunk inCkg = vecs[col].chunk(ckg);
+          final Chunk inCkg = vecs[col].chunkForChunkIdx(ckg);
           // loop over local rows of incoming chunks (fast path)
           for (int row = 0; row < inCkg._len; ++row) {
-            int outCkgIdx = (int)((off + row) / rows_per_new_chunk); // destination chunk idx
+            int outCkgIdx = (int)((inCkg._start + row) / rows_per_new_chunk); // destination chunk idx
             if (shuffle) outCkgIdx = (int)(idx[outCkgIdx]); //shuffle: choose a different output chunk
             assert(outCkgIdx >= 0 && outCkgIdx < splits);
             outCkg[outCkgIdx].addNum(inCkg.at0(row));
           }
-          off += inCkg._len;
         }
         for(int i=0; i<outCkg.length; ++i)
           outCkg[i].close(i, null);
@@ -115,6 +114,7 @@ public class MRUtils {
         t._domain = vecs[col]._domain;
         vecs[col] = t;
       }
+      Log.info("Load balancing done.");
     }
     fr.reloadVecs();
     return new Frame(fr.names(), vecs);
