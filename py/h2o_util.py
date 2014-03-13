@@ -2,6 +2,7 @@ import subprocess
 import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json, csv
 import h2o
+import sys
 
 
 
@@ -146,22 +147,33 @@ def file_read_csv_col(csvPathname, col=0, skipHeader=True, datatype='float', pre
         rowNum = 0
         dataList = []
         lastRowLength = None
-        for row in reader:
-            if skipHeader and rowNum==0:
-                print "Skipping header in this csv"
-            else:
-                if col >= len(row):
-                    print "col (zero indexed): %s points past the # entries in this row %s" % (col, row)
-                if lastRowLength and len(row)!=lastRowLength:
-                    print "Current row length: %s is different than last row length: %s" % (row, lastRowLength)
-                colData = row[col]
-                # only print first 5 for seeing
-                # don't print big col cases
-                if rowNum < preview and len(row) <= 10: 
-                    print colData
-                dataList.append(colData)
-            rowNum += 1
-            lastRowLength = len(row)
+        try:
+            for row in reader:
+                if skipHeader and rowNum==0:
+                    print "Skipping header in this csv"
+                else:
+                    NA = False
+                    if col > len(row)-1:
+                        print "col (zero indexed): %s points past the # entries in this row %s" % (col, row)
+                    if lastRowLength and len(row)!=lastRowLength:
+                        print "Current row length: %s is different than last row length: %s" % (row, lastRowLength)
+
+                    if col > len(row)-1:
+                        colData = None
+                    else:
+                        colData = row[col]
+                    # only print first 5 for seeing
+                    # don't print big col cases
+                    if rowNum < preview and len(row) <= 10: 
+                        print colData
+                    dataList.append(colData)
+                rowNum += 1
+                if rowNum%10==0:
+                    # print rowNum
+                    pass
+                lastRowLength = len(row)
+        except csv.Error, e:
+            sys.exit('file %s, line %d: %s' % (csvPathname, reader.line_num, e))
 
         # now we have a list of strings
         # change them to float if asked for, or int

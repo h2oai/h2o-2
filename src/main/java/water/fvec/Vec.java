@@ -1,10 +1,12 @@
 package water.fvec;
 
-import java.util.UUID;
-import java.util.Arrays;
 import water.*;
-import water.util.Utils;
 import water.nbhm.NonBlockingHashMapLong;
+import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.UUID;
+
 import static water.util.Utils.seq;
 
 /**
@@ -500,7 +502,7 @@ public class Vec extends Iced {
   }
 
   /** The Chunk for a chunk#.  Warning: this loads the data locally!  */
-  public Chunk elem2BV( int cidx ) {
+  public Chunk chunkForChunkIdx(int cidx) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     Chunk c = dvec.get();               // Chunk data to compression wrapper
@@ -512,33 +514,33 @@ public class Vec extends Iced {
     return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
-  public final Chunk chunk( long i ) {
-    return elem2BV(elem2ChunkIdx(i));
+  public final Chunk chunkForRow(long i) {
+    return chunkForChunkIdx(elem2ChunkIdx(i));
   }
 
   /** Fetch element the slow way, as a long.  Floating point values are
    *  silently rounded to an integer.  Throws if the value is missing. */
-  public final long  at8( long i ) { return chunk(i).at8(i); }
+  public final long  at8( long i ) { return chunkForRow(i).at8(i); }
   /** Fetch element the slow way, as a double.  Missing values are
    *  returned as Double.NaN instead of throwing. */
-  public final double at( long i ) { return chunk(i).at (i); }
+  public final double at( long i ) { return chunkForRow(i).at(i); }
   /** Fetch the missing-status the slow way. */
-  public final boolean isNA(long row){ return chunk(row).isNA(row); }
+  public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
 
   /** Write element the slow way, as a long.  There is no way to write a
    *  missing value with this call.  Under rare circumstances this can throw:
    *  if the long does not fit in a double (value is larger magnitude than
    *  2^52), AND float values are stored in Vector.  In this case, there is no
    *  common compatible data representation. */
-  public final long   set( long i, long   l) { return chunk(i).set(i,l); }
+  public final long   set( long i, long   l) { return chunkForRow(i).set(i, l); }
   /** Write element the slow way, as a double.  Double.NaN will be treated as
    *  a set of a missing element. */
-  public final double set( long i, double d) { return chunk(i).set(i,d); }
+  public final double set( long i, double d) { return chunkForRow(i).set(i, d); }
   /** Write element the slow way, as a float.  Float.NaN will be treated as
    *  a set of a missing element. */
-  public final float  set( long i, float  f) { return chunk(i).set(i,f); }
+  public final float  set( long i, float  f) { return chunkForRow(i).set(i, f); }
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) { return chunk(i).setNA(i); }
+  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i); }
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {
@@ -547,8 +549,8 @@ public class Vec extends Iced {
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
       // CNC: Bad plan to load remote data during a toString... messes up debug printing
-      // Stupidly elem2BV loads all data locally
-      // s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
+      // Stupidly chunkForChunkIdx loads all data locally
+      // s += chunkForChunkIdx(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
     }
     return s+"}]";
   }

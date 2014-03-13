@@ -1,10 +1,10 @@
 package water.fvec;
 
-import java.io.IOException;
-import java.io.InputStream;
-
 import water.Job.ProgressMonitor;
 import water.Key;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * A vector of plain Bytes.
@@ -13,7 +13,7 @@ public class ByteVec extends Vec {
 
   ByteVec( Key key, long espc[] ) { super(key,espc); }
 
-  public C1NChunk elem2BV( int cidx ) { return (C1NChunk)super.elem2BV(cidx); }
+  public C1NChunk chunkForChunkIdx(int cidx) { return (C1NChunk)super.chunkForChunkIdx(cidx); }
 
   /** Open a stream view over the underlying data  */
   public InputStream openStream(final ProgressMonitor pmon) {
@@ -25,7 +25,7 @@ public class ByteVec extends Vec {
         if( _c0 == null || _sz >= _c0._len ) {
           sz[0] += _c0 != null?_c0._len:0;
           if(_cidx >= nChunks() )return 0;
-          _c0 = elem2BV(_cidx++);
+          _c0 = chunkForChunkIdx(_cidx++);
           _sz = C1NChunk.OFF;
           if( pmon != null ) pmon.update(_c0._len);
         }

@@ -90,7 +90,7 @@ def percentileOnSortedList_25_50_75( N, key=lambda x:x):
 
 #***************************************************************************
 def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float', h2oSummary2=None, 
-   h2oQuantilesApprox=None, h2oQuantilesExact=None, interpolate='linear', quantile=0.50):
+   h2oQuantilesApprox=None, h2oQuantilesExact=None, interpolate='linear', quantile=0.50, use_genfromtxt=False):
     SCIPY_INSTALLED = True
     try:
         import scipy as sp
@@ -101,18 +101,29 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
         print "numpy or scipy is not installed. Will only do sort-based checking"
         SCIPY_INSTALLED = false
 
-    target = h2o_util.file_read_csv_col(csvPathname, col=col, datatype=datatype,
-        skipHeader=skipHeader, preview=5)
+    if use_genfromtxt:
+        print "Using numpy.genfromtxt. Better handling of null bytes"
+        target = np.genfromtxt(
+            open(csvPathname, 'r'),
+            delimiter=',',
+            skip_header=1 if skipHeader else 0,
+            dtype=None) # guess!
+        print "shape:", target.shape()
+
+    else:
+        print "Using python csv reader"
+        target = h2o_util.file_read_csv_col(csvPathname, col=col, datatype=datatype,
+            skipHeader=skipHeader, preview=5)
 
     if datatype=='float':
         # to make irene's R runif files first col work (quoted row numbers, integers
         #shouldn't hurt anyone else?
         # strip " from left (ignore leading whitespace
         # strip " from right (ignore leading whitespace
-        targetFP= map(float, target)
+        targetFP = map(float, target)
         # targetFP= np.array(tFP, np.float)
     if datatype=='int':
-        targetFP= map(int, target)
+        targetFP = map(int, target)
 
 
     # http://docs.scipy.org/doc/numpy-dev/reference/generated/numpy.percentile.html
@@ -205,7 +216,8 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
     if h2oSummary2:
         if math.isnan(float(h2oSummary2)):
             raise Exception("h2oSummary2 is unexpectedly NaN %s" % h2oSummary2)
-        h2o_util.assertApproxEqual(h2oSummary2, b, rel=0.5,
+        # bounds are way off, since it depends on the min/max of the col, not the expected value
+        h2o_util.assertApproxEqual(h2oSummary2, b, rel=1.0,
             msg='h2o summary2 is not approx. same as sort algo')
 
     if SCIPY_INSTALLED:
