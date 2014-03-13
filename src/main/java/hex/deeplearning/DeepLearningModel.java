@@ -745,14 +745,14 @@ public class DeepLearningModel extends Model {
 
     model_info.job().toHTML(sb);
     Inspect2 is2 = new Inspect2();
+    final Key val_key = model_info().parameters.validation != null ? model_info().parameters.validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
-            + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
+            + (val_key != null ? (is2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null, responseName()) + ", "
-            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>"
-            + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName()) : "")
+            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key) + ", "
+            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);

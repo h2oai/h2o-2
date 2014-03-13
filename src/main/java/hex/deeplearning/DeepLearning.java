@@ -15,6 +15,7 @@ import water.util.MRUtils;
 import water.util.RString;
 import water.util.Utils;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import static water.util.MRUtils.sampleFrame;
@@ -319,7 +320,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return HTML Link
    */
   public static String link(Key k, String content) {
-    return link(k, content, null, null);
+    return link(k, content, null, null, null);
   }
 
   /**
@@ -328,18 +329,21 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param content Link text
    * @param cp Key to checkpoint to continue training with (optional)
    * @param response Response
+   * @param val Validation data set key
    * @return HTML Link
    */
-  public static String link(Key k, String content, Key cp, String response) {
+  public static String link(Key k, String content, Key cp, String response, Key val) {
     DeepLearning req = new DeepLearning();
     RString rs = new RString("<a href='" + req.href() + ".query?source=%$key" +
             (cp == null ? "" : "&checkpoint=%$cp") +
             (response == null ? "" : "&response=%$resp") +
+            (val == null ? "" : "&validation=%$valkey") +
             "'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
     if (cp != null) rs.replace("cp", cp.toString());
     if (response != null) rs.replace("resp", response);
+    if (val != null) rs.replace("valkey", val);
     return rs.toString();
   }
 
@@ -360,17 +364,17 @@ public class DeepLearning extends Job.ValidatedJob {
       try {
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
-        if (source == null || source._key != previous.model_info().get_params().source._key) {
+        if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
           throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
         }
-        if (response == null || response._key != previous.model_info().get_params().response._key) {
+        if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
           throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
         }
         if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0) {
           throw new IllegalArgumentException("ignored_cols must be the same as for the checkpointed model.");
         }
         if ((validation!=null) != (previous.model_info().get_params().validation != null)
-                || (validation != null && validation._key != previous.model_info().get_params().validation._key)) {
+                || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
           throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
         }
         if (classification != previous.model_info().get_params().classification) {
