@@ -151,8 +151,8 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Ignore constant training columns", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
-  @API(help = "Force extra load balancing to increase training speed for small datasets (beta)", filter = Default.class, json = true)
-  public boolean force_load_balance = false;
+  @API(help = "Force extra load balancing to increase training speed for small datasets", filter = Default.class, json = true)
+  public boolean force_load_balance = true;
 
   @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
@@ -360,16 +360,17 @@ public class DeepLearning extends Job.ValidatedJob {
       try {
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
-        if (source._key != previous.model_info().get_params().source._key) {
+        if (source == null || source._key != previous.model_info().get_params().source._key) {
           throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
         }
-        if (response._key != previous.model_info().get_params().response._key) {
+        if (response == null || response._key != previous.model_info().get_params().response._key) {
           throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
         }
         if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0) {
           throw new IllegalArgumentException("ignored_cols must be the same as for the checkpointed model.");
         }
-        if (validation._key != previous.model_info().get_params().validation._key) {
+        if ((validation!=null) != (previous.model_info().get_params().validation != null)
+                || (validation != null && validation._key != previous.model_info().get_params().validation._key)) {
           throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
         }
         if (classification != previous.model_info().get_params().classification) {
