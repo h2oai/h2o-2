@@ -38,11 +38,10 @@ class Basic(unittest.TestCase):
 
         # h2b.browseTheCloud()
         trial = 0
-        xList = []
-        eList = []
-        fList = []
-        
         for (csvPathname, iColCount, oColCount, hex_key, timeoutSecs) in tryList:
+            xList = []
+            eList = []
+            fList = []
 
             # PARSE*******************************************************
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=200, doSummary=False)
@@ -127,7 +126,7 @@ class Basic(unittest.TestCase):
                     start = time.time()
                     h2o.nodes[0].remove_all_keys()
                     elapsed = time.time() - start
-                    print "remove all keys end on ", csvFilename, 'took', elapsed, 'seconds.'
+                    print "remove all keys end on took", elapsed, 'seconds.'
 
         #****************************************************************
         # PLOTS. look for eplot.jpg and fplot.jpg in local dir?

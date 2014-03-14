@@ -373,27 +373,28 @@ public class Summary2 extends Iced {
       // should also be obsessive and check that it's not 0 and force to 1.
       // Since nbin is implied by _binsz, ratio _binsz and recompute nbin
       int binCase = 0; // keep track in case we assert
+      double start;
       if ( stat0._max2==stat0._min2) {
         binszSuggest = 0; // fixed next with other 0 cases.
-        _start = stat0._min2;
+        start = stat0._min2;
         binCase = 1;
       }
       // minimum 2 if min/max different
       else if ( stat0._max2!=stat0._min2 && nbinSuggest<2 ) {
         binszSuggest = (stat0._max2 - stat0._min2) / 2.0;
-        _start = stat0._min2;
+        start = stat0._min2;
         binCase = 2;
       }
       else if (nbinSuggest<1 || nbinSuggest>BROWSER_BIN_TARGET ) {
         // switch to a static equation with a fixed bin count, and recompute binszSuggest
         // one more bin than necessary for the range (99 exact. causes one extra
         binszSuggest = (stat0._max2 - stat0._min2) / (BROWSER_BIN_TARGET - 1.0);
-        _start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
+        start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
         binCase = 3;
       }
       else {
-        // align to binszSuggest boundary
-        _start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
+        // align to binszSuggest boundary. (this is for reals)
+        start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
         binCase = 4;
       }
 
@@ -404,6 +405,8 @@ public class Summary2 extends Iced {
       // histogram looks good for integers. This is our final best bin size.
       double binsz = (binszSuggest!=0) ? binszSuggest : (vec.isInt() ? 1 : 1e-13d); 
       _binsz = vec.isInt() ? Math.floor(binsz) : binsz;
+      // make integers start on an integer too!
+      _start = vec.isInt() ? Math.floor(start) : start;
 
       // This equation creates possibility of some of the first bins being empty
       // also: _binsz means many _binsz2 could be empty at the start if we resused _start there
