@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
             print "\nx:", x
             print "y:", y
 
-            destination_key='GLM_model_$python_0_default_0'
+            destination_key='GLM_model_python_0_default_0'
 
             kwargs = {
                 'x': x, 
