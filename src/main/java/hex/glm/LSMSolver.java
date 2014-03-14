@@ -168,7 +168,7 @@ public abstract class LSMSolver extends Iced{
 
 
   public static final class ADMMSolver extends LSMSolver {
-
+  public long _n;
     //public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
     public double _orlx = 1;//1.4; // over relaxation param
@@ -223,7 +223,7 @@ public abstract class LSMSolver extends Iced{
       final int N = xy.length;
       Arrays.fill(z, 0);
       if(_lambda>0 || _addedL2 > 0)
-        gram.addDiag(_lambda*(1-_alpha) + _addedL2);
+        gram.addDiag(_lambda*(1-_alpha)/_n + _addedL2);
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
         if(Double.isNaN(_rho)) rho = _lambda*_alpha;//gram.diagMin()+1e-5;// find rho value as min diag element + constant

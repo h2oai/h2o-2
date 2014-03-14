@@ -3,9 +3,9 @@ import h2o, h2o_cmd, sys
 import time, random, re
 import h2o_browse as h2b
 
-def checkForBadFP(value, name='min_value', nanOkay=False, json=None):
+def checkForBadFP(value, name='min_value', nanOkay=False, infOkay=False, json=None):
     # if we passed the json, dump it for debug
-    if 'Infinity' in str(value):
+    if 'Infinity' in str(value) and not infOkay:
         if json:
             print h2o.dump_json(json)
         raise Exception("Infinity in inspected %s can't be good for: %s" % (str(value), name))

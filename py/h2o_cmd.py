@@ -409,8 +409,8 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
 
                 # check for NaN/Infinity in some of these
                 # apparently we can get NaN in the mean for a numerica col with all NA?
-                h2o_exec.checkForBadFP(mean, 'mean for colname: %s stattype: %s' % (colname, stattype), nanOkay=True)
-                h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True)
+                h2o_exec.checkForBadFP(mean, 'mean for colname: %s stattype: %s' % (colname, stattype), nanOkay=True, infOkay=True)
+                h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True, infOkay=True)
                 h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
 
                 if numRows and (nacnt==numRows):

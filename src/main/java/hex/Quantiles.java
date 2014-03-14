@@ -213,6 +213,12 @@ public class Quantiles extends Iced {
   }
   public void add(double val) {
     if ( Double.isNaN(val) ) return;
+    // can get infinity due to bad enum parse to real
+    // histogram is sized ok, but the index calc below will be too big
+    // just drop them. not sure if something better to do?
+    if( val==Double.POSITIVE_INFINITY ) return;
+    if( val==Double.NEGATIVE_INFINITY ) return;
+
     _totalRows++;
     if ( _isEnum ) return;
 
