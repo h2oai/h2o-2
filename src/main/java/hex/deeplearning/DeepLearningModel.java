@@ -624,7 +624,7 @@ public class DeepLearningModel extends Model {
       }
       model_info().toString();
       final Frame trainPredict = score(ftrain, false);
-      final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
+      final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
       if (isClassifier()) err.train_err = trainErr;
       else err.train_mse = trainErr;
 
@@ -643,6 +643,7 @@ public class DeepLearningModel extends Model {
         Vec tmp = null;
         if (isClassifier() && vadaptor.needsAdaptation2CM()) tmp = ftest.remove(ftest.vecs().length-1);
         final Frame validPredict = score(ftest, false);
+        final Frame hitratio_validPredict = new Frame(validPredict);
         // Adapt output response domain, in case validation domain is different from training domain
         // Note: doesn't change predictions, just the *possible* label domain
         if (isClassifier() && vadaptor.needsAdaptation2CM()) {
@@ -651,7 +652,7 @@ public class DeepLearningModel extends Model {
           validPredict.replace(0, CMadapted); //replace label
           validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
         }
-        final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
+        final double validErr = calcError(ftest, validPredict, hitratio_validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
         if (isClassifier()) err.valid_err = validErr;
         else err.valid_mse = validErr;
         validPredict.delete();
@@ -747,14 +748,15 @@ public class DeepLearningModel extends Model {
    * For binary classification, this is the classification error based on assigning labels using the optimal threshold for maximizing the F1 score.
    * For regression, this is the mean squared error (MSE).
    * @param ftest Frame containing test data
-   * @param fpreds Frame containing predicted data (classification: label + per-class probabilities, regression: target)
+   * @param fpreds Frame containing ADAPTED predicted data (classification: label + per-class probabilities, regression: target)
+   * @param hitratio_fpreds Frame containing predicted data (classification: label + per-class probabilities, regression: target)
    * @param label Name for the scored data set
    * @param printCM Whether to print the confusion matrix to stdout
    * @param cm Confusion Matrix object to populate for multi-class classification (also used for regression)
    * @param auc AUC object to populate for binary classification
    * @return model error, see description above
    */
-  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc, HitRatio hr) {
+  public double calcError(Frame ftest, Frame fpreds, Frame hitratio_fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc, HitRatio hr) {
     StringBuilder sb = new StringBuilder();
     double error;
 
@@ -783,7 +785,7 @@ public class DeepLearningModel extends Model {
     if (hr != null) {
       hr.actual = ftest;
       hr.vactual = ftest.lastVec();
-      hr.predict = fpreds;
+      hr.predict = hitratio_fpreds;
       hr.serve();
       hr.toASCII(sb);
     }

@@ -177,13 +177,12 @@ public class HitRatio extends Request2 {
       // rows
       for( int r=0; r < cs[0]._len; r++ ) {
         final int actual_label = (int)cs[0].at80(r);
-        assert(actual_label < cs.length-1); // actual label: 0...number of classes-1
 
         //predict K labels
         for(int p=1; p < cs.length; p++) preds[p] = (float)cs[p].at0(r);
         final int[] pred_labels = getPredictions(_K, preds, tieBreaker);
 
-        updateHits(_hits, actual_label, pred_labels);
+        if (actual_label < cs.length-1) updateHits(_hits, actual_label, pred_labels);
       }
       _count += cs[0]._len;
     }
