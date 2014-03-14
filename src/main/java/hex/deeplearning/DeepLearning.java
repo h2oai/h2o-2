@@ -210,6 +210,9 @@ public class DeepLearning extends Job.ValidatedJob {
       if (checkpoint != null) {
         arg.disable("Taken from model checkpoint.");
         final DeepLearningModel cp_model = UKV.get(checkpoint);
+        if (cp_model == null) {
+          throw new IllegalArgumentException("Checkpointed model was not found.");
+        }
         if (cp_model.model_info().unstable()) {
           throw new IllegalArgumentException("Checkpointed model was unstable. Not restarting.");
         }
