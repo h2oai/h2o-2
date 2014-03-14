@@ -4,6 +4,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
+
 import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
@@ -18,8 +19,7 @@ import water.api.Request.Filter;
 import water.api.Request.Validator;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Check;
-import water.util.RString;
+import water.util.*;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -1732,10 +1732,16 @@ public class RequestArguments extends RequestStatics {
   }
   public class H2OKey extends InputText<Key> {
     public final Key _defaultValue;
+    private final boolean _checkLegal;
     public H2OKey(String name, boolean required) { this(name,null,required); }
+    public H2OKey(String name, boolean required, boolean checkLegal) { this(name,null,required,checkLegal); }
     public H2OKey(String name, Key key) { this(name,key,false); }
-    public H2OKey(String name, Key key, boolean req) { super(name, req); _defaultValue = key; }
-    @Override protected Key parse(String input) { return Key.make(input); }
+    public H2OKey(String name, Key key, boolean req) { super(name, req); _defaultValue = key; _checkLegal = false; }
+    public H2OKey(String name, Key key, boolean req, boolean checkLegal) { super(name, req); _defaultValue = key; _checkLegal = checkLegal; }
+    @Override protected Key parse(String input) {
+      if (_checkLegal && Utils.contains(input, Key.ILLEGAL_USER_KEY_CHARS))
+        throw new IllegalArgumentException("Key '" + input + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
+    return Key.make(input); }
     @Override protected Key defaultValue() { return _defaultValue; }
     @Override protected String queryDescription() { return "Valid H2O key"; }
   }
