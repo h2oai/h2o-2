@@ -41,6 +41,7 @@ ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
 	-R CMD Rd2pdf --force --output="h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
+	mkdir -p ../target/R
 	cp -p h2o_package.pdf ../target/R
 endif
 	rm -rf h2o-package/inst/java
