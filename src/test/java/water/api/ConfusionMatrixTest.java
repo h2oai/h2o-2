@@ -260,6 +260,23 @@ public class ConfusionMatrixTest extends TestUtil {
               ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
               ),
           debug);
+
+      // Another case
+      simpleCMTest(
+          frame("v1", vec(ari( 7, 8,  9, 10, 11) )),
+          frame("v2", vec(ari( 7, 8, 13, 10, 11) )),
+          ar("7","8", "9","10","11"),
+          ar("7","8","10","11","13"),
+          ar("7","8","9","10","11","13"),
+          ar( ar( 1L, 0L, 0L, 0L, 0L, 0L, 0L), // "7"
+              ar( 0L, 1L, 0L, 0L, 0L, 0L, 0L), // "8"
+              ar( 0L, 0L, 0L, 0L, 0L, 1L, 0L), // "9"
+              ar( 0L, 0L, 0L, 1L, 0L, 0L, 0L), // "10"
+              ar( 0L, 0L, 0L, 0L, 1L, 0L, 0L), // "11"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "13"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
+              ),
+          debug);
   }
 
 
