@@ -111,7 +111,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='GBM.query?source=%$key'>%content</a>");
+    RString rs = new RString("<a href='/2/GBM.query?source=%$key'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
