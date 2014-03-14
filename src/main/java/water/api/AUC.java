@@ -171,7 +171,7 @@ public class AUC extends Request2 {
     Vec va = null, vp;
     // Input handling
     if( vactual==null || vpredict==null )
-      throw new IllegalArgumentException("Missing actual or predict!");
+      throw new IllegalArgumentException("Missing vactual or vpredict!");
     if (vactual.length() != vpredict.length())
       throw new IllegalArgumentException("Both arguments must have the same length!");
     if (!vactual.isInt())
