@@ -2,10 +2,7 @@ package water.fvec;
 
 import java.io.File;
 
-import org.apache.hadoop.fs.FileStatus;
-
 import water.*;
-import water.persist.PersistHdfs;
 import water.persist.PersistNFS;
 
 // A distributed file-backed Vector
@@ -24,14 +21,6 @@ public class NFSFileVec extends FileVec {
   public static Key make(File f, Futures fs) {
     long size = f.length();
     Key k = Vec.newKey(PersistNFS.decodeFile(f));
-    // Insert the top-level FileVec key into the store
-    DKV.put(k,new NFSFileVec(k,size), fs);
-    return k;
-  }
-
-  public static Key make(FileStatus f, Futures fs) {
-    long size = f.getLen();
-    Key k = Vec.newKey(Key.make(f.getPath().toString()));
     // Insert the top-level FileVec key into the store
     DKV.put(k,new NFSFileVec(k,size), fs);
     return k;
