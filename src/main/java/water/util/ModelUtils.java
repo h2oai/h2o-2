@@ -62,7 +62,7 @@ public class ModelUtils {
   /**
    * Create labels from per-class probabilities with pseudo-random tie-breaking, if needed.
    * @param numK Number of top probabilities to make labels for
-   * @param preds Predictions (first element will be the label is ignored here)
+   * @param preds Predictions (first element is ignored here: placeholder for a label)
    * @param data Data to break ties (typically, the test set data for this row)
    * @return Array of predicted labels
    */

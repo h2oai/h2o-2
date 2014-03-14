@@ -84,6 +84,10 @@ public class DeepLearningModel extends Model {
     public AUC trainAUC;
     @API(help = "AUC on validation data")
     public AUC validAUC;
+    @API(help = "Hit ratio on training data")
+    public water.api.HitRatio train_hitratio;
+    @API(help = "Hit ratio on validation data")
+    public water.api.HitRatio valid_hitratio;
 
     // regression
     @API(help = "Training MSE")
@@ -614,9 +618,13 @@ public class DeepLearningModel extends Model {
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
       if (err.classification && nclasses()==2) err.trainAUC = new AUC();
+      if (err.classification && nclasses() > 2) {
+        err.train_hitratio = new HitRatio();
+        err.train_hitratio.set_max_k(Math.min(nclasses(), model_info().get_params().max_hit_ratio_k));
+      }
       model_info().toString();
       final Frame trainPredict = score(ftrain, false);
-      final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC);
+      final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
       if (isClassifier()) err.train_err = trainErr;
       else err.train_mse = trainErr;
 
@@ -627,6 +635,10 @@ public class DeepLearningModel extends Model {
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
         if (err.classification && nclasses()==2) err.validAUC = new AUC();
+        if (err.classification && nclasses() > 2) {
+          err.valid_hitratio = new HitRatio();
+          err.valid_hitratio.set_max_k(Math.min(nclasses(), model_info().get_params().max_hit_ratio_k));
+        }
         Job.ValidatedJob.Response2CMAdaptor vadaptor = model_info().job().getValidAdaptor();
         Vec tmp = null;
         if (isClassifier() && vadaptor.needsAdaptation2CM()) tmp = ftest.remove(ftest.vecs().length-1);
@@ -639,7 +651,7 @@ public class DeepLearningModel extends Model {
           validPredict.replace(0, CMadapted); //replace label
           validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
         }
-        final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC);
+        final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
         if (isClassifier()) err.valid_err = validErr;
         else err.valid_mse = validErr;
         validPredict.delete();
@@ -742,7 +754,7 @@ public class DeepLearningModel extends Model {
    * @param auc AUC object to populate for binary classification
    * @return model error, see description above
    */
-  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc) {
+  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc, HitRatio hr) {
     StringBuilder sb = new StringBuilder();
     double error;
 
@@ -767,6 +779,13 @@ public class DeepLearningModel extends Model {
       cm.serve();
       cm.toASCII(sb);
       error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
+    }
+    if (hr != null) {
+      hr.actual = ftest;
+      hr.vactual = ftest.lastVec();
+      hr.predict = fpreds;
+      hr.serve();
+      hr.toASCII(sb);
     }
     if (printCM && (auc != null || cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
       Log.info("Scoring on " + label + " data:");
@@ -952,6 +971,12 @@ public class DeepLearningModel extends Model {
     if (model_info().get_params().variable_importances) {
       final float [] varimp = model_info().computeVariableImportances();
       new VarImp(varimp, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, varimp.length)).toHTML(sb);
+    }
+
+    if (error.valid_hitratio != null) {
+      error.valid_hitratio.toHTML(sb);
+    } else if (error.train_hitratio != null) {
+      error.train_hitratio.toHTML(sb);
     }
 
     DocGen.HTML.title(sb, "Scoring history");

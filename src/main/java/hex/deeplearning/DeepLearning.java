@@ -132,6 +132,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
   public int max_confusion_matrix_size = 20;
 
+  @API(help = "Max. number of labels (K) to use for hit ratio computation", filter = Default.class, json = true, gridable = false)
+  public int max_hit_ratio_k = 10;
+
   /*Imbalanced Classes*/
   @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false)
   public boolean balance_classes = false;
@@ -259,6 +262,7 @@ public class DeepLearning extends Job.ValidatedJob {
     else {
       if(arg._name.equals("classification_stop")
               || arg._name.equals("max_confusion_matrix_size")
+              || arg._name.equals("max_hit_ratio_k")
               || arg._name.equals("max_after_balance_size")
               || arg._name.equals("balance_classes")) {
         arg.disable("Only for classification.", inputArgs);
@@ -292,6 +296,7 @@ public class DeepLearning extends Job.ValidatedJob {
             || arg._name.equals("regression_stop")
             || arg._name.equals("quiet_mode")
             || arg._name.equals("max_confusion_matrix_size")
+            || arg._name.equals("max_hit_ratio_k")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }

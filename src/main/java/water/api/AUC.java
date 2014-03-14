@@ -17,6 +17,7 @@ import static java.util.Arrays.sort;
 public class AUC extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+  public static final String DOC_GET = "AUC";
 
   @API(help = "", required = true, filter = Default.class, json=true)
   public Frame actual;
