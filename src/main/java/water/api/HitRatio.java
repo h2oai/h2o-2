@@ -106,7 +106,6 @@ public class HitRatio extends Request2 {
     for (long h : hits) assert(h >= 0);
     assert(pred_labels != null);
     assert(actual_label >= 0);
-    assert(actual_label < pred_labels.length);
     assert(hits.length == pred_labels.length);
 
     //find the first occurrence of the actual label and increment all counters from there on
