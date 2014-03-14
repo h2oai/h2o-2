@@ -254,7 +254,7 @@ public class TreeMeasuresCollector extends MRTask2<TreeMeasuresCollector> {
       // Over all trees
       for (int tidx = 0; tidx < ntrees; tidx++) {
         assert right.nrows()[tidx] == nrows()[tidx]; // check that we iterate over same OOB rows
-        double delta = ((double) (right._sse[tidx] - _sse[tidx])) / nrows()[tidx];
+        double delta = ((double) (_sse[tidx] - right._sse[tidx])) / nrows()[tidx];
         imp += delta;
         sd  += delta * delta;
       }
