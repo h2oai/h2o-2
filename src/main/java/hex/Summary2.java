@@ -362,7 +362,7 @@ public class Summary2 extends Iced {
       // Result from the dynamic bin sizing equations
       double startSuggest = d * Math.floor(stat0._min2 / d);
       double binszSuggest = d;
-      int nbinSuggest = (int)(Math.round((stat0._max2 + (vec.isInt() ? .5 : 0) - startSuggest) / d)) + 1;
+      int nbinSuggest = (int) Math.ceil((stat0._max2 - startSuggest)/d) + 1;
       
       // Protect against massive binning. browser doesn't need
       int BROWSER_BIN_TARGET = 100;
@@ -373,23 +373,22 @@ public class Summary2 extends Iced {
       // should also be obsessive and check that it's not 0 and force to 1.
       // Since nbin is implied by _binsz, ratio _binsz and recompute nbin
       int binCase = 0; // keep track in case we assert
-      if ( nbinSuggest > BROWSER_BIN_TARGET ) {
-        // switch to a static equation with a fixed bin count, and recompute binszSuggest
-        // one more bin than necessary for the range (99 exact. causes one extra
-        binszSuggest = (stat0._max2 - stat0._min2) / (BROWSER_BIN_TARGET - 1.0);
-        _start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
-        binCase = 1;
-      }
-      // minimum 1. Also 1 if there is only one value.
-      else if ( stat0._max2==stat0._min2 || nbinSuggest<1 ) {
+      if ( stat0._max2==stat0._min2) {
         binszSuggest = 0; // fixed next with other 0 cases.
         _start = stat0._min2;
-        binCase = 2;
+        binCase = 1;
       }
       // minimum 2 if min/max different
       else if ( stat0._max2!=stat0._min2 && nbinSuggest<2 ) {
         binszSuggest = (stat0._max2 - stat0._min2) / 2.0;
         _start = stat0._min2;
+        binCase = 2;
+      }
+      else if (nbinSuggest<1 || nbinSuggest>BROWSER_BIN_TARGET ) {
+        // switch to a static equation with a fixed bin count, and recompute binszSuggest
+        // one more bin than necessary for the range (99 exact. causes one extra
+        binszSuggest = (stat0._max2 - stat0._min2) / (BROWSER_BIN_TARGET - 1.0);
+        _start = binszSuggest * Math.floor(stat0._min2 / binszSuggest);
         binCase = 3;
       }
       else {
@@ -415,7 +414,7 @@ public class Summary2 extends Iced {
 
       double impliedBinEnd = _start + (nbin * _binsz);
       String assertMsg = _start+" "+_stat0._min2+" "+_stat0._max2+
-        " "+impliedBinEnd+" "+_binsz+" "+nbin+" "+binCase;
+        " "+impliedBinEnd+" "+_binsz+" "+nbin+" "+startSuggest+" "+nbinSuggest+" "+binCase;
       // Log.info("Summary2 bin1. "+assertMsg);
       assert _start <= _stat0._min2 : assertMsg;
       // just in case, make sure it's big enough
@@ -532,6 +531,11 @@ public class Summary2 extends Iced {
   }
   public void add(double val) {
     if( Double.isNaN(val) ) return;
+    // can get infinity due to bad enum parse to real
+    // histogram is sized ok, but the index calc below will be too big
+    // just drop them. not sure if something better to do?
+    if( val==Double.POSITIVE_INFINITY ) return;
+    if( val==Double.NEGATIVE_INFINITY ) return;
     _len1++; _gprows++;
 
     if ( _type != T_ENUM ) {
@@ -568,12 +572,12 @@ public class Summary2 extends Iced {
         binIdx2 = 0; // not used
       }
       else {
-        binIdx2 = Math.round(((val - _start2) * 1000000.0) / _binsz2) / 1000000;
+        binIdx2 = (int) Math.floor((val - _start2) / _binsz2);
       }
 
       int binIdx2Int = (int) binIdx2;
       assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
-        "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
+        "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length+" "+val+" "+_start2+" "+_binsz2;
 
       if (hcnt2[binIdx2Int] == 0) {
         // Log.info("New init: "+val+" for index "+binIdx2Int);
@@ -606,12 +610,12 @@ public class Summary2 extends Iced {
       binIdx = hcnt.length-1;
     }
     else {
-      binIdx = Math.round(((val - _start) * 1000000.0) / _binsz) / 1000000;
+      binIdx = (int) Math.floor((val - _start) / _binsz);
     }
 
     int binIdxInt = (int) binIdx;
     assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
-        "binIdxInt too big for hcnt2 "+binIdxInt+" "+hcnt.length;
+        "binIdxInt too big for hcnt2 "+binIdxInt+" "+hcnt.length+" "+val+" "+_start+" "+_binsz;
     ++hcnt[binIdxInt];
   }
 

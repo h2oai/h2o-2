@@ -78,7 +78,12 @@ class Basic(unittest.TestCase):
                 print "Probably got a col NA'ed and constant values as a result %s" % constantValuesDict
             
             # start after the last input col
+            levels = h2o.nodes[0].levels(source=hex_key);
+            l = levels['levels']
             for column in range(iColCount, iColCount+oColCount):
+                if l[column]:
+                    print "Skipping", column, "because it's enum (says levels)"
+                    continue
 
                 # QUANTILE*******************************************************
                 
