@@ -1,6 +1,7 @@
 package hex.deeplearning;
 
 import hex.FrameTask.DataInfo;
+import hex.VarImp;
 import water.*;
 import water.api.*;
 import water.api.Request.API;
@@ -433,6 +434,50 @@ public class DeepLearningModel extends Model {
 //            _w[w] = uniformDist(rand, min, max);
 //          }
 //        }
+
+    /**
+     * Compute Variable Importance, based on Garson (but using absolute values of the weights)
+     * @return variable importances for input features
+     */
+    public float[] computeVariableImportances() {
+      float[] vi = new float[units[0]];
+      Arrays.fill(vi, 0f);
+
+      float[][] Qik = new float[units[0]][units[2]]; //importance of input i on output k
+      float[] sum_wj = new float[units[1]]; //sum of incoming weights into first hidden layer
+      for (float[] Qi : Qik) Arrays.fill(Qi, 0f);
+      Arrays.fill(sum_wj, 0f);
+
+      // compute sum of absolute incoming weights
+      for( int j = 0; j < units[1]; j++ ) {
+        for( int i = 0; i < units[0]; i++ ) {
+          float wij = weights[0][j*units[0]+i];
+          sum_wj[j] += Math.abs(wij);
+        }
+      }
+      // compute importance of input i on output k as product of connecting weights going through j
+      for( int i = 0; i < units[0]; i++ ) {
+        for( int k = 0; k < units[2]; k++ ) {
+          for( int j = 0; j < units[1]; j++ ) {
+            float wij = weights[0][j*units[0]+i];
+            float wjk = weights[1][k*units[1]+j];
+            Qik[i][k] += Math.abs(wij/sum_wj[j] * wjk);
+          }
+        }
+      }
+      // normalize Qik over all outputs k
+      for( int k = 0; k < units[2]; k++ ) {
+        float sumQk = 0;
+        for( int i = 0; i < units[0]; i++ ) sumQk += Qik[i][k];
+        for( int i = 0; i < units[0]; i++ ) Qik[i][k] /= sumQk;
+      }
+      // importance for feature i is the sum over k of i->k importances
+      for( int i = 0; i < units[0]; i++ ) vi[i] = Utils.sum(Qik[i]);
+
+      //normalize importances such that sum(vi) = 1
+      Utils.div(vi, Utils.sum(vi));
+      return vi;
+    }
 
     // compute stats on all nodes
     public void computeStats() {
@@ -901,6 +946,12 @@ public class DeepLearningModel extends Model {
           else sb.append(toolarge + "</h5>");
         }
       }
+    }
+
+    // Variable importance
+    if (model_info().get_params().variable_importances) {
+      final float [] varimp = model_info().computeVariableImportances();
+      new VarImp(varimp, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, varimp.length)).toHTML(sb);
     }
 
     DocGen.HTML.title(sb, "Scoring history");

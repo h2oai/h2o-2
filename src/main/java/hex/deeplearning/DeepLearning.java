@@ -146,6 +146,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
 
+  @API(help = "Compute input variable importances", filter = Default.class, json = true)
+  public boolean variable_importances = true;
+
   @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
 

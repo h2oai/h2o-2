@@ -1,11 +1,11 @@
 package hex;
 
-import java.util.Arrays;
-import java.util.Comparator;
-
 import water.Iced;
 import water.api.DocGen;
 import water.api.Request.API;
+
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class VarImp extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -30,6 +30,7 @@ public class VarImp extends Iced {
   public final boolean scaled() { return false; }
 
   public VarImp(float[] varimp) { this(varimp, null, VarImpMethod.RELATIVE_IMPORTANCE); }
+  public VarImp(float[] varimp, String[] variables) { this(varimp, variables, VarImpMethod.RELATIVE_IMPORTANCE); }
   protected VarImp(float[] varimp, String[] variables, VarImpMethod method) {
     this.varimp = varimp;
     this.variables = variables;
