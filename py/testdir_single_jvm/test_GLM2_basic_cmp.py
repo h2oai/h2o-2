@@ -15,7 +15,7 @@ except ImportError:
     SCIPY_INSTALLED = false
 
 #*********************************************************************************
-def do_scipy_glm(self, bucket, csvPathname):
+def do_scipy_glm(self, bucket, csvPathname, L):
     
     h2p.red_print("Now doing sklearn")
     h2p.red_print("\nsee http://scikit-learn.org/0.11/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression")
@@ -27,7 +27,8 @@ def do_scipy_glm(self, bucket, csvPathname):
 
     csvPathnameFull = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
-    C = 1e4
+    # make sure it does fp divide
+    C = 1/(L+0.0)
     print "C regularization:", C
     dataset = np.loadtxt( 
         open(csvPathnameFull,'r'),
@@ -73,6 +74,7 @@ def do_scipy_glm(self, bucket, csvPathname):
 
     # print "coefficients:", clf2.coef_
     cstring = "".join([("%.5e  " % c) for c in clf2.coef_[0]])
+    h2p.green_print("sklearn L2 C", C)
     h2p.green_print("sklearn coefficients:", cstring)
     h2p.green_print("sklearn intercept:", "%.5e" % clf2.intercept_[0])
     h2p.green_print("sklearn score:", clf2.score(train,target))
@@ -93,6 +95,7 @@ def do_scipy_glm(self, bucket, csvPathname):
 
     # print "coefficients:", clf1.coef_
     cstring = "".join([("%.5e  " % c) for c in clf1.coef_[0]])
+    h2p.green_print("sklearn L1 C", C)
     h2p.green_print("sklearn coefficients:", cstring)
     h2p.green_print("sklearn intercept:", "%.5e" % clf1.intercept_[0])
     h2p.green_print("sklearn score:", clf1.score(train,target))
@@ -106,7 +109,7 @@ def do_scipy_glm(self, bucket, csvPathname):
     ##     'intercept_scaling']
 
 #*********************************************************************************
-def do_h2o_glm(self, bucket, csvPathname):
+def do_h2o_glm(self, bucket, csvPathname, L):
 
     h2p.red_print("\nNow doing h2o")
     h2o.beta_features=True
@@ -123,7 +126,7 @@ def do_h2o_glm(self, bucket, csvPathname):
     y         = 'CAPSULE'
     family    = 'binomial'
     alpha     = '0'
-    lambda_   = '1E-4'
+    lambda_   = L
     nfolds    = '0'
     f         = 'prostate'
     modelKey  = 'GLM_' + f
@@ -147,6 +150,8 @@ def do_h2o_glm(self, bucket, csvPathname):
     # GLM2: when it redirects to the model view, we no longer have the job_key! (unlike the first response and polling)
     (warnings, clist, intercept) = h2o_glm.simpleCheckGLM(self, glmResult, None, **kwargs)
     cstring = "".join([("%.5e  " % c) for c in clist])
+    h2p.green_print("h2o alpha ", alpha)
+    h2p.green_print("h2o lambda ", lambda_)
     h2p.green_print("h2o coefficient list:", cstring)
     h2p.green_print("h2o intercept", "%.5e  " %  intercept)
 
@@ -204,9 +209,20 @@ class Basic(unittest.TestCase):
         csvFilename = 'prostate.csv'
         csvPathname = importFolderPath + "/" + csvFilename
 
-        do_h2o_glm(self, bucket, csvPathname)
+        # use L for lambda in h2o, C=1/L in sklearn
+        L = 1e-4
+        do_h2o_glm(self, bucket, csvPathname, L)
         if SCIPY_INSTALLED:
-            do_scipy_glm(self, bucket, csvPathname)
+            do_scipy_glm(self, bucket, csvPathname, L)
+
+        # since we invert for C, can't use 0 (infinity)
+        L = 1e-13
+        # C in sklearn Specifies the strength of the regularization. 
+        # The smaller it is the bigger in the regularization. 
+        # we'll set it to 1/L
+        do_h2o_glm(self, bucket, csvPathname, L)
+        if SCIPY_INSTALLED:
+            do_scipy_glm(self, bucket, csvPathname, L)
 
 
 if __name__ == '__main__':
