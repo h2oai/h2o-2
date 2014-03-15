@@ -507,7 +507,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         for (int n = 0; n< t.len()-t.leaves; n++)
           if (t.node(n) instanceof DecidedNode) { // it is split node
             Split split = t.decided(n)._split;
-            _improvPerVar[split._col] += split.improvement(); // least squares improvement
+            if (split._col!=-1) // Skip impossible splits ~ leafs
+              _improvPerVar[split._col] += split.improvement(); // least squares improvement
           }
       }
     }
