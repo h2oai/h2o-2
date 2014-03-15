@@ -156,7 +156,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean ignore_const_cols = true;
 
   @API(help = "Force extra load balancing to increase training speed for small datasets", filter = Default.class, json = true)
-  public boolean force_load_balance = true;
+  public boolean force_load_balance = false;
 
   @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
