@@ -13,6 +13,7 @@ import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetModel;
 import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
+import hex.gbm.GBM;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
 import hex.deeplearning.DeepLearning;
@@ -339,6 +340,7 @@ public class Inspect extends Request {
           + PCA.link(key, "PCA") + ", "
           + RF.link(key, "Single Node Random Forest") + ", "
           + DRF.link(key, "Distributed Random Forest") + ", "
+          + GBM.link(key, "GBM") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", "
           + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "

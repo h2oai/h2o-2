@@ -207,10 +207,10 @@ public class ConfusionMatrixTest extends TestUtil {
           ar("B","C"),
           ar("A","B"),
           ar("A","B","C"),
-          ar( ar(0L, 0L, 0L, 0L),
-              ar(0L, 2L, 0L, 0L),
-              ar(2L, 0L, 0L, 0L),
-              ar(0L, 0L, 0L, 0L)
+          ar( ar(0L, 0L, 0L, 0L), // A
+              ar(0L, 2L, 0L, 0L), // B
+              ar(2L, 0L, 0L, 0L), // C
+              ar(0L, 0L, 0L, 0L)  // NA
               ),
           debug);
   }
@@ -258,6 +258,59 @@ public class ConfusionMatrixTest extends TestUtil {
               ar( 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L), // "6"
               ar( 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "7"
               ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
+              ),
+          debug);
+
+      // Another case
+      simpleCMTest(
+          frame("v1", vec(ari( 7, 8,  9, 10, 11) )),
+          frame("v2", vec(ari( 7, 8, 13, 10, 11) )),
+          ar("7","8", "9","10","11"),
+          ar("7","8","10","11","13"),
+          ar("7","8","9","10","11","13"),
+          ar( ar( 1L, 0L, 0L, 0L, 0L, 0L, 0L), // "7"
+              ar( 0L, 1L, 0L, 0L, 0L, 0L, 0L), // "8"
+              ar( 0L, 0L, 0L, 0L, 0L, 1L, 0L), // "9"
+              ar( 0L, 0L, 0L, 1L, 0L, 0L, 0L), // "10"
+              ar( 0L, 0L, 0L, 0L, 1L, 0L, 0L), // "11"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "13"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
+              ),
+          debug);
+
+      // Mixed case
+      simpleCMTest(
+          frame("v1", vec(ar("-1", "1", "A"), ari( 0, 1, 2) )),
+          frame("v2", vec(ar( "0", "1", "B"), ari( 0, 1, 2) )),
+          ar("-1", "1", "A"),
+          ar( "0", "1", "B"),
+          ar( "-1", "0", "1", "A", "B"),
+          ar( ar( 0L, 1L, 0L, 0L, 0L, 0L), // "-1"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L), // "0"
+              ar( 0L, 0L, 1L, 0L, 0L, 0L), // "1"
+              ar( 0L, 0L, 0L, 0L, 1L, 0L), // "A"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L), // "B"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
+              ),
+          false);
+
+      // Mixed case with change of numeric ordering 1, 10, 9 -> 1,9,10
+      simpleCMTest(
+          frame("v1", vec(ar("-1", "1", "10", "9", "A"), ari( 0, 1, 2, 3, 4) )),
+          frame("v2", vec(ar( "0", "2",  "8", "9", "B"), ari( 0, 1, 2, 3, 4) )),
+          ar("-1", "1", "10", "9", "A"),
+          ar( "0", "2",  "8", "9", "B"),
+          ar( "-1", "0", "1", "2",  "8", "9", "10", "A", "B"),
+          ar( ar( 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "-1"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "0"
+              ar( 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L), // "1"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "2"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "8"
+              ar( 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L), // "9"
+              ar( 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L), // "10"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L), // "A"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "B"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
               ),
           debug);
   }

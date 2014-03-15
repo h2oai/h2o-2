@@ -1,12 +1,14 @@
-package samples;
+package samples.expert;
 
-import hex.*;
+import hex.Layer;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+import hex.NeuralNet;
+import hex.Trainer;
 import water.fvec.Vec;
 
 /**
- * Same as previous MNIST sample but using Rectifier units and Dropout.
+ * Same as previous MNIST sample but using Rectifier units and Dropout. Also deprecated.
  */
 public class NeuralNetMnistDrednet extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {

@@ -9,30 +9,30 @@ paramsTrainRF = {
     'bin_limit': 100,
     'use_non_local_data': 0, # doesn't fit in single jvm
     'ignore': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
-    'timeoutSecs': 14800,
+    'timeoutSecs': 1800,
     'response_variable': 'IsDepDelayed'
     }
 
 # RF test parameters
 paramsScoreRF = {
     # 'vactual': 'IsDepDelayed',
-    'timeoutSecs': 14800,
+    'timeoutSecs': 1800,
     }
 
 trainDS = {
     'csvFilename' : 'airlines_all.csv',
-    'timeoutSecs' : 14800,
+    'timeoutSecs' : 1800,
     'header'      : 1
     }
 
 # FIX should point to a different smaller dataset
 scoreDS = {
     'csvFilename' : 'airlines_all.csv',
-    'timeoutSecs' : 14800,
+    'timeoutSecs' : 1800,
     'header'      : 1
     }
 
-PARSE_TIMEOUT=14800
+PARSE_TIMEOUT=1800
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 

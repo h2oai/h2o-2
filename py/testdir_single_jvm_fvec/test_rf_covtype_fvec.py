@@ -132,6 +132,14 @@ class Basic(unittest.TestCase):
 
 
             ### print "rfView", h2o.dump_json(rfView)
+            print "We have a result from the RF above, completed but didn't do RFView yet"
+            # could the RF indicate 'done' too soon?
+            if rfResult['state']=='RUNNING':
+                raise Exception("Why is this RF still in RUNNING state? %s" % h2o.dump_json(rfResult))
+
+            if 'drf_model' not in rfResult:
+                raise Exception("How come there's no drf_model in this RF result? %s" % h2o.dump_json(rfResult))
+
             model_key = rfResult['drf_model']['_key']
             data_key = rfResult['drf_model']['_dataKey']
             ntrees = kwargs['ntrees']

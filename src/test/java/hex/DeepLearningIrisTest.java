@@ -270,9 +270,9 @@ public class DeepLearningIrisTest extends TestUtil {
                         final double trainErr = ref._nn.Accuracy(ref._trainData);
                         final double testErr = ref._nn.Accuracy(ref._testData);
                         final Frame trainPredict = mymodel.score(_train, false);
-                        final double myTrainErr = mymodel.calcError(_train, trainPredict, "Final training error:", true, null, null);
+                        final double myTrainErr = mymodel.calcError(_train, trainPredict, trainPredict, "Final training error:", true, null, null, null);
                         final Frame testPredict = mymodel.score(_test, false);
-                        final double myTestErr = mymodel.calcError(_test, testPredict, "Final testing error:",  true, null, null);
+                        final double myTestErr = mymodel.calcError(_test, testPredict, testPredict, "Final testing error:",  true, null, null, null);
                         Log.info("H2O  training error : " + myTrainErr*100 + "%, test error: " + myTestErr*100 + "%");
                         Log.info("REF  training error : " + trainErr*100 + "%, test error: " + testErr*100 + "%");
                         compareVal(trainErr, myTrainErr, abseps, releps);

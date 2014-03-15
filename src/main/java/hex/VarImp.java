@@ -21,11 +21,13 @@ public class VarImp extends Iced {
   }
 
   @API(help="Variable importance of individual variables.")
-  public final float[]  varimp;
+  public float[]  varimp;
   @API(help="Names of variables.")
   private String[] variables;
   @API(help="Variable importance measurement method.")
   public final VarImpMethod method;
+  @API(help="Max. number of variables to show.")
+  public final int max_var = 100;
   @API(help="Scaled measurements.")
   public final boolean scaled() { return false; }
 
@@ -51,13 +53,26 @@ public class VarImp extends Iced {
       @Override public int compare(Integer o1, Integer o2) { float f = varimp[o1]-varimp[o2]; return f<0 ? 1 : (f>0 ? -1 : 0); }
     });
 
-    if (variables!=null) DocGen.HTML.tableLine(sb, "Variable", variables, sortOrder);
-    if (varimp   !=null) DocGen.HTML.tableLine(sb, method.toString(), varimp, sortOrder);
-    toHTMLAppendMoreTableLines(sb, sortOrder);
+    final boolean shorten = variables!=null && varimp!=null && max_var < sortOrder.length;
+    // only keep max_var variables
+    if (shorten) {
+      sortOrder = Arrays.copyOfRange(sortOrder, 0, max_var);
+      String[] variables_show = new String[sortOrder.length];
+      float[] varimp_show = new float[sortOrder.length];
+      for (int i=0;i<sortOrder.length;++i) {
+        variables_show[i] = variables[sortOrder[i]];
+        varimp_show[i] = varimp[sortOrder[i]];
+      }
+      variables = variables_show;
+      varimp = varimp_show;
+    }
+    if (variables!=null) DocGen.HTML.tableLine(sb, "Variable", variables, shorten ? null : sortOrder);
+    if (varimp!=null) DocGen.HTML.tableLine(sb, method.toString(), varimp, shorten ? null : sortOrder);
+    toHTMLAppendMoreTableLines(sb, shorten ? null : sortOrder);
     DocGen.HTML.arrayTail(sb);
     // Generate a graph - horrible code
     DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
-        DocGen.HTML.toJSArray(new StringBuilder(), variables ),
+        DocGen.HTML.toJSArray(new StringBuilder(), variables),
         DocGen.HTML.toJSArray(new StringBuilder(), varimp)
         );
 

@@ -85,7 +85,7 @@ public class ConfusionMatrix extends Request2 {
         vp = vpredict.toEnum(); // always returns TransfVec
         predicted_domain = vp._domain;
         if (!Arrays.equals(actual_domain, predicted_domain)) {
-          domain = Utils.union(actual_domain, predicted_domain);
+          domain = Utils.domainUnion(actual_domain, predicted_domain);
           int[][] vamap = Model.getDomainMapping(domain, actual_domain, true);
           va = TransfVec.compose( (TransfVec) va, vamap, domain, false ); // delete original va
           int[][] vpmap = Model.getDomainMapping(domain, predicted_domain, true);
