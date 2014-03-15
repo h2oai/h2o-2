@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
             h2o_nn.pickRandDeepLearningParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            nn = h2o_cmd.runDeepLearning(timeoutSecs=70, parseResult=parseResult, **kwargs)
+            nn = h2o_cmd.runDeepLearning(timeoutSecs=300, parseResult=parseResult, **kwargs)
             print "nn result:", h2o.dump_json(nn)
             h2o.check_sandbox_for_errors()
             # FIX! simple check?

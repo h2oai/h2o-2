@@ -117,7 +117,7 @@ public class Frame extends Lockable<Frame> {
 
   /** Appends an entire Frame */
   public Frame add( Frame fr, String names[] ) {
-    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group());
+    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group()) : _vecs.length;
     for( String name : names )
       if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len0= _names!=null ? _names.length : 0;

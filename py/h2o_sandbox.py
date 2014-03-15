@@ -165,6 +165,8 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         justInfo = True
         for e in errLines:
             justInfo &= re.match("INFO:", e) or ("apache" in e)
+            # very hacky. try to ignore the captured broken pipe exceptions. ugly
+            justInfo &= re.match("java.net.SocketException: Broken pipe", e)
 
         if not justInfo:
             emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr (or R stdout/stderr).\n" + \
