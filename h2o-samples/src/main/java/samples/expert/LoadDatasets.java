@@ -4,7 +4,7 @@ import water.Job;
 import water.TestUtil;
 
 /**
- * Runs a neural network on the MNIST dataset.
+ * Loads all datasets from smalldata folder for testing purposes
  */
 public class LoadDatasets extends Job {
   public static void main(String[] args) throws Exception {
