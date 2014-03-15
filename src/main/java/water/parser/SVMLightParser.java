@@ -1,13 +1,11 @@
 package water.parser;
 
+import water.Iced;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-
-import org.apache.poi.ss.formula.ptg.PowerPtg;
-
-import water.Iced;
 
 /**
  * Parser for SVM light format.
@@ -52,16 +50,16 @@ public class SVMLightParser extends CustomParser{
   public boolean parallelParseSupported(){return true;}
 
   /**
-   * Try to parse the bits as svm light format, return SVMParser instance if the input is in svm light format, null otherwise.
-   * @param bits
+   * Try to parse the bytes as svm light format, return SVMParser instance if the input is in svm light format, null otherwise.
+   * @param bytes
    * @return SVMLightPArser instance or null
    */
-  public static PSetupGuess guessSetup(byte [] bits){
+  public static PSetupGuess guessSetup(byte [] bytes){
     // find the last eof
-    int i = bits.length-1;
-    while(bits[i] != '\n' && i >= 0)--i;
-    assert i > 0;
-    InputStream is = new ByteArrayInputStream(Arrays.copyOf(bits,i));
+    int i = bytes.length-1;
+    while(i > 0 && bytes[i] != '\n')--i;
+    assert i >= 0;
+    InputStream is = new ByteArrayInputStream(Arrays.copyOf(bytes,i));
     SVMLightParser p = new SVMLightParser(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false));
     InspectDataOut dout = new InspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
