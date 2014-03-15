@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary2_uniform(self):
+    def test_quantile_cmp_uniform(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)

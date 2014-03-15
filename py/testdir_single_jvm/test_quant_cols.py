@@ -32,17 +32,16 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
+            ('/home/0xdiag/datasets/airlines/year2013.csv', None, None, 'cE', 300), 
             ('/home/kevin/Downloads/t.csv', 15, 11, 'cE', 300), 
             ]
 
         # h2b.browseTheCloud()
         trial = 0
-        xList = []
-        eList = []
-        fList = []
-        
         for (csvPathname, iColCount, oColCount, hex_key, timeoutSecs) in tryList:
-            colCount = iColCount + oColCount
+            xList = []
+            eList = []
+            fList = []
 
             # PARSE*******************************************************
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=200, doSummary=False)
@@ -54,6 +53,13 @@ class Basic(unittest.TestCase):
             numRows = inspect['numRows']
             numCols = inspect['numCols']
 
+            if not oColCount:
+                iColCount = 0
+
+            if not oColCount:
+                oColCount = numCols
+
+            colCount = iColCount + oColCount
             for i in range (0,numCols):
                 print "Column", i, "summary"
                 h2o_cmd.runSummary(key=hex_key, max_qbins=1, cols=i);
@@ -71,7 +77,12 @@ class Basic(unittest.TestCase):
                 print "Probably got a col NA'ed and constant values as a result %s" % constantValuesDict
             
             # start after the last input col
+            levels = h2o.nodes[0].levels(source=hex_key);
+            l = levels['levels']
             for column in range(iColCount, iColCount+oColCount):
+                if l[column]:
+                    print "Skipping", column, "because it's enum (says levels)"
+                    continue
 
                 # QUANTILE*******************************************************
                 
@@ -115,7 +126,7 @@ class Basic(unittest.TestCase):
                     start = time.time()
                     h2o.nodes[0].remove_all_keys()
                     elapsed = time.time() - start
-                    print "remove all keys end on ", csvFilename, 'took', elapsed, 'seconds.'
+                    print "remove all keys end on took", elapsed, 'seconds.'
 
         #****************************************************************
         # PLOTS. look for eplot.jpg and fplot.jpg in local dir?

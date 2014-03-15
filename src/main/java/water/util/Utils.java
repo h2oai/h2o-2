@@ -1010,21 +1010,40 @@ public class Utils {
     return s;
   }
 
-  /** Union of given arrays.
+  /** Clever union of String arrays.
+   *
+   * For union of numeric arrays (strings represent integers) it is expecting numeric ordering.
+   * For pure string domains it is expecting lexicographical ordering.
+   * For mixed domains it always expects lexicographical ordering.
+   *
+   * @param a a set of strings
+   * @param b a set of strings
+   * @return union of arrays
+   */
+  public static String[] union(String[] a, String[] b) {
+    int cIinA = numInts(a);
+    int cIinB = numInts(b);
+    // Trivial case - all strings or ints
+    if (cIinA-cIinB==0 || cIinA==a.length && cIinB==b.length)
+      return union(a, b, cIinA==0);
+    return union(a, b, true);
+  }
+
+  /** Union of given String arrays.
    *
    * @param a first array
    * @param b second array
+   * @param lexo - true if domains are sorted in lexicographical order or false for numeric domains
    * @return union of values in given arrays.
    *
    * @precondition a!=null && b!=null
-   * @precondition a && b are sorted
    */
-  public static String[] union(String[] a, String[] b) {
+  public static String[] union(String[] a, String[] b, boolean lexo) {
     assert a!=null && b!=null : "Union expect non-null input!";
     String[] r = new String[a.length+b.length];
     int ia = 0, ib = 0, i = 0;
     while (ia < a.length && ib < b.length) {
-      int c = a[ia].compareTo(b[ib]);
+      int c = lexo ? a[ia].compareTo(b[ib]) : Integer.valueOf(a[ia]).compareTo(Integer.valueOf(b[ib]));
       if ( c < 0) r[i++] = a[ia++];
       else if (c == 0) { r[i++] = a[ia++]; ib++; }
       else r[i++] = b[ib++];
@@ -1032,6 +1051,19 @@ public class Utils {
     if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
     if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
     return Arrays.copyOf(r, i);
+  }
+
+  /** Returns number of strings which represents a number. */
+  public static int numInts(String... a) {
+    int cnt = 0;
+    for(String s : a) if (isInt(s)) cnt++;
+    return cnt;
+  }
+
+  public static boolean isInt(String s) {
+    int i = s.charAt(0)=='-' ? 1 : 0;
+    for(; i<s.length();i++) if (!Character.isDigit(s.charAt(i))) return false;
+    return true;
   }
 
   public static int[] filter(int[] values, boolean[] filter, int fcnt) {
