@@ -739,7 +739,12 @@ public class Utils {
     for (int i=0; i<dom.length; i++) result[dom[i]-min] = i;
     return result;
   }
-  public static String[] toStringMap(long[] dom) {
+  public static String[] toString(long[] dom) {
+    String[] result = new String[dom.length];
+    for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
+    return result;
+  }
+  public static String[] toString(int[] dom) {
     String[] result = new String[dom.length];
     for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
     return result;
@@ -1030,9 +1035,14 @@ public class Utils {
     if (cIinA==0 && cIinB==0   // only strings
         || cIinA==a.length && cIinB==b.length ) // only integers
       return union(a, b, cIinA==0);
+    // Be little bit clever here: sort string representing numbers first and append
     // a,b were sorted by Array.sort() but can contain some numbers.
     // So sort numbers in numeric way, and then string in lexicographical order
-    return union(a, b, true);
+    int[] ai = toInt(a, 0, cIinA); Arrays.sort(ai); // extract int part but sort it in numeric order
+    int[] bi = toInt(b, 0, cIinB); Arrays.sort(bi);
+    String[] ri = toString(union(ai,bi)); // integer part
+    String[] si = union(a,b,cIinA,a.length-cIinA,cIinB,b.length-cIinB,true);
+    return join(ri, si);
   }
 
   /** Union of given String arrays.
@@ -1049,10 +1059,30 @@ public class Utils {
    */
   public static String[] union(String[] a, String[] b, boolean lexo) {
     assert a!=null && b!=null : "Union expect non-null input!";
-    String[] r = new String[a.length+b.length];
+    return union(a, b, 0, a.length, 0, b.length, lexo);
+  }
+  public static String[] union(String[] a, String[] b, int aoff, int alen, int boff, int blen, boolean lexo) {
+    assert a!=null && b!=null : "Union expect non-null input!";
+    String[] r = new String[alen+blen];
+    int ia = aoff, ib = boff, i = 0;
+    while (ia < aoff+alen && ib < boff+blen) {
+      int c = lexo ? a[ia].compareTo(b[ib]) : Integer.valueOf(a[ia]).compareTo(Integer.valueOf(b[ib]));
+      if ( c < 0) r[i++] = a[ia++];
+      else if (c == 0) { r[i++] = a[ia++]; ib++; }
+      else r[i++] = b[ib++];
+    }
+    if (ia < aoff+alen) while (ia<aoff+alen) r[i++] = a[ia++];
+    if (ib < boff+blen) while (ib<boff+blen) r[i++] = b[ib++];
+    return Arrays.copyOf(r, i);
+  }
+
+  /** Returns a union of given sorted arrays. */
+  public static int[] union(int[] a, int[] b) {
+    assert a!=null && b!=null : "Union expect non-null input!";
+    int[] r = new int[a.length+b.length];
     int ia = 0, ib = 0, i = 0;
     while (ia < a.length && ib < b.length) {
-      int c = lexo ? a[ia].compareTo(b[ib]) : Integer.valueOf(a[ia]).compareTo(Integer.valueOf(b[ib]));
+      int c = a[ia]-b[ib];
       if ( c < 0) r[i++] = a[ia++];
       else if (c == 0) { r[i++] = a[ia++]; ib++; }
       else r[i++] = b[ib++];
@@ -1060,6 +1090,12 @@ public class Utils {
     if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
     if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
     return Arrays.copyOf(r, i);
+  }
+
+  public static <T> T[] join(T[] a, T[] b) {
+    T[] res = Arrays.copyOf(a, a.length+b.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
   }
 
   /** Returns number of strings which represents a number. */
@@ -1073,6 +1109,12 @@ public class Utils {
     int i = s.charAt(0)=='-' ? 1 : 0;
     for(; i<s.length();i++) if (!Character.isDigit(s.charAt(i))) return false;
     return true;
+  }
+
+  public static int[] toInt(String[] a, int off, int len) {
+    int[] res = new int[len];
+    for(int i=0; i<len; i++) res[i] = Integer.valueOf(a[off+i]);
+    return res;
   }
 
   public static int[] filter(int[] values, boolean[] filter, int fcnt) {
@@ -1131,6 +1173,43 @@ public class Utils {
     String[] res = new String[ary.length];
     for(int i=0; i<ary.length; i++) res[i] = ary[sortOrder[i]];
     return res;
+  }
+  public static int[] sortAccording(int[] ary, Integer[] sortOrder) {
+    int[] res = new int[ary.length];
+    for(int i=0; i<ary.length; i++) res[i] = ary[sortOrder[i]];
+    return res;
+  }
+  /** Sort two arrays - the second one is sorted according the first one. */
+  public static void sortWith(final int[] ary, int[] ary2) {
+    Integer[] sortOrder = new Integer[ary.length];
+    for(int i=0; i<sortOrder.length; i++) sortOrder[i] = i;
+    Arrays.sort(sortOrder, new Comparator<Integer>() {
+      @Override public int compare(Integer o1, Integer o2) { return ary[o1]-ary[o2]; }
+    });
+    sortAccording2(ary,  sortOrder);
+    sortAccording2(ary2, sortOrder);
+  }
+  /** Sort given array according given sort order. Sort is implemented in-place. */
+  public static void sortAccording2(int[] ary, Integer[] sortOrder) {
+    Integer[] so = sortOrder.clone(); // we are modifying sortOrder to preserve exchanges
+    for(int i=0; i<ary.length; i++) {
+      int tmp = ary[i];
+      int idx = so[i];
+      ary[i] = ary[idx];
+      ary[idx] = tmp;
+      for (int j=i; j<so.length; j++) if (so[j]==i) { so[j] = idx; break; }
+    }
+  }
+  /** Sort given array according given sort order. Sort is implemented in-place. */
+  public static void sortAccording2(boolean[] ary, Integer[] sortOrder) {
+    Integer[] so = sortOrder.clone(); // we are modifying sortOrder to preserve exchanges
+    for(int i=0; i<ary.length; i++) {
+      boolean tmp = ary[i];
+      int idx = so[i];
+      ary[i] = ary[idx];
+      ary[idx] = tmp;
+      for (int j=i; j<so.length; j++) if (so[j]==i) { so[j] = idx; break; }
+    }
   }
 
   public static String[] createConfusionMatrixHeader( long xs[], String ds[] ) {
