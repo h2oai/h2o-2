@@ -8,36 +8,54 @@ try:
     import scipy as sp
     import numpy as np
     import sklearn as sk
+    import statsmodels as sm
+    import statsmodels.api as sm_api
     print "numpy, scipy and sklearn are installed. Will do extra checks"
 
 except ImportError:
-    print "numpy, scipy or sklearn is not installed. Will just do h2o stuff"
+    print "numpy, sklearn, or statsmodels  is not installed. Will just do h2o stuff"
     SCIPY_INSTALLED = False
 
+# http://statsmodels.sourceforge.net/devel/glm.html#module-reference
+# This seems better than the sklearn LogisticRegression I was using
+# Using Logit is as simple as thishttp://statsmodels.sourceforge.net/devel/examples/generated/example_discrete.html
 #*********************************************************************************
-def do_scipy_glm(self, bucket, csvPathname, L, family='binomial'):
+def do_statsmodels_glm(self, bucket, csvPathname, L, family='gaussian'):
     
-    h2p.red_print("Now doing sklearn")
-    h2p.red_print("\nsee http://scikit-learn.org/0.11/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression")
+    h2p.red_print("Now doing statsmodels")
+    h2p.red_print("http://statsmodels.sourceforge.net/devel/glm.html#module-reference")
+    h2p.red_print("http://statsmodels.sourceforge.net/devel/generated/statsmodels.genmod.generalized_linear_model.GLM.html")
 
     import numpy as np
     import scipy as sp
-    from sklearn.linear_model import LogisticRegression
     from numpy import loadtxt
+    import statsmodels as sm
 
     csvPathnameFull = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
-    # make sure it does fp divide
-    C = 1/(L+0.0)
-    print "C regularization:", C
-    dataset = np.loadtxt( 
-        open(csvPathnameFull,'r'),
-        skiprows=1, # skip the header
-        delimiter=',',
-        dtype='float');
+    if 1==1:
+        dataset = np.loadtxt( 
+            open(csvPathnameFull,'r'),
+            skiprows=1, # skip the header
+            delimiter=',',
+            dtype='float');
+
+    # skipping cols from the begining... (ID is col 1)
+    # In newer versions of Numpy, np.genfromtxt can take an iterable argument, 
+    # so you can wrap the file you're reading in a generator that generates lines, 
+    # skipping the first N columns. If your numbers are comma-separated, that's something like
+    if 1==0:
+        f = open(csvPathnameFull,'r'),
+        np.genfromtxt(
+            (",".join(ln.split()[1:]) for ln in f),
+            skiprows=1, # skip the header
+            delimiter=',',
+            dtype='float');
 
     print "\ncsv read for training, done"
 
+    # data is last column
+    # drop the output
     n_features = len(dataset[0]) - 1;
     print "n_features:", n_features
 
@@ -46,7 +64,6 @@ def do_scipy_glm(self, bucket, csvPathname, L, family='binomial'):
     target = [x[1] for x in dataset]
     # slice off the first 2
     train  = np.array ( [x[2:] for x in dataset] )
-
 
     n_samples, n_features = train.shape
     print "n_samples:", n_samples, "n_features:",  n_features
@@ -58,64 +75,23 @@ def do_scipy_glm(self, bucket, csvPathname, L, family='binomial'):
     print "len(target):", len(target)
     print "dataset shape:", dataset.shape
 
-    if family!='binomial':
-        raise Exception("Only have binomial logistic for scipy")
-    print "\nTrying l2"
-    clf2 = LogisticRegression(
-        C=C,
-        dual=False, 
-        fit_intercept=True, 
-        intercept_scaling=1, 
-        penalty='l2', 
-        tol=0.0001);
+    if family!='gaussian':
+        raise Exception("Only have gaussian logistic for scipy")
 
     # train the classifier
+    gauss_log = sm_api.GLM(target, train, family=sm_api.families.Gaussian(sm_api.families.links.log))
     start = time.time()
-    clf2.fit(train, target)
-    print "L2 fit took", time.time() - start, "seconds"
+    gauss_log_results = gauss_log.fit()
+    print "sm_api.GLM took", time.time() - start, "seconds"
+    print gauss_log_results.summary()
 
-    # print "coefficients:", clf2.coef_
-    cstring = "".join([("%.5e  " % c) for c in clf2.coef_[0]])
-    h2p.green_print("sklearn L2 C", C)
-    h2p.green_print("sklearn coefficients:", cstring)
-    h2p.green_print("sklearn intercept:", "%.5e" % clf2.intercept_[0])
-    h2p.green_print("sklearn score:", clf2.score(train,target))
-
-    print "\nTrying l1"
-    clf1 = LogisticRegression(
-        C=C,
-        dual=False, 
-        fit_intercept=True, 
-        intercept_scaling=1, 
-        penalty='l1', 
-        tol=0.0001);
-
-    # train the classifier
-    start = time.time()
-    clf1.fit(train, target)
-    print "L1 fit took", time.time() - start, "seconds"
-
-    # print "coefficients:", clf1.coef_
-    cstring = "".join([("%.5e  " % c) for c in clf1.coef_[0]])
-    h2p.green_print("sklearn L1 C", C)
-    h2p.green_print("sklearn coefficients:", cstring)
-    h2p.green_print("sklearn intercept:", "%.5e" % clf1.intercept_[0])
-    h2p.green_print("sklearn score:", clf1.score(train,target))
-
-    # attributes are accessed in the normal python way
-    dx = clf1.__dict__
-    dx.keys()
-
-    ##    ['loss', 'C', 'dual', 'fit_intercept', 'class_weight_label', 'label_', 
-    ##     'penalty', 'multi_class', 'raw_coef_', 'tol', 'class_weight', 
-    ##     'intercept_scaling']
 
 #*********************************************************************************
-def do_h2o_glm(self, bucket, csvPathname, L, family='binomial'):
+def do_h2o_glm(self, bucket, csvPathname, L, family='gaussian'):
 
     h2p.red_print("\nNow doing h2o")
     h2o.beta_features=True
-    parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='local', timeoutSecs=180)
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', timeoutSecs=180)
     # save the resolved pathname for use in the sklearn csv read below
 
     inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -124,18 +100,20 @@ def do_h2o_glm(self, bucket, csvPathname, L, family='binomial'):
         "    numRows:", "{:,}".format(inspect['numRows']), \
         "    numCols:", "{:,}".format(inspect['numCols'])
 
-    x         = 'ID'
-    y         = 'CAPSULE'
+    # Need to chop out the ID col?
+    # x         = 'ID'
+    # y         = 'CAPSULE'
     family    = family
     alpha     = '0'
     lambda_   = L
     nfolds    = '0'
-    f         = 'prostate'
-    modelKey  = 'GLM_' + f
+    modelKey  = 'GLM_Model'
+    y         = 'GLEASON'
+    
 
     kwargs = {
         'response'           : y,
-        'ignored_cols'       : x,
+        'ignored_cols'       : 'ID, CAPSULE',
         'family'             : family,
         'lambda'             : lambda_,
         'alpha'              : alpha,
@@ -205,27 +183,31 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM2_basic_cmp(self):
-        bucket = 'smalldata'
-        importFolderPath = "logreg"
-        csvFilename = 'prostate.csv'
+    def test_GLM2_basic_cmp2(self):
+
+        if 1==1:
+            bucket = 'smalldata'
+            importFolderPath = "logreg"
+            csvFilename = 'prostate.csv'
+        if 1==0:
+            bucket = 'home-0xdiag-datasets'
+            importFolderPath = "standard"
+            csvFilename = 'covtype.data'
+
         csvPathname = importFolderPath + "/" + csvFilename
 
         # use L for lambda in h2o, C=1/L in sklearn
-        family = 'binomial'
+        family = 'gaussian'
         L = 1e-4
         do_h2o_glm(self, bucket, csvPathname, L, family)
         if SCIPY_INSTALLED:
-            do_scipy_glm(self, bucket, csvPathname, L, family)
+            do_statsmodels_glm(self, bucket, csvPathname, L, family)
 
         # since we invert for C, can't use 0 (infinity)
-        L = 1e-13
-        # C in sklearn Specifies the strength of the regularization. 
-        # The smaller it is the bigger in the regularization. 
-        # we'll set it to 1/L
+        L = 0
         do_h2o_glm(self, bucket, csvPathname, L, family)
         if SCIPY_INSTALLED:
-            do_scipy_glm(self, bucket, csvPathname, L, family)
+            do_statsmodels_glm(self, bucket, csvPathname, L, family)
 
 
 if __name__ == '__main__':

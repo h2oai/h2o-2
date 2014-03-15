@@ -41,6 +41,7 @@
                 "alpha": { "type": "number" },
                 "best_lambda_idx": { "type": "number" }
                 "beta_eps": { "type": "number" },
+                "lambda_max": { "type": "number" },
                 "coefficient_names": { "type": "array", "items": 
                     { "type": "string" }
                 },

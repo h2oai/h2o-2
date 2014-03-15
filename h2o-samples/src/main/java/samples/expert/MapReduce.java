@@ -1,14 +1,13 @@
-package samples;
-
-import java.io.File;
+package samples.expert;
 
 import org.junit.Assert;
-
 import water.Job;
 import water.MRTask2;
 import water.deploy.VM;
 import water.fvec.Chunk;
 import water.fvec.Frame;
+
+import java.io.File;
 
 /**
  * Demonstration of H2O's map-reduce API. This task sums the elements of a column.
@@ -27,7 +26,7 @@ public class MapReduce extends Job {
   protected JobState execImpl() {
     // Parse a dataset into a Frame, H2O's distributed table-like data structure
     File file = new File(VM.h2oFolder(), "smalldata/iris/iris.csv");
-    Frame frame = Frames.parse(file);
+    Frame frame = samples.expert.Frames.parse(file);
 
     // Create an instance of our custom map-reduce class.
     Sum sum = new Sum();

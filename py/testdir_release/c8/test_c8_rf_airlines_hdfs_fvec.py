@@ -8,31 +8,31 @@ paramsTrainRF = {
     'max_depth': 15,
     'nbins': 100,
     'ignored_cols_by_name': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
-    'timeoutSecs': 14800,
+    'timeoutSecs': 1800,
     'response': 'IsDepDelayed'
     }
 
 # RF test parameters
 paramsScoreRF = {
     'vactual': 'IsDepDelayed',
-    'timeoutSecs': 14800,
+    'timeoutSecs': 1800,
     }
 
 trainDS = {
     # 'csvFilename' : 'airlines_all.csv',
     'csvFilename' : '2008.csv',
-    'timeoutSecs' : 14800,
+    'timeoutSecs' : 1800,
     'header'      : 1
     }
 
 # FIX should point to a different smaller dataset
 scoreDS = {
     'csvFilename' : 'airlines_all.csv',
-    'timeoutSecs' : 14800,
+    'timeoutSecs' : 1800,
     'header'      : 1
     }
 
-PARSE_TIMEOUT=14800
+PARSE_TIMEOUT=1800
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 

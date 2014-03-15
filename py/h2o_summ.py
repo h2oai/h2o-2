@@ -89,8 +89,11 @@ def percentileOnSortedList_25_50_75( N, key=lambda x:x):
     return three
 
 #***************************************************************************
-def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float', h2oSummary2=None, 
-   h2oQuantilesApprox=None, h2oQuantilesExact=None, interpolate='linear', quantile=0.50, use_genfromtxt=False):
+def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float', 
+    h2oSummary2=None, 
+    h2oQuantilesApprox=None, h2oQuantilesExact=None, 
+    h2oExecQuantilesApprox=None,
+    interpolate='linear', quantile=0.50, use_genfromtxt=False):
     SCIPY_INSTALLED = True
     try:
         import scipy as sp
@@ -99,7 +102,7 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
 
     except ImportError:
         print "numpy or scipy is not installed. Will only do sort-based checking"
-        SCIPY_INSTALLED = false
+        SCIPY_INSTALLED = False
 
     if use_genfromtxt:
         print "Using numpy.genfromtxt. Better handling of null bytes"
@@ -197,21 +200,23 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
     h2p.blue_print(label, "from h2o summary:", h2oSummary2)
     h2p.blue_print(label, "from h2o multipass:", h2oQuantilesExact)
     h2p.blue_print(label, "from h2o singlepass:", h2oQuantilesApprox)
+    if h2oExecQuantilesApprox:
+        h2p.blue_print(label, "from h2o exec:", h2oExecQuantilesApprox)
 
     # they should be identical. keep a tight absolute tolerance
     # Note the comparisons have different tolerances, some are relative, some are absolute
+    if h2oQuantilesExact:
+        if math.isnan(float(h2oQuantilesExact)):
+            raise Exception("h2oQuantilesExact is unexpectedly NaN %s" % h2oQuantilesExact)
+        h2o_util.assertApproxEqual(h2oQuantilesExact, b, tol=0.0000002, 
+            msg='h2o quantile multipass is not approx. same as sort algo')
+
     if h2oQuantilesApprox:
         # this can be NaN if we didn't calculate it. turn the NaN string into a float NaN
         if math.isnan(float(h2oQuantilesApprox)):
             raise Exception("h2oQuantilesApprox is unexpectedly NaN %s" % h2oQuantilesApprox)
         h2o_util.assertApproxEqual(h2oQuantilesApprox, b, rel=0.5,
             msg='h2o quantile singlepass is not approx. same as sort algo')
-
-    if h2oQuantilesExact:
-        if math.isnan(float(h2oQuantilesExact)):
-            raise Exception("h2oQuantilesExact is unexpectedly NaN %s" % h2oQuantilesExact)
-        h2o_util.assertApproxEqual(h2oQuantilesExact, b, tol=0.0000002, 
-            msg='h2o quantile multipass is not approx. same as sort algo')
 
     if h2oSummary2:
         if math.isnan(float(h2oSummary2)):
@@ -220,21 +225,28 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
         h2o_util.assertApproxEqual(h2oSummary2, b, rel=1.0,
             msg='h2o summary2 is not approx. same as sort algo')
 
+    if h2oExecQuantilesApprox:
+        if math.isnan(float(h2oExecQuantilesApprox)):
+            raise Exception("h2oExecQuantilesApprox is unexpectedly NaN %s" % h2oExecQuantilesApprox)
+        # bounds are way off
+        h2o_util.assertApproxEqual(h2oExecQuantilesApprox, b, rel=1.0,
+            msg='h2o summary2 is not approx. same as sort algo')
+
     if SCIPY_INSTALLED:
-        if h2oQuantilesApprox:
+        if h2oQuantilesExact:
             h2o_util.assertApproxEqual(h2oQuantilesExact, p, tol=0.0000002,
                 msg='h2o quantile multipass is not same as numpy.percentile')
             h2o_util.assertApproxEqual(h2oQuantilesExact, s1, tol=0.0000002,
                 msg='h2o quantile multipass is not same as scipy stats.scoreatpercentile')
 
         # give us some slack compared to the scipy use of median (instead of desired mean)
-        if h2oQuantilesExact:
+        if h2oQuantilesApprox:
             if interpolate=='mean':
-                h2o_util.assertApproxEqual(h2oQuantilesExact, s2, rel=0.01,
-                    msg='h2o quantile multipass is not approx. same as scipy stats.mstats.mquantiles')
+                h2o_util.assertApproxEqual(h2oQuantilesApprox, s2, rel=0.01,
+                    msg='h2o quantile singlepass is not approx. same as scipy stats.mstats.mquantiles')
             else:
-                h2o_util.assertApproxEqual(h2oQuantilesExact, s2, tol=0.0000002,
-                    msg='h2o quantile multipass is not same as scipy stats.mstats.mquantiles')
+                h2o_util.assertApproxEqual(h2oQuantilesApprox, s2, rel=0.01,
+                    msg='h2o quantile singlepass is not same as scipy stats.mstats.mquantiles')
 
         # see if scipy changes. nope. it doesn't 
         if 1==0:

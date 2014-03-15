@@ -12,7 +12,7 @@ DO_MEDIAN = True
 # FIX!. we seem to lose accuracy with fewer bins -> more iterations. Maybe we're leaking or ??
 # this test failed (if run as user kevin) with 10 bins
 MAX_QBINS = 1000 # pass
-MAX_QBINS = 100 # pass
+MAX_QBINS = 1000 # pass
 
 # this one doesn't fail with 10 bins
 # this failed. interestingly got same number as 1000 bin summary2 (the 7.433..
@@ -20,7 +20,7 @@ MAX_QBINS = 100 # pass
 # MAX_QBINS = 20
 # Exception: h2o quantile multipass is not approx. same as sort algo. h2o_util.assertApproxEqual failed comparing 7.43337413296 and 8.26268245. {'tol': 2e-07}.
 
-MAX_QBINS = 20
+MAX_QBINS = 1000
 
 class Basic(unittest.TestCase):
     def tearDown(self):

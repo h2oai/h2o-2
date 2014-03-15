@@ -212,7 +212,7 @@ class Basic(unittest.TestCase):
                     # what about x?
                     'family': family, 
                     'alpha': 0, 
-                    'lambda': 0.5, 
+                    'lambda': 1e-4,
                     'beta_epsilon': 1.0E-4, 
                     'max_iter': 50 }
             else:
@@ -222,7 +222,7 @@ class Basic(unittest.TestCase):
                     'x': x,
                     'family': family, 
                     'alpha': 0, 
-                    'lambda': 0.5, 
+                    'lambda': 1e-4,
                     'beta_epsilon': 1.0E-4, 
                     'max_iter': 50 }
 
