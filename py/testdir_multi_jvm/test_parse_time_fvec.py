@@ -57,7 +57,7 @@ def rand_rowData(colCount=6):
     b = ", ".join(map(str,a))
     return b
 
-def write_syn_dataset(csvPathname, rowCount, colCount, headerData=None):
+def write_syn_dataset(csvPathname, rowCount, colCount, headerData=None, rowData=None):
     dsf = open(csvPathname, "w+")
     if headerData is not None:
         dsf.write(headerData + "\n")
@@ -86,6 +86,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_time(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_time.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -109,14 +110,13 @@ class Basic(unittest.TestCase):
             missingValuesListA = h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "missingValuesListA", missingValuesListA
 
-            num_colsA = inspect['num_cols']
-            num_rowsA = inspect['num_rows']
-            row_sizeA = inspect['row_size']
-            value_size_bytesA = inspect['value_size_bytes']
+            numColsA = inspect['numCols']
+            numRowsA = inspect['numRows']
+            byteSizeA = inspect['byteSize']
 
             self.assertEqual(missingValuesListA, [], "missingValuesList should be empty")
-            self.assertEqual(num_colsA, colCount)
-            self.assertEqual(num_rowsA, rowCount)
+            self.assertEqual(numColsA, colCount)
+            self.assertEqual(numRowsA, rowCount)
 
             # do a little testing of saving the key as a csv
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
@@ -132,21 +132,19 @@ class Basic(unittest.TestCase):
             missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "missingValuesListB", missingValuesListB
 
-            num_colsB = inspect['num_cols']
-            num_rowsB = inspect['num_rows']
-            row_sizeB = inspect['row_size']
-            value_size_bytesB = inspect['value_size_bytes']
+            numColsB = inspect['numCols']
+            numRowsB = inspect['numRows']
+            byteSizeB = inspect['byteSize']
 
             self.assertEqual(missingValuesListA, missingValuesListB,
                 "missingValuesList mismatches after re-parse of downloadCsv result")
-            self.assertEqual(num_colsA, num_colsB,
-                "num_cols mismatches after re-parse of downloadCsv result")
+            self.assertEqual(numColsA, numColsB,
+                "numCols mismatches after re-parse of downloadCsv result")
             # H2O adds a header to the csv created. It puts quotes around the col numbers if no header
             # so I guess that's okay. So allow for an extra row here.
-            self.assertEqual(num_rowsA, num_rowsB,
-                "num_rowsA: %s num_rowsB: %s mismatch after re-parse of downloadCsv result" % (num_rowsA, num_rowsB) )
+            self.assertEqual(numRowsA, numRowsB,
+                "numRowsA: %s numRowsB: %s mismatch after re-parse of downloadCsv result" % (numRowsA, numRowsB) )
             print "H2O writes the internal format (number) out for time."
-            print "So don't do the row_size and value_size comparisons."
 
             # ==> syn_time.csv <==
             # 31-Oct-49, 25-NOV-10, 08-MAR-44, 23-Nov-34, 19-Feb-96, 23-JUN-30
@@ -158,10 +156,8 @@ class Basic(unittest.TestCase):
 
             if 1==0:
                 # extra line for column headers?
-                self.assertEqual(row_sizeA, row_sizeB, 
-                    "row_size wrong after re-parse of downloadCsv result %d %d" % (row_sizeA, row_sizeB) )
-                self.assertEqual(value_size_bytesA, value_size_bytesB,
-                    "value_size_bytes mismatches after re-parse of downloadCsv result %d %d" % (value_size_bytesA, value_size_bytesB) )
+                self.assertEqual(byteSizeA, byteSizeB,
+                    "byteSize mismatches after re-parse of downloadCsv result %d %d" % (byteSizeA, byteSizeB) )
 
             # FIX! should do some comparison of values? 
             # maybe can use exec to checksum the columns and compare column list.
