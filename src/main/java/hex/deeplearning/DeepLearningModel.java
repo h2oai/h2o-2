@@ -440,7 +440,8 @@ public class DeepLearningModel extends Model {
 //        }
 
     /**
-     * Compute Variable Importance, based on Garson (but using absolute values of the weights)
+     * Compute Variable Importance, based on
+     * GEDEON: DATA MINING OF INPUTS: ANALYSING MAGNITUDE AND FUNCTIONAL MEASURES
      * @return variable importances for input features
      */
     public float[] computeVariableImportances() {
@@ -449,8 +450,10 @@ public class DeepLearningModel extends Model {
 
       float[][] Qik = new float[units[0]][units[2]]; //importance of input i on output k
       float[] sum_wj = new float[units[1]]; //sum of incoming weights into first hidden layer
+      float[] sum_wk = new float[units[2]]; //sum of incoming weights into output layer (or second hidden layer)
       for (float[] Qi : Qik) Arrays.fill(Qi, 0f);
       Arrays.fill(sum_wj, 0f);
+      Arrays.fill(sum_wk, 0f);
 
       // compute sum of absolute incoming weights
       for( int j = 0; j < units[1]; j++ ) {
@@ -459,13 +462,20 @@ public class DeepLearningModel extends Model {
           sum_wj[j] += Math.abs(wij);
         }
       }
+      for( int k = 0; k < units[2]; k++ ) {
+        for( int j = 0; j < units[1]; j++ ) {
+          float wjk = weights[1][k*units[1]+j];
+          sum_wk[k] += Math.abs(wjk);
+        }
+      }
       // compute importance of input i on output k as product of connecting weights going through j
       for( int i = 0; i < units[0]; i++ ) {
         for( int k = 0; k < units[2]; k++ ) {
           for( int j = 0; j < units[1]; j++ ) {
             float wij = weights[0][j*units[0]+i];
             float wjk = weights[1][k*units[1]+j];
-            Qik[i][k] += Math.abs(wij/sum_wj[j] * wjk);
+            //Qik[i][k] += Math.abs(wij)/sum_wj[j] * wjk; //Wong,Gedeon,Taggart '95
+            Qik[i][k] += Math.abs(wij)/sum_wj[j] * Math.abs(wjk)/sum_wk[k]; //Gedeon '97
           }
         }
       }
@@ -478,8 +488,8 @@ public class DeepLearningModel extends Model {
       // importance for feature i is the sum over k of i->k importances
       for( int i = 0; i < units[0]; i++ ) vi[i] = Utils.sum(Qik[i]);
 
-      //normalize importances such that sum(vi) = 1
-      Utils.div(vi, Utils.sum(vi));
+      //normalize importances such that max(vi) = 1
+      Utils.div(vi, Utils.maxValue(vi));
       return vi;
     }
 
@@ -617,10 +627,11 @@ public class DeepLearningModel extends Model {
       err.training_samples = model_info().get_processed_total();
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
+      final int hit_k = Math.min(nclasses(), model_info().get_params().max_hit_ratio_k);
       if (err.classification && nclasses()==2) err.trainAUC = new AUC();
-      if (err.classification && nclasses() > 2) {
+      if (err.classification && nclasses() > 2 && hit_k > 0) {
         err.train_hitratio = new HitRatio();
-        err.train_hitratio.set_max_k(Math.min(nclasses(), model_info().get_params().max_hit_ratio_k));
+        err.train_hitratio.set_max_k(hit_k);
       }
       model_info().toString();
       final Frame trainPredict = score(ftrain, false);
@@ -635,9 +646,9 @@ public class DeepLearningModel extends Model {
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
         if (err.classification && nclasses()==2) err.validAUC = new AUC();
-        if (err.classification && nclasses() > 2) {
+        if (err.classification && nclasses() > 2 && hit_k > 0) {
           err.valid_hitratio = new HitRatio();
-          err.valid_hitratio.set_max_k(Math.min(nclasses(), model_info().get_params().max_hit_ratio_k));
+          err.valid_hitratio.set_max_k(hit_k);
         }
         Job.ValidatedJob.Response2CMAdaptor vadaptor = model_info().job().getValidAdaptor();
         Vec tmp = null;
