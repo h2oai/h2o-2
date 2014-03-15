@@ -173,8 +173,7 @@ public class Quantiles extends Iced {
       }
       else {
         // okay if 1 more than max_qbins gets created
-        // _binsz2 = _binsz / (max_qbins / nbin);
-        int nbin2 = (int)(Math.round((_max + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
+        int nbin2 = (int) Math.ceil((_max - _start2)/_binsz2) + 1;
         assert nbin2 > 0;
         // Log.debug("Q_ Single pass histogram has "+nbin2+" bins");
         // Log.debug("Q_ Single pass histogram starts at "+_start2);

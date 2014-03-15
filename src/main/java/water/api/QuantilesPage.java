@@ -79,13 +79,6 @@ public class QuantilesPage extends Request2 {
     Futures fs = new Futures();
     for( Vec vec : vecs) {
         vec.rollupStats(fs);
-        // just to see, move to using these rather than the min/max/mean from basicStats
-        double vmax = vec.max();
-        double vmin = vec.min();
-        double vmean = vec.mean();
-        double vsigma = vec.sigma();
-        long vnaCnt = vec.naCnt();
-        boolean visInt = vec.isInt();
     }
     fs.blockForPending();
 

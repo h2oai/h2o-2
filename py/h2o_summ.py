@@ -245,7 +245,7 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
                 h2o_util.assertApproxEqual(h2oQuantilesApprox, s2, rel=0.01,
                     msg='h2o quantile singlepass is not approx. same as scipy stats.mstats.mquantiles')
             else:
-                h2o_util.assertApproxEqual(h2oQuantilesApprox, s2, tol=0.0000002,
+                h2o_util.assertApproxEqual(h2oQuantilesApprox, s2, rel=0.01,
                     msg='h2o quantile singlepass is not same as scipy stats.mstats.mquantiles')
 
         # see if scipy changes. nope. it doesn't 
