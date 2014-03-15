@@ -72,12 +72,15 @@ class Basic(unittest.TestCase):
                 print "Checking sandbox log files"
                 h2o.check_sandbox_for_errors(cloudShutdownIsError=True)
             else:
-                print str(datetime.datetime.now()), h2o.python_cmd_line, "still here"
+                print str(datetime.datetime.now()), h2o.python_cmd_line, "still here", totalTime, maxTime, incrTime
 
-        start = time.time()
-        h2i.delete_keys_at_all_nodes()
-        elapsed = time.time() - start
-        print "delete_keys_at_all_nodes(): took", elapsed, "secs"
+        # don't do this, as the cloud may be hung?
+        if 1==0:
+            print "Shutting down cloud, but first delete all keys"
+            start = time.time()
+            h2i.delete_keys_at_all_nodes()
+            elapsed = time.time() - start
+            print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
 if __name__ == '__main__':
     h2o.unit_main()
