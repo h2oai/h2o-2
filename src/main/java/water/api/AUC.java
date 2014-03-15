@@ -17,6 +17,7 @@ import static java.util.Arrays.sort;
 public class AUC extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+  public static final String DOC_GET = "AUC";
 
   @API(help = "", required = true, filter = Default.class, json=true)
   public Frame actual;
@@ -171,7 +172,7 @@ public class AUC extends Request2 {
     Vec va = null, vp;
     // Input handling
     if( vactual==null || vpredict==null )
-      throw new IllegalArgumentException("Missing actual or predict!");
+      throw new IllegalArgumentException("Missing vactual or vpredict!");
     if (vactual.length() != vpredict.length())
       throw new IllegalArgumentException("Both arguments must have the same length!");
     if (!vactual.isInt())
