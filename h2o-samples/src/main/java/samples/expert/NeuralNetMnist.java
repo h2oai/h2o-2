@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Runs a neural network on the MNIST dataset.
+ * Runs a neural network (deprecated - use Deep Learning instead) on the MNIST dataset.
  */
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {

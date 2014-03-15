@@ -5,11 +5,10 @@ import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet;
 import hex.Trainer;
-import samples.expert.NeuralNetMnist;
 import water.fvec.Vec;
 
 /**
- * Same as previous MNIST sample but using Rectifier units and Dropout.
+ * Same as previous MNIST sample but using Rectifier units and Dropout. Also deprecated.
  */
 public class NeuralNetMnistDrednet extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
