@@ -44,9 +44,9 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10, 1000, 'cA', 200, 200),
-            (10, 2000, 'cB', 200, 200),
-            (10, 3000, 'cB', 200, 200),
+            (10, 10, 'cA', 200, 200),
+            (10, 1000, 'cB', 200, 200),
+            (10, 1000, 'cB', 200, 200),
             # we timeout/fail on 500k? stop at 200k
             # (10, 500000, 'cC', 200, 200),
             # (10, 1000000, 'cD', 200, 360),
@@ -95,6 +95,21 @@ class Basic(unittest.TestCase):
                 hex_key_i = hex_key + "_" + str(i)
                 hex_key_0 = hex_key + "_0"
                 print "\nComparing %s to %s" % (hex_key_i, hex_key_0)
+                execExpr = "%s[1,]+%s[1,]" % (hex_key_0, hex_key_i)
+                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                execExpr = "%s[,1]+%s[,1]" % (hex_key_0, hex_key_i)
+                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                execExpr = "%s+%s" % (hex_key_0, hex_key_i)
+                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                execExpr = "%s!=%s" % (hex_key_0, hex_key_i)
+                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                execExpr = "%s==%s" % (hex_key_0, hex_key_i)
+                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                execExpr = "sum(%s==%s)" % (hex_key_0, hex_key_i)
+                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                execExpr = "s=sum(%s==%s)" % (hex_key_0, hex_key_i)
+                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
                 execExpr = "s=c(1); s=sum(%s==%s)" % (hex_key_0, hex_key_i)
                 resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                 execExpr = "n=c(1); n=nrow(%s)*ncol(%s))" % (hex_key, hex_key_i)

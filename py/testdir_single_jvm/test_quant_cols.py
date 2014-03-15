@@ -31,21 +31,27 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        tryList = [
-            ('/home/0xdiag/datasets/airlines/year2013.csv', None, None, 'cE', 300), 
-            ('/home/kevin/Downloads/t.csv', 15, 11, 'cE', 300), 
-            ]
+    
+        if getpass.getuser()=='kevin':
+            tryList = [
+                ('home-0xdiag-datasets', 'airlines/year2013.csv', None, None, 'cE', 300), 
+                (None, '/home/kevin/Downloads/t.csv', 15, 11, 'cE', 300), 
+                ]
+        else:
+            tryList = [
+                ('home-0xdiag-datasets', 'airlines/year2013.csv', None, None, 'cE', 300), 
+                ]
 
         # h2b.browseTheCloud()
         trial = 0
-        for (csvPathname, iColCount, oColCount, hex_key, timeoutSecs) in tryList:
+        for (bucket, csvPathname, iColCount, oColCount, hex_key, timeoutSecs) in tryList:
             xList = []
             eList = []
             fList = []
 
             # PARSE*******************************************************
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=200, doSummary=False)
-            csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=200, doSummary=False)
+            csvPathnameFull = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
