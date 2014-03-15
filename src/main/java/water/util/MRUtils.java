@@ -1,9 +1,6 @@
 package water.util;
 
-import water.H2O;
-import water.H2ONode;
-import water.Key;
-import water.MRTask2;
+import water.*;
 import water.fvec.*;
 
 import java.util.Random;
@@ -92,6 +89,7 @@ public class MRUtils {
       Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
       final long rows_per_new_chunk = (long)(Math.ceil((double)fr.numRows()/splits));
       //loop over cols (same indexing for each column)
+      Futures fs = new Futures();
       for(int col=0; col<vecs.length; col++) {
         AppendableVec vec = new AppendableVec(keys[col]);
         // create outgoing chunks for this col
@@ -110,11 +108,12 @@ public class MRUtils {
           }
         }
         for(int i=0; i<outCkg.length; ++i)
-          outCkg[i].close(i, null);
-        Vec t = vec.close(null);
+          outCkg[i].close(i, fs);
+        Vec t = vec.close(fs);
         t._domain = vecs[col]._domain;
         vecs[col] = t;
       }
+      fs.blockForPending();
       Log.info("Load balancing done.");
     }
     fr.reloadVecs();
