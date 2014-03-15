@@ -277,6 +277,26 @@ public class ConfusionMatrixTest extends TestUtil {
               ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
               ),
           debug);
+
+      // Mixed case
+      simpleCMTest(
+          frame("v1", vec(ar("-1", "1", "10", "9", "A"), ari( 0, 1,  2, 3, 4) )),
+          frame("v2", vec(ar( "0", "2",  "8", "9", "B"), ari( 0, 1,  2, 3, 4) )),
+          ar("-1", "1", "10", "9", "A"),
+          ar( "0", "2",  "8", "9", "B"),
+          ar( "-1", "0", "1", "2",  "8", "9", "10", "A", "B"),
+          ar( ar( 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "-1"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "0"
+              ar( 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L), // "1"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "2"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "8"
+              ar( 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L), // "9"
+              ar( 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L), // "10"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L), // "A"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "B"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
+              ),
+          debug);
   }
 
 

@@ -1014,28 +1014,37 @@ public class Utils {
    *
    * For union of numeric arrays (strings represent integers) it is expecting numeric ordering.
    * For pure string domains it is expecting lexicographical ordering.
-   * For mixed domains it always expects lexicographical ordering.
+   * For mixed domains it always expects lexicographical ordering since such a domain were produce
+   * by a parser which sort string with Array.sort().
+   *
+   * @PRECONDITION - string domain was sorted by Array.sort(String[]), integer domain by Array.sort(int[]) and switched to Strings !!!
    *
    * @param a a set of strings
    * @param b a set of strings
    * @return union of arrays
    */
-  public static String[] union(String[] a, String[] b) {
+  public static String[] domainUnion(String[] a, String[] b) {
     int cIinA = numInts(a);
     int cIinB = numInts(b);
-    // Trivial case - all strings or ints
-    if (cIinA-cIinB==0 || cIinA==a.length && cIinB==b.length)
+    // Trivial case - all strings or ints, sorted
+    if (cIinA==0 && cIinB==0   // only strings
+        || cIinA==a.length && cIinB==b.length ) // only integers
       return union(a, b, cIinA==0);
+    // a,b were sorted by Array.sort() but can contain some numbers.
+    // So sort numbers in numeric way, and then string in lexicographical order
     return union(a, b, true);
   }
 
   /** Union of given String arrays.
+   *
+   * The method expects ordering of domains in given order (lexicographical, numeric)
    *
    * @param a first array
    * @param b second array
    * @param lexo - true if domains are sorted in lexicographical order or false for numeric domains
    * @return union of values in given arrays.
    *
+   * @precondition lexo ? a,b are lexicographically sorted : a,b are sorted numerically
    * @precondition a!=null && b!=null
    */
   public static String[] union(String[] a, String[] b, boolean lexo) {
