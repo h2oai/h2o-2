@@ -27,8 +27,14 @@ class Basic(unittest.TestCase):
         csvPathname = 'datagen1.csv'
         # have to give the separator == comma...otherwise H2O can't deduce it on this dataset
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-            timeoutSecs=10, header=1, separator=44)
-        h2o_cmd.runRF(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
+            timeoutSecs=10, header=0, separator=44)
+
+        inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
+        num_cols = inspect['num_cols']
+        h2o_cmd.runRF(parseResult=parseResult, 
+            trees=1, 
+            response_variable='C'+str(num_cols),
+            timeoutSecs=20)
 
     def test_B_randomdata2_1_lineend(self):
         csvPathname = 'datagen1.csv'
@@ -49,8 +55,14 @@ class Basic(unittest.TestCase):
         outfile.close()
 
         parseResult = h2i.import_parse(path=csvPathname2, schema='put', 
-            timeoutSecs=10, header=1, separator=44)
-        h2o_cmd.runRF(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
+            timeoutSecs=10, header=0, separator=44)
+
+        inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
+        num_cols = inspect['num_cols']
+        h2o_cmd.runRF(parseResult=parseResult, 
+            trees=1, 
+            response_variable='C'+str(num_cols),
+            timeoutSecs=20)
 
 
 if __name__ == '__main__':
