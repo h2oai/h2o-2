@@ -1,8 +1,11 @@
-package samples;
+package samples.expert;
 
-import hex.*;
+import hex.Layer;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+import hex.NeuralNet;
+import hex.Trainer;
+import samples.expert.NeuralNetMnist;
 import water.fvec.Vec;
 
 /**

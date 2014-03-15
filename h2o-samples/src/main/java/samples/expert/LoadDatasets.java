@@ -1,4 +1,4 @@
-package samples;
+package samples.expert;
 
 import water.Job;
 import water.TestUtil;

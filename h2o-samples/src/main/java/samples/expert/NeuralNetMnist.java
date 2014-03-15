@@ -1,4 +1,4 @@
-package samples;
+package samples.expert;
 
 import hex.Layer;
 import hex.Layer.VecSoftmax;
