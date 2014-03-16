@@ -36,6 +36,14 @@ public class QuantilesPage extends Request2 {
   @API(help = "Column name.")
   String column_name;
 
+  // this isn't used yet. column_name is
+  // class colsFilter1 extends MultiVecSelect { public colsFilter1() { super("source_key");} }
+  // @API(help = "Not supported yet (Select columns)", filter=colsFilter1.class)
+  // int[] cols;
+
+  @API(help = "Maximum number of columns to show quantile", filter = Default.class, lmin = 1)
+  int max_ncols = 1000;
+
   @API(help = "Quantile requested.")
   double quantile_requested;
 
@@ -62,10 +70,18 @@ public class QuantilesPage extends Request2 {
 
   @Override protected Response serve() {
     if( source_key == null ) return RequestServer._http404.serve();
+
     if( column == null ) return RequestServer._http404.serve();
     if ( column.isEnum() ) {
       throw new IllegalArgumentException("Column is an enum");
     }
+
+    // all cols by default
+    // if( cols == null ) {
+    //   cols = new int[Math.min(source_key.vecs().length,max_ncols)];
+    //   for(int i = 0; i < cols.length; i++) cols[i] = i;
+    // }
+
     if (! ((interpolation_type == 2) || (interpolation_type == 7)) ) {
       throw new IllegalArgumentException("Unsupported interpolation type. Currently only allow 2 or 7");
     }

@@ -896,10 +896,12 @@ public class Summary2 extends Iced {
       sb.append("<th>mean</th><td>" + Utils.p2d(stats.mean)+"</td>");
       sb.append("<th>sd</th><td>" + Utils.p2d(stats.sd) + "</td>");
       sb.append("<th>zeros</th><td>" + stats.zeros + "</td>");
+      sb.append("<tr>");
       sb.append("<th>min[" + stats.mins.length + "]</th>");
       for( double min : stats.mins ) {
         sb.append("<td>" + Utils.p2d(min) + "</td>");
       }
+      sb.append("<tr>");
       sb.append("<th>max[" + stats.maxs.length + "]</th>");
       for( double max : stats.maxs ) {
         sb.append("<td>" + Utils.p2d(max) + "</td>");

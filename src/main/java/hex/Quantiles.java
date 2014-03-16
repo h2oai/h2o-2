@@ -18,19 +18,16 @@ public class Quantiles extends Iced {
   // for GET.
   static final String DOC_GET = "Returns a quantile of a fluid-vec frame";
 
-  public static final int    MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
+  public static final int MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
   // just use [0] here?
   public final double QUANTILES_TO_DO[];
 
-  public long                _totalRows;    // non-empty rows per group
+  public long      _totalRows;    // non-empty rows per group
   // FIX! not sure if I need to save these here from vec
   // why were these 'transient' ? doesn't make sense if hcnt2 stuff wasn't transient
   // they're not very big. are they serialized in the map/reduce?
   final double     _max;
   final double     _min;
-  final double     _mean;
-  final double     _sigma;
-  final long       _naCnt;
   final boolean    _isInt;
   final boolean    _isEnum;
   final String[]   _domain;
@@ -129,9 +126,6 @@ public class Quantiles extends Iced {
     _domain = vec.isEnum() ? vec.domain() : null;
     _max = vec.max();
     _min = vec.min();
-    _mean = vec.mean();
-    _sigma = vec.sigma();
-    _naCnt = vec.naCnt();
 
     _totalRows = 0;
     QUANTILES_TO_DO = new double[1];
