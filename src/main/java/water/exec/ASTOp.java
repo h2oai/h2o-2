@@ -1,5 +1,7 @@
 package water.exec;
+import water.util.Log;
 
+import hex.Quantiles;
 import hex.la.Matrix;
 
 import java.util.*;
@@ -951,9 +953,10 @@ class ASTSeq extends ASTOp {
   }
 }
 
-// Compute sample quantiles given a set of cutoffs.
+// Compute exact quantiles given a set of cutoffs, using multipass binning algo.
 class ASTQtile extends ASTOp {
   @Override String opStr() { return "quantile"; }
+
   ASTQtile( ) {
     super(new String[]{"quantile","x","probs"},
           new Type[]{Type.ARY, Type.ARY, Type.ARY},
@@ -962,58 +965,65 @@ class ASTQtile extends ASTOp {
           OPA_RIGHT);
   }
   @Override ASTQtile make() { return new ASTQtile(); }
+
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame x = env.ary(-2);
     Vec xv  = x          .theVec("Argument #1 in Quantile contains more than 1 column.");
     Vec pv  = env.ary(-1).theVec("Argument #2 in Quantile contains more than 1 column.");
     double p[] = new double[(int)pv.length()];
-    for (int i = 0; i < pv.length(); i++)
+
+    for (int i = 0; i < pv.length(); i++) {
       if ((p[i]=pv.at((long)i)) < 0 || p[i] > 1)
         throw new  IllegalArgumentException("Quantile: probs must be in the range of [0, 1].");
-    double samples[] = new Resample(10000).doAll(x)._local;
-    Arrays.sort(samples);
+    }
+    if ( xv.isEnum() ) {
+        throw new  IllegalArgumentException("Quantile: column type cannot be Enum.");
+    }
+
+    // FIX! might not be needed
+    Futures fs = new Futures();
+    xv.rollupStats(fs);
+    fs.blockForPending();
+
     // create output vec
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
-    for (double prob : p) {
-      double value;
-      int ix = (int)(samples.length * prob);
-      if (ix >= samples.length) value = xv.max();
-      else if (prob == 0) value = xv.min();
-      else value = samples[ix];
-      nc.addNum(value);
+
+    final int MAX_ITERATIONS = 16;
+    final int MAX_QBINS = 1000; // less uses less memory, can take more passes
+    final boolean MULTIPASS = true; // approx in 1 pass if false
+    final int INTERPOLATION = 7; // linear if quantile not exact on row. 2 uses mean.
+
+    Quantiles[] qbins = null;
+    double valStart = xv.min();
+    double valEnd = xv.max();
+    double result;
+    for (double quantile : p) {
+      // FIX! should really break this loop out into a multipass single type 7 quantile thing.
+      // Type 7 matches R default
+      for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+        qbins = new Quantiles.BinTask2(quantile, MAX_QBINS, valStart, valEnd, 
+          MULTIPASS, INTERPOLATION).doAll(xv)._qbins;
+        if ( qbins == null ) break;
+        else {
+          qbins[0].finishUp(xv);
+          Log.debug("\nQ_ multipass iteration: "+iteration+
+            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins[0]._valBinSize);
+          // next iteration
+          valStart = qbins[0]._newValStart;
+          valEnd = qbins[0]._newValEnd;
+          if ( qbins[0]._done ) break;
+        }
+      }
+      if ( qbins == null ) result = Double.NaN;
+      else result = qbins[0]._pctile[0];
+      nc.addNum(result);
     }
-    nc.close(0,null);
+
+    nc.close(0, null);
     Vec v = av.close(null);
     env.poppush(argcnt, new Frame(new String[]{"Quantile"}, new Vec[]{v}), null);
-  }
-  static class Resample extends MRTask2<Resample> {
-    final int _total;
-    public double _local[];
-    public Resample(int nsample) { _total = nsample; }
-    @Override public void map(Chunk chk) {
-      Random r = new Random(chk._start);
-      int ns = Math.min(chk._len,(int)(_total*(double)chk._len/vecs(0).length()));
-      _local = new double[ns];
-      int n = 0, fill=0;
-      double val;
-      if (ns == chk._len)
-        for (n = 0; n < ns; n++) {
-          if (!Double.isNaN(val = chk.at0(n))) _local[fill++] = val;
-        }
-      else
-        for (n = 0; n < ns; n++) {
-          int i = r.nextInt(chk._len);
-          if (!Double.isNaN(val = chk.at0(i))) _local[fill++] = val;
-        }
-      _local = Arrays.copyOf(_local,fill);
-    }
-    @Override public void reduce(Resample other) {
-      int appendAt = _local.length;
-      _local = Arrays.copyOf(_local, _local.length+other._local.length);
-      System.arraycopy(other._local,0,_local,appendAt,other._local.length);
-    }
   }
 }
 

@@ -89,8 +89,8 @@ public class QuantilesPage extends Request2 {
     Vec[] vecs = new Vec[1];
     String[] names = new String[1];
     vecs[0] = column;
-    names[0] = source_key.names()[source_key.find(column)];
-    Frame fr = new Frame(names, vecs);
+    // names[0] = source_key.names()[source_key.find(column)];
+    // Frame fr = new Frame(names, vecs);
 
     Futures fs = new Futures();
     for( Vec vec : vecs) {
@@ -118,7 +118,6 @@ public class QuantilesPage extends Request2 {
       qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
         // multiPass, interpolation_type).doAll(fr)._qbins;
         multiPass, interpolation_type).doAll(vecs[0])._qbins;
-      // can we just overwrite it with a new one?
       Log.debug("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
       // Have to get this internal state, and copy this state for the next iteration
@@ -177,7 +176,8 @@ public class QuantilesPage extends Request2 {
           // multiPass, interpolation_type).doAll(fr)._qbins;
           multiPass, interpolation_type).doAll(vecs[0])._qbins;
         iterations = b + 1;
-        if ( qbins2 != null ) {
+        if ( qbins2 == null ) break;
+        else {
           qbins2[0].finishUp(vecs[0]);
 
           Log.debug("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
