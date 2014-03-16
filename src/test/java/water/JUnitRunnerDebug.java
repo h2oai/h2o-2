@@ -45,13 +45,17 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       // tests = JUnitRunner.all();
-//      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
+
+      // Neural Net - deprecated
 //      tests.add(NeuralNetSpiralsTest.class); //compare NeuralNet vs reference
 //      tests.add(NeuralNetIrisTest.class); //compare NeuralNet vs reference
-      tests.add(DeepLearningSpiralsTest.class); //compare NN vs reference
-      tests.add(DeepLearningIrisTest.class); //compare NN vs reference
-      tests.add(DeepLearningProstateTest.class); //compare NN vs reference
-      tests.add(MRUtilsTest.class); //compare NN vs reference
+
+      // Deep Learning tests
+//      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
+      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
+      tests.add(DeepLearningIrisTest.class); //compare Deep Learning vs reference
+      tests.add(DeepLearningProstateTest.class); //test Deep Learning
+      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
       tests.add(Dropout.class); //test NN Dropput
 
       // Uncomment this to sleep here and use the browser.
