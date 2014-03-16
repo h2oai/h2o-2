@@ -295,6 +295,7 @@ public class MRUtils {
     // Re-try if we didn't get at least one example from each class
     if (Utils.minValue(dist) == 0) {
       Log.info("Re-doing stratified sampling because not all classes were represented (unlucky draw).");
+      r.delete();
       return sampleFrameStratified(fr, label, sampling_ratios, seed+1, debug);
     }
 
