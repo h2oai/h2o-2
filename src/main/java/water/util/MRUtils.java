@@ -84,7 +84,7 @@ public class MRUtils {
 
     // rebalance only if the number of chunks is less than the number of cores
     if( (fr.vecs()[0].nChunks() < splits/4 || shuffle) && fr.numRows() > splits) {
-      Vec[] vecs = fr.vecs();
+      Vec[] vecs = fr.vecs().clone();
       Log.info("Load balancing dataset, splitting it into up to " + splits + " chunks.");
       long[] idx = null;
       if (shuffle) {
