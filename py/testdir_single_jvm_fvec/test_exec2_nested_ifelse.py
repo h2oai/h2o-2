@@ -15,28 +15,32 @@ initList = [
         ('z.hex', 'z.hex=c(0)'),
         ]
 
-exprListFull = [
-        'r[,1]=r[,1]+r[,3];',
-        'r[,1]=ifelse(r[,1],r[,2], ifelse(r[,1],r[,2],r[,3]));',
-        'r[,1]=ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],ifelse(r[,1],r[,2],r[,3])))));',
-        ]
-
-fail = [
-        'r[,1]=\
-            ifelse(r[,1],r[,2],\
-            ifelse(r[,1],r[,2],\
-            ifelse(r[,1],r[,2],\
-            ifelse(r[,1],r[,2],\
-            ifelse(r[,1],r[,2],r[,3])))));'
-        ]
-
-
-# incrementally concatenate
+# make it incrementally longer, so we can see where it fails. 
 exprList = []
-expr = ""
-for i in range(10):
-    expr += random.choice(exprListFull)
-    exprList.append(expr)
+
+# try it with simple values and with a key column
+base1 = 'r[,1]='
+base2 = 'a='
+for i in range(1,20):
+    # put i in there just so we don't have to count
+    expr1 = "c(%s); " % i + base1
+    expr2 = "a=c(%s);b=c(%s);d=c(%s); " % (i,i,i) + base2
+    for j in range(i):
+        expr1 += 'ifelse(r[,1],r[,2], '
+        expr2 += 'ifelse(a,b, '
+    # last else
+    expr1 += "r[,1]"
+    expr2 += "d"
+    # now add the close parens
+    for j in range(i):
+        expr1 += ")"
+        expr2 += ")"
+    
+    # shouldn't be necessary
+    expr1 += ";"
+    expr2 += ";"
+    exprList.append(expr1)
+    exprList.append(expr2)
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -65,11 +69,7 @@ class Basic(unittest.TestCase):
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
 
-        # now run them just concatenating each time. We don't do any template substitutes, so don't need
-        # exec_expr_list_rand()
-        
         for execExpr in exprList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
 
