@@ -160,6 +160,7 @@ public abstract class Model extends Lockable<Model> {
    * @return
    */
   private Frame scoreImpl(Frame adaptFrm) {
+    assert adaptFrm.vecs().length == _names.length-1 : "Length mismatch: #Vecs: " + adaptFrm.vecs().length  + "\n" + Arrays.toString(_names);
     int ridx = adaptFrm.find(_names[_names.length-1]);
     assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
     // Create a new vector for response
