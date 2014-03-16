@@ -56,7 +56,7 @@ public class Quantiles extends Iced {
 
   // OUTPUTS
   // Basic info
-  @API(help="name"        ) public String    colname;
+  @API(help="name"    ) public String colname; // FIX! currently not set. Need at least one for class loading
 
   public long[]  hcnt2; // finer histogram. not visible
   public double[]  hcnt2_min; // min actual for each bin
@@ -89,7 +89,7 @@ public class Quantiles extends Iced {
     @Override public void map(Chunk[] cs) {
       _qbins = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _qbins[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], _quantile, _max_qbins,
+        _qbins[i] = new Quantiles(_fr.vecs()[i], _quantile, _max_qbins,
           _valStart, _valEnd, _multiPass, _interpolationType).add(cs[i]);
     }
 
@@ -99,7 +99,6 @@ public class Quantiles extends Iced {
     }
   }
 
-  // FIX! should use _max_qbins if available?
   public void finishUp(Vec vec) {
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
@@ -117,10 +116,9 @@ public class Quantiles extends Iced {
     }
   }
 
-  public Quantiles(Vec vec, String name, double quantile, int max_qbins, 
+  public Quantiles(Vec vec, double quantile, int max_qbins, 
         double valStart, double valEnd, boolean multiPass, int interpolationType) {
 
-    colname = name;
     _isEnum = vec.isEnum();
     _isInt = vec.isInt();
     _domain = vec.isEnum() ? vec.domain() : null;
@@ -194,9 +192,9 @@ public class Quantiles extends Iced {
     // hcnt2 implicitly zeroed on new 
   }
 
-  public Quantiles(Vec vec, String name) {
-    // default to single pass median approximation?
-    this(vec, name, 0.5, 1000, vec.min(), vec.max(), false, 7);
+  public Quantiles(Vec vec) {
+    // default to multipass median approximation?
+    this(vec, 0.5, 1000, vec.min(), vec.max(), true, 7);
   }
 
   public Quantiles add(Chunk chk) {
