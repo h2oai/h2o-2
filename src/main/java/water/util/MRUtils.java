@@ -247,6 +247,12 @@ public class MRUtils {
    * @return Stratified frame
    */
   public static Frame sampleFrameStratified(final Frame fr, Vec label, final float[] sampling_ratios, final long seed, final boolean debug) {
+    return sampleFrameStratified(fr, label, sampling_ratios, seed, debug, 0);
+  }
+
+  // internal version with repeat counter
+  // currently hardcoded to do up to 10 tries to get a row from each class, which can be impossible for certain wrong sampling ratios
+  private static Frame sampleFrameStratified(final Frame fr, Vec label, final float[] sampling_ratios, final long seed, final boolean debug, int count) {
     if (fr == null) return null;
     fr.closeAppendables();
     assert(label.isEnum());
@@ -293,10 +299,10 @@ public class MRUtils {
     }
 
     // Re-try if we didn't get at least one example from each class
-    if (Utils.minValue(dist) == 0) {
+    if (Utils.minValue(dist) == 0 && count < 10) {
       Log.info("Re-doing stratified sampling because not all classes were represented (unlucky draw).");
       r.delete();
-      return sampleFrameStratified(fr, label, sampling_ratios, seed+1, debug);
+      return sampleFrameStratified(fr, label, sampling_ratios, seed+1, debug, ++count);
     }
 
     // shuffle intra-chunk
