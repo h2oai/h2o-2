@@ -345,7 +345,10 @@ public abstract class Model extends Lockable<Model> {
     }
 
     // produce packed values
-    return Utils.pack(emap, bmap);
+    int[][] res = Utils.pack(emap, bmap);
+    // Sort values in numeric order to support binary search in TransfVec
+    Utils.sortWith(res[0], res[1]);
+    return res;
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,
