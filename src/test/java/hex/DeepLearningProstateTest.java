@@ -34,7 +34,7 @@ public class DeepLearningProstateTest extends TestUtil {
               false,
       }) {
         for (boolean balance : new boolean[]{
-//                true,
+                true,
                 false,
         }) {
           for (int resp : new int[]{
@@ -46,24 +46,24 @@ public class DeepLearningProstateTest extends TestUtil {
                     DeepLearning.ClassSamplingMethod.Stratified,
                     DeepLearning.ClassSamplingMethod.Uniform
             }) {
+              // FIXME: memory leak: stratified sampling might lead to some chunks not being kept around
+              if (resp == 8 && csm == DeepLearning.ClassSamplingMethod.Stratified && lb) continue;
+
               for (int scoretraining : new int[]{
                       200,
                       0,
               }) {
                 for (int scorevalidation : new int[]{
-                      200,
+                        200,
                         0,
                 }) {
 
-                  Key file = NFSFileVec.make(find_test_file("smalldata/./logreg/prostate.csv"));
-                  Frame frame = ParseDataset2.parse(Key.make(), new Key[]{file});
-                  Frame vframe = new Frame(frame);
-
-                  for (Frame valid : new Frame[]{
-//                          null,
-                          vframe,
-//                          frame,
-                  }) {
+                  for (int vf : new int[]{ 0, 1, -1 }) {
+                    Key file = NFSFileVec.make(find_test_file("smalldata/./logreg/prostate.csv"));
+                    Frame frame = ParseDataset2.parse(Key.make(), new Key[]{file});
+                    Frame valid = null; //no validation
+                    if (vf == 1) valid = frame; //use the same frame for validation
+                    else if (vf == -1) valid = new Frame(frame); //use a different frame for validation
 
                     Key dest = Key.make("prostate");
 
@@ -83,6 +83,7 @@ public class DeepLearningProstateTest extends TestUtil {
                       p.score_training_samples = scoretraining;
                       p.score_validation_samples = scorevalidation;
                       p.balance_classes = balance;
+                      p.quiet_mode = true;
                       p.score_validation_sampling = csm;
 //                      p.execImpl();
 
@@ -188,9 +189,9 @@ public class DeepLearningProstateTest extends TestUtil {
                     } //classifier
                     mymodel.delete();
                     UKV.remove(dest);
+                    frame.delete();
+                    if (valid != null) valid.delete();
                   }
-                  frame.delete();
-                  vframe.delete();
                 }
               }
             }
