@@ -371,6 +371,7 @@ public class DeepLearning extends Job.ValidatedJob {
     if (checkpoint == null) cp = initModel();
     else {
       final DeepLearningModel previous = UKV.get(checkpoint);
+      if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       cp = new DeepLearningModel(previous, destination_key, job_key);
       try {
         cp.write_lock(self());
@@ -537,7 +538,6 @@ public class DeepLearning extends Job.ValidatedJob {
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, timeStart, self()));
 
       Log.info("Finished training the Deep Learning model.");
-      emptyLTrash();
       return model;
     }
     catch(JobCancelledException ex) {
@@ -552,6 +552,7 @@ public class DeepLearning extends Job.ValidatedJob {
     finally {
       if (model != null) model.unlock(self());
       unlock_data();
+      emptyLTrash();
     }
   }
 
