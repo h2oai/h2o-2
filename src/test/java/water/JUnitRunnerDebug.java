@@ -1,6 +1,9 @@
 package water;
 
-import hex.*;
+import hex.DeepLearningIrisTest;
+import hex.DeepLearningProstateTest;
+import hex.DeepLearningSpiralsTest;
+import hex.MRUtilsTest;
 import hex.deeplearning.Dropout;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
@@ -48,6 +51,7 @@ public class JUnitRunnerDebug {
       tests.add(DeepLearningSpiralsTest.class); //compare NN vs reference
       tests.add(DeepLearningIrisTest.class); //compare NN vs reference
       tests.add(DeepLearningProstateTest.class); //compare NN vs reference
+      tests.add(MRUtilsTest.class); //compare NN vs reference
       tests.add(Dropout.class); //test NN Dropput
 
       // Uncomment this to sleep here and use the browser.
