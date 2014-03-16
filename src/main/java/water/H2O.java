@@ -658,30 +658,16 @@ public final class H2O {
     FJPS[GUI_PRIORITY] = new ForkJoinPool2(GUI_PRIORITY,2);
   }
 
-  // Easy peeks at the low FJ queue
-  public static int getLoQueue() {
-    int sum=0;
-    for( int i=0; i<MIN_HI_PRIORITY; i++ )
-      if( FJPS[i]!=null ) sum += FJPS[i].getQueuedSubmissionCount();
-      else break;
-    return sum;
-  }
-  public static int loQPoolSize() {
-    int sum=0;
-    for( int i=0; i<MIN_HI_PRIORITY; i++ )
-      if( FJPS[i]!=null ) sum += FJPS[i].getPoolSize();
-      else break;
-    return sum;
-  }
-  public static int getHiQueue (int i) { return FJPS[i+MIN_HI_PRIORITY].getQueuedSubmissionCount();}
-  public static int hiQPoolSize(int i) { return FJPS[i+MIN_HI_PRIORITY].getPoolSize();             }
+  // Easy peeks at the FJ queues
+  public static int getWrkQueueSize  (int i) { return FJPS[i]==null ? -1 : FJPS[i].getQueuedSubmissionCount();}
+  public static int getWrkThrPoolSize(int i) { return FJPS[i]==null ? -1 : FJPS[i].getPoolSize();             }
 
   // Submit to the correct priority queue
   public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
     assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
     if( FJPS[priority]==null )
-      synchronized( H2O.class ) { FJPS[priority] = new ForkJoinPool2(priority,-1); System.out.println("Adding F/J/Q# "+priority);}
+      synchronized( H2O.class ) { FJPS[priority] = new ForkJoinPool2(priority,-1); }
     FJPS[priority].submit(task);
     return task;
   }
