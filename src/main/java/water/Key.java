@@ -58,7 +58,7 @@ public final class Key extends Iced implements Comparable {
   private static final AtomicLongFieldUpdater<Key> _cacheUpdater =
     AtomicLongFieldUpdater.newUpdater(Key.class, "_cache");
 
-  protected final boolean isVec() { return _kb != null && _kb.length > 0 && _kb[0] == VEC; }
+  public final boolean isVec() { return _kb != null && _kb.length > 0 && _kb[0] == VEC; }
 
   // Accessors and updaters for the Cloud-specific cached stuff.
   // The Cloud index, a byte uniquely identifying the last 256 Clouds. It

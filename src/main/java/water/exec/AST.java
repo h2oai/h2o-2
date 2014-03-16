@@ -198,7 +198,7 @@ class ASTApply extends AST {
     int sp = env._sp;
     for( AST arg : _args ) arg.exec(env);
     assert sp+_args.length==env._sp;
-    env.fcn(-_args.length).apply(env,_args.length);
+    env.fcn(-_args.length).apply(env,_args.length,this);
   }
 }
 
@@ -304,7 +304,7 @@ class ASTSlice extends AST {
 // --------------------------------------------------------------------------
 class ASTNamedCol extends AST {
   final AST _ast;               // named slice of an expression
-  final String _colname;        // 
+  final String _colname;        //
   ASTNamedCol( Type t, AST ast, String colname ) {
     super(t); _ast = ast; _colname=colname;
   }
@@ -385,9 +385,7 @@ class ASTAssign extends AST {
   static ASTAssign parse(Exec2 E, AST ast, boolean EOS) {
     int x = E._x;
     // Allow '=' and '<-' assignment
-    if( !E.peek('=',EOS) ) {
-      if( !(E.peek('<',EOS) && E.peek('-',EOS)) ) { E._x=x; return null; }
-    }
+    if( !E.isAssign(EOS) ) return null;
     AST ast2=ast;
     ASTSlice slice= null;
     if( (ast instanceof ASTSlice) ) // Peek thru slice op
@@ -427,11 +425,9 @@ class ASTAssign extends AST {
     int x = E._x;
     String var = ASTId.parseNew(E);
     if( var == null ) return null;
-    if( !E.peek('=',EOS) ) {        // Not an assignment
-      if( !(E.peek('<',EOS) && E.peek('-',EOS)) ) { // The other assignment operator
-        if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
-        E._x=x; return null;      // Let higher parse levels sort it out
-      }
+    if( !E.isAssign(EOS) ) {
+      if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
+      E._x = x; return null;      // Let higher parse levels sort it out
     }
     x = E._x;
     AST eval = parseCXExpr(E, EOS);

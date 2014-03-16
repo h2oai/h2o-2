@@ -85,6 +85,7 @@ public class Vec extends Iced {
 
   // A 1-element Vec
   public Vec( Key key, double d ) {
+    assert key.isVec();
     _key = key;
     _espc = new long[]{0,1};
     Futures fs = new Futures();

@@ -556,7 +556,7 @@ public final class H2O {
   public static Collection<Value> values( ) { return STORE.values(); }
   public static int store_size() { return STORE.size(); }
 
-  // Global KeySet.  
+  // Global KeySet.
   // Pulls global keys locally, then hands out a local keySet.
   // Since this can get big, allow some filtering.
   public static Set<Key> globalKeySet( String clzname ) {
@@ -621,7 +621,7 @@ public final class H2O {
 
   // F/J threads that remember the priority of the last task they started
   // working on.
-  static class FJWThr extends ForkJoinWorkerThread {
+  public static class FJWThr extends ForkJoinWorkerThread {
     public int _priority;
     FJWThr(ForkJoinPool pool) {
       super(pool);
@@ -643,12 +643,10 @@ public final class H2O {
   // A standard FJ Pool, with an expected priority level.
   private static class ForkJoinPool2 extends ForkJoinPool {
     public final int _priority;
-    ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p!=MIN_PRIORITY); _priority = p; }
+    ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p<MIN_HI_PRIORITY); _priority = p; }
     public H2OCountedCompleter poll() { return (H2OCountedCompleter)pollSubmission(); }
   }
 
-  // Normal-priority work is generally directly-requested user ops.
-  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,-1);
   // Hi-priority work, sorted into individual queues per-priority.
   // Capped at a small number of threads per pool.
   private static final ForkJoinPool2 FJPS[] = new ForkJoinPool2[MAX_PRIORITY+1];
@@ -658,12 +656,23 @@ public final class H2O {
     for( int i=MIN_HI_PRIORITY+1; i<MAX_PRIORITY; i++ )
       FJPS[i] = new ForkJoinPool2(i,NUMCPUS); // All CPUs, but no more for blocking purposes
     FJPS[GUI_PRIORITY] = new ForkJoinPool2(GUI_PRIORITY,2);
-    FJPS[0] = FJP_NORM;
   }
 
   // Easy peeks at the low FJ queue
-  public static int getLoQueue (     ) { return FJP_NORM.getQueuedSubmissionCount();}
-  public static int loQPoolSize(     ) { return FJP_NORM.getPoolSize();             }
+  public static int getLoQueue() {
+    int sum=0;
+    for( int i=0; i<MIN_HI_PRIORITY; i++ )
+      if( FJPS[i]!=null ) sum += FJPS[i].getQueuedSubmissionCount();
+      else break;
+    return sum;
+  }
+  public static int loQPoolSize() {
+    int sum=0;
+    for( int i=0; i<MIN_HI_PRIORITY; i++ )
+      if( FJPS[i]!=null ) sum += FJPS[i].getPoolSize();
+      else break;
+    return sum;
+  }
   public static int getHiQueue (int i) { return FJPS[i+MIN_HI_PRIORITY].getQueuedSubmissionCount();}
   public static int hiQPoolSize(int i) { return FJPS[i+MIN_HI_PRIORITY].getPoolSize();             }
 
@@ -671,6 +680,8 @@ public final class H2O {
   public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
     assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
+    if( FJPS[priority]==null )
+      synchronized( H2O.class ) { FJPS[priority] = new ForkJoinPool2(priority,-1); System.out.println("Adding F/J/Q# "+priority);}
     FJPS[priority].submit(task);
     return task;
   }
@@ -771,7 +782,7 @@ public final class H2O {
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
-    public int    nthreads=Math.max(99,10*NUMCPUS); // Max number of F/J threads in the low-priority batch queue
+    public int    nthreads=4*NUMCPUS; // Max number of F/J threads in each low-priority batch queue
     public String h = null;
     public String help = null;
     public String version = null;
@@ -819,7 +830,7 @@ public final class H2O {
     "\n" +
     "    -nthreads <#threads>\n" +
     "          Maximum number of threads in the low priority batch-work queue.\n" +
-    "          (The default is 99.)\n" +
+    "          (The default is 4*numcpus.)\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
@@ -1664,7 +1675,7 @@ public final class H2O {
 
     // Timing things that can be tuned if needed.
     final private int maxFailureSeconds = 180;
-    final private int maxConsecutiveFailures = 9999999;
+    final private int maxConsecutiveFailures = 20;
     final private int checkIntervalSeconds = 10;
     final private int timeoutSeconds = 30;
     final private int millisPerSecond = 1000;

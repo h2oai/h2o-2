@@ -103,7 +103,7 @@ public class Frame extends Lockable<Frame> {
 
  /** Appends a named column, keeping the last Vec as the response */
   public Frame add( String name, Vec vec ) {
-    assert _vecs.length == 0 || anyVec().group().equals(vec.group());
+    assert _vecs.length == 0 || anyVec().group().equals(vec.group()) || Arrays.equals(anyVec()._espc,vec._espc);
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len = _names != null ? _names.length : 0;
     _names = _names != null ? Arrays.copyOf(_names,len+1) : new String[len+1];
@@ -382,7 +382,7 @@ public class Frame extends Lockable<Frame> {
     if( v0 == null ) return s;
     int nc = v0.nChunks();
     s += "Chunk starts: {";
-    for( int i=0; i<nc; i++ ) s += v0.elem2BV(i)._start+",";
+    for( int c=0; c<nc; c++ ) s += v0.chunk2StartElem(c)+",";
     s += "}";
     return s;
   }
@@ -583,7 +583,7 @@ public class Frame extends Lockable<Frame> {
         cols[(int)i] = v.at8(i);
     } else
       throw new IllegalArgumentException("Columns is specified by an unsupported data type (" + ocols.getClass().getName() + ")");
-    
+
     // Since cols is probably short convert to a positive list.
     int c2[] = null;
     if( cols==null ) {
