@@ -167,15 +167,31 @@ class Basic(unittest.TestCase):
             # execExpr = "quantile(%s[,1],%s);" % (hex_key, thresholds)
 
             print "Comparing (two places) each of the summary2 threshold quantile results, to single exec quantile"
+            h2o.beta_features = True
             for i, threshold in enumerate(thresholds):
-                execExpr = "quantile(%s[,1], c(%s));" % (hex_key, threshold)
-                (resultExec, result) = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-                h2p.green_print("\nresultExec: %s" % h2o.dump_json(resultExec))
-                h2p.blue_print("\nthreshold: %.2f Exec quantile: %s Summary2: %s" % (threshold, result, pt[i]))
-                if not result:
-                    raise Exception("exec result: %s for quantile: %s is bad" % (result, threshold))
-                h2o_util.assertApproxEqual(result, pctile[i], tol=maxDelta, 
-                    msg='exec percentile: %s too different from expected: %s' % (result, pctile[i]))
+                # FIX! do two?
+                if i!=0:
+                    execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, threshold)
+                    (resultExec, result) = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                    h2p.green_print("\nresultExec: %s" % h2o.dump_json(resultExec))
+                    h2p.blue_print("\nthreshold: %.2f Exec quantile: %s Summary2: %s" % (threshold, result, pt[i]))
+                    if not result:
+                        raise Exception("exec result: %s for quantile: %s is bad" % (result, threshold))
+                    h2o_util.assertApproxEqual(result, pctile[i], tol=maxDelta, 
+                        msg='exec percentile: %s too different from expected: %s' % (result, pctile[i]))
+                # for now, do one with all, but no checking
+                else:
+                    # This seemed to "work" but how do I get the key name for the list of values returned
+                    # the browser result field seemed right, but nulls in the key
+                    execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, ",".join(map(str,thresholds)))
+                    (resultExec, result) = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                    inspect = h2o_cmd.runInspect(key='r2') 
+                    numCols = inspect['numCols']
+                    numRows = inspect['numRows']
+
+                    self.assertEqual(numCols,1)
+                    self.assertEqual(numRows,len(thresholds))
+                    # FIX! should run thru the values in the col? how to get
 
             # compare the last one
             if colname!='':
