@@ -19,14 +19,17 @@ public class MRUtils {
    */
   public static Frame sampleFrame(Frame fr, final long rows, final long seed) {
     if (fr == null) return null;
+    fr.closeAppendables();
     final float fraction = rows > 0 ? (float)rows / fr.numRows() : 1.f;
     if (fraction >= 1.f) return fr;
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
         final Random rng = getDeterRNG(seed + cs[0].cidx());
+        int count = 0;
         for (int r = 0; r < cs[0]._len; r++)
-          if (rng.nextFloat() < fraction) {
+          if (rng.nextFloat() < fraction || (count == 0 && r == cs[0]._len-1) ) {
+            count++;
             for (int i = 0; i < ncs.length; i++) {
               ncs[i].addNum(cs[i].at0(r));
             }
@@ -47,6 +50,7 @@ public class MRUtils {
    * @return Shuffled frame
    */
   public static Frame shuffleFramePerChunk(Frame fr, final long seed) {
+    fr.closeAppendables();
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
@@ -71,14 +75,16 @@ public class MRUtils {
    * @return Shuffled frame
    */
   public static Frame shuffleAndBalance(final Frame fr, long seed, final boolean shuffle) {
+    fr.closeAppendables();
     int cores = 0;
     for( H2ONode node : H2O.CLOUD._memary )
       cores += node._heartbeat._num_cpus;
     final int splits = 4*cores;
 
-    Vec[] vecs = fr.vecs();
+
     // rebalance only if the number of chunks is less than the number of cores
-    if( vecs[0].nChunks() < splits/4 || shuffle ) {
+    if( (fr.vecs()[0].nChunks() < splits/4 || shuffle) && fr.numRows() > splits) {
+      Vec[] vecs = fr.vecs();
       Log.info("Load balancing dataset, splitting it into up to " + splits + " chunks.");
       long[] idx = null;
       if (shuffle) {
@@ -115,9 +121,9 @@ public class MRUtils {
       }
       fs.blockForPending();
       Log.info("Load balancing done.");
+      return new Frame(fr.names(), vecs);
     }
-    fr.reloadVecs();
-    return new Frame(fr.names(), vecs);
+    return fr;
   }
 
   /**
@@ -242,6 +248,7 @@ public class MRUtils {
    */
   public static Frame sampleFrameStratified(final Frame fr, Vec label, final float[] sampling_ratios, final long seed, final boolean debug) {
     if (fr == null) return null;
+    fr.closeAppendables();
     assert(label.isEnum());
     assert(sampling_ratios != null && sampling_ratios.length == label.domain().length);
     final int labelidx = fr.find(label); //which column is the label?
@@ -292,8 +299,9 @@ public class MRUtils {
     }
 
     // shuffle intra-chunk
-    r = shuffleFramePerChunk(r, seed+0x580FF13);
+    Frame shuffled = shuffleFramePerChunk(r, seed+0x580FF13);
+    r.delete();
 
-    return r;
+    return shuffled;
   }
 }
