@@ -225,7 +225,7 @@ public class Inspect2 extends Request2 {
           .append(", ").append(c0.chunk2StartElem(j)).append("</td>");
         for( int i=0; i<cols.length; i++ ) {
           // Report chunk-type (compression scheme)
-          String clazz = svecs[i].elem2BV(j).getClass().getSimpleName();
+          String clazz = svecs[i].chunkForChunkIdx(j).getClass().getSimpleName();
           String trim = clazz.replaceAll("Chunk","");
           sb.append("<td>").append(trim).append("</td>");
         }
@@ -266,7 +266,7 @@ public class Inspect2 extends Request2 {
       return str;
     }
     if( v.isInt() )  return Long.toString(row >= 0 ? v.at8(row) : (long)d);
-    Chunk c = v.elem2BV(0);
+    Chunk c = v.chunkForChunkIdx(0);
     Class Cc = c.getClass();
     if( Cc == C1SChunk.class ) return x2(d,((C1SChunk)c)._scale);
     if( Cc == C2SChunk.class ) return x2(d,((C2SChunk)c)._scale);

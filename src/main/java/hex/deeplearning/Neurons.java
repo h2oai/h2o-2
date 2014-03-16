@@ -355,10 +355,8 @@ public abstract class Neurons {
 //          double b = 12 + a * (6 + a * (3 + a));
 //          _a[o] = (_a[o] * b) / (a * b + 24);
 
-          // use this identity: tanh = 2*sigmoid(2*x) - 1, evaluates faster than tanh(x)
-          _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
-
-//          _a[o] = Math.tanh(_a[o]); //slow
+          _a[o] = 1. - 2. / (1. + Math.exp(2*_a[o])); //faster (less accurate, but fine for values that matter)
+//          _a[o] = Math.tanh(_a[o]); //slow (too accurate)
         }
       }
     }

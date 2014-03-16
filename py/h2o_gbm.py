@@ -1,6 +1,5 @@
 import h2o_cmd, h2o
 import re, random, math
-import matplotlib
 
 def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fListTitle=None, fList=None, fLabel=None, server=False):
     if h2o.python_username!='kevin':
@@ -8,6 +7,7 @@ def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fLis
 
     # Force matplotlib to not use any Xwindows backend.
     if server:
+        import matplotlib
         matplotlib.use('Agg')
 
     import pylab as plt

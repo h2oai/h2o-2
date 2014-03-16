@@ -1,7 +1,6 @@
 package water;
 
-import hex.ConfusionMatrix;
-import hex.VariableImportance;
+import hex.*;
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -100,13 +99,15 @@ public abstract class Model extends Lockable<Model> {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
   }
+  /** Returns number of input features */
+  public int nfeatures() { return _names.length - 1; }
 
   /** For classifiers, confusion matrix on validation set. */
   public ConfusionMatrix cm() { return null; }
   /** Returns mse for validation set. */
   public double mse() { return Double.NaN; }
-  /** Variable importance of individual variables measured by this model. */
-  public VariableImportance varimp() { return null; }
+  /** Variable importance of individual input features measured by this model. */
+  public VarImp varimp() { return null; }
 
   /** Bulk score for given <code>fr<code> frame.
    * The frame is always adapted to this model.
@@ -344,7 +345,10 @@ public abstract class Model extends Lockable<Model> {
     }
 
     // produce packed values
-    return Utils.pack(emap, bmap);
+    int[][] res = Utils.pack(emap, bmap);
+    // Sort values in numeric order to support binary search in TransfVec
+    Utils.sortWith(res[0], res[1]);
+    return res;
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,

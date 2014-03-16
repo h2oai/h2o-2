@@ -5,7 +5,7 @@ import copy
 print "Needs numpy, rpy2, and R installed. Run on 192.168.171-175"
 # FIX! maybe should update to build_cloud_with_hosts to run on 171-175?
 
-import h2o, h2o_cmd, h2o_glm, h2o_util
+import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_import as h2i
 import numpy as np
 from rpy2 import robjects as ro
 
@@ -120,6 +120,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_umass(self):
+        h2o.beta_features = True
         if (1==1):
             csvFilenameList = [
                 # col is zero based
@@ -155,18 +156,24 @@ class Basic(unittest.TestCase):
 
             # FIX! do something about this file munging
             csvPathname1 = 'logreg/umass_statdata/' + csvFilename
-            fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
+            fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname1, returnFullPath=True)
 
             csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename + '_2.csv'
-            h2o_util.file_clean_for_R(csvPathname1, csvPathname2)
+            h2o_util.file_clean_for_R(fullPathname, csvPathname2)
 
             # we can inspect this to get the number of cols in the dataset (trust H2O here)
-            parseResult = h2o_cmd.import_parse(path=csvPathname2, schema='put', hex_key=csvFilename, timeoutSecs=10)
+            parseResult = h2i.import_parse(path=csvPathname2, schema='put', hex_key=csvFilename, timeoutSecs=10)
             # we could specify key2 above but this is fine
             destination_key = parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, destination_key)
-            num_cols = inspect['num_cols']
-            num_rows = inspect['num_rows']
+
+            if h2o.beta_features:
+                num_cols = inspect['numCols']
+                num_rows = inspect['numRows']
+            else:
+                num_cols = inspect['num_cols']
+                num_rows = inspect['num_rows']
+
             print "num_cols", num_cols, "num_rows", num_rows
             ##  print h2o.dump_json(inspect)
 
@@ -198,10 +205,26 @@ class Basic(unittest.TestCase):
         
             print 'x:', x
 
-            kwargs = { 'n_folds': 0, 'y': y, 'x': x,
-                'family': family, 'link': 'familyDefault',
-                'alpha': 0, 'lambda': 0, 'case_mode': '=', 'case': 1,
-                'beta_epsilon': 1.0E-4, 'max_iter': 50 }
+            if h2o.beta_features:
+                kwargs = { 
+                    'n_folds': 0, 
+                    'response': y, 
+                    # what about x?
+                    'family': family, 
+                    'alpha': 0, 
+                    'lambda': 1e-4,
+                    'beta_epsilon': 1.0E-4, 
+                    'max_iter': 50 }
+            else:
+                kwargs = { 
+                    'n_folds': 0, 
+                    'y': y, 
+                    'x': x,
+                    'family': family, 
+                    'alpha': 0, 
+                    'lambda': 1e-4,
+                    'beta_epsilon': 1.0E-4, 
+                    'max_iter': 50 }
 
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)

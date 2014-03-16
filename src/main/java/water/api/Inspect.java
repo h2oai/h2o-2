@@ -13,6 +13,7 @@ import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetModel;
 import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
+import hex.gbm.GBM;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
 import hex.deeplearning.DeepLearning;
@@ -339,6 +340,7 @@ public class Inspect extends Request {
           + PCA.link(key, "PCA") + ", "
           + RF.link(key, "Single Node Random Forest") + ", "
           + DRF.link(key, "Distributed Random Forest") + ", "
+          + GBM.link(key, "GBM") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", "
           + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
@@ -620,21 +622,21 @@ public class Inspect extends Request {
 
       row.addProperty(ROW, FIRST_CHUNK);
       for( int i = 0; i < _f.numCols(); i++ )
-        row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(0).getClass().getSimpleName());
+        row.addProperty(_f._names[i], _f.vecs()[i].chunkForChunkIdx(0).getClass().getSimpleName());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {
 
         for( int ci = 0; ci < _f.vecs()[0].nChunks(); ci++ ) {
-//          Chunk chunk = _f.vecs()[ci].elem2BV(ci);
+//          Chunk chunk = _f.vecs()[ci].chunkForChunkIdx(ci);
           String prefix = CHUNK + " " + ci + " ";
           row.addProperty(ROW, prefix + TYPE);
           for( int i = 0; i < _f.numCols(); i++ )
-            row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(ci).getClass().getSimpleName());
+            row.addProperty(_f._names[i], _f.vecs()[i].chunkForChunkIdx(ci).getClass().getSimpleName());
           sb.append(defaultBuilder(row).build(response, row, contextName));
           row.addProperty(ROW, prefix + SIZE);
           for( int i = 0; i < _f.numCols(); i++ )
-            row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(ci).byteSize());
+            row.addProperty(_f._names[i], _f.vecs()[i].chunkForChunkIdx(ci).byteSize());
           sb.append(defaultBuilder(row).build(response, row, contextName));
         }
       } else {

@@ -38,8 +38,8 @@ public class TransfVec extends WrappedVec {
     _domain = domain;
   }
 
-  @Override public Chunk elem2BV(int cidx) {
-    Chunk c = masterVec().elem2BV(cidx);
+  @Override public Chunk chunkForChunkIdx(int cidx) {
+    Chunk c = masterVec().chunkForChunkIdx(cidx);
     if (_indexes!=null) // two way mapping
       return new TransfChunk(c, this);
     else // single way mapping

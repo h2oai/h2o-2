@@ -9,8 +9,6 @@ import org.junit.Test;
 import water.*;
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.parser.CustomParser;
-import water.parser.CustomParser.ParserType;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }
@@ -41,7 +39,7 @@ public class ParserTest2 extends TestUtil {
                             Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
         }
     } finally {
-//      fr.delete();
+      fr.delete();
     }
   }
 
@@ -444,11 +442,11 @@ public class ParserTest2 extends TestUtil {
     Class [] expectedTypes = new Class[]{C1Chunk.class,C1SChunk.class,C2Chunk.class,C2SChunk.class,C4Chunk.class,C4FChunk.class,C8Chunk.class,C8DChunk.class, C1Chunk.class};
     assertTrue(fr.numCols() == expectedTypes.length);
 //    for(int i = 0; i < expectedTypes.length; ++i)
-//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].elem2BV(0)));
+//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].chunkForChunkIdx(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].chunkForChunkIdx(0)));
     assertEquals(9,nlines);
     for(int i = 0; i < nlines-2; ++i)
       for( Vec v : fr.vecs() )
-        assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),
+        assertTrue("error at line "+i+", vec " + v.chunkForChunkIdx(0).getClass().getSimpleName(),
                    !Double.isNaN(v.at(i)) && !v.isNA(i) );
     int j = 0;
     for( Vec v:fr.vecs() ) {
@@ -491,7 +489,15 @@ public class ParserTest2 extends TestUtil {
         "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
         "1 2:.2 5:.5 9:.9\n1 3:.3 6:.6\n",
         "-1 7:.7 8:.8 9:.9\n1 20:2.\n",
-        "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9"
+        "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9\n",
+      "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
+      "1 2:.2 5:.5 9:.9\n1 3:.3 6:.6\n",
+      "-1 7:.7 8:.8 9:.9\n1 20:2.\n",
+      "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9\n",
+      "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
+      "1 2:.2 5:.5 9:.9\n1 3:.3 6:.6\n",
+      "-1 7:.7 8:.8 9:.9\n1 20:2.\n",
+      "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9\n"
     };
 
     double[][] exp = new double[][] {
@@ -503,6 +509,22 @@ public class ParserTest2 extends TestUtil {
         d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0,2.0),
         d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
         d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .1, .0, .0, .4, .0, .0, .0, .8, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .3, .0, .0, .6, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .0, .0, .0, .0, .0, .0, .7, .8, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0,2.0),
+      d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .1, .0, .0, .4, .0, .0, .0, .8, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .3, .0, .0, .6, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .0, .0, .0, .0, .0, .0, .7, .8, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0,2.0),
+      d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
     };
     String[] dataset = data;
     Key k = FVecTest.makeByteVec(Key.make("svmtest_bits").toString(),dataset);

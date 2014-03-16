@@ -254,10 +254,10 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
       v = DKV.get(ValueArray.getChunkKey(0,_key));
     else if(isByteVec()){
       ByteVec vec = get();
-      return vec.elem2BV(0).getBytes();
+      return vec.chunkForChunkIdx(0).getBytes();
     } else if(isFrame()){
       Frame fr = get();
-      return ((ByteVec)fr.vecs()[0]).elem2BV(0).getBytes();
+      return ((ByteVec)fr.vecs()[0]).chunkForChunkIdx(0).getBytes();
     }
     // Return empty array if key has been deleted
     return v != null ? v.memOrLoad() : new byte[0];

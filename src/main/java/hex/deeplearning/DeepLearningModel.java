@@ -1,6 +1,7 @@
 package hex.deeplearning;
 
 import hex.FrameTask.DataInfo;
+import hex.VarImp;
 import water.*;
 import water.api.*;
 import water.api.Request.API;
@@ -83,6 +84,10 @@ public class DeepLearningModel extends Model {
     public AUC trainAUC;
     @API(help = "AUC on validation data")
     public AUC validAUC;
+    @API(help = "Hit ratio on training data")
+    public water.api.HitRatio train_hitratio;
+    @API(help = "Hit ratio on validation data")
+    public water.api.HitRatio valid_hitratio;
 
     // regression
     @API(help = "Training MSE")
@@ -434,6 +439,60 @@ public class DeepLearningModel extends Model {
 //          }
 //        }
 
+    /**
+     * Compute Variable Importance, based on
+     * GEDEON: DATA MINING OF INPUTS: ANALYSING MAGNITUDE AND FUNCTIONAL MEASURES
+     * @return variable importances for input features
+     */
+    public float[] computeVariableImportances() {
+      float[] vi = new float[units[0]];
+      Arrays.fill(vi, 0f);
+
+      float[][] Qik = new float[units[0]][units[2]]; //importance of input i on output k
+      float[] sum_wj = new float[units[1]]; //sum of incoming weights into first hidden layer
+      float[] sum_wk = new float[units[2]]; //sum of incoming weights into output layer (or second hidden layer)
+      for (float[] Qi : Qik) Arrays.fill(Qi, 0f);
+      Arrays.fill(sum_wj, 0f);
+      Arrays.fill(sum_wk, 0f);
+
+      // compute sum of absolute incoming weights
+      for( int j = 0; j < units[1]; j++ ) {
+        for( int i = 0; i < units[0]; i++ ) {
+          float wij = weights[0][j*units[0]+i];
+          sum_wj[j] += Math.abs(wij);
+        }
+      }
+      for( int k = 0; k < units[2]; k++ ) {
+        for( int j = 0; j < units[1]; j++ ) {
+          float wjk = weights[1][k*units[1]+j];
+          sum_wk[k] += Math.abs(wjk);
+        }
+      }
+      // compute importance of input i on output k as product of connecting weights going through j
+      for( int i = 0; i < units[0]; i++ ) {
+        for( int k = 0; k < units[2]; k++ ) {
+          for( int j = 0; j < units[1]; j++ ) {
+            float wij = weights[0][j*units[0]+i];
+            float wjk = weights[1][k*units[1]+j];
+            //Qik[i][k] += Math.abs(wij)/sum_wj[j] * wjk; //Wong,Gedeon,Taggart '95
+            Qik[i][k] += Math.abs(wij)/sum_wj[j] * Math.abs(wjk)/sum_wk[k]; //Gedeon '97
+          }
+        }
+      }
+      // normalize Qik over all outputs k
+      for( int k = 0; k < units[2]; k++ ) {
+        float sumQk = 0;
+        for( int i = 0; i < units[0]; i++ ) sumQk += Qik[i][k];
+        for( int i = 0; i < units[0]; i++ ) Qik[i][k] /= sumQk;
+      }
+      // importance for feature i is the sum over k of i->k importances
+      for( int i = 0; i < units[0]; i++ ) vi[i] = Utils.sum(Qik[i]);
+
+      //normalize importances such that max(vi) = 1
+      Utils.div(vi, Utils.maxValue(vi));
+      return vi;
+    }
+
     // compute stats on all nodes
     public void computeStats() {
       double[][] rate = parameters.adaptive_rate ? new double[units.length-1][] : null;
@@ -503,6 +562,7 @@ public class DeepLearningModel extends Model {
     start_time = cp.start_time;
     run_time = cp.run_time;
     errors = cp.errors.clone();
+    training_rows = cp.training_rows; //copy the value to display the right number on the model page before training has started
     model_info.parameters.start_time = System.currentTimeMillis(); //for displaying the model progress
     _timeLastScoreEnter = System.currentTimeMillis();
     _timeLastScoreStart = 0;
@@ -522,7 +582,7 @@ public class DeepLearningModel extends Model {
     errors[0].validation = (params.validation != null);
   }
 
-  transient private long _timeLastScoreEnter;
+  private long _timeLastScoreEnter; //not transient: needed for HTML display page
   transient private long _timeLastScoreStart;
   transient private long _timeLastScoreEnd;
   transient private long _timeLastPrintStart;
@@ -567,10 +627,15 @@ public class DeepLearningModel extends Model {
       err.training_samples = model_info().get_processed_total();
       err.score_training_samples = ftrain.numRows();
       err.train_confusion_matrix = new ConfusionMatrix();
+      final int hit_k = Math.min(nclasses(), model_info().get_params().max_hit_ratio_k);
       if (err.classification && nclasses()==2) err.trainAUC = new AUC();
+      if (err.classification && nclasses() > 2 && hit_k > 0) {
+        err.train_hitratio = new HitRatio();
+        err.train_hitratio.set_max_k(hit_k);
+      }
       model_info().toString();
       final Frame trainPredict = score(ftrain, false);
-      final double trainErr = calcError(ftrain, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC);
+      final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
       if (isClassifier()) err.train_err = trainErr;
       else err.train_mse = trainErr;
 
@@ -581,10 +646,15 @@ public class DeepLearningModel extends Model {
         err.score_validation_samples = ftest.numRows();
         err.valid_confusion_matrix = new ConfusionMatrix();
         if (err.classification && nclasses()==2) err.validAUC = new AUC();
+        if (err.classification && nclasses() > 2 && hit_k > 0) {
+          err.valid_hitratio = new HitRatio();
+          err.valid_hitratio.set_max_k(hit_k);
+        }
         Job.ValidatedJob.Response2CMAdaptor vadaptor = model_info().job().getValidAdaptor();
         Vec tmp = null;
         if (isClassifier() && vadaptor.needsAdaptation2CM()) tmp = ftest.remove(ftest.vecs().length-1);
         final Frame validPredict = score(ftest, false);
+        final Frame hitratio_validPredict = new Frame(validPredict);
         // Adapt output response domain, in case validation domain is different from training domain
         // Note: doesn't change predictions, just the *possible* label domain
         if (isClassifier() && vadaptor.needsAdaptation2CM()) {
@@ -593,7 +663,7 @@ public class DeepLearningModel extends Model {
           validPredict.replace(0, CMadapted); //replace label
           validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
         }
-        final double validErr = calcError(ftest, validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC);
+        final double validErr = calcError(ftest, validPredict, hitratio_validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
         if (isClassifier()) err.valid_err = validErr;
         else err.valid_mse = validErr;
         validPredict.delete();
@@ -689,14 +759,15 @@ public class DeepLearningModel extends Model {
    * For binary classification, this is the classification error based on assigning labels using the optimal threshold for maximizing the F1 score.
    * For regression, this is the mean squared error (MSE).
    * @param ftest Frame containing test data
-   * @param fpreds Frame containing predicted data (classification: label + per-class probabilities, regression: target)
+   * @param fpreds Frame containing ADAPTED predicted data (classification: label + per-class probabilities, regression: target)
+   * @param hitratio_fpreds Frame containing predicted data (classification: label + per-class probabilities, regression: target)
    * @param label Name for the scored data set
    * @param printCM Whether to print the confusion matrix to stdout
    * @param cm Confusion Matrix object to populate for multi-class classification (also used for regression)
    * @param auc AUC object to populate for binary classification
    * @return model error, see description above
    */
-  public double calcError(Frame ftest, Frame fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc) {
+  public double calcError(Frame ftest, Frame fpreds, Frame hitratio_fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc, HitRatio hr) {
     StringBuilder sb = new StringBuilder();
     double error;
 
@@ -722,6 +793,13 @@ public class DeepLearningModel extends Model {
       cm.toASCII(sb);
       error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
     }
+    if (hr != null) {
+      hr.actual = ftest;
+      hr.vactual = ftest.lastVec();
+      hr.predict = hitratio_fpreds;
+      hr.serve();
+      hr.toASCII(sb);
+    }
     if (printCM && (auc != null || cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
       Log.info("Scoring on " + label + " data:");
       for (String s : sb.toString().split("\n")) Log.info(s);
@@ -745,14 +823,14 @@ public class DeepLearningModel extends Model {
 
     model_info.job().toHTML(sb);
     Inspect2 is2 = new Inspect2();
+    final Key val_key = model_info().parameters.validation != null ? model_info().parameters.validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
-            + (model_info().parameters.validation != null ? (is2.link("Inspect validation data (" + model_info().parameters.validation._key + ")", model_info().parameters.validation._key) + ", ") : "")
+            + (val_key != null ? (is2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null, null) + ", "
-            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>"
-            + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName()) : "")
+            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key) + ", "
+            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
@@ -900,6 +978,18 @@ public class DeepLearningModel extends Model {
           else sb.append(toolarge + "</h5>");
         }
       }
+    }
+
+    // Variable importance
+    if (model_info().get_params().variable_importances) {
+      final float [] varimp = model_info().computeVariableImportances();
+      new VarImp(varimp, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, varimp.length)).toHTML(sb);
+    }
+
+    if (error.valid_hitratio != null) {
+      error.valid_hitratio.toHTML(sb);
+    } else if (error.train_hitratio != null) {
+      error.train_hitratio.toHTML(sb);
     }
 
     DocGen.HTML.title(sb, "Scoring history");

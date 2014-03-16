@@ -644,6 +644,7 @@ setMethod("floor", "H2OParsedData", function(x) { .h2o.__unop2("floor", x) })
 setMethod("log", "H2OParsedData", function(x) { .h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { .h2o.__unop2("exp", x) })
 setMethod("is.na", "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
+setMethod("t", "H2OParsedData", function(x) { .h2o.__unop2("t", x) })
 
 setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {

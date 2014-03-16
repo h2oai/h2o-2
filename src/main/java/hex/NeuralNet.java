@@ -1064,7 +1064,7 @@ public class NeuralNet extends ValidatedJob {
           NewChunk chunk = new NewChunk(vec, split);
           for( long r = off; r < lim; r++ ) {
             if( cache == null || r < cache._start || r >= cache._start + cache._len )
-              cache = vecs[v].chunk(r);
+              cache = vecs[v].chunkForRow(r);
             if( !cache.isNA(r) ) {
               if( vecs[v]._domain != null )
                 chunk.addEnum((int) cache.at8(r));

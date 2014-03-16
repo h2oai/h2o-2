@@ -3,9 +3,9 @@ import h2o, h2o_cmd, sys
 import time, random, re
 import h2o_browse as h2b
 
-def checkForBadFP(value, name='min_value', nanOkay=False, json=None):
+def checkForBadFP(value, name='min_value', nanOkay=False, infOkay=False, json=None):
     # if we passed the json, dump it for debug
-    if 'Infinity' in str(value):
+    if 'Infinity' in str(value) and not infOkay:
         if json:
             print h2o.dump_json(json)
         raise Exception("Infinity in inspected %s can't be good for: %s" % (str(value), name))
@@ -44,7 +44,9 @@ def checkScalarResult(resultExec, resultKey, allowEmptyResult=False):
 
     if (cols and (not num_rows or num_rows==0) ) and not allowEmptyResult:
         print "resultExec[0]:", h2o.dump_json(resultExec)
-        raise Exception ("checkScalarResult says cols, but num_rows is 0 or None %s" % num_rows)
+        raise Exception ("checkScalarResult says 'cols' exist in exec json response,"+\
+            " but num_rows: %s is 0 or None. Is that an expected 'empty' key state?"+\
+            " Use 'allowEmptyResult if so." % num_rows)
 
     # Cycle thru rows and extract all the meta-data into a dict?   
     # assume "0" and "row" keys exist for each list entry in rows

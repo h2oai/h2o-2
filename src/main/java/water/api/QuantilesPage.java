@@ -36,6 +36,14 @@ public class QuantilesPage extends Request2 {
   @API(help = "Column name.")
   String column_name;
 
+  // this isn't used yet. column_name is
+  // class colsFilter1 extends MultiVecSelect { public colsFilter1() { super("source_key");} }
+  // @API(help = "Not supported yet (Select columns)", filter=colsFilter1.class)
+  // int[] cols;
+
+  @API(help = "Maximum number of columns to show quantile", filter = Default.class, lmin = 1)
+  int max_ncols = 1000;
+
   @API(help = "Quantile requested.")
   double quantile_requested;
 
@@ -62,11 +70,19 @@ public class QuantilesPage extends Request2 {
 
   @Override protected Response serve() {
     if( source_key == null ) return RequestServer._http404.serve();
+
     if( column == null ) return RequestServer._http404.serve();
-    if (column.isEnum()) {
+    if ( column.isEnum() ) {
       throw new IllegalArgumentException("Column is an enum");
     }
-    if (! ((interpolation_type == 2) || (interpolation_type == 7))) {
+
+    // all cols by default
+    // if( cols == null ) {
+    //   cols = new int[Math.min(source_key.vecs().length,max_ncols)];
+    //   for(int i = 0; i < cols.length; i++) cols[i] = i;
+    // }
+
+    if (! ((interpolation_type == 2) || (interpolation_type == 7)) ) {
       throw new IllegalArgumentException("Unsupported interpolation type. Currently only allow 2 or 7");
     }
 
@@ -79,13 +95,6 @@ public class QuantilesPage extends Request2 {
     Futures fs = new Futures();
     for( Vec vec : vecs) {
         vec.rollupStats(fs);
-        // just to see, move to using these rather than the min/max/mean from basicStats
-        double vmax = vec.max();
-        double vmin = vec.min();
-        double vmean = vec.mean();
-        double vsigma = vec.sigma();
-        long vnaCnt = vec.naCnt();
-        boolean visInt = vec.isInt();
     }
     fs.blockForPending();
 
@@ -109,7 +118,7 @@ public class QuantilesPage extends Request2 {
       qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
         multiPass, interpolation_type).doAll(fr)._qbins;
       // can we just overwrite it with a new one?
-      Log.info("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
+      Log.debug("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
       // Have to get this internal state, and copy this state for the next iteration
       // in order to multipass
@@ -123,7 +132,7 @@ public class QuantilesPage extends Request2 {
       //  valBinSize = newValBinSize;
       //  valLowCnt  = newValLowCnt;
 
-      if (qbins != null) { // if it's enum it will be null?
+      if ( qbins != null ) { // if it's enum it will be null?
         qbins[0].finishUp(vecs[0]);
         column_name = qbins[0].colname;
         quantile_requested = qbins[0].QUANTILES_TO_DO[0];
@@ -145,7 +154,7 @@ public class QuantilesPage extends Request2 {
 
       result_single = approxResult;
       // only the best result if we only ran the approx
-      if ( multiple_pass == 0) result = approxResult;
+      if ( multiple_pass == 0 ) result = approxResult;
 
       // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
       // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
@@ -171,8 +180,8 @@ public class QuantilesPage extends Request2 {
           // for printing?
           double valRange = qbins2[0]._valRange;
           double valBinSize = qbins2[0]._valBinSize;
-          Log.info("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
-          Log.info("Q_ valBinSize: "+valBinSize);
+          Log.debug("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
+          Log.debug("Q_ valBinSize: "+valBinSize);
 
           valStart = qbins2[0]._newValStart;
           valEnd = qbins2[0]._newValEnd;
@@ -181,7 +190,7 @@ public class QuantilesPage extends Request2 {
         }
       }
 
-      if (qbins2 != null) { // if it's enum it will be null?
+      if ( qbins2 != null ) { // if it's enum it will be null?
         column_name = qbins2[0].colname;
         quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
         done = qbins2[0]._done;

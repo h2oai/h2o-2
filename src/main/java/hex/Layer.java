@@ -357,7 +357,7 @@ public abstract class Layer extends Iced {
       for( int i = 0; i < vecs.length; i++ ) {
         Chunk c = _chunks[i];
         if( c == null || c._vec != vecs[i] || _pos < c._start || _pos >= c._start + c._len )
-          _chunks[i] = vecs[i].chunk(_pos);
+          _chunks[i] = vecs[i].chunkForRow(_pos);
       }
       ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), subs, muls, categoricals_lens, categoricals_mins);
       if (training) inputDropout(seed);

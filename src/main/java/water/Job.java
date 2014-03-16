@@ -770,7 +770,7 @@ public abstract class Job extends Request2 {
         if (classification) {
           _validResponseDomain  = getVectorDomain(_validResponse);
           if (_validResponseDomain!=null) {
-            _cmDomain = Utils.union(_sourceResponseDomain, _validResponseDomain);
+            _cmDomain = Utils.domainUnion(_sourceResponseDomain, _validResponseDomain);
             if (!Arrays.deepEquals(_sourceResponseDomain, _validResponseDomain)) {
               _fromModel2CM = Model.getDomainMapping(_cmDomain, _sourceResponseDomain, false); // transformation from model produced response ~> cmDomain
               _fromValid2CM = Model.getDomainMapping(_cmDomain, _validResponseDomain , false); // transformation from validation response domain ~> cmDomain

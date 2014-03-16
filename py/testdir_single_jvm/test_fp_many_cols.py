@@ -2,7 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
-H2O_SUPPORTS_OVER_100K_COLS = False
+H2O_SUPPORTS_OVER_50K_COLS = False
 
 print "Stress the # of cols with fp reals here." 
 print "Can pick fp format but will start with just the first (e0)"
@@ -109,19 +109,17 @@ class Basic(unittest.TestCase):
 
     def test_many_cols_and_values_with_syn(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        tryList = [
-            (100, 10000, 'cA', 60, 120),
-            (100, 30000, 'cB', 60, 120),
-            (100, 50000, 'cC', 60, 120),
-            (100, 70000, 'cD', 60, 120),
-            (100, 90000, 'cE', 60, 120),
-            (100, 100000, 'cF', 60, 120),
-        ]
 
-        if not H2O_SUPPORTS_OVER_100K_COLS:
-            print "Restricting number of columns tested to 100,000"
+        if not H2O_SUPPORTS_OVER_50K_COLS:
+            print "Restricting number of columns tested to 50,000"
+            tryList = [
+                (100, 200000, 'cG', 60, 120),
+                (100, 300000, 'cH', 60, 120),
+                (100, 400000, 'cI', 60, 120),
+                (100, 500000, 'cJ', 60, 120),
+            ]
         else:
-            tryList = tryList + [
+            tryList = [
                 (100, 200000, 'cG', 60, 120),
                 (100, 300000, 'cH', 60, 120),
                 (100, 400000, 'cI', 60, 120),

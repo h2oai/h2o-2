@@ -1,10 +1,10 @@
-package samples;
+package samples.expert;
 
 import water.Job;
 import water.TestUtil;
 
 /**
- * Runs a neural network on the MNIST dataset.
+ * Loads all datasets from smalldata folder for testing purposes
  */
 public class LoadDatasets extends Job {
   public static void main(String[] args) throws Exception {
@@ -23,6 +23,8 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./mnist/train.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./cars.csv");
     TestUtil.parseFromH2OFolder("smalldata/./iris/iris.csv");
+    TestUtil.parseFromH2OFolder("smalldata/test/classifier/multi_class.train.csv");
+    TestUtil.parseFromH2OFolder("smalldata/test/classifier/multi_class.test.csv");
     TestUtil.parseFromH2OFolder("smalldata/./covtype/covtype.20k.data");
     TestUtil.parseFromH2OFolder("smalldata/./1_100kx7_logreg.data.gz");
     TestUtil.parseFromH2OFolder("smalldata/./2_100kx7_logreg.data.gz");

@@ -1200,6 +1200,7 @@ public final class AutoBuffer {
     return this;
   }
   // Put a String as bytes (not chars!)
+  @SuppressWarnings("deprecation")
   public AutoBuffer putStr( String s ) {
     if( s==null ) return putInt(-1);
     // Use the explicit getBytes instead of the default no-arg one, to avoid

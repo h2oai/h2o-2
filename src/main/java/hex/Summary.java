@@ -37,8 +37,9 @@ public class Summary extends Iced {
       Column c = s.ary()._cols[colId];
       _enum = c.isEnum();
       // special case constant columns or columns entirely NA
-      if(c._min == c._max || Double.isInfinite(c._min) || Double.isInfinite(c._max)) {
-        _start = c._min;
+      if(c._min == c._max || Double.isInfinite(c._min) || Double.isInfinite(c._max) ||
+        Double.isNaN(c._min) || Double.isNaN(c._max)) {
+        _start = Double.isNaN(c._min) ? Double.NEGATIVE_INFINITY : c._min;
         _binsz = _binszInv = 1;
         _end = _start+1;
         _percentiles = null;

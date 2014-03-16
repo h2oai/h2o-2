@@ -1,6 +1,6 @@
 import unittest, random, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_util
 
 # some dates are "wrong"..i.e. the date should be constrained
 # depending on month and year.. Assume 1-31 is legal
@@ -19,13 +19,22 @@ months = [
     ['Dec', 'DEC']
     ]
 
+# increase weight for Feb
+monthWeights = [1 if i!=1 else 5 for i in range(len(months))]
+
+days = map(str, range(1,32))
+# increase weight for picking near end of month
+dayWeights = [1 if i<27 else 8 for i in range(len(days))]
+
+years = map(str, range(100))
+
 def getRandomDate():
     # assume leading zero is option
-    day = str(random.randint(1,31)).zfill(2)
+    day = days[h2o_util.weighted_choice(dayWeights)]
     if random.randint(0,1) == 1:
         day = day.zfill(2) 
 
-    year = str(random.randint(0,99)).zfill(2)
+    year = random.choice(years)
     if random.randint(0,1) == 1:
         year = year.zfill(2) 
 
@@ -33,11 +42,9 @@ def getRandomDate():
     ### if random.randint(0,1) == 1:
     # FIX! H2O currently only supports the translate months
     if 1==1:
-        month = random.randint(1,12)
-        monthTranslateChoices = months[month-1]
-        month = random.choice(monthTranslateChoices)
+        month = random.choice(months[h2o_util.weighted_choice(monthWeights)])
     else:
-        month = str(random.randint(1,12)).zfill(2)
+        month = str(random.randint(1,12))
         if random.randint(0,1) == 1:
             month = month.zfill(2) 
 
@@ -50,13 +57,13 @@ def rand_rowData(colCount=6):
     b = ", ".join(map(str,a))
     return b
 
-def write_syn_dataset(csvPathname, rowCount, headerData=None, rowData=None):
+def write_syn_dataset(csvPathname, rowCount, colCount, headerData=None):
     dsf = open(csvPathname, "w+")
     if headerData is not None:
         dsf.write(headerData + "\n")
-    if rowData is not None:
-        for i in range(rowCount):
-            dsf.write(rowData + "\n")
+    for i in range(rowCount):
+        rowData = rand_rowData(colCount)
+        dsf.write(rowData + "\n")
     dsf.close()
 
 class Basic(unittest.TestCase):
@@ -85,9 +92,8 @@ class Basic(unittest.TestCase):
 
         headerData = None
         colCount = 6
-        rowData = rand_rowData(colCount)
         rowCount = 1000
-        write_syn_dataset(csvPathname, rowCount, headerData, rowData)
+        write_syn_dataset(csvPathname, rowCount, colCount, headerData)
 
         for trial in range (20):
             rowData = rand_rowData()
