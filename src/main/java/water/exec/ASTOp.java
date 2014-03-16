@@ -914,7 +914,7 @@ class ASTMTrans extends ASTOp {
          OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTMTrans(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(!env.isAry(-1)) {
       Key k = new Vec.VectorGroup().addVec();
       Futures fs = new Futures();

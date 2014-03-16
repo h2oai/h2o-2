@@ -1,4 +1,4 @@
-spackage water.exec;
+package water.exec;
 
 import java.util.*;
 
