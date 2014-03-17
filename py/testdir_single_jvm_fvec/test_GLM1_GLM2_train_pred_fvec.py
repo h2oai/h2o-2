@@ -170,10 +170,13 @@ class Basic(unittest.TestCase):
         #**************************************************************************
         # first glm1
         h2o.beta_features = False
+        CLASS = 1
         # try ignoring the constant col to see if it makes a diff
         kwargs = {
             'lsm_solver': LSM_SOLVER,
             'standardize': STANDARDIZE,
+            'case': CLASS,
+            'case_mode': '=',
             # 'y': 'C' + str(y),
             'y': 'C' + str(y+1),
             'family': FAMILY,
@@ -181,23 +184,13 @@ class Basic(unittest.TestCase):
             'max_iter': MAX_ITER,
             'beta_epsilon': BETA_EPSILON}
 
-        CLASS=1
-        # maybe go back to simpler exec here. this was from when Exec failed unless this was used
-        execExpr="A.hex=%s" % parseResult['destination_key']
-        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-        # class 1=1, all else 0
-        if FAMILY == 'binomial':
-            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-        aHack = {'destination_key': 'A.hex'}
-        
         timeoutSecs = 120
         kwargs.update({'alpha': TRY_ALPHA, 'lambda': TRY_LAMBDA})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         # bad model (auc=0.5)
         # kwargs.update({'alpha': 0.0, 'lambda': 0.0})
         start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         # hack. fix bad 'family' ('link' is bad too)..so h2o_glm.py works right
         glm['GLMModel']['GLMParams']['family'] = FAMILY
         print "glm1 end on ", csvPathname, 'took', time.time() - start, 'seconds'
