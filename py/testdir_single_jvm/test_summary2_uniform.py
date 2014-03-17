@@ -3,8 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p, h2o_summ
 
 DO_MEDIAN = False
-MAX_QBINS = 1000000
-MAX_QBINS = 100000
+MAX_QBINS = 1000
 ROWS = 100000
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):

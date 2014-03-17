@@ -31,6 +31,62 @@ initList = [
 # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
 
 exprListFull = [
+    # "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95,0.99))",
+    "quantile(r.hex[,4],c(0.000))",
+    "quantile(r.hex[,4],c(0.000))",
+    "quantile(r.hex[,4],c(0.000))",
+
+    "quantile(r.hex[,4],c(0.001))",
+    "quantile(r.hex[,4],c(0.001))",
+    "quantile(r.hex[,4],c(0.001))",
+
+    "quantile(r.hex[,4],c(0.000,0.000))",
+    "quantile(r.hex[,4],c(0.000,0.000))",
+    "quantile(r.hex[,4],c(0.000,0.000))",
+
+    "quantile(r.hex[,4],c(0.001,0.001))",
+    "quantile(r.hex[,4],c(0.001,0.001))",
+    "quantile(r.hex[,4],c(0.001,0.001))",
+
+    "quantile(r.hex[,4],c(0.001,0.001,0.001))",
+    "quantile(r.hex[,4],c(0.001,0.001,0.001))",
+    "quantile(r.hex[,4],c(0.001,0.001,0.001))",
+
+    "quantile(r.hex[,4],c(0.05))",
+    "quantile(r.hex[,4],c(0.05))",
+    "quantile(r.hex[,4],c(0.05))",
+
+    "quantile(r.hex[,4],c(0.05,0.05))",
+    "quantile(r.hex[,4],c(0.05,0.05))",
+    "quantile(r.hex[,4],c(0.05,0.05))",
+
+    "quantile(r.hex[,4],c(0.05,0.05,0.05))",
+    "quantile(r.hex[,4],c(0.05,0.05,0.05))",
+    "quantile(r.hex[,4],c(0.05,0.05,0.05))",
+
+    "quantile(r.hex[,4],c(0.05,.001))",
+    "quantile(r.hex[,4],c(0.05,.001))",
+    "quantile(r.hex[,4],c(0.05,.001))",
+
+    "quantile(r.hex[,4],c(0.05,.000))",
+    "quantile(r.hex[,4],c(0.05,.000))",
+    "quantile(r.hex[,4],c(0.05,.000))",
+
+    "quantile(r.hex[,4],c(0.000,.05))",
+    "quantile(r.hex[,4],c(0.000,.05))",
+    "quantile(r.hex[,4],c(0.000,.05))",
+
+    "quantile(r.hex[,4],c(0.001,.05))",
+    "quantile(r.hex[,4],c(0.001,.05))",
+    "quantile(r.hex[,4],c(0.001,.05))",
+
+
+    "quantile(r.hex[,4],c(0.001,.05))",
+    "quantile(r.hex[,4],c(0.001,.05,0.3))",
+    "quantile(r.hex[,4],c(0.001,.05,0.3,0.55))",
+    "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7))",
+    "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95))",
+    "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95,0.99))",
     "1.23",
     " 1.23 + 2.34",
     " 1.23 + 2.34 * 3",
@@ -123,8 +179,9 @@ exprListFull = [
     "!x!=1",
     "(!x)!=1",
     "1+x^2",
-    "x=c(1);1+x**2",
-    "1+x**2",
+    # not supported **
+    # "x=c(1);1+x**2",
+    # "1+x**2",
     "x=c(1); y=c(1); x + 2/y",
     "x=c(1); y=c(1); x + (2/y)",
     "x=c(1); y=c(1); -x + y",
@@ -204,15 +261,19 @@ exprListFull = [
     "3 < 4 |  F &  3 > 4",
     "3 < 4 || F && 3 > 4",
     "r.hex[,4] != 29 || r.hex[,2] < 305 && r.hex[,2] < 81",
+    "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95,0.99))",
     "quantile(seq_len(10),seq_len(10)/10)",
     "quantile(runif(seq_len(10000)),seq_len(10)/10)",
+    # "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95,0.99))",
+    # problem with 0?
     "quantile(r.hex[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))",
     # "ddply(r.hex,r.hex,sum)",
     # "ddply(r.hex,seq_len(10000),sum)",
     # "ddply(r.hex,NA,sum)",
     # "ddply(r.hex,c(1,NA,3),sum)",
     "a=0;x=0;y=0",
-    "ddply(r.hex,c(1,3,3),sum)",
+    # takes more than 30 seconds?
+    # "ddply(r.hex,c(1,3,3),sum)",
     ]
 
 # concatenate a lot of random choices to make life harder
