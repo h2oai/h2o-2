@@ -20,9 +20,13 @@ exprList = [
     # "ddply(r.hex,NA,sum)",
     # "ddply(r.hex,c(1,NA,3),sum)",
     "a.hex = ddply(r.hex,c(1),sum)",
-    "a.hex = ddply(r.hex,c(1,3),sum)",
-    "a.hex = ddply(r.hex,c(1,3,3),sum)",
+    "a.hex = ddply(r.hex,c(2),sum)",
+    "a.hex = ddply(r.hex,c(3),sum)",
+    "a.hex = ddply(r.hex,c(4),sum)",
     ]
+
+for i in range(1,55):
+    exprList.append("a.hex = ddply(r.hex, c(%s), sum)" % i)
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -51,7 +55,7 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
         for resultKey, execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
         for execExpr in exprList:
             start = time.time()

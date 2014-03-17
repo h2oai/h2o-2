@@ -162,15 +162,17 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     # would have to update all tests.
     if len(errLines)!=0:
         # check if the lines all start with INFO: or have "apache" in them
-        justInfo = True
+        justInfo = 0
         for e in errLines:
-            # if every line has this (beginning of line match or 'apache' somwhere
-            justInfo &= re.match("INFO:", e) or ("apache" in e)
-            # very hacky. try to ignore the captured broken pipe exceptions. ugly
-            # if any line has this, ignore the whole group (may miss something as a result?)
-            justInfo |= "java.net.SocketException: Broken pipe" in e
+            # very hacky. try to ignore the captured broken pipe exceptions.
+            # if any line has this, ignore the whole group (may miss something)
+            if "Broken pipe" in e:
+                justInfo = 1
+            # if every line has this (beginning of line match)
+            elif justInfo==0 and not re.match("INFO:", e):
+                justInfo = 2
 
-        if not justInfo:
+        if justInfo==2:
             emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr (or R stdout/stderr).\n" + \
                      "Could have occurred at any prior time\n\n"
             emsg2 = "".join(errLines)
