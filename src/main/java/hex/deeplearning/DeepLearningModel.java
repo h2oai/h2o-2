@@ -979,7 +979,7 @@ public class DeepLearningModel extends Model {
             sb.append("</h5>");
             error.valid_confusion_matrix.toHTML(sb);
           } else if (smallenough) sb.append(" Not yet computed.</h5>");
-          else sb.append(" Too large." + "</h5>");
+          else sb.append(toolarge + "</h5>");
         } else {
           String cmTitle = "Confusion matrix reported on training data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":";
           sb.append("<h5>" + cmTitle);
