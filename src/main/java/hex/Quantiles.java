@@ -384,8 +384,9 @@ public class Quantiles extends Iced {
 
     assert _valStart!=Double.NaN : _valEnd;
     assert _valStart!=Double.NaN : _valStart;
-    assert _valStart!=_valEnd : _valStart+" "+_valEnd;
-    assert (_valBinSize!=0 && _valBinSize!=Double.NaN) : _valBinSize;
+    assert _valBinSize!=Double.NaN : _valBinSize;
+    if ( _valStart==_valEnd ) Log.info("exactQuantilesMultiPass: start/end are equal. "+_valStart+" "+_valEnd);
+    else assert (_valBinSize!=0 && _valBinSize!=Double.NaN) : _valBinSize;
 
     //  everything should either be in low, the bins, or high
     long totalBinnedRows = htot2(hcnt2_low, hcnt2_high);
@@ -412,8 +413,8 @@ public class Quantiles extends Iced {
       // have to keep cycling till we get to a non-zero hcnt
       // but need to break if we get to the end (into the extra bin). it must be nonzero then
     }
-    // Log.debug("Q_ Found k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+
-    //   " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+    Log.debug("Q_ Found k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+
+      " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
     assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
     assert hcnt2[k]!=1 || hcnt2_min[k]==hcnt2_max[k];
@@ -462,7 +463,6 @@ public class Quantiles extends Iced {
         assert hcnt2_min[k]==hcnt2_max[k];
         guess = hcnt2_min[k];
         done = true;
-        Log.debug("Q_ k"+k);
         Log.debug("Q_ Guess C "+guess);
       } 
       else if ( hcnt2[k]==1 && targetCntFract!=0 ) {
@@ -505,13 +505,14 @@ public class Quantiles extends Iced {
 
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)
-        Log.debug("Q_ Guess B "+guess+" with type "+_interpolationType+
+        Log.debug("Q_ Guess D "+guess+" with type "+_interpolationType+
           " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
           " _totalRows: " + _totalRows);
       }
       else {
         guess = Double.NaN; // don't bother guessing, since we don't use till the end
         done = false;
+        Log.debug("Q_ Guess E "+guess);
       }
     }
     if ( !done ) {
@@ -558,7 +559,7 @@ public class Quantiles extends Iced {
           " hcnt2_min[k]: "+hcnt2_min[k]+
           " hcnt2_max[k]: "+hcnt2_max[k]);
         guess = newValStart;
-        Log.debug("Q_ Guess E "+guess);
+        Log.debug("Q_ Guess G "+guess);
         done = true;
       }
     }
