@@ -2,7 +2,6 @@ package hex.deeplearning;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import water.H2O;
 import water.Job;
 import water.Key;
 import water.UKV;
@@ -241,15 +240,6 @@ public class DeepLearning extends Job.ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
-    if (H2O.CLOUD.size()>1) {
-//      if (expert_mode && arg._name.equals("force_load_balance")) {
-//        force_load_balance = false;
-//        arg.disable("Only for single-node operation.");
-//      }
-      if (arg._name.equals("seed")) {
-        arg.disable("Only for single-node operation.");
-      }
-    }
 
     if (classification) {
       if(arg._name.equals("regression_stop")) {
@@ -371,6 +361,7 @@ public class DeepLearning extends Job.ValidatedJob {
     if (checkpoint == null) cp = initModel();
     else {
       final DeepLearningModel previous = UKV.get(checkpoint);
+      if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       cp = new DeepLearningModel(previous, destination_key, job_key);
       try {
         cp.write_lock(self());
@@ -450,11 +441,13 @@ public class DeepLearning extends Job.ValidatedJob {
     try {
       lock_data();
       checkParams();
+      final boolean del_enum_resp = (classification && !response.isEnum());
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
       float[] priorDist = classification ? new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
+      if (del_enum_resp) model.toDelete(dinfo._adaptedFrame.lastVec()._key);
       return model;
     }
     finally {
@@ -474,13 +467,24 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   /**
+   * Helper to update a Frame and adding it to the local trash at the same time
+   * @param target Frame referece, to be overwritten
+   * @param src Newly made frame, to be deleted via local trash
+   * @return src
+   */
+  Frame updateFrame(Frame target, Frame src) {
+    if (src != target) ltrash(src);
+    return src;
+  }
+
+  /**
    * Train a Deep Learning neural net model
    * @param model Input model (e.g., from initModel(), or from a previous training run)
    * @return Trained model
    */
   public final DeepLearningModel trainModel(DeepLearningModel model) {
-    Frame valid = null, validScoreFrame = null;
-    Frame train = null, trainScoreFrame = null;
+    Frame valid, validScoreFrame = null;
+    Frame train, trainScoreFrame;
     try {
       lock_data();
       logStart();
@@ -493,11 +497,12 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
-      train = reBalance(train, seed);
+      train = updateFrame(train, reBalance(train, seed));
       float[] trainSamplingFactors;
       if (classification && balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
-        train = sampleFrameStratified(train, train.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*train.numRows()), seed, true, false);
+        train = updateFrame(train, sampleFrameStratified(
+                train, train.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*train.numRows()), seed, true, false));
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
       model.training_rows = train.numRows();
@@ -509,7 +514,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Frame adaptedValid = getValidation();
         if (getValidAdaptor().needsAdaptation2CM())
           adaptedValid.add("adaptedValidationResponse", getValidAdaptor().getAdaptedValidationResponse2CM());
-        valid = reBalance(adaptedValid, seed+1); //rebalance for load balancing, shuffle for "fairness"
+        valid = updateFrame(adaptedValid, reBalance(adaptedValid, seed+1)); //rebalance for load balancing, shuffle for "fairness"
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
         if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
           validScoreFrame = sampleFrameStratified(valid, valid.lastVec(), null,
@@ -537,7 +542,6 @@ public class DeepLearning extends Job.ValidatedJob {
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, timeStart, self()));
 
       Log.info("Finished training the Deep Learning model.");
-      emptyLTrash();
       return model;
     }
     catch(JobCancelledException ex) {
@@ -552,6 +556,7 @@ public class DeepLearning extends Job.ValidatedJob {
     finally {
       if (model != null) model.unlock(self());
       unlock_data();
+      emptyLTrash();
     }
   }
 
@@ -589,9 +594,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return Frame that can be load-balanced (and shuffled), depending on whether force_load_balance and shuffle_training_data are set
    */
   private Frame reBalance(final Frame fr, long seed) {
-    Frame f = force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
-    if (f != fr) ltrash(f);
-    return f;
+    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
   }
 
 }
