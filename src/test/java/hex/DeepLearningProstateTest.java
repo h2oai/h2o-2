@@ -41,11 +41,11 @@ public class DeepLearningProstateTest extends TestUtil {
       }) {
         for (boolean balance_classes : new boolean[]{
                 true,
-//                false,
+                false,
         }) {
           for (int resp : new int[]{
-//                  1, //binary
-//                  2, //regression
+                  1, //binary
+                  2, //regression
                   8, //multi-class
           }) {
             for (DeepLearning.ClassSamplingMethod csm : new DeepLearning.ClassSamplingMethod[] {
