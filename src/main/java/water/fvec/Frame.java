@@ -405,6 +405,7 @@ public class Frame extends Lockable<Frame> {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
       String n = (c < _names.length) ? _names[c] : ("C"+c);
+      int nlen = n.length();
       if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       int w=0;
       if( _vecs[c].isEnum() ) {
@@ -432,16 +433,20 @@ public class Frame extends Lockable<Frame> {
         if( f.charAt(1)==' ' ) w++; // Leading blank is not in print-width
       }
       int len = sb.length();
-      if( n.length() <= w ) {          // Short name, big digits
+      if( nlen>1 && w==1 ) {
+        fs[c]=" "+fs[c];
+        w=2;
+      }
+      if( nlen <= w ) {         // Short name, big digits
         sb.append(n);
-        for( int i=n.length(); i<w; i++ ) sb.append(' ');
+        for( int i=nlen; i<w; i++ ) sb.append(' ');
       } else if( w==1 ) {       // First char only
         sb.append(n.charAt(0));
       } else if( w==2 ) {       // First 2 chars only
         sb.append(n.charAt(0)).append(n.charAt(1));
       } else {                  // First char dot lastchars; e.g. Compress "Interval" to "I.val"
         sb.append(n.charAt(0)).append('.');
-        for( int i=n.length()-(w-2); i<n.length(); i++ )
+        for( int i=nlen-(w-2); i<nlen; i++ )
           sb.append(n.charAt(i));
       }
       assert len+w==sb.length();
