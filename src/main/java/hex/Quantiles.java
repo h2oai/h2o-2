@@ -56,7 +56,7 @@ public class Quantiles extends Iced {
 
   // OUTPUTS
   // Basic info
-  @API(help="name"        ) public String    colname;
+  @API(help="name"    ) public String colname; // FIX! currently not set. Need at least one for class loading
 
   public long[]  hcnt2; // finer histogram. not visible
   public double[]  hcnt2_min; // min actual for each bin
@@ -89,7 +89,7 @@ public class Quantiles extends Iced {
     @Override public void map(Chunk[] cs) {
       _qbins = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _qbins[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], _quantile, _max_qbins,
+        _qbins[i] = new Quantiles(_fr.vecs()[i], _quantile, _max_qbins,
           _valStart, _valEnd, _multiPass, _interpolationType).add(cs[i]);
     }
 
@@ -99,7 +99,6 @@ public class Quantiles extends Iced {
     }
   }
 
-  // FIX! should use _max_qbins if available?
   public void finishUp(Vec vec) {
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
@@ -117,10 +116,9 @@ public class Quantiles extends Iced {
     }
   }
 
-  public Quantiles(Vec vec, String name, double quantile, int max_qbins, 
+  public Quantiles(Vec vec, double quantile, int max_qbins, 
         double valStart, double valEnd, boolean multiPass, int interpolationType) {
 
-    colname = name;
     _isEnum = vec.isEnum();
     _isInt = vec.isInt();
     _domain = vec.isEnum() ? vec.domain() : null;
@@ -194,9 +192,9 @@ public class Quantiles extends Iced {
     // hcnt2 implicitly zeroed on new 
   }
 
-  public Quantiles(Vec vec, String name) {
-    // default to single pass median approximation?
-    this(vec, name, 0.5, 1000, vec.min(), vec.max(), false, 7);
+  public Quantiles(Vec vec) {
+    // default to multipass median approximation?
+    this(vec, 0.5, 1000, vec.min(), vec.max(), true, 7);
   }
 
   public Quantiles add(Chunk chk) {
@@ -211,10 +209,9 @@ public class Quantiles extends Iced {
     // just drop them. not sure if something better to do?
     if( val==Double.POSITIVE_INFINITY ) return;
     if( val==Double.NEGATIVE_INFINITY ) return;
-
-    _totalRows++;
     if ( _isEnum ) return;
 
+    _totalRows++;
     long maxBinCnt = _valMaxBinCnt;
 
     if ( !_multiPass  ) { // single pass approx
@@ -290,8 +287,11 @@ public class Quantiles extends Iced {
   } 
 
   public Quantiles add(Quantiles other) {
-    _totalRows += other._totalRows;
     if ( _isEnum ) return this;
+
+    assert !Double.isNaN(other._totalRows) : "NaN in other._totalRows merging";
+    assert !Double.isNaN(_totalRows) : "NaN in _totalRows merging";
+    _totalRows += other._totalRows;
 
     // merge hcnt2 per-bin mins 
     // other must be same length, but use it's length for safety
@@ -333,9 +333,11 @@ public class Quantiles extends Iced {
     }
 
     // 3 new things to merge for multipass histgrams (counts above/below the bins, and the min above the bins)
-    assert !Double.isNaN(other.hcnt2_high) : "NaN in hcnt2_high merging";
-    assert !Double.isNaN(other.hcnt2_low) : "NaN in hcnt2_low merging";
-    assert other.hcnt2_high==0 || !Double.isNaN(other.hcnt2_high_min) : "NaN in hcnt2_high_min merging";
+    assert !Double.isNaN(other.hcnt2_high) : "NaN in other.hcnt2_high merging";
+    assert !Double.isNaN(other.hcnt2_low) : "NaN in other.hcnt2_low merging";
+    assert !Double.isNaN(hcnt2_high) : "NaN in hcnt2_high merging";
+    assert !Double.isNaN(hcnt2_low) : "NaN in hcnt2_low merging";
+    assert other.hcnt2_high==0 || !Double.isNaN(other.hcnt2_high_min) : "0 or NaN in hcnt2_high_min merging";
 
     // these are count merges
     hcnt2_low = hcnt2_low + other.hcnt2_low;
@@ -365,33 +367,32 @@ public class Quantiles extends Iced {
   }
 
   private boolean exactQuantilesMultiPass(double[] qtiles, double[] thres) {
-    // do we need all of these as output?
-    double newValStart, newValEnd, newValRange, newValBinSize;
-    // FIX! figure out where unitialized can be used
-    newValStart = Double.NaN; 
-    newValEnd = Double.NaN;
-    newValRange = Double.NaN;
-    newValBinSize = Double.NaN;
+    double newValStart = Double.NaN; 
+    double newValEnd = Double.NaN;
+    double newValRange = Double.NaN;
+    double newValBinSize = Double.NaN;
+
     long newValLowCnt;
     long maxBinCnt = _valMaxBinCnt;
     assert maxBinCnt>1;
     long desiredBinCnt = maxBinCnt - 1;
 
     assert !_isEnum;
-    if( hcnt2.length == 0 ) return false;
-    // Tried creating relative NUDGE values to make sure bin range
-    // is always inclusive of target.
-    // ratio it down from valBinSize?  It doesn't need to be as big as valBinSize.
-    // can't seem to make it work yet. leave NUDGE=0
-    // Doesn't seem necessary? getting exact comparisons to other tools with NUDGE=0
-    double NUDGE = 0;
-    //  everything should either be in low, the bins, or high
+    if( hcnt2.length < 2 ) return false;
+
     double threshold = thres[0];
+
+    assert _valStart!=Double.NaN : _valEnd;
+    assert _valStart!=Double.NaN : _valStart;
+    assert _valStart!=_valEnd : _valStart+" "+_valEnd;
+    assert (_valBinSize!=0 && _valBinSize!=Double.NaN) : _valBinSize;
+
+    //  everything should either be in low, the bins, or high
     long totalBinnedRows = htot2(hcnt2_low, hcnt2_high);
-    Log.debug("Q_ totalRows check: "+_totalRows+" "+totalBinnedRows+" "+hcnt2_low+" "+hcnt2_high);
+    Log.debug("Q_ totalRows check: "+_totalRows+" "+totalBinnedRows+" "+hcnt2_low+" "+hcnt2_high+" "+_valStart+" "+_valEnd);
     assert _totalRows==totalBinnedRows : _totalRows+" "+totalBinnedRows+" "+hcnt2_low+" "+hcnt2_high;
 
-    //  now walk thru and find out what bin to look inside
+    // Find the row count we want to hit, within some bin.
     long currentCnt = hcnt2_low;
     double targetCntFull = threshold * (_totalRows-1);  //  zero based indexing
     long targetCntInt = (long) Math.floor(targetCntFull);
@@ -399,19 +400,22 @@ public class Quantiles extends Iced {
     assert (targetCntFract>=0) && (targetCntFract<=1);
     Log.debug("Q_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
 
+    // walk thru and find out what bin to look inside
     int k = 0;
     while((currentCnt + hcnt2[k]) <= targetCntInt) {
-      // Log.debug("Q_ Looping for k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+      Log.debug("Q_ Looping for k (multi): "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
+        " "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
       currentCnt += hcnt2[k];
-      ++k; // goes over in the equal case?
+      ++k;
+      if ( k == maxBinCnt )
+        break;
       // have to keep cycling till we get to a non-zero hcnt
-      // but need to break if we get to the end (into the extra bin)
-      if ( k == maxBinCnt ) break;
-      assert k<maxBinCnt : "k too large, k: "+k+" maxBinCnt: "+maxBinCnt+" "+currentCnt+" "+targetCntInt;
+      // but need to break if we get to the end (into the extra bin). it must be nonzero then
     }
-    Log.debug("Q_ Found k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+    // Log.debug("Q_ Found k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+
+    //   " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
-
+    assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
     assert hcnt2[k]!=1 || hcnt2_min[k]==hcnt2_max[k];
 
     // we can do mean and linear interpolation, if we don't land on a row
@@ -448,8 +452,8 @@ public class Quantiles extends Iced {
           // Unlike mean, which just depends on two adjacent values, this adjustment  
           // adds possible errors related to the arithmetic on the total # of rows.
           dDiff = hcnt2_max[k] - hcnt2_min[k]; // two adjacent..as if sorted!
-          pctDiff = targetCntFract; // This is the fraction of total rows
-          guess = hcnt2_min[k] + (pctDiff * dDiff);
+          // targetCntFract is fraction of total rows
+          guess = hcnt2_min[k] + (targetCntFract * dDiff);
         }
         done = true;
         Log.debug("Q_ Guess B "+guess+" with type "+_interpolationType+" targetCntFract: "+targetCntFract);
@@ -485,20 +489,18 @@ public class Quantiles extends Iced {
           nextVal = hcnt2_min[nextK];
         }
 
-        Log.debug("Q_         k hcnt2_max[k] nextVal");
-        Log.debug("Q_ hello3: "+k+" "+hcnt2_max[k]+" "+nextVal);
+        Log.debug("Q_ k hcnt2_max[k] nextVal");
+        Log.debug("Q_ "+k+" "+hcnt2_max[k]+" "+nextVal);
         Log.debug("Q_ \nInterpolating result using nextK: "+nextK+ " nextVal: "+nextVal);
 
         // OH! fixed bin as opposed to sort. Of course there are gaps between k and nextK
-
         if ( _interpolationType==2 ) { // type 2 (mean)
           guess = (hcnt2_max[k] + nextVal) / 2.0;
-          pctDiff = 0.5;
         }
         else { // default to type 7 (linear interpolation)
           dDiff = nextVal - hcnt2_max[k]; // two adjacent, as if sorted!
-          pctDiff = targetCntFract; // This is the fraction of total rows
-          guess = hcnt2_max[k] + (pctDiff * dDiff);
+          // targetCntFract is fraction of total rows
+          guess = hcnt2_max[k] + (targetCntFract * dDiff);
         }
 
         interpolated = true;

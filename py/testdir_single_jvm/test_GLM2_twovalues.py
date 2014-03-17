@@ -70,7 +70,7 @@ class GLM_twovalues(unittest.TestCase):
             -1,\
             -4,\
             -1,\
-            -4"
+            -3"
 
         twoValueList = [
             # (0,1,0, 12),
@@ -94,7 +94,7 @@ class GLM_twovalues(unittest.TestCase):
             # maybe go back to simpler exec here. this was from when Exec failed unless this was used
             execExpr="A.hex=%s" % hex_key
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (12, 12, case)
+            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (13, 13, case)
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
             aHack = {'destination_key': 'A.hex'}
 
@@ -103,8 +103,8 @@ class GLM_twovalues(unittest.TestCase):
                 'n_folds': 0,
                 'response': 'C13', 
                 'family': 'binomial', 
-                'alpha': 0.5, 
-                'lambda': 1e-4, 
+                'alpha': 0.0, 
+                'lambda': 0, 
                 'beta_epsilon': 0.0002
             }
 

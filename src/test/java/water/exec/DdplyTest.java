@@ -24,11 +24,20 @@ public class DdplyTest extends TestUtil {
       checkStr("ddply(cars.hex,c(3),nrow)");
 
       // More complex multi-return
-      checkStr("ddply(cars.hex,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})");
+      checkStr("ddply(cars.hex,c(3),function(x) {cbind(mean(x[,2]),mean(x[,3]))})");
 
       // A big enough file to distribute across multiple nodes.
       Frame fr1 = parseFrame(k1,"smalldata/unbalanced/orange_small_train.data.zip");
       checkStr("ddply(orange.hex,c(7),nrow)");
+      checkStr("ddply(orange.hex,c(206,207),function(x){ cbind( mean(x$Var6), sum(x$Var6+x$Var7+x$Var13) ) })");
+      // A more complex ddply that works as of 3/1/2014 but is slow for a junit
+      //checkStr("ddply(orange.hex,c(206,207),function(x){"+
+      //         "max6 = max(x$Var6);"+
+      //         "min6 = min(x$Var6);"+
+      //         "len  = max6-min6+1;"+
+      //         "tot  = sum(x$Var7);"+
+      //         "avg  = tot/len"+
+      //         "})");
 
       //Frame fr2 = parseFrame(k2,"../datasets/UCI/UCI-large/covtype/covtype.data");
       //checkStr("ddply(covtype.hex,c(11),nrow)");
@@ -42,8 +51,8 @@ public class DdplyTest extends TestUtil {
 
   void checkStr( String s ) {
     Env env=null;
-    try { 
-      env = Exec2.exec(s); 
+    try {
+      env = Exec2.exec(s);
       if( env.isAry() ) {       // Print complete frames for inspection
         Frame res = env.popAry();
         String skey = env.key();
@@ -53,7 +62,7 @@ public class DdplyTest extends TestUtil {
         System.out.println( env.resultString() );
         fail("Not a Frame result");
       }
-    } 
+    }
     catch( IllegalArgumentException iae ) { fail(iae.getMessage()); }
     if( env != null ) env.remove_and_unlock();
   }

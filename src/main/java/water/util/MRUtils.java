@@ -1,9 +1,6 @@
 package water.util;
 
-import water.H2O;
-import water.H2ONode;
-import water.Key;
-import water.MRTask2;
+import water.*;
 import water.fvec.*;
 
 import java.util.Random;
@@ -22,14 +19,17 @@ public class MRUtils {
    */
   public static Frame sampleFrame(Frame fr, final long rows, final long seed) {
     if (fr == null) return null;
+    fr.closeAppendables();
     final float fraction = rows > 0 ? (float)rows / fr.numRows() : 1.f;
     if (fraction >= 1.f) return fr;
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
         final Random rng = getDeterRNG(seed + cs[0].cidx());
+        int count = 0;
         for (int r = 0; r < cs[0]._len; r++)
-          if (rng.nextFloat() < fraction) {
+          if (rng.nextFloat() < fraction || (count == 0 && r == cs[0]._len-1) ) {
+            count++;
             for (int i = 0; i < ncs.length; i++) {
               ncs[i].addNum(cs[i].at0(r));
             }
@@ -50,6 +50,7 @@ public class MRUtils {
    * @return Shuffled frame
    */
   public static Frame shuffleFramePerChunk(Frame fr, final long seed) {
+    fr.closeAppendables();
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
@@ -74,14 +75,16 @@ public class MRUtils {
    * @return Shuffled frame
    */
   public static Frame shuffleAndBalance(final Frame fr, long seed, final boolean shuffle) {
+    fr.closeAppendables();
     int cores = 0;
     for( H2ONode node : H2O.CLOUD._memary )
       cores += node._heartbeat._num_cpus;
     final int splits = 4*cores;
 
-    Vec[] vecs = fr.vecs();
+
     // rebalance only if the number of chunks is less than the number of cores
-    if( vecs[0].nChunks() < splits/4 || shuffle ) {
+    if( (fr.vecs()[0].nChunks() < splits/4 || shuffle) && fr.numRows() > splits) {
+      Vec[] vecs = fr.vecs().clone();
       Log.info("Load balancing dataset, splitting it into up to " + splits + " chunks.");
       long[] idx = null;
       if (shuffle) {
@@ -92,6 +95,7 @@ public class MRUtils {
       Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
       final long rows_per_new_chunk = (long)(Math.ceil((double)fr.numRows()/splits));
       //loop over cols (same indexing for each column)
+      Futures fs = new Futures();
       for(int col=0; col<vecs.length; col++) {
         AppendableVec vec = new AppendableVec(keys[col]);
         // create outgoing chunks for this col
@@ -110,15 +114,16 @@ public class MRUtils {
           }
         }
         for(int i=0; i<outCkg.length; ++i)
-          outCkg[i].close(i, null);
-        Vec t = vec.close(null);
+          outCkg[i].close(i, fs);
+        Vec t = vec.close(fs);
         t._domain = vecs[col]._domain;
         vecs[col] = t;
       }
+      fs.blockForPending();
       Log.info("Load balancing done.");
+      return new Frame(fr.names(), vecs);
     }
-    fr.reloadVecs();
-    return new Frame(fr.names(), vecs);
+    return fr;
   }
 
   /**
@@ -242,7 +247,14 @@ public class MRUtils {
    * @return Stratified frame
    */
   public static Frame sampleFrameStratified(final Frame fr, Vec label, final float[] sampling_ratios, final long seed, final boolean debug) {
+    return sampleFrameStratified(fr, label, sampling_ratios, seed, debug, 0);
+  }
+
+  // internal version with repeat counter
+  // currently hardcoded to do up to 10 tries to get a row from each class, which can be impossible for certain wrong sampling ratios
+  private static Frame sampleFrameStratified(final Frame fr, Vec label, final float[] sampling_ratios, final long seed, final boolean debug, int count) {
     if (fr == null) return null;
+    fr.closeAppendables();
     assert(label.isEnum());
     assert(sampling_ratios != null && sampling_ratios.length == label.domain().length);
     final int labelidx = fr.find(label); //which column is the label?
@@ -287,14 +299,16 @@ public class MRUtils {
     }
 
     // Re-try if we didn't get at least one example from each class
-    if (Utils.minValue(dist) == 0) {
+    if (Utils.minValue(dist) == 0 && count < 10) {
       Log.info("Re-doing stratified sampling because not all classes were represented (unlucky draw).");
-      return sampleFrameStratified(fr, label, sampling_ratios, seed+1, debug);
+      r.delete();
+      return sampleFrameStratified(fr, label, sampling_ratios, seed+1, debug, ++count);
     }
 
     // shuffle intra-chunk
-    r = shuffleFramePerChunk(r, seed+0x580FF13);
+    Frame shuffled = shuffleFramePerChunk(r, seed+0x580FF13);
+    r.delete();
 
-    return r;
+    return shuffled;
   }
 }

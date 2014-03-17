@@ -399,7 +399,7 @@ public class TestUtil {
     assert names == null || names.length == rows[0].length;
     Futures fs = new Futures();
     Vec[] vecs = new Vec[rows[0].length];
-    Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
+    Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(vecs.length);
     for( int c = 0; c < vecs.length; c++ ) {
       AppendableVec vec = new AppendableVec(keys[c]);
       NewChunk chunk = new NewChunk(vec, 0);

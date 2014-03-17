@@ -1,5 +1,7 @@
 package water.exec;
+import water.util.Log;
 
+import hex.Quantiles;
 import hex.la.Matrix;
 
 import java.util.*;
@@ -255,7 +257,7 @@ public abstract class ASTOp extends AST {
 
   @Override void exec(Env env) { env.push(this); }
   // Standard column-wise function application
-  abstract void apply(Env env, int argcnt);
+  abstract void apply(Env env, int argcnt, ASTApply apply);
   // Special row-wise 'apply'
   double[] map(Env env, double[] in, double[] out) { throw H2O.unimpl(); }
 }
@@ -272,7 +274,7 @@ abstract class ASTUniOp extends ASTOp {
   protected ASTUniOp( String[] vars, Type[] types, int form, int precedence, int association ) {
     super(vars,types,form,precedence,association);
   }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     // Expect we can broadcast across all functions as needed.
     if( !env.isAry() ) { env.poppush(op(env.popDbl())); return; }
     Frame fr = env.popAry();
@@ -323,7 +325,7 @@ class ASTNrow extends ASTUniPrefixOp {
   ASTNrow() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame fr = env.popAry();
     String skey = env.key();
     double d = fr.numRows();
@@ -336,7 +338,7 @@ class ASTNcol extends ASTUniPrefixOp {
   ASTNcol() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame fr = env.popAry();
     String skey = env.key();
     double d = fr.numCols();
@@ -349,7 +351,7 @@ class ASTIsFactor extends ASTUniPrefixOp {
   ASTIsFactor() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "is.factor"; }
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(!env.isAry()) { env.poppush(0); return; }
     Frame fr = env.popAry();
     String skey = env.key();
@@ -368,7 +370,7 @@ class ASTAnyFactor extends ASTUniPrefixOp {
   ASTAnyFactor() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "any.factor"; }
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(!env.isAry()) { env.poppush(0); return; }
     Frame fr = env.popAry();
     String skey = env.key();
@@ -386,7 +388,7 @@ class ASTAnyNA extends ASTUniPrefixOp {
   ASTAnyNA() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "any.na"; }
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(!env.isAry()) { env.poppush(0); return; }
     Frame fr = env.popAry();
     String skey = env.key();
@@ -404,7 +406,7 @@ class ASTIsTRUE extends ASTUniPrefixOp {
   ASTIsTRUE() {super(VARS1,new Type[]{Type.DBL,Type.unbound()});}
   @Override String opStr() { return "isTRUE"; }
   @Override ASTOp make() {return new ASTIsTRUE();}  // to make sure fcn get bound at each new context
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double res = env.isDbl() && env.popDbl()==1.0 ? 1:0;
     env.pop();
     env.poppush(res);
@@ -415,7 +417,7 @@ class ASTScale extends ASTUniPrefixOp {
   ASTScale() { super(VARS1,new Type[]{Type.ARY,Type.ARY}); }
   @Override String opStr() { return "scale"; }
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(!env.isAry()) { env.poppush(Double.NaN); return; }
     Frame fr = env.popAry();
     String skey = env.key();
@@ -485,7 +487,7 @@ abstract class ASTTimeOp extends ASTOp {
   }
   ASTTimeOp() { super(VARS1,newsig(),OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); }
   abstract long op( MutableDateTime dt );
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     // Single instance of MDT for the single call
     if( !env.isAry() ) {        // Single point
       double d = env.popDbl();
@@ -542,7 +544,7 @@ abstract class ASTBinOp extends ASTOp {
     super(VARS2, newsig(), form, precedence, association); // binary ops are infix ops
   }
   abstract double op( double d0, double d1 );
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     // Expect we can broadcast across all functions as needed.
     Frame fr0 = null, fr1 = null;
     double d0=0, d1=0;
@@ -640,7 +642,7 @@ abstract class ASTReducerOp extends ASTOp {
     return out;
   }
   abstract double op( double d0, double d1 );
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double sum=_init;
     for( int i=0; i<argcnt-1; i++ )
       if( env.isDbl() ) sum = op(sum,env.popDbl());
@@ -694,7 +696,7 @@ class ASTReduce extends ASTOp {
   ASTReduce( ) { super(VARS,TYPES,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); }
   @Override String opStr(){ return "Reduce";}
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) { throw H2O.unimpl(); }
 }
 
 // TODO: Check refcnt mismatch issue: tmp = cbind(h.hex,3.5) results in different refcnts per col
@@ -705,7 +707,7 @@ class ASTCbind extends ASTOp {
                       OPF_PREFIX,
                       OPP_PREFIX,OPA_RIGHT); }
   @Override ASTOp make() {return this;}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Vec vmax = null;
     for(int i = 0; i < argcnt-1; i++) {
       if(env.isAry(-argcnt+1+i)) {
@@ -717,25 +719,21 @@ class ASTCbind extends ASTOp {
       }
     }
 
-    Frame fr = null;
-    if(env.isAry(-argcnt+1))
-      fr = new Frame(env.ary(-argcnt+1));
-    else {
-      // Vec v = new Vec(Key.make(), env.dbl(-argcnt+1));
-      double d = env.dbl(-argcnt+1);
-      Vec v = vmax == null ? new Vec(Key.make(), d) : vmax.makeCon(d);
-      fr = new Frame(new String[] {"c0"}, new Vec[] {v});
-      env.addRef(v);
-    }
-
-    for(int i = 1; i < argcnt-1; i++) {
-      if(env.isAry(-argcnt+1+i))
-        fr.add(env.ary(-argcnt+1+i),true);
-      else {
+    Frame fr = new Frame(new String[0],new Vec[0]);
+    for(int i = 0; i < argcnt-1; i++) {
+      if( env.isAry(-argcnt+1+i) ) {
+        Frame fr2 = env.ary(-argcnt+1+i);
+        if( fr2.numCols()==1 && apply != null && apply._args[i+1] instanceof ASTId ) {
+          String name = ((ASTId)apply._args[i+1])._id;
+          fr.add(name,fr2.anyVec());
+        } else {
+          fr.add(fr2,true);
+        }
+      } else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
-        Vec v = vmax == null ? new Vec(Key.make(), d) : vmax.makeCon(d);
-        fr.add("c" + String.valueOf(i), v);
+        Vec v = vmax == null ? new Vec(Vec.VectorGroup.VG_LEN1.addVec(), d) : vmax.makeCon(d);
+        fr.add("C" + String.valueOf(i+1), v);
         env.addRef(v);
       }
     }
@@ -753,7 +751,7 @@ class ASTMinNaRm extends ASTReducerOp {
   @Override
   ASTOp make() {return new ASTMinNaRm();}
   @Override double op(double d0, double d1) { return Math.min(d0, d1); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double min = Double.POSITIVE_INFINITY;
     int nacnt = 0;
     for( int i=0; i<argcnt-1; i++ )
@@ -781,7 +779,7 @@ class ASTMaxNaRm extends ASTReducerOp {
   @Override
   ASTOp make() {return new ASTMaxNaRm();}
   @Override double op(double d0, double d1) { return Math.max(d0,d1); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double max = Double.NEGATIVE_INFINITY;
     int nacnt = 0;
     for( int i=0; i<argcnt-1; i++ )
@@ -809,7 +807,7 @@ class ASTMin extends ASTReducerOp {
   @Override
   ASTOp make() {return new ASTMin();}
   @Override double op(double d0, double d1) { return Math.min(d0, d1); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double min = Double.POSITIVE_INFINITY;
     for( int i=0; i<argcnt-1; i++ )
       if( env.isDbl() ) min = Math.min(min, env.popDbl());
@@ -831,7 +829,7 @@ class ASTMax extends ASTReducerOp {
   @Override
   ASTOp make() {return new ASTMax();}
   @Override double op(double d0, double d1) { return Math.max(d0,d1); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double max = Double.NEGATIVE_INFINITY;
     for( int i=0; i<argcnt-1; i++ )
       if( env.isDbl() ) max = Math.max(max, env.popDbl());
@@ -857,7 +855,7 @@ class ASTAND extends ASTOp {
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTAND(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double op1 = env.isAry(-2) ? env.ary(-2).vecs()[0].at(0) : env.dbl(-2);
     double op2 = op1==0 ? 0 :
            Double.isNaN(op1) ? Double.NaN :
@@ -879,7 +877,7 @@ class ASTOR extends ASTOp {
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTOR(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     double op1 = env.isAry(-2) ? env.ary(-2).vecs()[0].at(0) : env.dbl(-2);
     double op2 = !Double.isNaN(op1) && op1!=0 ? 1 :
             env.isAry(-1) ? env.ary(-1).vecs()[0].at(0) : env.dbl(-1);
@@ -902,7 +900,7 @@ class ASTMMult extends ASTOp {
           OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTMMult(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     env.poppush(3,new Matrix(env.ary(-2)).mult(env.ary(-1)),null);
   }
 }
@@ -918,7 +916,7 @@ class ASTMTrans extends ASTOp {
          OPA_RIGHT);
   }
   @Override ASTOp make() { return new ASTMTrans(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(!env.isAry(-1)) {
       Key k = new Vec.VectorGroup().addVec();
       Futures fs = new Futures();
@@ -947,7 +945,7 @@ class ASTSeq extends ASTOp {
             OPA_RIGHT);
   }
   @Override ASTOp make() { return this; }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     int len = (int)env.popDbl();
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
@@ -955,9 +953,10 @@ class ASTSeq extends ASTOp {
   }
 }
 
-// Compute sample quantiles given a set of cutoffs.
+// Compute exact quantiles given a set of cutoffs, using multipass binning algo.
 class ASTQtile extends ASTOp {
   @Override String opStr() { return "quantile"; }
+
   ASTQtile( ) {
     super(new String[]{"quantile","x","probs"},
           new Type[]{Type.ARY, Type.ARY, Type.ARY},
@@ -966,58 +965,68 @@ class ASTQtile extends ASTOp {
           OPA_RIGHT);
   }
   @Override ASTQtile make() { return new ASTQtile(); }
-  @Override void apply(Env env, int argcnt) {
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame x = env.ary(-2);
     Vec xv  = x          .theVec("Argument #1 in Quantile contains more than 1 column.");
     Vec pv  = env.ary(-1).theVec("Argument #2 in Quantile contains more than 1 column.");
     double p[] = new double[(int)pv.length()];
-    for (int i = 0; i < pv.length(); i++)
+
+    for (int i = 0; i < pv.length(); i++) {
       if ((p[i]=pv.at((long)i)) < 0 || p[i] > 1)
         throw new  IllegalArgumentException("Quantile: probs must be in the range of [0, 1].");
-    double samples[] = new Resample(10000).doAll(x)._local;
-    Arrays.sort(samples);
+    }
+    if ( xv.isEnum() ) {
+        throw new  IllegalArgumentException("Quantile: column type cannot be Enum.");
+    }
+
+    // FIX! might not be needed
+    Futures fs = new Futures();
+    xv.rollupStats(fs);
+    fs.blockForPending();
+
     // create output vec
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
-    for (double prob : p) {
-      double value;
-      int ix = (int)(samples.length * prob);
-      if (ix >= samples.length) value = xv.max();
-      else if (prob == 0) value = xv.min();
-      else value = samples[ix];
-      nc.addNum(value);
+
+    Quantiles[] qbins = null;
+
+    final int MAX_ITERATIONS = 16;
+    final int MAX_QBINS = 1000; // less uses less memory, can take more passes
+    final boolean MULTIPASS = true; // approx in 1 pass if false
+    final int INTERPOLATION = 7; // linear if quantile not exact on row. 2 uses mean.
+
+    double result;
+    for (double quantile : p) {
+      // FIX! should really break this loop out into a multipass single type 7 quantile thing.
+      // Type 7 matches R default
+      double valStart = xv.min();
+      double valEnd = xv.max();
+      for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+        qbins = new Quantiles.BinTask2(quantile, MAX_QBINS, valStart, valEnd, 
+          MULTIPASS, INTERPOLATION).doAll(xv)._qbins;
+        if ( qbins == null ) break;
+        else {
+          // the map/reduce didn't create any h2o keys. don't have to wait for anything?
+          qbins[0].finishUp(xv);
+          Log.debug("\nQ_ multipass iteration: "+iteration+
+            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins[0]._valBinSize);
+          // next iteration
+          valStart = qbins[0]._newValStart;
+          valEnd = qbins[0]._newValEnd;
+          if ( qbins[0]._done ) break;
+        }
+      }
+      if ( qbins == null ) result = Double.NaN;
+      else result = qbins[0]._pctile[0];
+      qbins = null; // shouldn't need this? 
+      nc.addNum(result);
     }
-    nc.close(0,null);
+
+    nc.close(0, null);
     Vec v = av.close(null);
     env.poppush(argcnt, new Frame(new String[]{"Quantile"}, new Vec[]{v}), null);
-  }
-  static class Resample extends MRTask2<Resample> {
-    final int _total;
-    public double _local[];
-    public Resample(int nsample) { _total = nsample; }
-    @Override public void map(Chunk chk) {
-      Random r = new Random(chk._start);
-      int ns = Math.min(chk._len,(int)(_total*(double)chk._len/vecs(0).length()));
-      _local = new double[ns];
-      int n = 0, fill=0;
-      double val;
-      if (ns == chk._len)
-        for (n = 0; n < ns; n++) {
-          if (!Double.isNaN(val = chk.at0(n))) _local[fill++] = val;
-        }
-      else
-        for (n = 0; n < ns; n++) {
-          int i = r.nextInt(chk._len);
-          if (!Double.isNaN(val = chk.at0(i))) _local[fill++] = val;
-        }
-      _local = Arrays.copyOf(_local,fill);
-    }
-    @Override public void reduce(Resample other) {
-      int appendAt = _local.length;
-      _local = Arrays.copyOf(_local, _local.length+other._local.length);
-      System.arraycopy(other._local,0,_local,appendAt,other._local.length);
-    }
   }
 }
 
@@ -1035,7 +1044,7 @@ class ASTCat extends ASTOp {
     for (int i = 0; i < in.length; i++) out[i] = in[i];
     return out;
   }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
@@ -1049,7 +1058,7 @@ class ASTCat extends ASTOp {
     nc.close(0,null);
     Vec v = av.close(null);
     env.pop(argcnt);
-    env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+    env.push(new Frame(new String[]{"C1"}, new Vec[]{v}));
   }
 }
 
@@ -1061,7 +1070,7 @@ class ASTRunif extends ASTOp {
                      OPP_PREFIX,
                      OPA_RIGHT); }
   @Override ASTOp make() {return new ASTRunif();}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame fr = env.popAry();
     String skey = env.key();
     long [] espc = fr.anyVec()._espc;
@@ -1101,7 +1110,7 @@ class ASTSdev extends ASTOp {
                     OPA_RIGHT); }
   @Override String opStr() { return "sd"; }
   @Override ASTOp make() { return new ASTSdev(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame fr = env.peekAry();
     if (fr.vecs().length > 1)
       throw new IllegalArgumentException("sd does not apply to multiple cols.");
@@ -1120,12 +1129,12 @@ class ASTMean extends ASTOp {
                     OPA_RIGHT); }
   @Override String opStr() { return "mean"; }
   @Override ASTOp make() { return new ASTMean(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame fr = env.peekAry();
     if (fr.vecs().length > 1)
-      throw new IllegalArgumentException("sd does not apply to multiple cols.");
+      throw new IllegalArgumentException("mean does not apply to multiple cols.");
     if (fr.vecs()[0].isEnum())
-      throw new IllegalArgumentException("sd only applies to numeric vector.");
+      throw new IllegalArgumentException("mean only applies to numeric vector.");
     double ave = fr.vecs()[0].mean();
     env.pop();
     env.poppush(ave);
@@ -1146,7 +1155,7 @@ class ASTTable extends ASTOp {
                      OPA_RIGHT); }
   @Override String opStr() { return "table"; }
   @Override ASTOp make() { return new ASTTable(); }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     int ncol;
     Frame fr = env.ary(-1);
     if ((ncol = fr.vecs().length) > 2)
@@ -1241,7 +1250,7 @@ class ASTIfElse extends ASTOp {
     if( fal == null ) E.throwErr("Missing expression in trinary",x);
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     // All or none are functions
     assert ( env.isFcn(-1) &&  env.isFcn(-2) &&  _t.ret().isFcn())
       ||   (!env.isFcn(-1) && !env.isFcn(-2) && !_t.ret().isFcn());
@@ -1314,7 +1323,7 @@ class ASTCut extends ASTOp {
                    OPA_RIGHT); }
   @Override String opStr() { return "cut"; }
   @Override ASTOp make() {return new ASTCut();}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(env.isDbl()) {
       final int nbins = (int) Math.floor(env.popDbl());
       if(nbins < 2)
@@ -1405,7 +1414,7 @@ class ASTFactor extends ASTOp {
                       OPP_PREFIX,OPA_RIGHT); }
   @Override String opStr() { return "factor"; }
   @Override ASTOp make() {return new ASTFactor();}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame ary = env.peekAry();   // Ary on top of stack, keeps +1 refcnt
     String skey = env.peekKey();
     if( ary.numCols() != 1 )
@@ -1431,7 +1440,7 @@ class ASTPrint extends ASTOp {
                      OPP_PREFIX,OPA_RIGHT); }
   @Override String opStr() { return "print"; }
   @Override ASTOp make() {return new ASTPrint();}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     for( int i=1; i<argcnt; i++ ) {
       if( env.isAry(i-argcnt) ) {
         env._sb.append(env.ary(i-argcnt).toStringAll());
@@ -1458,7 +1467,7 @@ class ASTLs extends ASTOp {
                   OPA_RIGHT); }
   @Override String opStr() { return "ls"; }
   @Override ASTOp make() {return new ASTLs();}
-  @Override void apply(Env env, int argcnt) {
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
     for( Key key : H2O.globalKeySet(null) )
       if( key.user_allowed() && H2O.get(key) != null )
         env._sb.append(key.toString());

@@ -73,18 +73,26 @@ public class Cloud extends Request {
         cloudHealthy = false;
       }
 
-      JsonArray fjt = new JsonArray();
-      JsonArray fjq = new JsonArray();
-      if( hb._fjthrds_hi != null ) {
-        for( int i=0; i<hb._fjthrds_hi.length; i++ ) {
-          fjt.add(new JsonPrimitive(hb._fjthrds_hi[i]));
-          fjq.add(new JsonPrimitive(hb._fjqueue_hi[i]));
+      JsonArray fjth = new JsonArray();
+      JsonArray fjqh = new JsonArray();
+      JsonArray fjtl = new JsonArray();
+      JsonArray fjql = new JsonArray();
+      if( hb._fjthrds != null ) {
+        for( int i=0; i<H2O.MIN_HI_PRIORITY; i++ ) {
+          if( hb._fjthrds[i]==-1 ) break;
+          fjtl.add(new JsonPrimitive(hb._fjthrds[i]));
+          fjql.add(new JsonPrimitive(hb._fjqueue[i]));
         }
+        node.add(FJ_THREADS_LO, fjtl);
+        node.add(FJ_QUEUE_LO  , fjql);
+        for( int i=H2O.MIN_HI_PRIORITY; i<H2O.MAX_PRIORITY; i++ ) {
+          fjth.add(new JsonPrimitive(hb._fjthrds[i]));
+          fjqh.add(new JsonPrimitive(hb._fjqueue[i]));
+        }
+        node.add(FJ_THREADS_HI, fjth);
+        node.add(FJ_QUEUE_HI  , fjqh);
       }
-      node.add(FJ_THREADS_HI, fjt);
-      node.add(FJ_QUEUE_HI  , fjq);
-      node.addProperty(FJ_THREADS_LO, (int) hb._fjthrds_lo);
-      node.addProperty(FJ_QUEUE_LO, (int) hb._fjqueue_lo);
+
       node.addProperty(RPCS, (int) hb._rpcs);
       node.addProperty(TCPS_ACTIVE, (int) hb._tcps_active);
       if (hb._process_num_open_fds >= 0) { node.addProperty("open_fds", hb._process_num_open_fds); } else { node.addProperty("open_fds", "N/A"); }

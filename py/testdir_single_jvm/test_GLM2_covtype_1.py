@@ -36,11 +36,11 @@ class Basic(unittest.TestCase):
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         max_iter = 8
 
-        y = "C54"
+        y = 54
         modelKey = "GLMModel"
         kwargs = {
             # 'cols': x, # for 2
-            'response': y, # for 2
+            'response': 'C' + str(y+1), # for 2
             'family': 'binomial',
             # 'link': 'logit', # 2 doesn't support
             'n_folds': 2,
