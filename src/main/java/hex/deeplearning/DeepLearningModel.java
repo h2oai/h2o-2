@@ -103,6 +103,9 @@ public class DeepLearningModel extends Model {
 //    @API(help = "Validation MCE")
 //    public double valid_mce = Double.POSITIVE_INFINITY;
 
+    @API(help = "Time taken for scoring")
+    public long scoring_time;
+
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (classification) {
@@ -690,19 +693,20 @@ public class DeepLearningModel extends Model {
         err.valid_confusion_matrix = null;
       }
 
+      _timeLastScoreEnd = System.currentTimeMillis();
+      // print the freshly scored model to ASCII
+      for (String s : toString().split("\n")) Log.info(s);
+      err.scoring_time = System.currentTimeMillis() - now;
+      if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
       // enlarge the error array by one, push latest score back
       if (errors == null) {
-         errors = new Errors[]{err};
+        errors = new Errors[]{err};
       } else {
         Errors[] err2 = new Errors[errors.length+1];
         System.arraycopy(errors, 0, err2, 0, errors.length);
         err2[err2.length-1] = err;
         errors = err2;
       }
-      _timeLastScoreEnd = System.currentTimeMillis();
-      // print the freshly scored model to ASCII
-      for (String s : toString().split("\n")) Log.info(s);
-      if (printme) Log.info("Scoring time: " + PrettyPrint.msecs(System.currentTimeMillis() - now, true));
     }
     if (model_info().unstable()) {
       Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -1002,12 +1006,13 @@ public class DeepLearningModel extends Model {
 
     DocGen.HTML.title(sb, "Scoring history");
     if (errors.length > 1) {
+      DocGen.HTML.paragraph(sb, "Time taken for last scoring: " + PrettyPrint.msecs(errors[errors.length-1].scoring_time, true));
       // training
       {
         final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
         String training = "Number of training data samples for scoring: " + (fulltrain ? "all " : "") + pts;
         if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-        if (pts > 100000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+        if (pts > 100000 && errors[errors.length-1].scoring_time > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         DocGen.HTML.paragraph(sb, training);
       }
       // validation
@@ -1015,7 +1020,7 @@ public class DeepLearningModel extends Model {
         final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
         String validation = "Number of validation data samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
         if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
-        if (ptsv > 100000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
+        if (ptsv > 100000 && errors[errors.length-1].scoring_time > 10000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         DocGen.HTML.paragraph(sb, validation);
       }
 
