@@ -25,7 +25,13 @@ public class DeepLearningProstateTest extends TestUtil {
   }
 
   @Test public void run() {
-    for (boolean lb : new boolean[]{
+    Key file = NFSFileVec.make(find_test_file("smalldata/./logreg/prostate.csv"));
+    Frame frame = ParseDataset2.parse(Key.make(), new Key[]{file});
+    Key vfile = NFSFileVec.make(find_test_file("smalldata/./logreg/prostate.csv"));
+    Frame vframe = ParseDataset2.parse(Key.make(), new Key[]{vfile});
+
+    int count = 0;
+    for (boolean load_balance : new boolean[]{
             true,
             false,
     }) {
@@ -33,7 +39,7 @@ public class DeepLearningProstateTest extends TestUtil {
               true,
               false,
       }) {
-        for (boolean balance : new boolean[]{
+        for (boolean balance_classes : new boolean[]{
                 true,
                 false,
         }) {
@@ -46,8 +52,8 @@ public class DeepLearningProstateTest extends TestUtil {
                     DeepLearning.ClassSamplingMethod.Stratified,
                     DeepLearning.ClassSamplingMethod.Uniform
             }) {
-              // FIXME: memory leak: stratified sampling might lead to some chunks not being kept around
-              if (resp == 8 && csm == DeepLearning.ClassSamplingMethod.Stratified && lb) continue;
+              // FIXME: memory leak: stratified sampling can lead to some chunks not being kept around if no row is chosen
+              if (resp == 8 && csm == DeepLearning.ClassSamplingMethod.Stratified && load_balance) continue;
 
               for (int scoretraining : new int[]{
                       200,
@@ -58,31 +64,39 @@ public class DeepLearningProstateTest extends TestUtil {
                         0,
                 }) {
 
-                  for (int vf : new int[]{ 0, 1, -1 }) {
-                    Key file = NFSFileVec.make(find_test_file("smalldata/./logreg/prostate.csv"));
-                    Frame frame = ParseDataset2.parse(Key.make(), new Key[]{file});
+                  for (int vf : new int[]{
+                          0,  //no validation
+                          1,  //same as source
+                          -1, //different validation frame
+                  }) {
+                    count++;
+                    Log.info("**************************)");
+                    Log.info("Starting test #" + count);
+                    Log.info("**************************)");
                     Frame valid = null; //no validation
                     if (vf == 1) valid = frame; //use the same frame for validation
-                    else if (vf == -1) valid = new Frame(frame); //use a different frame for validation
+                    else if (vf == -1) valid = vframe; //different validation frame (here: from the same file)
 
                     Key dest = Key.make("prostate");
 
                     // build the model, with all kinds of shuffling/rebalancing/sampling
                     {
+                      final long seed = new Random().nextLong();
+                      Log.info("Using seed: " + seed);
                       DeepLearning p = new DeepLearning();
-                      p.epochs = 1.0 + new Random().nextDouble();
+                      p.epochs = 1.0 + new Random(seed).nextDouble();
                       p.source = frame;
-                      p.hidden = new int[]{1+new Random().nextInt(4), 1+new Random().nextInt(6)};
+                      p.hidden = new int[]{1+new Random(seed).nextInt(4), 1+new Random(seed).nextInt(6)};
                       p.response = frame.vecs()[resp];
                       if (resp == 2) p.classification = false;
                       p.destination_key = dest;
-                      p.seed = new Random().nextLong();
+                      p.seed = seed;
                       p.validation = valid;
-                      p.force_load_balance = lb;
+                      p.force_load_balance = load_balance;
                       p.shuffle_training_data = shuffle;
                       p.score_training_samples = scoretraining;
                       p.score_validation_samples = scorevalidation;
-                      p.balance_classes = balance;
+                      p.balance_classes = balance_classes;
                       p.quiet_mode = true;
                       p.score_validation_sampling = csm;
 //                      p.execImpl();
@@ -189,8 +203,6 @@ public class DeepLearningProstateTest extends TestUtil {
                     } //classifier
                     mymodel.delete();
                     UKV.remove(dest);
-                    frame.delete();
-                    if (valid != null) valid.delete();
                   }
                 }
               }
@@ -199,5 +211,8 @@ public class DeepLearningProstateTest extends TestUtil {
         }
       }
     }
+    frame.delete();
+    vframe.delete();
+    Log.info("Tested " + count + " parameter combinations.");
   }
 }
