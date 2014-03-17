@@ -13,10 +13,14 @@ import h2o_sandbox
 # prints interesting things to stdout. Creates the result xml in the current dire
 # with name "sh2junit_<name>.xml"
 
-print "Assumes ./sandbox already exists in current dir. Created by cloud building?"
 def sandbox_tmp_file(prefix='', suffix=''):
     # this gives absolute path, good!
-    fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir='./sandbox')
+    dirname = './sandbox'
+    if not os.path.exists(dirname):
+        print "no ./sandbox. Creating"
+        os.makedirs(dirname)
+
+    fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=dirname)
     # make sure the file now exists
     # os.open(path, 'a').close()
     # give everyone permission to read it (jenkins running as 
