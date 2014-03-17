@@ -19,7 +19,6 @@ public class MRUtils {
    */
   public static Frame sampleFrame(Frame fr, final long rows, final long seed) {
     if (fr == null) return null;
-    fr.closeAppendables();
     final float fraction = rows > 0 ? (float)rows / fr.numRows() : 1.f;
     if (fraction >= 1.f) return fr;
     Frame r = new MRTask2() {
@@ -50,7 +49,6 @@ public class MRUtils {
    * @return Shuffled frame
    */
   public static Frame shuffleFramePerChunk(Frame fr, final long seed) {
-    fr.closeAppendables();
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
@@ -75,7 +73,6 @@ public class MRUtils {
    * @return Shuffled frame
    */
   public static Frame shuffleAndBalance(final Frame fr, long seed, final boolean shuffle) {
-    fr.closeAppendables();
     int cores = 0;
     for( H2ONode node : H2O.CLOUD._memary )
       cores += node._heartbeat._num_cpus;
@@ -254,7 +251,6 @@ public class MRUtils {
   // currently hardcoded to do up to 10 tries to get a row from each class, which can be impossible for certain wrong sampling ratios
   private static Frame sampleFrameStratified(final Frame fr, Vec label, final float[] sampling_ratios, final long seed, final boolean debug, int count) {
     if (fr == null) return null;
-    fr.closeAppendables();
     assert(label.isEnum());
     assert(sampling_ratios != null && sampling_ratios.length == label.domain().length);
     final int labelidx = fr.find(label); //which column is the label?
