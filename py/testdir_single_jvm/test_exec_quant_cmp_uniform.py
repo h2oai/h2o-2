@@ -171,6 +171,7 @@ class Basic(unittest.TestCase):
             for i, threshold in enumerate(thresholds):
                 # FIX! do two?
                 if i!=0:
+                    execExpr = "r2=c(1); r2=quantile(%s[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))" % hex_key
                     execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, threshold)
                     (resultExec, result) = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                     h2p.green_print("\nresultExec: %s" % h2o.dump_json(resultExec))

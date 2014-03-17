@@ -990,23 +990,25 @@ class ASTQtile extends ASTOp {
     AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
 
+    Quantiles[] qbins = null;
+
     final int MAX_ITERATIONS = 16;
     final int MAX_QBINS = 1000; // less uses less memory, can take more passes
     final boolean MULTIPASS = true; // approx in 1 pass if false
     final int INTERPOLATION = 7; // linear if quantile not exact on row. 2 uses mean.
 
-    Quantiles[] qbins = null;
-    double valStart = xv.min();
-    double valEnd = xv.max();
     double result;
     for (double quantile : p) {
       // FIX! should really break this loop out into a multipass single type 7 quantile thing.
       // Type 7 matches R default
+      double valStart = xv.min();
+      double valEnd = xv.max();
       for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         qbins = new Quantiles.BinTask2(quantile, MAX_QBINS, valStart, valEnd, 
           MULTIPASS, INTERPOLATION).doAll(xv)._qbins;
         if ( qbins == null ) break;
         else {
+          // the map/reduce didn't create any h2o keys. don't have to wait for anything?
           qbins[0].finishUp(xv);
           Log.debug("\nQ_ multipass iteration: "+iteration+
             " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins[0]._valBinSize);
@@ -1018,6 +1020,7 @@ class ASTQtile extends ASTOp {
       }
       if ( qbins == null ) result = Double.NaN;
       else result = qbins[0]._pctile[0];
+      qbins = null; // shouldn't need this? 
       nc.addNum(result);
     }
 
