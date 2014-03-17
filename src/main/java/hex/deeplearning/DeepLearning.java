@@ -200,6 +200,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
+    // these parameters can be changed when re-starting from a checkpointed model
     if (!arg._name.equals("checkpoint")
             && !arg._name.equals("epochs")
             && !arg._name.equals("expert_mode")
@@ -219,13 +220,14 @@ public class DeepLearning extends Job.ValidatedJob {
           throw new IllegalArgumentException("Checkpointed model was unstable. Not restarting.");
         }
         final DeepLearning cp = cp_model.model_info().get_params();
-//        destination_key = cp.destination_key; //continue training the SAME model
         // the following parameters are needed in the DeepLearning class for training
         balance_classes = cp.balance_classes;
         score_validation_sampling = cp.score_validation_sampling;
         max_after_balance_size = cp.max_after_balance_size;
         score_training_samples = cp.score_training_samples;
         score_validation_samples = cp.score_validation_samples;
+        shuffle_training_data = cp.shuffle_training_data;
+        force_load_balance = cp.force_load_balance;
         state = JobState.RUNNING;
         return;
       }
