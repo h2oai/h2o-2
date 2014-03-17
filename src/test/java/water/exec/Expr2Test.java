@@ -219,8 +219,8 @@ public class Expr2Test extends TestUtil {
       checkStr("a=1;isTRUE(1)",1);
       checkStr("a=c(1,2);isTRUE(a)",0);
       checkStr("isTRUE(min)",0);
-      checkStr("seq_len(0)");
-      checkStr("seq_len(-1)");
+      checkStr("seq_len(0)","Error in seq_len(0): argument must be coercible to positive integer");
+      checkStr("seq_len(-1)","Error in seq_len(-1): argument must be coercible to positive integer");
       checkStr("seq_len(10)");
       checkStr("3 < 4 |  F &  3 > 4", 1); // Evals as (3<4) | (F & (3>4))
       checkStr("3 < 4 || F && 3 > 4", 1);
