@@ -33,11 +33,11 @@ public class DeepLearningProstateTest extends TestUtil {
     int count = 0;
     for (boolean load_balance : new boolean[]{
             true,
-            false,
+//            false,
     }) {
       for (boolean shuffle : new boolean[]{
               true,
-              false,
+//              false,
       }) {
         for (boolean balance_classes : new boolean[]{
                 true,
@@ -50,18 +50,18 @@ public class DeepLearningProstateTest extends TestUtil {
           }) {
             for (DeepLearning.ClassSamplingMethod csm : new DeepLearning.ClassSamplingMethod[] {
                     DeepLearning.ClassSamplingMethod.Stratified,
-                    DeepLearning.ClassSamplingMethod.Uniform
+//                    DeepLearning.ClassSamplingMethod.Uniform
             }) {
               // FIXME: memory leak: stratified sampling can lead to some chunks not being kept around if no row is chosen
               if (resp == 8 && csm == DeepLearning.ClassSamplingMethod.Stratified && load_balance) continue;
 
               for (int scoretraining : new int[]{
                       200,
-                      0,
+//                      0,
               }) {
                 for (int scorevalidation : new int[]{
                         200,
-                        0,
+//                        0,
                 }) {
 
                   for (int vf : new int[]{

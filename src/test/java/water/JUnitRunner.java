@@ -1,6 +1,5 @@
 package water;
 
-import hex.DeepLearningProstateTest;
 import hex.DeepLearningVsNeuralNet;
 import hex.NeuralNetIrisTest;
 import hex.NeuralNetSpiralsTest;
@@ -39,7 +38,6 @@ public class JUnitRunner {
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
     tests.remove(DeepLearningVsNeuralNet.class);
-    tests.remove(DeepLearningProstateTest.class);
     tests.remove(NeuralNetIrisTest.class); //old NeuralNet
     tests.remove(NeuralNetSpiralsTest.class); //old NeuralNet
     // Pure JUnit test
