@@ -441,11 +441,13 @@ public class DeepLearning extends Job.ValidatedJob {
     try {
       lock_data();
       checkParams();
+      final boolean del_enum_resp = (classification && !response.isEnum());
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
       float[] priorDist = classification ? new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
+      if (del_enum_resp) model.toDelete(dinfo._adaptedFrame.lastVec()._key);
       return model;
     }
     finally {
@@ -495,7 +497,7 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
-      train = updateFrame(train, reBalance(model.model_info().data_info()._adaptedFrame, seed));
+      train = updateFrame(train, reBalance(train, seed));
       float[] trainSamplingFactors;
       if (classification && balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
@@ -512,7 +514,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Frame adaptedValid = getValidation();
         if (getValidAdaptor().needsAdaptation2CM())
           adaptedValid.add("adaptedValidationResponse", getValidAdaptor().getAdaptedValidationResponse2CM());
-        valid = reBalance(adaptedValid, seed+1); //rebalance for load balancing, shuffle for "fairness"
+        valid = updateFrame(adaptedValid, reBalance(adaptedValid, seed+1)); //rebalance for load balancing, shuffle for "fairness"
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
         if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
           validScoreFrame = sampleFrameStratified(valid, valid.lastVec(), null,
@@ -592,9 +594,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return Frame that can be load-balanced (and shuffled), depending on whether force_load_balance and shuffle_training_data are set
    */
   private Frame reBalance(final Frame fr, long seed) {
-    Frame f = force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
-    if (f != fr) ltrash(f);
-    return f;
+    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
   }
 
 }

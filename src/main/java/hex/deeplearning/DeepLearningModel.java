@@ -49,6 +49,10 @@ public class DeepLearningModel extends Model {
     model_info.delete();
   }
 
+  public void toDelete(Key k) {
+    model_info._toDelete = k;
+  }
+
   public static class Errors extends Iced {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -291,9 +295,13 @@ public class DeepLearningModel extends Model {
         for (int i=0; i<E_g2.length; ++i) E_g2[i] = new float[units[i]*units[i+1]];
       }
     }
+
+    Key _toDelete = null;
     public void delete() {
-      // ugly: whoever made data_info should also clean this up... but sometimes it was made by Weaver from UKV!
-      if (data_info()._adaptedFrame.lastVec()._key!=null) UKV.remove(data_info()._adaptedFrame.lastVec()._key);
+      if (_toDelete!=null) {
+        assert(_toDelete == data_info._adaptedFrame.lastVec()._key);
+        UKV.remove(_toDelete);
+      }
     }
 
     @Override public String toString() {
