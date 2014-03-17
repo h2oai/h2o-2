@@ -21,7 +21,7 @@ public class Exec2 {
 
   // Grammar:
   //   statements := cxexpr ; statements
-  //   cxexpr :=                    // COMPLEX expr 
+  //   cxexpr :=                    // COMPLEX expr
   //           infix_expr           // Simple RHS-expr
   //           id = cxexpr          // Shadows outer var with a ptr assignment; no copy
   //                                // Overwrites inner var; types must match.
@@ -29,7 +29,7 @@ public class Exec2 {
   //           id[] = cxexpr        // Slice/partial assignment; id already exists
   //           iexpr ? cxexpr : cxexpr  // exprs must have equal types
   //   infix_expr :=                // Leading infix expression
-  //           op1 infix_expr term* // +x but also e.g. ++--!+-!-++!3 
+  //           op1 infix_expr term* // +x but also e.g. ++--!+-!-++!3
   //           op1?  slice term*    // e.g. cos() or -sin(foo) or -+-fun()[1,2]
   //   term : =                     // Infix expression
   //           op2 infix_expr       // Standard R operator prec ordering
@@ -66,7 +66,7 @@ public class Exec2 {
       Value val = H2O.raw_get(k);
       if( val != null && val.isArray() ) {
         Frame frAuto = ValueArray.asFrame(DKV.get(k));
-        // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.  
+        // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.
         // The VA is lost.
         Frame fr2 = new Frame(k,frAuto._names,frAuto.vecs());
         frAuto.remove(0,fr2.numCols());
@@ -79,12 +79,12 @@ public class Exec2 {
       if( !H2O.raw_get(k).isFrame() ) continue;
       Frame fr = DKV.get(k).get(); // Fetch whole thing
       String kstr = k.toString();
-      try { 
-        env.push(fr,kstr); 
+      try {
+        env.push(fr,kstr);
         global.add(new ASTId(Type.ARY,kstr,0,global.size()));
         fr.read_lock(null);
         locked.add(fr._key);
-      } catch( Exception e ) { 
+      } catch( Exception e ) {
         System.err.println("Exception while adding frame "+k+" to Exec env");
       }
     }
@@ -123,8 +123,8 @@ public class Exec2 {
     _env.push(global);
   }
   int lexical_depth() { return _env.size()-1; }
-  
-  AST parse() { 
+
+  AST parse() {
 
     AST ast = ASTStatement.parse(this);
     skipWS();                   // No trailing crud
@@ -172,7 +172,7 @@ public class Exec2 {
   static boolean isWS(char c) { return c<=' '; }
   static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';' || c=='$'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
-  static boolean isLetter2(char c) { 
+  static boolean isLetter2(char c) {
     return c=='.' || c==':' || c=='\\' || isDigit(c) || isLetter(c);
   }
 
@@ -220,6 +220,19 @@ public class Exec2 {
       else return _str.substring(_x-1,_x);
     _x++;                       // Else accept e.g. <= >= ++ != == etc...
     return _str.substring(_x-2,_x);
+  }
+
+  // isID specifically does not parse "=" or "<-".  This guy does.
+  boolean isAssign(boolean EOS) {
+    if( peek('<',EOS) ) {
+      if( _buf[_x]=='-' ) { _x++; return true; }
+      else return false;
+    }
+    if( !peek('=',EOS) ) return false;
+    char c = _buf[_x];
+    if( isDigit(c) || isLetter(c) || isWS(c) || isReserved(c) ) return true;
+    _x--;
+    return false;
   }
 
   // --------------------------------------------------------------------------

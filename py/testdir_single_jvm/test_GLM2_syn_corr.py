@@ -8,7 +8,15 @@ DO_ALL_DIGITS = False
 
 print "Uses numpy to create dataset..I guess we have to deal with jenkins not having it"
 print "uses dot product off some coefficients to create output. also correlatation with constant term in cols"
-import numpy as np
+SCIPY_INSTALLED = True
+try:
+    import scipy as sp
+    import numpy as np
+    print "Both numpy and scipy are installed. Will do extra checks"
+
+except ImportError:
+    print "numpy or scipy is not installed. Will only do sort-based checking"
+    SCIPY_INSTALLED = False
 
 def write_syn_dataset(csvPathname, rowCount=100, colCount=10):
     # http://nbviewer.ipython.org/github/fabianp/pytron/blob/master/doc/benchmark_logistic.ipynb
@@ -61,101 +69,106 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM2_mnist(self):
-        h2o.beta_features = True
-        SYNDATASETS_DIR = h2o.make_syn_dir()
+        if not SCIPY_INSTALLED:
+            pass
 
-        csvFilelist = [
-            (10000, 500, 'cA', 60),
-        ]
+        else:    
+            h2o.beta_features = True
+            SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        trial = 0
-        for (rowCount, colCount, hex_key, timeoutSecs) in csvFilelist:
-            trialStart = time.time()
+            csvFilelist = [
+                (10000, 500, 'cA', 60),
+            ]
 
-            # PARSE test****************************************
-            csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
-            csvPathname = SYNDATASETS_DIR + "/" + csvFilename
-            write_syn_dataset(csvPathname, rowCount, colCount)
+            trial = 0
+            for (rowCount, colCount, hex_key, timeoutSecs) in csvFilelist:
+                trialStart = time.time()
 
-            start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
-            elapsed = time.time() - start
-            print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+                # PARSE test****************************************
+                csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
+                csvPathname = SYNDATASETS_DIR + "/" + csvFilename
+                write_syn_dataset(csvPathname, rowCount, colCount)
 
-            # GLM****************************************
-            modelKey = 'GLM_model'
-            y = colCount 
-            kwargs = {
-                'response': 'C' + str(y+1),
-                'family': 'binomial',
-                'lambda': 1e-4, 
-                'alpha': 0,
-                'max_iter': 15,
-                'n_folds': 1,
-                'beta_epsilon': 1.0E-4,
-                'destination_key': modelKey,
-                }
+                start = time.time()
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', 
+                    hex_key=hex_key, timeoutSecs=timeoutSecs)
+                elapsed = time.time() - start
+                print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            # GLM wants the output col to be strictly 0,1 integer
-            execExpr = "aHack=%s; aHack[,%s] = aHack[,%s]==1" % (hex_key, y+1, y+1)
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-            aHack = {'destination_key': 'aHack'}
+                # GLM****************************************
+                modelKey = 'GLM_model'
+                y = colCount 
+                kwargs = {
+                    'response': 'C' + str(y+1),
+                    'family': 'binomial',
+                    'lambda': 1e-4, 
+                    'alpha': 0,
+                    'max_iter': 15,
+                    'n_folds': 1,
+                    'beta_epsilon': 1.0E-4,
+                    'destination_key': modelKey,
+                    }
 
-            
-            timeoutSecs = 1800
-            start = time.time()
-            glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
-            elapsed = time.time() - start
-            print "GLM completed in", elapsed, "seconds.", \
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+                # GLM wants the output col to be strictly 0,1 integer
+                execExpr = "aHack=%s; aHack[,%s] = aHack[,%s]==1" % (hex_key, y+1, y+1)
+                h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                aHack = {'destination_key': 'aHack'}
 
-            h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
-            modelKey = glm['glm_model']['_key']
+                
+                timeoutSecs = 1800
+                start = time.time()
+                glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                elapsed = time.time() - start
+                print "GLM completed in", elapsed, "seconds.", \
+                    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            # This seems wrong..what's the format of the cm?
-            lambdaMax = glm['glm_model']['lambda_max']
-            print "lambdaMax:", lambdaMax
+                h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
+                modelKey = glm['glm_model']['_key']
 
-            best_threshold= glm['glm_model']['submodels'][0]['validation']['best_threshold']
-            print "best_threshold", best_threshold
+                # This seems wrong..what's the format of the cm?
+                lambdaMax = glm['glm_model']['lambda_max']
+                print "lambdaMax:", lambdaMax
 
-            # pick the middle one?
-            cm = glm['glm_model']['submodels'][0]['validation']['_cms'][5]['_arr']
-            print "cm:", cm
-            pctWrong = h2o_gbm.pp_cm_summary(cm);
-            # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
+                best_threshold= glm['glm_model']['submodels'][0]['validation']['best_threshold']
+                print "best_threshold", best_threshold
 
-            print "\nTrain\n==========\n"
-            print h2o_gbm.pp_cm(cm)
+                # pick the middle one?
+                cm = glm['glm_model']['submodels'][0]['validation']['_cms'][5]['_arr']
+                print "cm:", cm
+                pctWrong = h2o_gbm.pp_cm_summary(cm);
+                # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
 
-            # Score *******************************
-            # this messes up if you use case_mode/case_vale above
-            print "\nPredict\n==========\n"
-            predictKey = 'Predict.hex'
-            start = time.time()
+                print "\nTrain\n==========\n"
+                print h2o_gbm.pp_cm(cm)
 
-            predictResult = h2o_cmd.runPredict(
-                data_key='aHack',
-                model_key=modelKey,
-                destination_key=predictKey,
-                timeoutSecs=timeoutSecs)
+                # Score *******************************
+                # this messes up if you use case_mode/case_vale above
+                print "\nPredict\n==========\n"
+                predictKey = 'Predict.hex'
+                start = time.time()
 
-            predictCMResult = h2o.nodes[0].predict_confusion_matrix(
-                actual='aHack',
-                vactual='C' + str(y+1),
-                predict=predictKey,
-                vpredict='predict',
-                )
+                predictResult = h2o_cmd.runPredict(
+                    data_key='aHack',
+                    model_key=modelKey,
+                    destination_key=predictKey,
+                    timeoutSecs=timeoutSecs)
 
-            cm = predictCMResult['cm']
+                predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+                    actual='aHack',
+                    vactual='C' + str(y+1),
+                    predict=predictKey,
+                    vpredict='predict',
+                    )
 
-            # These will move into the h2o_gbm.py
-            pctWrong = h2o_gbm.pp_cm_summary(cm);
-            self.assertLess(pctWrong, 50,"Should see less than 50% error")
+                cm = predictCMResult['cm']
 
-            print "\nTest\n==========\n"
-            print h2o_gbm.pp_cm(cm)
+                # These will move into the h2o_gbm.py
+                pctWrong = h2o_gbm.pp_cm_summary(cm);
+                self.assertLess(pctWrong, 50,"Should see less than 50% error")
+
+                print "\nTest\n==========\n"
+                print h2o_gbm.pp_cm(cm)
 
 
 if __name__ == '__main__':

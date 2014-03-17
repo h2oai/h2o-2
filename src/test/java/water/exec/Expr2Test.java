@@ -76,6 +76,7 @@ public class Expr2Test extends TestUtil {
       checkStr("x=mean(c(\n3))",3); // Assign x to the result of running fcn mean(3)
       checkStr("x=mean+3","Arg 'x' typed as dblary but passed dbl(ary)\n"+"x=mean+3\n"+"  ^-----^\n");       // Error: "mean" is a function; cannot add a function and a number
       checkStr("apply(c(1,2,3),,nrow)","Missing argument\napply(c(1,2,3),,nrow)\n               ^\n");
+      checkStr("foo==bar","Unknown var foo\nfoo==bar\n^--^\n"); // Error msg is about "foo==" and not new assignment "foo="
 
       // Simple array handling; broadcast operators
       checkStr("h.hex");        // Simple ref

@@ -33,6 +33,14 @@ public class QuantilesPage extends Request2 {
   @API(help = "Interpolation between rows. Type 2 (mean) or 7 (linear).", filter = Default.class)
   public int interpolation_type = 7;
 
+  // this isn't used yet. column_name is
+  // class colsFilter1 extends MultiVecSelect { public colsFilter1() { super("source_key");} }
+  // @API(help = "Not supported yet (Select columns)", filter=colsFilter1.class)
+  // int[] cols;
+
+  @API(help = "Maximum number of columns to show quantile", filter = Default.class, lmin = 1)
+  int max_ncols = 1000;
+
   @API(help = "Column name.")
   String column_name;
 
@@ -62,10 +70,18 @@ public class QuantilesPage extends Request2 {
 
   @Override protected Response serve() {
     if( source_key == null ) return RequestServer._http404.serve();
+
     if( column == null ) return RequestServer._http404.serve();
     if ( column.isEnum() ) {
       throw new IllegalArgumentException("Column is an enum");
     }
+
+    // all cols by default
+    // if( cols == null ) {
+    //   cols = new int[Math.min(source_key.vecs().length,max_ncols)];
+    //   for(int i = 0; i < cols.length; i++) cols[i] = i;
+    // }
+
     if (! ((interpolation_type == 2) || (interpolation_type == 7)) ) {
       throw new IllegalArgumentException("Unsupported interpolation type. Currently only allow 2 or 7");
     }
@@ -73,19 +89,12 @@ public class QuantilesPage extends Request2 {
     Vec[] vecs = new Vec[1];
     String[] names = new String[1];
     vecs[0] = column;
-    names[0] = source_key.names()[source_key.find(column)];
-    Frame fr = new Frame(names, vecs);
+    // names[0] = source_key.names()[source_key.find(column)];
+    // Frame fr = new Frame(names, vecs);
 
     Futures fs = new Futures();
     for( Vec vec : vecs) {
         vec.rollupStats(fs);
-        // just to see, move to using these rather than the min/max/mean from basicStats
-        double vmax = vec.max();
-        double vmin = vec.min();
-        double vmean = vec.mean();
-        double vsigma = vec.sigma();
-        long vnaCnt = vec.naCnt();
-        boolean visInt = vec.isInt();
     }
     fs.blockForPending();
 
@@ -107,8 +116,8 @@ public class QuantilesPage extends Request2 {
       if ( multiple_pass == 0) result = Double.NaN;
 
       qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
-        multiPass, interpolation_type).doAll(fr)._qbins;
-      // can we just overwrite it with a new one?
+        // multiPass, interpolation_type).doAll(fr)._qbins;
+        multiPass, interpolation_type).doAll(vecs[0])._qbins;
       Log.debug("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
       // Have to get this internal state, and copy this state for the next iteration
@@ -125,7 +134,7 @@ public class QuantilesPage extends Request2 {
 
       if ( qbins != null ) { // if it's enum it will be null?
         qbins[0].finishUp(vecs[0]);
-        column_name = qbins[0].colname;
+        column_name = names[0]; // the string name, not the param
         quantile_requested = qbins[0].QUANTILES_TO_DO[0];
         iterations = 1;
         done = qbins[0]._done;
@@ -164,14 +173,15 @@ public class QuantilesPage extends Request2 {
       qbins2 = null;
       for (int b = 0; b < MAX_ITERATIONS; b++) {
         qbins2 = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
-          multiPass, interpolation_type).doAll(fr)._qbins;
+          // multiPass, interpolation_type).doAll(fr)._qbins;
+          multiPass, interpolation_type).doAll(vecs[0])._qbins;
         iterations = b + 1;
-        if ( qbins2 != null ) {
+        if ( qbins2 == null ) break;
+        else {
           qbins2[0].finishUp(vecs[0]);
-          // for printing?
-          double valRange = qbins2[0]._valRange;
-          double valBinSize = qbins2[0]._valBinSize;
+
           Log.debug("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
+          double valBinSize = qbins2[0]._valBinSize;
           Log.debug("Q_ valBinSize: "+valBinSize);
 
           valStart = qbins2[0]._newValStart;
@@ -182,7 +192,7 @@ public class QuantilesPage extends Request2 {
       }
 
       if ( qbins2 != null ) { // if it's enum it will be null?
-        column_name = qbins2[0].colname;
+        column_name = names[0]; // string name, not the param
         quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
         done = qbins2[0]._done;
         exactResult = qbins2[0]._pctile[0];

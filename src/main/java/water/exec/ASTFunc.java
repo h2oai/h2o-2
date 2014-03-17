@@ -73,7 +73,7 @@ public class ASTFunc extends ASTOp {
     fun._env = env.capture(false);
     env.push(fun);
   }
-  @Override void apply(Env env, int argcnt) { 
+  @Override void apply(Env env, int argcnt, ASTApply apply) { 
     int res_idx = env.pushScope(argcnt-1);
     env.push(_tmps);
     _body.exec(env);
@@ -91,7 +91,7 @@ public class ASTFunc extends ASTOp {
     Frame fr = new Frame(new String[]{"row"},new Vec[]{av.close(null)});
     env.push(this);
     env.push(fr);
-    this.apply(env,2);
+    this.apply(env,2,null);
     if (env.isDbl()) {
       if (out==null || out.length<1) out= new double[1];
       out[0] = env.popDbl();

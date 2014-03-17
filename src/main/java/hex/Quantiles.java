@@ -18,19 +18,16 @@ public class Quantiles extends Iced {
   // for GET.
   static final String DOC_GET = "Returns a quantile of a fluid-vec frame";
 
-  public static final int    MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
+  public static final int MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
   // just use [0] here?
   public final double QUANTILES_TO_DO[];
 
-  public long                _totalRows;    // non-empty rows per group
+  public long      _totalRows;    // non-empty rows per group
   // FIX! not sure if I need to save these here from vec
   // why were these 'transient' ? doesn't make sense if hcnt2 stuff wasn't transient
   // they're not very big. are they serialized in the map/reduce?
   final double     _max;
   final double     _min;
-  final double     _mean;
-  final double     _sigma;
-  final long       _naCnt;
   final boolean    _isInt;
   final boolean    _isEnum;
   final String[]   _domain;
@@ -59,7 +56,7 @@ public class Quantiles extends Iced {
 
   // OUTPUTS
   // Basic info
-  @API(help="name"        ) public String    colname;
+  @API(help="name"    ) public String colname; // FIX! currently not set. Need at least one for class loading
 
   public long[]  hcnt2; // finer histogram. not visible
   public double[]  hcnt2_min; // min actual for each bin
@@ -92,7 +89,7 @@ public class Quantiles extends Iced {
     @Override public void map(Chunk[] cs) {
       _qbins = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _qbins[i] = new Quantiles(_fr.vecs()[i], _fr.names()[i], _quantile, _max_qbins,
+        _qbins[i] = new Quantiles(_fr.vecs()[i], _quantile, _max_qbins,
           _valStart, _valEnd, _multiPass, _interpolationType).add(cs[i]);
     }
 
@@ -102,7 +99,6 @@ public class Quantiles extends Iced {
     }
   }
 
-  // FIX! should use _max_qbins if available?
   public void finishUp(Vec vec) {
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
@@ -120,18 +116,14 @@ public class Quantiles extends Iced {
     }
   }
 
-  public Quantiles(Vec vec, String name, double quantile, int max_qbins, 
+  public Quantiles(Vec vec, double quantile, int max_qbins, 
         double valStart, double valEnd, boolean multiPass, int interpolationType) {
 
-    colname = name;
     _isEnum = vec.isEnum();
     _isInt = vec.isInt();
     _domain = vec.isEnum() ? vec.domain() : null;
     _max = vec.max();
     _min = vec.min();
-    _mean = vec.mean();
-    _sigma = vec.sigma();
-    _naCnt = vec.naCnt();
 
     _totalRows = 0;
     QUANTILES_TO_DO = new double[1];
@@ -173,8 +165,7 @@ public class Quantiles extends Iced {
       }
       else {
         // okay if 1 more than max_qbins gets created
-        // _binsz2 = _binsz / (max_qbins / nbin);
-        int nbin2 = (int)(Math.round((_max + (vec.isInt()?.5:0) - _start2)*1000000.0/_binsz2)/1000000L) + 1;
+        int nbin2 = (int) Math.ceil((_max - _start2)/_binsz2) + 1;
         assert nbin2 > 0;
         // Log.debug("Q_ Single pass histogram has "+nbin2+" bins");
         // Log.debug("Q_ Single pass histogram starts at "+_start2);
@@ -201,9 +192,9 @@ public class Quantiles extends Iced {
     // hcnt2 implicitly zeroed on new 
   }
 
-  public Quantiles(Vec vec, String name) {
-    // default to single pass median approximation?
-    this(vec, name, 0.5, 1000, vec.min(), vec.max(), false, 7);
+  public Quantiles(Vec vec) {
+    // default to multipass median approximation?
+    this(vec, 0.5, 1000, vec.min(), vec.max(), true, 7);
   }
 
   public Quantiles add(Chunk chk) {

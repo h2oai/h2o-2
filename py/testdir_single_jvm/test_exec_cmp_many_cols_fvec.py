@@ -36,8 +36,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ## print "sleeping 3600"
-        time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_parse_200k_cols_fvec(self):
@@ -94,11 +92,14 @@ class Basic(unittest.TestCase):
             for i in range(1,REPEAT):
                 hex_key_i = hex_key + "_" + str(i)
                 hex_key_0 = hex_key + "_0"
+                
                 print "\nComparing %s to %s" % (hex_key_i, hex_key_0)
-                execExpr = "%s[1,]+%s[1,]" % (hex_key_0, hex_key_i)
-                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-                execExpr = "%s[,1]+%s[,1]" % (hex_key_0, hex_key_i)
-                resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                if 1==0:
+                    execExpr = "%s[1,]+%s[1,]" % (hex_key_0, hex_key_i)
+                    resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+                    execExpr = "%s[,1]+%s[,1]" % (hex_key_0, hex_key_i)
+                    resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
                 execExpr = "%s+%s" % (hex_key_0, hex_key_i)
                 resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                 execExpr = "%s!=%s" % (hex_key_0, hex_key_i)

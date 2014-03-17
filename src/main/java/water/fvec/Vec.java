@@ -87,6 +87,7 @@ public class Vec extends Iced {
 
   // A 1-element Vec
   public Vec( Key key, double d ) {
+    assert key.isVec();
     _key = key;
     _espc = new long[]{0,1};
     Futures fs = new Futures();
@@ -266,7 +267,7 @@ public class Vec extends Iced {
     if( isEnum() ) return this.makeIdentityTransf(); // Make an identity transformation of this vector
     if( !isInt() ) throw new IllegalArgumentException("Enum conversion only works on integer columns");
     long[] domain;
-    String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
+    String[] sdomain = Utils.toString(domain = new CollectDomain(this).doAll(this).domain());
     if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column domain is too large to be represented as an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
     return this.makeSimpleTransf(domain, sdomain);
   }

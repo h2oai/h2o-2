@@ -77,7 +77,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        h2o.sleep(3600)
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_time(self):

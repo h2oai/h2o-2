@@ -41,12 +41,12 @@ class Basic(unittest.TestCase):
     def test_parse_200k_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10, 100000, 'cA', 200, 200),
+            # (10, 100000, 'cA', 200, 200),
             (10, 200000, 'cB', 200, 200),
-            (10, 300000, 'cB', 200, 200),
+            # (10, 300000, 'cB', 200, 200),
             # we timeout/fail on 500k? stop at 200k
             # (10, 500000, 'cC', 200, 200),
-            (10, 1000000, 'cD', 200, 360),
+            # (10, 1000000, 'cD', 200, 360),
             # (10, 1100000, 'cE', 60, 100),
             # (10, 1200000, 'cF', 60, 120),
             ]
@@ -86,6 +86,7 @@ class Basic(unittest.TestCase):
             # if not h2o.browse_disable:
             #    h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             #    time.sleep(5)
+            h2i.delete_keys_at_all_nodes()
 
 if __name__ == '__main__':
     h2o.unit_main()
