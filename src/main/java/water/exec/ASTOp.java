@@ -1132,9 +1132,9 @@ class ASTMean extends ASTOp {
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame fr = env.peekAry();
     if (fr.vecs().length > 1)
-      throw new IllegalArgumentException("sd does not apply to multiple cols.");
+      throw new IllegalArgumentException("mean does not apply to multiple cols.");
     if (fr.vecs()[0].isEnum())
-      throw new IllegalArgumentException("sd only applies to numeric vector.");
+      throw new IllegalArgumentException("mean only applies to numeric vector.");
     double ave = fr.vecs()[0].mean();
     env.pop();
     env.poppush(ave);
