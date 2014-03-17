@@ -3,6 +3,7 @@ package hex;
 import water.Iced;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -81,6 +82,45 @@ public class VarImp extends Iced {
 
   protected StringBuilder toHTMLAppendMoreTableLines(StringBuilder sb, Integer[] sortOrder) {
     return sb;
+  }
+
+  /** Variable importance measured as relative influence.
+   * It provides raw values, scaled values, and summary. */
+  public static class VarImpRI extends VarImp {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+    public VarImpRI(float[] varimp) {
+      super(varimp);
+    }
+
+    @API(help = "Scaled values of raw scores with respect to maximal value (GBM call - relative.influnce(model, scale=T)).")
+    public float[] scaled_values() {
+      float[] scaled = new float[varimp.length];
+      int maxVar = 0;
+      for (int i=0; i<varimp.length; i++)
+        if (varimp[i] > varimp[maxVar]) maxVar = i;
+      float maxVal = varimp[maxVar];
+      for (int var=0; var<varimp.length; var++)
+        scaled[var] = varimp[var] / maxVal;
+      return scaled;
+    }
+
+    @API(help = "Summary of values in percent (the same as produced by summary.gbm).")
+    public float[] summary() {
+      float[] summary = new float[varimp.length];
+      float sum = Utils.sum(varimp);
+      for (int var=0; var<varimp.length; var++)
+        summary[var] = 100*varimp[var] / sum;
+      return summary;
+    }
+
+    @Override protected StringBuilder toHTMLAppendMoreTableLines(StringBuilder sb, Integer[] sortOrder ) {
+      StringBuilder ssb = super.toHTMLAppendMoreTableLines(sb, sortOrder);
+      DocGen.HTML.tableLine(sb, "Scaled values",  scaled_values(), sortOrder);
+      DocGen.HTML.tableLine(sb, "Influence in %", summary(), sortOrder);
+      return ssb;
+    }
   }
 
   /** Variable importance measured as mean decrease in accuracy.
