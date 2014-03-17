@@ -51,9 +51,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   protected boolean importance = false; // compute variable importance
 
-  //@API(help = "Scale variable importance measures.", filter = Default.class )
-  protected boolean scale_importance = false;
-
 //  @API(help = "Active feature columns")
   protected int _ncols;
 
@@ -230,7 +227,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     VarImp varimp = null;
     if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
       Timer vi_timer = new Timer();
-      varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, scale_importance);
+      varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, false);
       Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring

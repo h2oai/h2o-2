@@ -1,10 +1,17 @@
 package hex.gbm;
 
-import hex.ConfusionMatrix;
-import hex.VarImp;
-import hex.gbm.DTree.*;
+import static water.util.ModelUtils.getPrediction;
+import static water.util.Utils.div;
+import hex.*;
+import hex.VarImp.VarImpRI;
+import hex.gbm.DTree.DecidedNode;
+import hex.gbm.DTree.LeafNode;
+import hex.gbm.DTree.Split;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
+
+import java.util.Arrays;
+
 import water.*;
 import water.api.DocGen;
 import water.api.GBMProgressPage;
@@ -12,11 +19,6 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-
-import java.util.Arrays;
-
-import static water.util.Utils.div;
-import static water.util.ModelUtils.getPrediction;
 
 // Gradient Boosted Trees
 //
@@ -107,7 +109,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
     return new GBMModel(model, ktrees, tstats);
   }
-  public GBM() { description = "Distributed GBM"; scale_importance = true; }
+  public GBM() { description = "Distributed GBM"; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -507,8 +509,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         for (int n = 0; n< t.len()-t.leaves; n++)
           if (t.node(n) instanceof DecidedNode) { // it is split node
             Split split = t.decided(n)._split;
-            if (split._col!=-1) // Skip impossible splits ~ leafs
-              _improvPerVar[split._col] += split.improvement(); // least squares improvement
+            if (split.col()!=-1) // Skip impossible splits ~ leafs
+              _improvPerVar[split.col()] += split.improvement(); // least squares improvement
           }
       }
     }
@@ -527,6 +529,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       for (int var=0; var<varimp.length; var++) varimp[var] /= maxVal;
     }
 
-    return new VarImp(varimp);
+    return new VarImpRI(varimp);
   }
 }
