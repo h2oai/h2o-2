@@ -203,6 +203,7 @@ public class Frame extends Lockable<Frame> {
     String[] names = new String[nlen];
     Key[] keys = new Key[nlen];
     Vec[] vecs = new Vec[nlen];
+    reloadVecs(); // force vecs reload
     if (startIdx > 0) {
       System.arraycopy(_names, 0, names, 0, startIdx);
       System.arraycopy(_vecs,  0, vecs,  0, startIdx);
