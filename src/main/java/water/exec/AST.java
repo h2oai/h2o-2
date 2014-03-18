@@ -43,6 +43,8 @@ abstract public class AST extends Iced {
   }
   abstract void exec(Env env);
   boolean isPosConstant() { return false; }
+  // Scrape out a column name, if we can.  NULL if we cannot.
+  String argName() { return null; }
   protected StringBuilder indent( StringBuilder sb, int d ) {
     for( int i=0; i<d; i++ ) sb.append("  ");
     return sb.append(_t).append(' ');
@@ -373,6 +375,7 @@ class ASTId extends AST {
     ASTFunc fcn = env.fcnScope(_depth);
     fcn._env.push_slot(_depth-1,_num,env);
   }
+  @Override String argName() { return _id; }
   @Override public String toString() { return _id; }
 }
 
@@ -526,6 +529,7 @@ class ASTAssign extends AST {
     if( cols!= null ) narg++;
     env.poppush(narg,ary,null);
   }
+  @Override String argName() { return _lhs instanceof ASTId ? ((ASTId)_lhs)._id : null; }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append('\n');
