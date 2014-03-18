@@ -1,5 +1,7 @@
 package hex.deeplearning;
 
+import static water.util.MRUtils.sampleFrame;
+import static water.util.MRUtils.sampleFrameStratified;
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
 import water.Job;
@@ -16,9 +18,6 @@ import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
-
-import static water.util.MRUtils.sampleFrame;
-import static water.util.MRUtils.sampleFrameStratified;
 
 /**
  * Deep Learning Neural Net implementation based on MRTask2
@@ -514,8 +513,9 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
         Frame adaptedValid = getValidation();
-        if (getValidAdaptor().needsAdaptation2CM())
-          adaptedValid.add("adaptedValidationResponse", getValidAdaptor().getAdaptedValidationResponse2CM());
+        if (getValidAdaptor().needsAdaptation2CM()) {
+          adaptedValid.add(getValidAdaptor().adaptedValidationResponse(_responseName), getValidAdaptor().getAdaptedValidationResponse2CM());
+        }
         valid = updateFrame(adaptedValid, reBalance(adaptedValid, seed+1)); //rebalance for load balancing, shuffle for "fairness"
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
         if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
@@ -537,11 +537,10 @@ public class DeepLearning extends Job.ValidatedJob {
       if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
 
       Log.info("Starting to train the Deep Learning model.");
-      long timeStart = System.currentTimeMillis();
 
       //main loop
       do model.set_model_info(new DeepLearningTask(model.model_info(), sync_fraction).doAll(train).model_info());
-      while (model.doScoring(train, trainScoreFrame, validScoreFrame, timeStart, self()));
+      while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
       Log.info("Finished training the Deep Learning model.");
       return model;

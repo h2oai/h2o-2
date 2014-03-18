@@ -1,11 +1,10 @@
 package water.util;
 
+import static water.util.Utils.getDeterRNG;
 import water.*;
 import water.fvec.*;
 
 import java.util.Random;
-
-import static water.util.Utils.getDeterRNG;
 
 public class MRUtils {
 
@@ -202,7 +201,8 @@ public class MRUtils {
         sampling_ratios[i] = ((float)fr.numRows() / label.domain().length) / dist[i]; // prior^-1 / num_classes
       }
       final float inv_scale = Utils.minValue(sampling_ratios); //majority class has lowest required oversampling factor to achieve balance
-      Utils.div(sampling_ratios, inv_scale); //want sampling_ratio 1.0 for majority class (no downsampling)
+      if (!Float.isNaN(inv_scale) && !Float.isInfinite(inv_scale))
+        Utils.div(sampling_ratios, inv_scale); //want sampling_ratio 1.0 for majority class (no downsampling)
     }
 
     if (!allowOversampling) {
@@ -217,7 +217,7 @@ public class MRUtils {
       numrows += sampling_ratios[i] * dist[i];
     }
     final long actualnumrows = Math.min(maxrows, Math.round(numrows)); //cap #rows at maxrows
-    assert(actualnumrows > 0);
+    assert(actualnumrows >= 0); //can have no matching rows in case of sparse data where we had to fill in a makeZero() vector
     Log.info("Stratified sampling to a total of " + String.format("%,d", actualnumrows) + " rows.");
 
     if (actualnumrows != numrows) {
@@ -284,6 +284,9 @@ public class MRUtils {
 
     // Confirm the validity of the distribution
     long[] dist = new ClassDist(r.vecs()[labelidx]).doAll(r.vecs()[labelidx]).dist();
+
+    // if there are no training labels in the test set, then there is no point in sampling the test set
+    if (dist == null) return fr;
 
     if (debug) {
       long sumdist = Utils.sum(dist);

@@ -1,18 +1,20 @@
 package hex.gbm;
 
-import static hex.gbm.SharedTreeModelBuilder.createRNG;
-import hex.*;
 import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
-
-import java.util.*;
-
 import water.*;
-import water.api.*;
+import water.api.AUC;
+import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.util.*;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static hex.gbm.SharedTreeModelBuilder.createRNG;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -962,7 +964,7 @@ public class DTree extends Iced {
       if( _dataKey != null ) {
         Value dataval = DKV.get(_dataKey);
         water.fvec.Frame frdata = ValueArray.asFrame(dataval);
-        water.fvec.Frame frsub = frdata.subframe(_names);
+        water.fvec.Frame frsub = frdata.subframe(_names, false);
         JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
       }
       return sb;
