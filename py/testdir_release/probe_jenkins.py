@@ -1,11 +1,18 @@
+#!/usr/bin/python
 from urllib2 import urlopen
-import json
+import json, re
 from json import loads
 
 
 def print_json(j):
-    print(json.dumps(j, sort_keys=True, indent=2))
+    j = json.dumps(j, sort_keys=True, indent=2)
+    # j = re.sub(j, r'\n', '\\n')
+    print j
 
+
+def my_urlopen(url):
+    print "\nurlopen:", url
+    return urlopen(url)
 
 print "\nget all projects"
 req = urlopen('http://192.168.1.164:8080/api/json')
@@ -22,31 +29,56 @@ for i,job in enumerate(data['jobs']):
 
 
 print "\nfull url to job", jobIndex
-req = urlopen('%s/%s' % (data['jobs'][jobIndex]['url'], 'api/json'))
+req = my_urlopen('%s%s' % (data['jobs'][jobIndex]['url'], 'api/json'))
 res = req.read()
 job = loads(res)
+
+
 print_json(job.keys())
+# [ "url", "number" ]
+
 print "I think this job is h2o_release_tests: ", job['name']
 
 print "\nwhen did", job['name'], "last run to success?"
+print "job['lastCompletedBuild']:"
+print_json(job['lastCompletedBuild'])
 print_json(job['lastCompletedBuild'].keys())
 
-req = urlopen('%s/%s' % (job['lastCompletedBuild']['url'], 'api/json'))
+# first part has the trailing / already
+req = my_urlopen('%s%s' % (job['lastCompletedBuild']['url'], 'testReport/api/json'))
 res = req.read()
-build = loads(res)
+testReport = loads(res)
+# [ "suites", "failCount", "skipCount", "duration", "passCount", "empty" ]
 
-print_json(build.keys())
-print "\nnumber:",
-print_json(build['number'])
-print "\nresult:",
-print_json(build['result'])
-print "\ntimestamp:",
-print_json(build['timestamp'])
-print "\nartifacts:",
-print_json(build['artifacts'])
-print "\nestimatedDuration:",
-print_json(build['estimatedDuration'])
-# print "%0.2f minutes" % ((build['estimatedDuration'] + 0.0)/(1000 * 60 * 60))
+# printed = 0
+print testReport.keys()
+printed = 0
+for i in testReport['suites']:
+    print "#######################################################"
+    noKeysList = []
 
 
+    if isinstance(i, dict) and printed<8:
+        print "i.keys", i.keys()
+        # i.keys [u'name', u'stdout', u'timestamp', u'stderr', u'duration', u'cases', u'id']
+        # print_json(i)
+        printed += 1
 
+
+
+# {
+#     "type":"object", "properties":{
+#         "age": { "type":"number", },
+#         "className": { "type":"string", },
+#         "duration": { "type":"number", },
+#         "errorDetails": { "type":"string", },
+#         "errorStackTrace": { "type":"string", },
+#         "failedSince": { "type":"number", },
+#         "name": { "type":"string", },
+#         "skippedMessage": { "type":"string", },
+#         "skipped": { "type":"boolean", },
+#         "status": { "type":"string", },
+#         "stderr": { "type":"string", },
+#         "stdout": { "type":"string", }
+#     }
+# }

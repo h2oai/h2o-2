@@ -1,18 +1,20 @@
 package hex.gbm;
 
-import static hex.gbm.SharedTreeModelBuilder.createRNG;
-import hex.*;
 import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
-
-import java.util.*;
-
 import water.*;
-import water.api.*;
+import water.api.AUC;
+import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.util.*;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static hex.gbm.SharedTreeModelBuilder.createRNG;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -539,7 +541,7 @@ public class DTree extends Iced {
     // Confusion matrix per each generated tree or null
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
     @API(help="Confusion matrix domain.")                                             public final String[]        cmDomain;
-    @API(help="Variable importance for individual input variables.")                  public final VarImp          varimp;
+    @API(help="Variable importance for individual input variables.")                  public final VarImp          varimp; // NOTE: in future we can have an array of different variable importance measures (per method)
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
     @API(help="AUC for validation dataset")                                           public final AUC             validAUC;
 
@@ -666,6 +668,7 @@ public class DTree extends Iced {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
       DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
+      DocGen.HTML.paragraph(sb,"Trees: " + ntrees());
       generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_key,"Predict!"));
       String[] domain = cmDomain; // Domain of response col
@@ -689,43 +692,8 @@ public class DTree extends Iced {
           rs.replace("key", testKey);
           DocGen.HTML.paragraph(sb,rs.toString());
         }
-
-        DocGen.HTML.arrayHead(sb);
-        sb.append("<tr class='warning' style='min-width:60px'>");
-        sb.append("<th style='min-width:60px'>Actual / Predicted</th>"); // Row header
-        for( int i=0; i<cm._arr.length; i++ )
-          sb.append("<th style='min-width:60px'>").append(domain[i]).append("</th>");
-        sb.append("<th style='min-width:60px'>Error</th>");
-        sb.append("</tr>");
-
-        // Main CM Body
-        long tsum=0, terr=0;               // Total observations & errors
-        for( int i=0; i<cm._arr.length; i++ ) { // Actual loop
-          sb.append("<tr style='min-width:60px'>");
-          sb.append("<th style='min-width:60px'>").append(domain[i]).append("</th>");// Row header
-          long sum=0, err=0;                     // Per-class observations & errors
-          for( int j=0; j<cm._arr[i].length; j++ ) { // Predicted loop
-            sb.append(i==j ? "<td style='background-color:LightGreen; min-width:60px;'>":"<td style='min-width:60px'>");
-            sb.append(cm._arr[i][j]).append("</td>");
-            sum += cm._arr[i][j];              // Per-class observations
-            if( i != j ) err += cm._arr[i][j]; // and errors
-          }
-          sb.append(String.format("<th style='min-width:60px'>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
-          tsum += sum;  terr += err; // Bump totals
-        }
-        sb.append("</tr>");
-
-        // Last row of CM
-        sb.append("<tr style='min-width:60px'>");
-        sb.append("<th style='min-width:60px'>Totals</th>");// Row header
-        for( int j=0; j<cm._arr.length; j++ ) { // Predicted loop
-          long sum=0;
-          for( int i=0; i<cm._arr.length; i++ ) sum += cm._arr[i][j];
-          sb.append("<td style='min-width:60px'>").append(sum).append("</td>");
-        }
-        sb.append(String.format("<th style='min-width:60px'>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
-        sb.append("</tr>");
-        DocGen.HTML.arrayTail(sb);
+        // generate HTML for CM
+        cm.toHTML(sb, domain);
       }
 
       if( errs != null ) {
@@ -996,7 +964,7 @@ public class DTree extends Iced {
       if( _dataKey != null ) {
         Value dataval = DKV.get(_dataKey);
         water.fvec.Frame frdata = ValueArray.asFrame(dataval);
-        water.fvec.Frame frsub = frdata.subframe(_names);
+        water.fvec.Frame frsub = frdata.subframe(_names, false);
         JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
       }
       return sb;

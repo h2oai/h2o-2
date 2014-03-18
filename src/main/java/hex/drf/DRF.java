@@ -2,9 +2,13 @@ package hex.drf;
 
 import static water.util.Utils.div;
 import static water.util.Utils.sum;
+import static hex.drf.TreeMeasuresCollector.asVotes;
+import static hex.drf.TreeMeasuresCollector.asSSE;
 import hex.ConfusionMatrix;
 import hex.VarImp;
-import hex.drf.TreeVotesCollector.TreeVotes;
+import hex.drf.TreeMeasuresCollector.TreeMeasures;
+import hex.drf.TreeMeasuresCollector.TreeVotes;
+import hex.drf.TreeMeasuresCollector.TreeSSE;
 import hex.gbm.*;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
@@ -53,10 +57,12 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // Fixed seed generator for DRF
   private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
 
-  // Tree votes of individual trees on OOB rows
-  private transient TreeVotes _treeVotesOnOOB;
-  // Tree votes per individual features on shuffled OOB rows
-  private transient TreeVotes[/*features*/] _treeVotesOnSOOB;
+  // --- Private data handled only on master node
+  // Classification or Regression:
+  // Tree votes/SSE of individual trees on OOB rows
+  private transient TreeMeasures _treeMeasuresOnOOB;
+  // Tree votes/SSE per individual features on permutated OOB rows
+  private transient TreeMeasures[/*features*/] _treeMeasuresOnSOOB;
 
   /** DRF model holding serialized tree and implementing logic for scoring a row */
   public static class DRFModel extends DTree.TreeModel {
@@ -173,8 +179,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
   @Override protected void initAlgo(DRFModel initialModel) {
-    // Initialize TreeVotes
-    if (importance) initTreeVotes();
+    // Initialize TreeVotes for classification, MSE arrays for regression
+    if (importance) initTreeMeasurements();
   }
 
   @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
@@ -209,17 +215,23 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     model = doScoring(model, fr, ktrees, tid, tstats, true, !hasValidation(), build_tree_per_node);
     // Make sure that we did not miss any votes
-    assert !importance || _treeVotesOnOOB.npredictors() == _treeVotesOnSOOB[0/*variable*/].npredictors() : "Missing some tree votes in variable importance voting?!";
+    assert !importance || _treeMeasuresOnOOB.npredictors() == _treeMeasuresOnSOOB[0/*variable*/].npredictors() : "Missing some tree votes in variable importance voting?!";
 
     return model;
   }
 
-  private void initTreeVotes() {
+  private void initTreeMeasurements() {
     assert importance : "Tree votes should be initialized only if variable importance is requested!";
     // Preallocate tree votes
-    _treeVotesOnOOB  = new TreeVotes(ntrees);
-    _treeVotesOnSOOB = new TreeVotes[_ncols];
-    for (int i=0; i<_ncols; i++) _treeVotesOnSOOB[i] = new TreeVotes(ntrees);
+    if (classification) {
+      _treeMeasuresOnOOB  = new TreeVotes(ntrees);
+      _treeMeasuresOnSOOB = new TreeVotes[_ncols];
+      for (int i=0; i<_ncols; i++) _treeMeasuresOnSOOB[i] = new TreeVotes(ntrees);
+    } else {
+      _treeMeasuresOnOOB  = new TreeSSE(ntrees);
+      _treeMeasuresOnSOOB = new TreeSSE[_ncols];
+      for (int i=0; i<_ncols; i++) _treeMeasuresOnSOOB[i] = new TreeSSE(ntrees);
+    }
   }
 
   /* On-the-fly version for varimp. After generation a new tree, its tree votes are collected on shuffled
@@ -236,19 +248,27 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   protected VarImp doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain, boolean scale) {
     // Check if we have already serialized 'ktrees'-trees in the model
     assert model.ntrees()-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
-    assert _treeVotesOnOOB.npredictors()-1 == tid : "Tree votes over OOB rows for this tree (var ktrees) were not found!";
+    assert _treeMeasuresOnOOB.npredictors()-1 == tid : "Tree votes over OOB rows for this tree (var ktrees) were not found!";
     // Compute tree votes over shuffled data
     final CompressedTree[/*nclass*/] theTree = model.ctree(tid); // get the last tree FIXME we should pass only keys
     final int nclasses = model.nclasses();
     Futures fs = new Futures();
     for (int var=0; var<_ncols; var++) {
       final int variable = var;
-      H2OCountedCompleter task4var = new H2OCountedCompleter() {
+      H2OCountedCompleter task4var = classification ? new H2OCountedCompleter() {
         @Override public void compute2() {
           // Compute this tree votes over all data over given variable
-          TreeVotes cd = TreeVotesCollector.collect(theTree, nclasses, fTrain, _ncols, sample_rate, variable);
+          TreeVotes cd = TreeMeasuresCollector.collectVotes(theTree, nclasses, fTrain, _ncols, sample_rate, variable);
           assert cd.npredictors() == 1;
-          _treeVotesOnSOOB[variable].append(cd);
+          asVotes(_treeMeasuresOnSOOB[variable]).append(cd);
+          tryComplete();
+        }
+      } : /* regression */ new H2OCountedCompleter() {
+        @Override public void compute2() {
+          // Compute this tree votes over all data over given variable
+          TreeSSE cd = TreeMeasuresCollector.collectSSE(theTree, nclasses, fTrain, _ncols, sample_rate, variable);
+          assert cd.npredictors() == 1;
+          asSSE(_treeMeasuresOnSOOB[variable]).append(cd);
           tryComplete();
         }
       };
@@ -260,7 +280,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     final float[] varimp   = new float[_ncols]; // output variable importance
     final float[] varimpSD = new float[_ncols]; // output variable importance sd
     for (int var=0; var<_ncols; var++) {
-      double[/*2*/] imp = _treeVotesOnSOOB[var].imp(_treeVotesOnOOB);
+      double[/*2*/] imp = classification ? asVotes(_treeMeasuresOnSOOB[var]).imp(asVotes(_treeMeasuresOnOOB)) :  asSSE(_treeMeasuresOnSOOB[var]).imp(asSSE(_treeMeasuresOnOOB));
       varimp  [var] = (float) imp[0];
       varimpSD[var] = (float) imp[1];
     }
@@ -376,7 +396,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Move rows into the final leaf rows
     Timer t_4 = new Timer();
     CollectPreds cp = new CollectPreds(ktrees,leafs).doAll(fr,build_tree_per_node);
-    if (importance) _treeVotesOnOOB.append(cp.rightVotes, cp.allRows); // Track right votes over OOB rows for this tree
+    if (importance) {
+      if (classification)   asVotes(_treeMeasuresOnOOB).append(cp.rightVotes, cp.allRows); // Track right votes over OOB rows for this tree
+      else /* regression */ asSSE  (_treeMeasuresOnOOB).append(cp.sse, cp.allRows);
+    }
     Log.debug(Sys.DRF__, "CollectPreds done: " + t_4);
 
     // Collect leaves stats
@@ -396,7 +419,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     float sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
       sum+=(fs[k+1]=(float)chk_tree(chks,k).at0(row));
-    if (_nclass == 1) sum /= (float)chk_oobt(chks).at0(row); // for regression average per trees voted for this row
+    if (_nclass == 1) sum /= (float)chk_oobt(chks).at0(row); // for regression average per trees voted for this row (only trees which have row in "out-of-bag"
     return sum;
   }
 
@@ -409,6 +432,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     /* @IN  */ final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     /* @OUT */ long rightVotes; // number of right votes over OOB rows (performed by this tree) represented by DTree[] _trees
     /* @OUT */ long allRows;    // number of all OOB rows (sampled by this tree)
+    /* @OUT */ float sse;      // Sum of squares for this tree only
     CollectPreds(DTree trees[], int leafs[]) { _trees=trees; }
     @Override public void map( Chunk[] chks ) {
       final Chunk    y       = importance ? chk_resp(chks) : null; // Response
@@ -444,7 +468,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
             //   - for classification: cumulative number of votes for this row
             //   - for regression: cumulative sum of prediction of each tree - has to be normalized by number of trees
             double prediction = ((LeafNode)tree.node(leafnid)).pred(); // Prediction for this k-class and this row
-            if (importance) rpred[1+k] = (float) prediction;
+            if (importance) rpred[1+k] = (float) prediction; // for both regression and classification
             ct.set0(row, (float)(ct.at0(row) +  prediction));
             // For this tree this row is out-of-bag - i.e., a tree voted for this row
             oobt.set0(row, _nclass>1?1:oobt.at0(row)+1); // for regression track number of trees, for classification boolean flag is enough
@@ -453,10 +477,16 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
           nids.set0(row,0);
         } /* end of k-trees iteration */
         if (importance) {
-          if (wasOOBRow) {
-            int treePred = ModelUtils.getPrediction(rpred, data_row(chks,row, rowdata));
-            int actuPred = (int) y.at80(row);
-            if (treePred==actuPred) rightVotes++; // No miss !
+          if (wasOOBRow && !y.isNA0(row)) {
+            if (classification) {
+              int treePred = ModelUtils.getPrediction(rpred, data_row(chks,row, rowdata));
+              int actuPred = (int) y.at80(row);
+              if (treePred==actuPred) rightVotes++; // No miss !
+            } else { // regression
+              float  treePred = rpred[1];
+              float  actuPred = (float) y.at0(row);
+              sse += (actuPred-treePred)*(actuPred-treePred);
+            }
             allRows++;
           }
         }
@@ -465,6 +495,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @Override public void reduce(CollectPreds mrt) {
       rightVotes += mrt.rightVotes;
       allRows    += mrt.allRows;
+      sse        += mrt.sse;
     }
   }
 

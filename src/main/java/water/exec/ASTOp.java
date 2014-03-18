@@ -722,13 +722,12 @@ class ASTCbind extends ASTOp {
     Frame fr = new Frame(new String[0],new Vec[0]);
     for(int i = 0; i < argcnt-1; i++) {
       if( env.isAry(-argcnt+1+i) ) {
+        String name = null;
         Frame fr2 = env.ary(-argcnt+1+i);
-        if( fr2.numCols()==1 && apply != null && apply._args[i+1] instanceof ASTId ) {
-          String name = ((ASTId)apply._args[i+1])._id;
+        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
           fr.add(name,fr2.anyVec());
-        } else {
+        else 
           fr.add(fr2,true);
-        }
       } else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
@@ -1132,9 +1131,9 @@ class ASTMean extends ASTOp {
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     Frame fr = env.peekAry();
     if (fr.vecs().length > 1)
-      throw new IllegalArgumentException("sd does not apply to multiple cols.");
+      throw new IllegalArgumentException("mean does not apply to multiple cols.");
     if (fr.vecs()[0].isEnum())
-      throw new IllegalArgumentException("sd only applies to numeric vector.");
+      throw new IllegalArgumentException("mean only applies to numeric vector.");
     double ave = fr.vecs()[0].mean();
     env.pop();
     env.poppush(ave);

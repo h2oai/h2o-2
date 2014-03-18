@@ -126,7 +126,7 @@ public class Expr2Test extends TestUtil {
       checkStr("c(2,NA)&&T",1); // 1
       checkStr("-(x = 3)",-3);
       checkStr("x<-+");
-      checkStr("x<-+;x(2)");     // Error, + is binary if used as prefix
+      checkStr("x<-+;x(2)","Passed 1 args but expected 2\nx<-+;x(2)\n      ^--^\n"); // Error, + is binary if used as prefix
       checkStr("x<-+;x(1,2)",3); // 3
       checkStr("x<-*;x(2,3)",6); // 6
       checkStr("x=c(0,1);!x+1"); // ! has lower precedence
@@ -152,7 +152,7 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x,<-){x+1}(2)","Invalid var\nfunction(x,<-){x+1}(2)\n           ^\n");
       checkStr("function(x,x){x+1}(2)","Repeated argument\nfunction(x,x){x+1}(2)\n           ^^\n");
       checkStr("function(x,y,z){x[]}(h.hex,1,2)");
-      checkStr("function(x){x[]}(2)");
+      checkStr("function(x){x[]}(2)","Arg 'x' typed as ary but passed dbl\nfunction(x){x[]}(2)\n                ^--^\n");
       checkStr("function(x){x+1}(2)",3);
       checkStr("function(x){y=x+y}(2)");
       checkStr("function(x){}(2)");
@@ -219,8 +219,8 @@ public class Expr2Test extends TestUtil {
       checkStr("a=1;isTRUE(1)",1);
       checkStr("a=c(1,2);isTRUE(a)",0);
       checkStr("isTRUE(min)",0);
-      checkStr("seq_len(0)");
-      checkStr("seq_len(-1)");
+      checkStr("seq_len(0)","Error in seq_len(0): argument must be coercible to positive integer");
+      checkStr("seq_len(-1)","Error in seq_len(-1): argument must be coercible to positive integer");
       checkStr("seq_len(10)");
       checkStr("3 < 4 |  F &  3 > 4", 1); // Evals as (3<4) | (F & (3>4))
       checkStr("3 < 4 || F && 3 > 4", 1);

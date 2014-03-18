@@ -5,7 +5,6 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log.Tag.Sys;
 import water.util.Log;
-import water.util.Utils;
 import hex.gbm.SharedTreeModelBuilder;
 import hex.gbm.GBM;
 
@@ -103,11 +102,11 @@ public class Runner {
     Log.info(sys,"Data loaded in "+t_load);
 
     // Pull out the response vector from the train data
-    Vec response = train.subframe(new String[] {ARGS.response} ).vecs()[0];
+    Vec response = train.subframe(new String[] {ARGS.response}, false).vecs()[0];
 
     // Build a Frame with just the requested columns.
-    train = train.subframe(cs);
-    if( test != null ) test = test.subframe(cs);
+    train = train.subframe(cs, false);
+    if( test != null ) test = test.subframe(cs, false);
     Vec vs[] = train.vecs();
     for( Vec v : vs ) v.min(); // Do rollups
     for( int i=0; i<train.numCols(); i++ ) 

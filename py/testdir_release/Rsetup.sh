@@ -1,8 +1,43 @@
 #!/bin/bash
+
+#****************************************************************************************************
+CLEAN_R_STUFF=0
+REMOVE_H2O_PACKAGES=0
+INSTALL_R_PACKAGES=0
+while getopts fp flag
+do
+    case $flag in
+        f)
+            echo "will delete ~/.Rlibrary, create ~/.Rprofile and ~/.Renviron, and reinstall R packages (not h2o package)"
+            CLEAN_R_STUFF=1
+            REMOVE_H2O_PACKAGES=1
+            INSTALL_R_PACKAGES=1
+            ;;
+        p)
+            echo "delete h2o package. Check and if necessary, install R packages (not h2o package)"
+            REMOVE_H2O_PACKAGES=1
+            INSTALL_R_PACKAGES=1
+            ;;
+        h)
+            echo "-f delete ~/.Rlibrary, create ~/.Rprofile and ~/.Renviron, and reinstall R packages (not h2o package)"
+            exit
+            ;;
+        ?)
+            echo "Something wrong with the args to Rsetup.sh"
+            exit
+            ;;
+    esac
+done
+shift $(( OPTIND - 1 ))  # shift past the last flag or argument
+# echo remaining parameters to Bash are $*
+
+#*******************************************************************************
 echo "Checking that you have R, and the R version"
 which R
 R --version | egrep -i '(version|platform)'
 echo ""
+
+#*******************************************************************************
 # don't always remove..other users may have stuff he doesn't want to re-install
 cat <<!  > /tmp/init_R_stuff.sh
     echo "Rebuilding ~/.Renviron and ~/.Rprofile for $USER"
@@ -16,7 +51,7 @@ cat <<!  > /tmp/init_R_stuff.sh
 !
 chmod +x /tmp/init_R_stuff.sh
 
-if [[ $USER == "jenkins" ]]
+if [ $CLEAN_R_STUFF -eq 1 ]
 then 
     sh -x /tmp/init_R_stuff.sh
 else
@@ -28,10 +63,15 @@ else
     echo ""
 fi
 
+#*******************************************************************************
 # removing .Rlibrary should have removed h2oWrapper
 # but maybe it was installed in another library (site library)
 # make sure it's removed, so the install installs the new (latest) one
-cat <<!  > /tmp/libPaths.cmd
+
+rm -f /tmp/libPaths.cmd
+if [ $REMOVE_H2O_PACKAGES -eq 1 ]
+then 
+    cat <<!  >> /tmp/libPaths.cmd
 .libPaths()
 myPackages = rownames(installed.packages())
 if("h2o" %in% myPackages) {
@@ -42,7 +82,12 @@ if("h2oRClient" %in% myPackages) {
   # detach("package:h2oRClient", unload=TRUE) 
   remove.packages("h2oRClient")
 }
+!
+fi
 
+if [ $INSTALL_R_PACKAGES -eq 1 ]
+then 
+    cat <<!  >> /tmp/libPaths.cmd
 # make the install conditional. Don't install if it's already there
 usePackage <- function(p) {
     local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
@@ -82,12 +127,14 @@ usePackage("RUnit")
 # usePackage("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1245/R", getOption("repos")))) 
 # library(h2o)
 !
+fi
+#****************************************************************************************************
 # if Jenkins is running this, doing execute it..he'll execute it to logs for stdout/stderr
-if [[ $USER == "jenkins" ]]
+if [ -f /tmp/libPaths.cmd ]
 then
     R -f /tmp/libPaths.cmd
 else
-    echo "If you want to setup R packages the RUnit tests use, like jenkins would..then enter the next line at the command prompt"
+    echo "If you want to setup R packages the RUnit tests use, like jenkins..then enter the next line at the command prompt"
     echo "Doesn't cover h2o package. Okay for the Runit test to handle that"
     echo ""
     echo "    R -f /tmp/libPaths.cmd"

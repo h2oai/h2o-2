@@ -125,7 +125,6 @@ public class Exec2 {
   int lexical_depth() { return _env.size()-1; }
 
   AST parse() {
-
     AST ast = ASTStatement.parse(this);
     skipWS();                   // No trailing crud
     return _x == _buf.length ? ast : throwErr("Junk at end of line",_buf.length-1);
@@ -230,10 +229,13 @@ public class Exec2 {
     }
     if( !peek('=',EOS) ) return false;
     char c = _buf[_x];
-    if( isDigit(c) || isLetter(c) || isWS(c) || isReserved(c) ) return true;
+    if( c != '=' ) return true; // what valid 2-letter tokens start with "="?  ==  but not =+ =>
     _x--;
     return false;
   }
+
+  // Yet-to-be-parsed 
+  private String debug() { return new String(_buf,_x,_buf.length-_x); }
 
   // --------------------------------------------------------------------------
   // Nicely report a syntax error
