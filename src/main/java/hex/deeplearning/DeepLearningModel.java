@@ -1,5 +1,6 @@
 package hex.deeplearning;
 
+import static java.lang.Double.isNaN;
 import hex.FrameTask.DataInfo;
 import hex.VarImp;
 import water.*;
@@ -14,8 +15,6 @@ import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
-
-import static java.lang.Double.isNaN;
 
 public class DeepLearningModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -602,11 +601,10 @@ public class DeepLearningModel extends Model {
    * @param train training data from which the model is built (for epoch counting only)
    * @param ftrain potentially downsampled training data for scoring
    * @param ftest  potentially downsampled validation data for scoring
-   * @param timeStart start time in milliseconds, used to report training speed
    * @param job_key key of the owning job
    * @return true if model building is ongoing
    */
-  boolean doScoring(Frame train, Frame ftrain, Frame ftest, long timeStart, Key job_key) {
+  boolean doScoring(Frame train, Frame ftrain, Frame ftest, Key job_key, Job.ValidatedJob.Response2CMAdaptor vadaptor) {
     final long now = System.currentTimeMillis();
     epoch_counter = (float)model_info().get_processed_total()/train.numRows();
     run_time += now-_timeLastScoreEnter;
@@ -661,15 +659,22 @@ public class DeepLearningModel extends Model {
           err.valid_hitratio = new HitRatio();
           err.valid_hitratio.set_max_k(hit_k);
         }
-        Job.ValidatedJob.Response2CMAdaptor vadaptor = model_info().job().getValidAdaptor();
-        Vec tmp = null;
-        if (isClassifier() && vadaptor.needsAdaptation2CM()) tmp = ftest.remove(ftest.vecs().length-1);
-        final Frame validPredict = score(ftest, false);
+        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
+        final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
+        Vec adaptCMresp = null;
+        if (adaptCM) {
+          assert(ftest.find(adaptRespName) == ftest.vecs().length-1); //make sure to have (adapted) response in the test set
+          adaptCMresp = ftest.remove(ftest.vecs().length-1); //model would remove any extra columns anyway (need to keep it here for later)
+        }
+
+        final Frame validPredict = score(ftest, adaptCM);
         final Frame hitratio_validPredict = new Frame(validPredict);
         // Adapt output response domain, in case validation domain is different from training domain
         // Note: doesn't change predictions, just the *possible* label domain
-        if (isClassifier() && vadaptor.needsAdaptation2CM()) {
-          ftest.add("adaptedValidationResponse", tmp);
+        if (adaptCM) {
+          assert(adaptCMresp != null);
+          assert(ftest.find(adaptRespName) == -1);
+          ftest.add(adaptRespName, adaptCMresp);
           final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
           validPredict.replace(0, CMadapted); //replace label
           validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)

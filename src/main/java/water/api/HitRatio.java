@@ -1,5 +1,6 @@
 package water.api;
 
+import static water.util.ModelUtils.getPredictions;
 import org.junit.Assert;
 import org.junit.Test;
 import water.MRTask2;
@@ -12,8 +13,6 @@ import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
-
-import static water.util.ModelUtils.getPredictions;
 
 public class HitRatio extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -77,6 +76,7 @@ public class HitRatio extends Request2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
+    if (hit_ratios==null) return false;
     sb.append("<div>");
     DocGen.HTML.section(sb, "Hit Ratio for Multi-Class Classification");
     DocGen.HTML.paragraph(sb, "(Frequency of actual class label to be among the top-K predicted class labels)");
@@ -90,6 +90,7 @@ public class HitRatio extends Request2 {
   }
 
   public void toASCII( StringBuilder sb ) {
+    if (hit_ratios==null) return;
     sb.append("K   Hit-ratio\n");
     for (int k = 1; k<=max_k; ++k) sb.append(k + "   " + String.format("%.3f", hit_ratios[k-1]*100.) + "%\n");
   }
@@ -142,7 +143,7 @@ public class HitRatio extends Request2 {
   private static class HitRatioTask extends MRTask2<HitRatioTask> {
     /* @OUT CMs */ public final float[] hit_ratios() {
       float[] hit_ratio = new float[_K];
-      assert(_count > 0);
+      if (_count == 0) return new float[_K];
       for (int i=0;i<_K;++i) {
         hit_ratio[i] = ((float)_hits[i])/_count;
       }
@@ -176,6 +177,10 @@ public class HitRatio extends Request2 {
 
       // rows
       for( int r=0; r < cs[0]._len; r++ ) {
+        if (cs[0].isNA0(r)) {
+          _count--;
+          continue;
+        }
         final int actual_label = (int)cs[0].at80(r);
 
         //predict K labels

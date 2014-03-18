@@ -104,6 +104,12 @@ public class QuantilesPage extends Request2 {
     boolean multiPass;
     Quantiles[] qbins;
 
+    // just take one here. 
+    // it's array because summary2 might use with a single pass list
+    // and an exec single pass approx could pass a threshold list
+    double [] quantiles_to_do = new double[1];
+    quantiles_to_do[0] = quantile;
+
     double approxResult;
     double exactResult;
     result_single = Double.NaN; 
@@ -115,9 +121,8 @@ public class QuantilesPage extends Request2 {
       result_single = Double.NaN; 
       if ( multiple_pass == 0) result = Double.NaN;
 
-      qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
-        // multiPass, interpolation_type).doAll(fr)._qbins;
-        multiPass, interpolation_type).doAll(vecs[0])._qbins;
+      // quantile doesn't matter for the map/reduce binning
+      qbins = new Quantiles.BinTask2(max_qbins, valStart, valEnd, multiPass).doAll(vecs[0])._qbins;
       Log.debug("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
       // Have to get this internal state, and copy this state for the next iteration
@@ -132,24 +137,22 @@ public class QuantilesPage extends Request2 {
       //  valBinSize = newValBinSize;
       //  valLowCnt  = newValLowCnt;
 
+      interpolation_type_used = interpolation_type;
+      quantile_requested = quantiles_to_do[0];
       if ( qbins != null ) { // if it's enum it will be null?
-        qbins[0].finishUp(vecs[0]);
+        qbins[0].finishUp(vecs[0], quantiles_to_do, interpolation_type);
         column_name = names[0]; // the string name, not the param
-        quantile_requested = qbins[0].QUANTILES_TO_DO[0];
         iterations = 1;
         done = qbins[0]._done;
         approxResult = qbins[0]._pctile[0];
         interpolated = qbins[0]._interpolated;
-        interpolation_type_used = qbins[0]._interpolationType;
       }
       else {
         column_name = "";
-        quantile_requested = quantile;
         iterations = 0;
         done = false;
         approxResult = Double.NaN;
         interpolated = false;
-        interpolation_type_used = interpolation_type;
       }
 
       result_single = approxResult;
@@ -172,13 +175,12 @@ public class QuantilesPage extends Request2 {
       
       qbins2 = null;
       for (int b = 0; b < MAX_ITERATIONS; b++) {
-        qbins2 = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
-          // multiPass, interpolation_type).doAll(fr)._qbins;
-          multiPass, interpolation_type).doAll(vecs[0])._qbins;
+        // quantile doesn't matter for the map/reduce binning
+        qbins2 = new Quantiles.BinTask2(max_qbins, valStart, valEnd, multiPass).doAll(vecs[0])._qbins;
         iterations = b + 1;
         if ( qbins2 == null ) break;
         else {
-          qbins2[0].finishUp(vecs[0]);
+          qbins2[0].finishUp(vecs[0], quantiles_to_do, interpolation_type); // in exec we call it with different quantiles
 
           Log.debug("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
           double valBinSize = qbins2[0]._valBinSize;
@@ -191,25 +193,23 @@ public class QuantilesPage extends Request2 {
         }
       }
 
+      interpolation_type_used = interpolation_type;
+      quantile_requested = quantiles_to_do[0];
       if ( qbins2 != null ) { // if it's enum it will be null?
         column_name = names[0]; // string name, not the param
-        quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
         done = qbins2[0]._done;
         exactResult = qbins2[0]._pctile[0];
         interpolated = qbins2[0]._interpolated;
-        interpolation_type_used = qbins2[0]._interpolationType;
       }
       else {
         // enums must come this way. Right now we don't seem 
         // to create everything for the normal response, if we reject an enum col.
         // should fix that. For now, just hack it to not look for stuff
         column_name = "";
-        quantile_requested = quantile;
         iterations = 0;
         done = false;
         exactResult = Double.NaN;
         interpolated = false;
-        interpolation_type_used = interpolation_type;
       }
 
       // all done with it

@@ -169,10 +169,10 @@ class Basic(unittest.TestCase):
             print "Comparing (two places) each of the summary2 threshold quantile results, to single exec quantile"
             h2o.beta_features = True
             for i, threshold in enumerate(thresholds):
-                # FIX! do two?
+                # FIX! do two of the same?..use same one for the 2nd
                 if i!=0:
-                    execExpr = "r2=c(1); r2=quantile(%s[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))" % hex_key
-                    execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, threshold)
+                    # execExpr = "r2=c(1); r2=quantile(%s[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))" % hex_key
+                    execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s,%s));" % (hex_key, threshold, threshold)
                     (resultExec, result) = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                     h2p.green_print("\nresultExec: %s" % h2o.dump_json(resultExec))
                     h2p.blue_print("\nthreshold: %.2f Exec quantile: %s Summary2: %s" % (threshold, result, pt[i]))
