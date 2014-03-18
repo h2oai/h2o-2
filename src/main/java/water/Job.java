@@ -1,5 +1,7 @@
 package water;
 
+import static water.util.Utils.difference;
+import static water.util.Utils.isEmpty;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import water.H2O.H2OCountedCompleter;
@@ -20,9 +22,6 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-
-import static water.util.Utils.difference;
-import static water.util.Utils.isEmpty;
 
 public abstract class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -834,6 +833,8 @@ public abstract class Job extends Request2 {
       public String[] getCMDomain() { return ValidatedJob.this.getCMDomain(); }
       /** Returns true if model/validation responses need to be adapted to confusion matrix domain. */
       public boolean needsAdaptation2CM() { return _fromModel2CM != null; }
+      /** Return the adapted response name */
+      public String adaptedValidationResponse(final String response) { return response + ".adapted"; }
     }
   }
 

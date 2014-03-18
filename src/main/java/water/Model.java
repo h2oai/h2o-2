@@ -1,6 +1,8 @@
 package water;
 
-import hex.*;
+import static water.util.Utils.contains;
+import hex.ConfusionMatrix;
+import hex.VarImp;
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -15,8 +17,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-
-import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -134,7 +134,7 @@ public abstract class Model extends Lockable<Model> {
    *         one column with predicted values.
    */
   public final Frame score(Frame fr, boolean adapt) {
-    int ridx = fr.find(_names[_names.length-1]);
+    int ridx = fr.find(responseName());
     if (ridx != -1) { // drop the response for scoring!
       fr = new Frame(fr);
       fr.remove(ridx);
@@ -160,9 +160,11 @@ public abstract class Model extends Lockable<Model> {
    * @return
    */
   private Frame scoreImpl(Frame adaptFrm) {
-    assert adaptFrm.vecs().length == _names.length-1 : "Length mismatch: #Vecs: " + adaptFrm.vecs().length  + "\n" + Arrays.toString(_names);
-    int ridx = adaptFrm.find(_names[_names.length-1]);
+    int ridx = adaptFrm.find(responseName());
     assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
+    assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
+    assert adaptFrm.vecs().length == _names.length-1 : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length  + " instead of " + (_names.length-1);
+
     // Create a new vector for response
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
@@ -279,7 +281,7 @@ public abstract class Model extends Lockable<Model> {
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    vfr = vfr.subframe(names); // select only supported columns, if column is missing Exception is thrown
+    vfr = vfr.subframe(names, false); // select only supported columns, if column is missing Exception is thrown
     Vec[] frvecs = vfr.vecs();
     boolean[] toEnum = new boolean[frvecs.length];
     if(!exact) for(int i = 0; i < n;++i)

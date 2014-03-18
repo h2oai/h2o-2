@@ -2,7 +2,6 @@ package water.fvec;
 
 import org.junit.Test;
 import water.TestUtil;
-import water.Key;
 
 public class ParseTimeTest extends TestUtil {
   private double[] d(double... ds) { return ds; }
@@ -12,7 +11,7 @@ public class ParseTimeTest extends TestUtil {
   // Parse click & query times from a subset of kaggle bestbuy data
   @Test public void testTimeParse1() {
     Frame fr = parseFrame(null,"smalldata/test/test_time.csv");
-    Frame fr2 = fr.subframe(new String[]{"click_time","query_time"});
+    Frame fr2 = fr.subframe(new String[]{"click_time","query_time"}, false);
     double[][] exp = new double[][] {
       d(1314945892533L, 1314945839752L ),
       d(1315250737042L, 1315250701187L ),
