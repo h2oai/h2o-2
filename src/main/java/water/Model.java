@@ -331,7 +331,7 @@ public abstract class Model extends Lockable<Model> {
     for( int i = 0; i < modelDom.length; i++) {
       Integer I = md.get(modelDom[i]);
       if (I == null && logNonExactMapping)
-        Log.warn(Sys.SCORM, "Column "+colName+" was trained with factor '"+modelDom[i]+"' which DOES NOT appear in column data");
+        Log.warn(Sys.SCORM, "Domain mapping: target domain contains the factor '"+modelDom[i]+"' which DOES NOT appear in input domain " + (colName!=null?"(column: " + colName+")":""));
       if (I!=null) {
         emap[i] = I;
         bmap[i] = true;
@@ -343,7 +343,7 @@ public abstract class Model extends Lockable<Model> {
         for (int j=0; j<emap.length; j++)
           if (emap[j]==i) { found=true; break; }
         if (!found)
-          Log.warn(Sys.SCORM, "Column "+colName+" WAS NOT trained with factor '"+colDom[i]+"' which appears in column data");
+          Log.warn(Sys.SCORM, "Domain mapping: target domain DOES NOT contain the factor '"+colDom[i]+"' which appears in input domain "+ (colName!=null?"(column: " + colName+")":""));
       }
     }
 
