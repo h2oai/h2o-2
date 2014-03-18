@@ -484,7 +484,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return Trained model
    */
   public final DeepLearningModel trainModel(DeepLearningModel model) {
-    Frame valid, validScoreFrame = null;
+    Frame validScoreFrame = null;
     Frame train, trainScoreFrame;
     try {
       lock_data();
@@ -516,16 +516,15 @@ public class DeepLearning extends Job.ValidatedJob {
         if (getValidAdaptor().needsAdaptation2CM()) {
           adaptedValid.add(getValidAdaptor().adaptedValidationResponse(_responseName), getValidAdaptor().getAdaptedValidationResponse2CM());
         }
-        valid = updateFrame(adaptedValid, reBalance(adaptedValid, seed+1)); //rebalance for load balancing, shuffle for "fairness"
+        validScoreFrame = updateFrame(adaptedValid, reBalance(adaptedValid, seed+1)); //rebalance for load balancing, shuffle for "fairness"
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
         if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
-          validScoreFrame = sampleFrameStratified(valid, valid.lastVec(), null,
-                  score_validation_samples > 0 ? score_validation_samples : valid.numRows(), seed+1, false /* no oversampling */, false);
+          validScoreFrame = updateFrame(validScoreFrame, sampleFrameStratified(validScoreFrame, validScoreFrame.lastVec(), null,
+                  score_validation_samples > 0 ? score_validation_samples : validScoreFrame.numRows(), seed+1, false /* no oversampling */, false));
         } else {
-          validScoreFrame = sampleFrame(valid, score_validation_samples, seed+1);
+          validScoreFrame = updateFrame(validScoreFrame, sampleFrame(validScoreFrame, score_validation_samples, seed+1));
         }
-        if (valid != validScoreFrame) ltrash(validScoreFrame);
-        Log.info("Number of chunks of the validation data: " + valid.anyVec().nChunks());
+        Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
       if (mini_batch > train.numRows()) {
         Log.warn("Setting mini_batch (" + mini_batch
