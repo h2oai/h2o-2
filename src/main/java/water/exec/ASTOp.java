@@ -979,7 +979,7 @@ class ASTQtile extends ASTOp {
         throw new  IllegalArgumentException("Quantile: column type cannot be Enum.");
     }
 
-    // FIX! might not be needed
+    // might not be needed
     Futures fs = new Futures();
     xv.rollupStats(fs);
     fs.blockForPending();
@@ -989,39 +989,70 @@ class ASTQtile extends ASTOp {
     AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
 
-    Quantiles[] qbins = null;
+    Quantiles[] qbins1 = null;
+    Quantiles[] qbinsM = null;
 
     final int MAX_ITERATIONS = 16;
     final int MAX_QBINS = 1000; // less uses less memory, can take more passes
     final boolean MULTIPASS = true; // approx in 1 pass if false
+    // Type 7 matches R default
     final int INTERPOLATION = 7; // linear if quantile not exact on row. 2 uses mean.
 
+    // The mappers throw away their memory when done? So if we save the hcnt* results 
+    // (histogram obj) from iteration 1, we can reuse it to avoid 1st pass for each threshold.
+    // Nice speedup for a list (and not affect single threshold)
+    // Cost of keeping the first histogram around during multipass iterations is small?
     double result;
+    double valStart = xv.min();
+    double valEnd = xv.max();
+    // we can only pass a list for a one pass approx. not here.
+    double [] quantiles_to_do = new double[1];
+
+    // some MULTIPASS conditionals needed if we were going to make this work for approx or exact
+    qbins1 = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd, MULTIPASS).doAll(xv)._qbins;
     for (double quantile : p) {
-      // FIX! should really break this loop out into a multipass single type 7 quantile thing.
-      // Type 7 matches R default
-      double valStart = xv.min();
-      double valEnd = xv.max();
+      // Don't need to reinit valStart/End now, because we saved the first qbins
+      result = Double.NaN;
       for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
-        qbins = new Quantiles.BinTask2(quantile, MAX_QBINS, valStart, valEnd, 
-          MULTIPASS, INTERPOLATION).doAll(xv)._qbins;
-        if ( qbins == null ) break;
-        else {
-          // the map/reduce didn't create any h2o keys. don't have to wait for anything?
-          qbins[0].finishUp(xv);
-          Log.debug("\nQ_ multipass iteration: "+iteration+
-            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins[0]._valBinSize);
-          // next iteration
-          valStart = qbins[0]._newValStart;
-          valEnd = qbins[0]._newValEnd;
-          if ( qbins[0]._done ) break;
+        // a little obtuse because reusing first pass object, if p has multiple thresholds
+        // since it's always the same (always had same valStart/End seed = vec min/max
+        if ( iteration == 1 ) {
+          if ( qbins1 == null ) break;
+          // need to pass a different threshold now for each finishUp!
+          quantiles_to_do[0] = quantile; // FIX! provide a single quantile entry?
+          qbins1[0].finishUp(xv, quantiles_to_do, INTERPOLATION);
+          Log.debug("\nQ_ 1st multipass iteration: "+iteration+
+            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins1[0]._valBinSize);
+          if ( qbins1[0]._done ) {
+            result = qbins1[0]._pctile[0];
+            break;
+          }
+          // next iteration. finishUp set these
+          valStart = qbins1[0]._newValStart;
+          valEnd = qbins1[0]._newValEnd;
         }
+        if ( iteration > 1 ) {
+          if ( qbinsM == null ) break;
+          quantiles_to_do[0] = quantile; // FIX! provide a single quantile entry?
+          qbinsM[0].finishUp(xv, quantiles_to_do, INTERPOLATION);
+          Log.debug("\nQ_ multipass iteration: "+iteration+
+            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbinsM[0]._valBinSize);
+          if ( qbinsM[0]._done ) {
+            result = qbinsM[0]._pctile[0];
+            break;
+          }
+          // next iteration. finishUp set these
+          valStart = qbinsM[0]._newValStart;
+          valEnd = qbinsM[0]._newValEnd;
+        }
+        // the 2-N map/reduces are here (with new start/ends. MULTIPASS is implied
+        qbinsM = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd, MULTIPASS).doAll(xv)._qbins;
       }
-      if ( qbins == null ) result = Double.NaN;
-      else result = qbins[0]._pctile[0];
-      qbins = null; // shouldn't need this? 
+      qbinsM = null; // shouldn't need this? 
       nc.addNum(result);
     }
+    // keep this guy around till we're done with all quantiles
+    qbins1 = null; // shouldn't need this?
 
     nc.close(0, null);
     Vec v = av.close(null);

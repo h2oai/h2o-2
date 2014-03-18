@@ -50,23 +50,24 @@ if 1==0:
     print((repr(result)))
 
 
-print job.get_last_stable_buildnumber()
-print job.get_last_good_buildnumber()
-print job.get_last_failed_buildnumber()
-print job.get_last_buildnumber()
+print "last_stable_buildnumber", job.get_last_stable_buildnumber()
+print "last_good_buildnumber", job.get_last_good_buildnumber()
+print "last_failed_buildnumber", job.get_last_failed_buildnumber()
+print "last_buildnumber", job.get_last_buildnumber()
 
 build = job.get_build(job.get_last_good_buildnumber())
 
-print build.get_revision()
+print "build revision", build.get_revision()
 af = build.get_artifacts()
 dict_af = build.get_artifact_dict()
-print build.get_status()
-print build.name
-print build.get_number()
+print "build get_status", build.get_status()
+print "build name", build.name
+print "build number", build.get_number()
 
-print dict_af
+print "dict_af", dict_af
 
 for a in af:
+    print "a.keys():", a.keys()
     txt = a.get_data()
     print "####################################"
-    print txt
+    # print txt

@@ -19,8 +19,6 @@ public class Quantiles extends Iced {
   static final String DOC_GET = "Returns a quantile of a fluid-vec frame";
 
   public static final int MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
-  // just use [0] here?
-  public final double QUANTILES_TO_DO[];
 
   public long      _totalRows;    // non-empty rows per group
   // FIX! not sure if I need to save these here from vec
@@ -42,7 +40,6 @@ public class Quantiles extends Iced {
   final double     _valEnd;
   final long       _valMaxBinCnt;
   final boolean    _multiPass;
-  public int       _interpolationType; // shown in output 
 
   // just for info on current pass?
   public double    _valRange;
@@ -66,58 +63,57 @@ public class Quantiles extends Iced {
   public double hcnt2_high_min; // min above current binning
 
   public static class BinTask2 extends MRTask2<BinTask2> {
-    private final double _quantile;
     private final int _max_qbins;
     private final double _valStart;
     private final double _valEnd;
     private final boolean _multiPass;
-    private final int _interpolationType;
 
     public Quantiles _qbins[];
 
-    public BinTask2 (double quantile, int max_qbins, double valStart, double valEnd, 
-      boolean multiPass, int interpolationType)
-      { 
-        _quantile = quantile; 
-        _max_qbins = max_qbins; 
-        _valStart = valStart; 
-        _valEnd = valEnd; 
-        _multiPass = multiPass; 
-        _interpolationType = interpolationType; 
-      }
+    public BinTask2 (int max_qbins, double valStart, double valEnd, boolean multiPass) { 
+      _max_qbins = max_qbins; 
+      _valStart = valStart; 
+      _valEnd = valEnd; 
+      _multiPass = multiPass; 
+    }
 
     @Override public void map(Chunk[] cs) {
       _qbins = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _qbins[i] = new Quantiles(_fr.vecs()[i], _quantile, _max_qbins,
-          _valStart, _valEnd, _multiPass, _interpolationType).add(cs[i]);
+        _qbins[i] = new Quantiles(_fr.vecs()[i], _max_qbins, _valStart, _valEnd, _multiPass).add(cs[i]);
     }
 
     @Override public void reduce(BinTask2 other) {
       for (int i = 0; i < _qbins.length; i++)
         _qbins[i].add(other._qbins[i]);
+      // will all the map memory get reclaimed now, since the reduce has gathered it?
+      // we want to keep 1st iteration object around in for lists of thresholds to do
+      // so hopefully this means just the reduce histogram will stay around.
+      // FIX! Maybe unnecesary/implied or better way?
+      other = null;
     }
   }
 
-  public void finishUp(Vec vec) {
+  // FIX! currently only take one quantile at a time here..ability to do a list though
+  public void finishUp(Vec vec, double[] quantiles_to_do, int interpolation_type) {
+    assert quantiles_to_do.length == 1 : "currently one quantile at a time. caller can reuse qbin for now.";
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
-    _pctile = new double[QUANTILES_TO_DO.length];
+    _pctile = new double[quantiles_to_do.length];
     if ( _isEnum ) {
-      ;
+      _done = false;
     } 
     else {
       if ( !_multiPass ) {
-        _done = approxQuantilesOnePass(_pctile, QUANTILES_TO_DO);
+        _done = approxQuantilesOnePass(_pctile, quantiles_to_do, interpolation_type);
       } 
       else {
-        _done = exactQuantilesMultiPass(_pctile, QUANTILES_TO_DO);
+        _done = exactQuantilesMultiPass(_pctile, quantiles_to_do, interpolation_type);
       }
     }
   }
 
-  public Quantiles(Vec vec, double quantile, int max_qbins, 
-        double valStart, double valEnd, boolean multiPass, int interpolationType) {
+  public Quantiles(Vec vec, int max_qbins, double valStart, double valEnd, boolean multiPass) {
 
     _isEnum = vec.isEnum();
     _isInt = vec.isInt();
@@ -126,14 +122,10 @@ public class Quantiles extends Iced {
     _min = vec.min();
 
     _totalRows = 0;
-    QUANTILES_TO_DO = new double[1];
-    QUANTILES_TO_DO[0] = quantile;
-
     _valStart = valStart;
     _valEnd = valEnd;
     _valRange = valEnd - valStart;
     _multiPass = multiPass;
-    _interpolationType = interpolationType;
 
     int desiredBinCnt = max_qbins;
     int maxBinCnt = desiredBinCnt + 1;
@@ -193,8 +185,9 @@ public class Quantiles extends Iced {
   }
 
   public Quantiles(Vec vec) {
-    // default to multipass median approximation?
-    this(vec, 0.5, 1000, vec.min(), vec.max(), true, 7);
+    // default to multipass, 1000 bin
+    // still would need to call the finishUp you want, to get a result
+    this(vec, 1000, vec.min(), vec.max(), true);
   }
 
   public Quantiles add(Chunk chk) {
@@ -274,7 +267,8 @@ public class Quantiles extends Iced {
         if ( hcnt2[binIdx2Int]==0 || (val > hcnt2_max[binIdx2Int]) ) hcnt2_max[binIdx2Int] = val;
         ++hcnt2[binIdx2Int];
 
-        // For debug/info, can report when it goes into extra bin needed due to fp fuzziness
+        // For debug/info, can report when it goes into extra bin.
+        // is it ever due to fp arith? Or just the max value?
         // not an error! should be protected by newValEnd below, and nextK 
         // estimates should go into the extra bin if interpolation is needed
         if ( false && (binIdx2 == (maxBinCnt-1)) ) {
@@ -297,7 +291,7 @@ public class Quantiles extends Iced {
     // other must be same length, but use it's length for safety
     // could add assert on lengths?
     for (int k = 0; k < other.hcnt2_min.length; k++) {
-      // for now..die on NaNs
+      // Shouldn't get any
       assert !Double.isNaN(other.hcnt2_min[k]) : "NaN in other.hcnt2_min merging";
       assert !Double.isNaN(other.hcnt2[k]) : "NaN in hcnt2_min merging";
       assert !Double.isNaN(hcnt2_min[k]) : "NaN in hcnt2_min merging";
@@ -316,7 +310,7 @@ public class Quantiles extends Iced {
     // merge hcnt2 per-bin maxs
     // other must be same length, but use it's length for safety
     for (int k = 0; k < other.hcnt2_max.length; k++) {
-      // for now..die on NaNs
+      // shouldn't get any
       assert !Double.isNaN(other.hcnt2_max[k]) : "NaN in other.hcnt2_max merging";
       assert !Double.isNaN(other.hcnt2[k]) : "NaN in hcnt2_min merging";
       assert !Double.isNaN(hcnt2_max[k]) : "NaN in hcnt2_max merging";
@@ -366,7 +360,7 @@ public class Quantiles extends Iced {
     return cnt;
   }
 
-  private boolean exactQuantilesMultiPass(double[] qtiles, double[] thres) {
+  private boolean exactQuantilesMultiPass(double[] qtiles, double[] quantiles_to_do, int interpolation_type) {
     double newValStart = Double.NaN; 
     double newValEnd = Double.NaN;
     double newValRange = Double.NaN;
@@ -380,12 +374,12 @@ public class Quantiles extends Iced {
     assert !_isEnum;
     if( hcnt2.length < 2 ) return false;
 
-    double threshold = thres[0];
+    double threshold = quantiles_to_do[0];
 
     assert _valStart!=Double.NaN : _valEnd;
     assert _valStart!=Double.NaN : _valStart;
     assert _valBinSize!=Double.NaN : _valBinSize;
-    if ( _valStart==_valEnd ) Log.info("exactQuantilesMultiPass: start/end are equal. "+_valStart+" "+_valEnd);
+    if ( _valStart==_valEnd ) Log.debug("exactQuantilesMultiPass: start/end are equal. "+_valStart+" "+_valEnd);
     else assert (_valBinSize!=0 && _valBinSize!=Double.NaN) : _valBinSize;
 
     //  everything should either be in low, the bins, or high
@@ -413,8 +407,8 @@ public class Quantiles extends Iced {
       // have to keep cycling till we get to a non-zero hcnt
       // but need to break if we get to the end (into the extra bin). it must be nonzero then
     }
-    Log.debug("Q_ Found k (multi): "+k+" "+currentCnt+" "+targetCntInt+" "+_totalRows+
-      " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+    Log.debug("Q_ Found k (multi): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
+      " "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
     assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
     assert hcnt2[k]!=1 || hcnt2_min[k]==hcnt2_max[k];
@@ -435,7 +429,7 @@ public class Quantiles extends Iced {
     boolean done = false;
     double guess = Double.NaN;
     boolean interpolated = false;
-    assert (_interpolationType==2) || (_interpolationType==7) : "Unsupported type "+_interpolationType;
+    assert (interpolation_type==2) || (interpolation_type==7) : "Unsupported type "+interpolation_type;
 
     double pctDiff, dDiff;
     if ( currentCnt==targetCntInt ) {
@@ -446,7 +440,7 @@ public class Quantiles extends Iced {
       } 
       else if ( hcnt2[k]==2 ) {
         // no mattter what size the fraction it would be on this number
-        if ( _interpolationType==2 ) { // type 2 (mean)
+        if ( interpolation_type==2 ) { // type 2 (mean)
           guess = (hcnt2_max[k] + hcnt2_min[k]) / 2.0;
         }
         else { // default to type 7 (linear interpolation)
@@ -457,7 +451,7 @@ public class Quantiles extends Iced {
           guess = hcnt2_min[k] + (targetCntFract * dDiff);
         }
         done = true;
-        Log.debug("Q_ Guess B "+guess+" with type "+_interpolationType+" targetCntFract: "+targetCntFract);
+        Log.debug("Q_ Guess B "+guess+" with type "+interpolation_type+" targetCntFract: "+targetCntFract);
       } 
       else if ( (hcnt2[k]==1) && (targetCntFract==0) ) {
         assert hcnt2_min[k]==hcnt2_max[k];
@@ -494,7 +488,7 @@ public class Quantiles extends Iced {
         Log.debug("Q_ \nInterpolating result using nextK: "+nextK+ " nextVal: "+nextVal);
 
         // OH! fixed bin as opposed to sort. Of course there are gaps between k and nextK
-        if ( _interpolationType==2 ) { // type 2 (mean)
+        if ( interpolation_type==2 ) { // type 2 (mean)
           guess = (hcnt2_max[k] + nextVal) / 2.0;
         }
         else { // default to type 7 (linear interpolation)
@@ -505,7 +499,7 @@ public class Quantiles extends Iced {
 
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)
-        Log.debug("Q_ Guess D "+guess+" with type "+_interpolationType+
+        Log.debug("Q_ Guess D "+guess+" with type "+interpolation_type+
           " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
           " _totalRows: " + _totalRows);
       }
@@ -573,17 +567,18 @@ public class Quantiles extends Iced {
     // Log.debug(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
     //  " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
 
-    // Don't need these any more
-    hcnt2 = null;
-    hcnt2_min = null;
-    hcnt2_max = null;
+    // We want to leave them now! we reuse in exec for multi-thresholds
+    // hcnt2 = null;
+    // hcnt2_min = null;
+    // hcnt2_max = null;
     _newValStart = newValStart;
     _newValEnd = newValEnd;
     _interpolated = interpolated;
     return done;
   }
 
-  private boolean approxQuantilesOnePass(double[] qtiles, double[] thres){
+  private boolean approxQuantilesOnePass(double[] qtiles, double[] quantiles_to_do, int interpolation_type) {
+    // actually don't use interpolation_type here..always linear interpolate, sort of (approx)
     // not called for enums
     assert !_isEnum;
     if( hcnt2.length == 0 ) return false;
@@ -603,12 +598,14 @@ public class Quantiles extends Iced {
 
     // we do zero-indexed list, so slightly different eqns.
     // walk up until we're at the bin that starts with the threshold, or right before
-    // only do thres[0]. how do we make a list of thresholds work?
-    // for(int j = 0; j < thres.length; ++j) {
+
+    // FIX! currently only do quantiles_to_do[0].
+    // for(int j = 0; j < quantiles_to_do.length; ++j) {
     for(int j = 0; j <=0; ++j) {
+      double threshold = quantiles_to_do[j];
       // 0 okay for threshold?
-      assert 0 <= thres[j] && thres[j] <= 1;
-      double s1 = Math.floor(thres[j] * (double) _totalRows); 
+      assert 0 <= threshold && threshold <= 1;
+      double s1 = Math.floor(threshold * (double) _totalRows); 
       if ( s1 == 0 ) {
         s1 = 1; // always need at least one row
       }
@@ -666,10 +663,10 @@ public class Quantiles extends Iced {
       Log.debug("Q_ hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
         " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
 
-      // Don't need these any more
-      hcnt2 = null;
-      hcnt2_min = null;
-      hcnt2_max = null;
+      // We want to leave them now! we reuse in exec for multi-thresholds
+      // hcnt2 = null;
+      // hcnt2_min = null;
+      // hcnt2_max = null;
 
     }
     return true;
