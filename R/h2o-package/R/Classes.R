@@ -579,10 +579,12 @@ cbind.H2OParsedData <- function(...) {
   compatible <- Reduce(function(l,r) l & r, x=m, init=T)
 
   if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same H2O instance'))}
-
   # TODO: if cbind(x,x), fix up the column names so unique. sigh.
   # TODO: cbind(df[,1], df[,2]) should retain colnames of original data frame (not temp keys from slice)
-  tmp <- mapply(function(x,n) { ifelse(is.null(n) || is.na(n) || nchar(n) == 0, x@key, paste(n, x@key, sep = "=")) }, l, names(l))
+  if(is.null(names(l)))
+    tmp <- Map(function(x) x@key, l)
+  else
+    tmp <- mapply(function(x,n) { ifelse(is.null(n) || is.na(n) || nchar(n) == 0, x@key, paste(n, x@key, sep = "=")) }, l, names(l))
   exec_cmd <- sprintf("cbind(%s)", paste(as.vector(tmp), collapse = ","))
   # exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
   res <- .h2o.__exec2(h2o, exec_cmd)
