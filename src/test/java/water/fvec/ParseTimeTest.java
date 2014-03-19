@@ -5,13 +5,11 @@ import water.TestUtil;
 
 public class ParseTimeTest extends TestUtil {
   private double[] d(double... ds) { return ds; }
-  private String[] s(String...ss) { return ss; }
-  private final double NaN = Double.NaN;
 
   // Parse click & query times from a subset of kaggle bestbuy data
   @Test public void testTimeParse1() {
     Frame fr = parseFrame(null,"smalldata/test/test_time.csv");
-    Frame fr2 = fr.subframe(new String[]{"click_time","query_time"}, false);
+    Frame fr2 = fr.subframe(new String[]{"click_time","query_time"});
     double[][] exp = new double[][] {
       d(1314945892533L, 1314945839752L ),
       d(1315250737042L, 1315250701187L ),

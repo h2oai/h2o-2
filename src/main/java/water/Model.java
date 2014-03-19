@@ -280,7 +280,8 @@ public abstract class Model extends Lockable<Model> {
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    vfr = vfr.subframe(names, false); // select only supported columns, if column is missing Exception is thrown
+    Frame  [] subVfr = vfr.subframe(names, Double.NaN); // select only supported columns, if column is missing replace it by constant column containing missing values.
+    vfr = subVfr[0]; // extract only subframe but keep the rest for delete later
     Vec[] frvecs = vfr.vecs();
     boolean[] toEnum = new boolean[frvecs.length];
     if(!exact) for(int i = 0; i < n;++i)
@@ -305,7 +306,10 @@ public abstract class Model extends Lockable<Model> {
         avecs.add(frvecs[c]);
         anames.add(names[c]);
       }
-    return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
+    // Fill trash bin by vectors which need to be deleted later by the caller.
+    Frame vecTrash = new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()]));
+    if (subVfr[1]!=null) vecTrash.add(subVfr[1], true);
+    return new Frame[] { new Frame(names,frvecs), vecTrash };
   }
 
   /** Returns a mapping between values of model domains (<code>modelDom</code>) and given column domain.
@@ -325,7 +329,7 @@ public abstract class Model extends Lockable<Model> {
   public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean logNonExactMapping) {
     int emap[] = new int[modelDom.length];
     boolean bmap[] = new boolean[modelDom.length];
-    HashMap<String,Integer> md = new HashMap<String, Integer>();
+    HashMap<String,Integer> md = new HashMap<String, Integer>((int) ((colDom.length/0.75f)+1));
     for( int i = 0; i < colDom.length; i++) md.put(colDom[i], i);
     for( int i = 0; i < modelDom.length; i++) {
       Integer I = md.get(modelDom[i]);
