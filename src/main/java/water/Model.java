@@ -299,7 +299,7 @@ public abstract class Model extends Lockable<Model> {
         Vec adaptedVec;
         if (toEnum[c]) { // Vector was flipped to column already, compose transformation
           adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], vfr.domains()[c], false);
-        } else adaptedVec = frvecs[c].makeTransf(map[c]);
+        } else adaptedVec = frvecs[c].makeTransf(map[c], vfr.domains()[c]);
         avecs.add(frvecs[c] = adaptedVec);
         anames.add(names[c]); // Collect right names
       } else if (toEnum[c]) { // Vector was transformed to enum domain, but does not need adaptation we need to record it
