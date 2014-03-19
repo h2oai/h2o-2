@@ -138,7 +138,7 @@ public class Frame extends Lockable<Frame> {
 
  /** Appends a named column, keeping the last Vec as the response */
   public Frame add( String name, Vec vec ) {
-    assert _vecs.length == 0 || anyVec().group().equals(vec.group()) || Arrays.equals(anyVec()._espc,vec._espc);
+    assert _vecs.length == 0 || anyVec().group().equals(vec.group()) || Arrays.equals(anyVec()._espc,vec._espc) : "Vector groups differs - adding vec named '"+name+"' into the frame with names " + Arrays.toString(_names);
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len = _names != null ? _names.length : 0;
     _names = _names != null ? Arrays.copyOf(_names,len+1) : new String[len+1];
@@ -152,7 +152,7 @@ public class Frame extends Lockable<Frame> {
 
   /** Appends an entire Frame */
   public Frame add( Frame fr, String names[] ) {
-    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group()) : _vecs.length;
+    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group()) : "Adding a vector from different vector group. Current frame contains "+Arrays.toString(_names)+ " vectors. New frame contains "+Arrays.toString(fr.names()) + " vectors.";
     for( String name : names )
       if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len0= _names!=null ? _names.length : 0;
