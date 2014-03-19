@@ -1,8 +1,8 @@
 package water.api.dsl
 
-/**
- * Created by michal on 3/19/14.
- */
-class MRLegos {
-
+/** Row accessor. */
+trait Row {
+  def d(ncol:Int):scala.Double
+  def l(ncol:Int):scala.Long
+  def ncols() : Int
 }

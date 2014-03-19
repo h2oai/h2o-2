@@ -3,7 +3,7 @@ package water.api.dsl
 import water.fvec.Chunk
 import water.MRTask2
 
-abstract class SMRTask[T] extends MRTask2[T] {
+abstract class SMRTask[T <: SMRTask[T]] extends MRTask2[T] {
   def iterator(chunks:Array[Chunk]) : Iterator[Row] = new RowIterator(chunks)
 
   private class RowIterator (private val chunks:Array[Chunk]) extends Iterator[Row] {
@@ -21,13 +21,6 @@ abstract class SMRTask[T] extends MRTask2[T] {
       override def l(ncol: Int): scala.Long   = chunks(ncol).at80(rowNum)
       override def ncols(): Int = chunks.length
     }
-  }
-
-  /** Row accessor. */
-  trait Row {
-    def d(ncol:Int):scala.Double
-    def l(ncol:Int):scala.Long
-    def ncols() : Int
   }
 }
 
