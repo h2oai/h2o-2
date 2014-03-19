@@ -5,6 +5,13 @@ from jenkinsapi.jenkins import Jenkins
 # only used when we wanted to see what objects were available (below)
 from see import see
 
+parse = argparse.ArgumentParser()
+parse.add_argument('-e', help="job number from a list of ec2 known jobs",  type=int, default=None)
+parse.add_argument('-x', help="job number from a list of 164 known jobs",  type=int, default=None)
+parse.add_argument('-j', '--jobname', help="jobname. Correct url is found",  default=None)
+parse.add_argument('-l', '--logging', help="turn on logging.DEBUG msgs to see allUrls used",  action='store_true')
+args = parse.parse_args()
+
 print "creates jsandbox (cleaned), and puts aTxt.txt and aConsole.txt in there, along with artifacts"
 # can refer to this by zero-based index with -n 0  or -n 1  etc
 # or by job name with -j h2o_master_test
@@ -22,8 +29,8 @@ allowedJobsX = [
 
 allowedJobsE = [
     'h2o.tests.single.jvm',
-    'h2o.tests.single_jvm.fvec',
-    'h2o.tests.multi.vm.temporary',
+    'h2o.tests.single.jvm.fvec',
+    'h2o.multi.vm.temporary',
     'h2o.tests.ec2.multi.jvm',
     'h2o.tests.ec2.multi.jvm.fvec',
     'h2o.tests.ec2.hosts',
@@ -51,12 +58,6 @@ allEc2Jobs = ['generic.h2o.build.branch', 'h2o.branch.api-dev', 'h2o.branch.clif
 # Project documentation: https://jenkinsapi.readthedocs.org/en/latest/
 
 #************************************************
-parse = argparse.ArgumentParser()
-parse.add_argument('-e', help="job number from a list of ec2 known jobs",  type=int, default=None)
-parse.add_argument('-x', help="job number from a list of 164 known jobs",  type=int, default=None)
-parse.add_argument('-j', '--jobname', help="jobname. Correct url is found",  default=None)
-parse.add_argument('-l', '--logging', help="turn on logging.DEBUG msgs to see allUrls used",  action='store_true')
-args = parse.parse_args()
 
 if args.logging:
     logging.basicConfig(level=logging.DEBUG)
@@ -89,7 +90,7 @@ if jobname in allEc2Jobs:
 elif jobname in all164Jobs:
     machine = '164'
 else:
-    raise Exception("%s not in lists of known jobs for machine=%s" % (jobname, machine))
+    raise Exception("%s not in lists of known jobs" % jobname)
 
 if machine not in allUrls:
     raise Exception("%s not in allUrls dict" % machine)
@@ -254,7 +255,7 @@ for i, (k, v) in enumerate(rs.items()):
 
     # print rs.name
     e1 = "\n******************************************************************************"
-    e2 = "%s %s" % (i, v)
+    e2 = "%s %s %s" % (i, jobname, v)
     aTxt.write(e1+"\n")
     aTxt.write(e2+"\n")
     # only if not PASSED
