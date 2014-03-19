@@ -18,7 +18,7 @@ def browseTheCloud():
         webbrowser.open_new(cloud_url)
 
 # match the first, swap the 2nd
-def browseJsonHistoryAsUrlLastMatch(matchme,swapme=None):
+def browseJsonHistoryAsUrlLastMatch(matchme, swapme=None):
     if not h2o.browse_disable:
         # get rid of the ".json" from the last url used by the test framework.
         # if we hit len(), we point to 0, so stop
@@ -46,7 +46,7 @@ def browseJsonHistoryAsUrlLastMatch(matchme,swapme=None):
 # maybe not useful, but something to play with.
 # go from end, backwards and see what breaks! (in json to html hack url transform)
 # note that put/upload  and rf/rfview methods are different for html vs json
-def browseJsonHistoryAsUrl():
+def browseJsonHistoryAsUrl(retryDelaySecs=0.25):
     if not h2o.browse_disable:
         # stop if you get to -50, don't want more than 50 tabs on browser
         tabCount = 0
@@ -64,8 +64,8 @@ def browseJsonHistoryAsUrl():
                 print "same, decoded:", urllib.unquote(url)
                 # does this open in same window?
                 h2o.log(url, comment="From browseJsonHistoryAsUrl")
-                webbrowser.open(url)
-                time.sleep(0.25)
+                webbrowser.open(url, new=0)
+                time.sleep(retryDelaySecs)
                 tabCount += 1
 
             if tabCount==50: 
