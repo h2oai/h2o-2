@@ -166,10 +166,9 @@ public abstract class Model extends Lockable<Model> {
     assert adaptFrm.vecs().length == _names.length-1 : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length  + " instead of " + (_names.length-1);
 
     // Create a new vector for response
-    Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
-    v._domain = _domains[_domains.length-1];
+    Vec v = adaptFrm.anyVec().makeZero(classNames());
     adaptFrm.add("predict",v);
     if( nclasses() > 1 ) {
       String prefix = "";

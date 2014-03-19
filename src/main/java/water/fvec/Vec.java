@@ -76,14 +76,16 @@ public class Vec extends Iced {
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
-  public Vec( Key key, long espc[] ) {
+  public Vec( Key key, long espc[]) { this(key, espc, null); }
+  public Vec( Key key, long espc[], String[] domain) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
     _time = -1;                 // not-a-time
+    _domain = domain;
   }
 
-  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; _time = -1; assert group()==v.group(); }
+  protected Vec( Key key, Vec v ) { this(key, v._espc); assert group()==v.group(); }
 
   // A 1-element Vec
   public Vec( Key key, double d ) {
@@ -98,14 +100,16 @@ public class Vec extends Iced {
 
   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
-  public Vec makeZero() { return makeCon(0); }
+  public Vec makeZero()                { return makeCon(0); }
+  public Vec makeZero(String[] domain) { return makeCon(0, domain); }
   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to a constant. */
-  public Vec makeCon( final long l ) {
+  public Vec makeCon( final long l ) { return makeCon(l, null); }
+  public Vec makeCon( final long l, String[] domain ) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
+    Vec v0 = new Vec(group().addVecs(1)[0],_espc, domain);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
