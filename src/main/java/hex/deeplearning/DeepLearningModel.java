@@ -117,7 +117,7 @@ public class DeepLearningModel extends Model {
                 + (validAUC != null ? " [using threshold for " + validAUC.threshold_criterion.toString().replace("_"," ") +"]: ": ": ")
                 + String.format("%.2f", (100 * valid_err)) + "%");
         if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
-      } else {
+      } else if (!Double.isInfinite(train_mse)) {
         sb.append("Error on training data (MSE): " + train_mse);
         if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
       }
