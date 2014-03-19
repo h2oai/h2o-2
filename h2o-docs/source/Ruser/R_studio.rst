@@ -30,37 +30,18 @@ program will no longer run, and work done will be lost.
 
 **STEP 3:**
 
-New users may skip this step, while users who have previously
-installed the  H\ :sub:`2`\ O R packages should uninstall them by entering the
-following commands to the R console:  
+Follow the instructions for installation on the page from which the
+package was downloaded. Those instructions will look similar to the
+instructions in the picture below:  
 
-::
-
-   detach("package:h2o", unload=TRUE) 
-   remove.packages("h2o") 
+.. image:: buildindex.png
+   :width: 100 %   
 
 
 Note: users may get warnings of the type "Error in
 detatch("package:h2o", unload = TRUE): invalid 'name' argument. 
 This tells users that there is no  H\ :sub:`2`\ O package to uninstall. These
-warnings can safely be ignored. 
-
-**STEP 4:**
-
-Install the H\ :sub:`2`\ O package via the H\ :sub:`2`\ O
-repository. This repository functions exactly like the R repository,
-but is maintained by  H\ :sub:`2`\ O. 
-
-**DO NOT CUT AND PASTE THIS CALL INTO R**
-The call shown below is specifically for the jacobi/2 build, which may
-be older than the build you would like to use. Your call should look
-similar to this, and you can find an exact command to copy and paste
-by going to H\ :sub:`2`\ O available downloads at 
-`http://0xdata.com/downloadtable
-<http://0xdata.com/downloadtable/>`_ and selecting the correct version
-there. 
-
-  `install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-jacobi/2/R", getOption("repos"))))` 
+warnings can safely be ignored.  
   
 
 **STEP 4:**

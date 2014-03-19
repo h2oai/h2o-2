@@ -25,7 +25,6 @@ public class Summary2 extends Iced {
 
   public static final int    MAX_HIST_SZ = water.parser.Enum.MAX_ENUM_SIZE;
   public static final int    NMAX = 5;
-  public static final int    RESAMPLE_SZ = 1000;
   // updated boundaries to be 0.1% 1%...99%, 99.9% so R code didn't have to change
   // ideally we extend the array here, and just update the R extraction of 25/50/75 percentiles
   // note python tests (junit?) may look at result
@@ -37,7 +36,6 @@ public class Summary2 extends Iced {
   public final int           _type;      // 0 - real; 1 - int; 2 - enum
   public double[]            _mins;
   public double[]            _maxs;
-  public double[]            _samples;   // currently, sampling is disabled. see below.
   long                       _gprows;    // non-empty rows per group
 
   final transient String[]   _domain;
@@ -273,20 +271,7 @@ public class Summary2 extends Iced {
       computeMajorities();
     } else {
       _pctile = new double[DEFAULT_PERCENTILES.length];
-      // never take this choice (summary1 didn't?
-      // means (like R) we can have quantiles with values not in the dataset..ok?
-      // ok since approximation? not okay if we did exact. Sampled sort is not good enough?
-      // was:
-      // if (_samples != null) {
-      if (false) { // don't use sampling
-        // FIX! should eventually get rid of this since unused
-        Arrays.sort(_samples);
-        // Compute percentiles for numeric data
-        for (int i = 0; i < _pctile.length; i++)
-          _pctile[i] = sampleQuantile(_samples,DEFAULT_PERCENTILES[i]);
-      } else {
-        approxQuantiles(_pctile,DEFAULT_PERCENTILES);
-      }
+      approxQuantiles(_pctile,DEFAULT_PERCENTILES);
     }
 
     // remove the trailing NaNs
@@ -480,56 +465,9 @@ public class Summary2 extends Iced {
     this(vec, name, stat0, 1000);
   }
 
-  /**
-   * Copy non-empty elements to an array.
-   * @param chk Chunk to copy from
-   * @return array of non-empty elements
-   */
-  double[] copy1(Chunk chk) {
-    double[] dbls = new double[_len1==0?128:_len1];
-    double val;
-    int ns = 0;
-    for (int i = 0; i < chk._len; i++) if (!chk.isNA0(i))
-      if (!Double.isNaN(val = chk.at0(i))) {
-        if (ns == dbls.length) dbls = Arrays.copyOf(dbls,dbls.length<<1);
-        dbls[ns++] = val;
-      }
-    if (ns < dbls.length) dbls = Arrays.copyOf(dbls,ns);
-    return dbls;
-  }
-
-  // FIX! should eventually get rid of this since unused?
-  public double[] resample(Chunk chk) {
-    Random r = new Random(chk._start);
-    if (_stat0.len1() <= RESAMPLE_SZ) return copy1(chk);
-    int ns = (int)(_len1*RESAMPLE_SZ/_stat0.len1()) + 1;
-    double[] dbls = new double[ns];
-    if (ns<<3 < _len1 && ns<<3 < chk._len) {
-      // Chunk pretty dense, sample directly
-      int n = 0;
-      while (n < ns) {
-        double val;
-        int i = r.nextInt(chk._len);
-        if (chk.isNA0(i)) continue;
-        if (Double.isNaN(val = chk.at0(i))) continue;
-        dbls[n++] = val;
-      }
-      return dbls;
-    }
-    dbls = copy1(chk);
-    if (dbls.length <= ns) return dbls;
-    for (int i = dbls.length-1; i >= ns; i--)
-      dbls[r.nextInt(i+1)] = dbls[i];
-    return Arrays.copyOf(dbls,ns);
-  }
-
   public Summary2 add(Chunk chk) {
     for (int i = 0; i < chk._len; i++)
       add(chk.at0(i));
-    // FIX! should eventually get rid of this since unused?
-    if (false) { // disabling to save mem
-      _samples = resample(chk);
-    }
     return this;
   }
   public void add(double val) {
@@ -623,22 +561,12 @@ public class Summary2 extends Iced {
   }
 
   public Summary2 add(Summary2 other) {
-
     // merge hcnt and hcnt just by adding
     if (hcnt != null)
       Utils.add(hcnt, other.hcnt);
 
     _gprows += other._gprows;
 
-    // FIX! no longer using
-    // merge samples
-    if (false) { // disabling to save mem
-      double merged[] = new double[_samples.length+other._samples.length];
-      System.arraycopy(_samples,0,merged,0,_samples.length);
-      System.arraycopy(other._samples,0,merged,_samples.length,other._samples.length);
-      _samples = merged;
-    }
-    
     if (_type == T_ENUM) return this;
 
     // merge hcnt2 per-bin mins 
@@ -726,13 +654,6 @@ public class Summary2 extends Iced {
 
   // _start of each hcnt bin
   public double binValue(int b) { return _start + b*_binsz; }
-
-  // FIX! should eventually get rid of this since unused
-  private double sampleQuantile(final double[] samples, final double threshold) {
-    assert 0.0 <= threshold && threshold <= 1.0;
-    int ix = (int)(samples.length * threshold);
-    return ix<samples.length?samples[ix]:Double.NaN;
-  }
 
   // need to count >4B rows
   private long htot2() { // same but for the finer histogram
