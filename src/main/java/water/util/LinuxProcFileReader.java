@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 public class LinuxProcFileReader {
   private String _systemData;
   private String _processData;
+  private String _pid;
 
   private long _systemIdleTicks = -1;
   private long _systemTotalTicks = -1;
@@ -51,20 +52,29 @@ public class LinuxProcFileReader {
    */
   public int getProcessNumOpenFds() { assert _processNumOpenFds > 0;  return _processNumOpenFds; }
 
+
+  /**
+   * @return process id for this node as a String.
+   */
+  public String getProcessID() { return _pid; }
   /**
    * Read and parse data from /proc/stat and /proc/<pid>/stat.
    * If this doesn't work for some reason, the values will be -1.
    */
   public void read() {
+    String pid = "-1";
+    try {
+      pid = getProcessId();
+      _pid = pid;
+    }
+    catch (Exception _) {}
+
     File f = new File ("/proc/stat");
     if (! f.exists()) {
       return;
     }
 
-    String pid;
     try {
-      pid = getProcessId();
-
       readSystemProcFile();
       readProcessProcFile(pid);
       readProcessNumOpenFds(pid);
