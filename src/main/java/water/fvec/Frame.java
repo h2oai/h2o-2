@@ -47,19 +47,47 @@ public class Frame extends Lockable<Frame> {
       if(_names[i].equals(name))return vecs[i];
     return null;
   }
-  public Frame subframe(String[] names, boolean isSparse){
-    Vec [] vecs = new Vec[names.length];
+
+  /** Returns a subframe of this frame containing only vectors with desired names.
+   *
+   * @param names list of vector names
+   * @return a new frame which collects vectors from this frame with desired names.
+   * @throws IllegalArgumentException if there is no vector with desired name in this frame.
+   */
+  public Frame subframe(String[] names) { return subframe(names, false, 0)[0]; }
+  /** Returns a new frame composed of vectors of this frame selected by given names.
+   * The method replaces missing vectors by a constant column filled by given value.
+   * @param names names of vector to compose a subframe
+   * @param c value to fill missing columns.
+   * @return two frames, the first contains subframe, the second contains newly created constant vectors or null
+   */
+  public Frame[] subframe(String[] names, double c) { return subframe(names, true, c); }
+  /** Create a subframe from this frame based on desired names.
+   * Throws an exception if desired column is not in this frame and <code>replaceBy</code> is <code>false</code>.
+   * Else replace a missing column by a constant column with given value.
+   *
+   * @param names list of column names to extract
+   * @param replaceBy should be missing column replaced by a constant column
+   * @param c value for constant column
+   * @return array of 2 frames, the first is containing a desired subframe, the second one contains newly created columns or null
+   * @throws IllegalArgumentException if <code>replaceBy</code> is false and there is a missing column in this frame
+   */
+  private Frame[] subframe(String[] names, boolean replaceBy, double c){
+    Vec [] vecs     = new Vec[names.length];
+    Vec [] cvecs    = replaceBy ? new Vec   [names.length] : null;
+    String[] cnames = replaceBy ? new String[names.length] : null;
+    int ccv = 0; // counter of constant columns
     vecs();                     // Preload the vecs
-    HashMap<String, Integer> map = new HashMap<String, Integer>(names.length);
-    for(int i = 0; i < _names.length; ++i)map.put(_names[i], i);
+    HashMap<String, Integer> map = new HashMap<String, Integer>((int) ((names.length/0.75f)+1)); // avoid rehashing by set up initial capacity
+    for(int i = 0; i < _names.length; ++i) map.put(_names[i], i);
     for(int i = 0; i < names.length; ++i)
       if(map.containsKey(names[i])) vecs[i] = _vecs[map.get(names[i])];
-      else {
-        double d = isSparse ? 0 : Double.NaN;
-        Log.warn("Column " + names[i] + " is missing, filling it in with " + d);
-        vecs[i] = anyVec().makeCon(d);
+      else if (replaceBy) {
+        Log.warn("Column " + names[i] + " is missing, filling it in with " + c);
+        cnames[ccv] = names[i];
+        vecs[i] = cvecs[ccv++] = anyVec().makeCon(c);
       }
-    return new Frame(names,vecs);
+  return new Frame[] { new Frame(names,vecs), ccv>0 ?  new Frame(Arrays.copyOf(cnames, ccv), Arrays.copyOf(cvecs,ccv)) : null };
   }
   public final Vec[] vecs() {
     Vec[] tvecs = _vecs; // read the content

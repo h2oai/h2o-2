@@ -76,14 +76,16 @@ public class Vec extends Iced {
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
-  public Vec( Key key, long espc[] ) {
+  public Vec( Key key, long espc[]) { this(key, espc, null); }
+  public Vec( Key key, long espc[], String[] domain) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
     _time = -1;                 // not-a-time
+    _domain = domain;
   }
 
-  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; _time = -1; assert group()==v.group(); }
+  protected Vec( Key key, Vec v ) { this(key, v._espc); assert group()==v.group(); }
 
   // A 1-element Vec
   public Vec( Key key, double d ) {
@@ -98,14 +100,16 @@ public class Vec extends Iced {
 
   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
-  public Vec makeZero() { return makeCon(0); }
+  public Vec makeZero()                { return makeCon(0); }
+  public Vec makeZero(String[] domain) { return makeCon(0, domain); }
   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to a constant. */
-  public Vec makeCon( final long l ) {
+  public Vec makeCon( final long l ) { return makeCon(l, null); }
+  public Vec makeCon( final long l, String[] domain ) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
+    Vec v0 = new Vec(group().addVecs(1)[0],_espc, domain);
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
@@ -146,15 +150,14 @@ public class Vec extends Iced {
   /** Create a vector transforming values according given domain map.
    * @see Vec#makeTransf(int[], int[], String[])
    */
-  public Vec makeTransf(final int[][] map, String[] domain) { return makeTransf(map[0], map[1], domain); }
-  public Vec makeTransf(final int[][] map) { return makeTransf(map[0], map[1], null); }
-  Vec makeTransf(final int[] values, final int[] indexes) { return makeTransf(values, indexes, null); }
+  public Vec makeTransf(final int[][] map, String[] finalDomain) { return makeTransf(map[0], map[1], finalDomain); }
   /**
-   * TODO
-   * @param values
-   * @param indexes
-   * @param domain
-   * @return
+   * Creates a new transformation from given values to given indexes of
+   * given domain.
+   * @param values values being mapped from
+   * @param indexes values being mapped to
+   * @param domain domain of new vector
+   * @return always return a new vector which maps given values into a new domain
    */
   Vec makeTransf(final int[] values, final int[] indexes, final String[] domain) {
     if( _espc == null ) throw H2O.unimpl();
@@ -163,8 +166,9 @@ public class Vec extends Iced {
     return v0;
   }
   /**
-   * TODO
-   * @return
+   * Makes a new transformation vector with identity mapping.
+   *
+   * @return a new transformation vector
    * @see Vec#makeTransf(int[], int[], String[])
    */
   Vec makeIdentityTransf() {
@@ -172,10 +176,11 @@ public class Vec extends Iced {
     return makeTransf(seq(0, _domain.length), null, _domain);
   }
   /**
-   * TODO
-   * @param values
-   * @param domain
-   * @return
+   * Makes a new transformation vector from given values to
+   * values 0..domain size
+   * @param values values which are mapped from
+   * @param domain target domain which is mapped to
+   * @return a new transformation vector providing mapping between given values and target domain.
    * @see Vec#makeTransf(int[], int[], String[])
    */
   Vec makeSimpleTransf(long[] values, String[] domain) {
