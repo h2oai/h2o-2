@@ -2,6 +2,7 @@ package water;
 
 import static water.util.Utils.difference;
 import static water.util.Utils.isEmpty;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import water.H2O.H2OCountedCompleter;
@@ -578,7 +579,7 @@ public abstract class Job extends Request2 {
             for (int c : val) sb.append(c + ",");
             jo.getAsJsonObject("source").addProperty(key, sb.toString().substring(0, sb.length()-1));
           } else {
-            jo.getAsJsonObject("source").addProperty(key, "N/A");
+            jo.getAsJsonObject("source").add(key, JsonNull.INSTANCE);
           }
         }
       }
