@@ -130,7 +130,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
   public int max_confusion_matrix_size = 20;
 
-  @API(help = "Max. number (K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false)
+  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false)
   public int max_hit_ratio_k = 10;
 
   /*Imbalanced Classes*/
