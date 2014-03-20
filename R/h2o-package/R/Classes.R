@@ -239,6 +239,7 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
   }
   
+  # TODO: Be careful, there might be a limit on how long a vector you can define in console
   if(is.numeric(object) && is.vector(object)) {
     res <- .h2o.__exec2_dest_key(client, paste("c(", paste(object, sep=',', collapse=","), ")", collapse=""), key)
     return(new("H2OParsedData", h2o=client, key=res$dest_key))
@@ -332,9 +333,9 @@ h2o.addFunction <- function(object, fun, name){
   res <- .h2o.__exec2(object, exec_cmd)
 }
 
-h2o.unique <- function(x, incomparables=F, ...){
+h2o.unique <- function(x, incomparables = FALSE, ...){
   # NB: we do nothing with incomparables right now
-  # NB: we only support MARGIN=2 (which is the default)
+  # NB: we only support MARGIN = 2 (which is the default)
 
   if(!class(x) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('h2o.unique: x is of the wrong type')
   if( nrow(x) == 0 | ncol(x) == 0) return(NULL) 
@@ -342,12 +343,13 @@ h2o.unique <- function(x, incomparables=F, ...){
 
   args <- list(...)
   if( 'MARGIN' %in% names(args) && args[['MARGIN']] != 2 ) stop('h2o unique: only MARGIN 2 supported')
-
-  uniq <- function(df){1}
-  h2o.addFunction(l, uniq)
-  res <- h2o.ddply(x, 1:ncol(x), uniq)
-
-  res[,1:(ncol(res)-1)]
+  .h2o.__unop2("unique", x)
+  
+#   uniq <- function(df){1}
+#   h2o.addFunction(l, uniq)
+#   res <- h2o.ddply(x, 1:ncol(x), uniq)
+# 
+#   res[,1:(ncol(res)-1)]
 }
 unique.H2OParsedDataVA <- h2o.unique
 unique.H2OParsedData <- h2o.unique
@@ -679,7 +681,10 @@ setMethod("nrow", "H2OParsedData", function(x) {
 setMethod("ncol", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
 
-setMethod("length", "H2OParsedData", function(x) { ncol(x) })
+setMethod("length", "H2OParsedData", function(x) { 
+  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key) 
+  numCols = as.numeric(res$numCols); numRows = as.numeric(res$numRows)
+  ifelse(numCols == 1, numRows, numCols) })
 
 setMethod("dim", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -979,24 +984,11 @@ setMethod("levels", "H2OParsedData", function(x) {
   res$levels[[1]]
 })
 
-unique.H2OParsedData <- function(x, incomparables = FALSE, MARGIN = 1, fromLast = FALSE, ...) {
-  if(!is.logical(incomparables) || incomparables) stop("Unimplemented")
-  if(MARGIN != 1) stop("Unimplemented")
-  if(fromLast) stop("Unimplemented")
-  .h2o.__unop2("unique", x)
-}
-
-merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all) {
-  if(!inherits(y, "H2OParsedData")) stop("y must be a H2O parsed data object")
-  if(!is.character(by)) stop("by must be of class character")
-  if(!is.logical(all)) stop("all must be of class logical")
-}
-
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Need to change ... to environment variables and pass to substitute method,
 #       Can't figure out how to access outside environment from within lapply
 setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
- if(missing(X) || !class(X) %in% c("H2OParsedData", "H2OParsedDataVA"))
+  if(missing(X) || !class(X) %in% c("H2OParsedData", "H2OParsedDataVA"))
    stop("X must be a H2O parsed data object")
   if(missing(MARGIN) || !(length(MARGIN) <= 2 && all(MARGIN %in% c(1,2))))
     stop("MARGIN must be either 1 (rows), 2 (cols), or a vector containing both")
@@ -1061,6 +1053,25 @@ str.H2OParsedData <- function(object, ...) {
       cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
     }
   }
+}
+
+setMethod("findInterval", "H2OParsedData", function(x, vec, rightmost.closed = FALSE, all.inside = FALSE) {
+  if(any(is.na(vec)))
+    stop("'vec' contains NAs")
+  if(is.unsorted(vec))
+    stop("'vec' must be sorted non-decreasingly")
+  if(all.inside) stop("Unimplemented")
+  
+  myVec = paste("c(", .seq_to_string(vec), ")", sep = "")
+  expr = paste("findInterval(", x@key, ",", myVec, ",", as.numeric(rightmost.closed), ")", sep = "")
+  res = .h2o.__exec2(x@h2o, expr)
+  new('H2OParsedData', h2o=x@h2o, key=res$dest_key)
+})
+
+merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all) {
+  if(!inherits(y, "H2OParsedData")) stop("y must be a H2O parsed data object")
+  if(!is.character(by)) stop("by must be of class character")
+  if(!is.logical(all)) stop("all must be of class logical")
 }
 
 # setGeneric("histograms", function(object) { standardGeneric("histograms") })
