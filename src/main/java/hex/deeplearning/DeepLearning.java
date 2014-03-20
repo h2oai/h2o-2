@@ -44,7 +44,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public double epochs = 10;
 
   @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 100000l;
+  public long mini_batch = 10000l;
 
   @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
