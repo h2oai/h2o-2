@@ -746,7 +746,7 @@ class ASTCbind extends ASTOp {
       } else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
-        Vec v = vmax == null ? new Vec(Vec.VectorGroup.VG_LEN1.addVec(), d) : vmax.makeCon(d);
+        Vec v = vmax == null ? Vec.make1Elem(d) : vmax.makeCon(d);
         fr.add("C" + String.valueOf(i+1), v);
         env.addRef(v);
       }
