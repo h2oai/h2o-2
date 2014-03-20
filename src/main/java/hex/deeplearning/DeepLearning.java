@@ -227,6 +227,7 @@ public class DeepLearning extends Job.ValidatedJob {
         score_validation_samples = cp.score_validation_samples;
         shuffle_training_data = cp.shuffle_training_data;
         force_load_balance = cp.force_load_balance;
+        classification = cp.classification;
         state = JobState.RUNNING;
         return;
       }
