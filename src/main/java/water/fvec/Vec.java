@@ -135,6 +135,16 @@ public class Vec extends Iced {
     fs.blockForPending();
     return v;
   }
+  public static Vec makeConSeq(double x, int len) {
+    Futures fs = new Futures();
+    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
+    NewChunk nc = new NewChunk(av,0);
+    for (int r = 0; r < len; r++) nc.addNum(x);
+    nc.close(0,fs);
+    Vec v = av.close(fs);
+    fs.blockForPending();
+    return v;
+  }
 
   /** Create a new 1-element vector in the shared vector group for 1-element vectors. */
   public static Vec make1Elem(double d) {
