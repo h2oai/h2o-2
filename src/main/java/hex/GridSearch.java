@@ -175,7 +175,7 @@ public class GridSearch extends Job {
           String err, f1 = "";
           if( info._cm != null && info._cm._arr != null) {
             err = String.format("%.2f", 100 * info._error) + "%";
-            if (info._cm.F1() != Double.NaN) f1 = String.format("%.4f", info._cm.F1());
+            if (info._cm.isBinary()) f1 = String.format("%.4f", info._cm.F1());
           } else err = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(err).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");

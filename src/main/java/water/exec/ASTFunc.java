@@ -41,8 +41,9 @@ public class ASTFunc extends ASTOp {
         for( ASTId id : vars ) if( var.equals(id._id) ) E.throwErr("Repeated argument",x);
         // Add unknown-type variable to new vars list
         vars.add(new ASTId(Type.unbound(),var,0,vars.size()));
-        if( E.peek(')',false) ) break;
+        if( E.peek(')') ) break;
         E.xpeek(',',E._x,null);
+        E.skipWS();
       }
     }
     int argcnt = vars.size();   // Record current size, as body may extend
