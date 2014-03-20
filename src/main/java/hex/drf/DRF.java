@@ -111,6 +111,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
+      if (testKey==null && sample_rate==1f) {
+        sb.append("<div class=\"alert\">There are now OOB data to report out-of-bag error, since sampling rate is 100%!</div>");
+      }
     }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
       if (isClassifier()) {
@@ -173,6 +176,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     if (!(0.0 < sample_rate && sample_rate <= 1.0)) throw new IllegalArgumentException("Sample rate should be interval (0,1> but it is " + sample_rate);
     if (DEBUG_DETERMINISTIC && seed == -1) _seed = 0x1321e74a0192470cL; // fixed version of seed
     else if (seed == -1) _seed = _seedGenerator.nextLong(); else _seed = seed;
+    if (sample_rate==1f && validation!=null)
+      Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is required. There are no OOB data to perform validation!");
   }
 
   // Out-of-bag trees counter - only one since it is shared via k-trees
@@ -234,15 +239,18 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
   }
 
-  /* On-the-fly version for varimp. After generation a new tree, its tree votes are collected on shuffled
+  /** On-the-fly version for varimp. After generation a new tree, its tree votes are collected on shuffled
    * OOB rows and variable importance is recomputed.
-   *
-   * From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp
-   * In every tree grown in the forest, put down the oob cases and count the number of votes cast for the correct class.
+   * <p>
+   * The <a href="http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp">page</a> says:
+   * <cite>
+   * "In every tree grown in the forest, put down the oob cases and count the number of votes cast for the correct class.
    * Now randomly permute the values of variable m in the oob cases and put these cases down the tree.
    * Subtract the number of votes for the correct class in the variable-m-permuted oob data from the number of votes
    * for the correct class in the untouched oob data.
-   * The average of this number over all trees in the forest is the raw importance score for variable m.
+   * The average of this number over all trees in the forest is the raw importance score for variable m."
+   * </cite>
+   * </p>
    * */
   @Override
   protected VarImp doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain, boolean scale) {

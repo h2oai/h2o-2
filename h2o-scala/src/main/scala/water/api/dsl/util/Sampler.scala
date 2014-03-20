@@ -1,6 +1,6 @@
 package water.api.dsl.util
 
-import water.api.dsl.T_T_Collect
+import water.api.dsl.{Row, T_T_Collect}
 
 /**
  * Resevoir Sampler to extract a column from a DataFrame and bring it to the local context.
@@ -23,11 +23,11 @@ import water.api.dsl.T_T_Collect
  *
  *    Not entirely sure about threading / synchronization in this model
  */
-class Sampler extends T_T_Collect[Reservoir,scala.Double] {
+class Sampler extends T_T_Collect[Reservoir] {
 
-  override def apply(acc:Reservoir, rhs:Array[scala.Double]):Reservoir = {
-      for( x <- rhs ) {
-        acc.add(x)
+  override def apply(acc:Reservoir, rhs:Row):Reservoir = {
+      for( col <- 0 until rhs.ncols() ) {
+        acc.add(rhs.d(col))
       }
       acc
   }
