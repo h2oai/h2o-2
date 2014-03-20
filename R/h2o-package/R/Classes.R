@@ -671,7 +671,7 @@ setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
 })
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
-setMethod("names<-", "H2OParsedData", function(x, value) { colnames(x) <- value })
+setMethod("names<-", "H2OParsedData", function(x, value) { colnames(x) <- value; return(x) })
 # setMethod("nrow", "H2OParsedData", function(x) { .h2o.__unop2("nrow", x) })
 # setMethod("ncol", "H2OParsedData", function(x) { .h2o.__unop2("ncol", x) })
 
