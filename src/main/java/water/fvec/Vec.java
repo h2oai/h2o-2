@@ -87,18 +87,7 @@ public class Vec extends Iced {
 
   protected Vec( Key key, Vec v ) { this(key, v._espc); assert group()==v.group(); }
 
-  // A 1-element Vec
-  public Vec( Key key, double d ) {
-    assert key.isVec();
-    _key = key;
-    _espc = new long[]{0,1};
-    Futures fs = new Futures();
-    DKV.put(chunkKey(0),new C0DChunk(d,1),fs);
-    DKV.put(_key,this,fs);
-    fs.blockForPending();
-  }
-
-  /** Make a new vector with the same size and data layout as the old one, and
+   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
   public Vec makeZero()                { return makeCon(0); }
   public Vec makeZero(String[] domain) { return makeCon(0, domain); }
@@ -143,6 +132,31 @@ public class Vec extends Iced {
     for (int r = 0; r < len; r++) nc.addNum(r+1);
     nc.close(0,fs);
     Vec v = av.close(fs);
+    fs.blockForPending();
+    return v;
+  }
+  public static Vec makeConSeq(double x, int len) {
+    Futures fs = new Futures();
+    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
+    NewChunk nc = new NewChunk(av,0);
+    for (int r = 0; r < len; r++) nc.addNum(x);
+    nc.close(0,fs);
+    Vec v = av.close(fs);
+    fs.blockForPending();
+    return v;
+  }
+
+  /** Create a new 1-element vector in the shared vector group for 1-element vectors. */
+  public static Vec make1Elem(double d) {
+    return make1Elem(Vec.VectorGroup.VG_LEN1.addVec(), d);
+  }
+  /** Create a new 1-element vector representing a scalar value. */
+  public static Vec make1Elem(Key key, double d) {
+    assert key.isVec();
+    Vec v = new Vec(key,new long[]{0,1});
+    Futures fs = new Futures();
+    DKV.put(v.chunkKey(0),new C0DChunk(d,1),fs);
+    DKV.put(key,v,fs);
     fs.blockForPending();
     return v;
   }
