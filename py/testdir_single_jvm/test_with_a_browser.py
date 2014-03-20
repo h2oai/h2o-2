@@ -15,9 +15,9 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(1, use_hdfs=True, 
             hdfs_name_node='192.168.1.176', hdfs_version='cdh3',
-            java_heap_GB=14)
+            java_heap_GB=14, base_port=54321)
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts(1, base_port=54321)
 
     @classmethod
     def tearDownClass(cls):
