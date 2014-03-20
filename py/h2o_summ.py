@@ -91,6 +91,7 @@ def percentileOnSortedList_25_50_75( N, key=lambda x:x):
 #***************************************************************************
 def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float', 
     h2oSummary2=None, 
+    h2oSummary2MaxErr=None,
     h2oQuantilesApprox=None, h2oQuantilesExact=None, 
     h2oExecQuantilesApprox=None,
     interpolate='linear', quantile=0.50, use_genfromtxt=False):
@@ -221,9 +222,15 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
     if h2oSummary2:
         if math.isnan(float(h2oSummary2)):
             raise Exception("h2oSummary2 is unexpectedly NaN %s" % h2oSummary2)
-        # bounds are way off, since it depends on the min/max of the col, not the expected value
-        h2o_util.assertApproxEqual(h2oSummary2, b, rel=1.0,
-            msg='h2o summary2 is not approx. same as sort algo')
+        if h2oSummary2MaxErr:
+            # maxErr absolute was calculated in the test from 0.5*(max-min/(max_qbins-2))
+            h2o_util.assertApproxEqual(h2oSummary2, b, tol=h2oSummary2MaxErr,
+                msg='h2o summary2 is not approx. same as sort algo (calculated expected max error)')
+        else:
+            # bounds are way off, since it depends on the min/max of the col, not the expected value
+            h2o_util.assertApproxEqual(h2oSummary2, b, rel=1.0,
+                msg='h2o summary2 is not approx. same as sort algo (sloppy compare)')
+
     if h2oQuantilesApprox and h2oSummary2:
         # they should both get the same answer. Currently they have different code, but same algo
         # FIX! ...changing to a relative tolerance, since we're getting a miscompare in some cases.
