@@ -27,8 +27,8 @@ import water.fvec.Vec.VectorGroup;
  * produce an output frame with newly created Vecs.
  */
 public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable, ForkJoinPool.ManagedBlocker {
-  public MRTask2() { _priority = getPriority(); }
-  public MRTask2(H2OCountedCompleter completer){super(completer); _priority = getPriority(); }
+  public MRTask2() { }
+  public MRTask2(H2OCountedCompleter completer){super(completer); }
 
   /** The Vectors to work on. */
   public Frame _fr;
@@ -39,13 +39,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // If TRUE, run entirely local - which will pull all the data locally.
   private boolean _run_local;
 
-  final private byte _priority;
+  private byte _priority = H2O.MIN_PRIORITY;
   @Override public byte priority() { return _priority; }
-  private byte getPriority() {
+  private void raisePriority() {
     // Always 1 higher priority than calling thread... because the caller will
     // block & burn a thread waiting for this MRTask2 to complete.
     Thread cThr = Thread.currentThread();
-    return (byte)((cThr instanceof H2O.FJWThr) ? ((H2O.FJWThr)cThr)._priority+1 : super.priority());
+    _priority = (byte)((cThr instanceof H2O.FJWThr) ? ((H2O.FJWThr)cThr)._priority+1 : super.priority());
   }
 
 
@@ -219,6 +219,24 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     return getResult();
   }
 
+  public final void asyncExec(Frame fr){asyncExec(0,fr,false);}
+
+  /**
+   * Fork the task in strictly non-blocking fashion.
+   *
+   * Same functionality as dfork, but does not raise priority, so user is should
+   * *never* block on it
+   */
+  public final void asyncExec( int outputs, Frame fr, boolean run_local){
+    // Use first readable vector to gate home/not-home
+    fr.checkCompatible();       // Check for compatible vectors
+    if((_noutputs = outputs) > 0)_vid = fr.anyVec().group().reserveKeys(outputs);
+    _fr = fr;                   // Record vectors to work on
+    _nodes = (1L<<H2O.CLOUD.size())-1; // Do Whole Cloud
+    _run_local = run_local;     // Run locally by copying data, or run globally?
+    setupLocal0();              // Local setup
+    H2O.submitTask(this);       // Begin normal execution on a FJ thread
+  }
   /** Invokes the map/reduce computation over the given Frame. This call is
    *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
@@ -228,14 +246,8 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     return dfork(outputs,new Frame(vecs),false);
   }
   public final T dfork( int outputs, Frame fr, boolean run_local) {
-    // Use first readable vector to gate home/not-home
-    fr.checkCompatible();       // Check for compatible vectors
-    if((_noutputs = outputs) > 0)_vid = fr.anyVec().group().reserveKeys(outputs);
-    _fr = fr;                   // Record vectors to work on
-    _nodes = (1L<<H2O.CLOUD.size())-1; // Do Whole Cloud
-    _run_local = run_local;     // Run locally by copying data, or run globally?
-    setupLocal0();              // Local setup
-    H2O.submitTask(this);       // Begin normal execution on a FJ thread
+    raisePriority();
+    asyncExec(outputs,fr,run_local);
     return self();
   }
 

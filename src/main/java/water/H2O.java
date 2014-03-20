@@ -665,7 +665,7 @@ public final class H2O {
   // Submit to the correct priority queue
   public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
-    assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
+    assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY:"priority " + priority + " is out of range, expected range is < " + MIN_PRIORITY + "," + MAX_PRIORITY + ">";
     if( FJPS[priority]==null )
       synchronized( H2O.class ) { FJPS[priority] = new ForkJoinPool2(priority,-1); }
     FJPS[priority].submit(task);

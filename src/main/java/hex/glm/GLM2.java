@@ -270,7 +270,7 @@ public class GLM2 extends ModelJob {
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
           Log.info("GLM line search: found admissible step=" + step);
           _lastResult = null; // set last result to null so that the Iteration will not attempt to verify whether or not it should do the line search.
-          new GLMIterationTask(GLM2.this,_dinfo,_glm,glmt._betas[i],_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
+          new GLMIterationTask(GLM2.this,_dinfo,_glm,glmt._betas[i],_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
           return;
         }
         step *= 0.5;
@@ -302,7 +302,7 @@ public class GLM2 extends ModelJob {
       }
     };
     if(GLM2.this.n_folds >= 2) xvalidate(_model.clone(), _lambdaIdx, fin);
-    else  new GLMValidationTask(_model.clone(),_lambdaIdx,fin).dfork(_dinfo._adaptedFrame);
+    else  new GLMValidationTask(_model.clone(),_lambdaIdx,fin).asyncExec(_dinfo._adaptedFrame);
   }
   private class Iteration extends H2OCallback<GLMIterationTask> {
     @Override public void callback(final GLMIterationTask glmt) {
@@ -328,7 +328,7 @@ public class GLM2 extends ModelJob {
         if(converged) Log.info("GLM converged by reaching 0 gradient/subgradient.");
         double objval = glmt._val.residual_deviance + 0.5*l2pen*l2norm(glmt._beta);
         if(!converged && _lastResult != null && needLineSearch(glmt._beta,objval,1)){
-          new GLMTask.GLMLineSearchTask(GLM2.this,_dinfo,_glm,_lastResult._glmt._beta,glmt._beta,1e-8, new LineSearchIteration()).dfork(_dinfo._adaptedFrame);
+          new GLMTask.GLMLineSearchTask(GLM2.this,_dinfo,_glm,_lastResult._glmt._beta,glmt._beta,1e-8, new LineSearchIteration()).asyncExec(_dinfo._adaptedFrame);
           return;
         }
         _lastResult = new IterationInfo(GLM2.this._iter-1, objval, glmt);
@@ -360,7 +360,7 @@ public class GLM2 extends ModelJob {
         }
         if(!converged && _glm.family != Family.gaussian && _iter < max_iter){
           ++_iter;
-          GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, newBeta,_ymu,_reg,new Iteration()).dfork(_dinfo._adaptedFrame);
+          new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, newBeta,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
           return;
         }
       }
@@ -426,20 +426,20 @@ public class GLM2 extends ModelJob {
               GLM2.this.complete(); // signal we're done to anyone waiting for the job
             else {
               ++_iter;
-              new GLMIterationTask(GLM2.this,_dinfo,_glm,null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).dfork(_dinfo._adaptedFrame);
+              new GLMIterationTask(GLM2.this,_dinfo,_glm,null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).asyncExec(_dinfo._adaptedFrame);
             }
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
             GLM2.this.cancel(ex);
             return true;
           }
-        }).dfork(_dinfo._adaptedFrame);
+        }).asyncExec(_dinfo._adaptedFrame);
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
         GLM2.this.cancel(ex);
         return true;
       }
-    }).dfork(_dinfo._adaptedFrame);
+    }).asyncExec(_dinfo._adaptedFrame);
   }
 
   private void xvalidate(final GLMModel model, int lambdaIxd,final H2OCountedCompleter cmp){
@@ -450,7 +450,7 @@ public class GLM2 extends ModelJob {
           GLMModel [] models = new GLMModel[keys.length];
           // we got the xval models, now compute their validations...
           for(int i = 0; i < models.length; ++i)models[i] = DKV.get(keys[i]).get();
-          new GLMXValidationTask(model,_lambdaIdx,models, cmp).dfork(_dinfo._adaptedFrame);
+          new GLMXValidationTask(model,_lambdaIdx,models, cmp).asyncExec(_dinfo._adaptedFrame);
         }catch(Throwable ex){cmp.completeExceptionally(ex);}
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
