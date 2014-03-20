@@ -23,7 +23,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   // Array filter type alias
   type FAOp = T_A2B_Transf[scala.Double]
   // Double collector
-  type CDOp = T_T_Collect[scala.Double,scala.Double]
+  type CDOp = T_T_Collect[scala.Double]
     
   // An object to represent an empty range selector 
   case object * extends Range(0, -1, 1);
@@ -70,7 +70,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
     println(f4)
     
     val f5 = f map ( new FAOp {
-      def apply(rhs: Array[scala.Double]):Boolean = rhs(2) > 4;
+      def apply(rhs: Row):Boolean = rhs.d(2) > 4;
     });
     f
   }

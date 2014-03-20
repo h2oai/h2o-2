@@ -293,6 +293,7 @@ public class Utils {
   }
 
   public static int[] shuffleArray(int[] a, int n, int result[], long seed, int startIndex) {
+    if (n<=0) return result;
     Random random = getDeterRNG(seed);
     result[0] = a[startIndex];
     for (int i = 1; i < n; i++) {

@@ -1,17 +1,10 @@
 package water.api.dsl
 
-import java.io._
-import java.security._
-import java.util.zip._
 import scala.tools.nsc._
 import scala.tools.nsc.interpreter._
 import water.fvec.NFSFileVec
-import water.fvec.Frame
 import water.Boot
 import water.H2O
-import water.api.dsl.examples._
-import hex.gbm.DTree.TreeModel.TreeStats
-import water.deploy.NodeCL
 
 /** Custom H2O REPL.
  *  
@@ -23,7 +16,7 @@ object ShalalaRepl {
   //  - hence it configures REPL classpath according the Boot
   def main(args: Array[String]): Unit = {
     // Launch Boot and and then H2O and ShalalaRepl 
-    Boot.main(classOf[ShalalaRepl], args);
+    Boot.main(classOf[ShalalaRepl], args)
   }
   
   def userMain(args: Array[String]):Unit = {

@@ -86,6 +86,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTIsNA());
     putPrefix(new ASTNrow());
     putPrefix(new ASTNcol());
+    putPrefix(new ASTLength());
     putPrefix(new ASTAbs ());
     putPrefix(new ASTSgn ());
     putPrefix(new ASTSqrt());
@@ -143,6 +144,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTUnique());
     putPrefix(new ASTRunif ());
     putPrefix(new ASTCut   ());
+    putPrefix(new ASTfindInterval());
     putPrefix(new ASTPrint ());
     putPrefix(new ASTLs    ());
   }
@@ -342,6 +344,19 @@ class ASTNcol extends ASTUniPrefixOp {
     Frame fr = env.popAry();
     String skey = env.key();
     double d = fr.numCols();
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+class ASTLength extends ASTUniPrefixOp {
+  ASTLength() { super(VARS1, new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "length"; }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = fr.numCols() == 1 ? fr.numRows() : fr.numCols();
     env.subRef(fr,skey);
     env.poppush(d);
   }
@@ -726,7 +741,7 @@ class ASTCbind extends ASTOp {
         Frame fr2 = env.ary(-argcnt+1+i);
         if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
           fr.add(name,fr2.anyVec());
-        else 
+        else
           fr.add(fr2,true);
       } else {
         double d = env.dbl(-argcnt+1+i);
@@ -998,7 +1013,7 @@ class ASTQtile extends ASTOp {
     // Type 7 matches R default
     final int INTERPOLATION = 7; // linear if quantile not exact on row. 2 uses mean.
 
-    // The mappers throw away their memory when done? So if we save the hcnt* results 
+    // The mappers throw away their memory when done? So if we save the hcnt* results
     // (histogram obj) from iteration 1, we can reuse it to avoid 1st pass for each threshold.
     // Nice speedup for a list (and not affect single threshold)
     // Cost of keeping the first histogram around during multipass iterations is small?
@@ -1048,7 +1063,7 @@ class ASTQtile extends ASTOp {
         // the 2-N map/reduces are here (with new start/ends. MULTIPASS is implied
         qbinsM = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd, MULTIPASS).doAll(xv)._qbins;
       }
-      qbinsM = null; // shouldn't need this? 
+      qbinsM = null; // shouldn't need this?
       nc.addNum(result);
     }
     // keep this guy around till we're done with all quantiles
@@ -1434,6 +1449,89 @@ class ASTCut extends ASTOp {
       env.pop();
       env.push(fr2);
     } else throw H2O.unimpl();
+  }
+}
+
+class ASTfindInterval extends ASTOp {
+  ASTfindInterval() { super(new String[]{"findInterval", "ary", "vec", "rightmost.closed"},
+                          new Type[]{Type.ARY, Type.ARY, Type.dblary(), Type.DBL},
+                          OPF_PREFIX,
+                          OPP_PREFIX,
+                          OPA_RIGHT); }
+  @Override String opStr() { return "findInterval"; }
+  @Override ASTOp make() { return new ASTfindInterval(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final boolean rclosed = env.popDbl() == 0 ? false : true;
+
+    if(env.isDbl()) {
+      final double cutoff = env.popDbl();
+
+      Frame fr = env.popAry();
+      String skey = env.key();
+      if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
+        throw new IllegalArgumentException("First argument must be a numeric column vector");
+
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for(int r = 0; r < chk._len; r++) {
+            double x = chk.at0(r);
+            if(Double.isNaN(x))
+              nchk.addNum(Double.NaN);
+            else {
+              if(rclosed)
+                nchk.addNum(x > cutoff ? 1 : 0);   // For rightmost.closed = TRUE
+              else
+                nchk.addNum(x >= cutoff ? 1 : 0);
+            }
+          }
+        }
+      }.doAll(1,fr).outputFrame(fr._names, fr.domains());
+      env.subRef(fr, skey);
+      env.pop();
+      env.push(fr2);
+    } else if(env.isAry()) {
+      Frame ary = env.popAry();
+      String skey1 = env.key();
+      if(ary.vecs().length != 1 || ary.vecs()[0].isEnum())
+        throw new IllegalArgumentException("Second argument must be a numeric column vector");
+      Vec brks = ary.vecs()[0];
+      // TODO: Check that num rows below some cutoff, else this will likely crash
+
+      // Check if vector of cutoffs is sorted in weakly ascending order
+      final int len = (int)brks.length();
+      final double[] cutoffs = new double[len];
+      for(int i = 0; i < len-1; i++) {
+        if(brks.at(i) > brks.at(i+1))
+          throw new IllegalArgumentException("Second argument must be sorted in non-decreasing order");
+        cutoffs[i] = brks.at(i);
+      }
+      cutoffs[len-1] = brks.at(len-1);
+
+      Frame fr = env.popAry();
+      String skey2 = env.key();
+      if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
+        throw new IllegalArgumentException("First argument must be a numeric column vector");
+
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for(int r = 0; r < chk._len; r++) {
+            double x = chk.at0(r);
+            if(Double.isNaN(x))
+              nchk.addNum(Double.NaN);
+            else {
+              double n = Arrays.binarySearch(cutoffs, x);
+              if(n < 0) nchk.addNum(-n-1);
+              else if(rclosed && n == len-1) nchk.addNum(n);   // For rightmost.closed = TRUE
+              else nchk.addNum(n+1);
+            }
+          }
+        }
+      }.doAll(1,fr).outputFrame(fr._names, fr.domains());
+      env.subRef(ary, skey1);
+      env.subRef(fr, skey2);
+      env.pop();
+      env.push(fr2);
+    }
   }
 }
 

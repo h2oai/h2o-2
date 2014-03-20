@@ -24,7 +24,7 @@ public class VarImp extends Iced {
   @API(help="Variable importance of individual variables.")
   public float[]  varimp;
   @API(help="Names of variables.")
-  private String[] variables;
+  protected String[] variables;
   @API(help="Variable importance measurement method.")
   public final VarImpMethod method;
   @API(help="Max. number of variables to show.")
@@ -66,11 +66,15 @@ public class VarImp extends Iced {
   }
 
   protected StringBuilder toHTMLGraph(StringBuilder sb, Integer[] sortOrder) {
-    Integer[] so = varimp.length > max_var ? sortOrder : null;
+    return toHTMLGraph(sb, variables, varimp, sortOrder, max_var);
+  }
+
+  static final StringBuilder toHTMLGraph(StringBuilder sb, String[] names, float[] vals, Integer[] sortOrder, int max) {
+    Integer[] so = vals.length > max ? sortOrder : null;
     // Generate a graph
     DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
-        DocGen.HTML.toJSArray(new StringBuilder(), variables, so, Math.min(max_var, variables.length)),
-        DocGen.HTML.toJSArray(new StringBuilder(), varimp,    so, Math.min(max_var, variables.length))
+        DocGen.HTML.toJSArray(new StringBuilder(), names, so, Math.min(max, vals.length)),
+        DocGen.HTML.toJSArray(new StringBuilder(), vals , so, Math.min(max, vals.length))
         );
     return sb;
   }
@@ -85,7 +89,8 @@ public class VarImp extends Iced {
   }
 
   /** Variable importance measured as relative influence.
-   * It provides raw values, scaled values, and summary. */
+   * It provides raw values, scaled values, and summary.
+   * Motivate by R's GBM package. */
   public static class VarImpRI extends VarImp {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -120,6 +125,9 @@ public class VarImp extends Iced {
       DocGen.HTML.tableLine(sb, "Scaled values",  scaled_values(), sortOrder, Math.min(max_var, varimp.length));
       DocGen.HTML.tableLine(sb, "Influence in %", summary(), sortOrder, Math.min(max_var, varimp.length));
       return ssb;
+    }
+    @Override protected StringBuilder toHTMLGraph(StringBuilder sb, Integer[] sortOrder) {
+      return toHTMLGraph(sb, variables, scaled_values(), sortOrder, max_var );
     }
   }
 

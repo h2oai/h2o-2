@@ -74,16 +74,14 @@ object Utils {
   }
 }
 
-class MRICollector[X<:Iced](acc:X, cf: T_T_Collect[X, scala.Double]) extends MRTask2[MRICollector[X]] {
+class MRICollector[X<:Iced](acc:X, cf: T_T_Collect[X]) extends SMRTask[MRICollector[X]] {
   var mracc: X = acc
   
   override def map(in:Array[Chunk]) = {
     mracc = acc
-    val rlen = in(0)._len
-    val tmprow = new Array[scala.Double](in.length)
-    for (row:Int <- 0 until rlen ) {
-      val rowdata = Utils.readRow(in,row,tmprow)
-      mracc = cf(mracc, rowdata)
+    val it = iterator(in)
+    while (it.hasNext) {
+      mracc = cf(mracc, it.next())
     }  
   }
   override def reduce(o:MRICollector[X]) = {
@@ -91,17 +89,15 @@ class MRICollector[X<:Iced](acc:X, cf: T_T_Collect[X, scala.Double]) extends MRT
   }
   
 }
-class MRCollector(acc:scala.Double, cf: T_T_Collect[scala.Double, scala.Double]) extends MRTask2[MRCollector] {
+class MRCollector(acc:scala.Double, cf: T_T_Collect[scala.Double]) extends SMRTask[MRCollector] {
   
   var mracc: scala.Double = acc
   
   override def map(in:Array[Chunk]) = {
     mracc = acc
-    val rlen = in(0)._len
-    val tmprow = new Array[scala.Double](in.length)
-    for (row:Int <- 0 until rlen ) {
-      val rowdata = Utils.readRow(in,row,tmprow)
-      mracc = cf(mracc, rowdata)
+    val it = iterator(in)
+    while (it.hasNext) {
+      mracc = cf(mracc, it.next())
     }  
   }
   override def reduce(o:MRCollector) = {
