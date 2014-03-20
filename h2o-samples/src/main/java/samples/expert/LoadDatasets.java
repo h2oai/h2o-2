@@ -19,6 +19,7 @@ public class LoadDatasets extends Job {
 
   void load() {
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate.csv");
+    TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_long.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./mnist/test.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./mnist/train.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./cars.csv");
@@ -144,7 +145,6 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./logreg/princeton/cuse.dat");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/princeton/housing.raw");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/pros.xls");
-    TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_long.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_test.csv");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_train.csv");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/syn_2659x1049.csv");
