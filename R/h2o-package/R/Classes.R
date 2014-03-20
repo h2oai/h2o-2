@@ -490,15 +490,19 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   else if(missing(i) && !missing(j)) {
     if(is.character(j)) {
       myNames = colnames(x)
-      if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
+      if(any(!(j %in% myNames))) {
+        if(length(j) == 1)
+          return(do.call("$<-", list(x, j, value)))
+        else stop("Unimplemented: undefined column names specified")
+      }
       cind = match(j, myNames)
       # cind = match(j[j %in% myNames], myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
     lhs = paste(x@key, "[,", cind, "]", sep = "")
   } else if(!missing(i) && missing(j)) {
-    rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
-    lhs = paste(x@key, "[", rind, ",]", sep = "")
+      rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
+      lhs = paste(x@key, "[", rind, ",]", sep = "")
   } else {
     if(is.character(j)) {
       myNames = colnames(x)
