@@ -1,6 +1,5 @@
 package water.exec;
 import water.util.Log;
-
 import hex.Quantiles;
 import hex.la.Matrix;
 
@@ -11,6 +10,7 @@ import org.joda.time.MutableDateTime;
 
 import water.*;
 import water.fvec.*;
+import water.fvec.Vec.VectorGroup;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -131,7 +131,9 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
     // Misc
-    putPrefix(new ASTSeq   ());
+    putPrefix(new ASTSeq());
+    putPrefix(new ASTSeqLen());
+    putPrefix(new ASTRepLen());
     putPrefix(new ASTQtile ());
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
@@ -746,7 +748,7 @@ class ASTCbind extends ASTOp {
       } else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
-        Vec v = vmax == null ? new Vec(Vec.VectorGroup.VG_LEN1.addVec(), d) : vmax.makeCon(d);
+        Vec v = vmax == null ? Vec.make1Elem(d) : vmax.makeCon(d);
         fr.add("C" + String.valueOf(i+1), v);
         env.addRef(v);
       }
@@ -949,9 +951,9 @@ class ASTMTrans extends ASTOp {
 }
 
 // Similar to R's seq_len
-class ASTSeq extends ASTOp {
+class ASTSeqLen extends ASTOp {
   @Override String opStr() { return "seq_len"; }
-  ASTSeq( ) {
+  ASTSeqLen( ) {
     super(new String[]{"seq_len", "n"},
             new Type[]{Type.ARY,Type.DBL},
             OPF_PREFIX,
@@ -964,6 +966,73 @@ class ASTSeq extends ASTOp {
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
     env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
+  }
+}
+
+// Same logic as R's generic seq method
+class ASTSeq extends ASTOp {
+  @Override String opStr() { return "seq"; }
+  ASTSeq() { super(new String[]{"seq", "from", "to", "by"},
+                   new Type[]{Type.dblary(), Type.DBL, Type.DBL, Type.DBL},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    double by = env.popDbl();
+    double to = env.popDbl();
+    double from = env.popDbl();
+
+    double delta = to - from;
+    if(delta == 0 && to == 0)
+      env.poppush(to);
+    else {
+      double n = delta/by;
+      if(n < 0)
+        throw new IllegalArgumentException("wrong sign in 'by' argument");
+      else if(n > Double.MAX_VALUE)
+        throw new IllegalArgumentException("'by' argument is much too small");
+
+      double dd = Math.abs(delta)/Math.max(Math.abs(from), Math.abs(to));
+      if(dd < 100*Double.MIN_VALUE)
+        env.poppush(from);
+      else {
+        Key k = new Vec.VectorGroup().addVec();
+        Futures fs = new Futures();
+        AppendableVec av = new AppendableVec(k);
+        NewChunk nc = new NewChunk(av, 0);
+        int len = (int)n + 1;
+        for (int r = 0; r < len; r++) nc.addNum(from + r*by);
+        // May need to adjust values = by > 0 ? min(values, to) : max(values, to)
+        nc.close(0, fs);
+        Vec vec = av.close(fs);
+        fs.blockForPending();
+        vec._domain = null;
+        env.poppush(1, new Frame(new String[] {"C1"}, new Vec[] {vec}), null);
+      }
+    }
+  }
+}
+
+class ASTRepLen extends ASTOp {
+  @Override String opStr() { return "rep_len"; }
+  ASTRepLen() { super(new String[]{"rep_len", "x", "length.out"},
+                   new Type[]{Type.dblary(), Type.DBL, Type.DBL},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(env.isAry(-2)) H2O.unimpl();
+    else {
+      int len = (int)env.popDbl();
+      if(len <= 0)
+        throw new IllegalArgumentException("Error in rep_len: argument length.out must be coercible to a positive integer");
+      double x = env.popDbl();
+      env.poppush(1,new Frame(new String[]{"C1"}, new Vec[]{Vec.makeConSeq(x, len)}),null);
+    }
   }
 }
 
