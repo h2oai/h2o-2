@@ -13,6 +13,7 @@ parse.add_argument('-l', '--logging', help="turn on logging.DEBUG msgs to see al
 args = parse.parse_args()
 
 print "creates jsandbox (cleaned), and puts aTxt.txt and aConsole.txt in there, along with artifacts"
+print " also creates fails* and regress* in there"
 # can refer to this by zero-based index with -n 0  or -n 1  etc
 # or by job name with -j h2o_master_test
 
@@ -235,18 +236,62 @@ t = buildtimestamp
 hm = "%s_%s" % (t.hour, t.minute)
 # hour minute second
 hms = "%s_%s" % (hm, t.second)
-failName = "%s_%s_%s_%s%s" % ("fails", jobname, buildnumber, hm, ".txt")
-print failName
+failName = "%s_%s_%s_%s%s" % ("fail", jobname, buildnumber, hm, ".txt")
+print "failName:", failName
+regressName = "%s_%s_%s_%s%s" % ("regress", jobname, buildnumber, hm, ".txt")
+print "regressName:", regressName
+
 stats = {}
-fTxt = open(LOG_DIR + "/" + failName, "a")
 
 def fprint (*args):
     # emulate printing each as string, then join with spaces
     s = ["%s" % a for a in args]
-    line = " ".join(s) + "\n"
+    line = " ".join(s)
     fTxt.write(line + "\n")
     print line
 
+def printStuff():
+    e1 = "\n******************************************************************************"
+    e2 = "%s %s %s" % (i, jobname, v)
+    fprint(e1)
+    fprint(e2)
+    # print "\n", k, "\n"
+    # print "\n", v, "\n"
+    # to see what you can get
+    # print see(v)
+    # print dir(v)
+    # print vars(v)
+    # .age .className .duration  .errorDetails .errorStackTrace .failedSince 
+    # .identifier()  .name .skipped .skippedMessage  .status  .stderr .stdout
+    fprint (i, "v.duration", v.duration)
+    fprint (i, "v.errorStackTrace", v.errorStackTrace)
+    fprint (i, "v.failedSince", v.failedSince)
+    fprint (i, "v.stderr", v.stderr)
+    # lines = v.stdout.splitlines()
+    # keep newlines in the list elements
+    if not v.stdout:
+        fprint ("v.stdout is empty")
+    else:
+        fprint ("len(v.stdout):", len(v.stdout))
+        # have to fix the \n and \tat in the strings
+        stdout = v.stdout
+        # json string has the actual '\' and 'n' or 'tat' chars
+        stdout = string.replace(stdout,'\\n', '\n');
+        stdout = string.replace(stdout,'\\tat', '\t');
+        # don't need double newlines
+        stdout = string.replace(stdout,'\n\n', '\n');
+        lineList = stdout.splitlines()
+        fprint ("len(lineList):", len(lineList))
+        num = min(20, len(lineList))
+        if num!=0:
+            # print i, "Last %s lineList of stdout %s" % (num, "\n".join(lineList[-num]))
+            fprint (i, "Last %s lineList of stdout\n" % num)
+            fprint ("\n".join(lineList[-num:]))
+        else:
+            fprint ("v.stdout is empty")
+
+
+#******************************************************
 for i, (k, v) in enumerate(rs.items()):
     if v.status in stats:
         stats[v.status] += 1
@@ -258,57 +303,30 @@ for i, (k, v) in enumerate(rs.items()):
     e2 = "%s %s %s" % (i, jobname, v)
     aTxt.write(e1+"\n")
     aTxt.write(e2+"\n")
+
     # only if not PASSED
     if v.status != 'PASSED':
-        fprint(e1)
-        fprint(e2)
-        # print "\n", k, "\n"
-        # print "\n", v, "\n"
-        # to see what you can get
-        # print see(v)
-        # print dir(v)
-        # print vars(v)
-        # .age .className .duration  .errorDetails .errorStackTrace .failedSince 
-        # .identifier()  .name .skipped .skippedMessage  .status  .stderr .stdout
-        fprint (i, "v.duration", v.duration)
-        fprint (i, "v.errorStackTrace", v.errorStackTrace)
-        fprint (i, "v.failedSince", v.failedSince)
-        fprint (i, "v.stderr", v.stderr)
-        # lines = v.stdout.splitlines()
-        # keep newlines in the list elements
-        if not v.stdout:
-            fprint ("v.stdout is empty")
-        else:
-            fprint ("len(v.stdout):", len(v.stdout))
-            # have to fix the \n and \tat in the strings
-            stdout = v.stdout
-            # json string has the actual '\' and 'n' or 'tat' chars
-            stdout = string.replace(stdout,'\\n', '\n');
-            stdout = string.replace(stdout,'\\tat', '\t');
-            # don't need double newlines
-            stdout = string.replace(stdout,'\n\n', '\n');
-            lineList = stdout.splitlines()
-            fprint ("len(lineList):", len(lineList))
-            num = min(20, len(lineList))
-            if num!=0:
-                # print i, "Last %s lineList of stdout %s" % (num, "\n".join(lineList[-num]))
-                fprint (i, "Last %s lineList of stdout\n" % num)
-                fprint ("\n".join(lineList[-num:]))
-            else:
-                fprint ("v.stdout is empty")
+        fTxt = open(LOG_DIR + "/" + failName, "a")
+        printStuff()
+        fTxt.close()
 
-        if PRINTALL:
-            fprint (i, "k", k)
-            fprint (i, "v", v)
-            fprint (i, "v.errorDetails", v.errorDetails)
-            fprint (i, "v.age", v.age)
-            fprint (i, "v.className", v.className)
-            fprint (i, "v.identifier()", v.identifier())
-            fprint (i, "v.name", v.name)
-            fprint (i, "v.skipped", v.age)
-            fprint (i, "v.skippedMessage", v.skippedMessage)
-            fprint (i, "v.status", v.status)
-            fprint (i, "v.stdout", v.stdout)
+    if v.status == 'REGRESSION':
+        fTxt = open(LOG_DIR + "/" + regressName, "a")
+        printStuff()
+        fTxt.close()
+
+    if PRINTALL:
+        fprint (i, "k", k)
+        fprint (i, "v", v)
+        fprint (i, "v.errorDetails", v.errorDetails)
+        fprint (i, "v.age", v.age)
+        fprint (i, "v.className", v.className)
+        fprint (i, "v.identifier()", v.identifier())
+        fprint (i, "v.name", v.name)
+        fprint (i, "v.skipped", v.age)
+        fprint (i, "v.skippedMessage", v.skippedMessage)
+        fprint (i, "v.status", v.status)
+        fprint (i, "v.stdout", v.stdout)
 
 #****************************************************************************
 # print "dict_af", dict_af
