@@ -8,6 +8,7 @@ import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
 import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetScore;
+import hex.ReBalance;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
@@ -136,6 +137,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");

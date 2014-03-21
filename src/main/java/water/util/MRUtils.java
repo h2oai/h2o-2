@@ -75,10 +75,10 @@ public class MRUtils {
     int cores = 0;
     for( H2ONode node : H2O.CLOUD._memary )
       cores += node._heartbeat._num_cpus;
-    final int splits = cores;
+    final int splits = 4*cores;
 
     // rebalance only if the number of chunks is less than the number of cores
-    if( (fr.vecs()[0].nChunks() < splits || shuffle) && fr.numRows() > splits) {
+    if( (fr.vecs()[0].nChunks() < cores || shuffle) && fr.numRows() > splits) {
       Vec[] vecs = fr.vecs().clone();
       Log.info("Load balancing dataset, splitting it into up to " + splits + " chunks.");
       long[] idx = null;

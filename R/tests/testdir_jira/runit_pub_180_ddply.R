@@ -10,7 +10,8 @@ source('../findNSourceUtils.R')
 
 ddplytest <- function(conn){
   Log.info('uploading ddply testing dataset')
-  df.h <- h2o.importFile(conn, locate('smalldata/jira/pub-180.csv'))
+  dataset_path = normalizePath(locate('smalldata/jira/pub-180.csv'))
+  df.h <- h2o.importFile(conn, dataset_path)
 
   Log.info('printing from h2o')
   Log.info( head(df.h) )

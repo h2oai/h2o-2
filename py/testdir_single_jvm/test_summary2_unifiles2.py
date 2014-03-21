@@ -4,12 +4,25 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b, 
 import h2o_summ
 
 print "same as test_summary2_unifiles.py but using local runif_.csv single col for comparison testing"
-print "Should really add something that sees we go to 16 with no answer, if bins are set to 1"
+
+print "\nShould really add something that sees we go to 16 with no answer, if bins are set to 1"
 print "Answer not guaranteed (for any data) if max iterations is 16 in h2o and max_qbins is small"
 
+print "FIX! should loop across all the quantiles in summary2, and do them for all, for the datasets here"
+print "0.99 had failed with the breadth.csv"
+# the old failure
+# Exception: h2o quantile multipass is not approx. same as sort algo. 
+# h2o_util.assertApproxEqual failed comparing 21.0 and 24.84. {'tol': 2e-07}.
+
 DO_MEDIAN = False
-OTHER = 0.99
-OTHER_FROM_SUMM = 9
+# 
+# the test compares to summary which has fixed quantiles.
+# but if we DO_MEDIAN=False, we can pick from any "other" here
+thresholds = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
+OTHER_Q_SUMM_INDEX = 9
+# has to point to one of the summmary2 choices
+OTHER_Q = thresholds[OTHER_Q_SUMM_INDEX]
+
 MAX_QBINS = 1000
 MAX_QBINS = 1000
 
@@ -41,10 +54,8 @@ class Basic(unittest.TestCase):
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
             # ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
-            ('breadth.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
-            ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
-            ('runif.csv', 'x.hex', [ (None, None, None, None, None, None)], 'smalldata', None),
-            
+            ('breadth.csv', 'b.hex', [ ('C1', None, None, None, None, None)], 'smalldata', 'quantiles'),
+            ('covtype.data', 'c.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
 
         ]
 
@@ -90,9 +101,9 @@ class Basic(unittest.TestCase):
                 if expected[0]:
                     self.assertEqual(colname, expected[0])
 
-                quantile = 0.5 if DO_MEDIAN else OTHER
+                quantile = 0.5 if DO_MEDIAN else OTHER_Q
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=scipyCol,
-                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
+                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=2)
                 qresult = q['result']
                 qresult_single = q['result_single']
                 qresult_iterations = q['iterations']
@@ -131,7 +142,6 @@ class Basic(unittest.TestCase):
                     print ""
 
                     # the thresholds h2o used, should match what we expected
-                    expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
                     pctile = stats['pctile']
 
                 # hack..assume just one None is enough to ignore for cars.csv
@@ -178,13 +188,12 @@ class Basic(unittest.TestCase):
                         # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                         h2o_summ.quantile_comparisons(
                             csvPathnameFull,
-                            skipHeader=True,
+                            skipHeader=False, # important!!
                             col=scipyCol,
                             datatype='float',
-                            quantile=0.5 if DO_MEDIAN else OTHER,
-                            # FIX! 
-                            h2oSummary2=pctile[5 if DO_MEDIAN else OTHER_FROM_SUMM],
-                            # h2oQuantilesApprox=qresult_single,
+                            quantile=0.5 if DO_MEDIAN else OTHER_Q,
+                            # h2oSummary2=pctile[5 if DO_MEDIAN else OTHER_Q_SUMM_INDEX],
+                            h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
                             )
 

@@ -249,4 +249,4 @@ clean:
 	$(MAKE) docs-website-clean
 
 
-.phony: default build test docs-website run clean
+.PHONY: default build test docs-website run clean
