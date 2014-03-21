@@ -958,7 +958,8 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
 
   meas = as.numeric(res[[measure]])
   result = .h2o.__getPerfResults(res, criterion)
-  new("H2OPerfModel", cutoffs = res$thresholds, measure = meas, perf = measure, model = result)
+  roc = .get_roc(res$confusion_matrices)
+  new("H2OPerfModel", cutoffs = res$thresholds, measure = meas, perf = measure, model = result, roc = roc)
 }
 
 .h2o.__getPerfResults <- function(res, criterion) {
@@ -985,11 +986,15 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
 
 plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   if(!type %in% c("cutoffs", "roc")) stop("type must be either 'cutoffs' or 'roc'")
-  if(type == "roc") stop("Unimplemented")
-  
-  xaxis = "Cutoff"; yaxis = .toupperFirst(x@perf)
-  plot(x@cutoffs, x@measure, main = paste(yaxis, "vs.", xaxis), xlab = xaxis, ylab = yaxis, ...)
-  abline(v = x@model$best_cutoff, lty = 2)
+  if(type == "roc") {
+    xaxis = "False Positive Rate"; yaxis = "True Positive Rate"
+    plot(x@roc$FPR, x@roc$TPR, main = paste(yaxis, "vs", xaxis), xlab = xaxis, ylab = yaxis, ...)
+    abline(0, 1, lty = 2)
+  } else {
+    xaxis = "Cutoff"; yaxis = .toupperFirst(x@perf)
+    plot(x@cutoffs, x@measure, main = paste(yaxis, "vs.", xaxis), xlab = xaxis, ylab = yaxis, ...)
+    abline(v = x@model$best_cutoff, lty = 2)
+  }
 }
 
 # ------------------------------- Helper Functions ---------------------------------------- #
@@ -1079,6 +1084,14 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   if(!is.null(actual_names))
     dimnames(cf_matrix) = list(Actual = c(actual_names, "Totals"), Predicted = c(predict_names, "Error"))
   return(cf_matrix)
+}
+
+.get_roc <- function(cms) {
+  tmp = sapply(cms, function(x) { c(TN = x[[1]][[1]], FP = x[[1]][[2]], FN = x[[2]][[1]], TP = x[[2]][[2]]) })
+  tmp = data.frame(t(tmp))
+  tmp$TPR = tmp$TP/(tmp$TP + tmp$FN)
+  tmp$FPR = tmp$FP/(tmp$FP + tmp$TN)
+  return(tmp)
 }
 
 .seq_to_string <- function(vec = as.numeric(NA)) {
