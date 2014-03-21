@@ -5,11 +5,13 @@ import numpy as np
 import scipy as sp
 import math
 import argparse
-OTHER_T = 0.999
+OTHER_T = 0.99
+
 BIN_COUNT = 20
 BIN_COUNT = 50
 BIN_COUNT = 100000
 BIN_COUNT = 2
+BIN_COUNT = 1000
 INTERPOLATION_TYPE=7
 
 print "Using max_qbins: ", BIN_COUNT, "threshold:", OTHER_T
@@ -250,12 +252,14 @@ def findQuantile(d, dmin, dmax, threshold):
         done = False
         guess = (hcnt2_max[k] - hcnt2_min[k]) / 2
 
+        # we maight not have gottent all the way
         if currentCnt==targetCntInt:
             if hcnt2[k]>2 and (hcnt2_min[k]==hcnt2_max[k]):
                 guess = hcnt2_min[k]
                 print "Guess A", guess, k, hcnt2[k]
 
             if hcnt2[k]==2:
+                print "hello"
                 print "\nTwo values in this bin but we could be aligned to the 2nd. so can't stop"
                 # no mattter what size the fraction it would be on this number
                 guess = (hcnt2_max[k] + hcnt2_min[k]) / 2.0
@@ -321,7 +325,7 @@ def findQuantile(d, dmin, dmax, threshold):
                 print "Guess D", guess
 
         if not done:
-            print "Not done, setting new range",\
+            print "%s %s %s %s Not done, setting new range" % (hcnt2[k], currentCnt, targetCntInt, targetCntFract),\
                 "k: ", k,\
                 "currentCnt: ", currentCnt,\
                 "hcnt2_min[k]: ", hcnt2_min[k],\
@@ -332,16 +336,19 @@ def findQuantile(d, dmin, dmax, threshold):
             # rather than using NUDGE, see if there's a non-zero bin below (min) or above (max) you.
             # Just need to check the one bin below and above k, if they exist. 
             if k > 0 and hcnt2[k-1]>0 and (hcnt2_max[k-1]<hcnt2_min[k]):
+                print "1"
                 newValStart = hcnt2_max[k-1]
             else:
+                print "2"
                 newValStart = hcnt2_min[k]
 
             # subtle. we do put stuff in the extra end bin (see the print above that happens)
             # k might be pointing to one less than that (like k=0 for 1 bin case)
             if k < maxBinCnt and hcnt2[k+1]>0 and (hcnt2_min[k+1]>hcnt2_max[k]):
-                print "hello"
+                print "3"
                 newValEnd = hcnt2_min[k+1]
             else:
+                print "4"
                 newValEnd = hcnt2_max[k]
             
             newValRange = newValEnd - newValStart 
@@ -362,12 +369,13 @@ def findQuantile(d, dmin, dmax, threshold):
                      (newValRange, hcnt2[k], hcnt2_min[k], hcnt2_max[k])
                 guess = newValStart
                 print "Guess E", guess
+                # was done = True 3/20/14
                 done = True
 
             # if we have to interpolate
             # if it falls into this bin, interpolate to this bin means one answer?
 
-            # cover the case above with multiple entris in a bin, all the same value
+            # cover the case above with multiple entries in a bin, all the same value
             # will be zero on the last pass?
             # assert newValBinSize != 0 or done
             # need the count up to but not including newValStart
@@ -407,6 +415,7 @@ csvPathname = './covtype1.data'
 csvPathname = './runif_.csv'
 csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
 csvPathname = './syn_binary_100000x1.csv'
+csvPathname = './breadth.csv'
 col = 0
 
 print "Reading csvPathname"
