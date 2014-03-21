@@ -7,6 +7,8 @@ import math
 import argparse
 OTHER_T = 0.99
 
+echo "FIX! have to update this to match current multipass exactQuantiles in Quantiles.java"
+
 BIN_COUNT = 20
 BIN_COUNT = 50
 BIN_COUNT = 100000
@@ -415,11 +417,7 @@ csvPathname = './covtype1.data'
 csvPathname = './runif_.csv'
 csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
 csvPathname = './syn_binary_100000x1.csv'
-<<<<<<< HEAD
-csvPathname = './breadth.csv'
-=======
 csvPathname = '/home/kevin/h2o/smalldata/quantiles/breadth.csv'
->>>>>>> 721f2d8a57c4de4640b5ba7f136395eee94af978
 col = 0
 
 print "Reading csvPathname"
