@@ -48,9 +48,15 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
             if re.search('h2o.*stdout|h2o.*stderr', filename) and not re.search('doneToLine', filename):
                 fileList.append(filename)
         if len(fileList)==0:
-            raise Exception("Unexpected: h2o_sandbox found 0 files in %s that matched the stdout/stderr pattern" % LOG_DIR)
+            # let this go...sh2junit.py apparently calls h2o_sandbox() looking for h2o logs?
+            emsg = "Unexpected: h2o_sandbox found 0 files in %s that matched the stdout/stderr pattern" % LOG_DIR
+            if sandboxIgnoreErrors:
+                print emsg
+                return
+            else:
+                raise Exception(emsg)
 
-    print "h2o_sandbox: checking", len(fileList), "files"
+    # print "h2o_sandbox: checking", len(fileList), "files"
 
     errLines = []
     for filename in fileList:

@@ -56,7 +56,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
   public double rho = 0.95;
 
-  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
+  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-15, dmax = 1, json = true)
   public double epsilon = 1e-6;
 
   /*Learning Rate*/
@@ -130,7 +130,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
   public int max_confusion_matrix_size = 20;
 
-  @API(help = "Max. number (K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false)
+  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false)
   public int max_hit_ratio_k = 10;
 
   /*Imbalanced Classes*/
@@ -157,7 +157,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean ignore_const_cols = true;
 
   @API(help = "Force extra load balancing to increase training speed for small datasets", filter = Default.class, json = true)
-  public boolean force_load_balance = false;
+  public boolean force_load_balance = true;
 
   @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
