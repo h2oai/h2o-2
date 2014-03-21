@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # to get the browser page special tab
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud(node_count=1, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
         h2o.beta_features = False
@@ -228,6 +228,7 @@ class Basic(unittest.TestCase):
                             col=scipyCol,
                             datatype='float',
                             quantile=0.5 if DO_MEDIAN else 0.999,
+                            # FIX! ignore for now
                             h2oSummary2=pctile[5 if DO_MEDIAN else 10],
                             h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,

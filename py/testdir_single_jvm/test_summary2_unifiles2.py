@@ -7,7 +7,9 @@ print "same as test_summary2_unifiles.py but using local runif_.csv single col f
 print "Should really add something that sees we go to 16 with no answer, if bins are set to 1"
 print "Answer not guaranteed (for any data) if max iterations is 16 in h2o and max_qbins is small"
 
-DO_MEDIAN = True
+DO_MEDIAN = False
+OTHER = 0.99
+OTHER_FROM_SUMM = 9
 MAX_QBINS = 1000
 MAX_QBINS = 1000
 
@@ -22,7 +24,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # to get the browser page special tab
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud(node_count=1, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
         h2o.beta_features = False
@@ -39,6 +41,7 @@ class Basic(unittest.TestCase):
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
             # ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
+            ('breadth.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
             ('covtype.data', 'x.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
             ('runif.csv', 'x.hex', [ (None, None, None, None, None, None)], 'smalldata', None),
             
@@ -81,13 +84,13 @@ class Basic(unittest.TestCase):
 
             summaries = summaryResult['summaries']
 
-            scipyCol = 1
+            scipyCol = 0
             for expected, column in zip(expectedCols, summaries):
                 colname = column['colname']
                 if expected[0]:
                     self.assertEqual(colname, expected[0])
 
-                quantile = 0.5 if DO_MEDIAN else .999
+                quantile = 0.5 if DO_MEDIAN else OTHER
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=scipyCol,
                     quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=1)
                 qresult = q['result']
@@ -178,9 +181,10 @@ class Basic(unittest.TestCase):
                             skipHeader=True,
                             col=scipyCol,
                             datatype='float',
-                            quantile=0.5 if DO_MEDIAN else 0.999,
-                            h2oSummary2=pctile[5 if DO_MEDIAN else 10],
-                            h2oQuantilesApprox=qresult_single,
+                            quantile=0.5 if DO_MEDIAN else OTHER,
+                            # FIX! 
+                            h2oSummary2=pctile[5 if DO_MEDIAN else OTHER_FROM_SUMM],
+                            # h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
                             )
 
