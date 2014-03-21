@@ -8,7 +8,7 @@ setClass("H2OParsedData", representation(h2o="H2OClient", key="character", logic
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
 # setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
-setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list"))
+setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
@@ -490,15 +490,19 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   else if(missing(i) && !missing(j)) {
     if(is.character(j)) {
       myNames = colnames(x)
-      if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
+      if(any(!(j %in% myNames))) {
+        if(length(j) == 1)
+          return(do.call("$<-", list(x, j, value)))
+        else stop("Unimplemented: undefined column names specified")
+      }
       cind = match(j, myNames)
       # cind = match(j[j %in% myNames], myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
     lhs = paste(x@key, "[,", cind, "]", sep = "")
   } else if(!missing(i) && missing(j)) {
-    rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
-    lhs = paste(x@key, "[", rind, ",]", sep = "")
+      rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
+      lhs = paste(x@key, "[", rind, ",]", sep = "")
   } else {
     if(is.character(j)) {
       myNames = colnames(x)
