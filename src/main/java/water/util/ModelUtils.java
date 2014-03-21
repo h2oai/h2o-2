@@ -116,7 +116,7 @@ public class ModelUtils {
           long hash = 0;
           if( data != null )
             for( double d : data ) hash ^= Double.doubleToRawLongBits(d+i) >> 6; // drop 6 least significant bits of mantissa (layout of long is: 1b sign, 11b exp, 52b mantissa)
-          labels[i++] = indices.remove((int)hash%indices.size());
+          labels[i++] = indices.remove((int)Math.abs(hash)%indices.size());
         }
         assert(i==numK);
       }
