@@ -6,19 +6,20 @@ from jenkinsapi.jenkins import Jenkins
 from see import see
 
 parse = argparse.ArgumentParser()
-parse.add_argument('-e', help="job number from a list of ec2 known jobs",  type=int, default=None)
-parse.add_argument('-x', help="job number from a list of 164 known jobs",  type=int, default=None)
-parse.add_argument('-j', '--jobname', help="jobname. Correct url is found",  default=None)
+group = parse.add_mutually_exclusive_group()
+group.add_argument('-e', help="job number from a list of ec2 known jobs",  type=int, action='store', default=None)
+group.add_argument('-x', help="job number from a list of 164 known jobs",  type=int, action='store', default=None)
+group.add_argument('-j', '--jobname', help="jobname. Correct url is found",  action='store', default=None)
 parse.add_argument('-l', '--logging', help="turn on logging.DEBUG msgs to see allUrls used",  action='store_true')
 args = parse.parse_args()
 
 print "creates jsandbox (cleaned), and puts aTxt.txt and aConsole.txt in there, along with artifacts"
+print " also creates fails* and regress* in there"
 # can refer to this by zero-based index with -n 0  or -n 1  etc
 # or by job name with -j h2o_master_test
 
 allowedJobsX = [
     'h2o_master_test',
-    'h2o_master_test2',
     'h2o_release_tests',
     'h2o_release_tests2',
     'h2o_release_tests_164',
@@ -68,11 +69,11 @@ if args.e and args.x:
     raise Exception("Don't use both -e and -x args")
 
 # default ec2 0
-if args.e:
+if args.e is not None:
     if args.e<0 or args.e>(len(allowedJobsE)-1):
         raise Exception("ec2 job number %s is outside allowed range: 0-%s" % (args.e, len(allowedJobsE)-1))
     jobname = allowedJobsE[args.e]
-elif args.x:
+elif args.x is not None:
     if args.x<0 or args.x>(len(allowedJobsX)-1):
         raise Exception("0xdata job number %s is outside allowed range: 0-%s" % (args.x, len(allowedJobsX)-1))
     jobname = allowedJobsX[args.x]
@@ -96,6 +97,7 @@ if machine not in allUrls:
     raise Exception("%s not in allUrls dict" % machine)
 jenkins_url = allUrls[machine]
 
+print "machine:", machine
 #************************************************
 def clean_sandbox(LOG_DIR="sandbox"):
     if os.path.exists(LOG_DIR):
@@ -146,6 +148,16 @@ print "\nChecking this job:", J[jobname]
 job = J[jobname]
 print "\nGetting %s job config" % jobname
 print job.get_config
+s = "%s" % job.get_config
+print s
+import xml.dom.minidom
+# xml = xml.dom.minidom.parse(xml_fname) # or xml.dom.minidom.parseString(xml_string)
+xml = xml.dom.minidom.parseString(s)
+pretty_xml = xml.toprettyxml()
+print "#************************"
+print "Pretty Xml for job config"
+print pretty_xml
+print "#************************"
 
 print "\nlast good build:"
 lgb = job.get_last_good_build()
@@ -174,6 +186,12 @@ build = job.get_build(job.get_last_good_buildnumber())
 
 af = build.get_artifacts()
 dict_af = build.get_artifact_dict()
+
+
+# for looking at object in json
+# import h2o_util
+# s = h2o_util.json_repr(dict_af, curr_depth=0, max_depth=12)
+# print dump_json(s)
 
 buildstatus = build.get_status()
 print "build get_status", buildstatus
@@ -235,18 +253,62 @@ t = buildtimestamp
 hm = "%s_%s" % (t.hour, t.minute)
 # hour minute second
 hms = "%s_%s" % (hm, t.second)
-failName = "%s_%s_%s_%s%s" % ("fails", jobname, buildnumber, hm, ".txt")
-print failName
+failName = "%s_%s_%s_%s%s" % ("fail", jobname, buildnumber, hm, ".txt")
+print "failName:", failName
+regressName = "%s_%s_%s_%s%s" % ("regress", jobname, buildnumber, hm, ".txt")
+print "regressName:", regressName
+
 stats = {}
-fTxt = open(LOG_DIR + "/" + failName, "a")
 
 def fprint (*args):
     # emulate printing each as string, then join with spaces
     s = ["%s" % a for a in args]
-    line = " ".join(s) + "\n"
+    line = " ".join(s)
     fTxt.write(line + "\n")
     print line
 
+def printStuff():
+    e1 = "\n******************************************************************************"
+    e2 = "%s %s %s" % (i, jobname, v)
+    fprint(e1)
+    fprint(e2)
+    # print "\n", k, "\n"
+    # print "\n", v, "\n"
+    # to see what you can get
+    # print see(v)
+    # print dir(v)
+    # print vars(v)
+    # .age .className .duration  .errorDetails .errorStackTrace .failedSince 
+    # .identifier()  .name .skipped .skippedMessage  .status  .stderr .stdout
+    fprint (i, "v.duration", v.duration)
+    fprint (i, "v.errorStackTrace", v.errorStackTrace)
+    fprint (i, "v.failedSince", v.failedSince)
+    fprint (i, "v.stderr", v.stderr)
+    # lines = v.stdout.splitlines()
+    # keep newlines in the list elements
+    if not v.stdout:
+        fprint ("v.stdout is empty")
+    else:
+        fprint ("len(v.stdout):", len(v.stdout))
+        # have to fix the \n and \tat in the strings
+        stdout = v.stdout
+        # json string has the actual '\' and 'n' or 'tat' chars
+        stdout = string.replace(stdout,'\\n', '\n');
+        stdout = string.replace(stdout,'\\tat', '\t');
+        # don't need double newlines
+        stdout = string.replace(stdout,'\n\n', '\n');
+        lineList = stdout.splitlines()
+        fprint ("len(lineList):", len(lineList))
+        num = min(20, len(lineList))
+        if num!=0:
+            # print i, "Last %s lineList of stdout %s" % (num, "\n".join(lineList[-num]))
+            fprint (i, "Last %s lineList of stdout\n" % num)
+            fprint ("\n".join(lineList[-num:]))
+        else:
+            fprint ("v.stdout is empty")
+
+
+#******************************************************
 for i, (k, v) in enumerate(rs.items()):
     if v.status in stats:
         stats[v.status] += 1
@@ -258,57 +320,30 @@ for i, (k, v) in enumerate(rs.items()):
     e2 = "%s %s %s" % (i, jobname, v)
     aTxt.write(e1+"\n")
     aTxt.write(e2+"\n")
+
     # only if not PASSED
     if v.status != 'PASSED':
-        fprint(e1)
-        fprint(e2)
-        # print "\n", k, "\n"
-        # print "\n", v, "\n"
-        # to see what you can get
-        # print see(v)
-        # print dir(v)
-        # print vars(v)
-        # .age .className .duration  .errorDetails .errorStackTrace .failedSince 
-        # .identifier()  .name .skipped .skippedMessage  .status  .stderr .stdout
-        fprint (i, "v.duration", v.duration)
-        fprint (i, "v.errorStackTrace", v.errorStackTrace)
-        fprint (i, "v.failedSince", v.failedSince)
-        fprint (i, "v.stderr", v.stderr)
-        # lines = v.stdout.splitlines()
-        # keep newlines in the list elements
-        if not v.stdout:
-            fprint ("v.stdout is empty")
-        else:
-            fprint ("len(v.stdout):", len(v.stdout))
-            # have to fix the \n and \tat in the strings
-            stdout = v.stdout
-            # json string has the actual '\' and 'n' or 'tat' chars
-            stdout = string.replace(stdout,'\\n', '\n');
-            stdout = string.replace(stdout,'\\tat', '\t');
-            # don't need double newlines
-            stdout = string.replace(stdout,'\n\n', '\n');
-            lineList = stdout.splitlines()
-            fprint ("len(lineList):", len(lineList))
-            num = min(20, len(lineList))
-            if num!=0:
-                # print i, "Last %s lineList of stdout %s" % (num, "\n".join(lineList[-num]))
-                fprint (i, "Last %s lineList of stdout\n" % num)
-                fprint ("\n".join(lineList[-num:]))
-            else:
-                fprint ("v.stdout is empty")
+        fTxt = open(LOG_DIR + "/" + failName, "a")
+        printStuff()
+        fTxt.close()
 
-        if PRINTALL:
-            fprint (i, "k", k)
-            fprint (i, "v", v)
-            fprint (i, "v.errorDetails", v.errorDetails)
-            fprint (i, "v.age", v.age)
-            fprint (i, "v.className", v.className)
-            fprint (i, "v.identifier()", v.identifier())
-            fprint (i, "v.name", v.name)
-            fprint (i, "v.skipped", v.age)
-            fprint (i, "v.skippedMessage", v.skippedMessage)
-            fprint (i, "v.status", v.status)
-            fprint (i, "v.stdout", v.stdout)
+    if v.status == 'REGRESSION':
+        fTxt = open(LOG_DIR + "/" + regressName, "a")
+        printStuff()
+        fTxt.close()
+
+    if PRINTALL:
+        fprint (i, "k", k)
+        fprint (i, "v", v)
+        fprint (i, "v.errorDetails", v.errorDetails)
+        fprint (i, "v.age", v.age)
+        fprint (i, "v.className", v.className)
+        fprint (i, "v.identifier()", v.identifier())
+        fprint (i, "v.name", v.name)
+        fprint (i, "v.skipped", v.age)
+        fprint (i, "v.skippedMessage", v.skippedMessage)
+        fprint (i, "v.status", v.status)
+        fprint (i, "v.stdout", v.stdout)
 
 #****************************************************************************
 # print "dict_af", dict_af

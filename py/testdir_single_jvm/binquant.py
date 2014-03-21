@@ -407,6 +407,7 @@ csvPathname = './covtype1.data'
 csvPathname = './runif_.csv'
 csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
 csvPathname = './syn_binary_100000x1.csv'
+csvPathname = '/home/kevin/h2o/smalldata/quantiles/breadth.csv'
 col = 0
 
 print "Reading csvPathname"

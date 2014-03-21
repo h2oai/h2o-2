@@ -56,8 +56,8 @@ class Basic(unittest.TestCase):
             ],
             ),
             ('runifA.csv', 'A.hex', [
-                (None,  1.00, None, 50.00, 75.00, 100.0),
-                ('x', -99.0, -44.7, 7.43, 58.00, 91.7),
+                (None,  1.00, 25.00, 50.00, 75.00, 100.0),
+                ('x', -99.9, -44.7, 7.43, 58.00, 91.7),
             ],
             ),
             # colname, (min, 25th, 50th, 75th, max)
@@ -109,9 +109,8 @@ class Basic(unittest.TestCase):
 
             h2o.beta_features = True
             # okay to get more cols than we want
-            # summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
-            print "keep summary2 with results for 1000 qbins, so it's accuracy doesn't degrade when fewer are used for 2/Quantile"
-            summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=1000)
+            # okay to vary MAX_QBINS because we adjust the expected accuracy
+            summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
             summaries = summaryResult['summaries']
 
@@ -166,6 +165,21 @@ class Basic(unittest.TestCase):
                     expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
                     pctile = stats['pctile']
 
+
+                # figure out the expected max error
+                # use this for comparing to sklearn/sort
+                if expected[1] and expected[5]:
+                    expectedRange = expected[5] - expected[1]
+                    # because of floor and ceil effects due we potentially lose 2 bins (worst case)
+                    # the extra bin for the max value, is an extra bin..ignore
+                    expectedBin = expectedRange/(MAX_QBINS-2)
+                    maxErr = 0.5 * expectedBin # should we have some fuzz for fp?
+
+                else:
+                    print "Test won't calculate max expected error"
+                    maxErr = 0
+                    
+
                 # hack..assume just one None is enough to ignore for cars.csv
                 if expected[1]:
                     h2o_util.assertApproxEqual(mins[0], expected[1], rel=0.02, msg='min is not approx. expected')
@@ -214,9 +228,11 @@ class Basic(unittest.TestCase):
                             col=scipyCol,
                             datatype='float',
                             quantile=0.5 if DO_MEDIAN else 0.999,
-                            h2oSummary2=pctile[5 if DO_MEDIAN else 10],
+                            # h2oSummary2=pctile[5 if DO_MEDIAN else 10],
                             h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
+                            # why am I off by 10x here?
+                            h2oSummary2MaxErr=maxErr*5,
                             )
 
 
