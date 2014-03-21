@@ -148,17 +148,6 @@ print "\nChecking this job:", J[jobname]
 job = J[jobname]
 print "\nGetting %s job config" % jobname
 print job.get_config
-s = "%s" % job.get_config
-print s
-import xml.dom.minidom
-# xml = xml.dom.minidom.parse(xml_fname) # or xml.dom.minidom.parseString(xml_string)
-xml = xml.dom.minidom.parseString(s)
-pretty_xml = xml.toprettyxml()
-print "#************************"
-print "Pretty Xml for job config"
-print pretty_xml
-print "#************************"
-
 print "\nlast good build:"
 lgb = job.get_last_good_build()
 print "\nlast good build revision:"
