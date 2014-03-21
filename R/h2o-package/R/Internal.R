@@ -5,7 +5,7 @@
 .pkg.env$temp_count = 0
 .pkg.env$IS_LOGGING = FALSE
 .TEMP_KEY = "Last.value"
-.RESULT_MAX = 200
+.RESULT_MAX = 1000
 .MAX_INSPECT_ROW_VIEW = 10000
 .MAX_INSPECT_COL_VIEW = 10000
 .LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
