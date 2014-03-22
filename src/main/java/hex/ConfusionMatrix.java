@@ -1,14 +1,13 @@
 package hex;
 
+import static water.api.DocGen.FieldDoc;
+import static water.util.Utils.printConfusionMatrix;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 import water.Iced;
 import water.api.Request.API;
 
 import java.util.Arrays;
-
-import static water.api.DocGen.FieldDoc;
-import static water.util.Utils.printConfusionMatrix;
 
 public class ConfusionMatrix extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -122,7 +121,7 @@ public class ConfusionMatrix extends Iced {
    * @return TNR / Specificity
    */
   public double specificity() {
-    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    if(!isBinary())throw new UnsupportedOperationException("specificity is only implemented for 2 class problems.");
     double tn = _arr[0][0];
     double fp = _arr[0][1];
     return tn / (tn + fp);
@@ -149,7 +148,7 @@ public class ConfusionMatrix extends Iced {
   }
   /**
    * The maximum per-class error
-   * @return max(classErr(0), classErr(1))
+   * @return max(classErr(i))
    */
   public double max_per_class_error() {
     int n = nclasses();
