@@ -685,10 +685,14 @@ setMethod("nrow", "H2OParsedData", function(x) {
 setMethod("ncol", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
 
-setMethod("length", "H2OParsedData", function(x) { 
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key) 
-  numCols = as.numeric(res$numCols); numRows = as.numeric(res$numRows)
-  ifelse(numCols == 1, numRows, numCols) })
+setMethod("length", "H2OParsedData", function(x) {
+  numCols = ncol(x)
+  if (numCols == 1) {
+    numRows = nrow(x)
+    return (numRows)      
+  }
+  return (numCols)
+})
 
 setMethod("dim", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -766,7 +770,7 @@ setMethod("range", "H2OParsedData", function(x) {
 })
 
 mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
-  if(length(x) != 1 || trim != 0) stop("Unimplemented")
+  if(ncol(x) != 1 || trim != 0) stop("Unimplemented")
   if(h2o.anyFactor(x) || dim(x)[2] != 1) {
     warning("argument is not numeric or logical: returning NA")
     return(NA_real_)
@@ -776,7 +780,7 @@ mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
 }
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
-  if(length(x) != 1) stop("Unimplemented")
+  if(ncol(x) != 1) stop("Unimplemented")
   if(dim(x)[2] != 1 || h2o.anyFactor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
   .h2o.__unop2("sd", x)
