@@ -1270,6 +1270,9 @@ class ASTXorSum extends ASTReducerOp { ASTXorSum() {super(0,false); }
     long d0Bits = Double.doubleToLongBits(d0);
     long d1Bits = Double.doubleToLongBits(d1);
     long xorsumBits = d0Bits ^ d1Bits;
+    // just need to not get inf or nan. If we zero the upper 4 bits, we won't
+    final long ZERO_SOME_SIGN_EXP = 0x0fffffffffffffffL;
+    xorsumBits = xorsumBits & ZERO_SOME_SIGN_EXP;
     double xorsum = Double.longBitsToDouble(xorsumBits);
     return xorsum;
   }
@@ -1277,11 +1280,17 @@ class ASTXorSum extends ASTReducerOp { ASTXorSum() {super(0,false); }
     if (out == null || out.length < 1) out = new double[1];
     long xorsumBits = 0;
     long vBits;
+    // for dp ieee 754 , sign and exp are the high 12 bits
+    // We don't want infinity or nan, because h2o will return a string.
+    double xorsum = 0;
     for (double v : in) {
       vBits = Double.doubleToLongBits(v);
       xorsumBits = xorsumBits ^ vBits;
     }
-    double xorsum = Double.longBitsToDouble(xorsumBits);
+    // just need to not get inf or nan. If we zero the upper 4 bits, we won't
+    final long ZERO_SOME_SIGN_EXP = 0x0fffffffffffffffL;
+    xorsumBits = xorsumBits & ZERO_SOME_SIGN_EXP;
+    xorsum = Double.longBitsToDouble(xorsumBits);
     out[0] = xorsum;
     return out;
   }

@@ -12,18 +12,20 @@ import sys
 # System.out.println(Long.toBinaryString(bits));
 
 import struct
-def floatToBits(f):
-    s = struct.pack('>f', f)
-    return struct.unpack('>l', s)[0]
+# Q is unsigned long long. 8 bytes
+# d is double float
+def doubleToUnsignedLongLong(d):
+    s = struct.pack('>d', d)
+    return struct.unpack('>Q', s)[0]
 # floatToBits(173.3125)
 # 1127043072
 # hex(_)
 # '0x432d5000'
 
 # You can reverse the order of operations to round-trip:
-def bitsToFloat(b):
-    s = struct.pack('>l', b)
-    return struct.unpack('>f', s)[0]
+def unsignedLongLongToDouble(Q):
+    s = struct.pack('>Q', Q)
+    return struct.unpack('>d', s)[0]
 
 # bitsToFloat(0x432d5000)
 # 173.3125

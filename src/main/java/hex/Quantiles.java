@@ -379,12 +379,12 @@ public class Quantiles extends Iced {
     assert _valStart!=Double.NaN : _valEnd;
     assert _valStart!=Double.NaN : _valStart;
     assert _valBinSize!=Double.NaN : _valBinSize;
-    if ( _valStart==_valEnd ) Log.info("exactQuantilesMultiPass: start/end are equal. "+_valStart+" "+_valEnd);
+    if ( _valStart==_valEnd ) Log.debug("exactQuantilesMultiPass: start/end are equal. "+_valStart+" "+_valEnd);
     else assert (_valBinSize!=0 && _valBinSize!=Double.NaN) : _valBinSize;
 
     //  everything should either be in low, the bins, or high
     long totalBinnedRows = htot2(hcnt2_low, hcnt2_high);
-    Log.info("Q_ totalRows check: "+_totalRows+" "+totalBinnedRows+" "+hcnt2_low+" "+hcnt2_high+" "+_valStart+" "+_valEnd);
+    Log.debug("Q_ totalRows check: "+_totalRows+" "+totalBinnedRows+" "+hcnt2_low+" "+hcnt2_high+" "+_valStart+" "+_valEnd);
     assert _totalRows==totalBinnedRows : _totalRows+" "+totalBinnedRows+" "+hcnt2_low+" "+hcnt2_high;
 
     // Find the row count we want to hit, within some bin.
@@ -393,12 +393,12 @@ public class Quantiles extends Iced {
     long targetCntInt = (long) Math.floor(targetCntFull);
     double targetCntFract = targetCntFull  - (double) targetCntInt;
     assert (targetCntFract>=0) && (targetCntFract<=1);
-    Log.info("Q_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
+    Log.debug("Q_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
 
     // walk thru and find out what bin to look inside
     int k = 0;
     while((currentCnt + hcnt2[k]) <= targetCntInt) {
-      Log.info("Q_ Looping for k (multi): "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
+      Log.debug("Q_ Looping for k (multi): "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
         " "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
       currentCnt += hcnt2[k];
       ++k;
@@ -407,7 +407,7 @@ public class Quantiles extends Iced {
       // have to keep cycling till we get to a non-zero hcnt
       // but need to break if we get to the end (into the extra bin). it must be nonzero then
     }
-    Log.info("Q_ Found k (multi): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
+    Log.debug("Q_ Found k (multi): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
       " "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
     assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
@@ -449,7 +449,7 @@ public class Quantiles extends Iced {
       else {
         guess = hcnt2_max[k];
         done = true;
-        Log.info("Q_ Guess M "+guess);
+        Log.debug("Q_ Guess M "+guess);
       }
     }
     else if ( inMidOfBin ) {
@@ -457,7 +457,7 @@ public class Quantiles extends Iced {
       // we never need to interpolate (only allowed when min=max
       guess = hcnt2_min[k];
       done = true;
-      Log.info("Q_ Guess N "+guess);
+      Log.debug("Q_ Guess N "+guess);
     }
 
     if ( !done && atStartOfBin ) {
@@ -465,7 +465,7 @@ public class Quantiles extends Iced {
       if ( hcnt2[k]>2 && (hcnt2_min[k]==hcnt2_max[k]) ) { 
         guess = hcnt2_min[k];
         done = true;
-        Log.info("Q_ Guess A "+guess);
+        Log.debug("Q_ Guess A "+guess);
       } 
       // min/max can be equal or not equal here
       else if ( hcnt2[k]==2 ) { // interpolate between min/max for the two value bin
@@ -481,13 +481,14 @@ public class Quantiles extends Iced {
         }
         done = true;
         interpolated = true;
-        Log.info("Q_ Guess B "+guess+" with type "+interpolation_type+" targetCntFract: "+targetCntFract);
+        Log.debug("Q_ Guess B "+guess+" with type "+interpolation_type+" targetCntFract: "+targetCntFract);
       } 
       // no interpolation needed
       else if ( (hcnt2[k]==1) && (targetCntFract==0) ) {
         assert hcnt2_min[k]==hcnt2_max[k];
+        guess = hcnt2_min[k];
         done = true;
-        Log.info("Q_ Guess C "+guess);
+        Log.debug("Q_ Guess C "+guess);
       } 
     }
 
@@ -497,10 +498,10 @@ public class Quantiles extends Iced {
 
         if ( hcnt2[k]==1 ) {
           assert hcnt2_min[k]==hcnt2_max[k];
-          Log.info("Q_ Single value in this bin, but fractional means we need to interpolate to next non-zero");
+          Log.debug("Q_ Single value in this bin, but fractional means we need to interpolate to next non-zero");
         }
         if ( interpolateEndNeeded ) {
-          Log.info("Q_ Interpolating off the end of a bin!");
+          Log.debug("Q_ Interpolating off the end of a bin!");
         }
 
         int nextK;
@@ -514,18 +515,18 @@ public class Quantiles extends Iced {
         double nextVal;
         if ( nextK >= maxBinCnt ) {
           assert hcnt2_high!=0;
-          Log.info("Q_ Using hcnt2_high_min for interpolate: "+hcnt2_high_min);
+          Log.debug("Q_ Using hcnt2_high_min for interpolate: "+hcnt2_high_min);
           nextVal = hcnt2_high_min;
         } 
         else {
-          Log.info("Q_ Using nextK for interpolate: "+nextK);
+          Log.debug("Q_ Using nextK for interpolate: "+nextK);
           assert hcnt2[nextK]!=0;
           nextVal = hcnt2_min[nextK];
         }
 
-        Log.info("Q_ k hcnt2_max[k] nextVal");
-        Log.info("Q_ "+k+" "+hcnt2_max[k]+" "+nextVal);
-        Log.info("Q_ \nInterpolating result using nextK: "+nextK+ " nextVal: "+nextVal);
+        Log.debug("Q_ k hcnt2_max[k] nextVal");
+        Log.debug("Q_ "+k+" "+hcnt2_max[k]+" "+nextVal);
+        Log.debug("Q_ \nInterpolating result using nextK: "+nextK+ " nextVal: "+nextVal);
 
         // OH! fixed bin as opposed to sort. Of course there are gaps between k and nextK
         if ( interpolation_type==2 ) { // type 2 (mean)
@@ -539,7 +540,7 @@ public class Quantiles extends Iced {
 
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)
-        Log.info("Q_ Guess D "+guess+" with type "+interpolation_type+
+        Log.debug("Q_ Guess D "+guess+" with type "+interpolation_type+
           " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
           " _totalRows: " + _totalRows);
       }
@@ -583,25 +584,25 @@ public class Quantiles extends Iced {
  
       // Since we always may need an interpolation, this seems bad if we get this with !done
       if ( newValBinSize==0 ) {
-        Log.info("Q_ Assuming done because newValBinSize is 0.");
-        Log.info("Q_ newValRange: "+newValRange+
+        Log.debug("Q_ Assuming done because newValBinSize is 0.");
+        Log.debug("Q_ newValRange: "+newValRange+
           " hcnt2[k]: "+hcnt2[k]+
           " hcnt2_min[k]: "+hcnt2_min[k]+
           " hcnt2_max[k]: "+hcnt2_max[k]);
         guess = newValStart;
-        Log.info("Q_ Guess G "+guess);
+        Log.debug("Q_ Guess G "+guess);
         assert true : "Should never get newValBinSize==0 in !done branch";
         done = true;
       }
     }
 
-    Log.info("Q_ guess: "+guess+" done: "+done+" hcnt2[k]: "+hcnt2[k]);
-    Log.info("Q_ currentCnt: "+currentCnt+" targetCntInt: "+targetCntInt+" hcnt2_low: "+hcnt2_low+" hcnt2_high: "+hcnt2_high);
-    Log.info("Q_ was "+_valStart+" "+_valEnd+" "+_valRange+" "+_valBinSize);
-    Log.info("Q_ next "+newValStart+" "+newValEnd+" "+newValRange+" "+newValBinSize);
+    Log.debug("Q_ guess: "+guess+" done: "+done+" hcnt2[k]: "+hcnt2[k]);
+    Log.debug("Q_ currentCnt: "+currentCnt+" targetCntInt: "+targetCntInt+" hcnt2_low: "+hcnt2_low+" hcnt2_high: "+hcnt2_high);
+    Log.debug("Q_ was "+_valStart+" "+_valEnd+" "+_valRange+" "+_valBinSize);
+    Log.debug("Q_ next "+newValStart+" "+newValEnd+" "+newValRange+" "+newValBinSize);
 
     qtiles[0] = guess;
-    // Log.info(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
+    // Log.debug(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
     //  " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
 
     // We want to leave them now! we reuse in exec for multi-thresholds
