@@ -130,6 +130,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
+    putPrefix(new ASTXorSum ());
     // Misc
     putPrefix(new ASTSeq());
     putPrefix(new ASTSeqLen());
@@ -1258,6 +1259,30 @@ class ASTMean extends ASTOp {
     double s = 0;  int cnt=0;
     for (double v : in) if( !Double.isNaN(v) ) { s+=v; cnt++; }
     out[0] = s/cnt;
+    return out;
+  }
+}
+
+class ASTXorSum extends ASTReducerOp { ASTXorSum() {super(0,false); } 
+  @Override String opStr(){ return "xorsum";}
+  @Override ASTOp make() {return new ASTXorSum();}
+  @Override double op(double d0, double d1) { 
+    long d0Bits = Double.doubleToLongBits(d0);
+    long d1Bits = Double.doubleToLongBits(d1);
+    long xorsumBits = d0Bits ^ d1Bits;
+    double xorsum = Double.longBitsToDouble(xorsumBits);
+    return xorsum;
+  }
+  @Override double[] map(Env env, double[] in, double[] out) {
+    if (out == null || out.length < 1) out = new double[1];
+    long xorsumBits = 0;
+    long vBits;
+    for (double v : in) {
+      vBits = Double.doubleToLongBits(v);
+      xorsumBits = xorsumBits ^ vBits;
+    }
+    double xorsum = Double.longBitsToDouble(xorsumBits);
+    out[0] = xorsum;
     return out;
   }
 }

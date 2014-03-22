@@ -4,7 +4,29 @@ import os, zipfile, simplejson as json, csv
 import h2o
 import sys
 
+# operations to get bit patterns for fp 
+# Python internally uses the native endianity and 64-bits for floats
+# Java floatToBits is the thing to convert fp to long bits
+# if it's real, use this to convert. All reals should match
+# long bits = Double.doubleToLongBits(myDouble);
+# System.out.println(Long.toBinaryString(bits));
 
+import struct
+def floatToBits(f):
+    s = struct.pack('>f', f)
+    return struct.unpack('>l', s)[0]
+# floatToBits(173.3125)
+# 1127043072
+# hex(_)
+# '0x432d5000'
+
+# You can reverse the order of operations to round-trip:
+def bitsToFloat(b):
+    s = struct.pack('>l', b)
+    return struct.unpack('>f', s)[0]
+
+# bitsToFloat(0x432d5000)
+# 173.3125
 
 # takes fp or list of fp and returns same with just two digits of precision
 # using print rounding
