@@ -50,7 +50,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public long seed = new Random().nextLong();
 
   /*Adaptive Learning Rate*/
-  @API(help = "Adaptive learning rate (AdaDelta)", filter = Default.class, json = true)
+  @API(help = "Adaptive learning rate (ADADELTA)", filter = Default.class, json = true)
   public boolean adaptive_rate = true;
 
   @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)

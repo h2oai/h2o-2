@@ -65,7 +65,7 @@ public abstract class Neurons {
   float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
   private double[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
 
-  // AdaDelta
+  // ADADELTA
   private float[] _E_dx2; //reference to _minfo.E_dx2[layer] for convenience
   private float[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
 
@@ -169,7 +169,7 @@ public abstract class Neurons {
    * Backpropagation: w -= rate * dE/dw, where dE/dw = dE/dy * dy/dnet * dnet/dw
    * This method adds the dnet/dw = activation term per unit
    * @param u unit (which neuron)
-   * @param g partial derivatives, precomputed: dE/dy * dy/net
+   * @param g partial derivative dE/dnet = dE/dy * dy/net
    */
   final void bprop(int u, double g) {
     final long processed = _minfo.get_processed_total();
@@ -185,11 +185,13 @@ public abstract class Neurons {
     final int off = u * _previous._a.length;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = off + i;
-      if( _previous._e != null )
-        _previous._e[i] += g * _w[w];
-      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1; //this is the actual gradient
+      // propagate the error dE/dnet to the previous layer, via connecting weights
+      if( _previous._e != null ) _previous._e[i] += g * _w[w];
 
-      // adaptive learning rate r from AdaDelta
+      //this is the actual gradient dE/dw
+      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
+
+      // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (_E_dx2 != null && _E_g2 != null) {
         assert(_wm == null && _bm == null);
@@ -379,8 +381,9 @@ public abstract class Neurons {
     }
     @Override protected void bprop() {
       for( int u = 0; u < _a.length; u++ ) {
-        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
-        double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-x^2
+        // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
+        // dy/dnet = (1 - a^2) for y(net) = tanh(net)
+        double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-a^2
         bprop(u, g);
       }
     }
@@ -560,20 +563,19 @@ public abstract class Neurons {
 //      if (target == missing_int_value) return; //ignore missing response values
       double g; //partial derivative dE/dy * dy/dnet
       for( int u = 0; u < _a.length; u++ ) {
-        // Computing partial derivative of g: dE/dy * dy/dnet
         final double t = (u == target ? 1 : 0);
         final double y = _a[u];
         //dy/dnet = derivative of softmax = (1-y)*y
         if (params.loss == Loss.CrossEntropy) {
           //nothing else needed, -dCE/dy * dy/dnet = target - y
-          g = t - y;
           //cf. http://www.stanford.edu/group/pdplab/pdphandbook/handbookch6.html
+          g = t - y;
         } else {
           assert(params.loss == Loss.MeanSquare);
           //-dMSE/dy = target-y
           g = (t - y) * (1 - y) * y;
         }
-        // this call adds the dnet/dw = x (activation of neuron) term to the total gradient dE/dw
+        // this call expects dE/dnet
         bprop(u, g);
       }
     }
@@ -603,7 +605,8 @@ public abstract class Neurons {
 //      if (target == missing_double_value) return;
       if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Regression is only implemented for MeanSquare error.");
       final int u = 0;
-      final double g = target - _a[u];
+      // Computing partial derivative: dE/dnet = dE/dy * dy/dnet = dE/dy * 1
+      final double g = target - _a[u]; //for MSE -dMSE/dy = target-y
       bprop(u, g);
     }
   }
