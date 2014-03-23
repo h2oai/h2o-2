@@ -16,6 +16,11 @@ import water.util.Utils;
 import java.util.Arrays;
 import java.util.Random;
 
+/**
+ * The Deep Learning model
+ * It contains a DeepLearningModelInfo with the most up-to-date model,
+ * a scoring history, as well as some helpers to indicated the progress
+ */
 public class DeepLearningModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -26,7 +31,7 @@ public class DeepLearningModel extends Model {
   final public DeepLearningModelInfo model_info() { return model_info; }
 
   @API(help="Job that built the model", json = true)
-  public Key jobKey;
+  final private Key jobKey;
 
   @API(help="Time to build the model", json = true)
   private long run_time;
@@ -41,13 +46,16 @@ public class DeepLearningModel extends Model {
   @API(help = "Scoring during model building")
   private Errors[] errors;
 
-  public Errors last_scored() { return errors[errors.length-1]; }
+  // return the most up-to-date model metrics
+  Errors last_scored() { return errors[errors.length-1]; }
 
+  // delete anything from the K-V store that's no longer needed after model building is over
   @Override public void delete() {
     super.delete();
     model_info.delete();
   }
 
+  // helper to add a key to be deleted when the model is deleted
   public void toDelete(Key k) {
     model_info._toDelete = k;
   }
@@ -642,7 +650,7 @@ public class DeepLearningModel extends Model {
         err.train_hitratio = new HitRatio();
         err.train_hitratio.set_max_k(hit_k);
       }
-      model_info().toString();
+      Log.info(model_info().toString());
       final Frame trainPredict = score(ftrain, false);
       final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
       if (isClassifier()) err.train_err = trainErr;
@@ -663,8 +671,9 @@ public class DeepLearningModel extends Model {
         final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
         Vec adaptCMresp = null;
         if (adaptCM) {
-          assert(ftest.find(adaptRespName) == ftest.vecs().length-1); //make sure to have (adapted) response in the test set
-          adaptCMresp = ftest.remove(ftest.vecs().length-1); //model would remove any extra columns anyway (need to keep it here for later)
+          Vec[] v = ftest.vecs();
+          assert(ftest.find(adaptRespName) == v.length-1); //make sure to have (adapted) response in the test set
+          adaptCMresp = ftest.remove(v.length-1); //model would remove any extra columns anyway (need to keep it here for later)
         }
 
         final Frame validPredict = score(ftest, adaptCM);
