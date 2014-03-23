@@ -8,15 +8,15 @@ import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2
 
 exprList = [
         'h=c(1); h = xorsum(r1[,1])',
-        'a=c(1); a = sum(r1[,1])',
         ]
 
+ROWS = 3
 #********************************************************************************
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE):
     dsf = open(csvPathname, 'w')
     expectedRange = (expectedMax - expectedMin)
-    expectedFpSum = 0.0
-    expectedUllSum = 0
+    expectedFpSum = float(0)
+    expectedUllSum = int(0)
     for row in range(rowCount):
         rowData = []
         for j in range(colCount):
@@ -39,11 +39,10 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
                 rexp = random.randint(0,20)
                 value = 2.0**rexp + 3.0*row
 
+
                 r = random.randint(0,1)
                 if r==0:
                     value = -1 * value
-
-
 
                 # value = -1 * value
                 # value = 2e9 + row
@@ -52,12 +51,13 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
             # get the expected patterns from python
             fpResult = float(value)
             ullResult = h2o_util.doubleToUnsignedLongLong(fpResult)
-            expectedUllSum ^= ullResult
             expectedFpSum += fpResult
+            expectedUllSum = expectedUllSum ^ ullResult
             # print "%30s" % "expectedUll (0.16x):", "0x%0.16x" % expectedUll
 
             # Now that you know how many decimals you want, 
             # say, 15, just use a rstrip("0") to get rid of the unnecessary 0s:
+            # can't rstrip, because it gets rid of trailing exponents  like +0 which causes NA if + 
             s = "%.16f" % value
             rowData.append(s)
 
@@ -65,6 +65,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
+    # print hex(~(0xf << 60))
+    # zero 4 bits of sign/exponent like h2o does, to prevent inf/nan
+    expectedUllSum = expectedUllSum & ~(0xf << 60)
     return (expectedUllSum, expectedFpSum)
 
 #********************************************************************************
@@ -90,7 +93,6 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        ROWS=3
         tryList = [
             (ROWS, 1, 'r1', 0, 10, None),
         ]
@@ -108,6 +110,8 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname
                 (expectedUllSum, expectedFpSum)  = write_syn_dataset(csvPathname, 
                     rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
+                expectedUllSumAsDouble = h2o_util.unsignedLongLongToDouble(expectedUllSum)
+                expectedFpSumAsLongLong = h2o_util.doubleToUnsignedLongLong(expectedFpSum)
 
                 parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hex_key, 
                     timeoutSecs=3000, retryDelaySecs=2)
@@ -123,16 +127,15 @@ class Basic(unittest.TestCase):
                 for execExpr in exprList:
                     for r in range(10):
                         start = time.time()
-                        (execResult, fpResult) = h2e.exec_expr(h2o.nodes[0], execExpr, 
-                            resultKey=None, timeoutSecs=300)
+                        (execResult, fpResult) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
                         print r, 'exec took', time.time() - start, 'seconds'
                         print r, "execResult:", h2o.dump_json(execResult)
-                        print r, ""
-                        print r, "%30s" % "fpResult:", "%.15f" % fpResult
                         ullResult = h2o_util.doubleToUnsignedLongLong(fpResult)
-                        print r, "%30s" % "bitResult (0.16x):", "0x%0.16x" % ullResult
-                        print r, "%30s" % "expectedUllSum (0.16x):", "0x%0.16x" % expectedUllSum
                         ullResultList.append((ullResult, fpResult))
+
+                        print "%30s" % "ullResult (0.16x):", "0x%0.16x   %s" % (ullResult, fpResult)
+                        print "%30s" % "expectedUllSum (0.16x):", "0x%0.16x   %s" % (expectedUllSum, expectedUllSumAsDouble)
+                        print "%30s" % "expectedFpSum (0.16x):", "0x%0.16x   %s" % (expectedFpSumAsLongLong, expectedFpSum)
 
                         # allow diff of the lsb..either way
                         # if ullResult!=expectedUllSum and abs((ullResult-expectedUllSum)>3):
@@ -146,9 +149,8 @@ class Basic(unittest.TestCase):
                 print "ullResultList:"
                 for ullResult, fpResult in ullResultList:
                     print "%30s" % "ullResult (0.16x):", "0x%0.16x   %s" % (ullResult, fpResult)
-                expectedUllSumAsDouble = h2o_util.unsignedLongLongToDouble(expectedUllSum)
-                print "%30s" % "expectedUll (0.16x):", "0x%0.16x   %s" % (expectedUllSum, expectedUllSumAsDouble)
-                expectedFpSumAsLongLong = h2o_util.doubleToUnsignedLongLong(expectedFpSum)
+
+                print "%30s" % "expectedUllSum (0.16x):", "0x%0.16x   %s" % (expectedUllSum, expectedUllSumAsDouble)
                 print "%30s" % "expectedFpSum (0.16x):", "0x%0.16x   %s" % (expectedFpSumAsLongLong, expectedFpSum)
 
 
