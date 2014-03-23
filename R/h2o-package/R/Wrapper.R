@@ -158,7 +158,7 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
-.h2o.startJar <- function(memory = "1g") {
+.h2o.startJar <- function(memory = "1g", beta = FALSE) {
   command <- .h2o.checkJava()
   
   #
@@ -193,6 +193,7 @@ h2o.clusterStatus <- function(client) {
             "-ip", "127.0.0.1",
             "-port", "54321"
             )
+  if(beta) args <- c(args, "-beta")
   cat("\n")
   cat(        "Note:  In case of errors look at the following log files:\n")
   cat(sprintf("           %s\n", stdout))
