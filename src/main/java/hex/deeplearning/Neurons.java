@@ -1,5 +1,6 @@
 package hex.deeplearning;
 
+import static hex.deeplearning.DeepLearning.Loss;
 import hex.FrameTask;
 import water.MemoryManager;
 import water.api.DocGen;
@@ -7,8 +8,6 @@ import water.api.Request.API;
 import water.util.Utils;
 
 import java.util.Arrays;
-
-import static hex.deeplearning.DeepLearning.Loss;
 
 /**
  * This class implements the concept of a Neuron layer in a Neural Network
@@ -31,6 +30,10 @@ public abstract class Neurons {
     this.units = units;
   }
 
+  /**
+   * Print the status of this neuron layer
+   * @return populated String
+   */
   @Override
   public String toString() {
     String s = this.getClass().getSimpleName();
@@ -62,7 +65,7 @@ public abstract class Neurons {
   float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
   private double[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
 
-  // AdaDelta
+  // ADADELTA
   private float[] _E_dx2; //reference to _minfo.E_dx2[layer] for convenience
   private float[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
 
@@ -82,6 +85,10 @@ public abstract class Neurons {
 //  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
 
 
+  /**
+   * Helper to check sanity of Neuron layers
+   * @param training whether training or testing is done
+   */
   void sanityCheck(boolean training) {
     if (this instanceof Input) {
       assert(_previous == null);
@@ -159,23 +166,32 @@ public abstract class Neurons {
   protected abstract void bprop();
 
   /**
-   * Apply gradient g to unit u with rate r and momentum m.
-   * @param u Unit (source of gradient correction)
-   * @param g Gradient (derivative of the loss function with respect to changing the weight of this unit)
-   * @param r Learning rate (as of this moment, in case there is learning rate annealing)
-   * @param m Momentum (as of this moment, in case there is a momentum ramp)
+   * Backpropagation: w -= rate * dE/dw, where dE/dw = dE/dy * dy/dnet * dnet/dw
+   * This method adds the dnet/dw = activation term per unit
+   * @param u unit (which neuron)
+   * @param g partial derivative dE/dnet = dE/dy * dy/net
    */
-  final void bprop(int u, double g, double r, double m) {
+  final void bprop(int u, double g) {
+    final long processed = _minfo.get_processed_total();
+    double m = 0, r = 0;
+    // No ADADELTA
+    if (_E_dx2 == null || _E_g2 == null) {
+      m = momentum(processed);
+      r = rate(processed) * (1 - m);
+    }
+
 //    Log.info("bprop(u=" + u + ", g=" + g + ", r=" + r + ", m=" + m);
     double r2 = 0;
     final int off = u * _previous._a.length;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = off + i;
-      if( _previous._e != null )
-        _previous._e[i] += g * _w[w];
-      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1; //this is the actual gradient
+      // propagate the error dE/dnet to the previous layer, via connecting weights
+      if( _previous._e != null ) _previous._e[i] += g * _w[w];
 
-      // adaptive learning rate r from AdaDelta
+      //this is the actual gradient dE/dw
+      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
+
+      // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (_E_dx2 != null && _E_g2 != null) {
         assert(_wm == null && _bm == null);
@@ -338,6 +354,9 @@ public abstract class Neurons {
 
   }
 
+  /**
+   * Tanh neurons - most common, most stable
+   */
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
@@ -361,17 +380,18 @@ public abstract class Neurons {
       }
     }
     @Override protected void bprop() {
-      long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
-        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
-        double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-x^2
-        bprop(u, g, r, m);
+        // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
+        // dy/dnet = (1 - a^2) for y(net) = tanh(net)
+        double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-a^2
+        bprop(u, g);
       }
     }
   }
 
+  /**
+   * Tanh neurons with 50% dropout
+   */
   public static class TanhDropout extends Tanh {
     public TanhDropout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
@@ -387,6 +407,9 @@ public abstract class Neurons {
     }
   }
 
+  /**
+   * Maxout neurons
+   */
   public static class Maxout extends Neurons {
     public Maxout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
@@ -405,18 +428,18 @@ public abstract class Neurons {
       if( max > 1 ) Utils.div(_a, max);
     }
     @Override protected void bprop() {
-      long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         double g = _e[u];
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
 //                    g = 0;
-        bprop(u, g, r, m);
+        bprop(u, g);
       }
     }
   }
 
+  /**
+   * Maxout neurons with 50% dropout
+   */
   public static class MaxoutDropout extends Maxout {
     public MaxoutDropout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
@@ -432,6 +455,9 @@ public abstract class Neurons {
     }
   }
 
+  /**
+   * Rectifier linear unit (ReLU) neurons
+   */
   public static class Rectifier extends Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
@@ -448,9 +474,6 @@ public abstract class Neurons {
     }
 
     @Override protected void bprop() {
-      long processed = _minfo.get_processed_total();
-      final double m = momentum(processed);
-      final double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
 
@@ -458,19 +481,22 @@ public abstract class Neurons {
         if (params.fast_mode || (_wm == null && params.l1 == 0.0 && params.l2 == 0.0)) {
           if( _a[u] > 0 ) { // don't use >= (faster this way: lots of zeros)
             final double g = _e[u]; // * 1.0 (from derivative of rectifier)
-            bprop(u, g, r, m);
+            bprop(u, g);
           }
         }
         // if we have momenta or l1 or l2, then EVEN for g=0, there will be contributions to the weight updates
         // Note: this is slower than always doing the shortcut above, and might not affect the accuracy much
         else {
           final double g = _a[u] > 0 ? _e[u] : 0;
-          bprop(u, g, r, m);
+          bprop(u, g);
         }
       }
     }
   }
 
+  /**
+   * Rectifier linear unit (ReLU) neurons with 50% dropout
+   */
   public static class RectifierDropout extends Rectifier {
     public RectifierDropout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
@@ -486,6 +512,9 @@ public abstract class Neurons {
     }
   }
 
+  /**
+   * Abstract class for Output neurons
+   */
   public static abstract class Output extends Neurons {
     static final int API_WEAVER = 1;
     public static DocGen.FieldDoc[] DOC_FIELDS;
@@ -495,6 +524,9 @@ public abstract class Neurons {
     protected void bprop() { throw new UnsupportedOperationException(); }
   }
 
+  /**
+   * Output neurons for classification - Softmax
+   */
   public static class Softmax extends Output {
     public Softmax(int units) { super(units); }
     @Override protected void fprop() {
@@ -519,24 +551,39 @@ public abstract class Neurons {
         _a[o] /= scale;
       }
     }
+
+
+    /**
+     * Backpropagation for classification
+     * Update every weight as follows: w += -rate * dE/dw
+     * Compute dE/dw via chain rule: dE/dw = dE/dy * dy/dnet * dnet/dw, where net = sum(xi*wi)+b and y = activation function
+     * @param target actual class label
+     */
     protected void bprop(int target) {
-      long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
 //      if (target == missing_int_value) return; //ignore missing response values
+      double g; //partial derivative dE/dy * dy/dnet
       for( int u = 0; u < _a.length; u++ ) {
-        final double targetval = (u == target ? 1 : 0);
-        double g = targetval - _a[u];
+        final double t = (u == target ? 1 : 0);
+        final double y = _a[u];
+        //dy/dnet = derivative of softmax = (1-y)*y
         if (params.loss == Loss.CrossEntropy) {
-          //nothing else needed
-        } else if (params.loss == Loss.MeanSquare) {
-          g *= (1 - _a[u]) * _a[u];
+          //nothing else needed, -dCE/dy * dy/dnet = target - y
+          //cf. http://www.stanford.edu/group/pdplab/pdphandbook/handbookch6.html
+          g = t - y;
+        } else {
+          assert(params.loss == Loss.MeanSquare);
+          //-dMSE/dy = target-y
+          g = (t - y) * (1 - y) * y;
         }
-        bprop(u, g, r, m);
+        // this call expects dE/dnet
+        bprop(u, g);
       }
     }
   }
 
+  /**
+   * Output neurons for regression - Softmax
+   */
   public static class Linear extends Output {
     public Linear(int units) { super(units); }
     @Override protected void fprop() {
@@ -546,20 +593,21 @@ public abstract class Neurons {
       final int off = o * _previous._a.length;
       for( int i = 0; i < _previous._a.length; i++ ) {
         _a[o] += _w[off+i] * _previous._a[i];
-//        Log.info("a[" + o + "] +=" + _w[off + i] + " * " + _previous._a[i] + " = " + _a[o]);
       }
       _a[o] += _b[o];
-//      Log.info("a[" + o + "] +=" + _b[o] + " = " + _a[o]);
     }
+
+    /**
+     * Backpropagation for regression
+     * @param target floating-point target value
+     */
     protected void bprop(double target) {
-      long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
-      assert(params.loss == Loss.MeanSquare);
-      int u = 0;
 //      if (target == missing_double_value) return;
-      double g = target - _a[u];
-      bprop(u, g, r, m);
+      if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Regression is only implemented for MeanSquare error.");
+      final int u = 0;
+      // Computing partial derivative: dE/dnet = dE/dy * dy/dnet = dE/dy * 1
+      final double g = target - _a[u]; //for MSE -dMSE/dy = target-y
+      bprop(u, g);
     }
   }
 
