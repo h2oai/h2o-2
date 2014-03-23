@@ -4,8 +4,8 @@ finfo32 = np.finfo(np.float32)
 finfo64 = np.finfo(np.float64)
 print finfo32
 print finfo64
-finfo32.resolution = 1e-6
-finfo64.resolution = 1e-15
+# finfo32.resolution = 1e-6
+# finfo64.resolution = 1e-15
 
 # Now that you know how many decimals you want, 
 # say, 15, just use a rstrip("0") to get rid of the unnecessary 0s:

@@ -4,6 +4,7 @@
 .pkg.env$result_count = 0
 .pkg.env$temp_count = 0
 .pkg.env$IS_LOGGING = FALSE
+
 .TEMP_KEY = "Last.value"
 .RESULT_MAX = 1000
 .MAX_INSPECT_ROW_VIEW = 10000

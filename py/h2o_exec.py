@@ -111,7 +111,7 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
         if 'funstr' in resultExec and resultExec['funstr']: # not null
             raise Exception("cols and funstr shouldn't both be in resultExec: %s" % h2o.dump_json(resultExec))
         else:
-            # Frame
+            print "Frame return"
             # if test said to look at a resultKey, it's should be in h2o k/v store
             # inspect a result key?
             if resultKey is not None:
@@ -124,10 +124,10 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
         
     else: 
         if 'funstr' in resultExec and resultExec['funstr']: # not null
-            # function return 
+            print "function return"
             result = resultExec['funstr']
         else:
-            # scalar
+            print "scalar return"
             result = resultExec['scalar']
             
     return resultExec, result

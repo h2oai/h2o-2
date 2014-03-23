@@ -171,7 +171,7 @@ print "last_buildnumber", job.get_last_buildnumber()
 
 
 print "Using last_buildnumber %s for result set" % job.get_last_buildnumber()
-build = job.get_build(job.get_last_good_buildnumber())
+build = job.get_build(job.get_last_buildnumber())
 
 af = build.get_artifacts()
 dict_af = build.get_artifact_dict()
