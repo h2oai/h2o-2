@@ -185,7 +185,7 @@ public class Inspect2 extends Request2 {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Mean").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : x1(svecs[i],-1,cols[i].mean)).append("</td>");
+      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : Double.toString(cols[i].mean)).append("</td>");
     sb.append("</tr>");
 
     // Cardinality row is shown only if dataset contains enum-column
