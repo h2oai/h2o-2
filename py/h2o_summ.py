@@ -216,7 +216,7 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
         # this can be NaN if we didn't calculate it. turn the NaN string into a float NaN
         if math.isnan(float(h2oQuantilesApprox)):
             raise Exception("h2oQuantilesApprox is unexpectedly NaN %s" % h2oQuantilesApprox)
-        h2o_util.assertApproxEqual(h2oQuantilesApprox, b, rel=0.5,
+        h2o_util.assertApproxEqual(h2oQuantilesApprox, b, rel=0.1,
             msg='h2o quantile singlepass is not approx. same as sort algo')
 
     if h2oSummary2:

@@ -229,11 +229,10 @@ class Basic(unittest.TestCase):
                             datatype='float',
                             quantile=0.5 if DO_MEDIAN else 0.999,
                             # FIX! ignore for now
-                            # h2oSummary2=pctile[5 if DO_MEDIAN else 10],
+                            h2oSummary2=pctile[5 if DO_MEDIAN else 10],
                             h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
-                            # why am I off by 10x here?
-                            h2oSummary2MaxErr=maxErr*5,
+                            h2oSummary2MaxErr=maxErr,
                             )
 
 

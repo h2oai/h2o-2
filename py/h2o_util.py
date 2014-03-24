@@ -3,6 +3,7 @@ import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json, csv
 import h2o
 import sys
+import math
 
 # operations to get bit patterns for fp 
 # Python internally uses the native endianity and 64-bits for floats
@@ -135,7 +136,10 @@ def cleanseInfNan(value):
 
 # use a random or selected fp format from the choices
 # for testing different fp representations
-def fp_format(val=None, sel=None):
+# 'only' can be e, f or g, to restrict the choices
+# it will wrap the 0-47 until the group (modulo e)
+def fp_format(val=None, sel=None, only=None):
+
     def e0(val): return "%e" % val
     def e1(val): return "%20e" % val
     def e2(val): return "%-20e" % val
@@ -207,6 +211,29 @@ def fp_format(val=None, sel=None):
         # pick one randomly if no sel
         choice = random.randint(0,len(caseList)-1)
         # print "Using fp format case", choice
+
+
+    SUBGRPS = 3
+    SUBGRP_SIZE = len(caseList) / SUBGRPS
+    # should be int
+    assert math.floor(SUBGRP_SIZE)==SUBGRP_SIZE, "You got a code problem in h2o_util.fp_format"
+
+    if only:
+        # make choice modulo 3 (can update if more subgroups are added
+        choice = choice % SUBGRPS
+        assert choice >= 0 and choice < SUBGRP_SIZE
+        # now add a base offset = subgrou size. 
+        # (assume we keep in sync with the subgroup sizes above)
+        if only=='e':
+            choice += 0
+        elif only=='f':
+            choice += 16
+        elif only=='g':
+            choice += 32
+        else:
+            # if a random choice, we should never get here because it's bounded to length of the list above
+            raise Exception("Bad param combo of only: %s and sel: % in h2o_util.fp_format()" % (only, sel))
+
     f = caseList[choice]
 
     return f(val)

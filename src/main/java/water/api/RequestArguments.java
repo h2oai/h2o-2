@@ -1596,7 +1596,7 @@ public class RequestArguments extends RequestStatics {
   public class DRFCopyDataBool extends Bool {
     private TypeaheadKey _frkey;
     public DRFCopyDataBool(String name, TypeaheadKey frkey) {
-      super(name,false,"Use a (lot) more memory in exchange for speed when running distributed.");
+      super(name,false,"Run on one node only; no network overhead but fewer cpus used.  Suitable for small datasets.");
       addPrerequisite(_frkey=frkey);
       setRefreshOnChange();
     }
@@ -1617,10 +1617,13 @@ public class RequestArguments extends RequestStatics {
       return b;
     }
     @Override protected Boolean defaultValue() {
+      // Can we allocate ALL of the dataset locally?
       long bs = fr().byteSize();
-      boolean b = MemoryManager.tryReserveTaskMem(bs); // Can we allocate ALL of the dataset locally?
-      if( b ) MemoryManager.freeTaskMem(bs);
-      return b;
+      if( !MemoryManager.tryReserveTaskMem(bs) ) return false;
+      // Also, do we have enough chunks to run it well globally?
+      if( fr().anyVec().nChunks() >= 2*H2O.CLOUD.size() ) return false;
+      // Less than 2 chunks per node, and fits locally... default to local-only
+      return true;
     }
   }
 

@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         if (localhost):
             h2o.build_cloud(1, use_hdfs=True, 
-            hdfs_name_node='192.168.1.176', hdfs_version='cdh3',
+            hdfs_name_node='192.168.1.180', hdfs_version='cdh4',
             java_heap_GB=14, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(1, base_port=54321)
