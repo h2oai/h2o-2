@@ -888,8 +888,6 @@ quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, na
   expr = paste("quantile(", x@key, ",", myProbs, ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   # res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_QUANTILES, source_key = x@key, column = 0, quantile = paste(probs, collapse = ","), interpolation_type = type, ...)
-  # return(res$result)
-  
   # col <- as.numeric(strsplit(res$result, "\n")[[1]][-1])
   # if(numCols > .MAX_INSPECT_COL_VIEW)
   #   warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
