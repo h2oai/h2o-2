@@ -153,7 +153,10 @@ public class MRUtils {
     }
   }
   private static class ClassDistHelper extends MRTask2<ClassDist> {
-    private ClassDistHelper(int nclass) { _nclass = nclass; }
+    private ClassDistHelper(int nclass) {
+      _nclass = nclass;
+      _ys = new long[_nclass];
+    }
     final int _nclass;
     protected long[] _ys;
     @Override public void map(Chunk ys) {
