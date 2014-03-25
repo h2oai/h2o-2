@@ -76,6 +76,11 @@ public class ConfusionMatrix extends Request2 {
       throw new IllegalArgumentException("Missing actual or predict!");
     if (vactual.length() != vpredict.length())
       throw new IllegalArgumentException("Both arguments must have the same length!");
+    // Handle regression kind which is producing CM 1x1 elements
+    if (!classification && vactual.isEnum())
+      throw new IllegalArgumentException("Actual vector cannot be categorical for regression scoring.");
+    if (!classification && vpredict.isEnum())
+      throw new IllegalArgumentException("Predicted vector cannot be categorical for regression scoring.");
 
     try {
       if (classification) {
@@ -98,15 +103,9 @@ public class ConfusionMatrix extends Request2 {
         }
         cm = new CM(domain.length).doAll(va,vp)._cm;
       } else {
-        if (vactual.isEnum())
-          throw new IllegalArgumentException("Actual vector cannot be categorical for regression scoring.");
-        if (vpredict.isEnum())
-          throw new IllegalArgumentException("Predicted vector cannot be categorical for regression scoring.");
         mse = new CM(1).doAll(vactual,vpredict).mse();
       }
       return Response.done(this);
-    } catch( Throwable t ) {
-      return Response.error(t);
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
       if (vp!=null) UKV.remove(vp._key);
