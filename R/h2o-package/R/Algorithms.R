@@ -840,7 +840,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
     # while(!.h2o.__isDone(data@h2o, "RF2", res)) { Sys.sleep(1) }
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRFModelView, '_modelKey'=res$destination_key)
 
-    result = .h2o.__getDRFResults(res2$drf_model, params)
+    result = .h2o.__getDRFResults(res2$drf_model, params, importance)
     new("H2ODRFModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     # .h2o.gridsearch.internal("RF", data, res$job_key, res$destination_key, validation, args$y_i)
@@ -862,7 +862,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   return(mySum)
 }
 
-.h2o.__getDRFResults <- function(res, params) {
+.h2o.__getDRFResults <- function(res, params, importance = FALSE) {
   result = list()
   params$ntree = res$N
   params$depth = res$max_depth
@@ -887,6 +887,13 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 
     class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
     result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
+  }
+  
+  if(importance) {
+    result$varimp = data.frame(rbind(res$varimp$varimp, res$varimp$varimpSD))
+    result$varimp[3,] = sqrt(params$ntree)*result$varimp[1,]/result$varimp[2,]   # Compute z-scores
+    colnames(result$varimp) = res$'_names'[-length(res$'_names')] # res$varimp$variables
+    rownames(result$varimp) = c(res$varimp$method, "Standard Deviation", "Z-Scores")
   }
   return(result)
 }

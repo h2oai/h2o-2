@@ -176,6 +176,9 @@ setMethod("show", "H2ODRFModel", function(object) {
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
+  if(!is.null(model$varimp)) {
+    cat("\nVariable importance:\n"); print(model$varimp)
+  }
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
 })
 
