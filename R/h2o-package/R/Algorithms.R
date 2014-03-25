@@ -1,7 +1,7 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
-h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.1, n.bins=100, importance=F, validation) {
+h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.1, n.bins=100, importance=FALSE, validation) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
@@ -14,7 +14,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   if( any(shrinkage < 0 | shrinkage > 1) ) stop('shrinkage must be in [0,1]')
   if(!is.numeric(n.bins)) stop('n.bins must be numeric')
   if(any(n.bins < 1)) stop('n.bins must be >= 1')
-  if( !is.logical(importance) ) stop('importance must be logical (TRUE or FALSE)')
+  if(!is.logical(importance)) stop('importance must be logical (TRUE or FALSE)')
 
   if(missing(validation)) validation = data
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
@@ -79,6 +79,14 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     }
   } else
     result$classification <- F
+  
+  if(params$importance) {
+    result$varimp = data.frame(t(res$varimp$varimp))
+    result$varimp[2,] = result$varimp[1,]/max(result$varimp[1,])
+    result$varimp[3,] = 100*result$varimp[1,]/sum(result$varimp[1,])
+    colnames(result$varimp) = res$'_names'[-length(res$'_names')]
+    rownames(result$varimp) = c(res$varimp$method, "Scaled Values", "Percent Influence")
+  }
 
   result$err = as.numeric(res$errs)
   return(result)
@@ -834,14 +842,14 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance))
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins)
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
     .h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!.h2o.__isDone(data@h2o, "RF2", res)) { Sys.sleep(1) }
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRFModelView, '_modelKey'=res$destination_key)
 
-    result = .h2o.__getDRFResults(res2$drf_model, params, importance)
+    result = .h2o.__getDRFResults(res2$drf_model, params)
     new("H2ODRFModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     # .h2o.gridsearch.internal("RF", data, res$job_key, res$destination_key, validation, args$y_i)
@@ -863,7 +871,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   return(mySum)
 }
 
-.h2o.__getDRFResults <- function(res, params, importance = FALSE) {
+.h2o.__getDRFResults <- function(res, params) {
   result = list()
   params$ntree = res$N
   params$depth = res$max_depth
@@ -890,10 +898,10 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
     result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   }
   
-  if(importance) {
+  if(params$importance) {
     result$varimp = data.frame(rbind(res$varimp$varimp, res$varimp$varimpSD))
     result$varimp[3,] = sqrt(params$ntree)*result$varimp[1,]/result$varimp[2,]   # Compute z-scores
-    colnames(result$varimp) = res$'_names'[-length(res$'_names')] # res$varimp$variables
+    colnames(result$varimp) = res$'_names'[-length(res$'_names')]    #res$varimp$variables
     rownames(result$varimp) = c(res$varimp$method, "Standard Deviation", "Z-Scores")
   }
   return(result)
