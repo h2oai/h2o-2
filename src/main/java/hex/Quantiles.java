@@ -399,16 +399,16 @@ public class Quantiles extends Iced {
 
     // walk thru and find out what bin to look inside
     int k = 0;
-    while((currentCnt + hcnt2[k]) <= targetCntInt) {
-      Log.debug("Q_ Looping for k (multi): "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
-        " "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+    while(k!=maxBinCnt && ((currentCnt + hcnt2[k]) <= targetCntInt)) {
+      Log.debug("Q_ Looping for k: "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
+        " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
       currentCnt += hcnt2[k];
       ++k;
-      if ( k == maxBinCnt )
-        break;
-      // have to keep cycling till we get to a non-zero hcnt
-      // but need to break if we get to the end (into the extra bin). it must be nonzero then
+      // Note the loop condition covers the breakout condition:
+      // (currentCnt==targetCntInt && (hcnt2[k]!=0)
+      // also: don't go pass array bounds
     }
+
     Log.debug("Q_ Found k (multi): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
       " "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
