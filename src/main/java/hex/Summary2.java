@@ -697,7 +697,7 @@ public class Summary2 extends Iced {
     int k = 0;
     while(k!=maxBinCnt && ((currentCnt + hcnt2[k]) <= targetCntInt)) {
       // Log.debug("Q_ Looping for k: "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
-      //  " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k];
+      //   " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
       currentCnt += hcnt2[k];
       ++k;
       // Note the loop condition covers the breakout condition:
@@ -812,7 +812,8 @@ public class Summary2 extends Iced {
         done = true; //  has to be one above us when needed. (or we're at end)
         Log.debug("QS_ Guess D "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
           " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
-          " _gprows: " + _gprows);
+          " _gprows: " + _gprows+" "+stillCanGetIt);
+
       }
       else { // single pass approx..with unresolved bin
         assert hcnt2[k]!=0 : hcnt2[k]+" "+k;

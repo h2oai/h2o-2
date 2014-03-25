@@ -235,6 +235,10 @@ class Basic(unittest.TestCase):
                             h2oSummary2MaxErr=maxErr,
                             )
 
+                        if False and h2o_util.approxEqual(pctile[5], 0.990238116744, tol=0.002, msg='stop here'):
+                            raise Exception("stopping to look")
+                                
+
 
                 scipyCol += 1
 

@@ -30,16 +30,11 @@ public class Quantiles extends Iced {
   final boolean    _isEnum;
   final String[]   _domain;
 
-  // used in approxQuantilesOnePass only
-  final double     _start2;
-  final double     _binsz2;    // 2nd finer grained histogram used for quantile estimates for numerics
-
   // used to feed the next iteration for multipass?
   // used in exactQuantilesMultiPass only
   final double     _valStart;
   final double     _valEnd;
   final long       _valMaxBinCnt;
-  final boolean    _multiPass;
 
   // just for info on current pass?
   public double    _valRange;
@@ -66,21 +61,19 @@ public class Quantiles extends Iced {
     private final int _max_qbins;
     private final double _valStart;
     private final double _valEnd;
-    private final boolean _multiPass;
 
     public Quantiles _qbins[];
 
-    public BinTask2 (int max_qbins, double valStart, double valEnd, boolean multiPass) { 
+    public BinTask2 (int max_qbins, double valStart, double valEnd) { 
       _max_qbins = max_qbins; 
       _valStart = valStart; 
       _valEnd = valEnd; 
-      _multiPass = multiPass; 
     }
 
     @Override public void map(Chunk[] cs) {
       _qbins = new Quantiles[cs.length];
       for (int i = 0; i < cs.length; i++)
-        _qbins[i] = new Quantiles(_fr.vecs()[i], _max_qbins, _valStart, _valEnd, _multiPass).add(cs[i]);
+        _qbins[i] = new Quantiles(_fr.vecs()[i], _max_qbins, _valStart, _valEnd).add(cs[i]);
     }
 
     @Override public void reduce(BinTask2 other) {
@@ -95,7 +88,7 @@ public class Quantiles extends Iced {
   }
 
   // FIX! currently only take one quantile at a time here..ability to do a list though
-  public void finishUp(Vec vec, double[] quantiles_to_do, int interpolation_type) {
+  public void finishUp(Vec vec, double[] quantiles_to_do, int interpolation_type, boolean multiPass) {
     assert quantiles_to_do.length == 1 : "currently one quantile at a time. caller can reuse qbin for now.";
     // below, we force it to ignore length and only do [0]
     // need to figure out if we need to do a list and how that's returned
@@ -104,16 +97,16 @@ public class Quantiles extends Iced {
       _done = false;
     } 
     else {
-      if ( !_multiPass ) {
-        _done = approxQuantilesOnePass(_pctile, quantiles_to_do, interpolation_type);
+      if ( multiPass ) {
+        _done = exactQuantilesMultiPass(_pctile, quantiles_to_do, interpolation_type);
       } 
       else {
-        _done = exactQuantilesMultiPass(_pctile, quantiles_to_do, interpolation_type);
+        _done = approxQuantilesOnePass(_pctile, quantiles_to_do, interpolation_type);
       }
     }
   }
 
-  public Quantiles(Vec vec, int max_qbins, double valStart, double valEnd, boolean multiPass) {
+  public Quantiles(Vec vec, int max_qbins, double valStart, double valEnd) {
 
     _isEnum = vec.isEnum();
     _isInt = vec.isInt();
@@ -125,55 +118,29 @@ public class Quantiles extends Iced {
     _valStart = valStart;
     _valEnd = valEnd;
     _valRange = valEnd - valStart;
-    _multiPass = multiPass;
 
+    assert max_qbins > 0 && max_qbins <= 1000000 : "max_qbins must be >0 and <= 1000000";
     int desiredBinCnt = max_qbins;
     int maxBinCnt = desiredBinCnt + 1;
     _valBinSize = _valRange / (desiredBinCnt + 0.0);
     _valMaxBinCnt = maxBinCnt;
 
     if( vec.isEnum() && _domain.length < MAX_ENUM_SIZE ) {
-      // do we even care here? don't want to think about whether multiPass is disabled
-      _start2 = 0;
-      _binsz2 = 1;
       hcnt2 = new long[_domain.length];
       hcnt2_min = new double[_domain.length];
       hcnt2_max = new double[_domain.length];
     } 
     else if ( !Double.isNaN(_min) ) {
-      assert max_qbins > 0 && max_qbins <= 1000000 : "max_qbins must be >0 and <= 1000000";
-      // only used on single pass
-      _binsz2 = (_max + (vec.isInt()?.5:0) - _min) / max_qbins;
-      _start2 = _binsz2 * Math.floor(_min/_binsz2);
-
-      if ( multiPass ) {
-        assert maxBinCnt > 0;
-        // Log.debug("Q_ Multiple pass histogram starts at "+_valStart);
-        // Log.debug("Q_ _min "+_min+" _max "+_max);
-        // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
-        hcnt2 = new long[maxBinCnt];
-        hcnt2_min = new double[maxBinCnt];
-        hcnt2_max = new double[maxBinCnt];
-      }
-      else {
-        // okay if 1 more than max_qbins gets created
-        int nbin2 = (int) Math.ceil((_max - _start2)/_binsz2) + 1;
-        assert nbin2 > 0;
-        // Log.debug("Q_ Single pass histogram has "+nbin2+" bins");
-        // Log.debug("Q_ Single pass histogram starts at "+_start2);
-        // Log.debug("Q_ _min "+_min+" _max "+_max);
-        // can't make any assertion about _start2 vs _min (either can be slightly smaller: fp)
-        hcnt2 = new long[nbin2];
-        hcnt2_min = new double[nbin2];
-        hcnt2_max = new double[nbin2];
-      }
+      assert maxBinCnt > 0;
+      // Log.debug("Q_ Multiple pass histogram starts at "+_valStart);
+      // Log.debug("Q_ _min "+_min+" _max "+_max);
+      hcnt2 = new long[maxBinCnt];
+      hcnt2_min = new double[maxBinCnt];
+      hcnt2_max = new double[maxBinCnt];
     } 
     else { // vec does not contain finite numbers
-      // do we care here? have to think about whether multiPass is disabled/
       // okay this one entry hcnt2 stuff is making the algo die ( I guess the min was nan above)
       // for now, just make it length 2
-      _start2 = vec.min();
-      _binsz2 = Double.POSITIVE_INFINITY;
       hcnt2 = new long[2];
       hcnt2_min = new double[2];
       hcnt2_max = new double[2];
@@ -185,9 +152,10 @@ public class Quantiles extends Iced {
   }
 
   public Quantiles(Vec vec) {
-    // default to multipass, 1000 bin
-    // still would need to call the finishUp you want, to get a result
-    this(vec, 1000, vec.min(), vec.max(), true);
+    // default to 1000 bin
+    // still would need to call the finishUp you want, to get a result,
+    // and do multipass iteration/finishUp, if desired
+    this(vec, 1000, vec.min(), vec.max());
   }
 
   public Quantiles add(Chunk chk) {
@@ -207,30 +175,8 @@ public class Quantiles extends Iced {
     _totalRows++;
     long maxBinCnt = _valMaxBinCnt;
 
-    if ( !_multiPass  ) { // single pass approx
-      long binIdx2;
-      if (hcnt2.length==1) {
-        binIdx2 = 0; // not used
-      }
-      else {
-        binIdx2 = (int) Math.floor((val - _start2) / _binsz2);
-      }
-
-      int binIdx2Int = (int) binIdx2;
-      assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
-        "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
-
-      if ( (hcnt2[binIdx2Int] == 0) || (val < hcnt2_min[binIdx2Int]) ) {
-        hcnt2_min[binIdx2Int] = val;
-      }
-      if ( (hcnt2[binIdx2Int] == 0) || (val > hcnt2_max[binIdx2Int]) ) {
-        hcnt2_max[binIdx2Int] = val;
-      }
-      ++hcnt2[binIdx2Int];
-      // don't care about bin edge leaks on the one pass algo
-      // I suppose the hcnt2.length must be big enough?
-    }
-    else { // multi pass exact. Should be able to do this for both, if the valStart param is correct
+    if ( true) { 
+      // multi pass exact. Should be able to do this for both, if the valStart param is correct
       long binIdx2;
       // Need to count the stuff outside the bin-gathering, 
       // since threshold compare is based on total row compare
@@ -260,7 +206,7 @@ public class Quantiles extends Iced {
       else {
         assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
           "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
-        // Log.debug("Q_ (multi) val: "+val+" valOffset: "+valOffset+" _valBinSize: "+_valBinSize);
+        // Log.debug("Q_ val: "+val+" valOffset: "+valOffset+" _valBinSize: "+_valBinSize);
         assert (binIdx2Int>=0) && (binIdx2Int<=maxBinCnt) : "binIdx2Int "+binIdx2Int+" out of range";
 
         if ( hcnt2[binIdx2Int]==0 || (val < hcnt2_min[binIdx2Int]) ) hcnt2_min[binIdx2Int] = val;
@@ -378,7 +324,7 @@ public class Quantiles extends Iced {
 
     double threshold = quantiles_to_do[0];
 
-    assert _valStart!=Double.NaN : _valEnd;
+    assert _valEnd!=Double.NaN : _valEnd;
     assert _valStart!=Double.NaN : _valStart;
     assert _valBinSize!=Double.NaN : _valBinSize;
     if ( _valStart==_valEnd ) Log.debug("exactQuantilesMultiPass: start/end are equal. "+_valStart+" "+_valEnd);
@@ -400,8 +346,8 @@ public class Quantiles extends Iced {
     // walk thru and find out what bin to look inside
     int k = 0;
     while(k!=maxBinCnt && ((currentCnt + hcnt2[k]) <= targetCntInt)) {
-      Log.debug("Q_ Looping for k: "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
-        " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+      // Log.debug("Q_ Looping for k: "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
+      //   " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
       currentCnt += hcnt2[k];
       ++k;
       // Note the loop condition covers the breakout condition:
@@ -409,7 +355,7 @@ public class Quantiles extends Iced {
       // also: don't go pass array bounds
     }
 
-    Log.debug("Q_ Found k (multi): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
+    Log.debug("Q_ Found k: "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
       " "+_totalRows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
     assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
@@ -559,7 +505,7 @@ public class Quantiles extends Iced {
       done = true; //  has to be one above us when needed. (or we're at end)
       Log.debug("Q_ Guess D "+guess+" with type "+interpolation_type+
         " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
-        " _totalRows: " + _totalRows);
+        " _totalRows: " + _totalRows+" "+stillCanGetIt+" "+forceBestApprox);
     }
 
     if ( !done  && !forceBestApprox) { // don't need for 1 pass approx
@@ -619,9 +565,6 @@ public class Quantiles extends Iced {
     Log.debug("Q_ next "+newValStart+" "+newValEnd+" "+newValRange+" "+newValBinSize);
 
     qtiles[0] = guess;
-    // Log.debug(]: hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
-    //  " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
-
     // We want to leave them now! we reuse in exec for multi-thresholds
     // hcnt2 = null;
     // hcnt2_min = null;
