@@ -393,13 +393,14 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 
     # Construct confusion matrix
     cm_ind = trunc(100*result$best_threshold) + 1
-    temp = data.frame(t(sapply(valid$'_cms'[[cm_ind]]$'_arr', c)))
-    temp[,3] = c(temp[1,2], temp[2,1])/apply(temp, 1, sum)
-    temp[3,] = c(temp[2,1], temp[1,2], 0)/apply(temp, 2, sum)
-    temp[3,3] = (temp[1,2] + temp[2,1])/valid$nobs
-    dn = list(Actual = c("false", "true", "Err"), Predicted = c("false", "true", "Err"))
-    dimnames(temp) = dn
-    result$confusion = temp
+#     temp = data.frame(t(sapply(valid$'_cms'[[cm_ind]]$'_arr', c)))
+#     temp[,3] = c(temp[1,2], temp[2,1])/apply(temp, 1, sum)
+#     temp[3,] = c(temp[2,1], temp[1,2], 0)/apply(temp, 2, sum)
+#     temp[3,3] = (temp[1,2] + temp[2,1])/valid$nobs
+#     dn = list(Actual = c("false", "true", "Err"), Predicted = c("false", "true", "Err"))
+#     dimnames(temp) = dn
+#    result$confusion = temp
+    result$confusion = .build_cm(valid$'_cms'[[cm_ind]]$'_arr', c("false", "true"))
   }
   return(result)
 }
