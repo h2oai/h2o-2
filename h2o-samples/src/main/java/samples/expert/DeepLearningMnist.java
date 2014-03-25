@@ -66,10 +66,10 @@ public class DeepLearningMnist extends Job {
     p.response = trainf.lastVec();
     p.ignored_cols = null;
     p.mini_batch = 240000;
-    p.score_interval = 60;
+    p.score_interval = 30;
 
     p.fast_mode = true; //to match old NeuralNet behavior
-    p.ignore_const_cols = true;
+    p.ignore_const_cols = false; //to match old NeuralNet behavior
     p.shuffle_training_data = false;
     p.force_load_balance = true;
     p.quiet_mode = false;

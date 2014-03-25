@@ -13,10 +13,10 @@ import water.fvec.Vec;
 public class NeuralNetMnistDrednet extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
     Class job = Class.forName(Thread.currentThread().getStackTrace()[1].getClassName());
-    samples.launchers.CloudLocal.launch(job, 1);
+//    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 3);
     //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
-    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.163");
+    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
 //  samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 8);
   }
@@ -40,9 +40,12 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     p.momentum_start = 0.5f;
     p.momentum_ramp = 1800000;
     p.momentum_stable = 0.99f;
+    p.score_training = 1000;
+    p.score_validation = 10000;
     p.l1 = .00001f;
     p.l2 = .00f;
     p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
+    p.score_interval = 30;
     // Hinton
 //  p.initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
 //  p.initial_weight_scale = 0.01;
