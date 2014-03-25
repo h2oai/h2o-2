@@ -175,53 +175,51 @@ public class Quantiles extends Iced {
     _totalRows++;
     long maxBinCnt = _valMaxBinCnt;
 
-    if ( true) { 
-      // multi pass exact. Should be able to do this for both, if the valStart param is correct
-      long binIdx2;
-      // Need to count the stuff outside the bin-gathering, 
-      // since threshold compare is based on total row compare
-      double valOffset = val - _valStart;
+    // multi pass exact. Should be able to do this for both, if the valStart param is correct
+    long binIdx2;
+    // Need to count the stuff outside the bin-gathering, 
+    // since threshold compare is based on total row compare
+    double valOffset = val - _valStart;
 
-      // FIX! do we really need this special case? Not hurting.
-      if (hcnt2.length==1) {
-        binIdx2 = 0;
-      }
-      else {
-        binIdx2 = (int) Math.floor(valOffset / _valBinSize);
-      }
-      int binIdx2Int = (int) binIdx2;
+    // FIX! do we really need this special case? Not hurting.
+    if (hcnt2.length==1) {
+      binIdx2 = 0;
+    }
+    else {
+      binIdx2 = (int) Math.floor(valOffset / _valBinSize);
+    }
+    int binIdx2Int = (int) binIdx2;
 
-      // we always need the start condition in the bins?
-      // maybe some redundancy in two compares
-      if ( valOffset < 0 || binIdx2Int<0 ) { 
-        ++hcnt2_low;
-      }
-      // we always need the end condition in the bins?
-      // would using valOffset here be less accurate? maybe some redundancy in two compares
-      // can't use maxBinCnt-1, because the extra bin is used for one value (the bounds)
-      else if ( val > _valEnd || binIdx2>=maxBinCnt ) { 
-        if ( (hcnt2_high==0) || (val < hcnt2_high_min) ) hcnt2_high_min = val;
-        ++hcnt2_high;
-      } 
-      else {
-        assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
-          "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
-        // Log.debug("Q_ val: "+val+" valOffset: "+valOffset+" _valBinSize: "+_valBinSize);
-        assert (binIdx2Int>=0) && (binIdx2Int<=maxBinCnt) : "binIdx2Int "+binIdx2Int+" out of range";
+    // we always need the start condition in the bins?
+    // maybe some redundancy in two compares
+    if ( valOffset < 0 || binIdx2Int<0 ) { 
+      ++hcnt2_low;
+    }
+    // we always need the end condition in the bins?
+    // would using valOffset here be less accurate? maybe some redundancy in two compares
+    // can't use maxBinCnt-1, because the extra bin is used for one value (the bounds)
+    else if ( val > _valEnd || binIdx2>=maxBinCnt ) { 
+      if ( (hcnt2_high==0) || (val < hcnt2_high_min) ) hcnt2_high_min = val;
+      ++hcnt2_high;
+    } 
+    else {
+      assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
+        "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length;
+      // Log.debug("Q_ val: "+val+" valOffset: "+valOffset+" _valBinSize: "+_valBinSize);
+      assert (binIdx2Int>=0) && (binIdx2Int<=maxBinCnt) : "binIdx2Int "+binIdx2Int+" out of range";
 
-        if ( hcnt2[binIdx2Int]==0 || (val < hcnt2_min[binIdx2Int]) ) hcnt2_min[binIdx2Int] = val;
-        if ( hcnt2[binIdx2Int]==0 || (val > hcnt2_max[binIdx2Int]) ) hcnt2_max[binIdx2Int] = val;
-        ++hcnt2[binIdx2Int];
+      if ( hcnt2[binIdx2Int]==0 || (val < hcnt2_min[binIdx2Int]) ) hcnt2_min[binIdx2Int] = val;
+      if ( hcnt2[binIdx2Int]==0 || (val > hcnt2_max[binIdx2Int]) ) hcnt2_max[binIdx2Int] = val;
+      ++hcnt2[binIdx2Int];
 
-        // For debug/info, can report when it goes into extra bin.
-        // is it ever due to fp arith? Or just the max value?
-        // not an error! should be protected by newValEnd below, and nextK 
-        // estimates should go into the extra bin if interpolation is needed
-        if ( false && (binIdx2 == (maxBinCnt-1)) ) {
-            Log.debug("\nQ_ FP! val went into the extra maxBinCnt bin:"+
-              binIdx2+" "+hcnt2_high_min+" "+valOffset+" "+
-              val+" "+_valStart+" "+hcnt2_high+" "+val+" "+_valEnd,"\n");
-        }
+      // For debug/info, can report when it goes into extra bin.
+      // is it ever due to fp arith? Or just the max value?
+      // not an error! should be protected by newValEnd below, and nextK 
+      // estimates should go into the extra bin if interpolation is needed
+      if ( false && (binIdx2 == (maxBinCnt-1)) ) {
+          Log.debug("\nQ_ FP! val went into the extra maxBinCnt bin:"+
+            binIdx2+" "+hcnt2_high_min+" "+valOffset+" "+
+            val+" "+_valStart+" "+hcnt2_high+" "+val+" "+_valEnd,"\n");
       }
     }
   } 
