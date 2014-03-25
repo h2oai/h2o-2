@@ -1,5 +1,6 @@
-package samples;
+package samples.expert;
 
+import static water.util.MRUtils.sampleFrame;
 import hex.deeplearning.DeepLearning;
 import water.Job;
 import water.TestUtil;
@@ -7,8 +8,6 @@ import water.fvec.Frame;
 import water.util.Log;
 
 import java.util.Random;
-
-import static water.util.MRUtils.sampleFrame;
 
 /**
  * Runs a neural network on the MNIST dataset.
@@ -21,9 +20,9 @@ public class DeepLearningMnist extends Job {
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
-    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.164");
-//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162");
+    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
 //    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
@@ -51,6 +50,7 @@ public class DeepLearningMnist extends Job {
     p.epochs = 10000;
     p.l1 = 1e-5;
     p.l2 = 0;
+    p.adaptive_rate = false;
     p.momentum_start = 0.5;
     p.momentum_ramp = 1800000;
     p.momentum_stable = 0.99;
