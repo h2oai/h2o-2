@@ -120,7 +120,7 @@ setMethod("show", "H2OGLMModel", function(object) {
   family = model$params$family$family
   if(family == "binomial") {
     cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5))
-    cat("\n\nConfusion Matrix:\n"); print(model$confusion,2)
+    cat("\n\nConfusion Matrix:\n"); print(model$confusion)
   }
 
   if(length(object@xval) > 0) {
