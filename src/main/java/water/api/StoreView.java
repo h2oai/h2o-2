@@ -6,9 +6,6 @@ import java.util.Arrays;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.parser.*;
-import water.parser.CustomParser.PSetupGuess;
-import water.util.Utils;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -16,8 +13,8 @@ import com.google.gson.JsonObject;
 public class StoreView extends Request {
 
   protected Str _filter = new Str(FILTER, "");
-  protected final Int _offset = new Int(OFFSET,0,0,1024);
-  protected final Int _view = new Int(VIEW, 20, 0, 1024);
+  protected final Int _offset = new Int(OFFSET, 0, 0, Integer.MAX_VALUE);
+  protected final Int _view   = new Int(VIEW,  20, 0, Integer.MAX_VALUE);
 
   @Override protected Response serve() {
     JsonObject result = new JsonObject();

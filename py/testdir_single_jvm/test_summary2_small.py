@@ -12,7 +12,6 @@ if getpass.getuser()=='kevin' or getpass.getuser()=='jenkins':
 
 DO_MEDIAN = True
 MAX_QBINS = 1000
-COLS = 100000
 
 def write_syn_dataset(csvPathname, rowCount, colCount, values, SEED):
     r1 = random.Random(SEED)
@@ -44,7 +43,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(node_count=1, java_heap_GB=16, base_port=54327)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -56,12 +55,12 @@ class Basic(unittest.TestCase):
             # colname, (min, 25th, 50th, 75th, max)
             # if rowCount is None, we'll just use  the data values
             # None in expected values means no compare
-            (None, 1, 'x.hex', [-1,0,1],        ('C1',  None, None, -1, None, None)),
-            (None, 2, 'x.hex', [-1,0,1],        ('C1',  None, None, -1, None, None)),
-            (None, 10, 'x.hex', [-1,0,1],        ('C1',  None, None, -1, None, None)),
-            (None, 100, 'x.hex', [-1,0,1],        ('C1',  None, None, -1, None, None)),
-            (None, 1000, 'x.hex', [-1,0,1],        ('C1',  None, None, -1, None, None)),
-            (None, 10000, 'x.hex', [-1,0,1],        ('C1',  None, None, -1, None, None)),
+            (None, 1, 'x.hex', [-1,0,1],        ('C1',  None, None, 0, None, None)),
+            (None, 2, 'x.hex', [-1,0,1],        ('C1',  None, None, 0, None, None)),
+            (None, 10, 'x.hex', [-1,0,1],        ('C1',  None, None, 0, None, None)),
+            (None, 100, 'x.hex', [-1,0,1],        ('C1',  None, None, 0, None, None)),
+            (None, 1000, 'x.hex', [-1,0,1],        ('C1',  None, None, 0, None, None)),
+            # (None, 10000, 'x.hex', [-1,0,1],        ('C1',  None, None, 0, None, None)),
             # (COLS, 1, 'x.hex', [1,0,-1],        ('C1',  None, None, None, None, None)),
         ]
 
@@ -157,6 +156,7 @@ class Basic(unittest.TestCase):
             expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
 
             pctile = stats['pctile']
+            print "pctile:", pctile
             if expected[0]:
                 self.assertEqual(colname, expected[0])
             if expected[1]:

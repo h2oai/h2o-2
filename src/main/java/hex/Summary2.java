@@ -271,7 +271,7 @@ public class Summary2 extends Iced {
       computeMajorities();
     } else {
       _pctile = new double[DEFAULT_PERCENTILES.length];
-      approxQuantiles(_pctile,DEFAULT_PERCENTILES);
+      approxQuantiles(_pctile, DEFAULT_PERCENTILES, _stat0._min2, _stat0._max2);
     }
 
     // remove the trailing NaNs
@@ -288,9 +288,14 @@ public class Summary2 extends Iced {
       }
     }
     for (int i = 0; i < _maxs.length>>>1; i++) {
-      double t = _maxs[i]; _maxs[i] = _maxs[_maxs.length-1-i]; _maxs[_maxs.length-1-i] = t;
+      double t = _maxs[i];  
+      _maxs[i] = _maxs[_maxs.length-1-i]; 
+      _maxs[_maxs.length-1-i] = t;
     }
-    this.stats = _type==T_ENUM?new EnumStats(vec.domain().length):new NumStats(vec.mean(),vec.sigma(),_stat0._zeros,_mins,_maxs,_pctile);
+    this.stats = _type==T_ENUM ?
+      new EnumStats(vec.domain().length) :
+      new NumStats(vec.mean(), vec.sigma(), _stat0._zeros, _mins, _maxs, _pctile);
+
     if (_type == T_ENUM) {
       this.hstart = 0;
       this.hstep = 1;
@@ -300,7 +305,7 @@ public class Summary2 extends Iced {
       this.hstep  = _binsz;
       this.hbrk = new String[hcnt.length];
       for (int i = 0; i < hbrk.length; i++)
-        hbrk[i] = Utils.p2d(i==0?_start:binValue(i));
+        hbrk[i] = Utils.p2d(i==0 ? _start : binValue(i));
     }
   }
 
@@ -331,7 +336,7 @@ public class Summary2 extends Iced {
       hcnt2_min = new double[_domain.length];
       hcnt2_max = new double[_domain.length];
     } 
-    else if (!(Double.isNaN(stat0._min2) || Double.isNaN(stat0._max2))) {
+    else if ( !(Double.isNaN(stat0._min2) || Double.isNaN(stat0._max2)) ) {
       // guard against improper parse (date type) or zero c._sigma
       long N = _stat0._len - stat0._nas - stat0._nans - stat0._pinfs - stat0._ninfs;
       double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(N));
@@ -398,19 +403,16 @@ public class Summary2 extends Iced {
       // FIX! is this okay if the dynamic range is > 2**32
       // align to bin size?
       int nbin = (int) Math.ceil((stat0._max2 - _start)/_binsz) + 1;
-      
-
       double impliedBinEnd = _start + (nbin * _binsz);
       String assertMsg = _start+" "+_stat0._min2+" "+_stat0._max2+
         " "+impliedBinEnd+" "+_binsz+" "+nbin+" "+startSuggest+" "+nbinSuggest+" "+binCase;
-      // Log.info("Summary2 bin1. "+assertMsg);
+
+      // Log.debug("Summary2 bin1. "+assertMsg);
       assert _start <= _stat0._min2 : assertMsg;
       // just in case, make sure it's big enough
       assert nbin > 0: assertMsg;
-
       // just for double checking we're okay (nothing outside the bin rang)
       assert impliedBinEnd>=_stat0._max2 : assertMsg;
-
 
       // create a 2nd finer grained historam for quantile estimates.
       // okay if it is approx. 1000 bins (+-1)
@@ -428,7 +430,7 @@ public class Summary2 extends Iced {
 
       assertMsg = _start2+" "+_stat0._min2+" "+_stat0._max2+
         " "+impliedBinEnd2+" "+_binsz2+" "+nbin2;
-      // Log.info("Summary2 bin2. "+assertMsg);
+      // Log.debug("Summary2 bin2. "+assertMsg);
       assert _start2 <= stat0._min2 : assertMsg;
       assert nbin2 > 0 : assertMsg;
       // can't make any assertion about _start2 vs _start  (either can be smaller due to fp issues)
@@ -439,12 +441,13 @@ public class Summary2 extends Iced {
       hcnt2_min = new double[nbin2];
       hcnt2_max = new double[nbin2];
 
-      // Log.info("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
-      // Log.info("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
-      // Log.info("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
+      // Log.debug("Finer histogram has "+nbin2+" bins. Visible histogram has "+nbin);
+      // Log.debug("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
+      // Log.debug("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
 
-    } else { // vec does not contain finite numbers
-      Log.info("Summary2: NaN in stat0._min2: "+stat0._min2+" or stat0._max2: "+stat0._max2);
+    } 
+    else { // vec does not contain finite numbers
+      Log.debug("Summary2: NaN in stat0._min2: "+stat0._min2+" or stat0._max2: "+stat0._max2);
       // vec.min() wouldn't be any better here. It could be NaN? 4/13/14
       // _start = vec.min();
       // _start2 = vec.min();
@@ -521,17 +524,17 @@ public class Summary2 extends Iced {
         "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length+" "+val+" "+_start2+" "+_binsz2;
 
       if (hcnt2[binIdx2Int] == 0) {
-        // Log.info("New init: "+val+" for index "+binIdx2Int);
+        // Log.debug("New init: "+val+" for index "+binIdx2Int);
         hcnt2_min[binIdx2Int] = val;
         hcnt2_max[binIdx2Int] = val;
       }
       else {
         if (val < hcnt2_min[binIdx2Int]) {
-            // Log.info("New min: "+val+" for index "+binIdx2Int);
+            // Log.debug("New min: "+val+" for index "+binIdx2Int);
             hcnt2_min[binIdx2Int] = val;
         }
         if (val > hcnt2_max[binIdx2Int]) {
-            // if ( binIdx2Int == 500 ) Log.info("New max: "+val+" for index "+binIdx2Int);
+            // if ( binIdx2Int == 500 ) Log.debug("New max: "+val+" for index "+binIdx2Int);
             hcnt2_max[binIdx2Int] = val;
         }
       }
@@ -588,7 +591,6 @@ public class Summary2 extends Iced {
         }
       }
     }
-
 
     // merge hcnt2 per-bin maxs
     // other must be same length, but use it's length for safety
@@ -654,109 +656,222 @@ public class Summary2 extends Iced {
 
   // _start of each hcnt bin
   public double binValue(int b) { return _start + b*_binsz; }
+  // can we assert against something here?
+  // assert _gprows==htot2(0, 0) : "_gprows: "+_gprows+" htot2(): "+htot2(0, 0);
 
   // need to count >4B rows
-  private long htot2() { // same but for the finer histogram
+  private long htot2(long low, long high) {
     long cnt = 0;
     for (int i = 0; i < hcnt2.length; i++) cnt+=hcnt2[i];
+    // add the stuff outside the bins, 0,0 for single pass
+    cnt = cnt + low + high;
     return cnt;
   }
 
-  private void approxQuantiles(double[] qtiles, double[] thres){
+
+  //******************************************************************************
+  // NOTE: only works on a backfilled hcnt2, unlike Quantiles. eliminates nextK search
+  // The backfill is not done here, so it's only done once (because 10 calls here)
+  private double approxLikeInQuantiles(double threshold, double valStart, double valEnd) {
+    // Code is lifted from Quantiles.java, with only a little jiggering
+    // on the branches around forceBestApprox/interpolation type, and use of globals
+    // that have different names. Need to merge sometime.
+    // the 'intent' is to be the same as the single pass Quantiles approx, interpolation_type==-1
+
+    // max_qbins was the goal for sizing. 
+    // nbins2 was what was used for size, after various calcs
+    // just assume hcnt2 is the right length!
+    // Don't need at least two bins..since we'll always have 'some' answer
+    // are we being called on constant 0?
+    int maxBinCnt = hcnt2.length;
+    
+    // Find the row count we want to hit, within some bin.
+    long currentCnt = 0;
+    double targetCntFull = threshold * (_gprows-1);  //  zero based indexing
+    long targetCntInt = (long) Math.floor(targetCntFull);
+    double targetCntFract = targetCntFull  - (double) targetCntInt;
+    assert (targetCntFract>=0) && (targetCntFract<=1);
+    Log.debug("QS_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
+      
+    // walk thru and find out what bin to look inside
+    int k = 0;
+    while(k!=maxBinCnt && ((currentCnt + hcnt2[k]) <= targetCntInt)) {
+      // Log.debug("Q_ Looping for k: "+threshold+" "+k+" "+maxBinCnt+" "+currentCnt+" "+targetCntInt+
+      //   " "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+      currentCnt += hcnt2[k];
+      ++k;
+      // Note the loop condition covers the breakout condition:
+      // (currentCnt==targetCntInt && (hcnt2[k]!=0)
+      // also: don't go pass array bounds
+    }
+
+
+    assert hcnt2[k]!=0;
+    Log.debug("QS_ Found k (approx): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
+      " "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+
+    assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
+    assert hcnt2[k]!=1 || hcnt2_min[k]==hcnt2_max[k];
+
+    boolean done = false;
+    double guess = Double.NaN;
+    boolean interpolated = false;
+    double dDiff;
+
+    // special cases. If the desired row is the last of equal values in this bin (2 or more)
+    // we will need to intepolate with a nextK out-of-bin value
+    // we can't iterate, since it won't improve things and the bin-size will be zero!
+    // trying to resolve case of binsize=0 for next pass, after this, is flawed thinking.
+    // implies the values are not the same..end of bin interpolate to next
+    boolean atStartOfBin = hcnt2[k]>=1 && (currentCnt == targetCntInt);
+    boolean atEndOfBin = !atStartOfBin && (hcnt2[k]>=2 && ((currentCnt + hcnt2[k] - 1) == targetCntInt));
+    boolean inMidOfBin = !atStartOfBin && !atEndOfBin && (hcnt2[k]>=3) && (hcnt2_min[k]==hcnt2_max[k]);
+
+    boolean interpolateEndNeeded = false;
+    if ( atEndOfBin ) {
+      if ( targetCntFract != 0 ) {
+        interpolateEndNeeded = true;
+      }
+      else {
+        guess = hcnt2_max[k];
+        done = true;
+        Log.debug("QS_ Guess M "+guess);
+      }
+    }
+    else if ( inMidOfBin ) {
+      // if we know there is something before and after us with same value, 
+      // we never need to interpolate (only allowed when min=max
+      guess = hcnt2_min[k];
+      done = true;
+      Log.debug("QS_ Guess N "+guess);
+    }
+
+    if ( !done && atStartOfBin ) {
+      // no interpolation needed
+      if ( hcnt2[k]>2 && (hcnt2_min[k]==hcnt2_max[k]) ) { 
+        guess = hcnt2_min[k];
+        done = true;
+        Log.debug("QS_ Guess A "+guess);
+      } 
+      // min/max can be equal or not equal here
+      else if ( hcnt2[k]==2 ) { // interpolate between min/max for the two value bin
+        // type 7 (linear interpolation)
+        // Unlike mean, which just depends on two adjacent values, this adjustment  
+        // adds possible errors related to the arithmetic on the total # of rows.
+        dDiff = hcnt2_max[k] - hcnt2_min[k]; // two adjacent..as if sorted!
+        // targetCntFract is fraction of total rows
+        guess = hcnt2_min[k] + (targetCntFract * dDiff);
+
+        done = true;
+        interpolated = true;
+        Log.debug("QS_ Guess B "+guess+" targetCntFract: "+targetCntFract);
+      } 
+      // no interpolation needed
+      else if ( (hcnt2[k]==1) && (targetCntFract==0) ) {
+        assert hcnt2_min[k]==hcnt2_max[k];
+        guess = hcnt2_min[k];
+        done = true;
+        Log.debug("QS_ Guess C "+guess);
+      } 
+    }
+
+    // interpolate into a nextK value
+    // all the qualification is so we don't set done when we're not, for multipass
+    // interpolate from single bin, end of two entry bin, or for approx
+    boolean stillCanGetIt = atStartOfBin && hcnt2[k]==1 && targetCntFract!=0;
+    if ( !done ) {
+      if ( hcnt2[k]==1 ) {
+        assert hcnt2_min[k]==hcnt2_max[k];
+        Log.debug("QS_ Single value in this bin, but fractional means we need to interpolate to next non-zero");
+      }
+      if ( interpolateEndNeeded ) {
+        Log.debug("QS_ Interpolating off the end of a bin!");
+      }
+
+      double nextVal;
+      int nextK;
+      // if we're at the end
+      assert k < maxBinCnt : k+" "+maxBinCnt;
+      if ( (k+1)==maxBinCnt) {
+        Log.debug("QS_ Using valEnd for approx interpolate: "+valEnd);
+        nextVal = valEnd; // just in case the binning didn't max in a bin before the last
+      } 
+      else {
+        nextK = k + 1;
+        nextVal = hcnt2_min[nextK];
+        Log.debug("QS_ Using nextK for interpolate: "+nextK+" "+hcnt2_min[nextK]);
+        // hcnt2[nextK] may be zero here if we backfilled
+      }
+
+      // can still get an exact interpolation, when hcnt2[k]=2
+      if ( stillCanGetIt ) {
+        dDiff = nextVal - hcnt2_max[k]; // two adjacent, as if sorted!
+        // targetCntFract is fraction of total rows
+        guess = hcnt2_max[k] + (targetCntFract * dDiff);
+        interpolated = true;
+        done = true; //  has to be one above us when needed. (or we're at end)
+        Log.debug("QS_ Guess D "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
+          " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
+          " _gprows: " + _gprows+" "+stillCanGetIt);
+
+      }
+      else { // single pass approx..with unresolved bin
+        assert hcnt2[k]!=0 : hcnt2[k]+" "+k;
+        dDiff = (nextVal - hcnt2_min[k]) / hcnt2[k]; 
+        guess = hcnt2_min[k] + (targetCntFull-currentCnt) * dDiff;
+        interpolated = true;
+        done = true; //  has to be one above us when needed. (or we're at end)
+        Log.debug("QS_ Guess E "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
+          " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
+          " _gprows: " + _gprows);
+      }
+    }
+    assert !Double.isNaN(guess); // covers positive/negative inf also (if we divide by 0)
+    return guess;
+  }
+  //******************************************************************************
+  private void approxQuantiles(double[] qtiles, double[] thres, double valStart, double valEnd){
     // not called for enums
     assert _type != T_ENUM;
-    if ( hcnt2.length==0 ) return;
+
+    // hcnt2 may have been sized differently than the max_qbins goal
+    int maxBinCnt = hcnt2.length;
+    if ( maxBinCnt==0 ) return;
     // this would imply we didn't get anything correctly. Maybe real col with all NA?
-    if ( (hcnt2.length==1) && (hcnt2[0]==0) )  return;
+    if ( (maxBinCnt==1) && (hcnt2[0]==0) )  return;
 
-    int k = 0;
-    long s = 0;
-    double guess = 0;
-    double actualBinWidth = 0;
-    assert _gprows==htot2() : "_gprows: "+_gprows+" htot2(): "+htot2();
+    // Perf hack that is currently different than Quantiles.java
+    // back fill hcnt2_min where it's zero, so we can avoid the nextK search 
+    // when we need to interpolate. Keep hcnt2[k]=0 so we know not to use it 
+    // other than for getting nextK without searching. This is powerful
+    // because if we're getting 10 quantiles from a histogram, we don't 
+    // do searches to the end (potentially) for ever nextK find. This
+    // makes the Quantiles.java algo work well when reused for multiple quantiles
+    // here in Summary2
 
-    // One goal definition: (Excel?)
-    // Given a set of N ordered values {v[1], v[2], ...} and a requirement to 
-    // calculate the pth percentile, do the following:
-    // Calculate l = p(N-1) + 1
-    // Split l into integer and decimal components i.e. l = k + d
-    // Compute the required value as V = v[k] + d(v[k+1] - v[k])
+    // The use of nextK, rather than just our bin, improves accuracy for various cases.
+    // (mirroring what Quantiles does for perfect answers)
 
-    // walk up until we're at the bin that starts with the threshold, or right before
+    // start at the end. don't need to fill the 0 case ever, but should for consistency
+    double backfill = valEnd;
+    for (int b=(maxBinCnt-1); b>=0; --b) {
+      if ( hcnt2[b] == 0 ) {
+        hcnt2_min[b] = backfill;
+        // Log.debug("QS_ backfilling "+b+" "+backfill);
+      }
+      else {
+        backfill = hcnt2_min[b];
+      }
+    }
+
     for(int j = 0; j < thres.length; ++j) {
       // 0 okay for threshold?
       assert 0 <= thres[j] && thres[j] <= 1;
-      double s1 = Math.floor(thres[j] * (double) _gprows); 
-      if ( s1 == 0 ) {
-        s1 = 1; // always need at least one row
-      }
-      // what if _gprows is 0?. just return above?. Is it NAs?
-      // assert _gprows > 0 : _gprows;
-      if( _gprows == 0 ) return;
-      assert 1 <= s1 && s1 <= _gprows : s1+" "+_gprows;
-      // how come first bins can be 0? Fixed. problem was _start. Needed _start2. still can get some
-      while( (s+hcnt2[k]) < s1) { // important to be < here. case: 100 rows, getting 50% right.
-        s += hcnt2[k];
-        k++;
-      }
-      // Log.info("Found k: "+k+" "+s+" "+s1+" "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
-
-      // All possible bin boundary issues 
-      if ( s==s1 || hcnt2[k]==0 ) {
-        if ( hcnt2[k]!=0 ) {
-          guess = hcnt2_min[k];
-          // Log.info("Guess A: "+guess+" "+s+" "+s1);
-        }
-        else {
-          if ( k==0 ) { 
-            assert hcnt2[k+1]!=0 : "Unexpected state of starting hcnt2 bins";
-            guess = hcnt2_min[k+1];
-            // Log.info("Guess B: "+guess+" "+s+" "+s1);
-          }
-          else {
-            if ( hcnt2[k-1]!=0 ) {
-              guess = hcnt2_max[k-1];
-              // Log.info("Guess C: "+guess+" "+s+" "+s1);
-            }
-            else {
-              assert false : "Unexpected state of adjacent hcnt2 bins";
-            }
-          }
-        }
-      }
-      else {
-        // nonzero hcnt2[k] guarantees these are valid
-        actualBinWidth = hcnt2_max[k] - hcnt2_min[k];
-
-        // interpolate within the populated bin, assuming linear distribution
-        // since we have the actual min/max within a bin, we can be more accurate
-        // compared to using the bin boundaries
-        // Note actualBinWidth is 0 when all values are the same in a bin
-        // Interesting how we have a gap that we jump between max of one bin, and min of another.
-        guess = hcnt2_min[k] + actualBinWidth * ((s1 - s)/ hcnt2[k]);
-        // Log.info("Guess D: "+guess+" "+k+" "+hcnt2_min[k]+" "+actualBinWidth+" "+s+" "+s1+" "+hcnt2[k]);
-      }
-
-      qtiles[j] = guess;
-
-      // _maxs[5] is usually the biggest (not always)?  _mins[0] is the smallest
-      // oh..ugly. At this point, NaNs haven't been stripped. so we don't know that 
-      // the end of _maxs has the true max (if there is just 1-4 values in the data, 
-      // _maxs doens't get filled (legacy!). The NaNs and array length get flushed later.
-      // _maxs really should have been organized as big to small so biggest is always in 0.
-      // So find the last max before the nans
-      double trueMax = _maxs[0];
-      for(int p = 1; p < _maxs.length; ++p) {
-        if ( !Double.isNaN(_maxs[p]) ) trueMax = _maxs[p];
-      }
-
-      // might have fp tolerance issues here? but fp numbers should be exactly same?
-      // assert guess <= trueMax : guess+" "+trueMax;
-      // assert guess >= _mins[0] : guess+" "+_mins[0];
-      // Log.info("_mins[0]: "+_mins[0]+" trueMax: "+trueMax+" hcnt2[k]: "+hcnt2[k]+" hcnt2_min[k]: "+hcnt2_min[k]+
-      // " hcnt2_max[k]: "+hcnt2_max[k]+" _binsz2: "+_binsz2+" guess: "+guess+" k: "+k+"\n");
+      qtiles[j] = approxLikeInQuantiles(thres[j], valStart, valEnd);
     }
   }
+
+  //******************************************************************************
   // Compute majority categories for enums only
   public void computeMajorities() {
     if ( _type != T_ENUM ) return;

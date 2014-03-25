@@ -1094,7 +1094,7 @@ class ASTQtile extends ASTOp {
     double [] quantiles_to_do = new double[1];
 
     // some MULTIPASS conditionals needed if we were going to make this work for approx or exact
-    qbins1 = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd, MULTIPASS).doAll(xv)._qbins;
+    qbins1 = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd).doAll(xv)._qbins;
     for (double quantile : p) {
       // Don't need to reinit valStart/End now, because we saved the first qbins
       result = Double.NaN;
@@ -1105,7 +1105,7 @@ class ASTQtile extends ASTOp {
           if ( qbins1 == null ) break;
           // need to pass a different threshold now for each finishUp!
           quantiles_to_do[0] = quantile; // FIX! provide a single quantile entry?
-          qbins1[0].finishUp(xv, quantiles_to_do, INTERPOLATION);
+          qbins1[0].finishUp(xv, quantiles_to_do, INTERPOLATION, MULTIPASS);
           Log.debug("\nQ_ 1st multipass iteration: "+iteration+
             " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins1[0]._valBinSize);
           if ( qbins1[0]._done ) {
@@ -1119,7 +1119,7 @@ class ASTQtile extends ASTOp {
         if ( iteration > 1 ) {
           if ( qbinsM == null ) break;
           quantiles_to_do[0] = quantile; // FIX! provide a single quantile entry?
-          qbinsM[0].finishUp(xv, quantiles_to_do, INTERPOLATION);
+          qbinsM[0].finishUp(xv, quantiles_to_do, INTERPOLATION, MULTIPASS);
           Log.debug("\nQ_ multipass iteration: "+iteration+
             " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbinsM[0]._valBinSize);
           if ( qbinsM[0]._done ) {
@@ -1131,7 +1131,7 @@ class ASTQtile extends ASTOp {
           valEnd = qbinsM[0]._newValEnd;
         }
         // the 2-N map/reduces are here (with new start/ends. MULTIPASS is implied
-        qbinsM = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd, MULTIPASS).doAll(xv)._qbins;
+        qbinsM = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd).doAll(xv)._qbins;
       }
       qbinsM = null; // shouldn't need this?
       nc.addNum(result);
