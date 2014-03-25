@@ -954,7 +954,8 @@ h2o.confusionMatrix <- function(data, reference) {
 
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CONFUSION, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0)
   cm = lapply(res$cm[-length(res$cm)], function(x) { x[-length(x)] })
-  .build_cm(cm, res$actual_domain, res$predicted_domain, transpose = TRUE)
+  # .build_cm(cm, res$actual_domain, res$predicted_domain, transpose = TRUE)
+  .build_cm(cm, res$domain, transpose = TRUE)
 }
 
 h2o.hitRatio <- function(prediction, reference, k = 10, seed = 0) {
