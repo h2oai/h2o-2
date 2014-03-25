@@ -206,7 +206,7 @@ public class DeepLearningModel extends Model {
 
     // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
     boolean has_momenta() { return parameters.momentum_start != 0 || parameters.momentum_stable != 0; }
-    boolean adaDelta() { return parameters.rho > 0 && parameters.epsilon > 0; }
+    boolean adaDelta() { return parameters.adaptive_rate; }
     public final float[] get_weights(int i) { return weights[i]; }
     public final double[] get_biases(int i) { return biases[i]; }
     public final float[] get_weights_momenta(int i) { return weights_momenta[i]; }
@@ -265,7 +265,7 @@ public class DeepLearningModel extends Model {
       assert(num_input > 0);
       assert(num_output > 0);
       parameters = params;
-      if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and non-zero AdaDelta parameters at the same time.");
+      if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and adaptive rate at the same time.");
       final int layers=parameters.hidden.length;
       // units (# neurons for each layer)
       units = new int[layers+2];
@@ -296,7 +296,7 @@ public class DeepLearningModel extends Model {
         biases_momenta = new double[biases.length][];
         for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
       }
-      else {
+      else if (adaDelta()) {
         //AdaGrad
         if (E_dx2 != null) return;
         E_dx2 = new float[weights.length][];
