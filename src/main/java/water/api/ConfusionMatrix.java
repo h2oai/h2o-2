@@ -1,6 +1,9 @@
 package water.api;
 
-import water.*;
+import water.MRTask2;
+import water.Model;
+import water.Request2;
+import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.TransfVec;
@@ -68,14 +71,13 @@ public class ConfusionMatrix extends Request2 {
   @Override public Response serve() {
     Vec va = null,vp = null, avp = null;
     classification = vactual.isInt() && vpredict.isInt();
+    // Input handling
+    if( vactual==null || vpredict==null )
+      throw new IllegalArgumentException("Missing actual or predict!");
+    if (vactual.length() != vpredict.length())
+      throw new IllegalArgumentException("Both arguments must have the same length!");
 
     try {
-      // Input handling
-      if( vactual==null || vpredict==null )
-        throw new IllegalArgumentException("Missing actual or predict!");
-      if (vactual.length() != vpredict.length())
-        throw new IllegalArgumentException("Both arguments must have the same length!");
-
       if (classification) {
         // Create a new vectors - it is cheap since vector are only adaptation vectors
         va = vactual .toEnum(); // always returns TransfVec
