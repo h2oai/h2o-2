@@ -187,7 +187,8 @@ h2o.clusterStatus <- function(client) {
   
   jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
   jar_file <- paste('"', jar_file, '"', sep = "")
-  args <- c(paste("-Xmx", memory, sep=""),
+  args <- c(paste("-Xms", memory, sep=""),
+            paste("-Xmx", memory, sep=""),
             "-jar", jar_file,
             "-name", "H2O_started_from_R",
             "-ip", "127.0.0.1",

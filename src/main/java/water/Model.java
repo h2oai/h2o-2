@@ -280,7 +280,8 @@ public abstract class Model extends Lockable<Model> {
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    Frame  [] subVfr = vfr.subframe(names, Double.NaN); // select only supported columns, if column is missing replace it by constant column containing missing values.
+    // FIXME: Replacing in non-existant columns with 0s only makes sense for sparse data (SVMLight), otherwise we should either throw an exception or use NaNs...
+    Frame  [] subVfr = vfr.subframe(names, 0); // select only supported columns, if column is missing replace it with zeroes
     vfr = subVfr[0]; // extract only subframe but keep the rest for delete later
     Vec[] frvecs = vfr.vecs();
     boolean[] toEnum = new boolean[frvecs.length];

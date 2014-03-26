@@ -114,7 +114,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   protected void closeLocal() { }
 
   /** Internal field to track a range of remote nodes/JVMs to work on */
-  protected long _nodes;        // Bitset of NODEs to work on - remotely
+  protected short _nxx, _nhi;   // Range of Nodes to work on - remotely
+  private int addShift( int x ) { x += _nxx; int sz = H2O.CLOUD.size(); return x < sz ? x : x-sz; }
+  private int subShift( int x ) { x -= _nxx; int sz = H2O.CLOUD.size(); return x <  0 ? x+sz : x; }
   /** Internal field to track the left & right remote nodes/JVMs to work on */
   transient protected RPC<T> _nleft, _nrite;
   /** Internal field to track if this is a top-level local call */
@@ -230,9 +232,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   public final T dfork( int outputs, Frame fr, boolean run_local) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
-    if((_noutputs = outputs) > 0)_vid = fr.anyVec().group().reserveKeys(outputs);
+    if((_noutputs = outputs) > 0) _vid = fr.anyVec().group().reserveKeys(outputs);
     _fr = fr;                   // Record vectors to work on
-    _nodes = (1L<<H2O.CLOUD.size())-1; // Do Whole Cloud
+    _nxx = (short)H2O.SELF.index(); _nhi = (short)H2O.CLOUD.size(); // Do Whole Cloud
     _run_local = run_local;     // Run locally by copying data, or run globally?
     setupLocal0();              // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
@@ -278,16 +280,14 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _topLocal = true;
     // Check for global vs local work
     int selfidx = H2O.SELF.index();
-    _nodes &= ~(1L<<selfidx);   // Remove self from work set
-    if( !_run_local && _nodes != 0 ) { // Have global work?
-      int bc = Long.bitCount(_nodes);  // How many nodes to hand out work to
-      long xs=_nodes;
-      for( int i=0; i<bc>>1; i++ ) xs &= (xs-1); // Remove 1/2 the bits
-      long ys = _nodes & ~xs;   // Complement sets
+    int nlo = subShift(selfidx);
+    assert nlo < _nhi;
+    final int nmid = (nlo+_nhi)>>>1; // Mid-point
+    if( !_run_local && nlo+1 < _nhi ) { // Have global work?
       _profile._rpcLstart = System.currentTimeMillis();
-      if( xs!=0 ) _nleft = remote_compute(xs);
+      _nleft = remote_compute(nlo+1,nmid);
       _profile._rpcRstart = System.currentTimeMillis();
-      if( ys!=0 ) _nrite = remote_compute(ys);
+      _nrite = remote_compute( nmid,_nhi);
       _profile._rpcRdone  = System.currentTimeMillis();
     }
     _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
@@ -301,10 +301,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   // Make an RPC call to some node in the middle of the given range.  Add a
   // pending completion to self, so that we complete when the RPC completes.
-  private final RPC<T> remote_compute( long ns ) {
-    int node = Long.numberOfTrailingZeros(ns);
+  private final RPC<T> remote_compute( int nlo, int nhi ) {
+    // No remote work?
+    if( !(nlo < nhi) ) return null;
+    int node = addShift(nlo);
+    assert node != H2O.SELF.index();
     T rpc = clone();
-    rpc._nodes = ns;
+    rpc._nhi = (short)nhi;
     addToPendingCount(1);       // Not complete until the RPC returns
     // Set self up as needing completion by this RPC: when the ACK comes back
     // we'll get a wakeup.
@@ -424,14 +427,15 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _profile._localBlkDone = System.currentTimeMillis();
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
-    long ns = _nodes|(1L<<H2O.SELF.index()); // Save before copyOver crushes them
-    if( _res == null ) _nodes = -1L; // Flag for no local results *at all*
-    else if( _res != this ) {     // There is a local result, and its not self
-      _res._profile = _profile;   // Use my profile (not childs)
-      copyOver(_res);             // So copy into self
+    int nlo = subShift(H2O.SELF.index());
+    int nhi = _nhi;             // Save before copyOver crushes them
+    if( _res == null ) _nhi=-1; // Flag for no local results *at all*
+    else if( _res != this ) {   // There is a local result, and its not self
+      _res._profile = _profile; // Use my profile (not childs)
+      copyOver(_res);           // So copy into self
     }
     closeLocal();
-    if( ns == (1L<<H2O.CLOUD.size())-1)
+    if( nlo==0 && nhi == H2O.CLOUD.size() )
       postGlobal();
   }
 
@@ -445,9 +449,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // blocks.  Not much can be asserted there.
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
-    if( mrt._nodes != -1L )     // Any results at all?
+    if( mrt._nhi != -1L ) {     // Any results at all?
       if( _res == null ) _res = mrt;
       else _res.reduce4(mrt);
+    }
   }
 
   /** Call user's reduction.  Also reduce any new AppendableVecs.  Called
