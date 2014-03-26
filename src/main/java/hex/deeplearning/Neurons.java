@@ -2,9 +2,13 @@ package hex.deeplearning;
 
 import static hex.deeplearning.DeepLearning.Loss;
 import hex.FrameTask;
+import org.junit.Ignore;
+import org.junit.Test;
 import water.MemoryManager;
+import water.PrettyPrint;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -359,7 +363,7 @@ public abstract class Neurons {
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      gemv(_a, _w, _previous._a, _b, training);
+      gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       for( int o = 0; o < _a.length; o++ )
         _a[o] = 1. - 2. / (1. + Math.exp(2*_a[o])); //evals faster than tanh(x), but is slightly less numerically stable - OK
     }
@@ -451,7 +455,7 @@ public abstract class Neurons {
   public static class Rectifier extends Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      gemv(_a, _w, _previous._a, _b, training);
+      gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       for( int o = 0; o < _a.length; o++ )
         _a[o] = Math.max(_a[o], 0);
     }
@@ -504,7 +508,7 @@ public abstract class Neurons {
   public static class Softmax extends Output {
     public Softmax(int units) { super(units); }
     @Override protected void fprop() {
-      gemv(_a, _w, _previous._a, _b, false);
+      gemv(_a, _w, _previous._a, _b, null);
       final double max = Utils.maxValue(_a);
       double scale = 0;
       for( int o = 0; o < _a.length; o++ ) {
@@ -555,7 +559,7 @@ public abstract class Neurons {
   public static class Linear extends Output {
     public Linear(int units) { super(units); }
     @Override protected void fprop() {
-      gemv(_a, _w, _previous._a, _b, false);
+      gemv(_a, _w, _previous._a, _b, null);
     }
 
     /**
@@ -576,24 +580,132 @@ public abstract class Neurons {
   }
 
   /**
-   * Mat-Vec (with optional row dropout)
-   * @param res = A*x+y (pre-allocated, will be overwritten)
-   * @param a matrix rows x cols
+   * Mat-Vec Plus Add (with optional row dropout)
+   * @param res = a*x+y (pre-allocated, will be overwritten)
+   * @param a matrix of size rows x cols
    * @param x vector of length cols
    * @param y vector of length rows
-   * @param consider_dropout whether to consider dropout (i.e, _dropout, can be null)
+   * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  void gemv(final double[] res, final float[] a, final double[] x, final double[] y, boolean consider_dropout) {
+  static void gemv_naive(final double[] res, final float[] a, final double[] x, final double[] y, byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
     for(int r = 0; r<rows; r++) {
       res[r] = 0;
-      if( !consider_dropout || _dropout == null || _dropout.unit_active(r) ) {
-        for(int i = 0; i<cols; i++)
-          res[r] += a[r*cols+i] * x[i];
-        res[r] += y[r];
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      for(int i = 0; i<cols; i++)
+        res[r] += a[r*cols+i] * x[i];
+      res[r] += y[r];
+    }
+  }
+
+  /**
+   * Optimized Mat-Vec Plus Add (with optional row dropout)
+   * @param res = a*x+y (pre-allocated, will be overwritten)
+   * @param a matrix of size rows x cols
+   * @param x vector of length cols
+   * @param y vector of length rows
+   * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
+   */
+  static void gemv(double[] res, float [] a, double [] x, final double[] y, byte[] row_bits) {
+    final int cols = x.length;
+    final int rows = y.length;
+    assert(res.length == rows);
+    final int extra=cols-cols%8;
+    final int multiple = (cols/8)*8-1;
+    int idx = 0;
+    for (int r = 0; r<rows; r++) {
+      res[r] = 0;
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) {
+        idx += cols;
+        continue;
       }
+      double psum1 = 0;
+      double psum2 = 0;
+      double psum3 = 0;
+      for (int c = 0; c < multiple; c += 4) {
+        int off = idx + c;
+        res[r] += a[off    ] * x[c    ] + a[off + 1] * x[c + 1];
+        psum1  += a[off + 2] * x[c + 2] + a[off + 3] * x[c + 3];
+        c += 4;
+        off += 4;
+        psum2  += a[off    ] * x[c    ] + a[off + 1] * x[c + 1];
+        psum3  += a[off + 2] * x[c + 2] + a[off + 3] * x[c + 3];
+      }
+      for (int j = extra; j < cols; j++)
+        res[r] += a[idx + j] * x[j];
+      res[r] += psum1 + psum2 + psum3 + y[r];
+      idx += cols;
+    }
+  }
+
+  // Test mat-vec performance
+  static public class MatVecTester {
+    @Test
+    @Ignore
+    public void run() {
+      int rows = 2048;
+      int cols = 1024;
+      int loops = 1000;
+
+      float [] a = new float[rows*cols];
+      double [] x = new double[cols];
+      double [] y = new double[rows];
+      double [] res = new double[rows];
+      byte [] bits = new byte[rows];
+
+      for (int i=0;i<rows;++i) {
+        y[i] = 0;
+        res[i] = 0;
+        bits[i] = (byte)(new String("abcdefghijklmnopqrstuvwxyz").toCharArray()[i%26]);
+      }
+      for (int i=0;i<cols;++i) {
+        x[i] = ((float)i)/cols;
+      }
+      for (int i=0;i<rows;++i) {
+        int off = i*cols;
+        for (int j=0;j<cols;++j) {
+          a[off+j] = ((float)(i+j))/cols;
+        }
+      }
+      /**
+       * naive version
+       */
+      double sum = 0;
+      //warmup
+      for (int l=0;l<loops;++l) {
+        gemv_naive(res, a, x, y, bits);
+        sum += res[rows/2];
+      }
+      System.gc();
+      sum = 0;
+      long start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv_naive(res, a, x, y, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      Log.info("result: " + sum + " and " + Utils.sum(res));
+      Log.info("Naive time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+
+      /**
+       * optimized version
+       */
+      sum = 0;
+      //warmup
+      for (int l=0;l<loops;++l) {
+        gemv(res, a, x, y, bits);
+        sum += res[rows/2];
+      }
+      System.gc();
+      sum = 0;
+      start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv(res, a, x, y, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      Log.info("result: " + sum + " and " + Utils.sum(res));
+      Log.info("Optimized time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
     }
   }
 
