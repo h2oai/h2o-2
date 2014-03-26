@@ -25,11 +25,11 @@ public abstract class Layer extends Iced {
   protected NeuralNet params;
 
   // Layer state: activity, error
-  protected transient double[] _a, _e;
+  protected transient float[] _a, _e;
 
   // Shared state: weights and biases (and their momenta)
   protected transient float[] _w, _wm;
-  protected transient double[] _b, _bm;
+  protected transient float[] _b, _bm;
 
   // Previous and input layers
   protected transient Layer _previous;
@@ -81,7 +81,7 @@ public abstract class Layer extends Iced {
     }
 
     // for input layer
-    public void randomlySparsifyActivation(double[] a, double rate, long seed) {
+    public void randomlySparsifyActivation(float[] a, double rate, long seed) {
       if (rate == 0) return;
       setSeed(seed);
       for( int i = 0; i < a.length; i++ )
@@ -112,9 +112,9 @@ public abstract class Layer extends Iced {
 
   public void init(Layer[] ls, int index, boolean weights) {
     params.rate *= Math.pow(params.rate_decay, index-1);
-    _a = new double[units];
+    _a = new float[units];
     if (!(this instanceof Output) && !(this instanceof Input)) {
-      _e = new double[units];
+      _e = new float[units];
     }
     _previous = ls[index - 1];
     _input = (Input) ls[0];
@@ -125,10 +125,10 @@ public abstract class Layer extends Iced {
 
     if( weights ) {
       _w = new float[units * _previous.units];
-      _b = new double[units];
+      _b = new float[units];
       if( params.momentum_start != 0 || params.momentum_stable != 0 ) {
         _wm = new float[_w.length];
-        _bm = new double[_b.length];
+        _bm = new float[_b.length];
       }
     }
   }
@@ -257,7 +257,7 @@ public abstract class Layer extends Iced {
     protected long _pos, _len;
 
     @Override public void init(Layer[] ls, int index, boolean weights) {
-      _a = new double[units];
+      _a = new float[units];
       dropout = new Dropout(units);
     }
 
@@ -389,7 +389,7 @@ public abstract class Layer extends Iced {
     @Override public void map(Chunk[] cs) {
       _means = new double[_units];
       _sigms = new double[_units];
-      double[] a = new double[_means.length];
+      float[] a = new float[_means.length];
       for( int r = 0; r < cs[0]._len; r++ ) {
         ChunksInput.set(cs, a, r, _subs, _muls, _categoricals_lens, _categoricals_mins);
         for( int c = 0; c < a.length; c++ )
@@ -451,7 +451,7 @@ public abstract class Layer extends Iced {
       if (training) inputDropout(seed);
     }
 
-    static void set(Chunk[] chunks, double[] a, int row, double[] subs, double[] muls, int[] catLens, int[] catMins) {
+    static void set(Chunk[] chunks, float[] a, int row, double[] subs, double[] muls, int[] catLens, int[] catMins) {
       int n = 0;
       // loop over all columns
       for( int i = 0; i < catLens.length; i++ ) {
@@ -461,15 +461,15 @@ public abstract class Layer extends Iced {
           //numerical value: normalize
           d -= subs[n];
           d *= muls[n];
-          a[n++] = missing ? 0 : d;
+          a[n++] = missing ? 0f : (float)d;
         } else {
           // categorical values: use precomputed stats
           int cat = catLens[i];
           for( int c = 0; c < cat; c++ )
-            a[n + c] = missing ? 0 : -subs[n + c];
+            a[n + c] = missing ? 0f : (float)-subs[n + c];
           int c = (int) d - catMins[i] - 1;
           if( c >= 0 )
-            a[n + c] = missing ? 0 : (1 - subs[n + c]) * muls[n + c];
+            a[n + c] = missing ? 0f : (float)((1 - subs[n + c]) * muls[n + c]);
           n += cat;
         }
       }
@@ -512,7 +512,7 @@ public abstract class Layer extends Iced {
       }
       double scale = 0;
       for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = Math.exp(_a[o] - max);
+        _a[o] = (float)Math.exp(_a[o] - max);
         scale += _a[o];
       }
       for( int o = 0; o < _a.length; o++ )
@@ -687,7 +687,7 @@ public abstract class Layer extends Iced {
 //          _a[o] = (_a[o] * b) / (a * b + 24);
 
           // use this identity: tanh = 2*sigmoid(2*x) - 1, evaluates faster than tanh(x)
-           _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
+           _a[o] = -1f + (2f / (1f + (float)Math.exp(-2 * _a[o])));
 
 //          _a[o] = Math.tanh(_a[o]); //slow
         }
@@ -732,7 +732,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       // Auto encoder has its own bias vector
-      _b = new double[units];
+      _b = new float[units];
     }
 
     @Override protected void fprop(long seed, boolean training) {
@@ -741,7 +741,7 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _previous._a.length; i++ )
           _a[o] += _w[i * _a.length + o] * _previous._a[i];
         _a[o] += _b[o];
-        _a[o] = Math.tanh(_a[o]);
+        _a[o] = (float)Math.tanh(_a[o]);
       }
     }
 
@@ -771,17 +771,17 @@ public abstract class Layer extends Iced {
       if( weights ) {
         randomize(params.seed + 0xBAD5EED + index, 1.0f);
         for( int i = 0; i < _b.length; i++ )
-          _b[i] = index == 1 ? 0.5 : 1;
+          _b[i] = index == 1 ? 0.5f : 1f;
       }
     }
 
     @Override protected void fprop(long seed, boolean training) {
-      double max = 0;
+      float max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         if( !training || dropout == null || dropout.unit_active(o)) {
           final int off = o * _previous._a.length;
-          _a[o] = Double.NEGATIVE_INFINITY;
+          _a[o] = Float.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] = Math.max(_a[o], _w[off+i] * _previous._a[i]);
           _a[o] += _b[o];
@@ -826,7 +826,7 @@ public abstract class Layer extends Iced {
       if( weights ) {
         randomize(params.seed + 0xBAD5EED + index, 1.0f);
         for( int i = 0; i < _b.length; i++ )
-          _b[i] = index == 1 ? 0.5 : 1;
+          _b[i] = index == 1 ? 0.5f : 1f;
       }
     }
 
@@ -875,9 +875,9 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights) {
       super.init(ls, index, weights);
       // Auto encoder has its own bias vector
-      _b = new double[units];
+      _b = new float[units];
       for( int i = 0; i < _b.length; i++ )
-        _b[i] = index == 1 ? 0.5 : 1;
+        _b[i] = index == 1 ? 0.5f : 1f;
     }
 
     @Override protected void fprop(long seed, boolean training) {
@@ -893,18 +893,18 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      float m = (float)momentum(processed);
+      float r = (float)rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         assert _previous._previous.units == units;
-        double e = _previous._previous._a[u] - _a[u];
-        double g = e;//* (1 - _a[o]) * _a[o];
+        float e = _previous._previous._a[u] - _a[u];
+        float g = e;//* (1 - _a[o]) * _a[o];
         //double g = e * (1 - _a[o]) * _a[o]; // Square error
         double r2 = 0;
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + u;
           if( _previous._e != null ) _previous._e[i] += g * _w[w];
-          double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
+          float d = g * _previous._a[i] - (float)(_w[w] * params.l2) - (float)(Math.signum(_w[w]) * params.l1);
           _w[w] += r * d;
           if (params.max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
         }
