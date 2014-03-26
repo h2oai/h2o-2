@@ -1,5 +1,6 @@
-package samples;
+package samples.expert;
 
+import static water.util.MRUtils.sampleFrame;
 import hex.deeplearning.DeepLearning;
 import water.Job;
 import water.TestUtil;
@@ -8,22 +9,20 @@ import water.util.Log;
 
 import java.util.Random;
 
-import static water.util.MRUtils.sampleFrame;
-
 /**
  * Runs a neural network on the MNIST dataset.
  */
 public class DeepLearningMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = DeepLearningMnist.class;
-//    samples.launchers.CloudLocal.launch(job, 1);
+    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
-    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.164");
-//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
 //    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
@@ -51,6 +50,7 @@ public class DeepLearningMnist extends Job {
     p.epochs = 10000;
     p.l1 = 1e-5;
     p.l2 = 0;
+    p.adaptive_rate = false;
     p.momentum_start = 0.5;
     p.momentum_ramp = 1800000;
     p.momentum_stable = 0.99;
@@ -66,10 +66,10 @@ public class DeepLearningMnist extends Job {
     p.response = trainf.lastVec();
     p.ignored_cols = null;
     p.mini_batch = 240000;
-    p.score_interval = 60;
+    p.score_interval = 30;
 
     p.fast_mode = true; //to match old NeuralNet behavior
-    p.ignore_const_cols = true;
+    p.ignore_const_cols = false; //to match old NeuralNet behavior
     p.shuffle_training_data = false;
     p.force_load_balance = true;
     p.quiet_mode = false;

@@ -112,7 +112,7 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
             delimiter=',',
             skip_header=1 if skipHeader else 0,
             dtype=None) # guess!
-        print "shape:", target.shape()
+        # print "shape:", target.shape()
 
     else:
         print "Using python csv reader"

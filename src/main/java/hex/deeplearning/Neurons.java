@@ -95,14 +95,13 @@ public abstract class Neurons {
       assert (!training || _dropout != null);
     } else {
       assert(_previous != null);
-      if (params.momentum_stable != 0 || params.momentum_start != 0) {
-        assert(_minfo.has_momenta());
+      if (_minfo.has_momenta()) {
         assert(_wm != null);
         assert(_bm != null);
         assert(_E_dx2 == null);
         assert(_E_g2 == null);
       }
-      if (params.rho > 0 || params.epsilon > 0) {
+      if (_minfo.adaDelta()) {
         if (params.rho == 0) throw new IllegalArgumentException("rho must be > 0 if epsilon is >0.");
         if (params.epsilon == 0) throw new IllegalArgumentException("epsilon must be > 0 if rho is >0.");
         assert(_minfo.adaDelta());
@@ -170,14 +169,15 @@ public abstract class Neurons {
    * This method adds the dnet/dw = activation term per unit
    * @param u unit (which neuron)
    * @param g partial derivative dE/dnet = dE/dy * dy/net
+   * @param r rate
+   * @param m momentum
    */
-  final void bprop(int u, double g) {
-    final long processed = _minfo.get_processed_total();
-    double m = 0, r = 0;
-    // No ADADELTA
-    if (_E_dx2 == null || _E_g2 == null) {
-      m = momentum(processed);
-      r = rate(processed) * (1 - m);
+  final void bprop(int u, double g, double r, double m) {
+    // only correct weights if the gradient is large enough
+    if (params.fast_mode || (
+            // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
+            !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
+      if (Math.abs(g) <= 1e-10) return;
     }
 
 //    Log.info("bprop(u=" + u + ", g=" + g + ", r=" + r + ", m=" + m);
@@ -236,7 +236,6 @@ public abstract class Neurons {
         _w[w] += r * d;
 //        Log.info("w[" + w + "] += " + r + " * " + d + " = " + _w[w]);
       }
-      if (Double.isInfinite(_w[w])) _minfo.set_unstable();
       if (params.max_w2 != Double.POSITIVE_INFINITY)
         r2 += _w[w] * _w[w];
     }
@@ -360,31 +359,19 @@ public abstract class Neurons {
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = 0;
-        final int off = o * _previous._a.length;
-        if( !training || _dropout == null || _dropout.unit_active(o) ) {
-          for( int i = 0; i < _previous._a.length; i++ ) {
-            _a[o] += _w[off+i] * _previous._a[i];
-          }
-          _a[o] += _b[o];
-
-          // tanh approx, slightly faster, untested
-//          double a = Math.abs(_a[o]);
-//          double b = 12 + a * (6 + a * (3 + a));
-//          _a[o] = (_a[o] * b) / (a * b + 24);
-
-          _a[o] = 1. - 2. / (1. + Math.exp(2*_a[o])); //faster (less accurate, but fine for values that matter)
-//          _a[o] = Math.tanh(_a[o]); //slow (too accurate)
-        }
-      }
+      gemv(_a, _w, _previous._a, _b, training);
+      for( int o = 0; o < _a.length; o++ )
+        _a[o] = 1. - 2. / (1. + Math.exp(2*_a[o])); //evals faster than tanh(x), but is slightly less numerically stable - OK
     }
     @Override protected void bprop() {
+      final long processed = _minfo.get_processed_total();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
         // dy/dnet = (1 - a^2) for y(net) = tanh(net)
         double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-a^2
-        bprop(u, g);
+        bprop(u, g, r, m);
       }
     }
   }
@@ -428,11 +415,14 @@ public abstract class Neurons {
       if( max > 1 ) Utils.div(_a, max);
     }
     @Override protected void bprop() {
+      final long processed = _minfo.get_processed_total();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         double g = _e[u];
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
 //                    g = 0;
-        bprop(u, g);
+        bprop(u, g, r, m);
       }
     }
   }
@@ -461,35 +451,19 @@ public abstract class Neurons {
   public static class Rectifier extends Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = 0;
-        final int off = o * _previous._a.length;
-        if( !training || _dropout == null || _dropout.unit_active(o) ) {
-          for( int i = 0; i < _previous._a.length; i++ )
-            _a[o] += _w[off+i] * _previous._a[i];
-          _a[o] += _b[o];
-          _a[o] = Math.max(_a[o], 0);
-        }
-      }
+      gemv(_a, _w, _previous._a, _b, training);
+      for( int o = 0; o < _a.length; o++ )
+        _a[o] = Math.max(_a[o], 0);
     }
 
     @Override protected void bprop() {
+      final long processed = _minfo.get_processed_total();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-
-        // no need to update the weights if there are no momenta and l1=0 and l2=0
-        if (params.fast_mode || (_wm == null && params.l1 == 0.0 && params.l2 == 0.0)) {
-          if( _a[u] > 0 ) { // don't use >= (faster this way: lots of zeros)
-            final double g = _e[u]; // * 1.0 (from derivative of rectifier)
-            bprop(u, g);
-          }
-        }
-        // if we have momenta or l1 or l2, then EVEN for g=0, there will be contributions to the weight updates
-        // Note: this is slower than always doing the shortcut above, and might not affect the accuracy much
-        else {
-          final double g = _a[u] > 0 ? _e[u] : 0;
-          bprop(u, g);
-        }
+        final double g = _a[u] > 0 ? _e[u] : 0;
+        bprop(u, g, r, m);
       }
     }
   }
@@ -530,16 +504,8 @@ public abstract class Neurons {
   public static class Softmax extends Output {
     public Softmax(int units) { super(units); }
     @Override protected void fprop() {
-      double max = Double.NEGATIVE_INFINITY;
-      for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = 0;
-        final int off = o * _previous._a.length;
-        for( int i = 0; i < _previous._a.length; i++ )
-          _a[o] += _w[off+i] * _previous._a[i];
-        _a[o] += _b[o];
-        if( max < _a[o] )
-          max = _a[o];
-      }
+      gemv(_a, _w, _previous._a, _b, false);
+      final double max = Utils.maxValue(_a);
       double scale = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = Math.exp(_a[o] - max);
@@ -552,7 +518,6 @@ public abstract class Neurons {
       }
     }
 
-
     /**
      * Backpropagation for classification
      * Update every weight as follows: w += -rate * dE/dw
@@ -561,6 +526,9 @@ public abstract class Neurons {
      */
     protected void bprop(int target) {
 //      if (target == missing_int_value) return; //ignore missing response values
+      final long processed = _minfo.get_processed_total();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
       double g; //partial derivative dE/dy * dy/dnet
       for( int u = 0; u < _a.length; u++ ) {
         final double t = (u == target ? 1 : 0);
@@ -576,7 +544,7 @@ public abstract class Neurons {
           g = (t - y) * (1 - y) * y;
         }
         // this call expects dE/dnet
-        bprop(u, g);
+        bprop(u, g, r, m);
       }
     }
   }
@@ -587,14 +555,7 @@ public abstract class Neurons {
   public static class Linear extends Output {
     public Linear(int units) { super(units); }
     @Override protected void fprop() {
-      assert(_a.length == 1);
-      int o = 0;
-      _a[o] = 0;
-      final int off = o * _previous._a.length;
-      for( int i = 0; i < _previous._a.length; i++ ) {
-        _a[o] += _w[off+i] * _previous._a[i];
-      }
-      _a[o] += _b[o];
+      gemv(_a, _w, _previous._a, _b, false);
     }
 
     /**
@@ -607,7 +568,32 @@ public abstract class Neurons {
       final int u = 0;
       // Computing partial derivative: dE/dnet = dE/dy * dy/dnet = dE/dy * 1
       final double g = target - _a[u]; //for MSE -dMSE/dy = target-y
-      bprop(u, g);
+      final long processed = _minfo.get_processed_total();
+      double m = momentum(processed);
+      double r = rate(processed) * (1 - m);
+      bprop(u, g, r, m);
+    }
+  }
+
+  /**
+   * Mat-Vec (with optional row dropout)
+   * @param res = A*x+y (pre-allocated, will be overwritten)
+   * @param a matrix rows x cols
+   * @param x vector of length cols
+   * @param y vector of length rows
+   * @param consider_dropout whether to consider dropout (i.e, _dropout, can be null)
+   */
+  void gemv(final double[] res, final float[] a, final double[] x, final double[] y, boolean consider_dropout) {
+    final int cols = x.length;
+    final int rows = y.length;
+    assert(res.length == rows);
+    for(int r = 0; r<rows; r++) {
+      res[r] = 0;
+      if( !consider_dropout || _dropout == null || _dropout.unit_active(r) ) {
+        for(int i = 0; i<cols; i++)
+          res[r] += a[r*cols+i] * x[i];
+        res[r] += y[r];
+      }
     }
   }
 

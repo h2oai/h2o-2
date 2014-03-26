@@ -2296,7 +2296,7 @@ class H2O(object):
         print csvPathname, "size:", h2o_util.file_size_formatted(csvPathname)
 
     # shouldn't need params
-    def log_download(self, logDir=None, timeoutSecs=5, **kwargs):
+    def log_download(self, logDir=None, timeoutSecs=30, **kwargs):
         if logDir == None:
             logDir = LOG_DIR # normally sandbox
 

@@ -393,13 +393,14 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 
     # Construct confusion matrix
     cm_ind = trunc(100*result$best_threshold) + 1
-    temp = data.frame(t(sapply(valid$'_cms'[[cm_ind]]$'_arr', c)))
-    temp[,3] = c(temp[1,2], temp[2,1])/apply(temp, 1, sum)
-    temp[3,] = c(temp[2,1], temp[1,2], 0)/apply(temp, 2, sum)
-    temp[3,3] = (temp[1,2] + temp[2,1])/valid$nobs
-    dn = list(Actual = c("false", "true", "Err"), Predicted = c("false", "true", "Err"))
-    dimnames(temp) = dn
-    result$confusion = temp
+#     temp = data.frame(t(sapply(valid$'_cms'[[cm_ind]]$'_arr', c)))
+#     temp[,3] = c(temp[1,2], temp[2,1])/apply(temp, 1, sum)
+#     temp[3,] = c(temp[2,1], temp[1,2], 0)/apply(temp, 2, sum)
+#     temp[3,3] = (temp[1,2] + temp[2,1])/valid$nobs
+#     dn = list(Actual = c("false", "true", "Err"), Predicted = c("false", "true", "Err"))
+#     dimnames(temp) = dn
+#    result$confusion = temp
+    result$confusion = .build_cm(valid$'_cms'[[cm_ind]]$'_arr', c("false", "true"))
   }
   return(result)
 }
@@ -953,7 +954,20 @@ h2o.confusionMatrix <- function(data, reference) {
 
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CONFUSION, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0)
   cm = lapply(res$cm[-length(res$cm)], function(x) { x[-length(x)] })
-  .build_cm(cm, res$actual_domain, res$predicted_domain, transpose = TRUE)
+  # .build_cm(cm, res$actual_domain, res$predicted_domain, transpose = TRUE)
+  .build_cm(cm, res$domain, transpose = TRUE)
+}
+
+h2o.hitRatio <- function(prediction, reference, k = 10, seed = 0) {
+  if(!class(prediction) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("prediction must be an H2O parsed dataset")
+  if(!class(reference) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("reference must be an H2O parsed dataset")
+  if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
+  if(!is.numeric(k) || k < 1) stop("max_k must be an integer greater than 0")
+  if(!is.numeric(seed)) stop("seed must be numeric")
+
+  res = .h2o.__remoteSend(prediction@h2o, .h2o.__PAGE_HITRATIO, actual = reference@key, vactual = 0, predict = prediction@key, max_k = k, seed = seed)
+  temp = res$hit_ratios; names(temp) = make.names(res$actual_domain)
+  return(temp)
 }
 
 h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
