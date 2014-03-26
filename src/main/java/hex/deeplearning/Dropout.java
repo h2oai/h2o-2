@@ -33,7 +33,7 @@ public class Dropout {
   }
 
   // for input layer
-  public void randomlySparsifyActivation(double[] a, double rate, long seed) {
+  public void randomlySparsifyActivation(float[] a, double rate, long seed) {
     if (rate == 0) return;
     setSeed(seed);
     for( int i = 0; i < a.length; i++ )
@@ -59,21 +59,21 @@ public class Dropout {
   @Test
   public void test() throws Exception {
     final int units = 1000;
-    double[] a = new double[units];
+    float[] a = new float[units];
     double sum1=0, sum2=0, sum3=0, sum4=0;
 
     final int loops = 10000;
     for (int l = 0; l < loops; ++l) {
       Dropout d = new Dropout(units);
       long seed = new Random().nextLong();
-      Arrays.fill(a, 1.);
-      d.randomlySparsifyActivation(a, 0.3, seed);
+      Arrays.fill(a, 1f);
+      d.randomlySparsifyActivation(a, 0.3f, seed);
       sum1 += water.util.Utils.sum(a);
-      Arrays.fill(a, 1.);
-      d.randomlySparsifyActivation(a, 0.0, seed+1);
+      Arrays.fill(a, 1f);
+      d.randomlySparsifyActivation(a, 0.0f, seed+1);
       sum2 += water.util.Utils.sum(a);
-      Arrays.fill(a, 1.);
-      d.randomlySparsifyActivation(a, 1.0, seed+2);
+      Arrays.fill(a, 1f);
+      d.randomlySparsifyActivation(a, 1.0f, seed+2);
       sum3 += water.util.Utils.sum(a);
       d.fillBytes(seed+3);
       for (int i=0; i<units; ++i)

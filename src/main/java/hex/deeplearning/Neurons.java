@@ -8,7 +8,6 @@ import water.MemoryManager;
 import water.PrettyPrint;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -55,7 +54,7 @@ public abstract class Neurons {
   /**
    * Layer state (one per neuron): activity, error
    */
-  public transient double[] _a, _e;
+  public transient float[] _a, _e;
 
   /**
    * References for feed-forward connectivity
@@ -63,11 +62,11 @@ public abstract class Neurons {
   public Neurons _previous; // previous layer of neurons
   DeepLearningModel.DeepLearningModelInfo _minfo; //reference to shared model info
   public float[] _w; //reference to _minfo.weights[layer] for convenience
-  public double[] _b; //reference to _minfo.biases[layer] for convenience
+  public float[] _b; //reference to _minfo.biases[layer] for convenience
 
   // momentum
   float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
-  private double[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
+  private float[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
 
   // ADADELTA
   private float[] _E_dx2; //reference to _minfo.E_dx2[layer] for convenience
@@ -131,9 +130,9 @@ public abstract class Neurons {
   public final void init(Neurons[] neurons, int index, DeepLearning p, final DeepLearningModel.DeepLearningModelInfo minfo, boolean training) {
     params = (DeepLearning)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
-    _a = new double[units];
+    _a = new float[units];
     if (!(this instanceof Output) && !(this instanceof Input)) {
-      _e = new double[units];
+      _e = new float[units];
     }
     if (training && (this instanceof MaxoutDropout || this instanceof TanhDropout
             || this instanceof RectifierDropout || this instanceof Input) ) {
@@ -176,7 +175,7 @@ public abstract class Neurons {
    * @param r rate
    * @param m momentum
    */
-  final void bprop(int u, double g, double r, double m) {
+  final void bprop(int u, float g, float r, float m) {
     // only correct weights if the gradient is large enough
     if (params.fast_mode || (
             // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
@@ -201,8 +200,8 @@ public abstract class Neurons {
         assert(_wm == null && _bm == null);
         final double grad = d;
         _E_g2[w] = (float)(params.rho * _E_g2[w] + (1.-params.rho)*grad*grad);
-        final double RMS_dx = Math.sqrt(_E_dx2[w]+params.epsilon);
-        final double RMS_g = Math.sqrt(_E_g2[w]+params.epsilon);
+        final float RMS_dx = (float)Math.sqrt(_E_dx2[w]+params.epsilon);
+        final float RMS_g = (float)Math.sqrt(_E_g2[w]+params.epsilon);
         r = RMS_dx/RMS_g;
         _E_dx2[w] = (float)(params.rho * _E_dx2[w] + (1.-params.rho)*(r*d)*(r*d));
       }
@@ -249,7 +248,7 @@ public abstract class Neurons {
     }
 
     if (!params.nesterov_accelerated_gradient) {
-      final double delta = r * g;
+      final float delta = r * g;
       _b[u] += delta;
       if( _bm != null ) {
         _b[u] += m * _bm[u];
@@ -272,8 +271,8 @@ public abstract class Neurons {
    * @param n The number of training samples seen so far (for rate_annealing > 0)
    * @return Learning rate
    */
-  public double rate(long n) {
-    return params.rate / (1 + params.rate_annealing * n);
+  public float rate(long n) {
+    return (float)(params.rate / (1 + params.rate_annealing * n));
   }
 
   /**
@@ -282,7 +281,7 @@ public abstract class Neurons {
    * @param n The number of training samples seen so far
    * @return momentum
    */
-  public double momentum(long n) {
+  public float momentum(long n) {
     double m = params.momentum_start;
     if( params.momentum_ramp > 0 ) {
       if( n >= params.momentum_ramp )
@@ -290,7 +289,7 @@ public abstract class Neurons {
       else
         m += (params.momentum_stable - params.momentum_start) * n / params.momentum_ramp;
     }
-    return m;
+    return (float)m;
   }
 
   /**
@@ -305,7 +304,7 @@ public abstract class Neurons {
     Input(int units, final FrameTask.DataInfo d) {
       super(units);
       _dinfo = d;
-      _a = new double[units];
+      _a = new float[units];
     }
 
     @Override protected void bprop() { throw new UnsupportedOperationException(); }
@@ -344,9 +343,9 @@ public abstract class Neurons {
      *             (This allows this array to be re-usable by the caller, without re-allocating each time)
      */
     public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
-      Arrays.fill(_a, 0.);
-      for (int i=0; i<numcat; ++i) _a[cats[i]] = 1.0;
-      for (int i=0; i<nums.length; ++i) _a[_dinfo.numStart()+i] = Double.isNaN(nums[i]) ? 0 : nums[i];
+      Arrays.fill(_a, 0f);
+      for (int i=0; i<numcat; ++i) _a[cats[i]] = 1f;
+      for (int i=0; i<nums.length; ++i) _a[_dinfo.numStart()+i] = Double.isNaN(nums[i]) ? 0f : (float)nums[i];
 
       // Input Dropout
       final double rate = params.input_dropout_ratio;
@@ -365,16 +364,16 @@ public abstract class Neurons {
     @Override protected void fprop(long seed, boolean training) {
       gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       for( int o = 0; o < _a.length; o++ )
-        _a[o] = 1. - 2. / (1. + Math.exp(2*_a[o])); //evals faster than tanh(x), but is slightly less numerically stable - OK
+        _a[o] = 1f - 2f / (1f + (float)Math.exp(2*_a[o])); //evals faster than tanh(x), but is slightly less numerically stable - OK
     }
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
         // dy/dnet = (1 - a^2) for y(net) = tanh(net)
-        double g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-a^2
+        float g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-a^2
         bprop(u, g, r, m);
       }
     }
@@ -404,12 +403,12 @@ public abstract class Neurons {
   public static class Maxout extends Neurons {
     public Maxout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      double max = 0;
+      float max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         if( !training || _dropout == null || _dropout.unit_active(o) ) {
           final int off = o * _previous._a.length;
-          _a[o] = Double.NEGATIVE_INFINITY;
+          _a[o] = Float.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] = Math.max(_a[o], _w[off+i] * _previous._a[i]);
           _a[o] += _b[o];
@@ -420,10 +419,10 @@ public abstract class Neurons {
     }
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
-        double g = _e[u];
+        float g = _e[u];
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
 //                    g = 0;
         bprop(u, g, r, m);
@@ -462,11 +461,11 @@ public abstract class Neurons {
 
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-        final double g = _a[u] > 0 ? _e[u] : 0;
+        final float g = _a[u] > 0 ? _e[u] : 0;
         bprop(u, g, r, m);
       }
     }
@@ -509,10 +508,10 @@ public abstract class Neurons {
     public Softmax(int units) { super(units); }
     @Override protected void fprop() {
       gemv(_a, _w, _previous._a, _b, null);
-      final double max = Utils.maxValue(_a);
-      double scale = 0;
+      final float max = Utils.maxValue(_a);
+      float scale = 0;
       for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = Math.exp(_a[o] - max);
+        _a[o] = (float)Math.exp(_a[o] - max);
         scale += _a[o];
       }
       for( int o = 0; o < _a.length; o++ ) {
@@ -531,12 +530,12 @@ public abstract class Neurons {
     protected void bprop(int target) {
 //      if (target == missing_int_value) return; //ignore missing response values
       final long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
-      double g; //partial derivative dE/dy * dy/dnet
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
+      float g; //partial derivative dE/dy * dy/dnet
       for( int u = 0; u < _a.length; u++ ) {
-        final double t = (u == target ? 1 : 0);
-        final double y = _a[u];
+        final float t = (u == target ? 1 : 0);
+        final float y = _a[u];
         //dy/dnet = derivative of softmax = (1-y)*y
         if (params.loss == Loss.CrossEntropy) {
           //nothing else needed, -dCE/dy * dy/dnet = target - y
@@ -566,15 +565,15 @@ public abstract class Neurons {
      * Backpropagation for regression
      * @param target floating-point target value
      */
-    protected void bprop(double target) {
+    protected void bprop(float target) {
 //      if (target == missing_double_value) return;
       if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Regression is only implemented for MeanSquare error.");
       final int u = 0;
       // Computing partial derivative: dE/dnet = dE/dy * dy/dnet = dE/dy * 1
-      final double g = target - _a[u]; //for MSE -dMSE/dy = target-y
+      final float g = target - _a[u]; //for MSE -dMSE/dy = target-y
       final long processed = _minfo.get_processed_total();
-      double m = momentum(processed);
-      double r = rate(processed) * (1 - m);
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       bprop(u, g, r, m);
     }
   }
@@ -587,28 +586,30 @@ public abstract class Neurons {
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  static void gemv_naive(final double[] res, final float[] a, final double[] x, final double[] y, byte[] row_bits) {
+  static void gemv_naive(final float[] res, final float[] a, final float[] x, final float[] y, byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
     for(int r = 0; r<rows; r++) {
       res[r] = 0;
       if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      float tmp = 0;
       for(int i = 0; i<cols; i++)
-        res[r] += a[r*cols+i] * x[i];
-      res[r] += y[r];
+        tmp += a[r*cols+i] * x[i];
+      res[r] += tmp + y[r];
     }
   }
 
   /**
    * Optimized Mat-Vec Plus Add (with optional row dropout)
+   * Optimization: Partial sums can be evaluated in parallel
    * @param res = a*x+y (pre-allocated, will be overwritten)
    * @param a matrix of size rows x cols
    * @param x vector of length cols
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  static void gemv(double[] res, float [] a, double [] x, final double[] y, byte[] row_bits) {
+  static void gemv(float[] res, float[] a, float[] x, final float[] y, byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
@@ -621,21 +622,23 @@ public abstract class Neurons {
         idx += cols;
         continue;
       }
-      double psum1 = 0;
-      double psum2 = 0;
-      double psum3 = 0;
-      for (int c = 0; c < multiple; c += 4) {
+      float psum0 = 0, psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0, psum5 = 0, psum6 = 0, psum7 = 0;
+      for (int c = 0; c < multiple; c += 8) {
         int off = idx + c;
-        res[r] += a[off    ] * x[c    ] + a[off + 1] * x[c + 1];
-        psum1  += a[off + 2] * x[c + 2] + a[off + 3] * x[c + 3];
-        c += 4;
-        off += 4;
-        psum2  += a[off    ] * x[c    ] + a[off + 1] * x[c + 1];
-        psum3  += a[off + 2] * x[c + 2] + a[off + 3] * x[c + 3];
+        psum0 += a[off    ] * x[c    ];
+        psum1 += a[off + 1] * x[c + 1];
+        psum2 += a[off + 2] * x[c + 2];
+        psum3 += a[off + 3] * x[c + 3];
+        psum4 += a[off + 4] * x[c + 4];
+        psum5 += a[off + 5] * x[c + 5];
+        psum6 += a[off + 6] * x[c + 6];
+        psum7 += a[off + 7] * x[c + 7];
       }
       for (int j = extra; j < cols; j++)
         res[r] += a[idx + j] * x[j];
-      res[r] += psum1 + psum2 + psum3 + y[r];
+      res[r] += psum0 + psum1 + psum2 + psum3;
+      res[r] += psum4 + psum5 + psum6 + psum7;
+      res[r] += y[r];
       idx += cols;
     }
   }
@@ -647,12 +650,12 @@ public abstract class Neurons {
     public void run() {
       int rows = 2048;
       int cols = 1024;
-      int loops = 1000;
+      int loops = 5000;
 
       float [] a = new float[rows*cols];
-      double [] x = new double[cols];
-      double [] y = new double[rows];
-      double [] res = new double[rows];
+      float [] x = new float[cols];
+      float [] y = new float[rows];
+      float [] res = new float[rows];
       byte [] bits = new byte[rows];
 
       for (int i=0;i<rows;++i) {
@@ -669,43 +672,53 @@ public abstract class Neurons {
           a[off+j] = ((float)(i+j))/cols;
         }
       }
+
       /**
        * naive version
        */
-      double sum = 0;
+      System.out.println("warming up.");
+      float sum = 0;
       //warmup
-      for (int l=0;l<loops;++l) {
+      for (int l=0;l<11000;++l) {
         gemv_naive(res, a, x, y, bits);
         sum += res[rows/2];
       }
-      System.gc();
+      //warmup
+      for (int l=0;l<11000;++l) {
+        gemv(res, a, x, y, bits);
+        sum += res[rows/2];
+      }
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
+      /**
+       * naive version
+       */
+      System.out.println("starting naive.");
       sum = 0;
       long start = System.currentTimeMillis();
       for (int l=0;l<loops;++l) {
         gemv_naive(res, a, x, y, bits);
         sum += res[rows/2]; //do something useful
       }
-      Log.info("result: " + sum + " and " + Utils.sum(res));
-      Log.info("Naive time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("Naive time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
 
       /**
        * optimized version
        */
-      sum = 0;
-      //warmup
-      for (int l=0;l<loops;++l) {
-        gemv(res, a, x, y, bits);
-        sum += res[rows/2];
-      }
-      System.gc();
+      System.out.println("starting optimized.");
       sum = 0;
       start = System.currentTimeMillis();
       for (int l=0;l<loops;++l) {
         gemv(res, a, x, y, bits);
         sum += res[rows/2]; //do something useful
       }
-      Log.info("result: " + sum + " and " + Utils.sum(res));
-      Log.info("Optimized time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("Optimized time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
     }
   }
 
