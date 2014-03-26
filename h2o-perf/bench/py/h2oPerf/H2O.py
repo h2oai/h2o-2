@@ -151,7 +151,7 @@ class H2OCloudNode:
         # base_port and calculates it's own my_base_port.
         ports_per_node = 2
         self.my_base_port = \
-            self.base_port + \
+            (self.base_port) + \
             (self.cloud_num * self.nodes_per_cloud * ports_per_node) + \
             (self.node_num * ports_per_node)
 
@@ -159,6 +159,47 @@ class H2OCloudNode:
         ch = self.ssh.get_transport().open_session()
         ch.get_pty() # force the process to die without the connection
         return ch
+
+    def get_ticks(self):
+        """
+        Get process_total_ticks, system_total_ticks, sys_idle_ticks.
+        """
+        url_sys  = "http://{}:{}/stat".format(self.ip, 8000)
+        url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
+        r_sys    = requests.get(url_sys).text.split('\n')[0]
+        r_proc   = requests.get(url_proc).text.strip().split()
+
+        sys_user = int(r_sys.split()[1])
+        sys_nice = int(r_sys.split()[2])
+        sys_syst = int(r_sys.split()[3])
+        sys_idle = int(r_sys.split()[4])
+        sys_total_ticks = sys_user + sys_nice + sys_syst + sys_idle
+
+        proc_utime = int(r_proc[13])
+        proc_stime = int(r_proc[14])
+        process_total_ticks = proc_utime + proc_stime
+
+        return {"process_total_ticks": process_total_ticks, "system_total_ticks": sys_total_ticks, "system_idle_ticks": sys_idle}
+
+    def is_contaminated(self):
+        """
+        Checks for contamination.
+        @return: 1 for contamination, 0 for _no_ contamination
+        """
+        cur_ticks = self.get_ticks()
+        first_ticks = self.first_ticks
+        proc_delta = cur_ticks["process_total_ticks"] - first_ticks["process_total_ticks"]
+        sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
+        idle_delta = cur_ticks["sys_idle_ticks"] - first_ticks["sys_idle_ticks"]
+
+        sys_frac = 100*(1 - idle_delta * 1. / sys_delta)
+        proc_frac = 100*(proc_delta * 1. / sys_delta)
+
+        #20% diff
+        if proc_frac + 20 <= sys_frac:
+            self.is_contaminated = True
+            return 1
+        return 0
 
     def start_remote(self):
         """
@@ -199,6 +240,9 @@ class H2OCloudNode:
         PerfUtils.drain(self.channel.makefile_stderr(), errfd)
         self.channel.exec_command(cmd)
 
+        cmd_serve = ["python", "/home/0xdiag/serve_proc.py"]
+        self.channel.exec_command(cmd_serve)
+
         @atexit.register
         def kill_process():
             try:
@@ -215,6 +259,18 @@ class H2OCloudNode:
             except OSError:
                 pass
         print "+ CMD: " + cmd
+
+    def request_pid(self):
+        """
+        Use a request for /Cloud.json and look for pid.
+        """
+        name = self.ip + ":" + self.port
+        r = requests.get("http://"+name+"/Cloud.json")
+        name = "/" + name
+        j = json.loads(r.text)
+        for node in j["nodes"]:
+            if node["name"] == name:
+                return node["PID"]
 
     def scrape_port_from_stdout_remote(self):
         """
@@ -237,8 +293,10 @@ class H2OCloudNode:
                 match_groups = re.search(r"Listening for HTTP and REST traffic on  http://(\S+):(\d+)", s)
                 if (match_groups is not None):
                     port = match_groups.group(2)
-                    if (port is not None):
-                        self.port = port 
+                    if port is not None:
+                        self.port = port
+                        self.pid = self.request_pid()
+                        self.first_ticks = self.get_ticks()
                         f.close()
                         print("H2O Cloud {} Node {} started with output file {}".format(self.cloud_num,
                                                                                         self.node_num,
@@ -367,7 +425,8 @@ class H2OCloud:
             node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud,
                                 node_num, self.cloud_name, self.h2o_jar,
                                 node_['ip'],
-                                self.base_port,
+                                node_['port'],
+                                #self.base_port,
                                 node_['memory_bytes'],
                                 self.output_dir, isEC2)
             self.nodes.append(node)
@@ -403,6 +462,17 @@ class H2OCloud:
                 sftp.close()
             node.uploaded[f] = dest
            # sys.stdout.flush()
+
+    def check_contaminated(self):
+        """
+        Each node checks itself for contamination.
+        @return: True if contaminated, False if _not_ contaminated
+        """
+        for node in self.nodes:
+            if node.is_contaminated():
+                return [1, "Node " + node.ip + " was contaminated."]
+
+        return [0, " "]
 
     def start_remote(self):
         """
