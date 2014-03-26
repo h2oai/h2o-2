@@ -121,7 +121,7 @@ function makeGraph(json, svg) {
     ]);
 
     y.domain([
-      d3.min(datas2, function(c) { return d3.min(c.data, function(v) {  return +v[1]; }); }),
+      0,//d3.min(datas2, function(c) { return d3.min(c.data, function(v) {  return +v[1]; }); }),
       d3.max(datas2, function(c) { return d3.max(c.data, function(v) { return +v[1]; }); })
     ]);
 
