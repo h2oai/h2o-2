@@ -69,21 +69,41 @@ if args.e and args.x:
     raise Exception("Don't use both -e and -x args")
 
 # default ec2 0
+jobname = None
 if args.e is not None:
     if args.e<0 or args.e>(len(allowedJobsE)-1):
-        raise Exception("ec2 job number %s is outside allowed range: 0-%s" % (args.e, len(allowedJobsE)-1))
+        raise Exception("ec2 job number %s is outside allowed range: 0-%s" % \
+            (args.e, len(allowedJobsE)-1))
     jobname = allowedJobsE[args.e]
-elif args.x is not None:
+
+if args.x is not None:
     if args.x<0 or args.x>(len(allowedJobsX)-1):
-        raise Exception("0xdata job number %s is outside allowed range: 0-%s" % (args.x, len(allowedJobsX)-1))
+        raise Exception("0xdata job number %s is outside allowed range: 0-%s" % \
+            (args.x, len(allowedJobsX)-1))
     jobname = allowedJobsX[args.x]
-else: 
-    jobname = allowedJobsE[0]
 
 if args.jobname:
     if args.jobname not in allowedJobs:
         raise Exception("%s not in list of legal jobs" % args.jobname)
     jobname = args.jobname
+
+
+if not (args.jobname or args.x or args.e):
+    # prompt the user
+    while not jobname: 
+        allAllowedJobs = allowedJobsE + allowedJobsX
+        for j, job in enumerate(allAllowedJobs):
+            if j < len(allowedJobsE):
+                prefix = "-e"
+                subtract = 0
+            else:
+                prefix = "-x"
+                subtract = len(allowedJobsE)
+            print prefix, j-subtract, " [%s]: %s" % (j, job)
+
+        userInput = int(raw_input("Enter number (0 to %s): " % (len(allAllowedJobs)-1) ))
+        if userInput >=0 and userInput <= len(allAllowedJobs):
+            jobname = allAllowedJobs[userInput]
 
 # defaults
 if jobname in allEc2Jobs:
