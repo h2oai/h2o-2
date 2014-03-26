@@ -365,7 +365,7 @@ if 1==1:
         aTxt.write(e+"\n")
 
         # get the h2o output from the runit runs
-        a.save_to_dir(LOG_DIR)
+        # a.save_to_dir(LOG_DIR)
         consoleTxt.close()
         # print txt
         # a.save_to_dir('./sandbox')
