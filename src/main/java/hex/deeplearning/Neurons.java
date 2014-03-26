@@ -173,10 +173,11 @@ public abstract class Neurons {
    * @param m momentum
    */
   final void bprop(int u, double g, double r, double m) {
-    if (params.fast_mode || (_wm == null && params.l1 == 0.0 && params.l2 == 0.0)) {
-      if (Math.abs(g) <= 1e-8) {
-        return;
-      }
+    // only correct weights if the gradient is large enough
+    if (params.fast_mode || (
+            // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
+            !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
+      if (Math.abs(g) <= 1e-10) return;
     }
 
 //    Log.info("bprop(u=" + u + ", g=" + g + ", r=" + r + ", m=" + m);

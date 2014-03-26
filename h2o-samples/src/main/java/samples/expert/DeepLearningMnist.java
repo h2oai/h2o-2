@@ -15,14 +15,14 @@ import java.util.Random;
 public class DeepLearningMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = DeepLearningMnist.class;
-//    samples.launchers.CloudLocal.launch(job, 1);
+    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.164");
-    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
 //    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
