@@ -65,6 +65,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -99,6 +101,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -142,6 +146,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -176,6 +182,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -220,6 +228,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -254,6 +264,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -299,6 +311,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -333,6 +347,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -378,6 +394,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -412,6 +430,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -457,6 +477,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
@@ -492,6 +514,8 @@ SELECT
     tr.build_version,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result p
 ON tr.test_run_id = p.test_run_id
@@ -537,6 +561,8 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_branch,
     tr.cpus_per_host,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.contaminated,
+    tr.contamination_message
 FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id

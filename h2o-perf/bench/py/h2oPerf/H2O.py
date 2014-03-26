@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import json
 import sys
 import os
 import shutil
@@ -151,9 +152,9 @@ class H2OCloudNode:
         # base_port and calculates it's own my_base_port.
         ports_per_node = 2
         self.my_base_port = \
-            (self.base_port) + \
-            (self.cloud_num * self.nodes_per_cloud * ports_per_node) + \
-            (self.node_num * ports_per_node)
+            int(self.base_port) + \
+            int(self.cloud_num * self.nodes_per_cloud * ports_per_node) + \
+            int(self.node_num * ports_per_node)
 
     def open_channel(self):
         ch = self.ssh.get_transport().open_session()
@@ -190,10 +191,15 @@ class H2OCloudNode:
         first_ticks = self.first_ticks
         proc_delta = cur_ticks["process_total_ticks"] - first_ticks["process_total_ticks"]
         sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
-        idle_delta = cur_ticks["sys_idle_ticks"] - first_ticks["sys_idle_ticks"]
+        idle_delta = cur_ticks["system_idle_ticks"] - first_ticks["system_idle_ticks"]
 
         sys_frac = 100*(1 - idle_delta * 1. / sys_delta)
         proc_frac = 100*(proc_delta * 1. / sys_delta)
+
+        print "DEBUG: sys_frac, proc_frac"
+        print sys_frac, proc_frac
+        print ""
+        print ""
 
         #20% diff
         if proc_frac + 20 <= sys_frac:
@@ -241,7 +247,8 @@ class H2OCloudNode:
         self.channel.exec_command(cmd)
 
         cmd_serve = ["python", "/home/0xdiag/serve_proc.py"]
-        self.channel.exec_command(cmd_serve)
+        self.channelServe = self.open_channel()
+        self.channelServe.exec_command(' '.join(cmd_serve))
 
         @atexit.register
         def kill_process():
@@ -265,6 +272,7 @@ class H2OCloudNode:
         Use a request for /Cloud.json and look for pid.
         """
         name = self.ip + ":" + self.port
+        time.sleep(5)
         r = requests.get("http://"+name+"/Cloud.json")
         name = "/" + name
         j = json.loads(r.text)
@@ -296,11 +304,12 @@ class H2OCloudNode:
                     if port is not None:
                         self.port = port
                         self.pid = self.request_pid()
-                        self.first_ticks = self.get_ticks()
                         f.close()
                         print("H2O Cloud {} Node {} started with output file {}".format(self.cloud_num,
                                                                                         self.node_num,
                                                                                         self.output_file_name))
+
+                        self.first_ticks = self.get_ticks()
                         return
 
                 s = f.readline()
