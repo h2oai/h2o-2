@@ -20,10 +20,17 @@ test.cbind <- function(conn) {
   yy <- hdf[,2]
   expect_that( dim(cbind(xx,yy)), equals(c(12,2)) )
 
+  # cbind logical expressions
+  hdf_filt <- cbind(hdf[,3] <= 5, hdf[,4] >= 4)
+  expect_that(dim(hdf_filt), equals(c(12, 2)))
+  
+  # cbind sets column names correctly
+  hdf_names <- cbind(colX = xx, colY = yy)
+  expect_that(colnames(hdf_names), equals(c("colX", "colY")))
+  
   # cbind unequal rows fails
   expect_that(cbind(hdf, otherhdf), throws_error())
-
-
+  
   ##### FAILS #####
   # cbind a df to a slice
   #expect_that( dim(cbind(hdf, hdf[,1])), equals(12,5) )
