@@ -57,7 +57,7 @@
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -93,7 +93,7 @@ ORDER BY tr.start_epoch_ms;
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -138,7 +138,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 summary_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -174,7 +174,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 summary_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -220,7 +220,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 pca_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -256,7 +256,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 pca_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -303,7 +303,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 glm_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -339,7 +339,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 glm_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -386,7 +386,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 kmeans_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -422,7 +422,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 kmeans_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -469,7 +469,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 drf_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
@@ -505,7 +505,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
 SELECT
     FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (p.end_epoch_ms - p.start_epoch_ms) / 1000 drf_time_s,
+    (p.end_epoch_ms - p.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.test_run_id,
     tr.num_train_rows,
@@ -553,7 +553,7 @@ ORDER BY tr.test_name, tr.test_run_id;
 SELECT
 FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 gbm_time_s,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
     tr.num_train_rows,
     tr.num_explan_cols,
