@@ -23,7 +23,6 @@ import hex.pca.PCAScore;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
-import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
 import water.deploy.LaunchJar;
 import water.util.Log;
@@ -111,7 +110,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",      "Admin");
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",      "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",     "Admin");
-    Request.addToNavbar(registerRequest(new Script()),      "Get Script",      "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
 
     Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help", USE_NEW_TAB);
@@ -178,7 +176,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
     registerRequest(new RemoveAck());
-    registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
     registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
