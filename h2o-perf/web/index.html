@@ -64,7 +64,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -100,7 +100,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -145,7 +145,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -181,7 +181,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -227,7 +227,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -263,7 +263,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -310,7 +310,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -346,7 +346,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -393,7 +393,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -429,7 +429,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -476,7 +476,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -513,7 +513,7 @@ SELECT
     tr.build_branch,
     tr.build_version,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
@@ -560,7 +560,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
 FROM test_run tr
