@@ -11,6 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.*;
 
 import water.*;
+import water.NanoHTTPD.Response;
 import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
@@ -126,12 +127,21 @@ public abstract class Request extends RequestBuilders {
     if( query != null )
       return wrap(server, query, type);
     long time = System.currentTimeMillis();
-    Response response = serve();
+    Response response = null;
+    try {
+      response = serve();
+    } catch (IllegalArgumentException iae) { // handle illegal arguments
+      response = Response.error(iae);
+    }
     response.setTimeStart(time);
+    return serveResponse(server, parms, type, response);
+  }
+
+  public NanoHTTPD.Response serveResponse(NanoHTTPD server, Properties parms, RequestType type, Response response) {
     // Argh - referencing subclass, sorry for that, but it is temporary hack
     // for transition between v1 and v2 API
     if (this instanceof Request2) ((Request2) this).fillResponseInfo(response);
-    if (this instanceof Parse2) ((Parse2) this).fillResponseInfo(response); // FIXME: Parser2 should inherit from Request2
+    if (this instanceof Parse2)   ((Parse2)   this).fillResponseInfo(response); // FIXME: Parser2 should inherit from Request2
     if( type == RequestType.json )
       return response._req == null ? //
             wrap(server, response.toJson()) : //

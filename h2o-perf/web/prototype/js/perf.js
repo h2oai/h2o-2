@@ -54,4 +54,111 @@ $('*').on('change', '#question', function() {
 });
 
 
+function makeGraph(json, svg) {
+    var margin = {top: 20, right: 80, bottom: 30, left: 50},
+        width = 960 - margin.left - margin.right,
+        height = 500 -margin.top -margin.bottom;
+
+    var x = d3.scale.linear().range([0, width]);
+    var y = d3.scale.linear().range([height, 0]);
+    var color = d3.scale.category10();
+
+    var xAxis = d3.svg.axis().scale(x).orient("bottom");
+    var yAxis = d3.svg.axis().scale(y).orient("left");
+    
+    var line = d3.svg.line().interpolate("basis")
+                .x(function(d) {return x(d.build_version); })
+                .y(function(d) { return y(d.time_s); });
+
+    var svg = d3.select(svg).append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var datas = new Object();
+    var test_names = new Array();
+    for(i = 0; i < json.data.length; i++) {
+      test_names[i] = d3.values(json.data[i])[1];
+      datas[i] = d3.values(json.data[i]);
+    }
+    test_names = d3.set(test_names).values();
+
+//    var domains = new Array();
+//    for (i = 0; i < test_names.length; i++) {
+//      domains[i] = test_names[i];
+//      color.domain(domains)
+//      datas[i] = {
+//            name: test_names[i],
+//            color: color(),
+//            data: new Array()
+//            }
+//    }
+//    for(i = 0; i < json.data.length; i++) {
+//      build = d3.values(json.data[i])[6].split('.');
+//      build = build[build.length - 1]
+//      test  = d3.values(json.data[i])[1];
+//      dat   = d3.values(json.data[i])[2];
+//      for (int j = 0; j < datas.length; j++) {
+//        if (datas[j].name === test) {
+//            datas.data.push([build, dat])
+//        }
+//      }
+//    }
+
+    var tests = color.domain().map(function(name) {
+        return {
+            name: name,
+            values: data.filter(function(d) { return d.test_name !== name })
+                        .map(function(d) {
+                          build_version = d.build_version.split('.');
+                          build_version = build_version[build_version.length - 1];
+                          return {build: build_version, time: d.time_s};
+                         })
+         };
+    });
+
+    x.domain(d3.extent(data, function(d) { bv = d.build_version.split('.'); return bv[bv.length - 1]; }));
+    y.domain([
+        d3.min(tests, function(t) { return d3.min(t.values, function(v) {return v.time; }); }),
+        d3.max(tests, function(t) { return d3.max(t.values, function(v) {return v.time; }); })
+    ]);
+
+    svg.append("g").attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Time (s)");
+    
+    
+    var test = svg.selectAll(".test")
+      .data(tests)
+    .enter().append("g")
+      .attr("class", "test");
+
+
+    test.append("path")
+      .attr("class", "line")
+      .attr("d", function(d) { return line(d.values); })
+      .style("stroke", function(d) { return color(d.name); });
+
+  test.append("text")
+      .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+      .attr("transform", function(d) { return "translate(" + x(d.value.build) + "," + y(d.value.time) + ")"; })
+      .attr("x", 3)
+      .attr("dy", ".35em")
+      .text(function(d) { return d.name; });
+
+}
+
+
+
 

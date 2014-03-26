@@ -1,5 +1,6 @@
 package hex;
 
+import static hex.NeuralNet.ExecutionMode.*;
 import hex.Layer.*;
 import jsr166y.CountedCompleter;
 import water.*;
@@ -13,8 +14,6 @@ import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
-
-import static hex.NeuralNet.ExecutionMode.*;
 
 
 /**
@@ -98,6 +97,9 @@ public class NeuralNet extends ValidatedJob {
 
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
+
+  @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
+  public boolean fast_mode = true;
 
   @Override public boolean toHTML(StringBuilder sb) {
     return makeJsonBox(sb);
