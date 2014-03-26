@@ -1,7 +1,7 @@
 
 package water.api;
 
-import java.util.Arrays;
+import java.util.*;
 
 import water.*;
 import water.fvec.Frame;
@@ -12,42 +12,53 @@ import com.google.gson.JsonObject;
 
 public class StoreView extends Request {
 
+  public static final int MAX_VIEW = 1000000;
+
   protected Str _filter = new Str(FILTER, "");
   protected final Int _offset = new Int(OFFSET, 0, 0, Integer.MAX_VALUE);
-  protected final Int _view   = new Int(VIEW,  20, 0, Integer.MAX_VALUE);
+  protected final Int _view   = new Int(VIEW,  20, 0, MAX_VIEW);
 
   @Override protected Response serve() {
     JsonObject result = new JsonObject();
     // get the offset index
-    int offset = _offset.value();
+    final int offset = _offset.value();
+    final int view = _view.value();
     // write the response
-    H2O cloud = H2O.CLOUD; // Current eldest Cloud
-    Key[] keys = new Key[_view._max]; // Limit size of what we'll display on this page
+    final H2O cloud = H2O.CLOUD; // Current eldest Cloud
+    Key[] keys = new Key[view]; // Limit size of what we'll display on this page
     int len = 0;
+    int off = 0;
     String filter = _filter.value();
     // Gather some keys that pass all filters
-    for( Key key : H2O.globalKeySet(null) ) {
+    // - Sort all the keys for pretty display and reliable ordering
+    Set<Key> keySet = new TreeSet(H2O.globalKeySet(null));
+    int kcnt = keySet.size();
+    int allkeys = 0; // compute all viewable keys
+    for( Key key : keySet ) {
+      kcnt--;
       if( filter != null && // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue; // Ignore this filtered-out key
       if( !key.user_allowed() ) // Also filter out for user-keys
         continue;
       if( H2O.get(key) == null ) continue; // Ignore misses
-      keys[len++] = key; // Capture the key
-      if( len == keys.length ) {
-        // List is full; stop
-        result.addProperty(Constants.MORE,true);
-        break;
-      }
+      if( off >= offset) { // Skip first _offset keys
+        if (len<view) {
+          keys[len++] = key; // Capture the key
+          if( len == view && kcnt > 0) { // Last key for the view
+            // List is full; stop
+            result.addProperty(Constants.MORE,true);
+          }
+        }
+      } else off++;
+      allkeys++;
     }
-    // sort the keys, for pretty display & reliable ordering
-    Arrays.sort(keys,0,len);
-    if ((offset>=len) && (offset != 0))
-      return Response.error("Only "+len+" keys available");
+    if (off<offset)
+      return Response.error("Not enough keys - request offset is " + off + " but K/V contains "+len+" keys.");
 
     // Now build the result JSON with all available keys
     JsonArray ary = new JsonArray();
-    for( int i=offset; i<offset+_view.value(); i++ ) {
+    for( int i=0; i<len; i++ ) {
       if( i >= len ) break;
       Value val = DKV.get(keys[i]);
       if( val != null ) {
@@ -68,7 +79,7 @@ public class StoreView extends Request {
         " <button type='submit' class='btn btn-primary'>Filter keys!</button>" +
         "</form>");
 
-    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,_view.value(), len, false));
+    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,view,allkeys,false));
     r.setBuilder(KEYS+"."+KEY, new KeyCellBuilder());
     r.setBuilder(KEYS+".col_0", new KeyMinAvgMaxBuilder());
     r.setBuilder(KEYS+".col_1", new KeyMinAvgMaxBuilder());
