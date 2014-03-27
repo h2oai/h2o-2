@@ -68,6 +68,12 @@ public class Utils {
       if (from[i]<from[result]) result = i;
     return result;
   }
+  public static double maxValue(double[] from) {
+    double result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
+    return result;
+  }
   public static float maxValue(float[] from) {
     float result = from[0];
     for (int i = 1; i<from.length; ++i)

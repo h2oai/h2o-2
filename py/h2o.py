@@ -106,14 +106,17 @@ def get_ip_address():
         verboseprint("get_ip case 3:", ip)
 
     ipa = None
-    for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
-         # only take the first
-         if ipa is None and not ips.startswith("127."):
-            ipa = ips[:]
-            verboseprint("get_ip case 4:", ipa)
-            if ip != ipa:
-                print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
+    hostname = socket.gethostname()
+    badHosts = ['lg1', 'ch-0', 'ch-63']
+    if hostname not in badHosts: # hack for hosts that don't support this
+        for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
+             # only take the first
+             if ipa is None and not ips.startswith("127."):
+                ipa = ips[:]
+                verboseprint("get_ip case 4:", ipa)
+                if ip != ipa:
+                    print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                    print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
 
     verboseprint("get_ip_address:", ip)
     return ip
@@ -2296,7 +2299,7 @@ class H2O(object):
         print csvPathname, "size:", h2o_util.file_size_formatted(csvPathname)
 
     # shouldn't need params
-    def log_download(self, logDir=None, timeoutSecs=5, **kwargs):
+    def log_download(self, logDir=None, timeoutSecs=30, **kwargs):
         if logDir == None:
             logDir = LOG_DIR # normally sandbox
 

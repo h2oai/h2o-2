@@ -170,6 +170,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     try {
       // Initialized algorithm
       initAlgo(model);
+      // Init working frame
+      initWorkFrame(model, fr);
       // Compute the model
       model = buildModel(model, fr, names, domains, bm_timer);
     //} catch (Throwable t) { t.printStackTrace();
@@ -775,6 +777,15 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    * @param initialModel
    */
   protected abstract void initAlgo( TM initialModel);
+
+  /**
+   * Initialize working frame.
+   * @param initialModel  initial model
+   * @param fr working frame which contains train data and additional columns prepared by this builder.
+   *
+   * @see #buildModel()
+   */
+  protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);

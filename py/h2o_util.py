@@ -39,25 +39,25 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-# a short quick version for relative comparion. But it's probably better to use approx_equal below
+# a short quick version for relative comparion. But it's probably better to use approxEqual below
 # the subsequent ones might be prefered, especially assertAlmostEqual(
 # http://en.wikipedia.org/wiki/Relative_difference
 # http://stackoverflow.com/questions/4028889/floating-point-equality-in-python
-def fp_approx_equal(a, b, rel):
-    c = abs(a-b) / max(abs(a), abs(b))
-    print "actual relative diff: %s allowed relative diff: %s" % (c, rel)
-    return c < rel
+# def fp_approxEqual(a, b, rel):
+#     c = abs(a-b) / max(abs(a), abs(b))
+#     print "actual relative diff: %s allowed relative diff: %s" % (c, rel)
+#    return c < rel
 
 # Generic "approximately equal" function for any object type, with customisable error tolerance.
-# When called with float arguments, approx_equal(x, y[, tol[, rel]) compares x and y numerically, 
+# When called with float arguments, approxEqual(x, y[, tol[, rel]) compares x and y numerically, 
 # and returns True if y is within either absolute error tol or relative error rel of x, 
 # otherwise return False. 
 
 # The function defaults to sensible default values for tol and rel.
-# or any other pair of objects, approx_equal() looks for a method __approx_equal__ and, if found, 
+# or any other pair of objects, approxEqual() looks for a method __approxEqual__ and, if found, 
 # calls it with arbitrary optional arguments. 
 # This allows types to define their own concept of "close enough".
-def _float_approx_equal(x, y, tol=1e-18, rel=1e-7, **kwargs):
+def _float_approxEqual(x, y, tol=1e-18, rel=1e-7, **kwargs):
     if tol is rel is None:
         raise TypeError('cannot specify both absolute and relative errors are None')
     tests = []
@@ -67,9 +67,9 @@ def _float_approx_equal(x, y, tol=1e-18, rel=1e-7, **kwargs):
     return abs(x - y) <= max(tests)
 
 # from http://code.activestate.com/recipes/577124-approximately-equal/
-def approx_equal(x, y, *args, **kwargs):
-    """approx_equal(float1, float2[, tol=1e-18, rel=1e-7]) -> True|False
-    approx_equal(obj1, obj2[, *args, **kwargs]) -> True|False
+def approxEqual(x, y, *args, **kwargs):
+    """approxEqual(float1, float2[, tol=1e-18, rel=1e-7]) -> True|False
+    approxEqual(obj1, obj2[, *args, **kwargs]) -> True|False
 
     Return True if x and y are approximately equal, otherwise False.
 
@@ -78,13 +78,13 @@ def approx_equal(x, y, *args, **kwargs):
     relative check by passing None as tol or rel (but not both).
 
     For any other objects, x and y are checked in that order for a method
-    __approx_equal__, and the result of that is returned as a bool. Any
-    optional arguments are passed to the __approx_equal__ method.
+    __approxEqual__, and the result of that is returned as a bool. Any
+    optional arguments are passed to the __approxEqual__ method.
 
-    __approx_equal__ can return NotImplemented to signal that it doesn't know
+    __approxEqual__ can return NotImplemented to signal that it doesn't know
     how to perform that specific comparison, in which case the other object is
     checked instead. If neither object have the method, or both defer by
-    returning NotImplemented, approx_equal falls back on the same numeric
+    returning NotImplemented, approxEqual falls back on the same numeric
     comparison used for floats.
 
     >>> almost_equal(1.2345678, 1.2345677)
@@ -94,8 +94,8 @@ def approx_equal(x, y, *args, **kwargs):
 
     """
     if not (type(x) is type(y) is float):
-        # Skip checking for __approx_equal__ in the common case of two floats.
-        methodname = '__approx_equal__'
+        # Skip checking for __approxEqual__ in the common case of two floats.
+        methodname = '__approxEqual__'
         # Allow the objects to specify what they consider "approximately equal",
         # giving precedence to x. If either object has the appropriate method, we
         # pass on any optional arguments untouched.
@@ -113,12 +113,12 @@ def approx_equal(x, y, *args, **kwargs):
     # If we get here without returning, then neither x nor y knows how to do an
     # approximate equal comparison (or are both floats). Fall back to a numeric
     # comparison.
-    return _float_approx_equal(x, y, *args, **kwargs)
+    return _float_approxEqual(x, y, *args, **kwargs)
 
 # note this can take 'tol' and 'rel' parms for the float case
-# just wraps approx_equal in an assert with a good print message
+# just wraps approxEqual in an assert with a good print message
 def assertApproxEqual(x, y, msg='', **kwargs):
-    if not approx_equal(x, y, msg=msg, **kwargs):
+    if not approxEqual(x, y, msg=msg, **kwargs):
         m = msg + '. h2o_util.assertApproxEqual failed comparing %s and %s. %s.' % (x, y, kwargs)
         raise Exception(m)
 

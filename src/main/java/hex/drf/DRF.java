@@ -136,7 +136,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
     return new DRFModel(this, model, ktrees, tstats);
   }
-  public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 999; min_rows = 1; }
+  public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 20; min_rows = 1; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -187,6 +187,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Initialize TreeVotes for classification, MSE arrays for regression
     if (importance) initTreeMeasurements();
   }
+  @Override protected void initWorkFrame(DRFModel initialModel, Frame fr) {  }
 
   @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
     // Append number of trees participating in on-the-fly scoring

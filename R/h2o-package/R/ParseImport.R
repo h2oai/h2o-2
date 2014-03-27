@@ -43,10 +43,23 @@ h2o.ls <- function(object, pattern = "") {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(pattern)) stop("pattern must be of class character")
   
-  res = .h2o.__remoteSend(object, .h2o.__PAGE_VIEWALL, filter=pattern)
-  if(length(res$keys) == 0) return(list())
-  myList = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
-  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2, byrow = TRUE))
+  i = 0
+  myList = list()
+  page_keys = .MAX_INSPECT_ROW_VIEW
+  
+  # Need to pull all keys from every page in StoreView
+  while(page_keys == .MAX_INSPECT_ROW_VIEW) {
+    res = .h2o.__remoteSend(object, .h2o.__PAGE_VIEWALL, filter=pattern, offset=i*.MAX_INSPECT_ROW_VIEW, view=.MAX_INSPECT_ROW_VIEW)
+    if(length(res$keys) == 0) return(myList)
+    temp = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
+    
+    i = i + 1
+    myList = c(myList, temp)
+    page_keys = res$num_keys
+  }
+  tot_keys = page_keys + (i-1)*.MAX_INSPECT_ROW_VIEW
+  
+  temp = data.frame(matrix(unlist(myList), nrow=tot_keys, ncol=2, byrow = TRUE))
   colnames(temp) = c("Key", "Bytesize")
   temp$Key = as.character(temp$Key)
   temp$Bytesize = as.numeric(as.character(temp$Bytesize))
@@ -90,6 +103,8 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.logical(parse)) stop("parse must be of class logical")
   
   res = .h2o.__remoteSend(object, .h2o.__PAGE_IMPORTFILES, path=path)
@@ -120,6 +135,8 @@ h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TR
   if(nchar(path) == 0) stop("path must be a non-empty string")
   if(!is.character(pattern)) stop("pattern must be of class character")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.logical(parse)) stop("parse must be of class logical")
   
   # if(!file.exists(path)) stop("Directory does not exist!")
@@ -183,6 +200,8 @@ h2o.importURL.VA <- function(object, path, key = "", parse = TRUE, header, sep =
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.logical(parse)) stop("parse must be of class logical")
   
   destKey = ifelse(parse, "", key)
@@ -211,6 +230,8 @@ h2o.importHDFS.VA <- function(object, path, pattern = "", key = "", parse = TRUE
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.logical(parse)) stop("parse must be of class logical")
   
   res = .h2o.__remoteSend(object, .h2o.__PAGE_IMPORTHDFS, path=path)
@@ -255,6 +276,8 @@ h2o.uploadFile.VA <- function(object, path, key = "", parse = TRUE, header, sep 
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.logical(parse)) stop("parse must be of class logical")
   if(!is.logical(silent)) stop("silent must be of class logical")
   
@@ -274,6 +297,8 @@ h2o.uploadFile.FV <- function(object, path, key = "", parse = TRUE, header, sep 
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.logical(parse)) stop("parse must be of class logical")
   if(!is.logical(silent)) stop("silent must be of class logical")
   
@@ -301,6 +326,8 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, version = 
 h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
   if(class(data) != "H2ORawDataVA") stop("data must be of class H2ORawDataVA")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!(missing(header) || is.logical(header))) stop("header must be of class logical")
   if(!is.character(sep)) stop("sep must be of class character")
   if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA")) stop(paste("col.names cannot be of class", class(col.names)))
@@ -324,6 +351,8 @@ h2o.parseRaw.VA <- function(data, key = "", header, sep = "", col.names) {
 h2o.parseRaw.FV <- function(data, key = "", header, sep = "", col.names) {
   if(class(data) != "H2ORawData") stop("data must be of class H2ORawData")
   if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!(missing(header) || is.logical(header))) stop(paste("header cannot be of class", class(header)))
   if(!is.character(sep)) stop("sep must be of class character")
   if(!(missing(col.names) || class(col.names) == "H2OParsedData")) stop(paste("col.names cannot be of class", class(col.names)))
@@ -380,23 +409,6 @@ h2o.downloadCSV <- function(data, filename) {
 }
 
 # ----------------------------------- Work in Progress --------------------------------- #
-# h2o.push <- function(client, object, key) {
-#   if(missing(class) || class(client) != "H2OClient") stop("client must be a H2OClient object")
-#   if(missing(object)) stop("must specify object to push")
-#   else if(!is.numeric(object) && !is.function(object)) stop("object must be numeric or a function")
-#   if(missing(key)) key <- deparse(substitute(object))
-#   else if(!is.character(key)) stop("key must be of class character")
-#   else if(nchar(key) == 0) stop("key cannot be an empty string")
-#   
-#   if(is.numeric(object))
-#     res = .h2o.__exec2_dest_key(client, object, key)
-#   else if(is.function(object)) {
-#     object <- match.fun(object)
-#     res = .h2o.__exec2_dest_key(client, object, key)
-#     # TODO: Push function to the H2O server
-#   }
-# }
-
 # setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })
 # setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function(x, value) {
 #   res = .h2o.__exec2_dest_key(x@h2o, value@key, x@key); return(x)

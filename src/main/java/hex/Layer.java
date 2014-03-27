@@ -186,6 +186,11 @@ public abstract class Layer extends Iced {
    * Apply gradient g to unit u with rate r and momentum m.
    */
   final void bprop(int u, double g, double r, double m) {
+    // only correct weights if the gradient is large enough
+    if (params.fast_mode || (_w == null && params.l1 == 0.0 && params.l2 == 0.0)) {
+      if (Math.abs(g) <= 1e-10) return;
+    }
+
     double r2 = 0;
     final int off = u * _previous._a.length;
     for( int i = 0; i < _previous._a.length; i++ ) {
@@ -843,10 +848,8 @@ public abstract class Layer extends Iced {
       final double r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-        if( _a[u] > 0 ) { // don't use >=
-          final double g = _e[u]; // * 1.0 (from derivative of rectifier)
-          bprop(u, g, r, m);
-        }
+        final double g = _a[u] > 0 ? _e[u] : 0; // * 1.0 (from derivative of rectifier)
+        bprop(u, g, r, m);
         // otherwise g = _e[u] * 0.0 = 0 and we don't allow other contributions by (and to) weights and momenta
       }
     }

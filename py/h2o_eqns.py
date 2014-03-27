@@ -1,37 +1,63 @@
 import sys
 import random
 
-# Want to use this to create random exprssions. Will have to think about
+
+print "could generate random cases, and get the expected values running thru rpy2"
+print "check expected values"
+
+# look at this grammar and extend maybe..so not as many parans
+# E is an expression, I an integer and M is an expression that is an argument for a multiplication operation.
+
+# E -> I
+# E -> M '*' M
+# E -> E '+' E
+
+# M -> I
+# M -> M '*' M
+# M -> '(' E '+' E ')'
+
+# or
+# digit ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+# number ::= <digit> | <digit> <number>
+# op ::= '+' | '-' | '*' | '/'
+# expr ::= <number> <op> <number> | '(' <expr> ')' | '(' <expr> <op> <expr> ')'
+
+# think of random trees of random width and depth
+
+# Want to use this to create random expressions. Will have to think about
 # unary operations (~) and bit selections and how to match "widths"
 
+# comments from the original at 
+# http://stackoverflow.com/questions/6881170/is-there-a-way-to-autogenerate-valid-arithmetic-expressions
 # comments from the original at http://stackoverflow.com/questions/6881170/is-there-a-way-to-autogenerate-valid-arithmetic-expressions
 # 
-# I added some handling of the probability of the incidence of each operator. 
+# Added some handling of the probability of the incidence of each operator. 
 # The operators are biased so that the lower priority operators (larger precedence values) 
 # are more common than the higher order ones.
 # 
-# I also implemented parentheses only when precedence requires. 
-# Since the integers have the highest priority (lowest precedence value) they never get wrapped in parentheses. 
+# Implemented parentheses only when precedence requires. 
+# Since the integers have the highest priority (lowest precedence value) 
+# they never get wrapped in parentheses. 
 # There is no need for a parenthesized expression as a node in the expression tree.
 # 
-# The probability of using an operator is biased towards the initial levels (using a quadratic function) 
-# to get a nicer distribution of operators. 
+# The probability of using an operator is biased towards the 
+# initial levels (using a quadratic function) to get a nicer distribution of operators. 
 # Choosing a different exponent gives more potential control of the quality of the output, 
 # but I didn't play with the possibilities much.
 # 
-# I further implemented an evaluator for fun and also to filter out indeterminate expressions.
+# An evaluator for fun and also to filter out indeterminate expressions.
 
 # dictionary of operator precedence and incidence probability, with an
 # evaluator added just for fun.
 operators = {
-    '^': {'prec': 10, 'prob': .1, 'eval': lambda a, b: pow(a, b)},
-    '*': {'prec': 20, 'prob': .2, 'eval': lambda a, b: a*b},
-    '/': {'prec': 20, 'prob': .2, 'eval': lambda a, b: a/b},
-    '+': {'prec': 30, 'prob': .25, 'eval': lambda a, b: a+b},
-    '-': {'prec': 30, 'prob': .25, 'eval': lambda a, b: a-b}}
+    '^': {'prec': 10, 'prob': .60, 'eval': lambda a, b: pow(a, b)},
+    '*': {'prec': 20, 'prob': .10, 'eval': lambda a, b: a*b},
+    '/': {'prec': 20, 'prob': .10, 'eval': lambda a, b: a/b},
+    '+': {'prec': 30, 'prob': .10, 'eval': lambda a, b: a+b},
+    '-': {'prec': 30, 'prob': .10, 'eval': lambda a, b: a-b}}
 
 max_levels = 3
-integer_range = (-100, 100)
+integer_range = (-5, -3)
 random.seed()
 
 # A node in an expression tree
@@ -117,8 +143,7 @@ class binary_expression(expression):
         right_str = self.right.__str__()
         op_str = self.symbol
 
-        # Use precedence to determine if we need to put the sub expressions in
-        # parentheses
+        # Use precedence to decide if sub expressions get parentheses
         if self.left.precedence() > self.precedence():
             left_str = '('+left_str+')'
         if self.right.precedence() > self.precedence():
@@ -131,7 +156,7 @@ class binary_expression(expression):
         return left_str + op_str + right_str
 
 max_result = pow(10, 10)
-for i in range(10):
+for i in range(30):
     expr = expression.create_random(0)
 
     try:
@@ -140,3 +165,74 @@ for i in range(10):
         value = 'indeterminate'
 
     print expr, '=', value
+
+
+#**************************************
+# print "\nanother way"
+# Arithmetic Operators
+# 
+# Operator    Description
+# +   addition
+# -   subtraction
+# *   multiplication
+# /   division
+# ^ or **     exponentiation
+# x %% y  modulus (x mod y) 5%%2 is 1
+# x %/% y     integer division 5%/%2 is 2
+# 
+# Logical Operators
+# 
+# Operator    Description
+# <   less than
+# <=  less than or equal to
+# >   greater than
+# >=  greater than or equal to
+# ==  exactly equal to
+# !=  not equal to
+# !x  Not x
+# x | y   x OR y
+# x & y   x AND y
+# isTRUE(x)   test if X is TRUE 
+
+import random
+import math
+
+class Expression(object):
+    # OPS = ['+', '-', '*', '/', '^', '**', '%%', '%/%', '<', '<=', '>', '>=', '==', '!=', '!', '|', '&']
+    OPS = ['+', '-', '*', '/', '^', '**', '%%', '%/%', '<', '<=', '>', '>=', '==', '!=', '|', '&']
+    # has problems with <= and >=
+    OPS = ['+', '-', '*', '/', '^', '<', '>', '|', '&']
+    GROUP_PROB = 0.3
+    MIN_NUM, MAX_NUM = 0, 20
+
+    def __init__(self, maxNumbers, _maxdepth=None, _depth=0):
+        """
+        maxNumbers has to be a power of 2
+        """
+        if _maxdepth is None:
+            _maxdepth = math.log(maxNumbers, 2) - 1
+
+        if _depth < _maxdepth and random.randint(0, _maxdepth) > _depth:
+            self.left = Expression(maxNumbers, _maxdepth, _depth + 1)
+        else:
+            self.left = random.randint(Expression.MIN_NUM, Expression.MAX_NUM)
+
+        if _depth < _maxdepth and random.randint(0, _maxdepth) > _depth:
+            self.right = Expression(maxNumbers, _maxdepth, _depth + 1)
+        else:
+            self.right = random.randint(Expression.MIN_NUM, Expression.MAX_NUM)
+
+        self.grouped = random.random() < Expression.GROUP_PROB
+        self.operator = random.choice(Expression.OPS)
+
+    def __str__(self):
+        s = '{0!s} {1} {2!s}'.format(self.left, self.operator, self.right)
+        if self.grouped:
+            return '({0})'.format(s)
+        else:
+            return s
+
+
+for i in range(10):
+
+    print "\na=",Expression(20, 12, 1), ";"

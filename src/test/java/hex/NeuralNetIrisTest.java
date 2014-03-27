@@ -1,5 +1,7 @@
 package hex;
 
+import static hex.Layer.Rectifier;
+import static hex.Layer.Tanh;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet.Loss;
@@ -17,9 +19,6 @@ import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
-
-import static hex.Layer.Rectifier;
-import static hex.Layer.Tanh;
 
 public class NeuralNetIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
@@ -128,6 +127,7 @@ public class NeuralNetIrisTest extends TestUtil {
                     p.initial_weight_distribution = dist;
                     p.initial_weight_scale = scale;
                     p.diagnostics = true;
+                    p.fast_mode = false;
                     p.loss = loss;
 
                     Layer[] ls = new Layer[3];

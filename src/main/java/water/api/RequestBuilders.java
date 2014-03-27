@@ -548,7 +548,7 @@ public class RequestBuilders extends RequestQueries {
       return res;
     }
 
-    public void toJava(StringBuilder sb) { 
+    public void toJava(StringBuilder sb) {
       if( _req != null ) _req.toJava(sb);
     }
 
@@ -1056,9 +1056,13 @@ public class RequestBuilders extends RequestQueries {
       StringBuilder sb = new StringBuilder();
       sb.append("<div style='text-align:center;'>");
       sb.append(infoButton());
-      long lastOffset = (_max / _view) * _view;
-      long lastIdx = (_max / _view);
-      long currentIdx = _offset / _view;
+      long firstPageItems = _offset % _view;
+      long lastPageItems = (_max-_offset) % _view;
+      long prevPages  = _offset / _view + (firstPageItems>0?1:0);
+      long nextPages  = _offset + _view >= _max ? 0 : Math.max(_max-_offset-_view, 0) / _view + (lastPageItems>0?1:0);
+      long lastOffset = _offset + nextPages * _view;
+      long currentIdx = prevPages;
+      long lastIdx = currentIdx+nextPages;
       long startIdx = Math.max(currentIdx-5,0);
       long endIdx = Math.min(startIdx + 11, lastIdx);
       if (_offset == -1)
@@ -1066,15 +1070,15 @@ public class RequestBuilders extends RequestQueries {
 
       sb.append("<span class='pagination'><ul>");
       sb.append(link("|&lt;",0,_view, _offset == 0));
-      sb.append(link("&lt;",_offset-_view,_view, _offset-_view <0));
+      sb.append(link("&lt;",Math.max(_offset-_view,0),_view, currentIdx==0));
       if (startIdx>0)
         sb.append(link("...",0,0,true));
       for (long i = startIdx; i <= endIdx; ++i)
         sb.append(link(String.valueOf(i),_view*i,_view,i == currentIdx));
       if (endIdx<lastIdx)
         sb.append(link("...",0,0,true));
-      sb.append(link("&gt;",_offset+_view,_view, _offset+_view >lastOffset));
-      sb.append(link("&gt;|",lastOffset,_view, _offset == lastOffset));
+      sb.append(link("&gt;",_offset+_view,_view, currentIdx == lastIdx));
+      sb.append(link("&gt;|",lastOffset,_view, currentIdx == lastIdx));
       sb.append("</ul></span>");
       sb.append("</div>");
       return sb.toString();

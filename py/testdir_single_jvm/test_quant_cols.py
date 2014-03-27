@@ -34,8 +34,8 @@ class Basic(unittest.TestCase):
     
         if getpass.getuser()=='kevin':
             tryList = [
-                ('home-0xdiag-datasets', 'airlines/year2013.csv', None, None, 'cE', 300), 
                 (None, '/home/kevin/Downloads/t.csv', 15, 11, 'cE', 300), 
+                ('home-0xdiag-datasets', 'airlines/year2013.csv', None, None, 'cE', 300), 
                 ]
         else:
             tryList = [
@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
 
             # print h2o.dump_json(inspect)
             levels = h2o.nodes[0].levels(source=hex_key)
-            print "levels result:", h2o.dump_json(levels)
+            # print "levels result:", h2o.dump_json(levels)
 
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
@@ -107,7 +107,7 @@ class Basic(unittest.TestCase):
 
                 # don't do for enums
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
-                if 1==0:
+                if 1==1:
                     h2o_summ.quantile_comparisons(
                         csvPathnameFull,
                         skipHeader=True,
