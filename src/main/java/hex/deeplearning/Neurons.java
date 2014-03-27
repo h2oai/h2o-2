@@ -171,31 +171,34 @@ public abstract class Neurons {
    * @param r rate
    * @param m momentum
    */
-  final void bprop(int u, float g, float r, float m) {
+  final void bprop(final int u, final float g, float r, final float m) {
     // only correct weights if the gradient is large enough
     if (params.fast_mode || (
             // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
             !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
       if (Math.abs(g) <= 1e-10) return;
     }
-
-//    Log.info("bprop(u=" + u + ", g=" + g + ", r=" + r + ", m=" + m);
-    double r2 = 0;
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
+    final float l1 = (float)params.l1;
+    final float l2 = (float)params.l2;
+    final boolean update_prev = _previous._e != null;
+    final boolean have_momenta = _wm != null;
+    final boolean have_ada = _ada != null;
+    final boolean nesterov = params.nesterov_accelerated_gradient;
     final int off = u * _previous._a.length;
-    for( int i = 0; i < _previous._a.length; i++ ) {
-      int w = off + i;
-      // propagate the error dE/dnet to the previous layer, via connecting weights
-      if( _previous._e != null ) _previous._e[i] += g * _w[w];
 
+    double r2 = 0;
+    for( int i = 0; i < _previous._a.length; i++ ) {
+      final int w = off + i;
+      if( update_prev ) _previous._e[i] += g * _w[w]; // propagate the error dE/dnet to the previous layer, via connecting weights
       //this is the actual gradient dE/dw
-      float grad = g * _previous._a[i] - (float)(_w[w] * params.l2) - (float)(Math.signum(_w[w]) * params.l1);
+      final float grad = g * _previous._a[i] - Math.signum(_w[w]) * l1 - _w[w] * l2;
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
-      if (_ada != null) {
-        assert(_wm == null && _bm == null);
+      if (have_ada) {
+        assert(!have_momenta);
         final float grad2 = grad*grad;
         _ada[2*w+1] *= rho;
         _ada[2*w+1] += (1f-rho)*grad2;
@@ -203,22 +206,25 @@ public abstract class Neurons {
         final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
         r = RMS_dx*invRMS_g;
         _ada[2*w] = rho * _ada[2*w] + (1f-rho)*r*r*grad2;
-      }
-      if (!params.nesterov_accelerated_gradient) {
-        final float delta = r * grad;
-        _w[w] += delta;
-        if( _wm != null ) {
-          _w[w] += m * _wm[w];
-          _wm[w] = delta;
-        }
-      } else {
-        if( _wm != null ) {
-          _wm[w] *= m;
-          _wm[w] += grad;
-          grad = _wm[w];
-        }
         _w[w] += r * grad;
+      } else {
+        if (!nesterov) {
+          final float delta = r * grad;
+          _w[w] += delta;
+          if( have_momenta ) {
+            _w[w] += m * _wm[w];
+            _wm[w] = delta;
+          }
+        } else {
+          float tmp = grad;
+          if( have_momenta ) {
+            _wm[w] *= m;
+            _wm[w] += tmp;
+            tmp = _wm[w];
+          }
+          _w[w] += r * tmp;
 //        Log.info("w[" + w + "] += " + r + " * " + d + " = " + _w[w]);
+        }
       }
       if (params.max_w2 != Double.POSITIVE_INFINITY)
         r2 += _w[w] * _w[w];
@@ -231,13 +237,13 @@ public abstract class Neurons {
     if (!params.nesterov_accelerated_gradient) {
       final float delta = r * g;
       _b[u] += delta;
-      if( _bm != null ) {
+      if( have_momenta ) {
         _b[u] += m * _bm[u];
         _bm[u] = delta;
       }
     } else {
       float d = g;
-      if( _bm != null ) {
+      if( have_momenta ) {
         _bm[u] *= m;
         _bm[u] += d;
         d = _bm[u];
@@ -344,8 +350,10 @@ public abstract class Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
       gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
-      for( int o = 0; o < _a.length; o++ )
+      for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 1f - 2f / (1f + (float)Math.exp(2*_a[o])); //evals faster than tanh(x), but is slightly less numerically stable - OK
+//        _a[o] = (float)(1 - 2 / (1 + Utils.approxExp(2d*_a[o]))); //even faster, but ~ 4% relative error - not worth it here
+      }
     }
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
@@ -436,8 +444,9 @@ public abstract class Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
       gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
-      for( int o = 0; o < _a.length; o++ )
+      for( int o = 0; o < _a.length; o++ ) {
         _a[o] = Math.max(_a[o], 0f);
+      }
     }
 
     @Override protected void bprop() {
