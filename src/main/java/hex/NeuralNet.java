@@ -479,7 +479,7 @@ public class NeuralNet extends ValidatedJob {
     else {
       e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( ls[ls.length - 1]._a[0] != Layer.missing_double_value )
+        if( ls[ls.length - 1]._a[0] != Layer.missing_float_value )
           error(ls, e);
       e.classification = Double.POSITIVE_INFINITY;
       e.mean_square /= len;
@@ -518,7 +518,7 @@ public class NeuralNet extends ValidatedJob {
     Linear linear = (Linear) ls[ls.length - 1];
     for (Layer l : ls) l.fprop(-1, false);
     float[] output = ls[ls.length - 1]._a;
-    double[] target = linear.target();
+    float[] target = linear.target();
     e.mean_square = 0;
     for( int o = 0; o < output.length; o++ ) {
       final double d = target[o] - output[o];
@@ -899,7 +899,6 @@ public class NeuralNet extends ValidatedJob {
       for (Layer clone : clones) clone.fprop(-1, false);
       float[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
-      // convert to float
       for (int i=0; i<out.length; ++i) preds[i+1] = out[i];
       double[] data = new double[out.length];
       for (int i=0; i<out.length; ++i) data[i] = out[i];

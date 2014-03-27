@@ -29,9 +29,9 @@ public class DeepLearningVsNeuralNet extends TestUtil {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
-  void compareVal(double a, double b, double abseps, double releps) {
+  void compareVal(float a, float b, float abseps, float releps) {
     // check for equality
-    if (Double.compare(a, b) == 0) {
+    if (Float.compare(a, b) == 0) {
     }
     // check for small relative error
     else if (Math.abs(a-b)/Math.max(a,b) < releps) {
@@ -50,10 +50,10 @@ public class DeepLearningVsNeuralNet extends TestUtil {
     DeepLearning.Activation[] activations = {
             DeepLearning.Activation.Maxout,
             DeepLearning.Activation.MaxoutWithDropout,
-            DeepLearning.Activation.RectifierWithDropout,
             DeepLearning.Activation.Tanh,
+            DeepLearning.Activation.TanhWithDropout,
             DeepLearning.Activation.Rectifier,
-            DeepLearning.Activation.TanhWithDropout
+            DeepLearning.Activation.RectifierWithDropout,
     };
     DeepLearning.Loss[] losses = {
             DeepLearning.Loss.MeanSquare,
@@ -126,12 +126,12 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                     for (double rate : rates) {
                       for (String file : files) {
                         for (boolean fast_mode : new boolean[]{true,false}) {
-                          double reftrainerr=0, trainerr=0;
-                          double reftesterr=0, testerr=0;
-                          double[] a = new double[hidden.length+2];
-                          double[] b = new double[hidden.length+2];
-                          double[] ba = new double[hidden.length+2];
-                          double[] bb = new double[hidden.length+2];
+                          float reftrainerr=0, trainerr=0;
+                          float reftesterr=0, testerr=0;
+                          float[] a = new float[hidden.length+2];
+                          float[] b = new float[hidden.length+2];
+                          float[] ba = new float[hidden.length+2];
+                          float[] bb = new float[hidden.length+2];
                           long numweights = 0, numbiases = 0;
                           for (int repeat = 0; repeat < num_repeats; ++repeat) {
                             long seed = new Random().nextLong();
@@ -350,8 +350,8 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                           /**
                            * Tolerances
                            */
-                          final double abseps = threaded ? 1e-2 : 1e-13;
-                          final double releps = threaded ? 1e-2 : 1e-13;
+                          final float abseps = threaded ? 1e-2f : 1e-6f;
+                          final float releps = threaded ? 1e-2f : 1e-6f;
 
                           // training set scoring
                           Log.info("NeuralNet     train error " + reftrainerr);

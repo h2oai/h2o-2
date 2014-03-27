@@ -192,13 +192,13 @@ public abstract class Neurons {
       if( _previous._e != null ) _previous._e[i] += g * _w[w];
 
       //this is the actual gradient dE/dw
-      double d = g * _previous._a[i] - _w[w] * params.l2 - Math.signum(_w[w]) * params.l1;
+      float d = g * _previous._a[i] - (float)(_w[w] * params.l2) - (float)(Math.signum(_w[w]) * params.l1);
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (_E_dx2 != null && _E_g2 != null) {
         assert(_wm == null && _bm == null);
-        final double grad = d;
+        final float grad = d;
         _E_g2[w] = (float)(params.rho * _E_g2[w] + (1.-params.rho)*grad*grad);
         final float RMS_dx = (float)Math.sqrt(_E_dx2[w]+params.epsilon);
         final float RMS_g = (float)Math.sqrt(_E_g2[w]+params.epsilon);
@@ -224,11 +224,11 @@ public abstract class Neurons {
 //        }
 
       if (!params.nesterov_accelerated_gradient) {
-        final double delta = r * d;
+        final float delta = r * d;
         _w[w] += delta;
         if( _wm != null ) {
           _w[w] += m * _wm[w];
-          _wm[w] = (float)(delta);
+          _wm[w] = delta;
         }
       } else {
         if( _wm != null ) {
@@ -255,7 +255,7 @@ public abstract class Neurons {
         _bm[u] = delta;
       }
     } else {
-      double d = g;
+      float d = g;
       if( _bm != null ) {
         _bm[u] *= m;
         _bm[u] += d;
@@ -263,7 +263,7 @@ public abstract class Neurons {
       }
       _b[u] += r * d;
     }
-    if (Double.isInfinite(_b[u])) _minfo.set_unstable();
+    if (Float.isInfinite(_b[u])) _minfo.set_unstable();
   }
 
   /**
@@ -373,7 +373,7 @@ public abstract class Neurons {
       for( int u = 0; u < _a.length; u++ ) {
         // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
         // dy/dnet = (1 - a^2) for y(net) = tanh(net)
-        float g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-a^2
+        float g = _e[u] * (1f - _a[u] * _a[u]);
         bprop(u, g, r, m);
       }
     }
@@ -456,7 +456,7 @@ public abstract class Neurons {
     @Override protected void fprop(long seed, boolean training) {
       gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       for( int o = 0; o < _a.length; o++ )
-        _a[o] = Math.max(_a[o], 0);
+        _a[o] = Math.max(_a[o], 0f);
     }
 
     @Override protected void bprop() {
@@ -465,7 +465,7 @@ public abstract class Neurons {
       float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-        final float g = _a[u] > 0 ? _e[u] : 0;
+        final float g = _a[u] > 0f ? _e[u] : 0;
         bprop(u, g, r, m);
       }
     }
@@ -515,7 +515,7 @@ public abstract class Neurons {
         scale += _a[o];
       }
       for( int o = 0; o < _a.length; o++ ) {
-        if (Double.isNaN(_a[o]))
+        if (Float.isNaN(_a[o]))
           throw new RuntimeException("Numerical instability, predicted NaN.");
         _a[o] /= scale;
       }
