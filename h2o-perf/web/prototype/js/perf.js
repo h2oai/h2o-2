@@ -127,6 +127,13 @@ function makeGraph(json, svg) {
 
     for (var i in datas2) {
         linedata = datas2[i]
+        svg.selectAll(".point").data(linedata.data).enter()
+              .append("svg:circle")
+              .attr("stroke", "black")
+              .attr("fill", "black")
+              .attr("cx", function(d, i) { console.log(d); return x(d[0]) })
+              .attr("cy", function(d, i) { return y(d[1]) })
+              .attr("r", function(d, i) { return 3 }); 
         linesGroup.append("path")
                   .attr("d", lineFunction(linedata.data))
                   .attr("class", "line")
