@@ -176,8 +176,6 @@ public class AUC extends Request2 {
       throw new IllegalArgumentException("Both arguments must have the same length!");
     if (!vactual.isInt())
       throw new IllegalArgumentException("Actual column must be integer class labels!");
-    if (vpredict.isInt() && vpredict.min() != vpredict.max()) //don't fuss if all predictions are 0 or 1
-      throw new IllegalArgumentException("Predicted column must be a floating point probability!");
 
     try {
       va = vactual.toEnum(); // always returns TransfVec
