@@ -5,6 +5,8 @@ import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 import hex.rng.MersenneTwisterRNG;
 import hex.rng.XorShiftRNG;
+import org.junit.Assert;
+import org.junit.Test;
 import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen;
@@ -887,6 +889,105 @@ public class Utils {
     for (int i=0; i<nums.length; i++) nums[i] *= n;
     return nums;
   }
+
+  /**
+   * Fast approximate sqrt
+   * @param x
+   * @return sqrt(x) with up to 5% relative error
+   */
+  public static double approxSqrt(double x) {
+    return Double.longBitsToDouble(((Double.doubleToLongBits(x) >> 32) + 1072632448) << 31);
+  }
+  /**
+   * Fast approximate sqrt
+   * @param x
+   * @return sqrt(x) with up to 5% relative error
+   */
+  public static float approxSqrt(float x) {
+    return Float.intBitsToFloat(532483686 + (Float.floatToRawIntBits(x) >> 1));
+  }
+  /**
+   * Fast approximate 1./sqrt
+   * @param x
+   * @return 1./sqrt(x) with up to 2% relative error
+   */
+  public static double approxInvSqrt(double x) {
+    double xhalf = 0.5d*x; x = Double.longBitsToDouble(0x5fe6ec85e7de30daL - (Double.doubleToLongBits(x)>>1)); return x*(1.5d - xhalf*x*x);
+  }
+  /**
+   * Fast approximate 1./sqrt
+   * @param x
+   * @return 1./sqrt(x) with up to 2% relative error
+   */
+  public static float approxInvSqrt(float x) {
+    float xhalf = 0.5f*x; x = Float.intBitsToFloat(0x5f3759df - (Float.floatToIntBits(x)>>1)); return x*(1.5f - xhalf*x*x);
+  }
+  /**
+   * Fast approximate exp
+   * @param x
+   * @return exp(x) with up to 5% relative error
+   */
+  public static double approxExp(double x) {
+    return Double.longBitsToDouble(((long)(1512775 * x + 1072632447)) << 32);
+  }
+  @Test
+  public void run() {
+    // float square
+    {
+      float err = 0;
+      for (int i=0;i<100000;++i) {
+        final float x = Math.abs(new Random().nextFloat() * new Random().nextLong());
+        err = Math.max(err, Math.abs((float)Math.sqrt(x)-approxSqrt(x))/(float)Math.sqrt(x));
+      }
+      Log.info("rel. error for approxSqrt(float): " + err);
+      Assert.assertTrue("rel. error for approxSqrt(float): " + err, Math.abs(err) < 5e-2);
+    }
+
+    // double square
+    {
+      double err = 0;
+      for (int i=0;i<100000;++i) {
+        final double x = Math.abs(new Random().nextDouble() * new Random().nextLong());
+        err = Math.max(err, Math.abs(Math.sqrt(x)-approxSqrt(x))/Math.sqrt(x));
+      }
+      Log.info("rel. error for approxSqrt(double): " + err);
+      Assert.assertTrue("rel. error for approxSqrt(double): " + err, Math.abs(err) < 5e-2);
+    }
+
+    // float inv square
+    {
+      float err = 0;
+      for (int i=0;i<100000;++i) {
+        final float x = Math.abs(new Random().nextFloat() * new Random().nextLong());
+        err = Math.max(err, Math.abs((float)(1./Math.sqrt(x))-approxInvSqrt(x))*(float)Math.sqrt(x));
+      }
+      Log.info("rel. error for approxInvSqrt(float): " + err);
+      Assert.assertTrue("rel. error for approxInvSqrt(float): " + err, Math.abs(err) < 2e-2);
+    }
+
+    // double inv square
+    {
+      double err = 0;
+      for (int i=0;i<100000;++i) {
+        final double x = Math.abs(new Random().nextDouble());
+        err = Math.max(err, Math.abs((1./Math.sqrt(x))-approxInvSqrt(x))*Math.sqrt(x));
+      }
+      Log.info("rel. error for approxInvSqrt(double): " + err);
+      Assert.assertTrue("rel. error for approxInvSqrt(double): " + err, Math.abs(err) < 2e-2);
+    }
+
+    // double exp
+    {
+      double err = 0;
+      for (int i=0;i<100000;++i) {
+        final double x = new Random().nextDouble() * new Random().nextInt(30);
+        err = Math.max(err, Math.abs(Math.exp(x)-approxExp(x))/Math.exp(x));
+      }
+      Log.info("rel. error for approxExp(double): " + err);
+      Assert.assertTrue("rel. error for approxExp(double): " + err, Math.abs(err) < 5e-2);
+    }
+  }
+
   /**
    * Replace given characters in a given string builder.
    * The number of characters to replace has to match to number of
