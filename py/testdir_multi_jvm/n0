@@ -10,7 +10,10 @@
 # ./n0.doit test_cloud_udp_drop.py
 ./n0.doit test_csv_download_libsvm.py
 ./n0.doit test_dead_node_status.py
+./n0.doit test_elapsed_time.py
+./n0.doit test_exec2_autoframe2.py
 ./n0.doit test_flatfile.py
+./n0.doit test_GBM_cancel_model_reuse.py
 ./n0.doit test_GBM_covtype_train_test.py
 ./n0.doit test_GBM_manyfiles_train_test.py
 ./n0.doit test_GBM_params_rand2.py
@@ -61,7 +64,9 @@
 ./n0.doit test_parse_rand_schmoo3.py
 ./n0.doit test_parse_rand_schmoo.py
 ./n0.doit test_parse_time2.py
+./n0.doit test_parse_time_fvec.py
 ./n0.doit test_parse_time.py
+./n0.doit test_parse_time_rand.py
 ./n0.doit test_poisson_covtype20x.py
 ./n0.doit test_put_1m_keys.py
 ./n0.doit test_putfile2.py
