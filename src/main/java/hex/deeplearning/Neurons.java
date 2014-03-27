@@ -69,8 +69,7 @@ public abstract class Neurons {
   private float[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
 
   // ADADELTA
-  private float[] _E_dx2; //reference to _minfo.E_dx2[layer] for convenience
-  private float[] _E_g2; //reference to _minfo.E_g2[layer] for convenience
+  private float[] _ada;
 
   /**
    * For Dropout training
@@ -101,15 +100,13 @@ public abstract class Neurons {
       if (_minfo.has_momenta()) {
         assert(_wm != null);
         assert(_bm != null);
-        assert(_E_dx2 == null);
-        assert(_E_g2 == null);
+        assert(_ada == null);
       }
       if (_minfo.adaDelta()) {
         if (params.rho == 0) throw new IllegalArgumentException("rho must be > 0 if epsilon is >0.");
         if (params.epsilon == 0) throw new IllegalArgumentException("epsilon must be > 0 if rho is >0.");
         assert(_minfo.adaDelta());
-        assert(_E_dx2 != null);
-        assert(_E_g2 != null);
+        assert(_ada != null);
         assert(_wm == null);
         assert(_bm == null);
       }
@@ -148,8 +145,7 @@ public abstract class Neurons {
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
       if (minfo.adaDelta()) {
-        _E_dx2 = minfo.get_E_dx2(index-1);
-        _E_g2 = minfo.get_E_g2(index - 1);
+        _ada = minfo.get_ada(index-1);
       }
     }
     sanityCheck(training);
@@ -198,34 +194,16 @@ public abstract class Neurons {
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
-      if (_E_dx2 != null && _E_g2 != null) {
+      if (_ada != null) {
         assert(_wm == null && _bm == null);
         final float grad2 = grad*grad;
-        _E_g2[w] *= rho;
-        _E_g2[w] += (1f-rho)*grad2;
-        final float RMS_dx = approxSqrt(_E_dx2[w] + eps);
-        final float invRMS_g = approxInvSqrt(_E_g2[w] + eps);
+        _ada[2*w+1] *= rho;
+        _ada[2*w+1] += (1f-rho)*grad2;
+        final float RMS_dx = Utils.approxSqrt(_ada[2*w] + eps);
+        final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
         r = RMS_dx*invRMS_g;
-        _E_dx2[w] = rho * _E_dx2[w] + (1f-rho)*r*r*grad2;
+        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*r*r*grad2;
       }
-
-      // TODO finish per-weight acceleration, doesn't help for now
-//        if( _wp != null && d != 0 ) {
-//          boolean sign = _wp[w] >= 0;
-//          double mult = Math.abs(_wp[w]);
-//          // If the gradient kept its sign, increase
-//          if( (d >= 0) == sign )
-//            mult += .05f;
-//          else {
-//            if( mult > 1 )
-//              mult *= .95f;
-//            else
-//              sign = !sign;
-//          }
-//          d *= mult;
-//          _wp[w] = sign ? mult : -mult;
-//        }
-
       if (!params.nesterov_accelerated_gradient) {
         final float delta = r * grad;
         _w[w] += delta;
@@ -246,7 +224,7 @@ public abstract class Neurons {
         r2 += _w[w] * _w[w];
     }
     if( params.max_w2 != Double.POSITIVE_INFINITY && r2 > params.max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      final double scale = approxSqrt((float)(params.max_w2 / r2));
+      final double scale = Utils.approxSqrt((float)(params.max_w2 / r2));
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
 
@@ -267,19 +245,6 @@ public abstract class Neurons {
       _b[u] += r * d;
     }
     if (Float.isInfinite(_b[u])) _minfo.set_unstable();
-  }
-
-  private static double approxSqrt(double x) {
-    return Double.longBitsToDouble( ( ( Double.doubleToLongBits( 289358932. )-(1l<<52) )>>1 ) + ( 1l<<61 ) );
-  }
-  private static float approxSqrt(float x) {
-    return Float.intBitsToFloat(532483686 + (Float.floatToRawIntBits(x) >> 1));
-  }
-  private static double approxInvSqrt(double x) {
-    double xhalf = 0.5d*x; x = Double.longBitsToDouble(0x5fe6ec85e7de30daL - (Double.doubleToLongBits(x)>>1)); return x*(1.5d - xhalf*x*x);
-  }
-  private static float approxInvSqrt(float x) {
-    float xhalf = 0.5f*x; x = Float.intBitsToFloat(0x5f3759df - (Float.floatToIntBits(x)>>1)); return x*(1.5f - xhalf*x*x);
   }
 
   /**
@@ -377,10 +342,6 @@ public abstract class Neurons {
    */
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
-//    public static double fastExp(double val) {
-//      final long tmp = (long) (1512775 * val + 1072632447);
-//      return Double.longBitsToDouble(tmp << 32);
-//    }
     @Override protected void fprop(long seed, boolean training) {
       gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       for( int o = 0; o < _a.length; o++ )

@@ -190,10 +190,8 @@ public class DeepLearningModel extends Model {
     private float[][] weights_momenta;
     private float[][] biases_momenta;
 
-
     // helpers for AdaDelta
-    private float[][] E_dx2;
-    private float[][] E_g2;
+    private float[][] ada;
 
     // compute model size (number of model parameters required for making predictions)
     // momenta are not counted here, but they are needed for model building
@@ -211,8 +209,7 @@ public class DeepLearningModel extends Model {
     public final float[] get_biases(int i) { return biases[i]; }
     public final float[] get_weights_momenta(int i) { return weights_momenta[i]; }
     public final float[] get_biases_momenta(int i) { return biases_momenta[i]; }
-    public final float[] get_E_dx2(int i) { return E_dx2[i]; }
-    public final float[] get_E_g2(int i) { return E_g2[i]; }
+    public final float[] get_ada(int i) { return ada[i]; }
 
     @API(help = "Model parameters", json = true)
     final private DeepLearning parameters;
@@ -298,11 +295,9 @@ public class DeepLearningModel extends Model {
       }
       else if (adaDelta()) {
         //AdaGrad
-        if (E_dx2 != null) return;
-        E_dx2 = new float[weights.length][];
-        for (int i=0; i<E_dx2.length; ++i) E_dx2[i] = new float[units[i]*units[i+1]];
-        E_g2 = new float[weights.length][];
-        for (int i=0; i<E_g2.length; ++i) E_g2[i] = new float[units[i]*units[i+1]];
+        if (ada != null) return;
+        ada = new float[weights.length][];
+        for (int i=0; i<ada.length; ++i) ada[i] = new float[2*units[i]*units[i+1]];
       }
     }
 
@@ -405,8 +400,7 @@ public class DeepLearningModel extends Model {
       }
       if (adaDelta()) {
         assert(other.adaDelta());
-        Utils.add(E_dx2, other.E_dx2);
-        Utils.add(E_g2,  other.E_g2);
+        Utils.add(ada, other.ada);
       }
       add_processed_local(other.get_processed_local());
     }
@@ -418,8 +412,7 @@ public class DeepLearningModel extends Model {
         for (float[] bias_momenta : biases_momenta) Utils.div(bias_momenta, N);
       }
       if (adaDelta()) {
-        for (float[] dx2 : E_dx2) Utils.div(dx2, (float) N);
-        for (float[] g2 : E_g2) Utils.div(g2, (float) N);
+        for (float[] dx2 : ada) Utils.div(dx2, N);
       }
     }
     double uniformDist(Random rand, double min, double max) {
@@ -428,10 +421,10 @@ public class DeepLearningModel extends Model {
     void randomizeWeights() {
       for (int i=0; i<weights.length; ++i) {
         final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD5EED + i+1); //to match NeuralNet behavior
+        final double range = Math.sqrt(6. / (units[i] + units[i+1]));
         for( int j = 0; j < weights[i].length; j++ ) {
           if (parameters.initial_weight_distribution == DeepLearning.InitialWeightDistribution.UniformAdaptive) {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
-            final double range = Math.sqrt(6. / (units[i] + units[i+1]));
             weights[i][j] = (float)uniformDist(rng, -range, range);
             if (i==weights.length-1 && parameters.classification) weights[i][j] *= 4; //Softmax might need an extra factor 4, since it's like a sigmoid
           }
@@ -525,9 +518,11 @@ public class DeepLearningModel extends Model {
         for(int u = 0; u < weights[y-1].length; u++) {
           mean_weight[y] += weights[y-1][u];
           if (rate != null) {
-            final double RMS_dx = Math.sqrt(E_dx2[y-1][u]+parameters.epsilon);
-            final double RMS_g = Math.sqrt(E_g2[y-1][u]+parameters.epsilon);
-            rate[y-1][u] = (float)(RMS_dx/RMS_g); //not exactly right, RMS_dx should be from the previous time step -> but close enough for diagnostics.
+//            final float RMS_dx = (float)Math.sqrt(ada[y-1][2*u]+(float)parameters.epsilon);
+//            final float invRMS_g = (float)(1/Math.sqrt(ada[y-1][2*u+1]+(float)parameters.epsilon));
+            final float RMS_dx = Utils.approxSqrt(ada[y-1][2*u]+(float)parameters.epsilon);
+            final float invRMS_g = Utils.approxInvSqrt(ada[y-1][2*u+1]+(float)parameters.epsilon);
+            rate[y-1][u] = RMS_dx*invRMS_g; //not exactly right, RMS_dx should be from the previous time step -> but close enough for diagnostics.
             mean_rate[y] += rate[y-1][u];
           }
         }
@@ -547,9 +542,12 @@ public class DeepLearningModel extends Model {
             rms_rate[y] += drate * drate;
           }
         }
-        rms_bias[y] = (float)Math.sqrt(rms_bias[y]/biases[y-1].length);
-        rms_weight[y] = (float)Math.sqrt(rms_weight[y]/weights[y-1].length);
-        if (rate != null) rms_rate[y] = (float)Math.sqrt(rms_rate[y]/rate[y-1].length);
+        rms_bias[y] = Utils.approxSqrt(rms_bias[y]/biases[y-1].length);
+        rms_weight[y] = Utils.approxSqrt(rms_weight[y]/weights[y-1].length);
+        if (rate != null) rms_rate[y] = Utils.approxSqrt(rms_rate[y]/rate[y-1].length);
+//        rms_bias[y] = (float)Math.sqrt(rms_bias[y]/biases[y-1].length);
+//        rms_weight[y] = (float)Math.sqrt(rms_weight[y]/weights[y-1].length);
+//        if (rate != null) rms_rate[y] = (float)Math.sqrt(rms_rate[y]/rate[y-1].length);
 
         unstable |= isNaN(mean_bias[y])  || isNaN(rms_bias[y])
                 || isNaN(mean_weight[y]) || isNaN(rms_weight[y]);
