@@ -187,6 +187,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Initialize TreeVotes for classification, MSE arrays for regression
     if (importance) initTreeMeasurements();
   }
+  @Override protected void initWorkFrame(DRFModel initialModel, Frame fr) {  }
 
   @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
     // Append number of trees participating in on-the-fly scoring
