@@ -618,27 +618,25 @@ public abstract class Neurons {
     int idx = 0;
     for (int r = 0; r<rows; r++) {
       res[r] = 0;
-      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) {
-        idx += cols;
-        continue;
+      if( row_bits == null || (row_bits[r / 8] & (1 << (r % 8))) != 0) {
+        float psum0 = 0, psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0, psum5 = 0, psum6 = 0, psum7 = 0;
+        for (int c = 0; c < multiple; c += 8) {
+          int off = idx + c;
+          psum0 += a[off    ] * x[c    ];
+          psum1 += a[off + 1] * x[c + 1];
+          psum2 += a[off + 2] * x[c + 2];
+          psum3 += a[off + 3] * x[c + 3];
+          psum4 += a[off + 4] * x[c + 4];
+          psum5 += a[off + 5] * x[c + 5];
+          psum6 += a[off + 6] * x[c + 6];
+          psum7 += a[off + 7] * x[c + 7];
+        }
+        for (int j = extra; j < cols; j++)
+          res[r] += a[idx + j] * x[j];
+        res[r] += psum0 + psum1 + psum2 + psum3;
+        res[r] += psum4 + psum5 + psum6 + psum7;
+        res[r] += y[r];
       }
-      float psum0 = 0, psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0, psum5 = 0, psum6 = 0, psum7 = 0;
-      for (int c = 0; c < multiple; c += 8) {
-        int off = idx + c;
-        psum0 += a[off    ] * x[c    ];
-        psum1 += a[off + 1] * x[c + 1];
-        psum2 += a[off + 2] * x[c + 2];
-        psum3 += a[off + 3] * x[c + 3];
-        psum4 += a[off + 4] * x[c + 4];
-        psum5 += a[off + 5] * x[c + 5];
-        psum6 += a[off + 6] * x[c + 6];
-        psum7 += a[off + 7] * x[c + 7];
-      }
-      for (int j = extra; j < cols; j++)
-        res[r] += a[idx + j] * x[j];
-      res[r] += psum0 + psum1 + psum2 + psum3;
-      res[r] += psum4 + psum5 + psum6 + psum7;
-      res[r] += y[r];
       idx += cols;
     }
   }
