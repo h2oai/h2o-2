@@ -4,22 +4,24 @@ import random
 # Want to use this to create random exprssions. Will have to think about
 # unary operations (~) and bit selections and how to match "widths"
 
-# comments from the original at http://stackoverflow.com/questions/6881170/is-there-a-way-to-autogenerate-valid-arithmetic-expressions
+# comments from the original at 
+# http://stackoverflow.com/questions/6881170/is-there-a-way-to-autogenerate-valid-arithmetic-expressions
 # 
 # I added some handling of the probability of the incidence of each operator. 
 # The operators are biased so that the lower priority operators (larger precedence values) 
 # are more common than the higher order ones.
 # 
-# I also implemented parentheses only when precedence requires. 
-# Since the integers have the highest priority (lowest precedence value) they never get wrapped in parentheses. 
+# Implemented parentheses only when precedence requires. 
+# Since the integers have the highest priority (lowest precedence value) 
+# they never get wrapped in parentheses. 
 # There is no need for a parenthesized expression as a node in the expression tree.
 # 
-# The probability of using an operator is biased towards the initial levels (using a quadratic function) 
-# to get a nicer distribution of operators. 
+# The probability of using an operator is biased towards the 
+# initial levels (using a quadratic function) to get a nicer distribution of operators. 
 # Choosing a different exponent gives more potential control of the quality of the output, 
 # but I didn't play with the possibilities much.
 # 
-# I further implemented an evaluator for fun and also to filter out indeterminate expressions.
+# An evaluator for fun and also to filter out indeterminate expressions.
 
 # dictionary of operator precedence and incidence probability, with an
 # evaluator added just for fun.
@@ -117,8 +119,7 @@ class binary_expression(expression):
         right_str = self.right.__str__()
         op_str = self.symbol
 
-        # Use precedence to determine if we need to put the sub expressions in
-        # parentheses
+        # Use precedence to decide if sub expressions get parentheses
         if self.left.precedence() > self.precedence():
             left_str = '('+left_str+')'
         if self.right.precedence() > self.precedence():
