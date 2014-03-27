@@ -12,6 +12,7 @@ import java.util.Random;
 public class Dropout {
   private transient Random _rand;
   private transient byte[] _bits;
+  public byte[] bits() { return _bits; }
 
   public Dropout() {
   }

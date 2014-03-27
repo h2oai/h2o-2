@@ -67,6 +67,16 @@ def start_cloud(object, use_remote):
     object.cloud[0].wait_for_cloud_to_be_up()
     object.jvm_output_file = object.cloud[0].nodes[0].get_output_file_name()
 
+def run_contaminated(object):
+    """
+    Check if the run was contaminated.
+    """
+    
+    if object.terminated:
+        return
+    
+    return object.cloud[0].check_contaminated()
+
 def stop_cloud(object, use_remote):
     """
     Stop H2O cloud.

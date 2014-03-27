@@ -13,6 +13,37 @@
         <script type="text/javascript" src="../prototype/js/handleTypeahead.js"></script>
         <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
     </head>
+    <style>
+        .axis path,
+        .axis line {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+        }
+        
+        .x.axis path {
+          display: none;
+        }
+        
+        .line {
+          fill: none;
+          stroke: steelblue;
+          stroke-width: 1.5px;
+        }
+
+        div.tooltip {   
+            position: absolute;           
+            text-align: center;           
+            width: 90px;
+            height: 35px;
+            padding: 2px;
+            font: 12px sans-serif;        
+            background: lightsteelblue;   
+            border: 0px;      
+            border-radius: 8px;           
+            pointer-events: none;         
+          }
+  </style>
     <body>
         <script>
             $(document).ready(function() {
@@ -27,11 +58,11 @@
                     </div>
                 </div>
             </div>
+            <div id="graph_area"></div>
             <div id="results_table">
               <script>
                 $(document).ready(function() {
                   doQuery('../prototype/php/getJSON.php');
-                  //doQuery('../prototype/php/last_n_builds.php');
                 });
               </script>
               </div>
