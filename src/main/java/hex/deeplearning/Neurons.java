@@ -185,6 +185,8 @@ public abstract class Neurons {
 
 //    Log.info("bprop(u=" + u + ", g=" + g + ", r=" + r + ", m=" + m);
     double r2 = 0;
+    final float rho = (float)params.rho;
+    final float eps = (float)params.epsilon;
     final int off = u * _previous._a.length;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = off + i;
@@ -198,13 +200,13 @@ public abstract class Neurons {
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (_E_dx2 != null && _E_g2 != null) {
         assert(_wm == null && _bm == null);
-        _E_g2[w] = (float)(params.rho * _E_g2[w] + (1.-params.rho)*grad*grad);
-        //final float RMS_dx = (float)Math.sqrt(_E_dx2[w]+params.epsilon);
-        //final float invRMS_g = 1f/(float)Math.sqrt(_E_g2[w]+params.epsilon);
-        final float RMS_dx = approxSqrt(_E_dx2[w] + (float)params.epsilon);
-        final float invRMS_g = approxInvSqrt(_E_g2[w] + (float) params.epsilon);
+        final float grad2 = grad*grad;
+        _E_g2[w] *= rho;
+        _E_g2[w] += (1f-rho)*grad2;
+        final float RMS_dx = approxSqrt(_E_dx2[w] + eps);
+        final float invRMS_g = approxInvSqrt(_E_g2[w] + eps);
         r = RMS_dx*invRMS_g;
-        _E_dx2[w] = (float)(params.rho * _E_dx2[w] + (1.-params.rho)*(r*grad)*(r*grad));
+        _E_dx2[w] = rho * _E_dx2[w] + (1f-rho)*r*r*grad2;
       }
 
       // TODO finish per-weight acceleration, doesn't help for now
