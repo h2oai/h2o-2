@@ -821,7 +821,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, validation, nodesize=1) {
+h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=20, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, validation, nodesize=1) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')

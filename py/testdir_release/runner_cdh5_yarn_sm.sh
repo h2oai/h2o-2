@@ -22,11 +22,15 @@ mkdir -p sandbox
 
 # resource manager is still on 
 # yarn.resourcemanager.address  8032
-CDH5_YARN_JOBTRACKER=ch-5:8032
-CDH5_YARN_NODES=1
+# FIX! apparently we have to dispatch from the jobtracker machine or it doesn't work
+# the yarn_site.xml and mapred_site.xml maybe need to be copied to all machines from here? (hadoop config)
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 5g for now. node count 2"
 echo "need to adjust the cdh5 cloudera config (yarn memory?)"
+HDFS_NAME_NODE=10.71.0.100
+
+CDH5_YARN_JOBTRACKER=ch-10:8032
+CDH5_YARN_NODES=1
 CDH5_YARN_HEAP=5g
 CDH5_YARN_JAR=h2odriver_cdh4_yarn.jar
 
@@ -37,15 +41,14 @@ HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xdiag
-REMOTE_IP=ch-0
+REMOTE_IP=ch-10
 REMOTE_USER=0xdiag@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xdiag/0xdiag_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xdiag/0xdiag_id_rsa $REMOTE_USER"
 
-# source ./kill_hadoop_jobs.sh
-echo "Skipping this because it doesn't wor "
-echo "source ./kill_hadoop_jobs.sh"
-source ./kill_hadoop_jobs.sh || true
+$REMOTE_SSH_USER "mapred job -list"
+# this execute on the remote machine
+source ./kill_hadoop_jobs.sh
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
 rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh
@@ -87,7 +90,7 @@ done < h2o_one_node
 rm -fr h2o-nodes.json
 # NOTE: keep this hdfs info in sync with the json used to build the cloud above
 echo "Make sure you update this to point to the right name node, which can be different than the resource manager"
-../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node 192.168.1.180 -expected_size $CDH5_YARN_NODES
+../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node $HDFS_NAME_NODE -expected_size $CDH5_YARN_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
@@ -158,4 +161,4 @@ jobs -l
 echo ""
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
 echo "The mapred job(s) should be gone?"
-# $REMOTE_SSH_USER "mapred job -list"
+$REMOTE_SSH_USER "mapred job -list"
