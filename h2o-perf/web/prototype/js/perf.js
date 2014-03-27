@@ -85,7 +85,6 @@ function makeGraph(json, svg) {
       test_names.push(d3.values(json.data[i])[1]);
     }
     test_names = d3.set(test_names).values();
-    console.log(test_names)
 
     var datas2 = new Array();
     var domains = new Array();
@@ -107,11 +106,10 @@ function makeGraph(json, svg) {
       dat   = d3.values(json.data[i])[2];
       for(j = 0; j < datas2.length; j++) {
         if (datas2[j].name === test) {
-            datas2[j].data.push([build, dat])
+            datas2[j].data.push([build, dat, test])
         }
       }
     }
-    console.log(datas2)
 
     x.domain([
       d3.min(datas2, function(c) { return d3.min(c.data, function(v) { return v[0]; }); }),
@@ -124,6 +122,7 @@ function makeGraph(json, svg) {
     ]);
 
     var linesGroup = svg.append("g").attr("class", "line");
+    var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
 
     for (var i in datas2) {
         linedata = datas2[i]
@@ -131,7 +130,24 @@ function makeGraph(json, svg) {
               .append("svg:circle")
               .attr("stroke", "black")
               .attr("fill", "black")
-              .attr("cx", function(d, i) { console.log(d); return x(d[0]) })
+            .on("mouseover", function(d, i) {
+                var dd = document.createElement("div");
+                dd.style.position = "absolute";
+                dd.style.visibility = "hidden";
+                dd.style.height = "auto";
+                dd.style.width = "auto";
+                dd.innerHTML = d[2];
+                dd.setAttribute("id", "a")
+                document.body.appendChild(dd);
+                div.transition().duration(200).style("opacity", .95);
+                div.html("build:" + d[0] + "<br /> time: " + parseFloat(d[1]).toFixed(1) + "(s)")
+                .style("left", (d3.event.pageX) + "px")
+                .style("top", (d3.event.pageY - 28) + "px")
+                .style("width", (dd.clientWidth + 1) + "px");
+             })
+              .on("mouseout", function(d) {
+                  div.transition().duration(400).style("opacity", 0)})
+              .attr("cx", function(d, i) { return x(d[0]) })
               .attr("cy", function(d, i) { return y(d[1]) })
               .attr("r", function(d, i) { return 3 }); 
         linesGroup.append("path")
