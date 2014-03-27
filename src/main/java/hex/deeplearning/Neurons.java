@@ -192,18 +192,19 @@ public abstract class Neurons {
       if( _previous._e != null ) _previous._e[i] += g * _w[w];
 
       //this is the actual gradient dE/dw
-      float d = g * _previous._a[i] - (float)(_w[w] * params.l2) - (float)(Math.signum(_w[w]) * params.l1);
+      float grad = g * _previous._a[i] - (float)(_w[w] * params.l2) - (float)(Math.signum(_w[w]) * params.l1);
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (_E_dx2 != null && _E_g2 != null) {
         assert(_wm == null && _bm == null);
-        final float grad = d;
         _E_g2[w] = (float)(params.rho * _E_g2[w] + (1.-params.rho)*grad*grad);
-        final float RMS_dx = (float)Math.sqrt(_E_dx2[w]+params.epsilon);
-        final float RMS_g = (float)Math.sqrt(_E_g2[w]+params.epsilon);
-        r = RMS_dx/RMS_g;
-        _E_dx2[w] = (float)(params.rho * _E_dx2[w] + (1.-params.rho)*(r*d)*(r*d));
+        //final float RMS_dx = (float)Math.sqrt(_E_dx2[w]+params.epsilon);
+        //final float invRMS_g = 1f/(float)Math.sqrt(_E_g2[w]+params.epsilon);
+        final float RMS_dx = approxSqrt(_E_dx2[w] + (float)params.epsilon);
+        final float invRMS_g = approxInvSqrt(_E_g2[w] + (float) params.epsilon);
+        r = RMS_dx*invRMS_g;
+        _E_dx2[w] = (float)(params.rho * _E_dx2[w] + (1.-params.rho)*(r*grad)*(r*grad));
       }
 
       // TODO finish per-weight acceleration, doesn't help for now
@@ -224,7 +225,7 @@ public abstract class Neurons {
 //        }
 
       if (!params.nesterov_accelerated_gradient) {
-        final float delta = r * d;
+        final float delta = r * grad;
         _w[w] += delta;
         if( _wm != null ) {
           _w[w] += m * _wm[w];
@@ -233,17 +234,17 @@ public abstract class Neurons {
       } else {
         if( _wm != null ) {
           _wm[w] *= m;
-          _wm[w] += d;
-          d = _wm[w];
+          _wm[w] += grad;
+          grad = _wm[w];
         }
-        _w[w] += r * d;
+        _w[w] += r * grad;
 //        Log.info("w[" + w + "] += " + r + " * " + d + " = " + _w[w]);
       }
       if (params.max_w2 != Double.POSITIVE_INFINITY)
         r2 += _w[w] * _w[w];
     }
     if( params.max_w2 != Double.POSITIVE_INFINITY && r2 > params.max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      final double scale = Math.sqrt(params.max_w2 / r2);
+      final double scale = approxSqrt((float)(params.max_w2 / r2));
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
 
@@ -264,6 +265,19 @@ public abstract class Neurons {
       _b[u] += r * d;
     }
     if (Float.isInfinite(_b[u])) _minfo.set_unstable();
+  }
+
+  private static double approxSqrt(double x) {
+    return Double.longBitsToDouble( ( ( Double.doubleToLongBits( 289358932. )-(1l<<52) )>>1 ) + ( 1l<<61 ) );
+  }
+  private static float approxSqrt(float x) {
+    return Float.intBitsToFloat(532483686 + (Float.floatToRawIntBits(x) >> 1));
+  }
+  private static double approxInvSqrt(double x) {
+    double xhalf = 0.5d*x; x = Double.longBitsToDouble(0x5fe6ec85e7de30daL - (Double.doubleToLongBits(x)>>1)); return x*(1.5d - xhalf*x*x);
+  }
+  private static float approxInvSqrt(float x) {
+    float xhalf = 0.5f*x; x = Float.intBitsToFloat(0x5f3759df - (Float.floatToIntBits(x)>>1)); return x*(1.5f - xhalf*x*x);
   }
 
   /**
@@ -361,6 +375,10 @@ public abstract class Neurons {
    */
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
+//    public static double fastExp(double val) {
+//      final long tmp = (long) (1512775 * val + 1072632447);
+//      return Double.longBitsToDouble(tmp << 32);
+//    }
     @Override protected void fprop(long seed, boolean training) {
       gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       for( int o = 0; o < _a.length; o++ )
