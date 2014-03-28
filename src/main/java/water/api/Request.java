@@ -2,6 +2,7 @@ package water.api;
 
 import hex.KMeansModel;
 import hex.glm.GLMModel;
+import hex.nb.NBModel;
 import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
@@ -297,6 +298,8 @@ public abstract class Request extends RequestBuilders {
     if(c != null) {
       if( PCAModel.class.isAssignableFrom(c) )
         return TypeaheadPCAModelKeyRequest.class;
+      if( NBModel.class.isAssignableFrom(c) )
+        return TypeaheadNBModelKeyRequest.class;
       if( GLMModel.class.isAssignableFrom(c))
         return TypeaheadGLMModelKeyRequest.class;
       if( RFModel.class.isAssignableFrom(c))
