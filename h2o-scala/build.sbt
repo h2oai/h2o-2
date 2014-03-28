@@ -84,3 +84,10 @@ javaOptions in run ++= Seq("-Xmx4g", "-Xms4g")
 // - Change the base directory
 baseDirectory in run := h2oClasses.value
 
+lazy val runExamples = taskKey[Unit]("Run examples")
+
+fullRunTask(runExamples, Runtime, "water.api.dsl.examples.Examples")
+
+fork in runExamples := true
+
+

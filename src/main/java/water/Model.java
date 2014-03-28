@@ -166,10 +166,9 @@ public abstract class Model extends Lockable<Model> {
     assert adaptFrm.vecs().length == _names.length-1 : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length  + " instead of " + (_names.length-1);
 
     // Create a new vector for response
-    Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
-    v._domain = _domains[_domains.length-1];
+    Vec v = adaptFrm.anyVec().makeZero(classNames());
     adaptFrm.add("predict",v);
     if( nclasses() > 1 ) {
       String prefix = "";
@@ -281,7 +280,9 @@ public abstract class Model extends Lockable<Model> {
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    vfr = vfr.subframe(names, false); // select only supported columns, if column is missing Exception is thrown
+    // FIXME: Replacing in non-existant columns with 0s only makes sense for sparse data (SVMLight), otherwise we should either throw an exception or use NaNs...
+    Frame  [] subVfr = vfr.subframe(names, 0); // select only supported columns, if column is missing replace it with zeroes
+    vfr = subVfr[0]; // extract only subframe but keep the rest for delete later
     Vec[] frvecs = vfr.vecs();
     boolean[] toEnum = new boolean[frvecs.length];
     if(!exact) for(int i = 0; i < n;++i)
@@ -299,14 +300,17 @@ public abstract class Model extends Lockable<Model> {
         Vec adaptedVec;
         if (toEnum[c]) { // Vector was flipped to column already, compose transformation
           adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], vfr.domains()[c], false);
-        } else adaptedVec = frvecs[c].makeTransf(map[c]);
+        } else adaptedVec = frvecs[c].makeTransf(map[c], vfr.domains()[c]);
         avecs.add(frvecs[c] = adaptedVec);
         anames.add(names[c]); // Collect right names
       } else if (toEnum[c]) { // Vector was transformed to enum domain, but does not need adaptation we need to record it
         avecs.add(frvecs[c]);
         anames.add(names[c]);
       }
-    return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
+    // Fill trash bin by vectors which need to be deleted later by the caller.
+    Frame vecTrash = new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()]));
+    if (subVfr[1]!=null) vecTrash.add(subVfr[1], true);
+    return new Frame[] { new Frame(names,frvecs), vecTrash };
   }
 
   /** Returns a mapping between values of model domains (<code>modelDom</code>) and given column domain.
@@ -326,12 +330,12 @@ public abstract class Model extends Lockable<Model> {
   public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean logNonExactMapping) {
     int emap[] = new int[modelDom.length];
     boolean bmap[] = new boolean[modelDom.length];
-    HashMap<String,Integer> md = new HashMap<String, Integer>();
+    HashMap<String,Integer> md = new HashMap<String, Integer>((int) ((colDom.length/0.75f)+1));
     for( int i = 0; i < colDom.length; i++) md.put(colDom[i], i);
     for( int i = 0; i < modelDom.length; i++) {
       Integer I = md.get(modelDom[i]);
       if (I == null && logNonExactMapping)
-        Log.warn(Sys.SCORM, "Column "+colName+" was trained with factor '"+modelDom[i]+"' which DOES NOT appear in column data");
+        Log.warn(Sys.SCORM, "Domain mapping: target domain contains the factor '"+modelDom[i]+"' which DOES NOT appear in input domain " + (colName!=null?"(column: " + colName+")":""));
       if (I!=null) {
         emap[i] = I;
         bmap[i] = true;
@@ -343,7 +347,7 @@ public abstract class Model extends Lockable<Model> {
         for (int j=0; j<emap.length; j++)
           if (emap[j]==i) { found=true; break; }
         if (!found)
-          Log.warn(Sys.SCORM, "Column "+colName+" WAS NOT trained with factor '"+colDom[i]+"' which appears in column data");
+          Log.warn(Sys.SCORM, "Domain mapping: target domain DOES NOT contain the factor '"+colDom[i]+"' which appears in input domain "+ (colName!=null?"(column: " + colName+")":""));
       }
     }
 

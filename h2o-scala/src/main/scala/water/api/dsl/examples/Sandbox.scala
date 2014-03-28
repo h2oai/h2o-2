@@ -141,11 +141,11 @@ object XT {
     import H2ODsl._
     val f = parse("../private/cars.csv")
     val f5 = f map ( new FAOp {
-      def apply(rhs: Array[scala.Double]):Boolean = rhs(2) > 4;
+      def apply(rhs: Row):Boolean = rhs.d(2) > 4;
     });
     
     val f4 = f collect ( 0.0, new CDOp() {
-      override def apply(acc:scala.Double, rhs:Array[scala.Double]) = acc + rhs(2)
+      override def apply(acc:scala.Double, rhs:Row) = acc + rhs.d(2)
       override def reduce(l:scala.Double,r:scala.Double) = l+r
     } )
     

@@ -1,6 +1,5 @@
 package water.exec;
 import water.util.Log;
-
 import hex.Quantiles;
 import hex.la.Matrix;
 
@@ -11,6 +10,7 @@ import org.joda.time.MutableDateTime;
 
 import water.*;
 import water.fvec.*;
+import water.fvec.Vec.VectorGroup;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -86,6 +86,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTIsNA());
     putPrefix(new ASTNrow());
     putPrefix(new ASTNcol());
+    putPrefix(new ASTLength());
     putPrefix(new ASTAbs ());
     putPrefix(new ASTSgn ());
     putPrefix(new ASTSqrt());
@@ -129,8 +130,11 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
+    putPrefix(new ASTXorSum ());
     // Misc
-    putPrefix(new ASTSeq   ());
+    putPrefix(new ASTSeq());
+    putPrefix(new ASTSeqLen());
+    putPrefix(new ASTRepLen());
     putPrefix(new ASTQtile ());
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
@@ -143,6 +147,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTUnique());
     putPrefix(new ASTRunif ());
     putPrefix(new ASTCut   ());
+    putPrefix(new ASTfindInterval());
     putPrefix(new ASTPrint ());
     putPrefix(new ASTLs    ());
   }
@@ -342,6 +347,19 @@ class ASTNcol extends ASTUniPrefixOp {
     Frame fr = env.popAry();
     String skey = env.key();
     double d = fr.numCols();
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+class ASTLength extends ASTUniPrefixOp {
+  ASTLength() { super(VARS1, new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "length"; }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = fr.numCols() == 1 ? fr.numRows() : fr.numCols();
     env.subRef(fr,skey);
     env.poppush(d);
   }
@@ -726,12 +744,12 @@ class ASTCbind extends ASTOp {
         Frame fr2 = env.ary(-argcnt+1+i);
         if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
           fr.add(name,fr2.anyVec());
-        else 
+        else
           fr.add(fr2,true);
       } else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
-        Vec v = vmax == null ? new Vec(Vec.VectorGroup.VG_LEN1.addVec(), d) : vmax.makeCon(d);
+        Vec v = vmax == null ? Vec.make1Elem(d) : vmax.makeCon(d);
         fr.add("C" + String.valueOf(i+1), v);
         env.addRef(v);
       }
@@ -934,9 +952,9 @@ class ASTMTrans extends ASTOp {
 }
 
 // Similar to R's seq_len
-class ASTSeq extends ASTOp {
+class ASTSeqLen extends ASTOp {
   @Override String opStr() { return "seq_len"; }
-  ASTSeq( ) {
+  ASTSeqLen( ) {
     super(new String[]{"seq_len", "n"},
             new Type[]{Type.ARY,Type.DBL},
             OPF_PREFIX,
@@ -949,6 +967,73 @@ class ASTSeq extends ASTOp {
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
     env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
+  }
+}
+
+// Same logic as R's generic seq method
+class ASTSeq extends ASTOp {
+  @Override String opStr() { return "seq"; }
+  ASTSeq() { super(new String[]{"seq", "from", "to", "by"},
+                   new Type[]{Type.dblary(), Type.DBL, Type.DBL, Type.DBL},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    double by = env.popDbl();
+    double to = env.popDbl();
+    double from = env.popDbl();
+
+    double delta = to - from;
+    if(delta == 0 && to == 0)
+      env.poppush(to);
+    else {
+      double n = delta/by;
+      if(n < 0)
+        throw new IllegalArgumentException("wrong sign in 'by' argument");
+      else if(n > Double.MAX_VALUE)
+        throw new IllegalArgumentException("'by' argument is much too small");
+
+      double dd = Math.abs(delta)/Math.max(Math.abs(from), Math.abs(to));
+      if(dd < 100*Double.MIN_VALUE)
+        env.poppush(from);
+      else {
+        Key k = new Vec.VectorGroup().addVec();
+        Futures fs = new Futures();
+        AppendableVec av = new AppendableVec(k);
+        NewChunk nc = new NewChunk(av, 0);
+        int len = (int)n + 1;
+        for (int r = 0; r < len; r++) nc.addNum(from + r*by);
+        // May need to adjust values = by > 0 ? min(values, to) : max(values, to)
+        nc.close(0, fs);
+        Vec vec = av.close(fs);
+        fs.blockForPending();
+        vec._domain = null;
+        env.poppush(1, new Frame(new String[] {"C1"}, new Vec[] {vec}), null);
+      }
+    }
+  }
+}
+
+class ASTRepLen extends ASTOp {
+  @Override String opStr() { return "rep_len"; }
+  ASTRepLen() { super(new String[]{"rep_len", "x", "length.out"},
+                   new Type[]{Type.dblary(), Type.DBL, Type.DBL},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(env.isAry(-2)) H2O.unimpl();
+    else {
+      int len = (int)env.popDbl();
+      if(len <= 0)
+        throw new IllegalArgumentException("Error in rep_len: argument length.out must be coercible to a positive integer");
+      double x = env.popDbl();
+      env.poppush(1,new Frame(new String[]{"C1"}, new Vec[]{Vec.makeConSeq(x, len)}),null);
+    }
   }
 }
 
@@ -979,7 +1064,7 @@ class ASTQtile extends ASTOp {
         throw new  IllegalArgumentException("Quantile: column type cannot be Enum.");
     }
 
-    // FIX! might not be needed
+    // might not be needed
     Futures fs = new Futures();
     xv.rollupStats(fs);
     fs.blockForPending();
@@ -989,39 +1074,70 @@ class ASTQtile extends ASTOp {
     AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
 
-    Quantiles[] qbins = null;
+    Quantiles[] qbins1 = null;
+    Quantiles[] qbinsM = null;
 
     final int MAX_ITERATIONS = 16;
     final int MAX_QBINS = 1000; // less uses less memory, can take more passes
     final boolean MULTIPASS = true; // approx in 1 pass if false
+    // Type 7 matches R default
     final int INTERPOLATION = 7; // linear if quantile not exact on row. 2 uses mean.
 
+    // The mappers throw away their memory when done? So if we save the hcnt* results
+    // (histogram obj) from iteration 1, we can reuse it to avoid 1st pass for each threshold.
+    // Nice speedup for a list (and not affect single threshold)
+    // Cost of keeping the first histogram around during multipass iterations is small?
     double result;
+    double valStart = xv.min();
+    double valEnd = xv.max();
+    // we can only pass a list for a one pass approx. not here.
+    double [] quantiles_to_do = new double[1];
+
+    // some MULTIPASS conditionals needed if we were going to make this work for approx or exact
+    qbins1 = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd).doAll(xv)._qbins;
     for (double quantile : p) {
-      // FIX! should really break this loop out into a multipass single type 7 quantile thing.
-      // Type 7 matches R default
-      double valStart = xv.min();
-      double valEnd = xv.max();
+      // Don't need to reinit valStart/End now, because we saved the first qbins
+      result = Double.NaN;
       for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
-        qbins = new Quantiles.BinTask2(quantile, MAX_QBINS, valStart, valEnd, 
-          MULTIPASS, INTERPOLATION).doAll(xv)._qbins;
-        if ( qbins == null ) break;
-        else {
-          // the map/reduce didn't create any h2o keys. don't have to wait for anything?
-          qbins[0].finishUp(xv);
-          Log.debug("\nQ_ multipass iteration: "+iteration+
-            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins[0]._valBinSize);
-          // next iteration
-          valStart = qbins[0]._newValStart;
-          valEnd = qbins[0]._newValEnd;
-          if ( qbins[0]._done ) break;
+        // a little obtuse because reusing first pass object, if p has multiple thresholds
+        // since it's always the same (always had same valStart/End seed = vec min/max
+        if ( iteration == 1 ) {
+          if ( qbins1 == null ) break;
+          // need to pass a different threshold now for each finishUp!
+          quantiles_to_do[0] = quantile; // FIX! provide a single quantile entry?
+          qbins1[0].finishUp(xv, quantiles_to_do, INTERPOLATION, MULTIPASS);
+          Log.debug("\nQ_ 1st multipass iteration: "+iteration+
+            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbins1[0]._valBinSize);
+          if ( qbins1[0]._done ) {
+            result = qbins1[0]._pctile[0];
+            break;
+          }
+          // next iteration. finishUp set these
+          valStart = qbins1[0]._newValStart;
+          valEnd = qbins1[0]._newValEnd;
         }
+        if ( iteration > 1 ) {
+          if ( qbinsM == null ) break;
+          quantiles_to_do[0] = quantile; // FIX! provide a single quantile entry?
+          qbinsM[0].finishUp(xv, quantiles_to_do, INTERPOLATION, MULTIPASS);
+          Log.debug("\nQ_ multipass iteration: "+iteration+
+            " valStart: "+valStart+" valEnd: "+valEnd+ " valBinSize: "+qbinsM[0]._valBinSize);
+          if ( qbinsM[0]._done ) {
+            result = qbinsM[0]._pctile[0];
+            break;
+          }
+          // next iteration. finishUp set these
+          valStart = qbinsM[0]._newValStart;
+          valEnd = qbinsM[0]._newValEnd;
+        }
+        // the 2-N map/reduces are here (with new start/ends. MULTIPASS is implied
+        qbinsM = new Quantiles.BinTask2(MAX_QBINS, valStart, valEnd).doAll(xv)._qbins;
       }
-      if ( qbins == null ) result = Double.NaN;
-      else result = qbins[0]._pctile[0];
-      qbins = null; // shouldn't need this? 
+      qbinsM = null; // shouldn't need this?
       nc.addNum(result);
     }
+    // keep this guy around till we're done with all quantiles
+    qbins1 = null; // shouldn't need this?
 
     nc.close(0, null);
     Vec v = av.close(null);
@@ -1143,6 +1259,39 @@ class ASTMean extends ASTOp {
     double s = 0;  int cnt=0;
     for (double v : in) if( !Double.isNaN(v) ) { s+=v; cnt++; }
     out[0] = s/cnt;
+    return out;
+  }
+}
+
+class ASTXorSum extends ASTReducerOp { ASTXorSum() {super(0,false); } 
+  @Override String opStr(){ return "xorsum";}
+  @Override ASTOp make() {return new ASTXorSum();}
+  @Override double op(double d0, double d1) { 
+    long d0Bits = Double.doubleToLongBits(d0);
+    long d1Bits = Double.doubleToLongBits(d1);
+    long xorsumBits = d0Bits ^ d1Bits;
+    // just need to not get inf or nan. If we zero the upper 4 bits, we won't
+    final long ZERO_SOME_SIGN_EXP = 0x0fffffffffffffffL;
+    xorsumBits = xorsumBits & ZERO_SOME_SIGN_EXP;
+    double xorsum = Double.longBitsToDouble(xorsumBits);
+    return xorsum;
+  }
+  @Override double[] map(Env env, double[] in, double[] out) {
+    if (out == null || out.length < 1) out = new double[1];
+    long xorsumBits = 0;
+    long vBits;
+    // for dp ieee 754 , sign and exp are the high 12 bits
+    // We don't want infinity or nan, because h2o will return a string.
+    double xorsum = 0;
+    for (double v : in) {
+      vBits = Double.doubleToLongBits(v);
+      xorsumBits = xorsumBits ^ vBits;
+    }
+    // just need to not get inf or nan. If we zero the upper 4 bits, we won't
+    final long ZERO_SOME_SIGN_EXP = 0x0fffffffffffffffL;
+    xorsumBits = xorsumBits & ZERO_SOME_SIGN_EXP;
+    xorsum = Double.longBitsToDouble(xorsumBits);
+    out[0] = xorsum;
     return out;
   }
 }
@@ -1403,6 +1552,89 @@ class ASTCut extends ASTOp {
       env.pop();
       env.push(fr2);
     } else throw H2O.unimpl();
+  }
+}
+
+class ASTfindInterval extends ASTOp {
+  ASTfindInterval() { super(new String[]{"findInterval", "ary", "vec", "rightmost.closed"},
+                          new Type[]{Type.ARY, Type.ARY, Type.dblary(), Type.DBL},
+                          OPF_PREFIX,
+                          OPP_PREFIX,
+                          OPA_RIGHT); }
+  @Override String opStr() { return "findInterval"; }
+  @Override ASTOp make() { return new ASTfindInterval(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final boolean rclosed = env.popDbl() == 0 ? false : true;
+
+    if(env.isDbl()) {
+      final double cutoff = env.popDbl();
+
+      Frame fr = env.popAry();
+      String skey = env.key();
+      if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
+        throw new IllegalArgumentException("First argument must be a numeric column vector");
+
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for(int r = 0; r < chk._len; r++) {
+            double x = chk.at0(r);
+            if(Double.isNaN(x))
+              nchk.addNum(Double.NaN);
+            else {
+              if(rclosed)
+                nchk.addNum(x > cutoff ? 1 : 0);   // For rightmost.closed = TRUE
+              else
+                nchk.addNum(x >= cutoff ? 1 : 0);
+            }
+          }
+        }
+      }.doAll(1,fr).outputFrame(fr._names, fr.domains());
+      env.subRef(fr, skey);
+      env.pop();
+      env.push(fr2);
+    } else if(env.isAry()) {
+      Frame ary = env.popAry();
+      String skey1 = env.key();
+      if(ary.vecs().length != 1 || ary.vecs()[0].isEnum())
+        throw new IllegalArgumentException("Second argument must be a numeric column vector");
+      Vec brks = ary.vecs()[0];
+      // TODO: Check that num rows below some cutoff, else this will likely crash
+
+      // Check if vector of cutoffs is sorted in weakly ascending order
+      final int len = (int)brks.length();
+      final double[] cutoffs = new double[len];
+      for(int i = 0; i < len-1; i++) {
+        if(brks.at(i) > brks.at(i+1))
+          throw new IllegalArgumentException("Second argument must be sorted in non-decreasing order");
+        cutoffs[i] = brks.at(i);
+      }
+      cutoffs[len-1] = brks.at(len-1);
+
+      Frame fr = env.popAry();
+      String skey2 = env.key();
+      if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
+        throw new IllegalArgumentException("First argument must be a numeric column vector");
+
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for(int r = 0; r < chk._len; r++) {
+            double x = chk.at0(r);
+            if(Double.isNaN(x))
+              nchk.addNum(Double.NaN);
+            else {
+              double n = Arrays.binarySearch(cutoffs, x);
+              if(n < 0) nchk.addNum(-n-1);
+              else if(rclosed && n == len-1) nchk.addNum(n);   // For rightmost.closed = TRUE
+              else nchk.addNum(n+1);
+            }
+          }
+        }
+      }.doAll(1,fr).outputFrame(fr._names, fr.domains());
+      env.subRef(ary, skey1);
+      env.subRef(fr, skey2);
+      env.pop();
+      env.push(fr2);
+    }
   }
 }
 

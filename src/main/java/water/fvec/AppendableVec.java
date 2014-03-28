@@ -105,7 +105,7 @@ public class AppendableVec extends Vec {
     }
     // number wins, we need to go through the enum chunks and declare them all
     // NAs (chunk is considered enum iff it has only enums + possibly some nas)
-    if( hasNumber && hasEnum ) { 
+    if( hasNumber && hasEnum ) {
       for(int i = 0; i < nchunk; ++i)
         if(_chunkTypes[i] == ENUM)
           DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
@@ -122,7 +122,7 @@ public class AppendableVec extends Vec {
         for(int i = 0; i < nchunk; ++i)
           if(_chunkTypes[i] == TIME)
             DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
-      
+
     }
     assert t<0 || _domain == null;
 
@@ -138,8 +138,7 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key, espc);
-    vec._domain = _domain;
+    Vec vec = new Vec(_key, espc, _domain);
     vec._time = (byte)t;        // Time parse, if any
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;

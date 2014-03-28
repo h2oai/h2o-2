@@ -24,7 +24,7 @@ public class VarImp extends Iced {
   @API(help="Variable importance of individual variables.")
   public float[]  varimp;
   @API(help="Names of variables.")
-  private String[] variables;
+  protected String[] variables;
   @API(help="Variable importance measurement method.")
   public final VarImpMethod method;
   @API(help="Max. number of variables to show.")
@@ -48,35 +48,16 @@ public class VarImp extends Iced {
     DocGen.HTML.section(sb,"Variable importance of input variables: " + method);
     DocGen.HTML.arrayHead(sb);
     // Create a sort order
-    Integer[] sortOrder = new Integer[varimp.length];
-    for(int i=0; i<sortOrder.length; i++) sortOrder[i] = i;
-    Arrays.sort(sortOrder, new Comparator<Integer>() {
-      @Override public int compare(Integer o1, Integer o2) { float f = varimp[o1]-varimp[o2]; return f<0 ? 1 : (f>0 ? -1 : 0); }
-    });
-
-    final boolean shorten = variables!=null && varimp!=null && max_var < sortOrder.length;
-    // only keep max_var variables
-    if (shorten) {
-      sortOrder = Arrays.copyOfRange(sortOrder, 0, max_var);
-      String[] variables_show = new String[sortOrder.length];
-      float[] varimp_show = new float[sortOrder.length];
-      for (int i=0;i<sortOrder.length;++i) {
-        variables_show[i] = variables[sortOrder[i]];
-        varimp_show[i] = varimp[sortOrder[i]];
-      }
-      variables = variables_show;
-      varimp = varimp_show;
-    }
-    if (variables!=null) DocGen.HTML.tableLine(sb, "Variable", variables, shorten ? null : sortOrder);
-    if (varimp!=null) DocGen.HTML.tableLine(sb, method.toString(), varimp, shorten ? null : sortOrder);
-    toHTMLAppendMoreTableLines(sb, shorten ? null : sortOrder);
+    Integer[] sortOrder = getSortOrder();
+    // Generate variable labels and raw scores
+    if (variables != null) DocGen.HTML.tableLine(sb, "Variable", variables, sortOrder, Math.min(max_var, variables.length));
+    if (varimp    != null) DocGen.HTML.tableLine(sb, method.toString(), varimp, sortOrder, Math.min(max_var, variables.length));
+    // Print a specific information
+    toHTMLAppendMoreTableLines(sb, sortOrder);
     DocGen.HTML.arrayTail(sb);
-    // Generate a graph - horrible code
-    DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
-        DocGen.HTML.toJSArray(new StringBuilder(), variables),
-        DocGen.HTML.toJSArray(new StringBuilder(), varimp)
-        );
-
+    // Generate nice graph ;-)
+    toHTMLGraph(sb, sortOrder);
+    // And return the result
     return sb;
   }
 
@@ -84,8 +65,32 @@ public class VarImp extends Iced {
     return sb;
   }
 
+  protected StringBuilder toHTMLGraph(StringBuilder sb, Integer[] sortOrder) {
+    return toHTMLGraph(sb, variables, varimp, sortOrder, max_var);
+  }
+
+  static final StringBuilder toHTMLGraph(StringBuilder sb, String[] names, float[] vals, Integer[] sortOrder, int max) {
+    Integer[] so = vals.length > max ? sortOrder : null;
+    // Generate a graph
+    DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
+        DocGen.HTML.toJSArray(new StringBuilder(), names, so, Math.min(max, vals.length)),
+        DocGen.HTML.toJSArray(new StringBuilder(), vals , so, Math.min(max, vals.length))
+        );
+    return sb;
+  }
+  /** By default provides a sort order according to raw scores stored in <code>varimp</code>. */
+  protected Integer[] getSortOrder() {
+    Integer[] sortOrder = new Integer[varimp.length];
+    for(int i=0; i<sortOrder.length; i++) sortOrder[i] = i;
+    Arrays.sort(sortOrder, new Comparator<Integer>() {
+      @Override public int compare(Integer o1, Integer o2) { float f = varimp[o1]-varimp[o2]; return f<0 ? 1 : (f>0 ? -1 : 0); }
+    });
+    return sortOrder;
+  }
+
   /** Variable importance measured as relative influence.
-   * It provides raw values, scaled values, and summary. */
+   * It provides raw values, scaled values, and summary.
+   * Motivate by R's GBM package. */
   public static class VarImpRI extends VarImp {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -117,9 +122,12 @@ public class VarImp extends Iced {
 
     @Override protected StringBuilder toHTMLAppendMoreTableLines(StringBuilder sb, Integer[] sortOrder ) {
       StringBuilder ssb = super.toHTMLAppendMoreTableLines(sb, sortOrder);
-      DocGen.HTML.tableLine(sb, "Scaled values",  scaled_values(), sortOrder);
-      DocGen.HTML.tableLine(sb, "Influence in %", summary(), sortOrder);
+      DocGen.HTML.tableLine(sb, "Scaled values",  scaled_values(), sortOrder, Math.min(max_var, varimp.length));
+      DocGen.HTML.tableLine(sb, "Influence in %", summary(), sortOrder, Math.min(max_var, varimp.length));
       return ssb;
+    }
+    @Override protected StringBuilder toHTMLGraph(StringBuilder sb, Integer[] sortOrder) {
+      return toHTMLGraph(sb, variables, scaled_values(), sortOrder, max_var );
     }
   }
 
@@ -152,9 +160,9 @@ public class VarImp extends Iced {
     @Override protected StringBuilder toHTMLAppendMoreTableLines(StringBuilder sb, Integer[] sortOrder ) {
       StringBuilder ssb = super.toHTMLAppendMoreTableLines(sb, sortOrder);
       if (varimpSD!=null) {
-        DocGen.HTML.tableLine(sb, "SD", varimpSD, sortOrder);
+        DocGen.HTML.tableLine(sb, "SD", varimpSD, sortOrder, Math.min(max_var, varimp.length));
         float[] zscores = z_score();
-        DocGen.HTML.tableLine(sb, "Z-scores", zscores, sortOrder);
+        DocGen.HTML.tableLine(sb, "Z-scores", zscores, sortOrder, Math.min(max_var, varimp.length));
       }
       return ssb;
     }

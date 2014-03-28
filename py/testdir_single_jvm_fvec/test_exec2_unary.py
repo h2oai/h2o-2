@@ -113,7 +113,7 @@ else:
         # ?
         ## "(r.hex+1)<-2",
         "r.hex[nrow(r.hex),]",
-        "r.hex[,col(r.hex)]",
+        "r.hex[,ncol(r.hex)]",
         # double semi doesn't work
         # "r.hex[2,3]<-4;",
         "c(1,3,5)",

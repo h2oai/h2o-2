@@ -91,8 +91,9 @@ def percentileOnSortedList_25_50_75( N, key=lambda x:x):
 #***************************************************************************
 def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float', 
     h2oSummary2=None, 
+    h2oSummary2MaxErr=None,
     h2oQuantilesApprox=None, h2oQuantilesExact=None, 
-    h2oExecQuantilesApprox=None,
+    h2oExecQuantiles=None,
     interpolate='linear', quantile=0.50, use_genfromtxt=False):
     SCIPY_INSTALLED = True
     try:
@@ -111,7 +112,7 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
             delimiter=',',
             skip_header=1 if skipHeader else 0,
             dtype=None) # guess!
-        print "shape:", target.shape()
+        # print "shape:", target.shape()
 
     else:
         print "Using python csv reader"
@@ -200,8 +201,8 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
     h2p.blue_print(label, "from h2o summary:", h2oSummary2)
     h2p.blue_print(label, "from h2o multipass:", h2oQuantilesExact)
     h2p.blue_print(label, "from h2o singlepass:", h2oQuantilesApprox)
-    if h2oExecQuantilesApprox:
-        h2p.blue_print(label, "from h2o exec:", h2oExecQuantilesApprox)
+    if h2oExecQuantiles:
+        h2p.blue_print(label, "from h2o exec:", h2oExecQuantiles)
 
     # they should be identical. keep a tight absolute tolerance
     # Note the comparisons have different tolerances, some are relative, some are absolute
@@ -215,15 +216,21 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
         # this can be NaN if we didn't calculate it. turn the NaN string into a float NaN
         if math.isnan(float(h2oQuantilesApprox)):
             raise Exception("h2oQuantilesApprox is unexpectedly NaN %s" % h2oQuantilesApprox)
-        h2o_util.assertApproxEqual(h2oQuantilesApprox, b, rel=0.5,
+        h2o_util.assertApproxEqual(h2oQuantilesApprox, b, rel=0.1,
             msg='h2o quantile singlepass is not approx. same as sort algo')
 
     if h2oSummary2:
         if math.isnan(float(h2oSummary2)):
             raise Exception("h2oSummary2 is unexpectedly NaN %s" % h2oSummary2)
-        # bounds are way off, since it depends on the min/max of the col, not the expected value
-        h2o_util.assertApproxEqual(h2oSummary2, b, rel=1.0,
-            msg='h2o summary2 is not approx. same as sort algo')
+        if h2oSummary2MaxErr:
+            # maxErr absolute was calculated in the test from 0.5*(max-min/(max_qbins-2))
+            h2o_util.assertApproxEqual(h2oSummary2, b, tol=h2oSummary2MaxErr,
+                msg='h2o summary2 is not approx. same as sort algo (calculated expected max error)')
+        else:
+            # bounds are way off, since it depends on the min/max of the col, not the expected value
+            h2o_util.assertApproxEqual(h2oSummary2, b, rel=1.0,
+                msg='h2o summary2 is not approx. same as sort algo (sloppy compare)')
+
     if h2oQuantilesApprox and h2oSummary2:
         # they should both get the same answer. Currently they have different code, but same algo
         # FIX! ...changing to a relative tolerance, since we're getting a miscompare in some cases.
@@ -232,11 +239,11 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
             msg='h2o summary2 is not approx. same as h2o singlepass.'+\
                 ' Check that max_qbins is 1000 (summary2 is fixed) and type 7 interpolation')
 
-    if h2oExecQuantilesApprox:
-        if math.isnan(float(h2oExecQuantilesApprox)):
-            raise Exception("h2oExecQuantilesApprox is unexpectedly NaN %s" % h2oExecQuantilesApprox)
+    if h2oExecQuantiles:
+        if math.isnan(float(h2oExecQuantiles)):
+            raise Exception("h2oExecQuantiles is unexpectedly NaN %s" % h2oExecQuantiles)
         # bounds are way off
-        h2o_util.assertApproxEqual(h2oExecQuantilesApprox, b, rel=1.0,
+        h2o_util.assertApproxEqual(h2oExecQuantiles, b, rel=1.0,
             msg='h2o summary2 is not approx. same as sort algo')
 
     if SCIPY_INSTALLED:

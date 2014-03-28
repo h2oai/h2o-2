@@ -116,6 +116,7 @@ public class HeartBeatThread extends Thread {
         hb._process_total_ticks = -1;
 	hb._process_num_open_fds = -1;
       }
+      hb._pid = lpfr.getProcessID();
 
       // Announce what Cloud we think we are in.
       // Publish our health as well.

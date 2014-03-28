@@ -98,11 +98,14 @@ public class QuantilesPage extends Request2 {
     }
     fs.blockForPending();
 
-    // not used on the single pass approx. will use on multipass iterations
-    double valStart = vecs[0].min();
-    double valEnd = vecs[0].max();
     boolean multiPass;
     Quantiles[] qbins;
+
+    // just take one here. 
+    // it's array because summary2 might use with a single pass list
+    // and an exec single pass approx could pass a threshold list
+    double [] quantiles_to_do = new double[1];
+    quantiles_to_do[0] = quantile;
 
     double approxResult;
     double exactResult;
@@ -110,14 +113,18 @@ public class QuantilesPage extends Request2 {
     result = Double.NaN; 
     boolean done = false;
     // approx (fully independent from the multipass)
+    qbins = null;
     if ( multiple_pass == 0 || multiple_pass == 2 ) {
       multiPass = false;
       result_single = Double.NaN; 
       if ( multiple_pass == 0) result = Double.NaN;
 
-      qbins = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
-        // multiPass, interpolation_type).doAll(fr)._qbins;
-        multiPass, interpolation_type).doAll(vecs[0])._qbins;
+      // These are used as initial params, and setup for the next iteration
+      // be sure to set again if multiple qbins are created
+      double valStart = vecs[0].min();
+      double valEnd = vecs[0].max();
+      // quantile doesn't matter for the map/reduce binning
+      qbins = new Quantiles.BinTask2(max_qbins, valStart, valEnd).doAll(vecs[0])._qbins;
       Log.debug("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
       // Have to get this internal state, and copy this state for the next iteration
@@ -132,24 +139,22 @@ public class QuantilesPage extends Request2 {
       //  valBinSize = newValBinSize;
       //  valLowCnt  = newValLowCnt;
 
+      interpolation_type_used = interpolation_type;
+      quantile_requested = quantiles_to_do[0];
       if ( qbins != null ) { // if it's enum it will be null?
-        qbins[0].finishUp(vecs[0]);
+        qbins[0].finishUp(vecs[0], quantiles_to_do, interpolation_type, multiPass);
         column_name = names[0]; // the string name, not the param
-        quantile_requested = qbins[0].QUANTILES_TO_DO[0];
         iterations = 1;
         done = qbins[0]._done;
         approxResult = qbins[0]._pctile[0];
         interpolated = qbins[0]._interpolated;
-        interpolation_type_used = qbins[0]._interpolationType;
       }
       else {
         column_name = "";
-        quantile_requested = quantile;
         iterations = 0;
         done = false;
         approxResult = Double.NaN;
         interpolated = false;
-        interpolation_type_used = interpolation_type;
       }
 
       result_single = approxResult;
@@ -158,62 +163,59 @@ public class QuantilesPage extends Request2 {
 
       // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
       // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
-      // done with that!
-      qbins = null;
     }
     
     if ( multiple_pass == 1 || multiple_pass == 2 ) {
       final int MAX_ITERATIONS = 16; 
       multiPass = true;
       exactResult = Double.NaN; 
-      // try a second pass
-      Quantiles[] qbins2;
-      int iteration;
-      
-      qbins2 = null;
-      for (int b = 0; b < MAX_ITERATIONS; b++) {
-        qbins2 = new Quantiles.BinTask2(quantile, max_qbins, valStart, valEnd, 
-          // multiPass, interpolation_type).doAll(fr)._qbins;
-          multiPass, interpolation_type).doAll(vecs[0])._qbins;
-        iterations = b + 1;
-        if ( qbins2 == null ) break;
-        else {
-          qbins2[0].finishUp(vecs[0]);
+      double valStart = vecs[0].min();
+      double valEnd = vecs[0].max();
 
+      for (int b = 0; b < MAX_ITERATIONS; b++) {
+        // we did an approximation pass above we could reuse it for the first pass here?
+        // quantile doesn't matter for the map/reduce binning
+        // cleaned up things so no multipass behavior in qbins..all in finishUp:w
+        // so can reuse the qbins from the approx pass above (if done)
+        if ( !(multiple_pass==2 && b==0) ) {
+          qbins = new Quantiles.BinTask2(max_qbins, valStart, valEnd).doAll(vecs[0])._qbins;
+        }
+        iterations = b + 1;
+        if ( qbins == null ) break;
+        else {
+          qbins[0].finishUp(vecs[0], quantiles_to_do, interpolation_type, multiPass); 
           Log.debug("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
-          double valBinSize = qbins2[0]._valBinSize;
+          double valBinSize = qbins[0]._valBinSize;
           Log.debug("Q_ valBinSize: "+valBinSize);
 
-          valStart = qbins2[0]._newValStart;
-          valEnd = qbins2[0]._newValEnd;
-          done = qbins2[0]._done;
+          valStart = qbins[0]._newValStart;
+          valEnd = qbins[0]._newValEnd;
+          done = qbins[0]._done;
           if ( done ) break;
         }
       }
 
-      if ( qbins2 != null ) { // if it's enum it will be null?
+      interpolation_type_used = interpolation_type;
+      quantile_requested = quantiles_to_do[0];
+      if ( qbins != null ) { // if it's enum it will be null?
         column_name = names[0]; // string name, not the param
-        quantile_requested = qbins2[0].QUANTILES_TO_DO[0];
-        done = qbins2[0]._done;
-        exactResult = qbins2[0]._pctile[0];
-        interpolated = qbins2[0]._interpolated;
-        interpolation_type_used = qbins2[0]._interpolationType;
+        done = qbins[0]._done;
+        exactResult = qbins[0]._pctile[0];
+        interpolated = qbins[0]._interpolated;
       }
       else {
         // enums must come this way. Right now we don't seem 
         // to create everything for the normal response, if we reject an enum col.
         // should fix that. For now, just hack it to not look for stuff
         column_name = "";
-        quantile_requested = quantile;
         iterations = 0;
         done = false;
         exactResult = Double.NaN;
         interpolated = false;
-        interpolation_type_used = interpolation_type;
       }
 
       // all done with it
-      qbins2 = null;
+      qbins = null;
       // always the best result if we ran here
       result = exactResult;
     }

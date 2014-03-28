@@ -106,7 +106,7 @@ class ReleaseCommon(object):
         # this could fail too
         if h2o.nodes[0].delete_keys_at_teardown:
             start = time.time()
-            h2i.delete_keys_at_all_nodes()
+            h2i.delete_keys_at_all_nodes(timeoutSecs=300)
             elapsed = time.time() - start
             print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 

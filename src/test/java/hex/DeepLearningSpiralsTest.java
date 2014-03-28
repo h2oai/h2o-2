@@ -31,7 +31,7 @@ public class DeepLearningSpiralsTest extends TestUtil {
       p.seed = 0xbabe;
       p.rate = 0.007;
       p.rate_annealing = 0;
-      p.epochs = 3000;
+      p.epochs = 5000;
       p.hidden = new int[]{100};
       p.activation = DeepLearning.Activation.Tanh;
       p.max_w2 = Double.MAX_VALUE;

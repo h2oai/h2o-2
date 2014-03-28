@@ -964,7 +964,7 @@ public class DTree extends Iced {
       if( _dataKey != null ) {
         Value dataval = DKV.get(_dataKey);
         water.fvec.Frame frdata = ValueArray.asFrame(dataval);
-        water.fvec.Frame frsub = frdata.subframe(_names, false);
+        water.fvec.Frame frsub = frdata.subframe(_names);
         JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
       }
       return sb;

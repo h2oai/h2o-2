@@ -1,8 +1,10 @@
 #!/usr/bin/python
-import sys, itertools, os, re
+import sys, itertools, os, re, glob
 
+
+# use glob.glob. it uses os.listdir() and fnmatch.fnmatch() ..so it's unix style pattern match
 def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
-    cloudShutdownIsError=False, sandboxIgnoreErrors=False):
+    cloudShutdownIsError=False, sandboxIgnoreErrors=False, pattern=None):
     # show the parameters
     ### print "check_sandbox_for_errors:", locals()
     
@@ -21,135 +23,170 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     # if you find a problem, just keep printing till the end, in that file.
     # The stdout/stderr is shared for the entire cloud session?
     # so don't want to dump it multiple times?
-    errLines = []
-    for filename in os.listdir(LOG_DIR):
+
+    # glob gives full path, so we have to strip to match os.listdir()
+    fileList = []
+
+    # if we're using a pattern, ignore the "done" files
+    if pattern:
+        # search whatever the pattern says
+        # need to exclude directories (syn_datasets)
+        fileList1 = glob.glob(LOG_DIR + "/" + pattern)
+        # have to remove all the line count temp files
+        # ignore the json file we copy there also (anything eding in json)
+        for filename in fileList1:
+            if os.path.isfile(filename) and not re.search('doneToLine', filename) and not re.search('\.json$', filename):
+                fileList.append(os.path.basename(filename))
+        if len(fileList)==0:
+            raise Exception("Unexpected: h2o_sandbox found 0 files in %s that matched the pattern: %s" % (LOG_DIR, pattern) )
+    else:
+        fileList1 = os.listdir(LOG_DIR)
         # don't search the R stdout/stderr
         # this matches the python h2o captured stdout/stderr, and also any downloaded h2o logs
         # not the commands.log
-        if re.search('h2o.*stdout|h2o.*stderr',filename) and not re.search('doneToLine',filename):
-            sandFile = open(LOG_DIR + "/" + filename, "r")
+        for filename in fileList1:
+            if re.search('h2o.*stdout|h2o.*stderr', filename) and not re.search('doneToLine', filename):
+                fileList.append(filename)
+        if len(fileList)==0:
+            # let this go...sh2junit.py apparently calls h2o_sandbox() looking for h2o logs?
+            emsg = "Unexpected: h2o_sandbox found 0 files in %s that matched the stdout/stderr pattern" % LOG_DIR
+            if sandboxIgnoreErrors:
+                print emsg
+                return
+            else:
+                raise Exception(emsg)
 
-            # if we've already walked it, there will be a matching file
-            # with the last line number we checked
-            try:
-                with open(LOG_DIR + "/" + "doneToLine." + filename) as f:
-                    doneToLine = int(f.readline().rstrip())
-            except IOError:
-               # no file
-               doneToLine = 0
+    # print "h2o_sandbox: checking", len(fileList), "files"
 
-            # just in case error/assert is lower or upper case
-            # FIX! aren't we going to get the cloud building info failure messages
-            # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
-            regex1String = 'found multiple|exception|error|ERRR|assert|killing|killed|required ports'
-            if cloudShutdownIsError:
-                regex1String += '|shutdown command'
-            regex1 = re.compile(regex1String, re.IGNORECASE)
-            regex2 = re.compile('Caused',re.IGNORECASE)
-            # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
-            # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
-            regex3 = re.compile('warn|TCP', re.IGNORECASE)
+    errLines = []
+    for filename in fileList:
+        sandFile = open(LOG_DIR + "/" + filename, "r")
 
-            # many hdfs/apache messages have 'error' in the text. treat as warning if they have '[WARN]'
-            # i.e. they start with:
-            # [WARN]
+        # if we've already walked it, there will be a matching file
+        # with the last line number we checked
+        try:
+            with open(LOG_DIR + "/" + "doneToLine." + filename) as f:
+                doneToLine = int(f.readline().rstrip())
+        except IOError:
+            # no file
+            doneToLine = 0
 
-            # if we started due to "warning" ...then if we hit exception, we don't want to stop
-            # we want that to act like a new beginning. Maybe just treat "warning" and "info" as
-            # single line events? that's better
-            printing = 0 # "printing" is per file.
-            lines = 0 # count per file! errLines accumulates for multiple files.
-            currentLine = 0
-            log_python_test_name = None
-            for line in sandFile:
-                currentLine += 1
+        # if we're using a pattern, ignore the doneToLine stuff (always start at 0
+        if pattern:
+            doneToLine = 0
 
-                m = re.search('(python_test_name:) (.*)', line)
-                if m:
-                    log_python_test_name = m.group(2)
-                    # if log_python_test_name == python_test_name):
-                    #    print "Found log_python_test_name:", log_python_test_name
+        # just in case error/assert is lower or upper case
+        # FIX! aren't we going to get the cloud building info failure messages
+        # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
+        regex1String = 'found multiple|exception|error|ERRR|assert|killing|killed|required ports'
+        if cloudShutdownIsError:
+            regex1String += '|shutdown command'
+        regex1 = re.compile(regex1String, re.IGNORECASE)
+        regex2 = re.compile('Caused',re.IGNORECASE)
+        # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
+        # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
+        regex3 = re.compile('warn|TCP', re.IGNORECASE)
 
-                # don't check if we've already checked
-                if currentLine <= doneToLine:
-                    continue
+        # many hdfs/apache messages have 'error' in the text. treat as warning if they have '[WARN]'
+        # i.e. they start with:
+        # [WARN]
 
-                # if log_python_test_name and (log_python_test_name != python_test_name):
-                #     print "h2o_sandbox.py: ignoring because wrong test name:", currentLine
+        # if we started due to "warning" ...then if we hit exception, we don't want to stop
+        # we want that to act like a new beginning. Maybe just treat "warning" and "info" as
+        # single line events? that's better
+        printing = 0 # "printing" is per file.
+        lines = 0 # count per file! errLines accumulates for multiple files.
+        currentLine = 0
+        log_python_test_name = None
+        for line in sandFile:
+            currentLine += 1
 
-                # JIT reporting looks like this..don't detect that as an error
-                printSingleWarning = False
-                foundBad = False
-                if not ' bytes)' in line:
-                    # no multiline FSM on this
-                    printSingleWarning = regex3.search(line)
-                    #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
-                    # don't detect these class loader info messags as errors
-                    #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
-                    foundBad = regex1.search(line) and not (
-                        ('Error on training data' in line) or
-                        ('Error on validation data' in line) or
-                        ('Act/Prd' in line) or
-                        ('water.DException' in line) or
-                        # the manyfiles data has eRRr in a warning about test/train data
-                        ('WARN SCORM' in line) or
-                        # ignore the long, long lines that the JStack prints as INFO
-                        ('stack_traces' in line) or
-                        # shows up as param to url for h2o
-                        ('out_of_bag_error_estimate' in line) or
-                        # R stdout confusion matrix. Probably need to figure out how to exclude R logs
-                        ('Training Error' in line) or
-                        # now from GBM
-                        ('Mean Squared Error' in line) or
-                        ('Error' in line and 'Actual' in line) or
-                        # fvec
-                        ('prediction error' in line) or ('errors on' in line) or
-                        # R
-                        ('class.error' in line) or
-                        # original RF
-                        ('error rate' in line) or ('[Loaded ' in line) or
-                        ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
+            m = re.search('(python_test_name:) (.*)', line)
+            if m:
+                log_python_test_name = m.group(2)
+                # if log_python_test_name == python_test_name):
+                #    print "Found log_python_test_name:", log_python_test_name
 
-                if (printing==0 and foundBad):
-                    printing = 1
-                    lines = 1
-                elif (printing==1):
-                    lines += 1
-                    # if we've been printing, stop when you get to another error
-                    # keep printing if the pattern match for the condition
-                    # is on a line with "Caused" in it ("Caused by")
-                    # only use caused for overriding an end condition
-                    foundCaused = regex2.search(line)
-                    # since the "at ..." lines may have the "bad words" in them, we also don't want
-                    # to stop if a line has " *at " at the beginning.
-                    # Update: Assertion can be followed by Exception.
-                    # Make sure we keep printing for a min of 4 lines
-                    foundAt = re.match(r'[\t ]+at ',line)
-                    if foundBad and (lines>10) and not (foundCaused or foundAt):
-                        printing = 2
+            # don't check if we've already checked
+            if currentLine <= doneToLine:
+                continue
 
-                if (printing==1):
-                    # to avoid extra newline from print. line already has one
-                    errLines.append(line)
+            # if log_python_test_name and (log_python_test_name != python_test_name):
+            #     print "h2o_sandbox.py: ignoring because wrong test name:", currentLine
+
+            # JIT reporting looks like this..don't detect that as an error
+            printSingleWarning = False
+            foundBad = False
+            if not ' bytes)' in line:
+                # no multiline FSM on this
+                printSingleWarning = regex3.search(line)
+                #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
+                # don't detect these class loader info messags as errors
+                #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
+                foundBad = regex1.search(line) and not (
+                    ('Error on training data' in line) or
+                    ('Error on validation data' in line) or
+                    ('Act/Prd' in line) or
+                    ('water.DException' in line) or
+                    # the manyfiles data has eRRr in a warning about test/train data
+                    ('WARN SCORM' in line) or
+                    # ignore the long, long lines that the JStack prints as INFO
+                    ('stack_traces' in line) or
+                    # shows up as param to url for h2o
+                    ('out_of_bag_error_estimate' in line) or
+                    # R stdout confusion matrix. Probably need to figure out how to exclude R logs
+                    ('Training Error' in line) or
+                    # now from GBM
+                    ('Mean Squared Error' in line) or
+                    ('Error' in line and 'Actual' in line) or
+                    # fvec
+                    ('prediction error' in line) or ('errors on' in line) or
+                    # R
+                    ('class.error' in line) or
+                    # original RF
+                    ('error rate' in line) or ('[Loaded ' in line) or
+                    ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
+
+            if (printing==0 and foundBad):
+                printing = 1
+                lines = 1
+            elif (printing==1):
+                lines += 1
+                # if we've been printing, stop when you get to another error
+                # keep printing if the pattern match for the condition
+                # is on a line with "Caused" in it ("Caused by")
+                # only use caused for overriding an end condition
+                foundCaused = regex2.search(line)
+                # since the "at ..." lines may have the "bad words" in them, we also don't want
+                # to stop if a line has " *at " at the beginning.
+                # Update: Assertion can be followed by Exception.
+                # Make sure we keep printing for a min of 4 lines
+                foundAt = re.match(r'[\t ]+at ',line)
+                if foundBad and (lines>10) and not (foundCaused or foundAt):
+                    printing = 2
+
+            if (printing==1):
+                # to avoid extra newline from print. line already has one
+                errLines.append(line)
+                sys.stdout.write(line)
+
+            if (printSingleWarning):
+                # don't print these lines
+                if not (
+                    ('Unable to load native-hadoop library' in line) or
+                    ('stack_traces' in line) or
+                    ('Multiple local IPs detected' in line) or
+                    ('[Loaded ' in line) or
+                    ('RestS3Service' in line) ):
                     sys.stdout.write(line)
 
-                if (printSingleWarning):
-                    # don't print these lines
-                    if not (
-                        ('Unable to load native-hadoop library' in line) or
-                        ('stack_traces' in line) or
-                        ('Multiple local IPs detected' in line) or
-                        ('[Loaded ' in line) or
-                        ('RestS3Service' in line) ):
-                        sys.stdout.write(line)
-
-            sandFile.close()
-            # remember what you've checked so far, with a file that matches, plus a suffix
-            # this is for the case of multiple tests sharing the same log files
-            # only want the test that caused the error to report it. (not flat the subsequent ones as fail)
-            # overwrite if exists
-            with open(LOG_DIR + "/" + "doneToLine." + filename, "w") as f:
-                f.write(str(currentLine) + "\n")
+        sandFile.close()
+        # remember what you've checked so far, with a file that matches, plus a suffix
+        # this is for the case of multiple tests sharing the same log files
+        # only want the test that caused the error to report it. (not flat the subsequent ones as fail)
+        # overwrite if exists
+        with open(LOG_DIR + "/" + "doneToLine." + filename, "w") as f:
+            f.write(str(currentLine) + "\n")
 
     sys.stdout.flush()
 
@@ -178,12 +215,21 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
             emsg2 = "".join(errLines)
             errorFound = True
             errorMessage = python_test_name + emsg1 + emsg2
-            if not sandboxIgnoreErrors:
+
+            # just print if using the pattern match
+            if pattern:
+                print "####################################################################"
+                print errorMessage
+                print "####################################################################"
+            
+
+            if not pattern and not sandboxIgnoreErrors:
                 raise Exception(errorMessage)
 
     if errorFound:
         return errorMessage
     else:
+        print "h2o_sandbox: h2o logs seem okay"
         return
 
 if __name__ == "__main__":

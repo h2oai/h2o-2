@@ -18,10 +18,6 @@ do
             REMOVE_H2O_PACKAGES=1
             INSTALL_R_PACKAGES=1
             ;;
-        h)
-            echo "-f delete ~/.Rlibrary, create ~/.Rprofile and ~/.Renviron, and reinstall R packages (not h2o package)"
-            exit
-            ;;
         ?)
             echo "Something wrong with the args to Rsetup.sh"
             exit

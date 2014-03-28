@@ -107,8 +107,9 @@ public class DeepLearningProstateTest extends TestUtil {
 
                     // score and check result (on full data)
                     final DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+                    if (valid == null ) valid = frame;
                     if (mymodel.isClassifier()) {
-                      Frame pred = mymodel.score(frame);
+                      Frame pred = mymodel.score(valid);
                       StringBuilder sb = new StringBuilder();
 
                       AUC auc = new AUC();
@@ -116,8 +117,8 @@ public class DeepLearningProstateTest extends TestUtil {
                       double error = 0;
                       // binary
                       if (resp == 1) {
-                        auc.actual = frame;
-                        auc.vactual = frame.vecs()[resp];
+                        auc.actual = valid;
+                        auc.vactual = valid.vecs()[resp];
                         auc.predict = pred;
                         auc.vpredict = pred.vecs()[2];
                         auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
@@ -131,7 +132,7 @@ public class DeepLearningProstateTest extends TestUtil {
                         Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
 
                         // check that calcError() is consistent as well (for CM=null, AUC!=null)
-                        Assert.assertEquals(mymodel.calcError(frame, pred, pred, "training", false, null, auc, null), error, 1e-15);
+                        Assert.assertEquals(mymodel.calcError(valid, pred, pred, "training", false, null, auc, null), error, 1e-15);
                       }
 
                       // Compute CM
@@ -139,8 +140,8 @@ public class DeepLearningProstateTest extends TestUtil {
                       {
                         sb = new StringBuilder();
                         water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
-                        CM.actual = frame;
-                        CM.vactual = frame.vecs()[resp];
+                        CM.actual = valid;
+                        CM.vactual = valid.vecs()[resp];
                         CM.predict = pred;
                         CM.vpredict = pred.vecs()[0];
                         CM.serve();
@@ -164,8 +165,8 @@ public class DeepLearningProstateTest extends TestUtil {
                         ev.remove_and_unlock();
 
                         water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
-                        CM.actual = frame;
-                        CM.vactual = frame.vecs()[1];
+                        CM.actual = valid;
+                        CM.vactual = valid.vecs()[1];
                         CM.predict = pred2;
                         CM.vpredict = pred2.vecs()[0];
                         CM.serve();
@@ -183,8 +184,8 @@ public class DeepLearningProstateTest extends TestUtil {
                         ev.remove_and_unlock();
 
                         CM = new water.api.ConfusionMatrix();
-                        CM.actual = frame;
-                        CM.vactual = frame.vecs()[1];
+                        CM.actual = valid;
+                        CM.vactual = valid.vecs()[1];
                         CM.predict = pred2;
                         CM.vpredict = pred2.vecs()[0];
                         CM.serve();

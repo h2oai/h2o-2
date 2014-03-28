@@ -8,6 +8,7 @@ import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
 import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetScore;
+import hex.ReBalance;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
@@ -22,7 +23,6 @@ import hex.pca.PCAScore;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
-import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
 import water.deploy.LaunchJar;
 import water.util.Log;
@@ -110,7 +110,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",      "Admin");
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",      "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",     "Admin");
-    Request.addToNavbar(registerRequest(new Script()),      "Get Script",      "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
 
     Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help", USE_NEW_TAB);
@@ -136,6 +135,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
@@ -176,7 +176,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
     registerRequest(new RemoveAck());
-    registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
     registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());

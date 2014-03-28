@@ -15,8 +15,8 @@ public class Cloud extends Request {
     final public long _process_total_ticks;
 
     LastTicksEntry(HeartBeat hb) {
-      _system_idle_ticks = hb._system_idle_ticks;
-      _system_total_ticks = hb._system_total_ticks;
+      _system_idle_ticks   = hb._system_idle_ticks;
+      _system_total_ticks  = hb._system_total_ticks;
       _process_total_ticks = hb._process_total_ticks;
     }
   }
@@ -72,6 +72,7 @@ public class Cloud extends Request {
       if (! h2o._node_healthy) {
         cloudHealthy = false;
       }
+      node.addProperty("PID", hb._pid);
 
       JsonArray fjth = new JsonArray();
       JsonArray fjqh = new JsonArray();

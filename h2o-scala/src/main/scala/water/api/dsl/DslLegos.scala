@@ -6,8 +6,6 @@ import water.H2O
 import water.Key
 import water.MRTask2
 import water.fvec.Chunk
-import water.fvec.NewChunk
-import java.lang.Double
 import water.Iced
 import water.fvec.NFSFileVec
 import java.io.File
@@ -35,19 +33,19 @@ trait T_Frame extends T_H20_Frame {
   //def ##[T](ve: CSelect) = \(ve::Nil)
   
   /** Basic arithmetic ops with scalar. */
-  def +(rhs: Number): T_Frame;
-  def -(rhs: Number): T_Frame;
-  def *(rhs: Number): T_Frame;
-  def /(rhs: Number): T_Frame;
+  def +(rhs: Number): T_Frame
+  def -(rhs: Number): T_Frame
+  def *(rhs: Number): T_Frame
+  def /(rhs: Number): T_Frame
   def ^(rhs: Number): T_Frame
   
-  def <(rhs: Number): T_Frame;
-  def <=(rhs: Number): T_Frame;
-  def >(rhs: Number): T_Frame;
-  def >=(rhs: Number): T_Frame;
-  def ==(rhs: Number): T_Frame;
-  def !=(rhs: Number): T_Frame;
-  
+  def <(rhs: Number): T_Frame
+  def <=(rhs: Number): T_Frame
+  def >(rhs: Number): T_Frame
+  def >=(rhs: Number): T_Frame
+  def ==(rhs: Number): T_Frame
+  def !=(rhs: Number): T_Frame
+
   /** Basic arithmetic ops with another frame - R-like semantics. */ 
   def +(rhs: T_Frame): T_Frame;
   def -(rhs: T_Frame): T_Frame;
@@ -79,8 +77,8 @@ trait T_H20_Frame {
 abstract class T_NV_Transf[T] extends Iced with (T => T)
 /** A row transformer */
 abstract class T_A2A_Transf[T,R] extends Iced with (Array[T] => Array[R])
-abstract class T_A2B_Transf[T] extends Iced with (Array[T] => Boolean)
-abstract class T_T_Collect[@specialized(scala.Double) ACCU,T] extends Iced with ((ACCU,Array[T]) => ACCU) {
+abstract class T_A2B_Transf[T] extends Iced with (Row => Boolean)
+abstract class T_T_Collect[@specialized(scala.Double) ACCU] extends Iced with ((ACCU,Row) => ACCU) {
   def reduce(accu1:ACCU, accu2:ACCU):ACCU
 }
 
@@ -140,7 +138,6 @@ case class CSub() extends T_Chunk_Combinator {
 // f[,2-3]+1 => f[,2-3].map( { x => x+1 }) => map(Chunks[] ch, NewChunk[] ncs) { }  
 abstract trait T_MR[T <: DFrame] {
   
-  import water.api.dsl.MRUtils._
   //self:T => def frame():Frame // target type should contain method frame()
   // use all columns in frame and apply a transformation on all of them
   //
@@ -191,12 +188,11 @@ abstract trait T_MR[T <: DFrame] {
   def map(af: T_A2B_Transf[scala.Double]):T = {
     val f = frame()
     
-    val mrt = new MRTask2() {
+    val mrt = new SMRTask() {
       override def map(in:Array[Chunk], out:NewChunk) = {
-        val rlen = in(0)._len
-        val tmprow = new Array[scala.Double](in.length)
-        for (row:Int <- 0 until rlen ) {
-          out.addNum(if (af(Utils.readRow(in,row,tmprow))) 1 else 0)
+        val it = iterator(in)
+        while (it.hasNext) {
+          out.addNum(if (af(it.next())) 1 else 0)
         }  
       }   
     }
@@ -208,13 +204,13 @@ abstract trait T_MR[T <: DFrame] {
   def filter(af: T_A2B_Transf[scala.Double]):T = {
     val f = frame()
     
-    val mrt = new MRTask2() {
+    val mrt = new SMRTask() {
       override def map(in:Array[Chunk], out:Array[NewChunk]) = {
-        val rlen = in(0)._len
-        val tmprow = new Array[scala.Double](in.length)
-        for (row:Int <- 0 until rlen ) {
-          if (af(Utils.readRow(in,row,tmprow))) {
-            for (i:Int <- 0 until in.length) out(i).addNum(tmprow(i))
+        val it = iterator(in)
+        while (it.hasNext) {
+          val r = it.next();
+          if (af(r)) {
+            for (i:Int <- 0 until r.ncols()) out(i).addNum(r.d(i))
           }
         }  
       }   
@@ -224,14 +220,14 @@ abstract trait T_MR[T <: DFrame] {
     apply(result) // return the DFrame
   }
   
-  def collect[X<:Iced](acc:X, cf: T_T_Collect[X, scala.Double]):X = {
+  def collect[X<:Iced](acc:X, cf: T_T_Collect[X]):X = {
     val f = frame()
     
     val mrt = new MRICollector(acc, cf)
     mrt.doAll(f)
     mrt.mracc
   }
-  def collect(acc:scala.Double, cf: T_T_Collect[scala.Double, scala.Double]):scala.Double = {
+  def collect(acc:scala.Double, cf: T_T_Collect[scala.Double]):scala.Double = {
     val f = frame()
     
     val mrt = new MRCollector(acc, cf)

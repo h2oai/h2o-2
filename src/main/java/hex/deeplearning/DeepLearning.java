@@ -44,19 +44,19 @@ public class DeepLearning extends Job.ValidatedJob {
   public double epochs = 10;
 
   @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
-  public long mini_batch = 100000l;
+  public long mini_batch = 10000l;
 
   @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
   /*Adaptive Learning Rate*/
-  @API(help = "Adaptive learning rate (AdaDelta)", filter = Default.class, json = true)
+  @API(help = "Adaptive learning rate (ADADELTA)", filter = Default.class, json = true)
   public boolean adaptive_rate = true;
 
   @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
   public double rho = 0.95;
 
-  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
+  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-15, dmax = 1, json = true)
   public double epsilon = 1e-6;
 
   /*Learning Rate*/
@@ -130,7 +130,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
   public int max_confusion_matrix_size = 20;
 
-  @API(help = "Max. number (K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false)
+  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false)
   public int max_hit_ratio_k = 10;
 
   /*Imbalanced Classes*/
@@ -157,7 +157,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean ignore_const_cols = true;
 
   @API(help = "Force extra load balancing to increase training speed for small datasets", filter = Default.class, json = true)
-  public boolean force_load_balance = false;
+  public boolean force_load_balance = true;
 
   @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
@@ -185,6 +185,10 @@ public class DeepLearning extends Job.ValidatedJob {
     MeanSquare, CrossEntropy
   }
 
+  /**
+   * Helper to specify which arguments trigger a refresh on change
+   * @param ver
+   */
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
@@ -197,6 +201,11 @@ public class DeepLearning extends Job.ValidatedJob {
     }
   }
 
+  /**
+   * Helper to handle arguments based on existing input values
+   * @param arg
+   * @param inputArgs
+   */
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
     // these parameters can be changed when re-starting from a checkpointed model
@@ -227,11 +236,11 @@ public class DeepLearning extends Job.ValidatedJob {
         score_validation_samples = cp.score_validation_samples;
         shuffle_training_data = cp.shuffle_training_data;
         force_load_balance = cp.force_load_balance;
+        classification = cp.classification;
         state = JobState.RUNNING;
         return;
       }
     }
-
     if(arg._name.equals("initial_weight_scale") &&
             (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
@@ -241,7 +250,6 @@ public class DeepLearning extends Job.ValidatedJob {
       arg.disable("Using MeanSquare loss for regression.", inputArgs);
       loss = Loss.MeanSquare;
     }
-
     if (classification) {
       if(arg._name.equals("regression_stop")) {
         arg.disable("Only for regression.", inputArgs);
@@ -291,7 +299,6 @@ public class DeepLearning extends Job.ValidatedJob {
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
-
     if (!adaptive_rate) {
       if (arg._name.equals("rho") || arg._name.equals("epsilon")) {
         arg.disable("Only for adaptive learning rate.", inputArgs);
@@ -307,8 +314,6 @@ public class DeepLearning extends Job.ValidatedJob {
       }
     }
   }
-
-  public Frame score( Frame fr ) { return ((DeepLearningModel)UKV.get(dest())).score(fr);  }
 
   /** Print model parameters as JSON */
   @Override public boolean toHTML(StringBuilder sb) {
@@ -349,6 +354,10 @@ public class DeepLearning extends Job.ValidatedJob {
     return rs.toString();
   }
 
+  /**
+   * Report the relative progress of building a Deep Learning model (measured by how many epochs are done)
+   * @return floating point number between 0 and 1
+   */
   @Override public float progress(){
     if(UKV.get(dest()) == null)return 0;
     DeepLearningModel m = UKV.get(dest());
@@ -357,6 +366,10 @@ public class DeepLearning extends Job.ValidatedJob {
     return 0;
   }
 
+  /**
+   * Train a Deep Learning model, assumes that all members are populated
+   * @return JobState
+   */
   @Override public JobState execImpl() {
     DeepLearningModel cp;
     if (checkpoint == null) cp = initModel();
@@ -401,11 +414,16 @@ public class DeepLearning extends Job.ValidatedJob {
     return JobState.DONE;
   }
 
+  /**
+   * Redirect to the model page for that model that is trained by this job
+   * @return Response
+   */
   @Override protected Response redirect() {
     return DeepLearningProgressPage.redirect(this, self(), dest());
   }
 
   private boolean _fakejob;
+  //Sanity check for Deep Learning job parameters
   private void checkParams() {
     if (source.numCols() <= 1)
       throw new IllegalArgumentException("Training data must have at least 2 features (incl. response).");

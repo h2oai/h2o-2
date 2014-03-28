@@ -332,37 +332,45 @@ public abstract class DocGen {
       for( String s : ss ) sb.append("<tr><td>").append(s).append("</td></tr>");
       return arrayTail(sb);
     }
-    public StringBuilder toJSArray(StringBuilder sb, float[] nums) {
+    public StringBuilder toJSArray(StringBuilder sb, float[] nums) { return toJSArray(sb, nums, null, nums.length); }
+    public StringBuilder toJSArray(StringBuilder sb, float[] nums, Integer[] sortOrder, int maxValues) {
       sb.append('[');
-      for (int i=0; i<nums.length; i++) {
+      for (int i=0; i<maxValues; i++) {
         if (i>0) sb.append(',');
-        sb.append(nums[i]);
+        sb.append(nums[sortOrder!=null ? sortOrder[i] : i]);
       }
       sb.append(']');
       return sb;
     }
-    public StringBuilder toJSArray(StringBuilder sb, String[] ss) {
+    public StringBuilder toJSArray(StringBuilder sb, String[] ss) { return toJSArray(sb, ss, null, ss.length); }
+    public StringBuilder toJSArray(StringBuilder sb, String[] ss, Integer[] sortOrder, int maxValues) {
       sb.append('[');
-      for (int i=0; i<ss.length; i++) {
+      for (int i=0; i<maxValues; i++) {
         if (i>0) sb.append(',');
-        sb.append('"').append(ss[i]).append('"');
+        sb.append('"').append(ss[sortOrder!=null ? sortOrder[i] : i]).append('"');
       }
       sb.append(']');
       return sb;
     }
 
     public <T> StringBuilder tableLine(StringBuilder sb, String title, T[] values, Integer[] sortOrder) {
+      return tableLine(sb, title, values, sortOrder, values.length);
+    }
+    public <T> StringBuilder tableLine(StringBuilder sb, String title, T[] values, Integer[] sortOrder, int maxValues) {
       assert sortOrder == null || values.length == sortOrder.length;
       sb.append("<tr><th>").append(title).append("</th>");
-      for( int i=0; i<values.length; i++ )
+      for( int i=0; i<maxValues; i++ )
         sb.append("<td>").append(values[sortOrder!=null ? sortOrder[i] : i]).append("</td>");
       sb.append("</tr>");
       return sb;
     }
     public StringBuilder tableLine(StringBuilder sb, String title, float[] values, Integer[] sortOrder) {
+      return tableLine(sb, title, values, sortOrder, values.length);
+    }
+    public StringBuilder tableLine(StringBuilder sb, String title, float[] values, Integer[] sortOrder, int maxValues) {
       assert sortOrder == null || values.length == sortOrder.length;
       sb.append("<tr><th>").append(title).append("</th>");
-      for( int i=0; i<values.length; i++ )
+      for( int i=0; i<maxValues; i++ )
         sb.append(String.format("<td>%5.4f</td>",values[sortOrder!=null ? sortOrder[i] : i]));
       sb.append("</tr>");
       return sb;

@@ -94,7 +94,7 @@ public class GridSearch extends Job {
             info._error = info._model.mse();
           }
         }
-        if( info._cm != null)
+        if( info._cm != null && info._cm._arr != null)
           info._error = info._cm.err();
         if (infos != null) infos.add(info);
         prediction_errors[i] = info._error;
@@ -172,12 +172,12 @@ public class GridSearch extends Job {
           }
           sb.append("<td>").append(link).append("</td>");
 
-          String pct, f1 = "";
-          if( info._cm != null ) {
-            pct = String.format("%.2f", 100 * info._error) + "%";
-            if (info._cm.F1() != Double.NaN) f1 = String.format("%.4f", info._cm.F1());
-          } else pct = String.format("%.2f", info._error) ;
-          sb.append("<td><b>").append(pct).append("</b></td>");
+          String err, f1 = "";
+          if( info._cm != null && info._cm._arr != null) {
+            err = String.format("%.2f", 100 * info._error) + "%";
+            if (info._cm.isBinary()) f1 = String.format("%.4f", info._cm.F1());
+          } else err = String.format("%.2f", info._error) ;
+          sb.append("<td><b>").append(err).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");
           sb.append("</tr>");
         }

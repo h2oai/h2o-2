@@ -26,7 +26,7 @@ import water.util.RString;
 import com.google.gson.JsonObject;
 
 public class GLM extends Request {
-  protected final H2OKey _dest = new H2OKey(DEST_KEY, false);
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, false, true);
   protected final H2OHexKey _key = new H2OHexKey(KEY);
   protected final H2OHexKeyCol _y = new H2OHexKeyCol(Y, _key);
   protected final HexColumnSelect _x = new HexNonConstantColumnSelect(X, _key, _y);

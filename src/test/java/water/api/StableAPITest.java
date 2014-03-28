@@ -207,7 +207,6 @@ public class StableAPITest {
     regPy(Remove.class, "key");
     regPy(RemoveAck.class);
     regPy(Score.class);
-    regPy(Script.class);
     regPy(SetColumnNames.class);
     regPy(Shutdown.class);
     regPy(StoreView.class, "filter", "offset", "view");

@@ -32,7 +32,7 @@ public class Runner {
     int    mtries    = 0;       // Number of columns to try; zero defaults to Sqrt
     float  sample    = 0.6666667f; // Sampling rate
     long   seed      = 0xae44a87f9edf1cbL;
-    float  learn     = 0.1f;    // 
+    float  learn     = 0.1f;    //
     float  splitTestTrain = Float.NaN; // Ratio on test/train split
   }
 
@@ -77,7 +77,7 @@ public class Runner {
     // If testFile is set, cannot set splitTestTrain
     if( (ARGS.testFile != OptArgs.defaultTestFile) && !Float.isNaN(ARGS.splitTestTrain) )
       throw new RuntimeException("Cannot have both testFile and splitTestTrain");
-    
+
     Sys sys = ARGS.gbm ? Sys.GBM__ : Sys.DRF__;
 
     String cs[] = (ARGS.cols+","+ARGS.response).split("[,\t]");
@@ -91,7 +91,7 @@ public class Runner {
     Key trainkey = Key.make("train.hex");
     Key  testkey = Key.make( "test.hex");
     Frame train = TestUtil.parseFrame(trainkey,ARGS.trainFile);
-    Frame test = null; 
+    Frame test = null;
     if( !Float.isNaN(ARGS.splitTestTrain) ) {
       water.exec.Exec2.exec("r=runif(train.hex); test.hex=train.hex[r>=0.7,]; train.hex=train.hex[r<0.7,]").remove_and_unlock();
       train = UKV.get(trainkey);
@@ -102,14 +102,14 @@ public class Runner {
     Log.info(sys,"Data loaded in "+t_load);
 
     // Pull out the response vector from the train data
-    Vec response = train.subframe(new String[] {ARGS.response}, false).vecs()[0];
+    Vec response = train.subframe(new String[] {ARGS.response}).vecs()[0];
 
     // Build a Frame with just the requested columns.
-    train = train.subframe(cs, false);
-    if( test != null ) test = test.subframe(cs, false);
+    train = train.subframe(cs);
+    if( test != null ) test = test.subframe(cs);
     Vec vs[] = train.vecs();
     for( Vec v : vs ) v.min(); // Do rollups
-    for( int i=0; i<train.numCols(); i++ ) 
+    for( int i=0; i<train.numCols(); i++ )
       Log.info(sys,train._names[i]+", "+vs[i].min()+" - "+vs[i].max()+(vs[i].naCnt()==0?"":(", missing="+vs[i].naCnt())));
 
     Log.info(sys,"Arguments used:\n"+ARGS.toString());

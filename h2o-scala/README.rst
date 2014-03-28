@@ -71,6 +71,14 @@ You can start REPL via ``sbt``:
 
   sbt run
 
+Launch Examples
+-----------
+Shalala provides a convenient way to run examples via ``sbt``:
+
+::
+
+  sbt runExamples
+
 
 Key points of implementation
 ----------------------------

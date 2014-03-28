@@ -7,8 +7,7 @@ import h2o_print as h2p, h2o_exec as h2e, h2o_summ
 # have to match the csv file?
 # dtype=['string', 'float');
 thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
-
-DO_MEDIAN = True
+thresholds   = [0.0]
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
@@ -169,10 +168,10 @@ class Basic(unittest.TestCase):
             print "Comparing (two places) each of the summary2 threshold quantile results, to single exec quantile"
             h2o.beta_features = True
             for i, threshold in enumerate(thresholds):
-                # FIX! do two?
+                # FIX! do two of the same?..use same one for the 2nd
                 if i!=0:
-                    execExpr = "r2=c(1); r2=quantile(%s[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))" % hex_key
-                    execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, threshold)
+                    # execExpr = "r2=c(1); r2=quantile(%s[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))" % hex_key
+                    execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s,%s));" % (hex_key, threshold, threshold)
                     (resultExec, result) = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                     h2p.green_print("\nresultExec: %s" % h2o.dump_json(resultExec))
                     h2p.blue_print("\nthreshold: %.2f Exec quantile: %s Summary2: %s" % (threshold, result, pt[i]))
@@ -203,10 +202,9 @@ class Basic(unittest.TestCase):
                     col=0, # what col to extract from the csv
                     datatype='float',
                     quantile=thresholds[-1],
-                    h2oSummary2=pctile[-1],
+                    # h2oSummary2=pctile[-1],
                     # h2oQuantilesApprox=result, # from exec
-                    # h2oQuantilesExact=qresult,
-                    h2oExecQuantilesApprox=result, # from exec
+                    h2oExecQuantiles=result,
                     )
 
             h2o.nodes[0].remove_all_keys()

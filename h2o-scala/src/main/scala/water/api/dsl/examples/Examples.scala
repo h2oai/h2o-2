@@ -1,17 +1,29 @@
 package water.api.dsl.examples
 
-import water.Iced
-import water.api.dsl.T_T_Collect
-import water.api.dsl.DFrame
-import water.api.dsl.DFrame
+import water.{Boot, H2O, Iced}
+import water.api.dsl.{Row, T_T_Collect, DFrame}
 
 /**
+ * Simple example project.
+ *
  * Ideas:
  * GroupBy for H2O.
  * Histogram.
  * Matrix product.
  */
 object Examples {
+
+  // Call in the context of main classloader
+  def main(args: Array[String]):Unit = {
+    Boot.main(classOf[Examples], args)
+  }
+
+  // Call in the context of H2O classloader
+  def userMain(args: Array[String]):Unit = {
+    H2O.main(args)
+    example1()
+    example2()
+  }
   
   /** Compute average for given column. */
   def example1() = {
@@ -22,9 +34,9 @@ object Examples {
     
     val f = parse("../private/cars.csv")
     val r = f collect ( new Avg(0,0), 
-      new T_T_Collect[Avg,scala.Double] {
-	      override def apply(acc:Avg, rhs:Array[scala.Double]):Avg = {
-	        acc.sum += rhs(2)
+      new T_T_Collect[Avg] {
+	      override def apply(acc:Avg, rhs:Row):Avg = {
+	        acc.sum += rhs.d(2)
 	        acc.cnt += 1
 	        return acc
 	      }
@@ -56,7 +68,7 @@ object Examples {
     println("Errors per row: " + serr)
     // make a sum
     val rss = serr collect (0.0, new CDOp() {
-      def apply(acc:scala.Double, rhs:Array[scala.Double]) = acc + rhs(0)
+      def apply(acc:scala.Double, rhs:Row) = acc + rhs.d(0)
       def reduce(acc1:scala.Double, acc2:scala.Double) = acc1+acc2
     })
 
@@ -64,6 +76,9 @@ object Examples {
     
     shutdown()
   }
- 
+}
+
+// Companion class
+class Examples {
 }
 

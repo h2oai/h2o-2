@@ -1,5 +1,6 @@
 package water.api;
 
+import static java.util.Arrays.sort;
 import hex.ConfusionMatrix;
 import org.apache.commons.lang.StringEscapeUtils;
 import water.MRTask2;
@@ -11,8 +12,6 @@ import water.fvec.Vec;
 import water.util.Utils;
 
 import java.util.HashSet;
-
-import static java.util.Arrays.sort;
 
 public class AUC extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -177,8 +176,6 @@ public class AUC extends Request2 {
       throw new IllegalArgumentException("Both arguments must have the same length!");
     if (!vactual.isInt())
       throw new IllegalArgumentException("Actual column must be integer class labels!");
-    if (vpredict.isInt())
-      throw new IllegalArgumentException("Predicted column must be a floating point probability!");
 
     try {
       va = vactual.toEnum(); // always returns TransfVec

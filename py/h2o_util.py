@@ -3,8 +3,33 @@ import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json, csv
 import h2o
 import sys
+import math
 
+# operations to get bit patterns for fp 
+# Python internally uses the native endianity and 64-bits for floats
+# Java floatToBits is the thing to convert fp to long bits
+# if it's real, use this to convert. All reals should match
+# long bits = Double.doubleToLongBits(myDouble);
+# System.out.println(Long.toBinaryString(bits));
 
+import struct
+# Q is unsigned long long. 8 bytes
+# d is double float
+def doubleToUnsignedLongLong(d):
+    s = struct.pack('>d', d)
+    return struct.unpack('>Q', s)[0]
+# floatToBits(173.3125)
+# 1127043072
+# hex(_)
+# '0x432d5000'
+
+# You can reverse the order of operations to round-trip:
+def unsignedLongLongToDouble(Q):
+    s = struct.pack('>Q', Q)
+    return struct.unpack('>d', s)[0]
+
+# bitsToFloat(0x432d5000)
+# 173.3125
 
 # takes fp or list of fp and returns same with just two digits of precision
 # using print rounding
@@ -14,25 +39,25 @@ def twoDecimals(l):
     else:
         return "%.2f" % l
 
-# a short quick version for relative comparion. But it's probably better to use approx_equal below
+# a short quick version for relative comparion. But it's probably better to use approxEqual below
 # the subsequent ones might be prefered, especially assertAlmostEqual(
 # http://en.wikipedia.org/wiki/Relative_difference
 # http://stackoverflow.com/questions/4028889/floating-point-equality-in-python
-def fp_approx_equal(a, b, rel):
-    c = abs(a-b) / max(abs(a), abs(b))
-    print "actual relative diff: %s allowed relative diff: %s" % (c, rel)
-    return c < rel
+# def fp_approxEqual(a, b, rel):
+#     c = abs(a-b) / max(abs(a), abs(b))
+#     print "actual relative diff: %s allowed relative diff: %s" % (c, rel)
+#    return c < rel
 
 # Generic "approximately equal" function for any object type, with customisable error tolerance.
-# When called with float arguments, approx_equal(x, y[, tol[, rel]) compares x and y numerically, 
+# When called with float arguments, approxEqual(x, y[, tol[, rel]) compares x and y numerically, 
 # and returns True if y is within either absolute error tol or relative error rel of x, 
 # otherwise return False. 
 
 # The function defaults to sensible default values for tol and rel.
-# or any other pair of objects, approx_equal() looks for a method __approx_equal__ and, if found, 
+# or any other pair of objects, approxEqual() looks for a method __approxEqual__ and, if found, 
 # calls it with arbitrary optional arguments. 
 # This allows types to define their own concept of "close enough".
-def _float_approx_equal(x, y, tol=1e-18, rel=1e-7, **kwargs):
+def _float_approxEqual(x, y, tol=1e-18, rel=1e-7, **kwargs):
     if tol is rel is None:
         raise TypeError('cannot specify both absolute and relative errors are None')
     tests = []
@@ -42,9 +67,9 @@ def _float_approx_equal(x, y, tol=1e-18, rel=1e-7, **kwargs):
     return abs(x - y) <= max(tests)
 
 # from http://code.activestate.com/recipes/577124-approximately-equal/
-def approx_equal(x, y, *args, **kwargs):
-    """approx_equal(float1, float2[, tol=1e-18, rel=1e-7]) -> True|False
-    approx_equal(obj1, obj2[, *args, **kwargs]) -> True|False
+def approxEqual(x, y, *args, **kwargs):
+    """approxEqual(float1, float2[, tol=1e-18, rel=1e-7]) -> True|False
+    approxEqual(obj1, obj2[, *args, **kwargs]) -> True|False
 
     Return True if x and y are approximately equal, otherwise False.
 
@@ -53,13 +78,13 @@ def approx_equal(x, y, *args, **kwargs):
     relative check by passing None as tol or rel (but not both).
 
     For any other objects, x and y are checked in that order for a method
-    __approx_equal__, and the result of that is returned as a bool. Any
-    optional arguments are passed to the __approx_equal__ method.
+    __approxEqual__, and the result of that is returned as a bool. Any
+    optional arguments are passed to the __approxEqual__ method.
 
-    __approx_equal__ can return NotImplemented to signal that it doesn't know
+    __approxEqual__ can return NotImplemented to signal that it doesn't know
     how to perform that specific comparison, in which case the other object is
     checked instead. If neither object have the method, or both defer by
-    returning NotImplemented, approx_equal falls back on the same numeric
+    returning NotImplemented, approxEqual falls back on the same numeric
     comparison used for floats.
 
     >>> almost_equal(1.2345678, 1.2345677)
@@ -69,8 +94,8 @@ def approx_equal(x, y, *args, **kwargs):
 
     """
     if not (type(x) is type(y) is float):
-        # Skip checking for __approx_equal__ in the common case of two floats.
-        methodname = '__approx_equal__'
+        # Skip checking for __approxEqual__ in the common case of two floats.
+        methodname = '__approxEqual__'
         # Allow the objects to specify what they consider "approximately equal",
         # giving precedence to x. If either object has the appropriate method, we
         # pass on any optional arguments untouched.
@@ -88,12 +113,12 @@ def approx_equal(x, y, *args, **kwargs):
     # If we get here without returning, then neither x nor y knows how to do an
     # approximate equal comparison (or are both floats). Fall back to a numeric
     # comparison.
-    return _float_approx_equal(x, y, *args, **kwargs)
+    return _float_approxEqual(x, y, *args, **kwargs)
 
 # note this can take 'tol' and 'rel' parms for the float case
-# just wraps approx_equal in an assert with a good print message
+# just wraps approxEqual in an assert with a good print message
 def assertApproxEqual(x, y, msg='', **kwargs):
-    if not approx_equal(x, y, msg=msg, **kwargs):
+    if not approxEqual(x, y, msg=msg, **kwargs):
         m = msg + '. h2o_util.assertApproxEqual failed comparing %s and %s. %s.' % (x, y, kwargs)
         raise Exception(m)
 
@@ -107,6 +132,112 @@ def cleanseInfNan(value):
     if str(value) in translate:
         value = translate[str(value)]
     return value
+
+
+# use a random or selected fp format from the choices
+# for testing different fp representations
+# 'only' can be e, f or g, to restrict the choices
+# it will wrap the 0-47 until the group (modulo e)
+def fp_format(val=None, sel=None, only=None):
+
+    def e0(val): return "%e" % val
+    def e1(val): return "%20e" % val
+    def e2(val): return "%-20e" % val
+    def e3(val): return "%020e" % val
+    def e4(val): return "%+e" % val
+    def e5(val): return "%+20e" % val
+    def e6(val): return "%+-20e" % val
+    def e7(val): return "%+020e" % val
+    def e8(val): return "%.4e" % val
+    def e9(val): return "%20.4e" % val
+    def e10(val): return "%-20.4e" % val
+    def e11(val): return "%020.4e" % val
+    def e12(val): return "%+.4e" % val
+    def e13(val): return "%+20.4e" % val
+    def e14(val): return "%+-20.4e" % val
+    def e15(val): return "%+020.4e" % val
+
+    def f0(val): return "%f" % val
+    def f1(val): return "%20f" % val
+    def f2(val): return "%-20f" % val
+    def f3(val): return "%020f" % val
+    def f4(val): return "%+f" % val
+    def f5(val): return "%+20f" % val
+    def f6(val): return "%+-20f" % val
+    def f7(val): return "%+020f" % val
+    def f8(val): return "%.4f" % val
+    def f9(val): return "%20.4f" % val
+    def f10(val): return "%-20.4f" % val
+    def f11(val): return "%020.4f" % val
+    def f12(val): return "%+.4f" % val
+    def f13(val): return "%+20.4f" % val
+    def f14(val): return "%+-20.4f" % val
+    def f15(val): return "%+020.4f" % val
+
+    def g0(val): return "%g" % val
+    def g1(val): return "%20g" % val
+    def g2(val): return "%-20g" % val
+    def g3(val): return "%020g" % val
+    def g4(val): return "%+g" % val
+    def g5(val): return "%+20g" % val
+    def g6(val): return "%+-20g" % val
+    def g7(val): return "%+020g" % val
+    def g8(val): return "%.4g" % val
+    def g9(val): return "%20.4g" % val
+    def g10(val): return "%-20.4g" % val
+    def g11(val): return "%020.4g" % val
+    def g12(val): return "%+.4g" % val
+    def g13(val): return "%+20.4g" % val
+    def g14(val): return "%+-20.4g" % val
+    def g15(val): return "%+020.4g" % val
+
+    # try a neat way to use a dictionary to case select functions
+    # didn't want to use python advanced string format with variable as format
+    # because they do left/right align outside of that??
+    caseList=[
+        e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14, e15,
+        f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15,
+        g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15,
+        ]
+
+    if not val:
+        return len(caseList)
+
+    if sel:
+        if sel<0 or sel>=len(caseList):
+            raise Exception("sel out of range in write_syn_dataset:", sel)
+        choice = sel
+    else:
+        # pick one randomly if no sel
+        choice = random.randint(0,len(caseList)-1)
+        # print "Using fp format case", choice
+
+
+    SUBGRPS = 3
+    SUBGRP_SIZE = len(caseList) / SUBGRPS
+    # should be int
+    assert math.floor(SUBGRP_SIZE)==SUBGRP_SIZE, "You got a code problem in h2o_util.fp_format"
+
+    if only:
+        # make choice modulo 3 (can update if more subgroups are added
+        choice = choice % SUBGRPS
+        assert choice >= 0 and choice < SUBGRP_SIZE
+        # now add a base offset = subgrou size. 
+        # (assume we keep in sync with the subgroup sizes above)
+        if only=='e':
+            choice += 0
+        elif only=='f':
+            choice += 16
+        elif only=='g':
+            choice += 32
+        else:
+            # if a random choice, we should never get here because it's bounded to length of the list above
+            raise Exception("Bad param combo of only: %s and sel: % in h2o_util.fp_format()" % (only, sel))
+
+    f = caseList[choice]
+
+    return f(val)
+
 
 # http://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/
 # given [2, 3, 5] it returns 0 (the index of the first element) with probability 0.2, 
