@@ -15,7 +15,7 @@ DO_GEN_GRADIENT = False
 print "Not using GenGradient any more"
 
 def define_params_fail():
-    paramDict = {'destination_key': 'GLM_model_$python_0_default_0', 'standardize': 1, 'weight': 1, 'family': 'poisson', 'beta_epsilon': 0.0001, 'tweedie_power': None, 'max_iter': None, 'expert_settings': 0, 'n_folds': 2, 'link': None, 'alpha': 0, 'y': 54, 'x': None, 'thresholds': 0.7, 'beta_eps': None, 'lambda': 0}
+    paramDict = {'destination_key': 'GLM_model_python_0_default_0', 'standardize': 1, 'weight': 1, 'family': 'poisson', 'beta_epsilon': 0.0001, 'tweedie_power': None, 'max_iter': None, 'expert_settings': 0, 'n_folds': 2, 'link': None, 'alpha': 0, 'y': 54, 'x': None, 'thresholds': 0.7, 'beta_eps': None, 'lambda': 0}
 
     if DO_GEN_GRADIENT:
         paramDict['lsm_solver'] = 'GenGradient'

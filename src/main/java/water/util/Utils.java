@@ -5,6 +5,8 @@ import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 import hex.rng.MersenneTwisterRNG;
 import hex.rng.XorShiftRNG;
+import org.junit.Assert;
+import org.junit.Test;
 import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen;
@@ -66,6 +68,12 @@ public class Utils {
     int result = 0;
     for (int i = 1; i<from.length; ++i)
       if (from[i]<from[result]) result = i;
+    return result;
+  }
+  public static double maxValue(double[] from) {
+    double result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
     return result;
   }
   public static float maxValue(float[] from) {
@@ -163,6 +171,27 @@ public class Utils {
   public static double sum(final double[] from) {
     double result = 0;
     for (double d: from) result += d;
+    return result;
+  }
+  public static double sumSquares(final float[] a) {
+    return sumSquares(a, 0, a.length);
+  }
+  public static double sumSquares(final float[] a, int from, int to) {
+    double result = 0;
+    final int cols = to-from;
+    final int extra=cols-cols%8;
+    final int multiple = (cols/8)*4-1;
+    double psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0;
+    for (int c = from; c < from + multiple; c += 8) {
+      psum1 += a[c+0]*a[c+0] + a[c+1]*a[c+1];
+      psum2 += a[c+2]*a[c+2] + a[c+3]*a[c+3];
+      psum3 += a[c+4]*a[c+4] + a[c+5]*a[c+5];
+      psum4 += a[c+6]*a[c+6] + a[c+7]*a[c+7];
+    }
+    result += psum1 + psum2 + psum3 + psum4;
+    for (int c = from + extra; c < to; c += 4) {
+      result += a[c]*a[c];
+    }
     return result;
   }
 
@@ -881,6 +910,132 @@ public class Utils {
     for (int i=0; i<nums.length; i++) nums[i] *= n;
     return nums;
   }
+
+  /**
+   * Fast approximate sqrt
+   * @param x
+   * @return sqrt(x) with up to 5% relative error
+   */
+  public static double approxSqrt(double x) {
+    return Double.longBitsToDouble(((Double.doubleToLongBits(x) >> 32) + 1072632448) << 31);
+  }
+  /**
+   * Fast approximate sqrt
+   * @param x
+   * @return sqrt(x) with up to 5% relative error
+   */
+  public static float approxSqrt(float x) {
+    return Float.intBitsToFloat(532483686 + (Float.floatToRawIntBits(x) >> 1));
+  }
+  /**
+   * Fast approximate 1./sqrt
+   * @param x
+   * @return 1./sqrt(x) with up to 2% relative error
+   */
+  public static double approxInvSqrt(double x) {
+    double xhalf = 0.5d*x; x = Double.longBitsToDouble(0x5fe6ec85e7de30daL - (Double.doubleToLongBits(x)>>1)); return x*(1.5d - xhalf*x*x);
+  }
+  /**
+   * Fast approximate 1./sqrt
+   * @param x
+   * @return 1./sqrt(x) with up to 2% relative error
+   */
+  public static float approxInvSqrt(float x) {
+    float xhalf = 0.5f*x; x = Float.intBitsToFloat(0x5f3759df - (Float.floatToIntBits(x)>>1)); return x*(1.5f - xhalf*x*x);
+  }
+  /**
+   * Fast approximate exp
+   * @param x
+   * @return exp(x) with up to 5% relative error
+   */
+  public static double approxExp(double x) {
+    return Double.longBitsToDouble(((long)(1512775 * x + 1072632447)) << 32);
+  }
+  /**
+   * Fast approximate log for values > 1, otherwise exact
+   * @param x
+   * @return log(x) with up to 0.1% relative error
+   */
+  public static double approxLog(double x){
+    if (x > 1) return ((Double.doubleToLongBits(x) >> 32) - 1072632447d) / 1512775d;
+    else return Math.log(x);
+  }
+
+  public static class approxMathTester {
+    @Test
+    public void run() {
+      final int loops = 100000;
+      for (float maxVal : new float[]{1, Float.MAX_VALUE}) {
+        Log.info("Testing " + loops + " numbers in interval [0, " + maxVal + "].");
+        // float square
+        {
+          float err = 0;
+          for (int i=0;i<loops;++i) {
+            final float x = new Random().nextFloat() * maxVal;
+            err = Math.max(Math.abs(err), Math.abs((float)Math.sqrt(x)-approxSqrt(x))/(float)Math.sqrt(x));
+          }
+          Log.info("rel. error for approxSqrt(float): " + err);
+          Assert.assertTrue("rel. error for approxSqrt(float): " + err, Math.abs(err) < 5e-2);
+        }
+
+        // double square
+        {
+          double err = 0;
+          for (int i=0;i<loops;++i) {
+            final double x = new Random().nextFloat() * maxVal;
+            err = Math.max(Math.abs(err), Math.abs(Math.sqrt(x)-approxSqrt(x))/Math.sqrt(x));
+          }
+          Log.info("rel. error for approxSqrt(double): " + err);
+          Assert.assertTrue("rel. error for approxSqrt(double): " + err, Math.abs(err) < 5e-2);
+        }
+
+        // float inv square
+        {
+          float err = 0;
+          for (int i=0;i<loops;++i) {
+            final float x = new Random().nextFloat() * maxVal;
+            err = Math.max(Math.abs(err), Math.abs((float)(1./Math.sqrt(x))-approxInvSqrt(x))*(float)Math.sqrt(x));
+          }
+          Log.info("rel. error for approxInvSqrt(float): " + err);
+          Assert.assertTrue("rel. error for approxInvSqrt(float): " + err, Math.abs(err) < 2e-2);
+        }
+
+        // double inv square
+        {
+          double err = 0;
+          for (int i=0;i<loops;++i) {
+            final double x = new Random().nextFloat() * maxVal;
+            err = Math.max(Math.abs(err), Math.abs((1./Math.sqrt(x))-approxInvSqrt(x))*Math.sqrt(x));
+          }
+          Log.info("rel. error for approxInvSqrt(double): " + err);
+          Assert.assertTrue("rel. error for approxInvSqrt(double): " + err, Math.abs(err) < 2e-2);
+        }
+
+        // double exp
+        {
+          double err = 0;
+          for (int i=0;i<loops;++i) {
+            final double x = 30 - new Random().nextDouble() * 60;
+            err = Math.max(Math.abs(err), Math.abs(Math.exp(x)-approxExp(x))/Math.exp(x));
+          }
+          Log.info("rel. error for approxExp(double): " + err);
+          Assert.assertTrue("rel. error for approxExp(double): " + err, Math.abs(err) < 5e-2);
+        }
+
+        // double log
+        {
+          double err = 0;
+          for (int i=0;i<loops;++i) {
+            final double x = new Random().nextFloat() * maxVal;
+            err = Math.max(err, Math.abs(Math.log(x)-approxLog(x))/Math.abs(Math.log(x)));
+          }
+          Log.info("rel. error for approxLog(double): " + err);
+          Assert.assertTrue("rel. error for approxLog(double): " + err, Math.abs(err) < 1e-3);
+        }
+      }
+    }
+  }
+
   /**
    * Replace given characters in a given string builder.
    * The number of characters to replace has to match to number of

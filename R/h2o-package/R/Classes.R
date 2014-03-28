@@ -111,15 +111,16 @@ setMethod("show", "H2OGLMModel", function(object) {
   if(!is.null(model$normalized_coefficients)) {
     cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
   }
-  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
-  cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
-  cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
+  cat("\nNull Deviance:    ", round(model$null.deviance,1))
+  cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5))
+  cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
 
   family = model$params$family$family
   if(family == "binomial") {
-    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5), "\n")
-    cat("\nConfusion Matrix:\n"); print(model$confusion,2)
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5))
+    cat("\n\nConfusion Matrix:\n"); print(model$confusion)
   }
 
   if(length(object@xval) > 0) {
@@ -175,6 +176,9 @@ setMethod("show", "H2ODRFModel", function(object) {
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
+  if(!is.null(model$varimp)) {
+    cat("\nVariable importance:\n"); print(model$varimp)
+  }
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
 })
 
@@ -198,6 +202,10 @@ setMethod("show", "H2OGBMModel", function(object) {
     
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
+  }
+  
+  if(!is.null(model$varimp)) {
+    cat("\nVariable importance:\n"); print(model$varimp)
   }
   cat("\nMean-squared Error by tree:\n"); print(model$err)
 })
@@ -685,10 +693,14 @@ setMethod("nrow", "H2OParsedData", function(x) {
 setMethod("ncol", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
 
-setMethod("length", "H2OParsedData", function(x) { 
-  res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key) 
-  numCols = as.numeric(res$numCols); numRows = as.numeric(res$numRows)
-  ifelse(numCols == 1, numRows, numCols) })
+setMethod("length", "H2OParsedData", function(x) {
+  numCols = ncol(x)
+  if (numCols == 1) {
+    numRows = nrow(x)
+    return (numRows)      
+  }
+  return (numCols)
+})
 
 setMethod("dim", "H2OParsedData", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -766,7 +778,7 @@ setMethod("range", "H2OParsedData", function(x) {
 })
 
 mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
-  if(length(x) != 1 || trim != 0) stop("Unimplemented")
+  if(ncol(x) != 1 || trim != 0) stop("Unimplemented")
   if(h2o.anyFactor(x) || dim(x)[2] != 1) {
     warning("argument is not numeric or logical: returning NA")
     return(NA_real_)
@@ -776,7 +788,7 @@ mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
 }
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
-  if(length(x) != 1) stop("Unimplemented")
+  if(ncol(x) != 1) stop("Unimplemented")
   if(dim(x)[2] != 1 || h2o.anyFactor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
   .h2o.__unop2("sd", x)
@@ -884,8 +896,6 @@ quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, na
   expr = paste("quantile(", x@key, ",", myProbs, ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   # res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_QUANTILES, source_key = x@key, column = 0, quantile = paste(probs, collapse = ","), interpolation_type = type, ...)
-  # return(res$result)
-  
   # col <- as.numeric(strsplit(res$result, "\n")[[1]][-1])
   # if(numCols > .MAX_INSPECT_COL_VIEW)
   #   warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
@@ -1117,15 +1127,16 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   if(!is.null(model$normalized_coefficients)) {
     cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
   }
-  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
-  cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
-  cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
+  cat("\nNull Deviance:    ", round(model$null.deviance,1))
+  cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5))
+  cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
 
   family = model$params$family$family
   if(family == "binomial") {
-    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$threshold,5), "\n")
-    cat("\nConfusion Matrix:\n"); print(model$confusion)
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$threshold,5))
+    cat("\n\nConfusion Matrix:\n"); print(model$confusion)
   }
 
   if(length(object@xval) > 0) {

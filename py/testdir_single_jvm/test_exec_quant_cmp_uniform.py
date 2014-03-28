@@ -7,8 +7,7 @@ import h2o_print as h2p, h2o_exec as h2e, h2o_summ
 # have to match the csv file?
 # dtype=['string', 'float');
 thresholds   = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
-
-DO_MEDIAN = True
+thresholds   = [0.0]
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
@@ -203,10 +202,9 @@ class Basic(unittest.TestCase):
                     col=0, # what col to extract from the csv
                     datatype='float',
                     quantile=thresholds[-1],
-                    h2oSummary2=pctile[-1],
+                    # h2oSummary2=pctile[-1],
                     # h2oQuantilesApprox=result, # from exec
-                    # h2oQuantilesExact=qresult,
-                    h2oExecQuantilesApprox=result, # from exec
+                    h2oExecQuantiles=result,
                     )
 
             h2o.nodes[0].remove_all_keys()

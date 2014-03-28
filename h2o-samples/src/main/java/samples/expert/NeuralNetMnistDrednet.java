@@ -16,20 +16,19 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 3);
     //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
-    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.163");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
 //  samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 8);
   }
 
   @Override protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
-    Layer[] ls = new Layer[5];
-    ls[0] = new VecsInput(data, inputStats);
-    ls[1] = new Layer.RectifierDropout(1024);
-    ls[2] = new Layer.RectifierDropout(1024);
-    ls[3] = new Layer.RectifierDropout(2048);
-    ls[4] = new VecSoftmax(labels, outputStats);
-
     NeuralNet p = new NeuralNet();
+    Layer[] ls = new Layer[5];
+    p.hidden = new int[]{1024,1024,2048};
+//    p.hidden = new int[]{128,128,256};
+    ls[0] = new VecsInput(data, inputStats);
+    for( int i = 1; i < ls.length-1; i++ ) ls[i] = new Layer.RectifierDropout(p.hidden[i-1]);
+    ls[4] = new VecSoftmax(labels, outputStats);
     p.rate = 0.01f;
     p.rate_annealing = 1e-6f;
     p.epochs = 1000;
@@ -40,12 +39,16 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     p.momentum_start = 0.5f;
     p.momentum_ramp = 1800000;
     p.momentum_stable = 0.99f;
+    p.score_training = 1000;
+    p.score_validation = 10000;
     p.l1 = .00001f;
     p.l2 = .00f;
     p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
+    p.score_interval = 30;
     // Hinton
 //  p.initial_weight_distribution = Layer.InitialWeightDistribution.Normal;
 //  p.initial_weight_scale = 0.01;
+
 
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].init(ls, i, p);

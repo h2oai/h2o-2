@@ -137,6 +137,22 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Initialize gbm-specific data structures
     if (importance) _improvPerVar = new float[initialModel.nfeatures()];
   }
+  @Override protected void initWorkFrame(GBMModel initialModel, Frame fr) {
+    // Tag out rows missing the response column
+    new ExcludeNAResponse().doAll(fr);
+    // Initialize working response based on given loss function
+    if (_nclass == 1) { /* regression */
+      final float mean = (float) fr.vec(initialModel.responseName()).mean();
+      new MRTask2() {
+        @Override public void map(Chunk[] chks) {
+          Chunk tr = chk_tree(chks, 0); // there is only one tree for regression
+          for (int i=0; i<tr._len; i++) tr.set0(i, mean);
+        }
+      }.doAll(fr);
+    } else { /* multinomial */ // TODO: we should use bernoulli distribution
+      /* Preserve 0s in working columns */
+    }
+  }
   // ==========================================================================
   // Compute a GBM tree.
 
@@ -146,9 +162,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
   @Override protected GBMModel buildModel( GBMModel model, final Frame fr, String names[], String domains[][], Timer t_build ) {
-    // Tag out rows missing the response column
-    new ExcludeNAResponse().doAll(fr);
-
     // Build trees until we hit the limit
     int tid;
     DTree[] ktrees = null;              // Trees

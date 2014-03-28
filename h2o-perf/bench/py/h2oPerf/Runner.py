@@ -108,6 +108,13 @@ class PerfRunner:
             test.test_run.row['start_epoch_ms'] = test.start_ms
             test.test_run.row['end_epoch_ms'] = test.end_ms
             test.test_run.row['test_name'] = test.test_name
+            contamination = PerfUtils.run_contaminated(self)
+            print "DEBUG: "
+            print contamination
+            print ""
+            print ""
+            test.test_run.row["contaminated"] = contamination[0]
+            test.test_run.row["contamination_message"] = contamination[1]
             test.test_run.update(True)
             PerfUtils.stop_cloud(self, test.remote_hosts)
             self.cloud.pop(0)

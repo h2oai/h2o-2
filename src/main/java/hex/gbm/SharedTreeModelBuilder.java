@@ -170,6 +170,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     try {
       // Initialized algorithm
       initAlgo(model);
+      // Init working frame
+      initWorkFrame(model, fr);
       // Compute the model
       model = buildModel(model, fr, names, domains, bm_timer);
     //} catch (Throwable t) { t.printStackTrace();
@@ -199,7 +201,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected TM doScoring(TM model, Frame fTrain, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
+  protected TM doScoring(TM model, Frame fTrain, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_one_node ) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
@@ -219,7 +221,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _timeLastScoreStart = now;
       // Perform scoring
       Response2CMAdaptor vadaptor = getValidAdaptor();
-      sc = new Score().doIt(model, fTrain, vadaptor, oob, build_tree_per_node).report(logTag(),tid,ktrees);
+      sc = new Score().doIt(model, fTrain, vadaptor, oob, build_tree_one_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
 
@@ -494,7 +496,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   // --------------------------------------------------------------------------
   // Build an entire layer of all K trees
-  protected DHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DHistogram hcs[][][], boolean subset, boolean build_tree_per_node) {
+  protected DHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DHistogram hcs[][][], boolean subset, boolean build_tree_one_node) {
     // Build K trees, one per class.
 
     // Build up the next-generation tree splits from the current histograms.
@@ -514,7 +516,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       fr2.add(fr._names[_ncols+1+_nclass+k],vecs[_ncols+1+_nclass+k]);
       fr2.add(fr._names[_ncols+1+_nclass+_nclass+k],vecs[_ncols+1+_nclass+_nclass+k]);
       // Start building one of the K trees in parallel
-      H2O.submitTask(sb1ts[k] = new ScoreBuildOneTree(k,tree,leafs,hcs,fr2, subset, build_tree_per_node));
+      H2O.submitTask(sb1ts[k] = new ScoreBuildOneTree(k,tree,leafs,hcs,fr2, subset, build_tree_one_node));
     }
     // Block for all K trees to complete.
     boolean did_split=false;
@@ -534,17 +536,17 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final int _leafs[/*nclass*/];
     final DHistogram _hcs[/*nclass*/][][];
     final Frame _fr2;
-    final boolean _build_tree_per_node;
+    final boolean _build_tree_one_node;
     final boolean _subset;      // True if working a subset of cols
     boolean _did_split;
-    ScoreBuildOneTree( int k, DTree tree, int leafs[], DHistogram hcs[][][], Frame fr2, boolean subset, boolean build_tree_per_node ) {
+    ScoreBuildOneTree( int k, DTree tree, int leafs[], DHistogram hcs[][][], Frame fr2, boolean subset, boolean build_tree_one_node ) {
       _k    = k;
       _tree = tree;
       _leafs= leafs;
       _hcs  = hcs;
       _fr2  = fr2;
       _subset = subset;
-      _build_tree_per_node = build_tree_per_node;
+      _build_tree_one_node = build_tree_one_node;
     }
     @Override public void compute2() {
       // Fuse 2 conceptual passes into one:
@@ -555,7 +557,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      new ScoreBuildHistogram(this,_k,_tree,_leafs[_k],_hcs[_k],_subset).dfork(0,_fr2,_build_tree_per_node);
+      new ScoreBuildHistogram(this,_k,_tree,_leafs[_k],_hcs[_k],_subset).dfork(0,_fr2,_build_tree_one_node);
     }
     @Override public void onCompletion(CountedCompleter caller) {
       ScoreBuildHistogram sbh = (ScoreBuildHistogram)caller;
@@ -619,10 +621,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
      * @param fr    a model training frame
      * @param vadaptor an adaptor which helps to adapt model/validation response to confusion matrix domain.
      * @param oob   perform out-of-bag validation on training frame
-     * @param build_tree_per_node
+     * @param build_tree_one_node
      * @return this score object
      */
-    public Score doIt(Model model, Frame fr, Response2CMAdaptor vadaptor, boolean oob, boolean build_tree_per_node) {
+    public Score doIt(Model model, Frame fr, Response2CMAdaptor vadaptor, boolean oob, boolean build_tree_one_node) {
       assert !oob || vadaptor.getValidation()==null : "Validation frame cannot be specified if oob validation is demanded!"; // oob => validation==null
       assert _nclass == 1 || vadaptor.getCMDomain() != null : "CM domain has to be configured from classification!";
 
@@ -631,7 +633,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Validation frame adapted to a model
       Frame adaptedValidation = vadaptor.getValidation();
       // No validation frame is specified, so perform computation on training data
-      if( adaptedValidation == null ) return doAll(fr, build_tree_per_node);
+      if( adaptedValidation == null ) return doAll(fr, build_tree_one_node);
       _validation = true;
       _cavr       = false;
       // Validation: need to score the set, getting a probability distribution for each class
@@ -655,7 +657,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       }
       // Compute a CM & MSE
       try {
-        doAll(adapValidation, build_tree_per_node);
+        doAll(adapValidation, build_tree_one_node);
       } finally {
         // Perform clean-up: remove temporary result
         res.delete();
@@ -775,6 +777,15 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    * @param initialModel
    */
   protected abstract void initAlgo( TM initialModel);
+
+  /**
+   * Initialize working frame.
+   * @param initialModel  initial model
+   * @param fr working frame which contains train data and additional columns prepared by this builder.
+   *
+   * @see #buildModel()
+   */
+  protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);

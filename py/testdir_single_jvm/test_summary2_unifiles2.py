@@ -8,7 +8,6 @@ print "same as test_summary2_unifiles.py but using local runif_.csv single col f
 print "\nShould really add something that sees we go to 16 with no answer, if bins are set to 1"
 print "Answer not guaranteed (for any data) if max iterations is 16 in h2o and max_qbins is small"
 
-
 print "FIX! should loop across all the quantiles in summary2, and do them for all, for the datasets here"
 print "0.99 had failed with the breadth.csv"
 # the old failure
@@ -38,7 +37,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # to get the browser page special tab
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud(node_count=1, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
         h2o.beta_features = False
@@ -57,7 +56,6 @@ class Basic(unittest.TestCase):
             # ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
             ('breadth.csv', 'b.hex', [ ('C1', None, None, None, None, None)], 'smalldata', 'quantiles'),
             ('covtype.data', 'c.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
-            
 
         ]
 

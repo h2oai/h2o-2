@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # to get the browser page special tab
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud(node_count=1, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
         h2o.beta_features = False
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
             ),
             ('runifA.csv', 'A.hex', [
                 (None,  1.00, 25.00, 50.00, 75.00, 100.0),
-                ('x', -99.9, -44.7, 7.43, 58.00, 91.7),
+                ('x', -99.9, -44.7, 8.26, 58.00, 91.7),
             ],
             ),
             # colname, (min, 25th, 50th, 75th, max)
@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             ),
             ('runifB.csv', 'B.hex', [
                 (None,  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
-                ('x', -100.00, -50.0, 0.97, 51.7, 100,00),
+                ('x', -100.00, -50.0, 0.99, 51.7, 100,00),
             ],
             ),
 
@@ -127,7 +127,7 @@ class Basic(unittest.TestCase):
                 quantile = 0.5 if DO_MEDIAN else .999
                 # h2o has problem if a list of columns (or dictionary) is passed to 'column' param
                 q = h2o.nodes[0].quantiles(source_key=hex_key, column=column['colname'],
-                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=2, interpolation_type=2) # mean
+                    quantile=quantile, max_qbins=MAX_QBINS, multiple_pass=2, interpolation_type=7) # for comparing to summary2
                 qresult = q['result']
                 qresult_single = q['result_single']
                 h2p.blue_print("h2o quantiles result:", qresult)
@@ -228,12 +228,16 @@ class Basic(unittest.TestCase):
                             col=scipyCol,
                             datatype='float',
                             quantile=0.5 if DO_MEDIAN else 0.999,
-                            # h2oSummary2=pctile[5 if DO_MEDIAN else 10],
+                            # FIX! ignore for now
+                            h2oSummary2=pctile[5 if DO_MEDIAN else 10],
                             h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
-                            # why am I off by 10x here?
-                            h2oSummary2MaxErr=maxErr*5,
+                            h2oSummary2MaxErr=maxErr,
                             )
+
+                        if False and h2o_util.approxEqual(pctile[5], 0.990238116744, tol=0.002, msg='stop here'):
+                            raise Exception("stopping to look")
+                                
 
 
                 scipyCol += 1

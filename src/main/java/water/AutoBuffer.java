@@ -1442,11 +1442,28 @@ public final class AutoBuffer {
   }
   public AutoBuffer putJSONAA8d( String name, double[][] a ) {
     putJSONStr(name).put1(':');
+    return putJSONAA8d(a);
+  }
+  public AutoBuffer putJSONAA8d(double[][] a ) {
     if( a == null ) return putNULL();
     put1('[');
     for( int i=0; i<a.length; i++ ) {
       if( i>0 ) put1(',');
       putJSONA8d(a[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAAA8d( String name, double[][][] a ) {
+    putJSONStr(name).put1(':');
+    return putJSONAAA8d(a);
+
+  }
+  public AutoBuffer putJSONAAA8d( double[][][] a ) {
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONAA8d(a[i]);
     }
     return put1(']');
   }

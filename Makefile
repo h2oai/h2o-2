@@ -220,8 +220,9 @@ dw_3:
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
-	@if [ -f R/h2o-package/h2o_package.pdf ]; then \
-	    cp -p R/h2o-package/h2o_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2o_package.pdf || exit 1; \
+	@if [ -f R/h2o_package.pdf ]; then \
+	    echo cp -p R/h2o_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2o_package.pdf; \
+	    cp -p R/h2o_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2o_package.pdf || exit 1; \
 	fi
 
 #
@@ -249,4 +250,4 @@ clean:
 	$(MAKE) docs-website-clean
 
 
-.phony: default build test docs-website run clean
+.PHONY: default build test docs-website run clean

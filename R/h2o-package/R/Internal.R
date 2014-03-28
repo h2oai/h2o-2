@@ -4,6 +4,7 @@
 .pkg.env$result_count = 0
 .pkg.env$temp_count = 0
 .pkg.env$IS_LOGGING = FALSE
+
 .TEMP_KEY = "Last.value"
 .RESULT_MAX = 1000
 .MAX_INSPECT_ROW_VIEW = 10000
@@ -113,6 +114,7 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__HACK_SETCOLNAMES2 = "2/SetColumnNames2.json"
 .h2o.__PAGE_CONFUSION = "2/ConfusionMatrix.json"
 .h2o.__PAGE_AUC = "2/AUC.json"
+.h2o.__PAGE_HITRATIO = "2/HitRatio.json"
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
