@@ -8,26 +8,11 @@ import water.UDP;
  * Created by tomasnykodym on 3/26/14.
  */
 public class CXDChunk extends CXIChunk {
-  public CXDChunk(int len, int nzs, int [] ids, double [] ds){
-    super(len,ids.length,8);
-    assert 2 == _idsz || _idsz == 4;
-    int off = OFF;
-    final int inc = _idsz + _elsz;
-    for(int i = 0; i < nzs; ++i, off += inc){
-      if(_idsz == 2) {
-        UDP.set2 (_mem,off,(short)ids[i]);
-        UDP.set8d(_mem,off + 2, ds[i]);
-      } else {
-        assert _elsz == 4;
-        UDP.set4 (_mem, off, ids[i]);
-        UDP.set8d(_mem, off + 4, ds[i]);
-      }
-    }
-  }
+  protected CXDChunk(int len, int nzs, int valsz, byte [] buf){super(len,nzs,valsz,buf);}
 
   // extract fp value from an (byte)offset
   protected final double getFValue(int off){
-    if(_elsz == 8) return UDP.get8d(_mem, off + _idsz);
+    if(_valsz == 8) return UDP.get8d(_mem, off + _ridsz);
     throw H2O.unimpl();
   }
 
@@ -59,7 +44,7 @@ public class CXDChunk extends CXIChunk {
     nc._ds = MemoryManager.malloc8d(nc._len);
     nc._id = MemoryManager.malloc4 (len);
     int off = OFF;
-    for( int i = 0; i < len; ++i, off += _idsz + _elsz) {
+    for( int i = 0; i < len; ++i, off += _ridsz + _valsz) {
       nc._id[i] = getId(off);
       nc._ds[i] = getFValue(off);
     }

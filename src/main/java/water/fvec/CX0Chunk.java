@@ -5,15 +5,15 @@ import water.*;
 import java.util.Arrays;
 
 /** specialized subtype of SPARSE chunk for boolean (bitvector); no NAs.  contains just a list of rows that are non-zero. */
-public class CX0Chunk extends CXIChunk {
+public final class CX0Chunk extends CXIChunk {
   // Sparse constructor
-  public CX0Chunk(long [] ls, int [] xs, int[] id, int len2, int len) {super(ls,xs,id,len2, len,0);}
+  protected CX0Chunk(int len, int nzs, byte [] buf){super(len,nzs,0,buf);}
 
-  @Override protected long at8_impl(int idx) {return getId(findOffset(idx)) == idx?1:0;}
-  @Override protected double atd_impl(int idx) { return at8_impl(idx); }
+  @Override protected final long at8_impl(int idx) {return getId(findOffset(idx)) == idx?1:0;}
+  @Override protected final double atd_impl(int idx) { return at8_impl(idx); }
   @Override protected final boolean isNA_impl( int i ) { return false; }
 
-  @Override boolean hasFloat ()                 { return false; }
+  @Override boolean hasFloat () { return false; }
 
   @Override NewChunk inflate_impl(NewChunk nc) {
     final int len = sparseLen();
