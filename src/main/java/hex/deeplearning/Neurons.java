@@ -166,17 +166,17 @@ public abstract class Neurons {
   /**
    * Backpropagation: w -= rate * dE/dw, where dE/dw = dE/dy * dy/dnet * dnet/dw
    * This method adds the dnet/dw = activation term per unit
-   * @param u unit (which neuron)
-   * @param g partial derivative dE/dnet = dE/dy * dy/net
-   * @param r rate
-   * @param m momentum
+   * @param r row index (update weights feeding to this neuron)
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate
+   * @param momentum
    */
-  final void bprop(final int u, final float g, float r, final float m) {
+  final void bprop(final int r, final float partial_grad, float rate, final float momentum) {
     // only correct weights if the gradient is large enough
     if (params.fast_mode || (
             // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
             !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
-      if (Math.abs(g) <= 1e-10) return;
+      if (Math.abs(partial_grad) <= 1e-10) return;
     }
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
@@ -186,14 +186,16 @@ public abstract class Neurons {
     final boolean have_momenta = _wm != null;
     final boolean have_ada = _ada != null;
     final boolean nesterov = params.nesterov_accelerated_gradient;
-    final int off = u * _previous._a.length;
+    final int cols = _previous._a.length;
+    final int idx = r * cols;
 
-    double r2 = 0;
-    for( int i = 0; i < _previous._a.length; i++ ) {
-      final int w = off + i;
-      if( update_prev ) _previous._e[i] += g * _w[w]; // propagate the error dE/dnet to the previous layer, via connecting weights
+    for( int c = 0; c < cols; c++ ) {
+      final int w = idx + c;
+      if( update_prev ) _previous._e[c] += partial_grad * _w[w]; // propagate the error dE/dnet to the previous layer, via connecting weights
+      if (params.fast_mode && _previous._a[c] == 0) continue;
+
       //this is the actual gradient dE/dw
-      final float grad = g * _previous._a[i] - Math.signum(_w[w]) * l1 - _w[w] * l2;
+      final float grad = partial_grad * _previous._a[c] - Math.signum(_w[w]) * l1 - _w[w] * l2;
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
@@ -204,53 +206,54 @@ public abstract class Neurons {
         _ada[2*w+1] += (1f-rho)*grad2;
         final float RMS_dx = Utils.approxSqrt(_ada[2*w] + eps);
         final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
-        r = RMS_dx*invRMS_g;
-        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*r*r*grad2;
-        _w[w] += r * grad;
+        rate = RMS_dx*invRMS_g;
+        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*rate*rate*grad2;
+        _w[w] += rate * grad;
       } else {
         if (!nesterov) {
-          final float delta = r * grad;
+          final float delta = rate * grad;
           _w[w] += delta;
           if( have_momenta ) {
-            _w[w] += m * _wm[w];
+            _w[w] += momentum * _wm[w];
             _wm[w] = delta;
           }
         } else {
           float tmp = grad;
           if( have_momenta ) {
-            _wm[w] *= m;
+            _wm[w] *= momentum;
             _wm[w] += tmp;
             tmp = _wm[w];
           }
-          _w[w] += r * tmp;
-//        Log.info("w[" + w + "] += " + r + " * " + d + " = " + _w[w]);
+          _w[w] += rate * tmp;
         }
       }
-      if (params.max_w2 != Double.POSITIVE_INFINITY)
-        r2 += _w[w] * _w[w];
     }
-    if( params.max_w2 != Double.POSITIVE_INFINITY && r2 > params.max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      final double scale = Utils.approxSqrt((float)(params.max_w2 / r2));
-      for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
-    }
-
     if (!params.nesterov_accelerated_gradient) {
-      final float delta = r * g;
-      _b[u] += delta;
+      final float delta = rate * partial_grad;
+      _b[r] += delta;
       if( have_momenta ) {
-        _b[u] += m * _bm[u];
-        _bm[u] = delta;
+        _b[r] += momentum * _bm[r];
+        _bm[r] = delta;
       }
     } else {
-      float d = g;
+      float d = partial_grad;
       if( have_momenta ) {
-        _bm[u] *= m;
-        _bm[u] += d;
-        d = _bm[u];
+        _bm[r] *= momentum;
+        _bm[r] += d;
+        d = _bm[r];
       }
-      _b[u] += r * d;
+      _b[r] += rate * d;
     }
-    if (Float.isInfinite(_b[u])) _minfo.set_unstable();
+
+    // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+    if (params.max_w2 != Double.POSITIVE_INFINITY) {
+      final double r2 = Utils.sumSquares(_w, idx, idx+cols);
+      if( r2 > params.max_w2 ) {
+        final float scale = Utils.approxSqrt((float)(params.max_w2 / r2));
+        for( int c = 0; c < cols; c++ ) _w[idx + c] *= scale;
+      }
+    }
+    if (Float.isInfinite(_b[r])) _minfo.set_unstable();
   }
 
   /**
@@ -583,10 +586,9 @@ public abstract class Neurons {
     for(int r = 0; r<rows; r++) {
       res[r] = 0;
       if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
-      float tmp = 0;
       for(int i = 0; i<cols; i++)
-        tmp += a[r*cols+i] * x[i];
-      res[r] += tmp + y[r];
+        res[r] += a[r*cols+i] * x[i];
+      res[r] += y[r];
     }
   }
 
