@@ -623,10 +623,10 @@ public abstract class Neurons {
           psum6 += a[off + 6] * x[c + 6];
           psum7 += a[off + 7] * x[c + 7];
         }
-        for (int j = extra; j < cols; j++)
-          res[r] += a[idx + j] * x[j];
         res[r] += psum0 + psum1 + psum2 + psum3;
         res[r] += psum4 + psum5 + psum6 + psum7;
+        for (int j = extra; j < cols; j++)
+          res[r] += a[idx + j] * x[j];
         res[r] += y[r];
       }
       idx += cols;
