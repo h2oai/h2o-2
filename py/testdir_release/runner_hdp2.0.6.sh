@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo you can use -n argument to skip the s3 download if you did it once 
-echo files are unzipped to ../../h2o-downloaded
+echo "you can use -n argument to skip the s3 download if you did it once" 
+echo "files are unzipped to ../../h2o-downloaded"
 # This is critical:
 # Ensure that all your children are truly dead when you yourself are killed.
 # trap "kill -- -$BASHPID" INT TERM EXIT

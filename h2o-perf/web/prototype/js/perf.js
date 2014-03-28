@@ -56,19 +56,19 @@ $('*').on('change', '#question', function() {
 
 function makeGraph(json, svg) {
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
-        width = 960 - margin.left - margin.right,
+        width = 1200 - margin.left - margin.right,
         height = 500 -margin.top -margin.bottom;
 
-    var x = d3.scale.linear().range([0, width]);
+    var x = d3.scale.linear().range([0, width - 100]);
     var y = d3.scale.linear().range([height, 0]);
     var color = d3.scale.category10();
 
-    var xAxis = d3.svg.axis().scale(x).orient("bottom");
+    var xAxis = d3.svg.axis().scale(x).orient("bottom").tickFormat(d3.format("d"));
     var yAxis = d3.svg.axis().scale(y).orient("left");
     
-    var line = d3.svg.line().interpolate("basis")
-                .x(function(d) {return x(d.build_version); })
-                .y(function(d) { return y(d.time_s); });
+    var lineFunction = d3.svg.line().interpolate("ordinal")
+                .x(function(d) {return x(d[0]); })
+                .y(function(d) { return y(d[1]); });
 
     var svg = d3.select(svg).append("svg")
                 .attr("width", width + margin.left + margin.right)
@@ -76,57 +76,97 @@ function makeGraph(json, svg) {
               .append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    var datas = new Object();
     var test_names = new Array();
     for(i = 0; i < json.data.length; i++) {
-      test_names[i] = d3.values(json.data[i])[1];
-      datas[i] = d3.values(json.data[i]);
+      bv = d3.values(json.data[i])[6].split('.');
+      bv = bv[bv.length - 1];
+      if (bv == "99999") { continue; }
+      if (bv == 99999) { continue; }
+      test_names.push(d3.values(json.data[i])[1]);
     }
     test_names = d3.set(test_names).values();
 
-//    var domains = new Array();
-//    for (i = 0; i < test_names.length; i++) {
-//      domains[i] = test_names[i];
-//      color.domain(domains)
-//      datas[i] = {
-//            name: test_names[i],
-//            color: color(),
-//            data: new Array()
-//            }
-//    }
-//    for(i = 0; i < json.data.length; i++) {
-//      build = d3.values(json.data[i])[6].split('.');
-//      build = build[build.length - 1]
-//      test  = d3.values(json.data[i])[1];
-//      dat   = d3.values(json.data[i])[2];
-//      for (int j = 0; j < datas.length; j++) {
-//        if (datas[j].name === test) {
-//            datas.data.push([build, dat])
-//        }
-//      }
-//    }
+    var datas2 = new Array();
+    var domains = new Array();
+    for (i = 0; i < test_names.length; i++) {
+      domains[i] = test_names[i];
+      color.domain(domains)
+      datas2[i] = {
+            name: test_names[i],
+            color: color(),
+            data: new Array()
+            }
+    }
+    for(i = 0; i < json.data.length; i++) {
+      build = d3.values(json.data[i])[6].split('.');
+      build = build[build.length - 1]
+      if (build == "99999") { continue; }
+      if (build == 99999) { continue; }
+      test  = d3.values(json.data[i])[1];
+      dat   = d3.values(json.data[i])[2];
+      for(j = 0; j < datas2.length; j++) {
+        if (datas2[j].name === test) {
+            datas2[j].data.push([build, dat, test])
+        }
+      }
+    }
 
-    var tests = color.domain().map(function(name) {
-        return {
-            name: name,
-            values: data.filter(function(d) { return d.test_name !== name })
-                        .map(function(d) {
-                          build_version = d.build_version.split('.');
-                          build_version = build_version[build_version.length - 1];
-                          return {build: build_version, time: d.time_s};
-                         })
-         };
-    });
-
-    x.domain(d3.extent(data, function(d) { bv = d.build_version.split('.'); return bv[bv.length - 1]; }));
-    y.domain([
-        d3.min(tests, function(t) { return d3.min(t.values, function(v) {return v.time; }); }),
-        d3.max(tests, function(t) { return d3.max(t.values, function(v) {return v.time; }); })
+    x.domain([
+      d3.min(datas2, function(c) { return d3.min(c.data, function(v) { return v[0]; }); }),
+      d3.max(datas2, function(c) { return d3.max(c.data, function(v) { return v[0]; }); })
     ]);
 
-    svg.append("g").attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
+    y.domain([
+      0,
+      d3.max(datas2, function(c) { return d3.max(c.data, function(v) { return +v[1]; }); })
+    ]);
+
+    var linesGroup = svg.append("g").attr("class", "line");
+    var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+
+    for (var i in datas2) {
+        linedata = datas2[i]
+        svg.selectAll(".point").data(linedata.data).enter()
+              .append("svg:circle")
+              .attr("stroke", "black")
+              .attr("fill", "black")
+            .on("mouseover", function(d, i) {
+                var dd = document.createElement("div");
+                dd.style.position = "absolute";
+                dd.style.visibility = "hidden";
+                dd.style.height = "auto";
+                dd.style.width = "auto";
+                dd.innerHTML = d[2];
+                dd.setAttribute("id", "a")
+                document.body.appendChild(dd);
+                div.transition().duration(200).style("opacity", .95);
+                div.html("build:" + d[0] + "<br /> time: " + parseFloat(d[1]).toFixed(1) + "(s)")
+                .style("left", (d3.event.pageX) + "px")
+                .style("top", (d3.event.pageY - 28) + "px")
+                .style("width", (dd.clientWidth + 1) + "px");
+             })
+              .on("mouseout", function(d) {
+                  div.transition().duration(400).style("opacity", 0)})
+              .attr("cx", function(d, i) { return x(d[0]) })
+              .attr("cy", function(d, i) { return y(d[1]) })
+              .attr("r", function(d, i) { return 3 }); 
+        linesGroup.append("path")
+                  .attr("d", lineFunction(linedata.data))
+                  .attr("class", "line")
+                  .attr("fill", "none")
+                  .attr("stroke", function(d, i) {
+                      return linedata.color;
+                  });
+        linesGroup.append("text")
+              .attr("x", x(linedata.data[linedata.data.length - 1][0]))
+              .attr("y", y(linedata.data[linedata.data.length - 1][1]))
+              .text(linedata.name);
+     };
+
+    svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
 
     svg.append("g")
       .attr("class", "y axis")
@@ -137,28 +177,4 @@ function makeGraph(json, svg) {
       .attr("dy", ".71em")
       .style("text-anchor", "end")
       .text("Time (s)");
-    
-    
-    var test = svg.selectAll(".test")
-      .data(tests)
-    .enter().append("g")
-      .attr("class", "test");
-
-
-    test.append("path")
-      .attr("class", "line")
-      .attr("d", function(d) { return line(d.values); })
-      .style("stroke", function(d) { return color(d.name); });
-
-  test.append("text")
-      .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
-      .attr("transform", function(d) { return "translate(" + x(d.value.build) + "," + y(d.value.time) + ")"; })
-      .attr("x", 3)
-      .attr("dy", ".35em")
-      .text(function(d) { return d.name; });
-
 }
-
-
-
-
