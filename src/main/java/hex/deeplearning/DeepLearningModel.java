@@ -996,7 +996,7 @@ public class DeepLearningModel extends Model {
         } else {
           RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
           t_rs.replace("key", model_info().get_params().source._key);
-          String cmTitle = "<div class=\"alert\">Scoring results reported on training data" + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
+          String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.train_confusion_matrix != null && smallenough) {
             sb.append("</h5>");
