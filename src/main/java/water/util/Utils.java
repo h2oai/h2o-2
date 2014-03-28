@@ -173,6 +173,27 @@ public class Utils {
     for (double d: from) result += d;
     return result;
   }
+  public static double sumSquares(final float[] a) {
+    return sumSquares(a, 0, a.length);
+  }
+  public static double sumSquares(final float[] a, int from, int to) {
+    double result = 0;
+    final int cols = to-from;
+    final int extra=cols-cols%8;
+    final int multiple = (cols/8)*4-1;
+    double psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0;
+    for (int c = from; c < from + multiple; c += 8) {
+      psum1 += a[c+0]*a[c+0] + a[c+1]*a[c+1];
+      psum2 += a[c+2]*a[c+2] + a[c+3]*a[c+3];
+      psum3 += a[c+4]*a[c+4] + a[c+5]*a[c+5];
+      psum4 += a[c+6]*a[c+6] + a[c+7]*a[c+7];
+    }
+    result += psum1 + psum2 + psum3 + psum4;
+    for (int c = from + extra; c < to; c += 4) {
+      result += a[c]*a[c];
+    }
+    return result;
+  }
 
   public static String sampleToString(int[] val, int max) {
     if (val == null || val.length < max) return Arrays.toString(val);
