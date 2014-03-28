@@ -89,7 +89,7 @@ public class PCAScore extends FrameJob {
     }
 
     // Note: Rows with NAs (missing values) are automatically skipped!
-    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] response, NewChunk[] outputs) {
+    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double[] response, NewChunk[] outputs) {
       for(int c = 0; c < _ncomp; c++) {
         double x = 0;
         for(int d = 0; d < ncats; d++)
