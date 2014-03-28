@@ -87,13 +87,13 @@ public class DeepLearningVsNeuralNet extends TestUtil {
             new Random().nextFloat() * 0.5
     };
 
-    double p0 = 0.5 * new Random().nextFloat();
-    long pR = 1000 + new Random().nextInt(1000);
-    double p1 = 0.5 + 0.49 * new Random().nextFloat();
-    double l1 = 1e-5 * new Random().nextFloat();
-    double l2 = 1e-5 * new Random().nextFloat();
-    double max_w2 = new Random().nextInt(50);
-    double rate_annealing = 1e-7 + new Random().nextFloat() * 1e-6;
+    double p0 = 0; //0.5 * new Random().nextFloat();
+    long pR = 1; //1000 + new Random().nextInt(1000);
+    double p1 = 0; //0.5 + 0.49 * new Random().nextFloat();
+    double l1 = 0; //1e-5 * new Random().nextFloat();
+    double l2 = 0; //1e-5 * new Random().nextFloat();
+    double max_w2 = Double.POSITIVE_INFINITY; //new Random().nextInt(50);
+    double rate_annealing = 0; //1e-7 + new Random().nextFloat() * 1e-6;
 
 
 
@@ -342,16 +342,16 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                             _test.delete();
                             frame.delete();
                           }
-                          trainerr /= (double)num_repeats;
-                          reftrainerr /= (double)num_repeats;
-                          testerr /= (double)num_repeats;
-                          reftesterr /= (double)num_repeats;
+                          trainerr /= (float)num_repeats;
+                          reftrainerr /= (float)num_repeats;
+                          testerr /= (float)num_repeats;
+                          reftesterr /= (float)num_repeats;
 
                           /**
                            * Tolerances
                            */
-                          final float abseps = threaded ? 1e-2f : 1e-6f;
-                          final float releps = threaded ? 1e-2f : 1e-6f;
+                          final float abseps = threaded ? 1e-2f : 1e-5f;
+                          final float releps = threaded ? 1e-2f : 1e-5f;
 
                           // training set scoring
                           Log.info("NeuralNet     train error " + reftrainerr);

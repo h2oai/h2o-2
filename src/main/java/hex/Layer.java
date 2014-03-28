@@ -191,13 +191,16 @@ public abstract class Layer extends Iced {
       if (Math.abs(g) <= 1e-10) return;
     }
 
+    final float l1 = (float)params.l1;
+    final float l2 = (float)params.l2;
     double r2 = 0;
     final int off = u * _previous._a.length;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = off + i;
-      if( _previous._e != null )
-        _previous._e[i] += g * _w[w];
-      float d = g * _previous._a[i] - (float)(_w[w] * params.l2) - (float)(Math.signum(_w[w]) * params.l1);
+      if( _previous._e != null ) _previous._e[i] += g * _w[w];
+      if (params.fast_mode && _previous._a[i] == 0) continue;
+
+      float d = g * _previous._a[i] - Math.signum(_w[w]) * l1 - _w[w] * l2;
 
       // TODO finish per-weight acceleration, doesn't help for now
 //      if( _wp != null && d != 0 ) {
@@ -225,7 +228,7 @@ public abstract class Layer extends Iced {
       if (params.max_w2 != Double.POSITIVE_INFINITY) r2 += _w[w] * _w[w];
     }
     if( params.max_w2 != Double.POSITIVE_INFINITY && r2 > params.max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      final double scale = Math.sqrt(params.max_w2 / r2);
+      final float scale = Utils.approxSqrt((float)(params.max_w2 / r2));
       for( int i = 0; i < _previous._a.length; i++ ) _w[off + i] *= scale;
     }
     float d = g;
@@ -615,7 +618,6 @@ public abstract class Layer extends Iced {
       for( int u = 0; u < _a.length; u++ ) {
         if (v[u] == missing_float_value) continue; //ignore missing regression targets
         float g = v[u] - _a[u];
-        g *= (1 - _a[u]) * _a[u];
         bprop(u, g, r, m);
       }
     }
@@ -826,7 +828,7 @@ public abstract class Layer extends Iced {
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           _a[o] += _b[o];
-            _a[o] = Math.max(_a[o], 0f);
+          _a[o] = Math.max(_a[o], 0f);
         }
       }
     }
