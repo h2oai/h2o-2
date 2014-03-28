@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
         csvPathname_test  = 'mnist/test.csv.gz'
         hex_key = 'mnist_train.hex'
         validation_key = 'mnist_test.hex'
-        timeoutSecs = 30
+        timeoutSecs = 60
         parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
         parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='put', hex_key=validation_key, timeoutSecs=timeoutSecs)
         inspect = h2o_cmd.runInspect(None, hex_key)
