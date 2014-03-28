@@ -86,6 +86,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double input_dropout_ratio = 0.0;
 
+  @API(help = "Hidden layer dropout ratios (can improve generalization), specify one value per hidden layer, defaults to 0.5", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double[] hidden_dropout_ratios;
+
   @API(help = "L1 regularization (can add stability and improve generalization, causes many weights to become 0)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double l1 = 0.0;
 
@@ -296,6 +299,7 @@ public class DeepLearning extends Job.ValidatedJob {
             || arg._name.equals("quiet_mode")
             || arg._name.equals("max_confusion_matrix_size")
             || arg._name.equals("max_hit_ratio_k")
+            || arg._name.equals("hidden_dropout_ratios")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
@@ -311,6 +315,11 @@ public class DeepLearning extends Job.ValidatedJob {
         arg.disable("Only for non-adaptive learning rate.", inputArgs);
         momentum_start = 0;
         momentum_stable = 0;
+      }
+    }
+    if (arg._name.equals("hidden_dropout_ratios")) {
+      if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
+        arg.disable("Only for activation functions with dropout.", inputArgs);
       }
     }
   }
@@ -428,10 +437,21 @@ public class DeepLearning extends Job.ValidatedJob {
     if (source.numCols() <= 1)
       throw new IllegalArgumentException("Training data must have at least 2 features (incl. response).");
 
+    if (hidden == null) throw new IllegalArgumentException("There must be at least one hidden layer.");
+
     for (int i=0;i<hidden.length;++i) {
       if (hidden[i]==0)
         throw new IllegalArgumentException("Hidden layer size must be >0.");
     }
+
+    //Auto-fill defaults
+    if (hidden_dropout_ratios == null) {
+      hidden_dropout_ratios = new double[hidden.length];
+      if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
+        Arrays.fill(hidden_dropout_ratios, 0.5);
+      }
+    }
+    else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
 
     if(!classification && loss != Loss.MeanSquare) {
       Log.warn("Setting loss to MeanSquare for regression.");

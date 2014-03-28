@@ -319,13 +319,11 @@ public class DeepLearningModel extends Model {
             sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
                     + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
             if (i == 0) {
-              sb.append("  " + String.format("%.5g", neurons[i].params.input_dropout_ratio*100) + "%\n");
+              sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + "%\n");
               continue;
             }
             else if (i < neurons.length-1) {
-              sb.append( neurons[i] instanceof Neurons.TanhDropout
-                      || neurons[i] instanceof Neurons.RectifierDropout
-                      || neurons[i] instanceof Neurons.MaxoutDropout ? "    50%   " : "     0%   ");
+              sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
             } else {
               sb.append("          ");
             }
@@ -913,9 +911,7 @@ public class DeepLearningModel extends Model {
         }
         else if (i < neurons.length-1) {
           sb.append("<td>");
-          sb.append( neurons[i] instanceof Neurons.TanhDropout
-                  || neurons[i] instanceof Neurons.RectifierDropout
-                  || neurons[i] instanceof Neurons.MaxoutDropout ? "50%" : "0%");
+          sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
           sb.append("</td>");
         } else {
           sb.append("<td></td>");
