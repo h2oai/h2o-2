@@ -639,7 +639,7 @@ public abstract class Trainer {
         while (true) {
           input.fprop(new Random().nextLong(), true);
           for( int i = 0; i < input._a.length; i++ )
-            a[0].getBuffer().put(i, (float)input._a[i]);
+            a[0].getBuffer().put(i, input._a[i]);
           queue.putWriteBuffer(a[0], false);
           for( int y = 1; y < fprops.length; y++ )
             queue.put1DRangeKernel(fprops[y], 0, _ls[y]._a.length, group);
