@@ -10,7 +10,7 @@ import water.parser.DParseTask;
  *  implement (possibly empty) compression schemes.  */
 
 public abstract class Chunk extends Iced implements Cloneable {
-  public long _start;         // Start element; filled after AutoBuffer.read
+  public long _start = -1;    // Start element; filled after AutoBuffer.read
   public int _len;            // Number of elements in this chunk
   protected Chunk _chk2;      // Normally==null, changed if chunk is written to
   public Vec _vec;            // Owning Vec; filled after AutoBuffer.read
@@ -159,6 +159,35 @@ public abstract class Chunk extends Iced implements Cloneable {
   abstract boolean set_impl  (int idx, double d );
   abstract boolean set_impl  (int idx, float f );
   abstract boolean setNA_impl(int idx);
+
+
+
+  public boolean isSparse() {return false;}
+
+  public int sparseLen(){return _len;}
+
+  /**
+   * Get chunk-relative indeces of values (nonzeros for sparse, all for dense) stored in this chunk.
+   * For desne chunks, this will contain indeces of all the rows in this chunk.
+   *
+   * @return array of chunk-relative indeces of values stored in this chunk.
+   */
+  public int  nonzeros(int [] res){
+    for( int i = 0; i < _len; ++i) res[i] = i;
+    return _len;
+  }
+
+  /**
+   * Get chunk-relative indeces of values (nonzeros for sparse, all for dense) stored in this chunk.
+   * For desne chunks, this will contain indeces of all the rows in this chunk.
+   *
+   * @return array of chunk-relative indeces of values stored in this chunk.
+   */
+  public final int [] nonzeros () {
+    int [] res = MemoryManager.malloc4(sparseLen());
+    nonzeros(res);
+    return res;
+  }
 
   /** Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
    *  chunk and written value is out-of-range for an update-in-place operation.

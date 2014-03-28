@@ -11,6 +11,8 @@ import water.*;
 import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.*;
 
+import java.text.DecimalFormat;
+
 public class Inspect2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -80,6 +82,7 @@ public class Inspect2 extends Request2 {
 
   public static String jsonLink(Key key){return "2/Inspect2.json?src_key=" + key;}
 
+  private static final DecimalFormat mean_dformat = new DecimalFormat("###.###");
   @Override public boolean toHTML( StringBuilder sb ) {
     Key skey = Key.make(input("src_key"));
 
@@ -185,7 +188,7 @@ public class Inspect2 extends Request2 {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Mean").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(cols[i].type==ColType.Enum ? NA : x1(svecs[i],-1,cols[i].mean)).append("</td>");
+      sb.append("<td>").append(cols[i].type == ColType.Enum ? NA : mean_dformat.format(cols[i].mean)).append("</td>");
     sb.append("</tr>");
 
     // Cardinality row is shown only if dataset contains enum-column
