@@ -70,19 +70,19 @@ public class CBSChunkTest extends TestUtil {
   // used for data containing NAs
   @Test public void test2BPV() {
    // Simple case only compressing 2*3bits into 1byte including 1 NA
-   testImpl(new long[] {0,0,                  1},
+   testImpl(new long[] {0,Long.MAX_VALUE,                  1},
             new int [] {0,Integer.MIN_VALUE,0},
             2, 2, 1, 1);
    // Filling whole byte, one NA
-   testImpl(new long[] {1,0                ,0,1},
+   testImpl(new long[] {1,Long.MAX_VALUE                ,0,1},
             new int [] {0,Integer.MIN_VALUE,0,0},
             2, 0, 1, 1);
    // crossing the border of two bytes by 4bits, one NA
-   testImpl(new long[] {1,0,0,                1, 0,0},
+   testImpl(new long[] {1,0,Long.MAX_VALUE,                1, 0,0},
             new int [] {0,0,Integer.MIN_VALUE,0, 0,0},
             2, 4, 2, 1);
    // Two full bytes, 5 NAs
-   testImpl(new long[] {0,0,0,1, 0,0,1,0},
+   testImpl(new long[] {Long.MAX_VALUE,Long.MAX_VALUE,Long.MAX_VALUE,1, 0,Long.MAX_VALUE,1,Long.MAX_VALUE},
             new int [] {Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,0, 0,Integer.MIN_VALUE,0,Integer.MIN_VALUE},
             2, 0, 2, 5);
   }

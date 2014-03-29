@@ -75,14 +75,12 @@ public class SparseTest extends TestUtil {
         assertTrue(Double.isNaN(vals[nz]) || vals[nz] == v.asDouble());
       }
       Chunk c1 = setAndClose(vals[length-1] = v1,length-1,c0);
-      System.out.println(c1.getClass().getSimpleName());
       assertTrue(class1.isAssignableFrom(c1.getClass()));
       // test sparse set
       assertEquals(4,c1.sparseLen());
       assertEquals(Double.isNaN(v1),c1.isNA0(length-1));
       assertTrue(Double.isNaN(v1) || v1 == c1.at0(length-1));
       Chunk c2 = setAndClose(vals[0] = v2,0,c1);
-      System.out.println(c2.getClass().getSimpleName());
       assertTrue(class2.isAssignableFrom(c2.getClass()));
       assertTrue(c2.nextNZ(-1) == 0);
       assertEquals(vals.length,c2.sparseLen());
