@@ -475,7 +475,7 @@ class ASTAssign extends AST {
       assert ary_rhs==null;
       long row = (long)((ASTNum)slice._rows)._d;
       int  col = (int )((ASTNum)slice._cols)._d;
-      ary.vecs()[col].set(row,d);
+      ary.vecs()[col-1].set(row-1,d);
       env.push(d);
       return;
     }
