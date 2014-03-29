@@ -92,6 +92,8 @@ def get_ip_address():
 
     import socket
     ip = '127.0.0.1'
+    socket.setdefaulttimeout(0.5)
+    hostname = socket.gethostname()
     # this method doesn't work if vpn is enabled..it gets the vpn ip
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -102,21 +104,26 @@ def get_ip_address():
         pass
 
     if ip.startswith('127'):
-        ip = socket.getaddrinfo(socket.gethostname(), None)[0][4][0]
+        ip = socket.getaddrinfo(hostname, None)[0][4][0]
         verboseprint("get_ip case 3:", ip)
 
     ipa = None
-    hostname = socket.gethostname()
     badHosts = ['lg1', 'ch-0', 'ch-63']
-    if hostname not in badHosts: # hack for hosts that don't support this
-        for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
-             # only take the first
-             if ipa is None and not ips.startswith("127."):
-                ipa = ips[:]
-                verboseprint("get_ip case 4:", ipa)
-                if ip != ipa:
-                    print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                    print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
+    # hack for hosts that don't support this
+    # the gethostbyname_ex can be slow. the timeout above will save us quickly
+    if hostname not in badHosts:
+        try:
+            ghbx = socket.gethostbyname_ex(hostname)
+            for ips in ghbx[2]:
+                 # only take the first
+                 if ipa is None and not ips.startswith("127."):
+                    ipa = ips[:]
+                    verboseprint("get_ip case 4:", ipa)
+                    if ip != ipa:
+                        print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                        print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
+        except:
+            pass
 
     verboseprint("get_ip_address:", ip)
     return ip
