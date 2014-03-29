@@ -13,7 +13,7 @@
 
     "hdfs_name_node": "10.71.0.100",
     "hdfs_version": "cdh4",
-    "use_hdfs": true,
+    "use_hdfs": false,
 
     "use_flatfile": true,
 
