@@ -72,19 +72,21 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
   static long _lastWarn;
   static long _warnCount;
   @Override protected void postGlobal(){
-    if (H2O.CLOUD.size() > 1) {
+    if (H2O.CLOUD.size() > 1 && !_output.get_params().replicate_training_data) {
       long now = System.currentTimeMillis();
       if (_chunk_node_count < H2O.CLOUD.size() && (now - _lastWarn > 5000) && _warnCount < 3) {
 //        Log.info("Synchronizing across " + _chunk_node_count + " H2O node(s).");
         Log.warn(H2O.CLOUD.size() - _chunk_node_count + " node(s) (out of " + H2O.CLOUD.size()
-                + ") are not contributing to model updates. Consider using a larger training dataset (or fewer H2O nodes).");
+                + ") are not contributing to model updates. Consider setting replicate_training_data to true or using a larger training dataset (or fewer H2O nodes).");
         _lastWarn = now;
         _warnCount++;
       }
     }
-    _output.div(_chunk_node_count);
-    _output.add_processed_global(_output.get_processed_local());
-    _output.set_processed_local(0l);
+    if (!_output.get_params().replicate_training_data || H2O.CLOUD.size() == 1) {
+      _output.div(_chunk_node_count);
+      _output.add_processed_global(_output.get_processed_local());
+      _output.set_processed_local(0l);
+    }
     assert(_input == null);
   }
 
@@ -144,36 +146,41 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
   public static void step(long seed, Neurons[] neurons, DeepLearningModel.DeepLearningModelInfo minfo, boolean training, double[] responses) {
-    for (int i=1; i<neurons.length-1; ++i) {
-      neurons[i].fprop(seed, training);
-    }
-    if (minfo.get_params().classification) {
-      ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
-      if (training) {
-        for( int i = 1; i < neurons.length - 1; i++ )
-          Arrays.fill(neurons[i]._e, 0);
-        assert((double)(int)responses[0] == responses[0]);
-        final int target_label = (int)responses[0];
-        ((Neurons.Softmax)neurons[neurons.length-1]).bprop(target_label);
+    try {
+      for (int i=1; i<neurons.length-1; ++i) {
+        neurons[i].fprop(seed, training);
       }
-    }
-    else {
-      ((Neurons.Linear)neurons[neurons.length-1]).fprop();
-      if (training) {
-        for( int i = 1; i < neurons.length - 1; i++ )
-          Arrays.fill(neurons[i]._e, 0);
-        final float target_value = (float)responses[0];
-        ((Neurons.Linear)neurons[neurons.length-1]).bprop(target_value);
+      if (minfo.get_params().classification) {
+        ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
+        if (training) {
+          for( int i = 1; i < neurons.length - 1; i++ )
+            Arrays.fill(neurons[i]._e, 0);
+          assert((double)(int)responses[0] == responses[0]);
+          final int target_label = (int)responses[0];
+          ((Neurons.Softmax)neurons[neurons.length-1]).bprop(target_label);
+        }
       }
-    }
-    if (training) {
-      for (int i=neurons.length-2; i>0; --i)
-        neurons[i].bprop();
+      else {
+        ((Neurons.Linear)neurons[neurons.length-1]).fprop();
+        if (training) {
+          for( int i = 1; i < neurons.length - 1; i++ )
+            Arrays.fill(neurons[i]._e, 0);
+          final float target_value = (float)responses[0];
+          ((Neurons.Linear)neurons[neurons.length-1]).bprop(target_value);
+        }
+      }
+      if (training) {
+        for (int i=neurons.length-2; i>0; --i)
+          neurons[i].bprop();
 
-      /**
-       * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
-       */
-      minfo.add_processed_local(1);
+        /**
+         * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
+         */
+        minfo.add_processed_local(1);
+      }
+    }
+    catch(RuntimeException ex) {
+      minfo.set_unstable();
     }
   }
 

@@ -951,7 +951,7 @@ public class DeepLearningModel extends Model {
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
-    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + H2O.CLOUD.size() + " (" + cores + " cores)");
+    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + H2O.CLOUD.size() + " (" + cores + " threads)");
     final boolean isEnded = Job.isEnded(model_info().job().self());
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
@@ -966,7 +966,7 @@ public class DeepLearningModel extends Model {
     final boolean fulltrain = score_train==0 || score_train == model_info().data_info()._adaptedFrame.numRows();
     final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
 
-    final String toolarge = " Not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
+    final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + model_info().get_params().max_confusion_matrix_size + ".";
     boolean smallenough = model_info.units[model_info.units.length-1] <= model_info().get_params().max_confusion_matrix_size;
 
