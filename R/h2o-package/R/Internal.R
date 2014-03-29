@@ -139,6 +139,9 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 .h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
 .h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+.h2o.__PAGE_BAYES = "2/NaiveBayes.json"
+.h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
+.h2o.__PAGE_NBModelView = "2/NBModelView.json"
 
 .h2o.__remoteSend <- function(client, page, ...) {
   .h2o.__checkClientHealth(client)

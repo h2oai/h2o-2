@@ -27,12 +27,12 @@ public class NaiveBayes extends ModelJob {
   public int laplace = 0;
 
   @Override protected JobState execImpl() {
-    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, true);
+    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false);
 
     // TODO: Temporarily reject data with missing entries until NA handling implemented
     Vec[] vecs = fr.vecs();
     for(int i = 0; i < vecs.length; i++) {
-      if(!vecs[i].isEnum() || vecs[i].naCnt() != 0) throw H2O.unimpl();
+      if(vecs[i].naCnt() != 0) throw H2O.unimpl();
     }
 
     DataInfo dinfo = new DataInfo(fr, 1, false, false);
@@ -43,13 +43,13 @@ public class NaiveBayes extends ModelJob {
     return JobState.DONE;
   }
 
-  /* @Override protected void init() {
+  @Override protected void init() {
     super.init();
     Vec[] vecs = selectFrame(source).vecs();
     for(int i = 0; i < vecs.length; i++) {
       if(!vecs[i].isEnum()) throw H2O.unimpl();
     }
-  } */
+  }
 
   @Override protected Response redirect() {
     return NBProgressPage.redirect(this, self(), dest());
@@ -98,7 +98,7 @@ public class NaiveBayes extends ModelJob {
     final protected DataInfo _dinfo;
     final int _nres;              // Number of levels for the response y
 
-    public int _nobs;             // Number of rows where y != NA
+    public int _nobs;             // Number of rows counted in calculation
     public double[] _rescnt;      // Count of each level in the response
     public double[][][] _jntcnt;  // For each predictor, joint count of response and predictor level
 
@@ -121,22 +121,26 @@ public class NaiveBayes extends ModelJob {
       int res_idx = chks.length-1;
       Chunk res = chks[res_idx];
 
+      OUTER:
       for(int row = 0; row < chks[0]._len; row++) {
-        if(res.isNA0(row)) continue;
-        int rlevel = (int)res.at0(row);
-        _rescnt[rlevel]++;
-        _nobs++;
+        // Skip row if any entries in it are NA
+        for(int col = 0; col < chks.length; col++) {
+          if(chks[col].isNA0(row)) continue OUTER;
+        }
 
+        // Record joint counts of response and predictors
+        int rlevel = (int)res.at0(row);
         for(int col = 0; col < res_idx; col++) {
-          Chunk C = chks[col];
-          if(C.isNA0(row)) continue;
-          int plevel = (int)C.at0(row);
+          int plevel = (int)chks[col].at0(row);
           _jntcnt[col][rlevel][plevel]++;
         }
+        _rescnt[rlevel]++;
+        _nobs++;
       }
     }
 
     @Override public void reduce(NBTask nt) {
+      _nobs += nt._nobs;
       Utils.add(_rescnt, nt._rescnt);
       for(int col = 0; col < _jntcnt.length; col++)
         _jntcnt[col] = Utils.add(_jntcnt[col], nt._jntcnt[col]);
