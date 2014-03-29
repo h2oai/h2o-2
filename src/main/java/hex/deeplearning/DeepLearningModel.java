@@ -319,11 +319,11 @@ public class DeepLearningModel extends Model {
             sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
                     + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
             if (i == 0) {
-              sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + "%\n");
+              sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + " \n");
               continue;
             }
             else if (i < neurons.length-1) {
-              sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
+              sb.append("  " + formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
             } else {
               sb.append("          ");
             }
@@ -606,127 +606,132 @@ public class DeepLearningModel extends Model {
    * @return true if model building is ongoing
    */
   boolean doScoring(Frame train, Frame ftrain, Frame ftest, Key job_key, Job.ValidatedJob.Response2CMAdaptor vadaptor) {
-    final long now = System.currentTimeMillis();
-    epoch_counter = (float)model_info().get_processed_total()/train.numRows();
-    run_time += now-_timeLastScoreEnter;
-    _timeLastScoreEnter = now;
-    boolean keep_running = (epoch_counter < model_info().get_params().epochs);
-    final long sinceLastScore = now -_timeLastScoreStart;
-    final long sinceLastPrint = now -_timeLastPrintStart;
-    final long samples = model_info().get_processed_total();
-    if (!keep_running || sinceLastPrint > model_info().get_params().score_interval*1000) {
-      _timeLastPrintStart = now;
-      Log.info("Training time: " + PrettyPrint.msecs(run_time, true)
-              + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", 1000.*samples/run_time) + " samples/sec.");
-    }
-    // this is potentially slow - only do every so often
-    if( !keep_running ||
-            (sinceLastScore > model_info().get_params().score_interval*1000 //don't score too often
-        &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
-      final boolean printme = !model_info().get_params().quiet_mode;
-      if (printme) Log.info("Scoring the model.");
-      _timeLastScoreStart = now;
-      // compute errors
-      Errors err = new Errors();
-      err.classification = isClassifier();
-      assert(err.classification == model_info().get_params().classification);
-      err.training_time_ms = run_time;
-      err.epoch_counter = epoch_counter;
-      err.validation = ftest != null;
-      err.training_samples = model_info().get_processed_total();
-      err.score_training_samples = ftrain.numRows();
-      err.train_confusion_matrix = new ConfusionMatrix();
-      final int hit_k = Math.min(nclasses(), model_info().get_params().max_hit_ratio_k);
-      if (err.classification && nclasses()==2) err.trainAUC = new AUC();
-      if (err.classification && nclasses() > 2 && hit_k > 0) {
-        err.train_hitratio = new HitRatio();
-        err.train_hitratio.set_max_k(hit_k);
+    try {
+      final long now = System.currentTimeMillis();
+      epoch_counter = (float)model_info().get_processed_total()/train.numRows();
+      run_time += now-_timeLastScoreEnter;
+      _timeLastScoreEnter = now;
+      boolean keep_running = (epoch_counter < model_info().get_params().epochs);
+      final long sinceLastScore = now -_timeLastScoreStart;
+      final long sinceLastPrint = now -_timeLastPrintStart;
+      final long samples = model_info().get_processed_total();
+      if (!keep_running || sinceLastPrint > model_info().get_params().score_interval*1000) {
+        _timeLastPrintStart = now;
+        Log.info("Training time: " + PrettyPrint.msecs(run_time, true)
+                + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+                + " Speed: " + String.format("%.3f", 1000.*samples/run_time) + " samples/sec.");
       }
-      Log.info(model_info().toString());
-      final Frame trainPredict = score(ftrain, false);
-      final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
-      if (isClassifier()) err.train_err = trainErr;
-      else err.train_mse = trainErr;
-
-      trainPredict.delete();
-
-      if (err.validation) {
-        assert ftest != null;
-        err.score_validation_samples = ftest.numRows();
-        err.valid_confusion_matrix = new ConfusionMatrix();
-        if (err.classification && nclasses()==2) err.validAUC = new AUC();
+      // this is potentially slow - only do every so often
+      if( !keep_running ||
+              (sinceLastScore > model_info().get_params().score_interval*1000 //don't score too often
+                      &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
+        final boolean printme = !model_info().get_params().quiet_mode;
+        if (printme) Log.info("Scoring the model.");
+        _timeLastScoreStart = now;
+        // compute errors
+        Errors err = new Errors();
+        err.classification = isClassifier();
+        assert(err.classification == model_info().get_params().classification);
+        err.training_time_ms = run_time;
+        err.epoch_counter = epoch_counter;
+        err.validation = ftest != null;
+        err.training_samples = model_info().get_processed_total();
+        err.score_training_samples = ftrain.numRows();
+        err.train_confusion_matrix = new ConfusionMatrix();
+        final int hit_k = Math.min(nclasses(), model_info().get_params().max_hit_ratio_k);
+        if (err.classification && nclasses()==2) err.trainAUC = new AUC();
         if (err.classification && nclasses() > 2 && hit_k > 0) {
-          err.valid_hitratio = new HitRatio();
-          err.valid_hitratio.set_max_k(hit_k);
+          err.train_hitratio = new HitRatio();
+          err.train_hitratio.set_max_k(hit_k);
         }
-        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
-        final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
-        Vec adaptCMresp = null;
-        if (adaptCM) {
-          Vec[] v = ftest.vecs();
-          assert(ftest.find(adaptRespName) == v.length-1); //make sure to have (adapted) response in the test set
-          adaptCMresp = ftest.remove(v.length-1); //model would remove any extra columns anyway (need to keep it here for later)
+        Log.info(model_info().toString());
+        final Frame trainPredict = score(ftrain, false);
+        final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
+        if (isClassifier()) err.train_err = trainErr;
+        else err.train_mse = trainErr;
+
+        trainPredict.delete();
+
+        if (err.validation) {
+          assert ftest != null;
+          err.score_validation_samples = ftest.numRows();
+          err.valid_confusion_matrix = new ConfusionMatrix();
+          if (err.classification && nclasses()==2) err.validAUC = new AUC();
+          if (err.classification && nclasses() > 2 && hit_k > 0) {
+            err.valid_hitratio = new HitRatio();
+            err.valid_hitratio.set_max_k(hit_k);
+          }
+          final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
+          final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
+          Vec adaptCMresp = null;
+          if (adaptCM) {
+            Vec[] v = ftest.vecs();
+            assert(ftest.find(adaptRespName) == v.length-1); //make sure to have (adapted) response in the test set
+            adaptCMresp = ftest.remove(v.length-1); //model would remove any extra columns anyway (need to keep it here for later)
+          }
+
+          final Frame validPredict = score(ftest, adaptCM);
+          final Frame hitratio_validPredict = new Frame(validPredict);
+          // Adapt output response domain, in case validation domain is different from training domain
+          // Note: doesn't change predictions, just the *possible* label domain
+          if (adaptCM) {
+            assert(adaptCMresp != null);
+            assert(ftest.find(adaptRespName) == -1);
+            ftest.add(adaptRespName, adaptCMresp);
+            final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
+            validPredict.replace(0, CMadapted); //replace label
+            validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+          }
+          final double validErr = calcError(ftest, validPredict, hitratio_validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
+          if (isClassifier()) err.valid_err = validErr;
+          else err.valid_mse = validErr;
+          validPredict.delete();
         }
 
-        final Frame validPredict = score(ftest, adaptCM);
-        final Frame hitratio_validPredict = new Frame(validPredict);
-        // Adapt output response domain, in case validation domain is different from training domain
-        // Note: doesn't change predictions, just the *possible* label domain
-        if (adaptCM) {
-          assert(adaptCMresp != null);
-          assert(ftest.find(adaptRespName) == -1);
-          ftest.add(adaptRespName, adaptCMresp);
-          final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
-          validPredict.replace(0, CMadapted); //replace label
-          validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+        // keep output JSON small
+        if (errors.length > 1) {
+          if (last_scored().trainAUC != null) last_scored().trainAUC.clear();
+          if (last_scored().validAUC != null) last_scored().validAUC.clear();
         }
-        final double validErr = calcError(ftest, validPredict, hitratio_validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
-        if (isClassifier()) err.valid_err = validErr;
-        else err.valid_mse = validErr;
-        validPredict.delete();
-      }
 
-      // keep output JSON small
-      if (errors.length > 1) {
-        if (last_scored().trainAUC != null) last_scored().trainAUC.clear();
-        if (last_scored().validAUC != null) last_scored().validAUC.clear();
-      }
+        // only keep confusion matrices for the last step if there are fewer than specified number of output classes
+        if (err.train_confusion_matrix.cm != null
+                && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
+          err.train_confusion_matrix = null;
+          err.valid_confusion_matrix = null;
+        }
 
-      // only keep confusion matrices for the last step if there are fewer than specified number of output classes
-      if (err.train_confusion_matrix.cm != null
-              && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
-        err.train_confusion_matrix = null;
-        err.valid_confusion_matrix = null;
+        _timeLastScoreEnd = System.currentTimeMillis();
+        // print the freshly scored model to ASCII
+        for (String s : toString().split("\n")) Log.info(s);
+        err.scoring_time = System.currentTimeMillis() - now;
+        if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
+        // enlarge the error array by one, push latest score back
+        if (errors == null) {
+          errors = new Errors[]{err};
+        } else {
+          Errors[] err2 = new Errors[errors.length+1];
+          System.arraycopy(errors, 0, err2, 0, errors.length);
+          err2[err2.length-1] = err;
+          errors = err2;
+        }
       }
-
-      _timeLastScoreEnd = System.currentTimeMillis();
-      // print the freshly scored model to ASCII
-      for (String s : toString().split("\n")) Log.info(s);
-      err.scoring_time = System.currentTimeMillis() - now;
-      if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
-      // enlarge the error array by one, push latest score back
-      if (errors == null) {
-        errors = new Errors[]{err};
-      } else {
-        Errors[] err2 = new Errors[errors.length+1];
-        System.arraycopy(errors, 0, err2, 0, errors.length);
-        err2[err2.length-1] = err;
-        errors = err2;
+      if (model_info().unstable()) {
+        Log.err("Canceling job since the model is unstable (exponential growth observed).");
+        Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
+        keep_running = false;
+      } else if ( (isClassifier() && last_scored().train_err <= model_info().get_params().classification_stop)
+              || (!isClassifier() && last_scored().train_mse <= model_info().get_params().regression_stop) ) {
+        Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
+        keep_running = false;
       }
-    }
-    if (model_info().unstable()) {
-      Log.err("Canceling job since the model is unstable (exponential growth observed).");
-      Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
-      keep_running = false;
-    } else if ( (isClassifier() && last_scored().train_err <= model_info().get_params().classification_stop)
-        || (!isClassifier() && last_scored().train_mse <= model_info().get_params().regression_stop) ) {
-      Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
-      keep_running = false;
-    }
-    update(job_key);
+      update(job_key);
 //    System.out.println(this);
-    return keep_running;
+      return keep_running;
+    }
+    catch (Exception ex) {
+      return false;
+    }
   }
 
   @Override public String toString() {
@@ -750,6 +755,9 @@ public class DeepLearningModel extends Model {
    * @return preds, can contain NaNs
    */
   @Override public float[] score0(double[] data, float[] preds) {
+    if (model_info().unstable()) {
+      throw new UnsupportedOperationException("Trying to predict with an unstable model.");
+    }
     Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     DeepLearningTask.step(-1, neurons, model_info, false, null);
