@@ -555,7 +555,7 @@ public class NewChunk extends Chunk {
     int j = 0;
     for( int i=0; i<_len2; i++ ) {
       long le = -bias;
-      if(_id == null || _id[j] == i){
+      if(_id == null || (j < _id.length && _id[j] == i)){
         if( isNA2(j) ) {
           le = NAS[log];
         } else {
@@ -611,7 +611,7 @@ public class NewChunk extends Chunk {
     int j = 0;
     for (int i=0; i<_len2; i++) {
       byte val = 0;
-      if(_id == null || _id[j] == i) {
+      if(_id == null || (j < _id.length && _id[j] == i)) {
         assert bpv == 2 || !isNA2(j);
         val = (byte)(isNA2(j)?CBSChunk._NA:_ls[j]);
         ++j;
@@ -623,6 +623,7 @@ public class NewChunk extends Chunk {
       boff += bpv;
       if (boff>8-bpv) { assert boff == 8; bs[idx] = b; boff = 0; b = 0; idx++; }
     }
+    assert j == _len;
     assert bs[0] == (byte) (boff == 0 ? 0 : 8-boff):"b[0] = " + bs[0] + ", boff = " + boff + ", bpv = " + bpv;
     // Flush last byte
     if (boff>0) bs[idx++] = b;
