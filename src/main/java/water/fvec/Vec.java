@@ -554,58 +554,19 @@ public class Vec extends Iced {
    *  2^52), AND float values are stored in Vector.  In this case, there is no
    *  common compatible data representation.
    *
-   *  Will close the underlying chunk immediately after writing this value.
-   *  DO NOT use for bulk loads to the same chunk, otherwise there would be constant inflate-compress-DKV.put.
    *  */
-  public final long   set( long i, long   l) {
-    Chunk c = chunkForRow(i);
-    long res = c.set(i, l);
-    // immediately close the chunk, since caller has no chunk to close after done with bulk update.
-    Futures fs = new Futures();
-    c.close(c.cidx(),fs);
-    fs.blockForPending();
-    return res;
-  }
+  public final long   set( long i, long   l) {return chunkForRow(i).set(i,l);}
+
   /** Write element the slow way, as a double.  Double.NaN will be treated as
    *  a set of a missing element.
-   *
-   *  Will close the underlying chunk immediately after writing this value.
-   *  DO NOT use for bulk loads to the same chunk, otherwise there would be constant inflate-compress-DKV.put
    *  */
-  public final double set( long i, double d) {
-    Chunk c = chunkForRow(i);
-    double res = c.set(i, d);
-    // immediately close the chunk, since caller has no chunk to close after done with bulk update.
-    Futures fs = new Futures();
-    c.close(c.cidx(),fs);
-    fs.blockForPending();
-    return res;
-  }
+  public final double set( long i, double d) {return chunkForRow(i).set(i,d);}
   /** Write element the slow way, as a float.  Float.NaN will be treated as
    *  a set of a missing element.
-   *
-   *  Will close the underlying chunk immediately after writing this value.
-   *  DO NOT use for bulk loads to the same chunk, otherwise there would be constant inflate-compress-DKV.put
    *  */
-  public final float  set( long i, float  f) {
-    Chunk c = chunkForRow(i);
-    float res = c.set(i, f);
-    // immediately close the chunk, since caller has no chunk to close after done with bulk update.
-    Futures fs = new Futures();
-    c.close(c.cidx(),fs);
-    fs.blockForPending();
-    return res;
-  }
+  public final float  set( long i, float  f) {return chunkForRow(i).set(i,f);}
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) {
-    Chunk c = chunkForRow(i);
-    boolean res = c.setNA(i);
-    // immediately close the chunk, since caller has no chunk to close after done with bulk update.
-    Futures fs = new Futures();
-    c.close(c.cidx(),fs);
-    fs.blockForPending();
-    return res;
-  }
+  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i);}
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {

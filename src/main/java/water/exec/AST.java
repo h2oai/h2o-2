@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import water.*;
+import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
@@ -473,9 +474,13 @@ class ASTAssign extends AST {
     // Typed as a double ==> the row & col selectors are simple constants
     if( slice._t == Type.DBL ) { // Typed as a double?
       assert ary_rhs==null;
-      long row = (long)((ASTNum)slice._rows)._d;
-      int  col = (int )((ASTNum)slice._cols)._d;
-      ary.vecs()[col-1].set(row-1,d);
+      long row = (long)((ASTNum)slice._rows)._d-1;
+      int  col = (int )((ASTNum)slice._cols)._d-1;
+      Chunk c = ary.vecs()[col].chunkForRow(row);
+      c.set(row,d);
+      Futures fs = new Futures();
+      c.close(c.cidx(),fs);
+      fs.blockForPending();
       env.push(d);
       return;
     }
