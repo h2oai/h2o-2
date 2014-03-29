@@ -16,13 +16,13 @@
 if(.Platform$OS.type == "windows")
   .myPath = paste(Sys.getenv("APPDATA"), "h2o", sep=.Platform$file.sep)
   
-.pkg.env$h2o.__LOG_COMMAND = paste(.myPath, "h2o_commands.log", sep=.Platform$file.sep)
-.pkg.env$h2o.__LOG_ERROR = paste(.myPath, "h2o_error_json.log", sep=.Platform$file.sep)
+.pkg.env$h2o.__LOG_COMMAND = paste(.myPath, "commands.log", sep=.Platform$file.sep)
+.pkg.env$h2o.__LOG_ERROR = paste(.myPath, "errors.log", sep=.Platform$file.sep)
 
 h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = .pkg.env) }
 h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = .pkg.env) }
-h2o.__clearLogs        <- function() { unlink(.pkg.env$.h2o.__LOG_COMMAND)
-                                       unlink(.pkg.env$.h2o.__LOG_ERROR) }
+h2o.__clearLogs        <- function() { file.remove(.pkg.env$h2o.__LOG_COMMAND)
+                                       file.remove(.pkg.env$h2o.__LOG_ERROR) }
 h2o.__getLogPath <- function(type) {
   if(missing(type) || !type %in% c("Command", "Error"))
     stop("type must be either 'Command' or 'Error'")

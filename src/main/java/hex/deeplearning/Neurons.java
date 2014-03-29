@@ -133,7 +133,7 @@ public abstract class Neurons {
     }
     if (training && (this instanceof MaxoutDropout || this instanceof TanhDropout
             || this instanceof RectifierDropout || this instanceof Input) ) {
-      _dropout = new Dropout(units);
+      _dropout = this instanceof Input ? new Dropout(units, params.input_dropout_ratio) : new Dropout(units, params.hidden_dropout_ratios[index-1]);
     }
     if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
@@ -338,10 +338,9 @@ public abstract class Neurons {
       for (int i=0; i<nums.length; ++i) _a[_dinfo.numStart()+i] = Double.isNaN(nums[i]) ? 0f : (float)nums[i];
 
       // Input Dropout
-      final double rate = params.input_dropout_ratio;
-      if (rate == 0 || _dropout == null) return;
+      if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
-      _dropout.randomlySparsifyActivation(_a, rate, seed);
+      _dropout.randomlySparsifyActivation(_a, seed);
     }
 
   }
@@ -372,7 +371,7 @@ public abstract class Neurons {
   }
 
   /**
-   * Tanh neurons with 50% dropout
+   * Tanh neurons with dropout
    */
   public static class TanhDropout extends Tanh {
     public TanhDropout(int units) { super(units); }
@@ -423,7 +422,7 @@ public abstract class Neurons {
   }
 
   /**
-   * Maxout neurons with 50% dropout
+   * Maxout neurons with dropout
    */
   public static class MaxoutDropout extends Maxout {
     public MaxoutDropout(int units) { super(units); }
@@ -465,7 +464,7 @@ public abstract class Neurons {
   }
 
   /**
-   * Rectifier linear unit (ReLU) neurons with 50% dropout
+   * Rectifier linear unit (ReLU) neurons with dropout
    */
   public static class RectifierDropout extends Rectifier {
     public RectifierDropout(int units) { super(units); }
@@ -623,10 +622,10 @@ public abstract class Neurons {
           psum6 += a[off + 6] * x[c + 6];
           psum7 += a[off + 7] * x[c + 7];
         }
-        for (int j = extra; j < cols; j++)
-          res[r] += a[idx + j] * x[j];
         res[r] += psum0 + psum1 + psum2 + psum3;
         res[r] += psum4 + psum5 + psum6 + psum7;
+        for (int j = extra; j < cols; j++)
+          res[r] += a[idx + j] * x[j];
         res[r] += y[r];
       }
       idx += cols;

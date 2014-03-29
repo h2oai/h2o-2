@@ -40,15 +40,15 @@ class Basic(unittest.TestCase):
     def test_parse_many_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 5000, 'cA', 10),
-            (100, 6000, 'cB', 10),
-            (100, 7000, 'cC', 10),
-            (100, 8000, 'cD', 10),
-            (100, 8200, 'cE', 10),
-            (100, 8500, 'cF', 10),
-            (100, 9000, 'cG', 10),
-            (100, 10000, 'cI', 10),
-            (100, 11000, 'cH', 10),
+            (100, 5000, 'cA', 60),
+            (100, 6000, 'cB', 60),
+            (100, 7000, 'cC', 60),
+            (100, 8000, 'cD', 60),
+            (100, 8200, 'cE', 60),
+            (100, 8500, 'cF', 60),
+            (100, 9000, 'cG', 60),
+            (100, 10000, 'cI', 60),
+            (100, 11000, 'cH', 60),
             ]
 
         ### h2b.browseTheCloud()
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
 
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)

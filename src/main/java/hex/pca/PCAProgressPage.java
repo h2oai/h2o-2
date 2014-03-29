@@ -19,7 +19,7 @@ public class PCAProgressPage extends Progress2 {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     Job jjob = Job.findJob(job_key);
-    if (jjob ==null) return true;
+    if (jjob == null) return true;
     Value v = DKV.get(jjob.dest());
     if(v != null){
       PCAModel m = v.get();

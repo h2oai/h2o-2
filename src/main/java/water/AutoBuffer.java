@@ -1002,6 +1002,17 @@ public final class AutoBuffer {
     for( int i=x; i<x+y; i++ ) ary[i] = getAA8();
     return ary;
   }
+  public double[][][] getAAA8d( ) {
+    _arys++;
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    double[][][] ary  = new double[x+y+z][][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getAA8d();
+    return ary;
+  }
 
   public String getStr( ) {
     int len = getInt();
@@ -1197,6 +1208,15 @@ public final class AutoBuffer {
     int x=(int)(xy>>32);
     int y=(int)xy;
     for( int i=x; i<x+y; i++ ) putAA8(ary[i]);
+    return this;
+  }
+  public AutoBuffer putAAA8d( double[][][] ary ) {
+    _arys++;
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putAA8d(ary[i]);
     return this;
   }
   // Put a String as bytes (not chars!)

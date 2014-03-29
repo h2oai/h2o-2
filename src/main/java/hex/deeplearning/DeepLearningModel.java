@@ -8,10 +8,7 @@ import water.api.*;
 import water.api.Request.API;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.D3Plot;
-import water.util.Log;
-import water.util.ModelUtils;
-import water.util.Utils;
+import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -123,7 +120,7 @@ public class DeepLearningModel extends Model {
         if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
         if (validation) sb.append("\nError on validation data (misclassification)"
                 + (validAUC != null ? " [using threshold for " + validAUC.threshold_criterion.toString().replace("_"," ") +"]: ": ": ")
-                + String.format("%.2f", (100 * valid_err)) + "%");
+                + String.format("%.2f", (100*valid_err)) + "%");
         if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else if (!Double.isInfinite(train_mse)) {
         sb.append("Error on training data (MSE): " + train_mse);
@@ -322,13 +319,11 @@ public class DeepLearningModel extends Model {
             sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
                     + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
             if (i == 0) {
-              sb.append("  " + String.format("%.5g", neurons[i].params.input_dropout_ratio*100) + "%\n");
+              sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + "%\n");
               continue;
             }
             else if (i < neurons.length-1) {
-              sb.append( neurons[i] instanceof Neurons.TanhDropout
-                      || neurons[i] instanceof Neurons.RectifierDropout
-                      || neurons[i] instanceof Neurons.MaxoutDropout ? "    50%   " : "     0%   ");
+              sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
             } else {
               sb.append("          ");
             }
@@ -916,9 +911,7 @@ public class DeepLearningModel extends Model {
         }
         else if (i < neurons.length-1) {
           sb.append("<td>");
-          sb.append( neurons[i] instanceof Neurons.TanhDropout
-                  || neurons[i] instanceof Neurons.RectifierDropout
-                  || neurons[i] instanceof Neurons.MaxoutDropout ? "50%" : "0%");
+          sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
           sb.append("</td>");
         } else {
           sb.append("<td></td>");
@@ -957,6 +950,8 @@ public class DeepLearningModel extends Model {
       }
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
+    int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
+    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + H2O.CLOUD.size() + " (" + cores + " cores)");
     final boolean isEnded = Job.isEnded(model_info().job().self());
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
@@ -985,35 +980,40 @@ public class DeepLearningModel extends Model {
       }
       else {
         if (error.validation) {
-          String cmTitle = "Confusion matrix reported on validation data" + (fullvalid ? "" : " (" + score_valid + " samples)") + ":";
+          RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+          v_rs.replace("key", model_info().get_params().validation._key);
+          String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
             sb.append("</h5>");
             error.valid_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Not yet computed.</h5>");
+          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
           else sb.append(toolarge + "</h5>");
         } else {
-          String cmTitle = "Confusion matrix reported on training data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":";
+          RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+          t_rs.replace("key", model_info().get_params().source._key);
+          String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.train_confusion_matrix != null && smallenough) {
             sb.append("</h5>");
             error.train_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Not yet computed.</h5>");
+          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
           else sb.append(toolarge + "</h5>");
         }
       }
+    }
+
+    // Hit ratio
+    if (error.valid_hitratio != null) {
+      error.valid_hitratio.toHTML(sb);
+    } else if (error.train_hitratio != null) {
+      error.train_hitratio.toHTML(sb);
     }
 
     // Variable importance
     if (model_info().get_params().variable_importances) {
       final float [] varimp = model_info().computeVariableImportances();
       new VarImp(varimp, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, varimp.length)).toHTML(sb);
-    }
-
-    if (error.valid_hitratio != null) {
-      error.valid_hitratio.toHTML(sb);
-    } else if (error.train_hitratio != null) {
-      error.train_hitratio.toHTML(sb);
     }
 
     DocGen.HTML.title(sb, "Scoring history");

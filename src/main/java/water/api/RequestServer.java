@@ -2,6 +2,7 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
@@ -16,6 +17,7 @@ import hex.glm.GLMGridView;
 import hex.glm.GLMModelView;
 import hex.glm.GLMProgress;
 import hex.deeplearning.DeepLearning;
+import hex.nb.*;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
@@ -88,7 +90,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
-    Request.addToNavbar(registerRequest(new DeepLearning()),          "Deep Learning (Beta)",       "Model");
+    Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning (Beta)",       "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
@@ -136,6 +138,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new NaiveBayes()),     "Naive Bayes",          "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
@@ -163,6 +166,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DeepLearningProgressPage());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
+    registerRequest(new NBProgressPage());
+    registerRequest(new NBModelView());
     registerRequest(new PCAProgressPage());
     registerRequest(new PCAModelView());
     registerRequest(new PostFile());
