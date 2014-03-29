@@ -54,16 +54,12 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
    */
   @Override
   public void reduce(DeepLearningTask2 drt) {
-    if (_res == null) {
-      //in single-mode operation: assign result to me
-      _res = drt._res;
-    } else {
-      //distributed reduction between nodes
-      assert(drt._res._output != _res._output);
+    if (_res == null) _res = drt._res;
+    else {
       _res._chunk_node_count += drt._res._chunk_node_count;
-      _res._output.add(drt._res._output); //add models, but don't average yet
+      _res.model_info().add(drt._res.model_info()); //add models, but don't average yet
     }
-    assert(_res._output.get_params().replicate_training_data);
+    assert(_res.model_info().get_params().replicate_training_data);
   }
 
   /**
@@ -73,11 +69,11 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
    */
   @Override
   protected void postGlobal() {
+    assert(_res.model_info().get_params().replicate_training_data);
     super.postGlobal();
-    assert(_res._output.get_params().replicate_training_data);
-    _res._output.div(_res._chunk_node_count); //model averaging
-    _res._output.add_processed_global(_res._output.get_processed_local()); //switch from local counters to global counters
-    _res._output.set_processed_local(0l);
+    _res.model_info().div(_res._chunk_node_count); //model averaging
+    _res.model_info().add_processed_global(_res.model_info().get_processed_local()); //switch from local counters to global counters
+    _res.model_info().set_processed_local(0l);
   }
 
 }
