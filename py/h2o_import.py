@@ -105,7 +105,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
                 rootPath = os.path.split(rootPath)[0]
                 levels += 1
                 if (levels==6):
-                    raise Exception("unable to find bucket: %s" % bucket)
+                    raise Exception("unable to find bucket: %s. Maybe missing link in /home/0xdiag or /home/0xcustomer or jenkins ~? or whatever user is running the python or the h2o?" % bucket)
 
             h2o.verboseprint("search B did find", bucket, "at", rootPath)
             bucketPath = os.path.join(rootPath, bucket)
