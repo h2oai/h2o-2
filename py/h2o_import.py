@@ -89,8 +89,10 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
             rootPath = os.path.expanduser("~" + u)
             bucketPath = os.path.join(rootPath, bucket)
             h2o.verboseprint("Checking bucketPath:", bucketPath, 'assuming home is', rootPath)
+            print "Checking bucketPath:", bucketPath, 'assuming home is', rootPath
             if os.path.exists(bucketPath):
                 h2o.verboseprint("search A did find", bucket, "at", rootPath)
+                print "search A did find", bucket, "at", rootPath
                 break
         else:
             # last chance to find it by snooping around
@@ -162,6 +164,9 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
 def import_only(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, **kwargs):
+
+    if src_key and schema!='put':
+        raise Exception("can only specify a 'src_key' param for schema='put'. You have %s %s" % (schema, src_key))
 
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
