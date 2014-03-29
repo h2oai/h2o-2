@@ -89,10 +89,8 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
             rootPath = os.path.expanduser("~" + u)
             bucketPath = os.path.join(rootPath, bucket)
             h2o.verboseprint("Checking bucketPath:", bucketPath, 'assuming home is', rootPath)
-            print "Checking bucketPath:", bucketPath, 'assuming home is', rootPath
             if os.path.exists(bucketPath):
                 h2o.verboseprint("search A did find", bucket, "at", rootPath)
-                print "search A did find", bucket, "at", rootPath
                 break
         else:
             # last chance to find it by snooping around
