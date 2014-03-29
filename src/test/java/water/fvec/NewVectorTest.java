@@ -13,9 +13,15 @@ public class NewVectorTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   private void testImpl( long[] ls, int[] xs, Class C, boolean hasFloat ) {
+    int [] id = new int[xs.length];
+    for(int i = 0; i < xs.length; ++i)id[i] = i;
+    testImpl(ls,xs,id,C,hasFloat);
+  }
+  private void testImpl( long[] ls, int[] xs, int [] id, Class C, boolean hasFloat ) {
     AppendableVec av = new AppendableVec(Vec.newKey());
     NewChunk nv = new NewChunk(av,0);
     nv._ls = ls;
+    nv._id = id;
     nv._xs = xs;
     nv._len= nv._len2 = ls.length;
     Chunk bv = nv.compress();
@@ -90,7 +96,7 @@ public class NewVectorTest extends TestUtil {
     nv._len= nv._len2 = nv._ls.length;
     nv.close(0,null);
     Vec vec = av.close(new Futures());
-    assertEquals( nv._ls.length, vec.length() );
+    assertEquals( nv._len2, vec.length() );
     // Compression returns the expected constant-compression-type:
     Chunk c0 = vec.chunkForChunkIdx(0);
     assertTrue( "Found chunk class "+c0.getClass()+" but expected C0LChunk", c0 instanceof C0LChunk );
