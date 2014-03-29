@@ -3,6 +3,7 @@ package water.fvec;
 import water.*;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 /** specialized subtype of SPARSE chunk for boolean (bitvector); no NAs.  contains just a list of rows that are non-zero. */
 public final class CX0Chunk extends CXIChunk {
@@ -22,5 +23,13 @@ public final class CX0Chunk extends CXIChunk {
     nc._xs = MemoryManager.malloc4 (len);
     nc._id = nonzeros();
     return nc;
+  }
+
+  public Iterator<Value> values(){
+    return new SparseIterator(new Value(){
+      @Override public final long asLong(){return 1;}
+      @Override public final double asDouble() { return 1;}
+      @Override public final boolean isNA(){ return false;}
+    });
   }
 }

@@ -27,6 +27,7 @@ public class NewChunk extends Chunk {
   int _strCnt;                  // Count of Enum's appended
   int _nzCnt;                   // Count of non-zero's appended
   final int _timCnt[] = new int[ParseTime.TIME_PARSE.length]; // Count of successful time parses
+  public static final int MIN_SPARSE_RATIO = 32;
 
   public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
@@ -205,18 +206,13 @@ public class NewChunk extends Chunk {
   }
   protected void switch_to_doubles(){
     assert _ds == null;
-    _ds = MemoryManager.malloc8d(_len);
-    for(int i = 0; i < _len; ++i){
-      try{
-        if(isNA2(i) || isEnum2(i))_ds[i] = Double.NaN;
-        else  _ds[i] = _ls[i]*DParseTask.pow10(_xs[i]);
-      }catch(Throwable t){
-        if(isNA2(i) || isEnum2(i))_ds[i] = Double.NaN;
-        else  _ds[i] = _ls[i]*DParseTask.pow10(_xs[i]);
-      }
-    }
+    double [] ds = MemoryManager.malloc8d(_len);
+    for(int i = 0; i < _len; ++i)
+      if(isNA2(i) || isEnum2(i))ds[i] = Double.NaN;
+      else  ds[i] = _ls[i]*DParseTask.pow10(_xs[i]);
     _ls = null;
     _xs = null;
+    _ds = ds;
   }
   protected void set_sparse(int nzeros){
     if(_len == nzeros)return;
@@ -296,15 +292,20 @@ public class NewChunk extends Chunk {
         }
     }
     if( rerun ) { _naCnt = -1;  type(); } // Re-run rollups after dropping all numbers/enums
-
+    boolean sparse = false;
+    // sparse? treat as sparse iff we have at least MIN_SPARSE_RATIOx more zeros than nonzeros
+    if(MIN_SPARSE_RATIO*(_naCnt + _nzCnt) < _len2) {
+      set_sparse(_naCnt + _nzCnt);
+      sparse = true;
+    }
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.
     if( _ds != null ) {
       int i=0;
       for( ; i<_len; i++ ) // Attempt to inject all doubles into longs
         if( !Double.isNaN(_ds[i]) && (double)(long)_ds[i] != _ds[i] ) break;
-      if( i<_len )
-        return chunkD();
+      if(i < _len)
+        return sparse?new CXDChunk(_len2,_len,8,bufD(8)):chunkD();
       _ls = new long[_ds.length]; // Else flip to longs
       _xs = new int [_ds.length];
       for( i=0; i<_len; i++ )   // Inject all doubles into longs
@@ -383,8 +384,7 @@ public class NewChunk extends Chunk {
 
     // Boolean column?
     if (max == 1 && min == 0 && xmin == 0 && !overflow) {
-      if( _nzCnt*32 < _len2) { // Very sparse?
-        if(_len2 == _len)set_sparse(_nzCnt);
+      if(sparse) { // Very sparse?
         return  _naCnt==0
           ?new CX0Chunk(_len2,_len,bufS(0))// No NAs, can store as sparse bitvector
           :new CXIChunk(_len2,_len,1,bufS(1)); // have NAs, store as sparse 1byte values
@@ -397,10 +397,7 @@ public class NewChunk extends Chunk {
 
     final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
 
-    // sparse? treat as sparse iff we have at least 32x more zeros than nonzeros
-    if(_len2 > (_nzCnt + _naCnt) << 5){
-      set_sparse(_nzCnt + _naCnt);
-      assert _id != null && _id.length >= (_nzCnt + _naCnt);
+    if(sparse){
       if(fpoint) return new CXDChunk(_len2,_len,8,bufD(8));
       int sz = 8;
       if(Short.MIN_VALUE <= min && max <= Short.MAX_VALUE)sz = 2;
@@ -457,41 +454,6 @@ public class NewChunk extends Chunk {
   }
 
   private static long [] NAS = {C1Chunk._NA,C2Chunk._NA,C4Chunk._NA,C8Chunk._NA};
-
-  /*
-  protected CXIChunk(long[] ls, int[] xs, int[] ids, int len, int nz, int elementSz){
-    this(len,nz,elementSz);
-    int off = OFF;
-    final int inc = (_valsz + _ridsz);
-    for( int i=0; i<nz; i++, off += inc ) {
-      if(_ridsz == 2)
-        UDP.set2(_mem,off,(short)ids[i]);
-      else
-        UDP.set4(_mem,off,ids[i]);
-      if(_valsz == 0)continue;
-      assert xs[i] == Integer.MIN_VALUE || xs[i] >= 0:"unexpected exponent " + xs[i]; // assert we have int or NA
-      final long lval = xs[i] == Integer.MIN_VALUE?NAS[_valsz_log-1]:ls[i]*DParseTask.pow10i(xs[i]);
-      switch(elementSz){
-        case 1:
-          _mem[off+_ridsz] = (byte)lval;
-          break;
-        case 2:
-          short sval = (short)lval;
-          UDP.set2(_mem,off+_ridsz,sval);
-          break;
-        case 4:
-          int ival = (int)lval;
-          UDP.set4(_mem, off+_ridsz, ival);
-          break;
-        case 8:
-          UDP.set8(_mem, off+_ridsz, lval);
-          break;
-        default:
-          throw H2O.unimpl();
-      }
-    }
-    assert off==_mem.length;
-   */
 
   // Compute a sparse integer buffer
   private byte[] bufS(final int valsz){

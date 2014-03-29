@@ -160,7 +160,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   abstract boolean set_impl  (int idx, float f );
   abstract boolean setNA_impl(int idx);
 
-
+  public int nextNZ(int rid){return rid+1;}
 
   public boolean isSparse() {return false;}
 

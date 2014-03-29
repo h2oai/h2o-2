@@ -4,7 +4,6 @@ import water.AutoBuffer;
 import water.H2O;
 import water.MemoryManager;
 import water.UDP;
-import water.parser.DParseTask;
 
 import java.util.Iterator;
 
@@ -20,7 +19,7 @@ public class CXIChunk extends Chunk {
   protected transient int _lastOff = OFF;
 
 
-  private static final long [] NAS = {C2Chunk._NA,C4Chunk._NA,C8Chunk._NA};
+  private static final long [] NAS = {C1Chunk._NA,C2Chunk._NA,C4Chunk._NA,C8Chunk._NA};
 
   protected CXIChunk(int len, int nzs, int valsz, byte [] buf){
     assert (valsz == 0 || valsz == 1 || valsz == 2 || valsz == 4 || valsz == 8);
@@ -65,13 +64,13 @@ public class CXIChunk extends Chunk {
     int off = findOffset(idx);
     if(getId(off) != idx)return 0;
     long v =  getIValue(off);
-    return (v == NAS[_valsz_log -1])?Double.NaN:v;
+    return (v == NAS[_valsz_log])?Double.NaN:v;
   }
 
   @Override protected boolean isNA_impl( int i ) {
     int off = findOffset(i);
     if(getId(off) != i)return false;
-    return getIValue(off) == NAS[_valsz_log -1];
+    return getIValue(off) == NAS[_valsz_log];
   }
 
   @Override boolean hasFloat ()                 { return false; }
@@ -87,10 +86,10 @@ public class CXIChunk extends Chunk {
     for( int i = 0; i < len; ++i, off += _ridsz + _valsz) {
       nc._id[i] = getId(off);
       long v = getIValue(off);
-      if(v == NAS[_valsz_log -1]){
-        nc._ls[i] = Long.MAX_VALUE;
-        nc._xs[i] = Integer.MIN_VALUE;
-      } else nc._ls[i] = v;
+      if(v == NAS[_valsz_log])
+        nc.setNA_impl2(i);
+      else
+        nc._ls[i] = v;
     }
     return nc;
   }
@@ -106,7 +105,7 @@ public class CXIChunk extends Chunk {
   // extract integer value from an (byte)offset
   protected final long getIValue(int off){
     switch(_valsz){
-      case 1: return _mem[off+ _ridsz];
+      case 1: return _mem[off+ _ridsz]&0xFF;
       case 2: return UDP.get2(_mem, off + _ridsz);
       case 4: return UDP.get4(_mem, off + _ridsz);
       case 8: return UDP.get8(_mem, off + _ridsz);
@@ -165,41 +164,48 @@ public class CXIChunk extends Chunk {
     return this;
   }
 
-  public int skipCnt(int rid){
-    int off = _lastOff;
-    int currentId = getId(off);
-    if(rid != currentId) off = findOffset(rid);
+  @Override public final int nextNZ(int rid){
+    final int off = rid == -1?OFF:findOffset(rid);
+    int x = getId(off);
+    if(x > rid)return x;
     if(off < _mem.length - _ridsz - _valsz)
-      return getId(off + _ridsz + _valsz) - rid;
-    return 0;
+      return getId(off + _ridsz + _valsz);
+    return _len;
   }
-  public final class Value {
-    protected int off = OFF;
-    public int rowInChunk(){return getId(off);}
-    public long asLong(){
-      long v = getIValue(off);
-      if(v == NAS[(_valsz >>> 1) - 1]) throw new IllegalArgumentException("at8 but value is missing");
-      return v;
-    }
-    public double asDouble(){
-      long v = getIValue(off);
-      return (v == NAS[_valsz_log -1])?Double.NaN:v;
-    }
-    public boolean isNa(){
-      long v = getIValue(off);
-      return (v == NAS[_valsz_log -1]);
-    }
+  public abstract  class Value {
+    protected int _off = 0;
+    public int rowInChunk(){return getId(_off);}
+    public abstract long asLong();
+    public abstract double asDouble();
+    public abstract boolean isNA();
   }
 
+  public final class SparseIterator implements Iterator<Value> {
+    final Value _val;
+    public SparseIterator(Value v){_val = v;}
+    @Override public final boolean hasNext(){return _val._off < _mem.length - (_ridsz + _valsz);}
+    @Override public final Value next(){
+      if(_val._off == 0)_val._off = OFF;
+      else _val._off += (_ridsz + _valsz);
+      return _val;
+    }
+    @Override public final void remove(){throw new UnsupportedOperationException();}
+  }
   public Iterator<Value> values(){
-    final Value val = new Value();
-    return new Iterator<Value>(){
-      @Override public boolean hasNext(){return val.off != _mem.length - (_ridsz + _valsz);}
-      @Override public Value next(){
-        val.off += (_ridsz + _valsz);
-        return val;
+    return new SparseIterator(new Value(){
+      @Override public final long asLong(){
+        long v = getIValue(_off);
+        if(v == NAS[(_valsz >>> 1) - 1]) throw new IllegalArgumentException("at8 but value is missing");
+        return v;
       }
-      @Override public void remove(){throw new UnsupportedOperationException();}
-    };
+      @Override public final double asDouble() {
+      long v = getIValue(_off);
+      return (v == NAS[_valsz_log -1])?Double.NaN:v;
+      }
+      @Override public final boolean isNA(){
+        long v = getIValue(_off);
+        return (v == NAS[_valsz_log]);
+      }
+    });
   }
 }

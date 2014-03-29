@@ -4,6 +4,8 @@ import water.H2O;
 import water.MemoryManager;
 import water.UDP;
 
+import java.util.Iterator;
+
 /**
  * Created by tomasnykodym on 3/26/14.
  */
@@ -49,6 +51,21 @@ public class CXDChunk extends CXIChunk {
       nc._ds[i] = getFValue(off);
     }
     return nc;
+  }
+
+  public Iterator<Value> values(){
+    return new SparseIterator(new Value(){
+      @Override public final long asLong(){
+        double d = getFValue(_off);
+        if(Double.isNaN(d)) throw new IllegalArgumentException("at8 but value is missing");
+        return (long)d;
+      }
+      @Override public final double asDouble() {return getFValue(_off);}
+      @Override public final boolean isNA(){
+        double d = getFValue(_off);
+        return Double.isNaN(d);
+      }
+    });
   }
 
 }
