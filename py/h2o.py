@@ -133,6 +133,8 @@ def get_ip_address():
             # print "Timeout during socket.gethostbyname_ex(hostname)"
 
     verboseprint("get_ip_address:", ip)
+    # set it back to default higher timeout (None would be no timeout?)
+    socket.setdefaulttimeout(5)
     return ip
 
 def get_sandbox_name():

@@ -11,8 +11,11 @@ DO_EXEC_QUANT = False
 DO_SUMMARY = True
 DO_XORSUM = False
 
-DO_BIGFILE = False
+DO_BIGFILE = True
 DO_IRIS = False
+
+# overrides the calc below if not None
+OUTSTANDING = 5
 
 DO_PARSE_ALSO = True
 UPLOAD_PARSE_DIFF_NODES = False
@@ -97,7 +100,9 @@ class Basic(unittest.TestCase):
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         # don't raise exception if we find something bad in h2o stdout/stderr?
         # h2o.nodes[0].sandboxIgnoreErrors = True
-        outstanding = min(10, len(h2o.nodes))
+        if not OUTSTANDING:
+            global OUTSTANDING
+            OUTSTANDING = min(10, len(h2o.nodes))
 
         if DO_IRIS:
             global DO_BIGFILE
@@ -115,17 +120,17 @@ class Basic(unittest.TestCase):
             importFolderPath = "standard"
             csvFilename = "covtype20x.data"
             csvFilePattern = "covtype20x.data"
-            trialMax = 2 * outstanding
+            trialMax = 2 * OUTSTANDING
         else:
             bucket = 'home-0xdiag-datasets'
             importFolderPath = "standard"
             csvFilename = "covtype.data"
             csvFilePattern = "covtype.data"
-            trialMax = 4 * outstanding
+            trialMax = 40 * OUTSTANDING
 
         # add one just to make it odd
-        # outstanding = min(10, len(h2o.nodes) + 1)
-        # don't have more than one source file per node outstanding? (think of the node increment rule)
+        # OUTSTANDING = min(10, len(h2o.nodes) + 1)
+        # don't have more than one source file per node OUTSTANDING? (think of the node increment rule)
     
         # okay to reuse the src_key name. h2o deletes? use unique hex to make sure it's not reused.
         # might go to unique src keys also ..oops have to, to prevent complaints about the key (lock)
@@ -138,14 +143,13 @@ class Basic(unittest.TestCase):
 
         parseTrial = 0
         summaryTrial = 0
-        timeoutSecs = 500
         uploader_resultq = multiprocessing.Queue()
         while parseTrial <= trialMax:
             start = time.time()
             uploaders = []
             if not DO_IRIS:
-                assert outstanding<=10 , "we only have 10 links with unique names to covtype.data"
-            for o in range(outstanding):
+                assert OUTSTANDING<=10 , "we only have 10 links with unique names to covtype.data"
+            for o in range(OUTSTANDING):
                 src_key = csvFilename + "_" + str(parseTrial) 
                 hex_key = csvFilename + "_" + str(parseTrial) + ".hexxx"
                 # "key": "hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
@@ -162,7 +166,7 @@ class Basic(unittest.TestCase):
                 # summary2 not seeing it?
                 np = parseTrial % len(h2o.nodes)
                 retryDelaySecs=5 if DO_BIGFILE else 1
-                timeoutDelaySecs=60 if DO_BIGFILE else 15
+                timeoutSecs=60 if DO_BIGFILE else 15
                 tmp = multiprocessing.Process(target=function_no_keyboard_intr,
                     args=(uploader_resultq, uploadit, np, bucket, csvPathname, src_key, hex_key, timeoutSecs, retryDelaySecs))
                 tmp.start()
