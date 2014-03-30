@@ -105,7 +105,10 @@ class Basic(unittest.TestCase):
             importFolderPath = "iris"
             csvFilename = "iris2.csv"
             csvFilePattern = "iris2.csv"
-            trialMax = 100
+            if localhost:
+                trialMax = 20
+            else:
+                trialMax = 100
         elif DO_BIGFILE:
             bucket = 'home-0xdiag-datasets'
             importFolderPath = "standard"
@@ -197,7 +200,7 @@ class Basic(unittest.TestCase):
                 # do last to first..to get race condition?
                 firstXorUll = None
                 firstQuantileUll = None
-                hex_key = csvFilename + "_" + str(summaryTrial) + ".hex"
+                hex_key = csvFilename + "_" + str(summaryTrial) + ".hexxx"
                 
                 if DO_EXEC_QUANT:
                     execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, thresholds)

@@ -104,6 +104,7 @@ def get_ip_address():
         pass
 
     if ip.startswith('127'):
+        # drills down into family
         ip = socket.getaddrinfo(hostname, None)[0][4][0]
         verboseprint("get_ip case 3:", ip)
 
@@ -113,6 +114,11 @@ def get_ip_address():
     # the gethostbyname_ex can be slow. the timeout above will save us quickly
     if hostname not in badHosts:
         try:
+            # Translate a host name to IPv4 address format, extended interface. 
+            # Return a triple (hostname, aliaslist, ipaddrlist) 
+            # where hostname is the primary host name responding to the given ip_address, 
+            # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
+            # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
             ghbx = socket.gethostbyname_ex(hostname)
             for ips in ghbx[2]:
                  # only take the first
@@ -124,6 +130,7 @@ def get_ip_address():
                         print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
         except:
             pass
+            # print "Timeout during socket.gethostbyname_ex(hostname)"
 
     verboseprint("get_ip_address:", ip)
     return ip
@@ -139,14 +146,12 @@ def unit_main():
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
-    python_cmd_ip = get_ip_address()
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     python_username = getpass.getuser()
     # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
     # so this is correct, for stuff run with 'python ..."
     print "\nTest: %s    command line: %s" % (python_test_name, python_cmd_line)
-    print "Python runs on: %s" % python_cmd_ip
 
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -173,7 +178,13 @@ disable_time_stamp = False
 debug_rest = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
-python_cmd_ip = get_ip_address()
+
+# trust what the user says!
+if ipaddr_from_cmd_line:
+    python_cmd_ip = ipaddr_from_cmd_line
+else:
+    python_cmd_ip = get_ip_address()
+
 # no command line args if run with just nose
 python_cmd_args = ""
 # don't really know what it is if nosetests did some stuff. Should be just the test with no args
@@ -416,7 +427,7 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
     # doing this list outside the loops so we can shuffle for better test variation
     hostPortList = []
     if hosts is None:
-        ip = get_ip_address()
+        ip = python_cmd_ip
         for i in range(node_count):
             hostPortList.append(ip + ":" + str(base_port + ports_per_node*i))
     else:
