@@ -57,7 +57,8 @@ public class CXIChunk extends Chunk {
     int off = findOffset(idx);
     if(getId(off) != idx)return 0;
     long v = getIValue(off);
-    if( v== NAS[_valsz_log -1])throw new IllegalArgumentException("at8 but value is missing");
+    if( v== NAS[_valsz_log])
+      throw new IllegalArgumentException("at8 but value is missing");
     return v;
   }
   @Override protected double atd_impl(int idx) {

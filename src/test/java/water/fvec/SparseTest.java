@@ -23,7 +23,11 @@ public class SparseTest extends TestUtil {
     Key key = Vec.newKey();
     AppendableVec av = new AppendableVec(key);
     NewChunk nv = new NewChunk(av,0);
-    for(double d:vals)nv.addNum(d);
+    for(double d:vals){
+      if(Double.isNaN(d))nv.addNA();
+      else if((long)d == d) nv.addNum((long)d,0);
+      else nv.addNum(d);
+    }
     nv.close(0,null);
     Vec vec = av.close(new Futures());
     return vec.chunkForChunkIdx(0);
@@ -94,6 +98,7 @@ public class SparseTest extends TestUtil {
     }
   }
 
+
   @Test
   public void testDouble() {runTest(new double [] {2.7182,3.14,42},Double.NaN,123.45,CXDChunk.class,CXDChunk.class,C8DChunk.class);}
 
@@ -104,8 +109,11 @@ public class SparseTest extends TestUtil {
   }
   @Test public void testInt() {
     runTest(new double [] {1,2,Double.NaN},4,5,CXIChunk.class,CXIChunk.class,C1Chunk.class);
-    runTest(new double [] {1,2000,3},4,5,CXIChunk.class,CXIChunk.class,C2Chunk.class);
+    runTest(new double [] {1,2000,Double.NaN,3},4,5,CXIChunk.class,CXIChunk.class,C2Chunk.class);
     runTest(new double [] {Double.NaN,2000,3},400000,5,CXIChunk.class,CXIChunk.class,C4Chunk.class);
-    runTest(new double [] {1,2000,3},Double.NaN,1e10,CXIChunk.class,CXIChunk.class,C8Chunk.class);
+    runTest(new double [] {1,Double.NaN,2000,3},Double.NaN,1e10,CXIChunk.class,CXIChunk.class,C8Chunk.class);
   }
+
+
+
 }

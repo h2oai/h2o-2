@@ -52,7 +52,7 @@ public class NewChunk extends Chunk {
       int nas=0, ss=0, nzs=0;
       if( _ds != null ) {
         assert _ls==null && _xs==null;
-        for( double d : _ds ) if( Double.isNaN(d) ) nas++; else if( d!=0 ) nzs++;
+        for( int i = 0; i < _len; ++i) if( Double.isNaN(_ds[i]) ) nas++; else if( _ds[i]!=0 ) nzs++;
       } else {
         assert _ds==null;
         if( _ls != null )
@@ -92,29 +92,49 @@ public class NewChunk extends Chunk {
   public void addEnum(int e) {append2(e,Integer.MIN_VALUE+1);}
   public void addNA  (     ) {append2(Long.MAX_VALUE,Integer.MIN_VALUE  ); }
   public void addNum (long val, int exp) {
-    if( val == 0 ) exp = 0;// Canonicalize zero
-    long t;                // Remove extra scaling
-    while( exp < 0 && exp > -9999999 && (t=val/10)*10==val ) { val=t; exp++; }
-    append2(val,exp);
+    if(_ds != null){
+      assert _ls == null;
+      addNum(val*DParseTask.pow10(exp));
+    } else {
+      if( val == 0 ) exp = 0;// Canonicalize zero
+      long t;                // Remove extra scaling
+      while( exp < 0 && exp > -9999999 && (t=val/10)*10==val ) { val=t; exp++; }
+      append2(val,exp);
+    }
   }
   // Fast-path append double data
   public void addNum(double d) {
     if(_id == null || d != 0) {
+      if(_ls != null)switch_to_doubles();
       if( _ds == null || _len >= _ds.length ) {
         append2slowd();
         // call addNum again since append2slow might have flipped to sparse
         addNum(d);
+        assert _len <= _len2;
         return;
       }
       if(_id != null)_id[_len] = _len2;
       _ds[_len++] = d;
     }
     _len2++;
+    assert _len <= _len2;
   }
-  public final boolean sparse(){return _id != null || _ls == null && _ds == null;}
+  public final boolean sparse(){return _id != null;}
   // Append all of 'nc' onto the current NewChunk.  Kill nc.
   public void add( NewChunk nc ) {
-    if( nc._len == 0 ) return;
+    assert _cidx >= 0;
+    assert _len <= _len2;
+    assert nc._len <= nc._len2:"_len = " + nc._len + ", _len2 = " + nc._len2;
+    if( nc._len2 == 0 ) return;
+    if(_len2 == 0){
+      _ls = nc._ls; nc._ls = null;
+      _xs = nc._xs; nc._xs = null;
+      _id = nc._id; nc._id = null;
+      _ds = nc._ds; nc._ds = null;
+      _len = nc._len;
+      _len2 = nc._len2;
+      return;
+    }
     if(nc.sparse() != sparse()){ // for now, just make it dense
       cancel_sparse();
       nc.cancel_sparse();
@@ -123,16 +143,19 @@ public class NewChunk extends Chunk {
     while( _len+nc._len >= _xs.length )
       _xs = MemoryManager.arrayCopyOf(_xs,_xs.length<<1);
     _ls = MemoryManager.arrayCopyOf(_ls,_xs.length);
-    if(_id != null)
-      _id = MemoryManager.arrayCopyOf(_id,_xs.length);
     System.arraycopy(nc._ls,0,_ls,_len,nc._len);
     System.arraycopy(nc._xs,0,_xs,_len,nc._len);
-    if(nc._id != null)
+    if(_id != null) {
+      assert nc._id != null;
+      _id = MemoryManager.arrayCopyOf(_id,_xs.length);
       System.arraycopy(nc._id,0,_id,_len,nc._len);
-    for(int i = _len; i < _len + nc._len; ++i) _id[i] += _len2;
+      for(int i = _len; i < _len + nc._len; ++i) _id[i] += _len2;
+    } else assert nc._id == null;
+
     _len += nc._len;
     _len2 += nc._len2;
     nc._ls = null;  nc._xs = null; nc._id = null; nc._len = nc._len2 = 0;
+    assert _len <= _len2;
   }
   // PREpend all of 'nc' onto the current NewChunk.  Kill nc.
   public void addr( NewChunk nc ) {
@@ -141,12 +164,13 @@ public class NewChunk extends Chunk {
              tmpi = _id; _id = nc._id; nc._id = tmpi;
     double[] tmpd = _ds; _ds = nc._ds; nc._ds = tmpd;
     int      tmp  = _len; _len=nc._len; nc._len=tmp;
-    _len2=_len;
+             tmp  = _len2; _len2 = nc._len2; nc._len2 = tmp;
     add(nc);
   }
 
   // Fast-path append long data
   void append2( long l, int x ) {
+    assert _ds == null;
     if(_id == null || l != 0){
       if(_ls == null || _len == _ls.length) {
         append2slow();
@@ -160,6 +184,7 @@ public class NewChunk extends Chunk {
       _len++;
     }
     _len2++;
+    assert _len <= _len2;
   }
 
   // Slow-path append data
@@ -191,6 +216,7 @@ public class NewChunk extends Chunk {
           set_sparse(nzs);
           assert _len == 0 || _len  <= _ls.length:"_len = " + _len + ", _ls.length = " + _ls.length + ", nzs = " + nzs +  ", len2 = " + _len2;
           assert _id.length == _ls.length;
+          assert _len <= _len2;
           return;
         }
       } else {
@@ -207,6 +233,7 @@ public class NewChunk extends Chunk {
     }
     assert _len == 0 || _len < _ls.length:"_len = " + _len + ", _ls.length = " + _ls.length;
     assert _id == null || _id.length == _ls.length;
+    assert _len <= _len2;
   }
 
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
@@ -240,7 +267,7 @@ public class NewChunk extends Chunk {
   }
   protected void set_sparse(int nzeros){
     if(_len == nzeros)return;
-    assert _len == _len2;
+    assert _len == _len2:"_len = " + _len + ", _len2 = " + _len2 + ", nzeros = " + nzeros;
     int zs = 0;
     if(_ds == null){
       assert nzeros < _ls.length;
