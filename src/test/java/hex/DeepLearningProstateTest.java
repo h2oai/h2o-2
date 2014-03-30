@@ -32,11 +32,11 @@ public class DeepLearningProstateTest extends TestUtil {
 
     int count = 0;
     for (boolean replicate : new boolean[]{
-            true, //must be true
-//            false,
+//            true,
+            false,
     }) {
       for (boolean load_balance : new boolean[]{
-              true, //must be true
+              true, //must be true for leak
 //            false,
       }) {
         for (boolean shuffle : new boolean[]{
@@ -57,8 +57,8 @@ public class DeepLearningProstateTest extends TestUtil {
                     DeepLearning.ClassSamplingMethod.Uniform
               }) {
                 for (int scoretraining : new int[]{
-                        200, //sampling must be on
-//                      0,
+//                        200,
+                      0,
                 }) {
                   for (int scorevalidation : new int[]{
                           200, //sampling must be on
@@ -66,8 +66,8 @@ public class DeepLearningProstateTest extends TestUtil {
                   }) {
                     for (int vf : new int[]{
 //                            0,  //no validation
-                            1,  //same as source
-//                            -1, //different validation frame
+//                            1,  //same as source
+                            -1, //different validation frame
                     }) {
                       count++;
                       Log.info("**************************)");
