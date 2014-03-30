@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             timeoutSecs = 30
             print "Force it to think there's a header. using comma forced as separator"
-            parseResult = h2i.import_parse(path=csvPathname, src_key=src_key, schema='local', hex_key=hex_key,
+            parseResult = h2i.import_parse(path=csvPathname, src_key=src_key, schema='put', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=30, header=1, separator=44)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']
