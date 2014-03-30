@@ -33,8 +33,13 @@ public class C0LChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc._xs = MemoryManager.malloc4(_len);
-    Arrays.fill(nc._ls = MemoryManager.malloc8(_len),_con);
+    if(_con == 0) nc._id = new int[0];
+    else {
+      nc._ls = MemoryManager.malloc8(_len);
+      Arrays.fill(nc._ls,_con);
+      nc._xs = MemoryManager.malloc4(_len);
+    }
     return nc;
   }
+  @Override public int sparseLen(){return _con == 0?0:_len;}
 }

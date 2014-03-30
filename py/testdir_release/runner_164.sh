@@ -11,25 +11,33 @@ echo "current PID: $$"
 source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
-if [[ $USER == "jenkins" ]]
-then 
-    # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
-    # only do this if you're jenksin
-    echo "If we use more machines, expand this cleaning list."
-    echo "The possibilities should be relatively static over time"
-    echo "Could be problems if other threads also using that user on these machines at same time"
-    echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
-
-    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+if [[ $HOSTNAME == "ch-63" ]]
+then
+    # in sm land. clean up!
+    pssh -h /home/0xdiag/hosts_minus_9 -i 'rm -f -r /home/0xdiag/ice*'
+    python ../four_hour_cloud.py -v -cj pytest_config-jenkins-sm32.json &
 else
-    if [[ $USER == "kevin" ]]
-    then
-        python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+    if [[ $USER == "jenkins" ]]
+    then 
+        # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
+        # only do this if you're jenksin
+        echo "If we use more machines, expand this cleaning list."
+        echo "The possibilities should be relatively static over time"
+        echo "Could be problems if other threads also using that user on these machines at same time"
+        echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
+        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
+
+        python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
     else
-        python ../four_hour_cloud.py &
-    fi
-fi 
+        if [[ $USER == "kevin" ]]
+        then
+            python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+        else
+            python ../four_hour_cloud.py &
+        fi
+    fi 
+fi
+
 
 CLOUD_PID=$!
 jobs -l

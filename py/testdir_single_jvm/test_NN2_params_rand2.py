@@ -12,7 +12,7 @@ def define_params():
         'activation'                   : [None, 'Tanh', 'TanhWithDropout', 'Rectifier', 'RectifierWithDropout', 
                                             'Maxout', 'MaxoutWithDropout'],
         'input_dropout_ratio'          : [None, 0, 1],
-        'hidden'                       : [None, 0, '200,200'],
+        'hidden'                       : [None, 1, '200,200'],
         'rate'                         : [None, 0, 0.005, 0.010],
         'rate_annealing'               : [None, 0, 1e-6, 1e-4],
         'momentum_start'               : [None, 0, 0.1, 0.5, 0.9999],

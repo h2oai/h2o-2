@@ -109,7 +109,7 @@ public class Expr2Test extends TestUtil {
       checkStr("(h.hex+1)<-2","Junk at end of line\n"+"(h.hex+1)<-2\n"+"         ^-^\n"); // No L-value
       checkStr("h.hex[nrow(h.hex=1),]","Arg 'x' typed as ary but passed dbl\n"+"h.hex[nrow(h.hex=1),]\n"+"          ^--------^\n"); // Passing a scalar 1.0 to nrow
       checkStr("h.hex[{h.hex=10},]"); // ERROR BROKEN: SHOULD PARSE statement list here; then do evil side-effect killing h.hex but also using 10 to select last row
-      checkStr("h.hex[2,3]<-4;",4);
+      checkStr("h.hex[3,4]<-4;",4);
       checkStr("c(1,3,5)");
       // Column row subselection
       checkStr("h.hex[,c(1,3,5)]");
@@ -188,7 +188,7 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){h.hex})","apply requires that ary fun(ary x) return 1 column");
       checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
-      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",183.96); // Row-wise apply on mean
+      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",184.96); // Row-wise apply on mean
 
       // Conditional selection; 
       checkStr("ifelse(0,1,2)",2);
