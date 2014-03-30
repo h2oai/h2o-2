@@ -69,8 +69,18 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         # if we've already walked it, there will be a matching file
         # with the last line number we checked
         try:
-            with open(LOG_DIR + "/" + "doneToLine." + filename) as f:
-                doneToLine = int(f.readline().rstrip())
+            with open(LOG_DIR + "/doneToLine." + filename) as f:
+                # if multiple processes are checking, this file isn't locked
+                # if it's empty, treat it as zero
+                r = f.readline().rstrip()
+                if not r or r=="":
+                    doneToLine = 0
+                else:
+                    try:
+                        doneToLine = int(r)
+                    except:
+                        raise Exception("%s/doneToLine.%s is corrupted (multiprocess issue?): %s" % (LOG_DIR, filename, r))
+                    
         except IOError:
             # no file
             doneToLine = 0
