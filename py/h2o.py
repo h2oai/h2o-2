@@ -1522,6 +1522,14 @@ class H2O(object):
             timeout=timeoutSecs)
         return a
 
+    def rebalance(self, before=None, after=None, seed=None, timeoutSecs=180):
+        a = self.__do_json_request('2/ReBalance.json',
+            timeout=timeoutSecs,
+            params={"path": before, "after": after, "seed": seed}
+        )
+        verboseprint("\n rebalance result:", dump_json(a))
+        return a
+
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
@@ -1881,6 +1889,21 @@ class H2O(object):
         verboseprint("\nquantiles result:", dump_json(a))
         return a
 
+    def naive_bayes(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source_key': None,
+            'response': None,
+            'ignored_cols': None,
+            'classification': None,
+            'laplace': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'naive_bayes', print_params)
+        a = self.__do_json_request('2/NaiveBayes.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nnaive_bayes result:", dump_json(a))
+        return a
+
+
     def gbm_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             '_modelKey': model_key,
@@ -1981,6 +2004,19 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'predict_confusion_matrix', print_params)
         a = self.__do_json_request('2/ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
+        return a
+
+    def hit_ratio(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'actual': None,
+            'vactual': 'predict',
+            'predict': None,
+            'max_k': seed,
+            'make_k': 'None',
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'auc', print_params)
+        a = self.__do_json_request('2/HitRatio.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nhit_ratio result:", dump_json(a))
         return a
 
     def generate_auc(self, timeoutSecs=300, print_params=True, **kwargs):
