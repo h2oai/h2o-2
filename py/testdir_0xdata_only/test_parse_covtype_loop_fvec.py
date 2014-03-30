@@ -12,7 +12,7 @@ DO_SUMMARY = True
 DO_XORSUM = False
 
 DO_BIGFILE = False
-DO_IRIS = True
+DO_IRIS = False
 
 DO_PARSE_ALSO = True
 UPLOAD_PARSE_DIFF_NODES = False
@@ -100,6 +100,7 @@ class Basic(unittest.TestCase):
         outstanding = min(10, len(h2o.nodes))
 
         if DO_IRIS:
+            global DO_BIGFILE
             DO_BIGFILE = False
             bucket = 'smalldata'
             importFolderPath = "iris"

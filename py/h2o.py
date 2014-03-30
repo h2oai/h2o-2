@@ -1089,15 +1089,17 @@ class H2O(object):
             key = os.path.basename(f)
             ### print "putfile specifying this key:", key
 
+        fileObj = open(f, 'rb')
         resp = self.__do_json_request(
                 '2/PostFile.json' if beta_features else 'PostFile.json',
                 cmd='post',
                 timeout=timeoutSecs,
                 params={"key": key},
-                files={"file": open(f, 'rb')},
+                files={"file": fileObj},
                 extraComment = str(f))
 
         verboseprint("\nput_file response: ", dump_json(resp))
+        fileObj.close()
         return key
 
     def get_key(self, key, timeoutSecs=30):
