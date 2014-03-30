@@ -32,41 +32,41 @@ public class DeepLearningProstateTest extends TestUtil {
 
     int count = 0;
     for (boolean replicate : new boolean[]{
-//            true,
-            false,
+            true,
+//            false,
     }) {
       for (boolean load_balance : new boolean[]{
-              true, //must be true for leak
-//            false,
+//              true, //must be true for leak
+            false,
       }) {
         for (boolean shuffle : new boolean[]{
 //                true,
               false,
         }) {
           for (boolean balance_classes : new boolean[]{
-//                  true,
+                  true,
                   false,
           }) {
             for (int resp : new int[]{
                     1, //binary
-//                    2, //regression
-//                    8, //multi-class
+                    2, //regression
+                    8, //multi-class
             }) {
               for (DeepLearning.ClassSamplingMethod csm : new DeepLearning.ClassSamplingMethod[] {
-//                      DeepLearning.ClassSamplingMethod.Stratified,
-                    DeepLearning.ClassSamplingMethod.Uniform
+                      DeepLearning.ClassSamplingMethod.Stratified,
+//                    DeepLearning.ClassSamplingMethod.Uniform
               }) {
                 for (int scoretraining : new int[]{
-//                        200,
-                      0,
+                        200,
+//                      0,
                 }) {
                   for (int scorevalidation : new int[]{
-                          200, //sampling must be on
+                          200,
 //                        0,
                   }) {
                     for (int vf : new int[]{
-//                            0,  //no validation
-//                            1,  //same as source
+                            0,  //no validation
+                            1,  //same as source
                             -1, //different validation frame
                     }) {
                       count++;
@@ -81,8 +81,7 @@ public class DeepLearningProstateTest extends TestUtil {
 
                       // build the model, with all kinds of shuffling/rebalancing/sampling
                       {
-//                        final long seed = new Random().nextLong();
-                        final long seed = 2811479049790142983l;
+                        final long seed = new Random().nextLong();
                         Log.info("Using seed: " + seed);
                         DeepLearning p = new DeepLearning();
                         p.epochs = 1.0 + new Random(seed).nextDouble();
