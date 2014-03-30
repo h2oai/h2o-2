@@ -100,8 +100,8 @@ class Basic(unittest.TestCase):
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         # don't raise exception if we find something bad in h2o stdout/stderr?
         # h2o.nodes[0].sandboxIgnoreErrors = True
+        global OUTSTANDING
         if not OUTSTANDING:
-            global OUTSTANDING
             OUTSTANDING = min(10, len(h2o.nodes))
 
         if DO_IRIS:
