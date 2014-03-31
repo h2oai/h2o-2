@@ -585,7 +585,9 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
     log("#*********************************************************************")
 
     # start up h2o to report the java version (once). output to python stdout
-    check_h2o_version()
+    # only do this for regression testing
+    if getpass.getuser()=='jenkins':
+        check_h2o_version()
 
     # keep this param in kwargs, because we pass it to the H2O node build, so state
     # is created that polling and other normal things can check, to decide to dump
