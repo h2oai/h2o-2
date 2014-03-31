@@ -13,6 +13,8 @@ import water.fvec.ParseDataset2
 import water.Job
 import hex.drf.DRF
 import water.fvec.NewChunk
+import hex.Quantiles
+import water.api.QuantilesPage
 
 trait TRef {}
 
@@ -288,6 +290,14 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     drf.ntrees = ntrees;
     drf.invoke()
     return UKV.get(drf.dest())
+  }
+  
+  def quantiles(f: VT, column:Int): scala.Double = {
+    val qp : QuantilesPage = new QuantilesPage
+    qp.source_key = f.frame()
+    qp.column = f.frame().vecs()(column)
+    qp.invoke()
+    return qp.result
   }
 }
 

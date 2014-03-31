@@ -6,7 +6,7 @@ import water.util.RString;
 import water.util.Log;
 import water.fvec.*;
 
-public class QuantilesPage extends Request2 {
+public class QuantilesPage extends Job {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -57,7 +57,7 @@ public class QuantilesPage extends Request2 {
   int iterations;
 
   @API(help = "Result.")
-  double result;
+  public double result;
 
   @API(help = "Single pass Result.")
   double result_single;
@@ -101,7 +101,7 @@ public class QuantilesPage extends Request2 {
     boolean multiPass;
     Quantiles[] qbins;
 
-    // just take one here. 
+    // just take one here.
     // it's array because summary2 might use with a single pass list
     // and an exec single pass approx could pass a threshold list
     double [] quantiles_to_do = new double[1];
@@ -109,14 +109,14 @@ public class QuantilesPage extends Request2 {
 
     double approxResult;
     double exactResult;
-    result_single = Double.NaN; 
-    result = Double.NaN; 
+    result_single = Double.NaN;
+    result = Double.NaN;
     boolean done = false;
     // approx (fully independent from the multipass)
     qbins = null;
     if ( multiple_pass == 0 || multiple_pass == 2 ) {
       multiPass = false;
-      result_single = Double.NaN; 
+      result_single = Double.NaN;
       if ( multiple_pass == 0) result = Double.NaN;
 
       // These are used as initial params, and setup for the next iteration
@@ -164,11 +164,11 @@ public class QuantilesPage extends Request2 {
       // if max_qbins is set to 2? hmm. we won't resolve if max_qbins = 1
       // interesting to see how we resolve (should we disallow < 1000? (accuracy issues) but good for test)
     }
-    
+
     if ( multiple_pass == 1 || multiple_pass == 2 ) {
-      final int MAX_ITERATIONS = 16; 
+      final int MAX_ITERATIONS = 16;
       multiPass = true;
-      exactResult = Double.NaN; 
+      exactResult = Double.NaN;
       double valStart = vecs[0].min();
       double valEnd = vecs[0].max();
 
@@ -183,7 +183,7 @@ public class QuantilesPage extends Request2 {
         iterations = b + 1;
         if ( qbins == null ) break;
         else {
-          qbins[0].finishUp(vecs[0], quantiles_to_do, interpolation_type, multiPass); 
+          qbins[0].finishUp(vecs[0], quantiles_to_do, interpolation_type, multiPass);
           Log.debug("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
           double valBinSize = qbins[0]._valBinSize;
           Log.debug("Q_ valBinSize: "+valBinSize);
@@ -204,7 +204,7 @@ public class QuantilesPage extends Request2 {
         interpolated = qbins[0]._interpolated;
       }
       else {
-        // enums must come this way. Right now we don't seem 
+        // enums must come this way. Right now we don't seem
         // to create everything for the normal response, if we reject an enum col.
         // should fix that. For now, just hack it to not look for stuff
         column_name = "";
@@ -220,5 +220,10 @@ public class QuantilesPage extends Request2 {
       result = exactResult;
     }
     return Response.done(this);
+  }
+
+  @Override protected JobState execImpl() {
+    serve();
+    return JobState.DONE;
   }
 }

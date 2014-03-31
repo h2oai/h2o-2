@@ -21,8 +21,9 @@ object Examples {
   // Call in the context of H2O classloader
   def userMain(args: Array[String]):Unit = {
     H2O.main(args)
-    example1()
-    example2()
+    //example1()
+    //example2()
+    example3()
   }
   
   /** Compute average for given column. */
@@ -74,6 +75,26 @@ object Examples {
 
     println("RSS: " + rss)
     
+    shutdown()
+  }
+  
+  /** Compute quantiles for all vectors in a given frame. */ 
+  def example3() = {
+    
+    import water.api.dsl.H2ODsl._
+    val f = parse("../private/cars.csv")
+    
+    // Iterate over columns, pick only non-enum column and compute quantile for the column
+    for (columnId <-  0 until f.ncol) {
+      val colname = f.frame().names()(columnId)
+      if (f.frame().vecs()(columnId).isEnum()) {
+    	  println("Column '" + colname + "' is enum => skipped!")
+      } else {
+	      val q = quantiles(f, columnId)
+	      println("Column '" + colname + "' quantile is " + q)
+      }
+    }
+        
     shutdown()
   }
 }
