@@ -25,7 +25,7 @@ rm -f h2o-nodes.json
 if [[ $HOSTNAME == "lg1" || $HOSTNAME == "ch-63" ]]
 then
     # in sm land. clean up!
-    pssh -h /home/0xdiag/hosts_minus_9_22 -i 'rm -f -r /home/0xdiag/ice*'
+    # pssh -h /home/0xdiag/hosts_minus_9_22 -i 'rm -f -r /home/0xdiag/ice*'
     python ../four_hour_cloud.py -v -cj pytest_config-jenkins-sm2.json &
     CLOUD_IP=10.71.0.100
     CLOUD_PORT=54355
