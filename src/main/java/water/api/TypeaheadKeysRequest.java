@@ -1,6 +1,7 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
+import hex.nb.NBModel;
 import hex.pca.PCAModel;
 import hex.*;
 import hex.rf.RFModel;
@@ -97,6 +98,14 @@ class TypeaheadPCAModelKeyRequest extends TypeaheadKeysRequest {
   }
 }
 
+class TypeaheadNBModelKeyRequest extends TypeaheadKeysRequest {
+  public TypeaheadNBModelKeyRequest() {
+    super("Provides a simple JSON array of filtered keys known to the "+
+          "current node that are NBModels at the time of calling.",
+          null,NBModel.class);
+  }
+}
+
 class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
   public TypeaheadHexKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
@@ -105,7 +114,7 @@ class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
   }
 
   @Override protected boolean matchesType(Value val) {
-    if( val.type() == TypeMap.VALUE_ARRAY ) 
+    if( val.type() == TypeMap.VALUE_ARRAY )
       return val.isHex();
     return val.type() == TypeMap.FRAME;
   }

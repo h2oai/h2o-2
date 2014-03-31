@@ -562,7 +562,7 @@ def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent,
         execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, outputCol+1, trainDstKey, outputCol+1, outputClass)
         execExpr +=  "factor(%s[, %s]);" % (trainDstKey, outputCol+1)
 
-    h2o_exec.exec_expr(None, execExpr, resultKey=trainDstKey, timeoutSecs=15)
+    h2o_exec.exec_expr(None, execExpr, resultKey=trainDstKey, timeoutSecs=30)
 
     inspect = runInspect(key=trainDstKey)
     infoFromInspect(inspect, "%s after mungeDataset on %s" % (trainDstKey, srcKey) )
@@ -574,7 +574,7 @@ def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent,
     if changeToBinomial:
         execExpr += "%s[,%s]=%s[,%s]==%s;" % (testDstKey, outputCol+1, testDstKey, outputCol+1, outputClass)
         execExpr +=  "factor(%s[, %s])" % (testDstKey, outputCol+1)
-    h2o_exec.exec_expr(None, execExpr, resultKey=testDstKey, timeoutSecs=10)
+    h2o_exec.exec_expr(None, execExpr, resultKey=testDstKey, timeoutSecs=30)
 
     inspect = runInspect(key=testDstKey)
     infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )

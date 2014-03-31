@@ -479,7 +479,7 @@ public class NeuralNet extends ValidatedJob {
     else {
       e.mean_square = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( ls[ls.length - 1]._a[0] != Layer.missing_double_value )
+        if( ls[ls.length - 1]._a[0] != Layer.missing_float_value )
           error(ls, e);
       e.classification = Double.POSITIVE_INFINITY;
       e.mean_square /= len;
@@ -494,7 +494,7 @@ public class NeuralNet extends ValidatedJob {
     if( output.target() == -1 )
       return false;
     for (Layer l : ls) l.fprop(-1, false);
-    double[] out = ls[ls.length - 1]._a;
+    float[] out = ls[ls.length - 1]._a;
     int target = output.target();
     for( int o = 0; o < out.length; o++ ) {
       final boolean hitpos = (o == target);
@@ -504,9 +504,9 @@ public class NeuralNet extends ValidatedJob {
       e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
     }
     float[] preds = new float[out.length+1];
-    for (int i=0;i<out.length;++i) preds[i+1] = (float)out[i];
-    preds[0] = ModelUtils.getPrediction(preds, ls[0]._a);
-
+    for (int i=0;i<out.length;++i) preds[i+1] = out[i];
+    double[] data = new double[ls[0]._a.length];
+    preds[0] = ModelUtils.getPrediction(preds, data);
     if( confusion != null ) {
       if (output.target() != Layer.missing_int_value) confusion[output.target()][(int)preds[0]]++;
     }
@@ -517,8 +517,8 @@ public class NeuralNet extends ValidatedJob {
   static void error(Layer[] ls, Errors e) {
     Linear linear = (Linear) ls[ls.length - 1];
     for (Layer l : ls) l.fprop(-1, false);
-    double[] output = ls[ls.length - 1]._a;
-    double[] target = linear.target();
+    float[] output = ls[ls.length - 1]._a;
+    float[] target = linear.target();
     e.mean_square = 0;
     for( int o = 0; o < output.length; o++ ) {
       final double d = target[o] - output[o];
@@ -603,7 +603,7 @@ public class NeuralNet extends ValidatedJob {
     public float[][] weights;
 
     //@API(help = "Layer biases")
-    public double[][] biases;
+    public float[][] biases;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -615,16 +615,16 @@ public class NeuralNet extends ValidatedJob {
     public long[][] confusion_matrix;
 
     @API(help = "Mean bias")
-    public double[] mean_bias;
+    public float[] mean_bias;
 
     @API(help = "RMS bias")
-    public double[] rms_bias;
+    public float[] rms_bias;
 
     @API(help = "Mean weight")
-    public double[] mean_weight;
+    public float[] mean_weight;
 
     @API(help = "RMS weight")
-    public double[] rms_weight;
+    public float[] rms_weight;
 
     @API(help = "Unstable")
     public boolean unstable = false;
@@ -634,7 +634,7 @@ public class NeuralNet extends ValidatedJob {
       parameters = p;
       layers = ls;
       weights = new float[ls.length][];
-      biases = new double[ls.length][];
+      biases = new float[ls.length][];
       for( int y = 1; y < layers.length; y++ ) {
         weights[y] = layers[y]._w;
         biases[y] = layers[y]._b;
@@ -642,10 +642,10 @@ public class NeuralNet extends ValidatedJob {
 
       if (parameters.diagnostics) {
         // compute stats on all nodes
-        mean_bias = new double[ls.length];
-        rms_bias = new double[ls.length];
-        mean_weight = new double[ls.length];
-        rms_weight = new double[ls.length];
+        mean_bias = new float[ls.length];
+        rms_bias = new float[ls.length];
+        mean_weight = new float[ls.length];
+        rms_weight = new float[ls.length];
         for( int y = 1; y < layers.length; y++ ) {
           final Layer l = layers[y];
           final int len = l._a.length;
@@ -676,8 +676,8 @@ public class NeuralNet extends ValidatedJob {
             }
 
           }
-          rms_bias[y] = Math.sqrt(rms_bias[y]/len);
-          rms_weight[y] = Math.sqrt(rms_weight[y]/len/l._previous._a.length);
+          rms_bias[y] = (float)Math.sqrt(rms_bias[y]/len);
+          rms_weight[y] = (float)Math.sqrt(rms_weight[y]/len/l._previous._a.length);
 
           unstable |= Double.isNaN(mean_bias[y]) || Double.isNaN(rms_bias[y])
                   || Double.isNaN(mean_weight[y]) || Double.isNaN(rms_weight[y]);
@@ -897,11 +897,12 @@ public class NeuralNet extends ValidatedJob {
       }
       ((Input) clones[0])._pos = rowInChunk;
       for (Layer clone : clones) clone.fprop(-1, false);
-      double[] out = clones[clones.length - 1]._a;
+      float[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
-      // convert to float
-      for (int i=0; i<out.length; ++i) preds[i+1] = (float)out[i];
-      preds[0] = ModelUtils.getPrediction(preds, out);
+      for (int i=0; i<out.length; ++i) preds[i+1] = out[i];
+      double[] data = new double[out.length];
+      for (int i=0; i<out.length; ++i) data[i] = out[i];
+      preds[0] = ModelUtils.getPrediction(preds, data);
       return preds;
     }
 

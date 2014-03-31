@@ -1,0 +1,9 @@
+Movie,age,gender,occupation,zip_code,Adventure,Animation,Children,Comedy,Crime,Documentary,Drama,Fantasy,Film-Noir,Horror,Musical,Mystery,Romance,Sci-Fi,Thriller,War,Western
+frozen,27,F ,Programmer,94532,1,1,1,1,0,0,0,1,0,0,1,0,1,0,0,0,0
+threehund,27,F ,Programmer,94532,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0
+monmntmen,27,F ,Programmer,94532,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+muppets,27,F ,Programmer,94532,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0
+divergent,27,F ,Programmer,94532,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0
+peabody,27,F ,Programmer,94532,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0
+NonStop,27,F ,Programmer,94532,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0
+Her,27,F ,Programmer,94532,0,0,0,1,0,0,1,0,0,0,0,0,1,1,0,0,0

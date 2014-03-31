@@ -24,26 +24,28 @@ print "check expected values"
 
 # think of random trees of random width and depth
 
-# 
-# Want to use this to create random exprssions. Will have to think about
+# Want to use this to create random expressions. Will have to think about
 # unary operations (~) and bit selections and how to match "widths"
-# 
+
+# comments from the original at 
+# http://stackoverflow.com/questions/6881170/is-there-a-way-to-autogenerate-valid-arithmetic-expressions
 # comments from the original at http://stackoverflow.com/questions/6881170/is-there-a-way-to-autogenerate-valid-arithmetic-expressions
 # 
 # Added some handling of the probability of the incidence of each operator. 
 # The operators are biased so that the lower priority operators (larger precedence values) 
 # are more common than the higher order ones.
 # 
-# Also implemented parentheses only when precedence requires. 
-# Since the integers have the highest priority (lowest precedence value) they never get wrapped in parentheses. 
+# Implemented parentheses only when precedence requires. 
+# Since the integers have the highest priority (lowest precedence value) 
+# they never get wrapped in parentheses. 
 # There is no need for a parenthesized expression as a node in the expression tree.
 # 
-# The probability of using an operator is biased towards the initial levels (using a quadratic function) 
-# to get a nicer distribution of operators. 
+# The probability of using an operator is biased towards the 
+# initial levels (using a quadratic function) to get a nicer distribution of operators. 
 # Choosing a different exponent gives more potential control of the quality of the output, 
 # but I didn't play with the possibilities much.
 # 
-# I further implemented an evaluator for fun and also to filter out indeterminate expressions.
+# An evaluator for fun and also to filter out indeterminate expressions.
 
 # dictionary of operator precedence and incidence probability, with an
 # evaluator added just for fun.
@@ -141,8 +143,7 @@ class binary_expression(expression):
         right_str = self.right.__str__()
         op_str = self.symbol
 
-        # Use precedence to determine if we need to put the sub expressions in
-        # parentheses
+        # Use precedence to decide if sub expressions get parentheses
         if self.left.precedence() > self.precedence():
             left_str = '('+left_str+')'
         if self.right.precedence() > self.precedence():
@@ -154,16 +155,6 @@ class binary_expression(expression):
 
         return left_str + op_str + right_str
 
-max_result = pow(10, 10)
-for i in range(30):
-    expr = expression.create_random(0)
-
-    try:
-        value = float(expr.eval())
-    except:
-        value = 'indeterminate'
-
-    print expr, '=', value
 
 
 #**************************************
@@ -200,9 +191,10 @@ class Expression(object):
     # OPS = ['+', '-', '*', '/', '^', '**', '%%', '%/%', '<', '<=', '>', '>=', '==', '!=', '!', '|', '&']
     OPS = ['+', '-', '*', '/', '^', '**', '%%', '%/%', '<', '<=', '>', '>=', '==', '!=', '|', '&']
     # has problems with <= and >=
-    OPS = ['+', '-', '*', '/', '^', '<', '>', '|', '&']
+    # OPS = ['+', '-', '*', '/', '^', '<', '>', '|', '&']
+    OPS = ['+', '-', '*', '/']
     GROUP_PROB = 0.3
-    MIN_NUM, MAX_NUM = 0, 20
+    MIN_NUM, MAX_NUM = 1e10, 1e15
 
     def __init__(self, maxNumbers, _maxdepth=None, _depth=0):
         """
@@ -232,6 +224,22 @@ class Expression(object):
             return s
 
 
-for i in range(10):
+if __name__ == '__main__':
 
-    print "\na=",Expression(20, 12, 1), ";"
+    # ****************************
+    # first way
+    max_result = pow(10, 10)
+    for i in range(30):
+        expr = expression.create_random(0)
+
+        try:
+            value = float(expr.eval())
+        except:
+            value = 'indeterminate'
+
+        print expr, '=', value
+
+    # ****************************
+    # second way
+    for i in range(10):
+        print "\na=",Expression(20, 12, 1), ";"

@@ -20,6 +20,7 @@ import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
+import hex.nb.NBModelView;
 import hex.rf.RFModel;
 import water.*;
 import water.ValueArray.Column;
@@ -174,6 +175,8 @@ public class Inspect extends Request {
       return ((GridSearch) f).redirect();
     if(f instanceof hex.pca.PCAModel)
       return PCAModelView.redirect(this, key);
+    if(f instanceof hex.nb.NBModel)
+      return NBModelView.redirect(this, key);
     if (f instanceof DRFModel)
       return DRFModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());

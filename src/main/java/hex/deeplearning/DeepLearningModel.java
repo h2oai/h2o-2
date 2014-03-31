@@ -8,10 +8,7 @@ import water.api.*;
 import water.api.Request.API;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.D3Plot;
-import water.util.Log;
-import water.util.ModelUtils;
-import water.util.Utils;
+import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -123,7 +120,7 @@ public class DeepLearningModel extends Model {
         if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
         if (validation) sb.append("\nError on validation data (misclassification)"
                 + (validAUC != null ? " [using threshold for " + validAUC.threshold_criterion.toString().replace("_"," ") +"]: ": ": ")
-                + String.format("%.2f", (100 * valid_err)) + "%");
+                + String.format("%.2f", (100*valid_err)) + "%");
         if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else if (!Double.isInfinite(train_mse)) {
         sb.append("Error on training data (MSE): " + train_mse);
@@ -182,25 +179,23 @@ public class DeepLearningModel extends Model {
 
     // model is described by parameters and the following 2 arrays
     final private float[][] weights; //one 2D weight matrix per layer (stored as a 1D array each)
-    final private double[][] biases; //one 1D bias array per layer
+    final private float[][] biases; //one 1D bias array per layer
 
     // helpers for storing previous step deltas
     // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in DeepLearningTask.initLocal()
     // But then, after each reduction, the weights would be lost and would have to restart afresh -> not *exactly* right, but close...
     private float[][] weights_momenta;
-    private double[][] biases_momenta;
-
+    private float[][] biases_momenta;
 
     // helpers for AdaDelta
-    private float[][] E_dx2;
-    private float[][] E_g2;
+    private float[][] ada;
 
     // compute model size (number of model parameters required for making predictions)
     // momenta are not counted here, but they are needed for model building
     public long size() {
       long siz = 0;
       for (float[] w : weights) siz += w.length;
-      for (double[] b : biases) siz += b.length;
+      for (float[] b : biases) siz += b.length;
       return siz;
     }
 
@@ -208,11 +203,10 @@ public class DeepLearningModel extends Model {
     boolean has_momenta() { return parameters.momentum_start != 0 || parameters.momentum_stable != 0; }
     boolean adaDelta() { return parameters.adaptive_rate; }
     public final float[] get_weights(int i) { return weights[i]; }
-    public final double[] get_biases(int i) { return biases[i]; }
+    public final float[] get_biases(int i) { return biases[i]; }
     public final float[] get_weights_momenta(int i) { return weights_momenta[i]; }
-    public final double[] get_biases_momenta(int i) { return biases_momenta[i]; }
-    public final float[] get_E_dx2(int i) { return E_dx2[i]; }
-    public final float[] get_E_g2(int i) { return E_g2[i]; }
+    public final float[] get_biases_momenta(int i) { return biases_momenta[i]; }
+    public final float[] get_ada(int i) { return ada[i]; }
 
     @API(help = "Model parameters", json = true)
     final private DeepLearning parameters;
@@ -220,22 +214,22 @@ public class DeepLearningModel extends Model {
     public final DeepLearning job() { return get_params(); }
 
     @API(help = "Mean rate", json = true)
-    private double[] mean_rate;
+    private float[] mean_rate;
 
     @API(help = "RMS rate", json = true)
-    private double[] rms_rate;
+    private float[] rms_rate;
 
     @API(help = "Mean bias", json = true)
-    private double[] mean_bias;
+    private float[] mean_bias;
 
     @API(help = "RMS bias", json = true)
-    private double[] rms_bias;
+    private float[] rms_bias;
 
     @API(help = "Mean weight", json = true)
-    private double[] mean_weight;
+    private float[] mean_weight;
 
     @API(help = "RMS weight", json = true)
-    public double[] rms_weight;
+    public float[] rms_weight;
 
     @API(help = "Unstable", json = true)
     private volatile boolean unstable = false;
@@ -276,16 +270,16 @@ public class DeepLearningModel extends Model {
       weights = new float[layers+1][];
       for (int i=0; i<=layers; ++i) weights[i] = new float[units[i]*units[i+1]];
       // biases (only for hidden layers and output layer)
-      biases = new double[layers+1][];
-      for (int i=0; i<=layers; ++i) biases[i] = new double[units[i+1]];
+      biases = new float[layers+1][];
+      for (int i=0; i<=layers; ++i) biases[i] = new float[units[i+1]];
       fillHelpers();
       // for diagnostics
-      mean_rate = new double[units.length];
-      rms_rate = new double[units.length];
-      mean_bias = new double[units.length];
-      rms_bias = new double[units.length];
-      mean_weight = new double[units.length];
-      rms_weight = new double[units.length];
+      mean_rate = new float[units.length];
+      rms_rate = new float[units.length];
+      mean_bias = new float[units.length];
+      rms_bias = new float[units.length];
+      mean_weight = new float[units.length];
+      rms_weight = new float[units.length];
     }
 
     void fillHelpers() {
@@ -293,16 +287,14 @@ public class DeepLearningModel extends Model {
         if (weights_momenta != null) return;
         weights_momenta = new float[weights.length][];
         for (int i=0; i<weights_momenta.length; ++i) weights_momenta[i] = new float[units[i]*units[i+1]];
-        biases_momenta = new double[biases.length][];
-        for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new double[units[i+1]];
+        biases_momenta = new float[biases.length][];
+        for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new float[units[i+1]];
       }
       else if (adaDelta()) {
         //AdaGrad
-        if (E_dx2 != null) return;
-        E_dx2 = new float[weights.length][];
-        for (int i=0; i<E_dx2.length; ++i) E_dx2[i] = new float[units[i]*units[i+1]];
-        E_g2 = new float[weights.length][];
-        for (int i=0; i<E_g2.length; ++i) E_g2[i] = new float[units[i]*units[i+1]];
+        if (ada != null) return;
+        ada = new float[weights.length][];
+        for (int i=0; i<ada.length; ++i) ada[i] = new float[2*units[i]*units[i+1]];
       }
     }
 
@@ -327,13 +319,11 @@ public class DeepLearningModel extends Model {
             sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
                     + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
             if (i == 0) {
-              sb.append("  " + String.format("%.5g", neurons[i].params.input_dropout_ratio*100) + "%\n");
+              sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + " \n");
               continue;
             }
             else if (i < neurons.length-1) {
-              sb.append( neurons[i] instanceof Neurons.TanhDropout
-                      || neurons[i] instanceof Neurons.RectifierDropout
-                      || neurons[i] instanceof Neurons.MaxoutDropout ? "    50%   " : "     0%   ");
+              sb.append("  " + formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
             } else {
               sb.append("          ");
             }
@@ -387,13 +377,13 @@ public class DeepLearningModel extends Model {
                 || parameters.activation == DeepLearning.Activation.MaxoutWithDropout
                 ) {
 //          Arrays.fill(biases[i], 1.); //old behavior
-          Arrays.fill(biases[i], i == 0 ? 0.5 : 1.); //new behavior, might be slightly better
+          Arrays.fill(biases[i], i == 0 ? 0.5f : 1f); //new behavior, might be slightly better
         }
         else if (parameters.activation == DeepLearning.Activation.Tanh || parameters.activation == DeepLearning.Activation.TanhWithDropout) {
-          Arrays.fill(biases[i], 0.0);
+          Arrays.fill(biases[i], 0f);
         }
       }
-      Arrays.fill(biases[biases.length-1], 0.0); //output layer
+      Arrays.fill(biases[biases.length-1], 0f); //output layer
     }
     public void add(DeepLearningModelInfo other) {
       Utils.add(weights, other.weights);
@@ -405,21 +395,19 @@ public class DeepLearningModel extends Model {
       }
       if (adaDelta()) {
         assert(other.adaDelta());
-        Utils.add(E_dx2, other.E_dx2);
-        Utils.add(E_g2,  other.E_g2);
+        Utils.add(ada, other.ada);
       }
       add_processed_local(other.get_processed_local());
     }
-    protected void div(double N) {
-      for (float[] weight : weights) Utils.div(weight, (float) N);
-      for (double[] bias : biases) Utils.div(bias, N);
+    protected void div(float N) {
+      for (float[] weight : weights) Utils.div(weight, N);
+      for (float[] bias : biases) Utils.div(bias, N);
       if (has_momenta()) {
-        for (float[] weight_momenta : weights_momenta) Utils.div(weight_momenta, (float) N);
-        for (double[] bias_momenta : biases_momenta) Utils.div(bias_momenta, N);
+        for (float[] weight_momenta : weights_momenta) Utils.div(weight_momenta, N);
+        for (float[] bias_momenta : biases_momenta) Utils.div(bias_momenta, N);
       }
       if (adaDelta()) {
-        for (float[] dx2 : E_dx2) Utils.div(dx2, (float) N);
-        for (float[] g2 : E_g2) Utils.div(g2, (float) N);
+        for (float[] dx2 : ada) Utils.div(dx2, N);
       }
     }
     double uniformDist(Random rand, double min, double max) {
@@ -428,10 +416,10 @@ public class DeepLearningModel extends Model {
     void randomizeWeights() {
       for (int i=0; i<weights.length; ++i) {
         final Random rng = water.util.Utils.getDeterRNG(get_params().seed + 0xBAD5EED + i+1); //to match NeuralNet behavior
+        final double range = Math.sqrt(6. / (units[i] + units[i+1]));
         for( int j = 0; j < weights[i].length; j++ ) {
           if (parameters.initial_weight_distribution == DeepLearning.InitialWeightDistribution.UniformAdaptive) {
             // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
-            final double range = Math.sqrt(6. / (units[i] + units[i+1]));
             weights[i][j] = (float)uniformDist(rng, -range, range);
             if (i==weights.length-1 && parameters.classification) weights[i][j] *= 4; //Softmax might need an extra factor 4, since it's like a sigmoid
           }
@@ -513,7 +501,7 @@ public class DeepLearningModel extends Model {
 
     // compute stats on all nodes
     public void computeStats() {
-      double[][] rate = parameters.adaptive_rate ? new double[units.length-1][] : null;
+      float[][] rate = parameters.adaptive_rate ? new float[units.length-1][] : null;
       for( int y = 1; y < units.length; y++ ) {
         mean_rate[y] = rms_rate[y] = 0;
         mean_bias[y] = rms_bias[y] = 0;
@@ -521,13 +509,15 @@ public class DeepLearningModel extends Model {
         for(int u = 0; u < biases[y-1].length; u++) {
           mean_bias[y] += biases[y-1][u];
         }
-        if (rate != null) rate[y-1] = new double[weights[y-1].length];
+        if (rate != null) rate[y-1] = new float[weights[y-1].length];
         for(int u = 0; u < weights[y-1].length; u++) {
           mean_weight[y] += weights[y-1][u];
           if (rate != null) {
-            final double RMS_dx = Math.sqrt(E_dx2[y-1][u]+parameters.epsilon);
-            final double RMS_g = Math.sqrt(E_g2[y-1][u]+parameters.epsilon);
-            rate[y-1][u] = (RMS_dx/RMS_g); //not exactly right, RMS_dx should be from the previous time step -> but close enough for diagnostics.
+//            final float RMS_dx = (float)Math.sqrt(ada[y-1][2*u]+(float)parameters.epsilon);
+//            final float invRMS_g = (float)(1/Math.sqrt(ada[y-1][2*u+1]+(float)parameters.epsilon));
+            final float RMS_dx = Utils.approxSqrt(ada[y-1][2*u]+(float)parameters.epsilon);
+            final float invRMS_g = Utils.approxInvSqrt(ada[y-1][2*u+1]+(float)parameters.epsilon);
+            rate[y-1][u] = RMS_dx*invRMS_g; //not exactly right, RMS_dx should be from the previous time step -> but close enough for diagnostics.
             mean_rate[y] += rate[y-1][u];
           }
         }
@@ -547,9 +537,12 @@ public class DeepLearningModel extends Model {
             rms_rate[y] += drate * drate;
           }
         }
-        rms_bias[y] = Math.sqrt(rms_bias[y]/biases[y-1].length);
-        rms_weight[y] = Math.sqrt(rms_weight[y]/weights[y-1].length);
-        if (rate != null) rms_rate[y] = Math.sqrt(rms_rate[y]/rate[y-1].length);
+        rms_bias[y] = Utils.approxSqrt(rms_bias[y]/biases[y-1].length);
+        rms_weight[y] = Utils.approxSqrt(rms_weight[y]/weights[y-1].length);
+        if (rate != null) rms_rate[y] = Utils.approxSqrt(rms_rate[y]/rate[y-1].length);
+//        rms_bias[y] = (float)Math.sqrt(rms_bias[y]/biases[y-1].length);
+//        rms_weight[y] = (float)Math.sqrt(rms_weight[y]/weights[y-1].length);
+//        if (rate != null) rms_rate[y] = (float)Math.sqrt(rms_rate[y]/rate[y-1].length);
 
         unstable |= isNaN(mean_bias[y])  || isNaN(rms_bias[y])
                 || isNaN(mean_weight[y]) || isNaN(rms_weight[y]);
@@ -613,127 +606,132 @@ public class DeepLearningModel extends Model {
    * @return true if model building is ongoing
    */
   boolean doScoring(Frame train, Frame ftrain, Frame ftest, Key job_key, Job.ValidatedJob.Response2CMAdaptor vadaptor) {
-    final long now = System.currentTimeMillis();
-    epoch_counter = (float)model_info().get_processed_total()/train.numRows();
-    run_time += now-_timeLastScoreEnter;
-    _timeLastScoreEnter = now;
-    boolean keep_running = (epoch_counter < model_info().get_params().epochs);
-    final long sinceLastScore = now -_timeLastScoreStart;
-    final long sinceLastPrint = now -_timeLastPrintStart;
-    final long samples = model_info().get_processed_total();
-    if (!keep_running || sinceLastPrint > model_info().get_params().score_interval*1000) {
-      _timeLastPrintStart = now;
-      Log.info("Training time: " + PrettyPrint.msecs(run_time, true)
-              + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
-              + " Speed: " + String.format("%.3f", 1000.*samples/run_time) + " samples/sec.");
-    }
-    // this is potentially slow - only do every so often
-    if( !keep_running ||
-            (sinceLastScore > model_info().get_params().score_interval*1000 //don't score too often
-        &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
-      final boolean printme = !model_info().get_params().quiet_mode;
-      if (printme) Log.info("Scoring the model.");
-      _timeLastScoreStart = now;
-      // compute errors
-      Errors err = new Errors();
-      err.classification = isClassifier();
-      assert(err.classification == model_info().get_params().classification);
-      err.training_time_ms = run_time;
-      err.epoch_counter = epoch_counter;
-      err.validation = ftest != null;
-      err.training_samples = model_info().get_processed_total();
-      err.score_training_samples = ftrain.numRows();
-      err.train_confusion_matrix = new ConfusionMatrix();
-      final int hit_k = Math.min(nclasses(), model_info().get_params().max_hit_ratio_k);
-      if (err.classification && nclasses()==2) err.trainAUC = new AUC();
-      if (err.classification && nclasses() > 2 && hit_k > 0) {
-        err.train_hitratio = new HitRatio();
-        err.train_hitratio.set_max_k(hit_k);
+    try {
+      final long now = System.currentTimeMillis();
+      epoch_counter = (float)model_info().get_processed_total()/train.numRows();
+      run_time += now-_timeLastScoreEnter;
+      _timeLastScoreEnter = now;
+      boolean keep_running = (epoch_counter < model_info().get_params().epochs);
+      final long sinceLastScore = now -_timeLastScoreStart;
+      final long sinceLastPrint = now -_timeLastPrintStart;
+      final long samples = model_info().get_processed_total();
+      if (!keep_running || sinceLastPrint > model_info().get_params().score_interval*1000) {
+        _timeLastPrintStart = now;
+        Log.info("Training time: " + PrettyPrint.msecs(run_time, true)
+                + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
+                + " Speed: " + String.format("%.3f", 1000.*samples/run_time) + " samples/sec.");
       }
-      Log.info(model_info().toString());
-      final Frame trainPredict = score(ftrain, false);
-      final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
-      if (isClassifier()) err.train_err = trainErr;
-      else err.train_mse = trainErr;
-
-      trainPredict.delete();
-
-      if (err.validation) {
-        assert ftest != null;
-        err.score_validation_samples = ftest.numRows();
-        err.valid_confusion_matrix = new ConfusionMatrix();
-        if (err.classification && nclasses()==2) err.validAUC = new AUC();
+      // this is potentially slow - only do every so often
+      if( !keep_running ||
+              (sinceLastScore > model_info().get_params().score_interval*1000 //don't score too often
+                      &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
+        final boolean printme = !model_info().get_params().quiet_mode;
+        if (printme) Log.info("Scoring the model.");
+        _timeLastScoreStart = now;
+        // compute errors
+        Errors err = new Errors();
+        err.classification = isClassifier();
+        assert(err.classification == model_info().get_params().classification);
+        err.training_time_ms = run_time;
+        err.epoch_counter = epoch_counter;
+        err.validation = ftest != null;
+        err.training_samples = model_info().get_processed_total();
+        err.score_training_samples = ftrain.numRows();
+        err.train_confusion_matrix = new ConfusionMatrix();
+        final int hit_k = Math.min(nclasses(), model_info().get_params().max_hit_ratio_k);
+        if (err.classification && nclasses()==2) err.trainAUC = new AUC();
         if (err.classification && nclasses() > 2 && hit_k > 0) {
-          err.valid_hitratio = new HitRatio();
-          err.valid_hitratio.set_max_k(hit_k);
+          err.train_hitratio = new HitRatio();
+          err.train_hitratio.set_max_k(hit_k);
         }
-        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
-        final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
-        Vec adaptCMresp = null;
-        if (adaptCM) {
-          Vec[] v = ftest.vecs();
-          assert(ftest.find(adaptRespName) == v.length-1); //make sure to have (adapted) response in the test set
-          adaptCMresp = ftest.remove(v.length-1); //model would remove any extra columns anyway (need to keep it here for later)
+        Log.info(model_info().toString());
+        final Frame trainPredict = score(ftrain, false);
+        final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
+        if (isClassifier()) err.train_err = trainErr;
+        else err.train_mse = trainErr;
+
+        trainPredict.delete();
+
+        if (err.validation) {
+          assert ftest != null;
+          err.score_validation_samples = ftest.numRows();
+          err.valid_confusion_matrix = new ConfusionMatrix();
+          if (err.classification && nclasses()==2) err.validAUC = new AUC();
+          if (err.classification && nclasses() > 2 && hit_k > 0) {
+            err.valid_hitratio = new HitRatio();
+            err.valid_hitratio.set_max_k(hit_k);
+          }
+          final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
+          final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
+          Vec adaptCMresp = null;
+          if (adaptCM) {
+            Vec[] v = ftest.vecs();
+            assert(ftest.find(adaptRespName) == v.length-1); //make sure to have (adapted) response in the test set
+            adaptCMresp = ftest.remove(v.length-1); //model would remove any extra columns anyway (need to keep it here for later)
+          }
+
+          final Frame validPredict = score(ftest, adaptCM);
+          final Frame hitratio_validPredict = new Frame(validPredict);
+          // Adapt output response domain, in case validation domain is different from training domain
+          // Note: doesn't change predictions, just the *possible* label domain
+          if (adaptCM) {
+            assert(adaptCMresp != null);
+            assert(ftest.find(adaptRespName) == -1);
+            ftest.add(adaptRespName, adaptCMresp);
+            final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
+            validPredict.replace(0, CMadapted); //replace label
+            validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+          }
+          final double validErr = calcError(ftest, validPredict, hitratio_validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
+          if (isClassifier()) err.valid_err = validErr;
+          else err.valid_mse = validErr;
+          validPredict.delete();
         }
 
-        final Frame validPredict = score(ftest, adaptCM);
-        final Frame hitratio_validPredict = new Frame(validPredict);
-        // Adapt output response domain, in case validation domain is different from training domain
-        // Note: doesn't change predictions, just the *possible* label domain
-        if (adaptCM) {
-          assert(adaptCMresp != null);
-          assert(ftest.find(adaptRespName) == -1);
-          ftest.add(adaptRespName, adaptCMresp);
-          final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
-          validPredict.replace(0, CMadapted); //replace label
-          validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+        // keep output JSON small
+        if (errors.length > 1) {
+          if (last_scored().trainAUC != null) last_scored().trainAUC.clear();
+          if (last_scored().validAUC != null) last_scored().validAUC.clear();
         }
-        final double validErr = calcError(ftest, validPredict, hitratio_validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
-        if (isClassifier()) err.valid_err = validErr;
-        else err.valid_mse = validErr;
-        validPredict.delete();
-      }
 
-      // keep output JSON small
-      if (errors.length > 1) {
-        if (last_scored().trainAUC != null) last_scored().trainAUC.clear();
-        if (last_scored().validAUC != null) last_scored().validAUC.clear();
-      }
+        // only keep confusion matrices for the last step if there are fewer than specified number of output classes
+        if (err.train_confusion_matrix.cm != null
+                && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
+          err.train_confusion_matrix = null;
+          err.valid_confusion_matrix = null;
+        }
 
-      // only keep confusion matrices for the last step if there are fewer than specified number of output classes
-      if (err.train_confusion_matrix.cm != null
-              && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
-        err.train_confusion_matrix = null;
-        err.valid_confusion_matrix = null;
+        _timeLastScoreEnd = System.currentTimeMillis();
+        // print the freshly scored model to ASCII
+        for (String s : toString().split("\n")) Log.info(s);
+        err.scoring_time = System.currentTimeMillis() - now;
+        if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
+        // enlarge the error array by one, push latest score back
+        if (errors == null) {
+          errors = new Errors[]{err};
+        } else {
+          Errors[] err2 = new Errors[errors.length+1];
+          System.arraycopy(errors, 0, err2, 0, errors.length);
+          err2[err2.length-1] = err;
+          errors = err2;
+        }
       }
-
-      _timeLastScoreEnd = System.currentTimeMillis();
-      // print the freshly scored model to ASCII
-      for (String s : toString().split("\n")) Log.info(s);
-      err.scoring_time = System.currentTimeMillis() - now;
-      if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
-      // enlarge the error array by one, push latest score back
-      if (errors == null) {
-        errors = new Errors[]{err};
-      } else {
-        Errors[] err2 = new Errors[errors.length+1];
-        System.arraycopy(errors, 0, err2, 0, errors.length);
-        err2[err2.length-1] = err;
-        errors = err2;
+      if (model_info().unstable()) {
+        Log.err("Canceling job since the model is unstable (exponential growth observed).");
+        Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
+        keep_running = false;
+      } else if ( (isClassifier() && last_scored().train_err <= model_info().get_params().classification_stop)
+              || (!isClassifier() && last_scored().train_mse <= model_info().get_params().regression_stop) ) {
+        Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
+        keep_running = false;
       }
-    }
-    if (model_info().unstable()) {
-      Log.err("Canceling job since the model is unstable (exponential growth observed).");
-      Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
-      keep_running = false;
-    } else if ( (isClassifier() && last_scored().train_err <= model_info().get_params().classification_stop)
-        || (!isClassifier() && last_scored().train_mse <= model_info().get_params().regression_stop) ) {
-      Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
-      keep_running = false;
-    }
-    update(job_key);
+      update(job_key);
 //    System.out.println(this);
-    return keep_running;
+      return keep_running;
+    }
+    catch (Exception ex) {
+      return false;
+    }
   }
 
   @Override public String toString() {
@@ -757,14 +755,17 @@ public class DeepLearningModel extends Model {
    * @return preds, can contain NaNs
    */
   @Override public float[] score0(double[] data, float[] preds) {
+    if (model_info().unstable()) {
+      throw new UnsupportedOperationException("Trying to predict with an unstable model.");
+    }
     Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     DeepLearningTask.step(-1, neurons, model_info, false, null);
-    double[] out = neurons[neurons.length - 1]._a;
+    float[] out = neurons[neurons.length - 1]._a;
     if (isClassifier()) {
       assert(preds.length == out.length+1);
       for (int i=0; i<preds.length-1; ++i) {
-        preds[i+1] = (float)out[i];
+        preds[i+1] = out[i];
         if (Float.isNaN(preds[i+1])) throw new RuntimeException("Predicted class probability NaN!");
       }
       preds[0] = ModelUtils.getPrediction(preds, data);
@@ -773,7 +774,7 @@ public class DeepLearningModel extends Model {
       if (model_info().data_info()._normRespMul != null)
         preds[0] = (float)(out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
       else
-        preds[0] = (float)out[0];
+        preds[0] = out[0];
       if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
     }
     return preds;
@@ -918,9 +919,7 @@ public class DeepLearningModel extends Model {
         }
         else if (i < neurons.length-1) {
           sb.append("<td>");
-          sb.append( neurons[i] instanceof Neurons.TanhDropout
-                  || neurons[i] instanceof Neurons.RectifierDropout
-                  || neurons[i] instanceof Neurons.MaxoutDropout ? "50%" : "0%");
+          sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
           sb.append("</td>");
         } else {
           sb.append("<td></td>");
@@ -959,6 +958,8 @@ public class DeepLearningModel extends Model {
       }
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
+    int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
+    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + H2O.CLOUD.size() + " (" + cores + " threads)");
     final boolean isEnded = Job.isEnded(model_info().job().self());
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
@@ -973,7 +974,7 @@ public class DeepLearningModel extends Model {
     final boolean fulltrain = score_train==0 || score_train == model_info().data_info()._adaptedFrame.numRows();
     final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
 
-    final String toolarge = " Not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
+    final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + model_info().get_params().max_confusion_matrix_size + ".";
     boolean smallenough = model_info.units[model_info.units.length-1] <= model_info().get_params().max_confusion_matrix_size;
 
@@ -987,35 +988,40 @@ public class DeepLearningModel extends Model {
       }
       else {
         if (error.validation) {
-          String cmTitle = "Confusion matrix reported on validation data" + (fullvalid ? "" : " (" + score_valid + " samples)") + ":";
+          RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+          v_rs.replace("key", model_info().get_params().validation._key);
+          String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
             sb.append("</h5>");
             error.valid_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Not yet computed.</h5>");
+          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
           else sb.append(toolarge + "</h5>");
         } else {
-          String cmTitle = "Confusion matrix reported on training data" + (fulltrain ? "" : " (" + score_train + " samples)") + ":";
+          RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+          t_rs.replace("key", model_info().get_params().source._key);
+          String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.train_confusion_matrix != null && smallenough) {
             sb.append("</h5>");
             error.train_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Not yet computed.</h5>");
+          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
           else sb.append(toolarge + "</h5>");
         }
       }
+    }
+
+    // Hit ratio
+    if (error.valid_hitratio != null) {
+      error.valid_hitratio.toHTML(sb);
+    } else if (error.train_hitratio != null) {
+      error.train_hitratio.toHTML(sb);
     }
 
     // Variable importance
     if (model_info().get_params().variable_importances) {
       final float [] varimp = model_info().computeVariableImportances();
       new VarImp(varimp, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, varimp.length)).toHTML(sb);
-    }
-
-    if (error.valid_hitratio != null) {
-      error.valid_hitratio.toHTML(sb);
-    } else if (error.train_hitratio != null) {
-      error.train_hitratio.toHTML(sb);
     }
 
     DocGen.HTML.title(sb, "Scoring history");

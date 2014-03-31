@@ -662,6 +662,37 @@ h2o.deeplearning <- function(x, y, data, classification=TRUE, activation='Tanh',
   return(result)
 }
 
+# -------------------------------- Naive Bayes ----------------------------- #
+h2o.naiveBayes <- function(x, y, data, laplace = 0) {
+  args <- .verify_dataxy(data, x, y)
+  if(!is.numeric(laplace)) stop("laplace must be numeric")
+  if(laplace < 0) stop("laplace must be a non-negative number")
+  
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_BAYES, source = data@key, response = args$y, ignored_cols = args$x_ignore, laplace = laplace)
+  .h2o.__waitOnJob(data@h2o, res$job_key)
+  res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NBModelView, '_modelKey' = res$destination_key)
+  result = .h2o.__getNBResults(res2$nb_model)
+  new("H2ONBModel", key = res$destination_key, data = data, model = result)
+}
+
+.h2o.__getNBResults <- function(res) {
+  result = list()
+  result$laplace = res$laplace
+  result$levels = tail(res$'_domains',1)[[1]]
+  result$apriori = as.numeric(res$pprior)
+  names(result$apriori) = result$levels
+  
+  pred_names = res$'_names'[-length(res$'_names')]
+  pred_domains = res$'_domains'[-length(res$'_domains')]
+  result$tables = mapply(function(dat, nam, doms) { temp = t(matrix(unlist(dat), nrow = length(doms)))
+                                                    myList = list(result$levels, doms); names(myList) = c("Y", nam)
+                                                    dimnames(temp) = myList
+                                                    return(temp) }, 
+                         res$pcond, pred_names, pred_domains, SIMPLIFY = FALSE)
+  names(result$tables) = pred_names
+  return(result)
+}
+
 # ----------------------- Principal Components Analysis ----------------------------- #
 h2o.prcomp <- function(data, tol=0, ignored_cols = "", standardize=TRUE, retx=FALSE) {
   if(missing(data)) stop('Must specify data')
@@ -911,7 +942,7 @@ h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=20, sample.rate=2/3,
 # ------------------------------- Prediction ---------------------------------------- #
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('Must specify object')
-  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA', 'H2OKMeansModelVA', 'H2ORFModelVA') )) stop('object must be an H2OModel')
+  if(!inherits(object, "H2OModel") && !inherits(object, "H2OModelVA")) stop("object must be an H2O model")
   if( missing(newdata) ) newdata <- object@data
   if(!class(newdata) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('newdata must be a H2O dataset')
   if(inherits(object, "H2OModelVA") && class(newdata) != "H2OParsedDataVA")
@@ -926,10 +957,10 @@ h2o.predict <- function(object, newdata) {
     .h2o.__waitOnJob(object@data@h2o, res$response$redirect_request_args$job)
     res2 = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$destination_key)
     new("H2OParsedDataVA", h2o=object@data@h2o, key=res2$key)
-  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel")) {
+  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel", "H2ONBModel")) {
     # Set randomized prediction key
     key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
-                                       "H2ODRFModel" = "DRFPredict", "GLM2Predict")
+                                       "H2ODRFModel" = "DRFPredict", "GLM2Predict", "H2ONBModel" = "NBPredict")
     rand_pred_key = .h2o.__uniqID(key_prefix)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)

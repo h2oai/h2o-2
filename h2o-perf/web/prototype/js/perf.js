@@ -59,7 +59,7 @@ function makeGraph(json, svg) {
         width = 1200 - margin.left - margin.right,
         height = 500 -margin.top -margin.bottom;
 
-    var x = d3.scale.linear().range([0, width - 100]);
+    var x = d3.scale.linear().range([0, width - 200]);
     var y = d3.scale.linear().range([height, 0]);
     var color = d3.scale.category10();
 
@@ -123,9 +123,15 @@ function makeGraph(json, svg) {
 
     var linesGroup = svg.append("g").attr("class", "line");
     var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+    var links = []
+    var nodes = {}
 
+    var j = 0;
     for (var i in datas2) {
         linedata = datas2[i]
+        links.push({source: "source" + j, target: linedata.name, x: x(linedata.data[linedata.data.length - 1][0]), 
+                                                             y: y(linedata.data[linedata.data.length - 1][1])})
+        j++;
         svg.selectAll(".point").data(linedata.data).enter()
               .append("svg:circle")
               .attr("stroke", "black")
@@ -152,16 +158,82 @@ function makeGraph(json, svg) {
               .attr("r", function(d, i) { return 3 }); 
         linesGroup.append("path")
                   .attr("d", lineFunction(linedata.data))
-                  .attr("class", "line")
+                  .attr("class", "lines")
                   .attr("fill", "none")
                   .attr("stroke", function(d, i) {
                       return linedata.color;
                   });
-        linesGroup.append("text")
-              .attr("x", x(linedata.data[linedata.data.length - 1][0]))
-              .attr("y", y(linedata.data[linedata.data.length - 1][1]))
-              .text(linedata.name);
      };
+
+    links.forEach(function(link, i) {
+      link.source = nodes[link.source] || (nodes[link.source] = {name: '', isTarget: false, x: link.x, y: link.y});
+      link.target = nodes[link.target] || (nodes[link.target] = {name: link.target, isTarget: true, x: link.x + 50, y: link.y - 20});
+    });
+
+    var force = d3.layout.force()
+        .nodes(d3.values(nodes))
+        .links(links)
+        .size([width*2, height/2])
+        //.gravity(0.5)
+        .linkDistance(10)
+        .theta(.9)
+        .charge(-100)
+        .on("tick", tick);
+
+    for(i = 0; i < force.nodes().length; i++) {
+        if (!force.nodes()[i].isTarget) {
+          force.nodes()[i].fixed = true;
+        }
+        if(force.nodes()[i].isTarget && Math.random() < 0.5) {
+            force.nodes()[i].y += 250
+        }
+    }
+    force.start();
+
+    var link = svg.selectAll(".link")
+        .data(force.links())
+      .enter().append("line")
+        .attr("class", "link");
+
+    var node = svg.selectAll(".node")
+        .data(force.nodes())
+      .enter().append("g")
+        .attr("class", "node")
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout);
+        //.call(force.drag);
+
+    node.append("circle")
+        .attr("r", 3);
+
+    node.append("text")
+        .attr("x", 4)
+        .attr("dy", ".35em")
+        .text(function(d) { return d.name; });
+
+    function tick() {
+      link
+          .attr("x1", function(d) { return d.source.x; })
+          .attr("y1", function(d) { return d.source.y; })
+          .attr("x2", function(d) { return d.target.x; })
+          .attr("y2", function(d) { return d.target.y; });
+      node
+          .attr("transform", function(d) { 
+              return "translate(" + d.x + "," + d.y + ")"; 
+           });
+    }
+
+    function mouseover() {
+      d3.select(this).select("circle").transition()
+          .duration(750)
+          .attr("r", 16);
+    }
+    
+    function mouseout() {
+      d3.select(this).select("circle").transition()
+          .duration(750)
+          .attr("r", 2);
+    }
 
     svg.append("g")
       .attr("class", "x axis")

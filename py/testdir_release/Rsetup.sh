@@ -4,6 +4,7 @@
 CLEAN_R_STUFF=0
 REMOVE_H2O_PACKAGES=0
 INSTALL_R_PACKAGES=0
+CREATE_FILES_ONLY=1
 while getopts fp flag
 do
     case $flag in
@@ -12,14 +13,15 @@ do
             CLEAN_R_STUFF=1
             REMOVE_H2O_PACKAGES=1
             INSTALL_R_PACKAGES=1
+            CREATE_FILES_ONLY=0
             ;;
         p)
             echo "delete h2o package. Check and if necessary, install R packages (not h2o package)"
             REMOVE_H2O_PACKAGES=1
             INSTALL_R_PACKAGES=1
+            CREATE_FILES_ONLY=0
             ;;
         ?)
-            echo "Something wrong with the args to Rsetup.sh"
             exit
             ;;
     esac
@@ -65,7 +67,7 @@ fi
 # make sure it's removed, so the install installs the new (latest) one
 
 rm -f /tmp/libPaths.cmd
-if [ $REMOVE_H2O_PACKAGES -eq 1 ]
+if [[ $REMOVE_H2O_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
     cat <<!  >> /tmp/libPaths.cmd
 .libPaths()
@@ -81,7 +83,7 @@ if("h2oRClient" %in% myPackages) {
 !
 fi
 
-if [ $INSTALL_R_PACKAGES -eq 1 ]
+if [[ $INSTALL_R_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
     cat <<!  >> /tmp/libPaths.cmd
 # make the install conditional. Don't install if it's already there
@@ -126,7 +128,7 @@ usePackage("RUnit")
 fi
 #****************************************************************************************************
 # if Jenkins is running this, doing execute it..he'll execute it to logs for stdout/stderr
-if [ -f /tmp/libPaths.cmd ]
+if [ $CREATE_FILES_ONLY -eq 0 ]
 then
     R -f /tmp/libPaths.cmd
 else
@@ -137,3 +139,5 @@ else
     echo ""
     echo "Otherwise, I did nothing here, except create /tmp/libPaths.cmd"
 fi
+
+echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
