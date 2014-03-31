@@ -4,7 +4,6 @@
 
     "username": "0xdiag", 
     "key_filename": "~/.0xdiag/0xdiag_id_rsa",
-k
     "h2o_remote_buckets_root": "/home/0xdiag",
     "use_home_for_ice": true,
 
