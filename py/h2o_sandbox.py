@@ -243,7 +243,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     if errorFound:
         return errorMessage
     else:
-        print "h2o_sandbox: h2o logs seem okay"
+        ## print "h2o_sandbox: h2o logs seem okay"
         return
 
 if __name__ == "__main__":

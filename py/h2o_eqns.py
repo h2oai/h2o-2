@@ -155,16 +155,6 @@ class binary_expression(expression):
 
         return left_str + op_str + right_str
 
-max_result = pow(10, 10)
-for i in range(30):
-    expr = expression.create_random(0)
-
-    try:
-        value = float(expr.eval())
-    except:
-        value = 'indeterminate'
-
-    print expr, '=', value
 
 
 #**************************************
@@ -201,9 +191,10 @@ class Expression(object):
     # OPS = ['+', '-', '*', '/', '^', '**', '%%', '%/%', '<', '<=', '>', '>=', '==', '!=', '!', '|', '&']
     OPS = ['+', '-', '*', '/', '^', '**', '%%', '%/%', '<', '<=', '>', '>=', '==', '!=', '|', '&']
     # has problems with <= and >=
-    OPS = ['+', '-', '*', '/', '^', '<', '>', '|', '&']
+    # OPS = ['+', '-', '*', '/', '^', '<', '>', '|', '&']
+    OPS = ['+', '-', '*', '/']
     GROUP_PROB = 0.3
-    MIN_NUM, MAX_NUM = 0, 20
+    MIN_NUM, MAX_NUM = 1e10, 1e15
 
     def __init__(self, maxNumbers, _maxdepth=None, _depth=0):
         """
@@ -233,6 +224,22 @@ class Expression(object):
             return s
 
 
-for i in range(10):
+if __name__ == '__main__':
 
-    print "\na=",Expression(20, 12, 1), ";"
+    # ****************************
+    # first way
+    max_result = pow(10, 10)
+    for i in range(30):
+        expr = expression.create_random(0)
+
+        try:
+            value = float(expr.eval())
+        except:
+            value = 'indeterminate'
+
+        print expr, '=', value
+
+    # ****************************
+    # second way
+    for i in range(10):
+        print "\na=",Expression(20, 12, 1), ";"
