@@ -208,6 +208,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMGridView());
 //    registerRequest(new GLMValidationView());
     registerRequest(new LaunchJar());
+    registerRequest(new PersistModelParams());
     Request.initializeNavBar();
   }
 
@@ -304,7 +305,7 @@ public class RequestServer extends NanoHTTPD {
 
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
-    Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
     // update arguments and determine control variables
     uri = maybeTransformRequest(uri);
     // determine the request type

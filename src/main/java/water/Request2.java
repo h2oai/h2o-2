@@ -570,11 +570,20 @@ public abstract class Request2 extends Request {
   }
 
   public boolean makeJsonBox(StringBuilder sb) {
+    sb.append("<script type='text/javascript'>var my_json = ").append(toString()).append(";").append("</script>");
     sb.append("<div class='pull-right'><a href='#' onclick='$(\"#params\").toggleClass(\"hide\");'"
-            + " class='btn btn-inverse btn-mini'>Model Parameters</a></div><div class='hide' id='params'>"
-            + "<pre><code class=\"language-json\">");
-    sb.append(toString());
+            + " class='btn btn-inverse btn-mini'>View Model Parameters</a></div><div class='hide' id='params'>"
+            + "<pre><code class=\"language-json\" id='model_params_raw'>");
+    sb.append(toString()); // JSON is duplicated, but it doesn't get pretty-printed if we set it in the DOM with: $(\"#model_params_raw\").text(JSON.stringify(my_json));
     sb.append("</code></pre></div>");
     return true;
   }
+
+  public boolean makeSaveBox(StringBuilder sb) {
+      sb.append("<br /><div class='pull-right'><a href='#' ")
+                .append("onclick='$.ajax({ type: \"POST\", url: \"PersistModelParams.json\", data: JSON.stringify(my_json), contentType: \"application/json; charset=UTF-8\" }).done(function( msg ) { alert( \"Model Parameters Saved: \" + msg.destination_key ); });'")
+                .append(" class='btn btn-inverse btn-mini'>Save Model Parameters</a></div>");
+    return true;
+  }
+
 }

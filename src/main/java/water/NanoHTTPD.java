@@ -4,6 +4,7 @@ import java.net.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import com.google.gson.Gson;
 import water.fvec.UploadFileVec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -62,10 +63,10 @@ public class NanoHTTPD
    *
    * (By default, this delegates to serveFile() and allows directory listing.)
    *
-   * @param uri	Percent-decoded URI without parameters, for example "/index.cgi"
-   * @param method	"GET", "POST" etc.
-   * @param parms	Parsed, percent decoded parameters from URI and, in case of POST, data.
-   * @param header	Header entries, percent decoded
+   * @param uri Percent-decoded URI without parameters, for example "/index.cgi"
+   * @param method      "GET", "POST" etc.
+   * @param parms       Parsed, percent decoded parameters from URI and, in case of POST, data.
+   * @param header      Header entries, percent decoded
    * @return HTTP response, see class Response for details
    */
   public Response serve( String uri, String method, Properties header, Properties parms )
@@ -391,8 +392,9 @@ public class NanoHTTPD
                 else if (n == 0) {
                   // this is supposed to be blocking, so i don't know what this means.
                   // but it isn't good.
-                  assert(false);
-                  break;
+                  // It means the read was interrupted and you should keep reading.  Google EINTR. - rpeck
+                  // assert(false);
+                  // break;
                 }
                 bytesRead += n;
                 sb.append(pbuf, 0, n);
@@ -413,7 +415,15 @@ public class NanoHTTPD
               }
               postLine = postLine.trim();
             }
-            decodeParms( postLine, parms );
+
+            if (contentType.equalsIgnoreCase("application/json")) {
+                // handle a JSON body as a String
+                parms.put("jsonStr", postLine);
+            } else if (contentType.equalsIgnoreCase("application/x-www-form-urlencoded")) {
+                decodeParms( postLine, parms );
+            } else {
+                sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: unknown contentType:: " + contentType);
+            }
           }
         }
 
@@ -691,12 +701,12 @@ public class NanoHTTPD
 
         if ( data != null )
         {
-          int pending = data.available();	// This is to support partial sends, see serveFile()
+          int pending = data.available();       // This is to support partial sends, see serveFile()
           byte[] buff = new byte[theBufferSize];
           while (pending>0)
           {
             int read = data.read( buff, 0, ( (pending>theBufferSize) ?  theBufferSize : pending ));
-            if (read <= 0)	break;
+            if (read <= 0)      break;
             out.write( buff, 0, read );
             //pending -= read;
             pending = data.available();
@@ -1046,30 +1056,30 @@ public class NanoHTTPD
   static
   {
     StringTokenizer st = new StringTokenizer(
-        "css		text/css "+
-            "htm		text/html "+
-            "html		text/html "+
-            "xml		text/xml "+
-            "txt		text/plain "+
-            "asc		text/plain "+
-            "gif		image/gif "+
-            "jpg		image/jpeg "+
-            "jpeg		image/jpeg "+
-            "png		image/png "+
-            "mp3		audio/mpeg "+
-            "m3u		audio/mpeg-url " +
-            "mp4		video/mp4 " +
-            "ogv		video/ogg " +
-            "flv		video/x-flv " +
-            "mov		video/quicktime " +
-            "swf		application/x-shockwave-flash " +
-            "js			application/javascript "+
-            "pdf		application/pdf "+
-            "doc		application/msword "+
-            "ogg		application/x-ogg "+
-            "zip		application/octet-stream "+
-            "exe		application/octet-stream "+
-        "class		application/octet-stream " );
+        "css            text/css "+
+            "htm                text/html "+
+            "html               text/html "+
+            "xml                text/xml "+
+            "txt                text/plain "+
+            "asc                text/plain "+
+            "gif                image/gif "+
+            "jpg                image/jpeg "+
+            "jpeg               image/jpeg "+
+            "png                image/png "+
+            "mp3                audio/mpeg "+
+            "m3u                audio/mpeg-url " +
+            "mp4                video/mp4 " +
+            "ogv                video/ogg " +
+            "flv                video/x-flv " +
+            "mov                video/quicktime " +
+            "swf                application/x-shockwave-flash " +
+            "js                 application/javascript "+
+            "pdf                application/pdf "+
+            "doc                application/msword "+
+            "ogg                application/x-ogg "+
+            "zip                application/octet-stream "+
+            "exe                application/octet-stream "+
+        "class          application/octet-stream " );
     while ( st.hasMoreTokens())
       theMimeTypes.put( st.nextToken(), st.nextToken());
   }
