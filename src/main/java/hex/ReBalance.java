@@ -38,7 +38,7 @@ public class ReBalance extends Request2 {
 
     try {
       before.read_lock(null);
-      Frame balanced = MRUtils.shuffleAndBalance(before, seed, false);
+      Frame balanced = MRUtils.shuffleAndBalance(before, seed, false, false);
       before.unlock(null);
 
       Frame balanced2 = new Frame(Key.make(after), balanced.names(), balanced.vecs());

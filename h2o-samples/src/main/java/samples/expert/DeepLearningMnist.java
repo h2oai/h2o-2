@@ -19,7 +19,7 @@ public class DeepLearningMnist extends Job {
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
-//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.161", "192.168.1.163", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
@@ -69,9 +69,10 @@ public class DeepLearningMnist extends Job {
     p.score_interval = 30;
 
     p.fast_mode = true; //to match old NeuralNet behavior
-    p.ignore_const_cols = false; //to match old NeuralNet behavior
+    p.ignore_const_cols = true; //to match old NeuralNet behavior
     p.shuffle_training_data = false;
     p.force_load_balance = true;
+    p.replicate_training_data = true;
     p.quiet_mode = false;
     return p.execImpl();
   }

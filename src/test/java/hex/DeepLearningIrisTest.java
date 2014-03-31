@@ -163,6 +163,7 @@ public class DeepLearningIrisTest extends TestUtil {
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
                         p.force_load_balance = false; //keep just 1 chunk for reproducibility
+                        p.replicate_training_data = false; //keep just 1 chunk for reproducibility
                         DeepLearningModel mymodel = p.initModel(); //randomize weights, but don't start training yet
 
                         Neurons[] neurons = DeepLearningTask.makeNeuronsForTraining(mymodel.model_info());
