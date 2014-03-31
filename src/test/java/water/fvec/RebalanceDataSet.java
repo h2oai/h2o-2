@@ -24,15 +24,15 @@ public class RebalanceDataSet {
    * @param minRows
    * @return
    */
-  public static Frame rebalanceDataset(final Key resKey, final Frame f, final int minRows){
+  public static Frame rebalanceDataset(final Key resKey, final Frame f, final int nchunks){
     H2O.H2OCountedCompleter cmp = new H2O.H2OEmptyCompleter();
-    rebalanceDataset(cmp,resKey,f,minRows);
+    rebalanceDataset(cmp,resKey,f,nchunks);
     cmp.join();
     return UKV.get(resKey);
   }
 
 
-  public static void rebalanceDataset(H2O.H2OCountedCompleter cmp, final Key resKey, final Frame f, final int minRows){
+  public static void rebalanceDataset(H2O.H2OCountedCompleter cmp, final Key resKey, final Frame f, final int nchunks){
     final Vec [] newVecs = new Vec[f.numCols()];
     f.read_lock(null);
     H2O.submitTask(new H2O.H2OCountedCompleter(cmp) {
@@ -41,7 +41,6 @@ public class RebalanceDataSet {
         // simply create a bogus new vector (don't even put it into KV) with appropriate number of lines per chunk and then use it as a source to do multiple makeZero calls
         // to create empty vecs and than call RebalanceTask on each one of them.
         // RebalanceTask will fetch the appropriate src chunks and fetch the data from them.
-        int nchunks = (int)Math.min((f.numRows() / minRows), H2O.CLOUD.size()*H2O.NUMCPUS*4);
         int rpc = (int)(f.numRows() / nchunks);
         int rem = (int)(f.numRows() % nchunks);
         long [] espc = new long[nchunks+1];
@@ -67,6 +66,8 @@ public class RebalanceDataSet {
         f.unlock(null);
         Frame res = new Frame(resKey,f.names(),newVecs);
         res.update(null);
+        assert res.numRows() == f.numRows();
+        assert res.anyVec()._espc.length == (nchunks+1);
         res.unlock(null);
       }
     });
@@ -82,6 +83,7 @@ public class RebalanceDataSet {
       int rem = chk._len;
       while(rem > 0 && dst._len2 < chk._len){
         Chunk srcRaw = _srcVec.chunkForRow(chk._start+dst._len2);
+        if(srcRaw == null)System.out.println("missing chunk for row " + chk._start+dst._len2);
         NewChunk src = new NewChunk((srcRaw));
         src = srcRaw.inflate_impl(src);
         assert src._len2 == srcRaw._len;
