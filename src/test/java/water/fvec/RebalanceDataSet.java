@@ -21,7 +21,7 @@ public class RebalanceDataSet {
    * Rebalance the dataset
    * @param resKey
    * @param f
-   * @param minRows
+   * @param nchunks
    * @return
    */
   public static Frame rebalanceDataset(final Key resKey, final Frame f, final int nchunks){

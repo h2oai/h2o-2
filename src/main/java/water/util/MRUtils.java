@@ -71,16 +71,8 @@ public class MRUtils {
    * @param shuffle whether to shuffle the data globally
    * @return Shuffled frame
    */
-  public static Frame shuffleAndBalance(final Frame fr, long seed, final boolean local, final boolean shuffle) {
-    int cores = 0;
-    for( H2ONode node : H2O.CLOUD._memary ) {
-      if (local) cores = Math.max(cores, node._heartbeat._num_cpus);
-      else cores += node._heartbeat._num_cpus;
-    }
-    final int splits = 4*cores;
-
-    // rebalance only if the number of chunks is less than the number of cores
-    if( (fr.vecs()[0].nChunks() < cores || shuffle) && fr.numRows() > splits) {
+  public static Frame shuffleAndBalance(final Frame fr, int splits, long seed, final boolean local, final boolean shuffle) {
+    if( (fr.vecs()[0].nChunks() < splits || shuffle) && fr.numRows() > splits) {
       Vec[] vecs = fr.vecs().clone();
       Log.info("Load balancing dataset, splitting it into up to " + splits + " chunks.");
       long[] idx = null;
