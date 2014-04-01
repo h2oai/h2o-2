@@ -100,13 +100,13 @@ cp -f h2o_one_node sandbox
 
 #***********************************************************************************
 
-echo "Touch all the 0xdiag-datasets mnt points, to get autofs to mount them."
-echo "Permission rights extend to the top level now, so only 0xdiag can automount them"
-echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
-for mr in 161 162 163 
-do
-    ssh -i $HOME/.0xdiag/0xdiag_id_rsa 0xdiag@192.168.1.$mr 'cd /mnt/0xdiag-datasets'
-done
+# echo "Touch all the 0xdiag-datasets mnt points, to get autofs to mount them."
+# echo "Permission rights extend to the top level now, so only 0xdiag can automount them"
+# echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
+# for mr in 161 162 163 
+# do
+#     ssh -i $HOME/.0xdiag/0xdiag_id_rsa 0xdiag@192.168.1.$mr 'cd /mnt/0xdiag-datasets'
+# done
 
 # We now have the h2o-nodes.json, that means we started the jvms
 # Shouldn't need to wait for h2o cloud here..
