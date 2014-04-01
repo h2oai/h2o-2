@@ -17,7 +17,7 @@ myPort =  54321
 remote.h2o = h2o.init( ip = myIP, port = myPort )
 
 #Import the data file from HDFS and parse it into H2O memory
-qfile = h2o.importHDFS.FV(remote.h2o,"hdfs://akira.0xdata.loc:8020/datasets/quant_file.csv",key="qfile")
+qfile = h2o.importHDFS.FV(remote.h2o,"hdfs://abc.loc:2312/datasets/quant_file.csv",key="qfile")
 #If the data file sits on your local machine, upload and parse it into H2O memory
 #qfile=h2o.uploadFile.FV(remote.h2o,"/Users/nidhimehta/Desktop/quant_file.csv",key="qfile")
 
