@@ -64,28 +64,32 @@ public class Exec2 {
     H2O.globalKeySet( "water.ValueArray" ); // Bring VA's   from all over local
     for( Key k : H2O.localKeySet() ) {      // Convert all VAs to Frames
       Value val = H2O.raw_get(k);
-      if( val != null && val.isArray() ) {
-        Frame frAuto = ValueArray.asFrame(DKV.get(k));
+      if( val == null ) continue;
+      if( val.isArray() ) {
+        val = DKV.get(k);       // Fetch the whole thing
+        if( val == null ) continue; // Racing delete got it?
+        Frame frAuto = ValueArray.asFrame(val);
         // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.
         // The VA is lost.
         Frame fr2 = new Frame(k,frAuto._names,frAuto.vecs());
-        frAuto.remove(0,fr2.numCols());
-        frAuto.delete();
+        frAuto.remove(0,fr2.numCols()); // Remove Vecs from frAuto without deleting Vecs
+        frAuto.delete();                // Delete frAuto without deleting Vecs
         fr2.delete_and_lock(null).unlock(null);
-        DKV.get(k);             // Pull it locally again
+        val = DKV.get(k);       // Pull it locally again; val is now a Frame
       }
-    }
-    for( Key k : H2O.localKeySet() ) { // Add Frames to parser's namespace
-      if( !H2O.raw_get(k).isFrame() ) continue;
-      Frame fr = DKV.get(k).get(); // Fetch whole thing
-      String kstr = k.toString();
-      try {
-        env.push(fr,kstr);
-        global.add(new ASTId(Type.ARY,kstr,0,global.size()));
-        fr.read_lock(null);
-        locked.add(fr._key);
-      } catch( Exception e ) {
-        System.err.println("Exception while adding frame "+k+" to Exec env");
+      if( val.isFrame() ) {
+        val = DKV.get(k);       // Fetch the whole thing
+        if( val == null ) continue; // Racing delete got it?
+        Frame fr = val.get();
+        String kstr = k.toString();
+        try {
+          env.push(fr,kstr);
+          global.add(new ASTId(Type.ARY,kstr,0,global.size()));
+          fr.read_lock(null);
+          locked.add(fr._key);
+        } catch( Exception e ) {
+          System.err.println("Exception while adding frame "+k+" to Exec env");
+        }
       }
     }
 

@@ -22,45 +22,55 @@ rm -f test.*xml
 source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
-if [[ $USER == "jenkins" ]]
-then 
-    # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
-    # only do this if you're jenksin
-    echo "If we use more machines, expand this cleaning list."
-    echo "The possibilities should be relatively static over time"
-    echo "Could be problems if other threads also using that user on these machines at same time"
-    echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-    echo "Also: Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
-    echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
-    echo "okay to ls the top level here...no secret info..do all the machines we might be using"
-
-    for mr in 161 164 180
-    do
-        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
-            'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
-    done
-
-    # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
-    # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
-    # CLOUD_IP=192.168.1.161
-    python ../four_hour_cloud.py -cj pytest_config-jenkins-180.json &
-    # make sure this matches what's in the json!
-    CLOUD_IP=192.168.1.180
+if [[ $HOSTNAME == "lg1" || $HOSTNAME == "ch-63" ]]
+then
+    # in sm land. clean up!
+    # pssh -h /home/0xdiag/hosts_minus_9_22 -i 'rm -f -r /home/0xdiag/ice*'
+    python ../four_hour_cloud.py -v -cj pytest_config-jenkins-sm2.json &
+    CLOUD_IP=10.71.0.100
     CLOUD_PORT=54355
+
 else
-    if [[ $USER == "kevin" ]]
-    then
-        python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+    if [[ $USER == "jenkins" ]]
+    then 
+        # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
+        # only do this if you're jenksin
+        echo "If we use more machines, expand this cleaning list."
+        echo "The possibilities should be relatively static over time"
+        echo "Could be problems if other threads also using that user on these machines at same time"
+        echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
+        echo "Also: Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
+        echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
+        echo "okay to ls the top level here...no secret info..do all the machines we might be using"
+
+        for mr in 161 164 180
+        do
+            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
+                'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
+        done
+
+        # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
+        # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
+        # CLOUD_IP=192.168.1.161
+        python ../four_hour_cloud.py -cj pytest_config-jenkins-180.json &
         # make sure this matches what's in the json!
-        CLOUD_IP=127.0.0.1
+        CLOUD_IP=192.168.1.180
         CLOUD_PORT=54355
     else
-        python ../four_hour_cloud.py &
-        # make sure this matches what the four_hour_cloud.py does!
-        CLOUD_IP=127.0.0.1
-        CLOUD_PORT=54321
-    fi
-fi 
+        if [[ $USER == "kevin" ]]
+        then
+            python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+            # make sure this matches what's in the json!
+            CLOUD_IP=127.0.0.1
+            CLOUD_PORT=54355
+        else
+            python ../four_hour_cloud.py &
+            # make sure this matches what the four_hour_cloud.py does!
+            CLOUD_IP=127.0.0.1
+            CLOUD_PORT=54321
+        fi
+    fi 
+fi
 
 CLOUD_PID=$!
 jobs -l
@@ -181,7 +191,6 @@ then
     for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox|/results/' | grep 'runit.*\.[rR]' | sed -e 's!\.[rR]$!!');
     do
         myR $test 300
-        sleep 180
     done
 else
     myR $TESTDIR/$TEST 300

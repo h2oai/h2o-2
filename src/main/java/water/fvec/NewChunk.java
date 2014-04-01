@@ -1,6 +1,9 @@
 package water.fvec;
 
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.RandomAccess;
 
 import water.*;
 import water.parser.DParseTask;
@@ -36,6 +39,7 @@ public class NewChunk extends Chunk {
     this(C._vec, C._vec.elem2ChunkIdx(C._start));
     _len2 = C._len;
     _len = C.sparseLen();
+    _start = C._start;
   }
 
   // Pre-sized newchunks.
@@ -45,6 +49,49 @@ public class NewChunk extends Chunk {
     Arrays.fill(_ds,Double.NaN);
     _len = _len2 = len;
   }
+
+  public final class Value {
+    int _gId; // row number in dense (ie counting zeros)
+    int _lId; // local array index of this value, equal to _gId if dense
+
+    public Value(int lid, int gid){_lId = lid; _gId = gid;}
+    public final int rowId0(){return _gId;}
+    public void add2Chunk(NewChunk c){
+      if(_ds == null) c.addNum(_ls[_lId],_xs[_lId]);
+      else            c.addNum(_ds[_lId]);
+    }
+  }
+
+  public Iterator<Value> values(int fromIdx, int toIdx){
+    final int lId, gId;
+    final int to = Math.min(toIdx,_len2);
+
+    if(sparse()){
+      int x = Arrays.binarySearch(_id,0,_len,fromIdx);
+      if(x < 0) x = -x -1;
+      lId = x;
+      gId = x == _len?_len2:_id[x];
+    } else
+      lId = gId = fromIdx;
+    final Value v = new Value(lId,gId);
+    final Value next = new Value(lId,gId);
+    return new Iterator<Value>(){
+      public final boolean hasNext(){return next._gId < to;}
+      public final Value next(){
+        if(!hasNext())throw new NoSuchElementException();
+        v._gId = next._gId; v._lId = next._lId;
+        next._lId++;
+        if(sparse()) next._gId = next._lId < _len?_id[next._lId]:_len2;
+        else next._gId++;
+        return v;
+      }
+      @Override
+      public void remove() {throw new UnsupportedOperationException();}
+    };
+  }
+
+
+
 
   // Heuristic to decide the basic type of a column
   public byte type() {
@@ -120,6 +167,11 @@ public class NewChunk extends Chunk {
     assert _len <= _len2;
   }
   public final boolean sparse(){return _id != null;}
+
+  public void addZeros(int n){
+    if(!sparse()) for(int i = 0; i < n; ++i)addNum(0,0);
+    else _len2 += n;
+  }
   // Append all of 'nc' onto the current NewChunk.  Kill nc.
   public void add( NewChunk nc ) {
     assert _cidx >= 0;
