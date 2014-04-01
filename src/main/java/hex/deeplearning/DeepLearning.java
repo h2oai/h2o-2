@@ -229,6 +229,12 @@ public class DeepLearning extends Job.ValidatedJob {
             && !arg._name.equals("score_duty_cycle")
             && !arg._name.equals("quiet_mode")
             && !arg._name.equals("diagnostics")
+            && !arg._name.equals("classification_stop")
+            && !arg._name.equals("regression_stop")
+            && !arg._name.equals("max_confusion_matrix_size")
+            && !arg._name.equals("max_hit_ratio_k")
+            && !arg._name.equals("variable_importances")
+            && !arg._name.equals("force_load_balance")
             //non-trivial parameters that can affect training accuracy
             && !arg._name.equals("mini_batch")
             && !arg._name.equals("single_node_mode")
@@ -300,6 +306,7 @@ public class DeepLearning extends Job.ValidatedJob {
             || arg._name.equals("diagnostics")
             || arg._name.equals("rate_decay")
             || arg._name.equals("score_duty_cycle")
+            || arg._name.equals("variable_importances")
             || arg._name.equals("fast_mode")
             || arg._name.equals("score_validation_sampling")
             || arg._name.equals("max_after_balance_size")
@@ -425,18 +432,28 @@ public class DeepLearning extends Job.ValidatedJob {
           throw new IllegalArgumentException("classification must be the same as for the checkpointed model.");
         }
         // the following parameters might have been modified when restarting from a checkpoint
-        // trivial parameters that only affect scoring or printout
+        // 1. trivial parameters that only affect scoring or printout
         cp.model_info().get_params().expert_mode = expert_mode;
         cp.model_info().get_params().seed = seed;
         cp.model_info().get_params().epochs = previous.epoch_counter + epochs; //add previously processed epochs to total epochs
         cp.model_info().get_params().score_interval = score_interval;
-        cp.model_info().get_params().score_duty_cycle = score_duty_cycle;
-        cp.model_info().get_params().quiet_mode = quiet_mode;
-        cp.model_info().get_params().diagnostics = diagnostics;
-        // non-trivial parameters
+        if (expert_mode) {
+          cp.model_info().get_params().score_duty_cycle = score_duty_cycle;
+          cp.model_info().get_params().classification_stop = classification_stop;
+          cp.model_info().get_params().regression_stop = regression_stop;
+          cp.model_info().get_params().quiet_mode = quiet_mode;
+          cp.model_info().get_params().max_confusion_matrix_size = max_confusion_matrix_size;
+          cp.model_info().get_params().max_hit_ratio_k = max_hit_ratio_k;
+          cp.model_info().get_params().diagnostics = diagnostics;
+          cp.model_info().get_params().variable_importances = variable_importances;
+          cp.model_info().get_params().force_load_balance = force_load_balance;
+        }
+        // 2. non-trivial parameters that can affect accuracy
         cp.model_info().get_params().mini_batch = mini_batch;
-        cp.model_info().get_params().single_node_mode = single_node_mode;
-        cp.model_info().get_params().replicate_training_data = replicate_training_data;
+        if (expert_mode) {
+          cp.model_info().get_params().replicate_training_data = replicate_training_data;
+          cp.model_info().get_params().single_node_mode = single_node_mode;
+        }
         cp.update(self());
       } finally {
         cp.unlock(self());
