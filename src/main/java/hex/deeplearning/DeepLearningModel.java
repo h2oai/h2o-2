@@ -805,7 +805,7 @@ public class DeepLearningModel extends Model {
       auc.predict = fpreds;
       auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
       auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
-      auc.serve();
+      auc.invoke();
       auc.toASCII(sb);
       error = auc.err(); //using optimal threshold for F1
     }
@@ -816,7 +816,7 @@ public class DeepLearningModel extends Model {
       cm.vactual = ftest.lastVec(); //original vector or adapted response (label) if CM adaptation was done
       cm.predict = fpreds;
       cm.vpredict = fpreds.vecs()[0]; //ditto
-      cm.serve();
+      cm.invoke();
       cm.toASCII(sb);
       error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
     }

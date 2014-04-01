@@ -6,7 +6,7 @@ import water.util.RString;
 import water.util.Log;
 import water.fvec.*;
 
-public class QuantilesPage extends Job {
+public class QuantilesPage extends Func {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -68,29 +68,20 @@ public class QuantilesPage extends Job {
     return rs.toString();
   }
 
-  @Override protected Response serve() {
-    if( source_key == null ) return RequestServer._http404.serve();
-
-    if( column == null ) return RequestServer._http404.serve();
-    if ( column.isEnum() ) {
-      throw new IllegalArgumentException("Column is an enum");
-    }
-
-    // all cols by default
-    // if( cols == null ) {
-    //   cols = new int[Math.min(source_key.vecs().length,max_ncols)];
-    //   for(int i = 0; i < cols.length; i++) cols[i] = i;
-    // }
-
-    if (! ((interpolation_type == 2) || (interpolation_type == 7)) ) {
+  @Override protected void init() throws IllegalArgumentException {
+    super.init();
+    if( source_key == null ) throw new IllegalArgumentException("Source key is missing");
+    if( column == null )     throw new IllegalArgumentException("Column is missing");
+    if( column.isEnum() )    throw new IllegalArgumentException("Column is an enum");
+    if(! ((interpolation_type == 2) || (interpolation_type == 7)) ) {
       throw new IllegalArgumentException("Unsupported interpolation type. Currently only allow 2 or 7");
     }
+  }
 
+  @Override protected void execImpl() {
     Vec[] vecs = new Vec[1];
     String[] names = new String[1];
     vecs[0] = column;
-    // names[0] = source_key.names()[source_key.find(column)];
-    // Frame fr = new Frame(names, vecs);
 
     Futures fs = new Futures();
     for( Vec vec : vecs) {
@@ -219,11 +210,5 @@ public class QuantilesPage extends Job {
       // always the best result if we ran here
       result = exactResult;
     }
-    return Response.done(this);
-  }
-
-  @Override protected JobState execImpl() {
-    serve();
-    return JobState.DONE;
   }
 }

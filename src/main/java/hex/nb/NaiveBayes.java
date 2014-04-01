@@ -26,7 +26,7 @@ public class NaiveBayes extends ModelJob {
   @API(help = "Laplace smoothing parameter", filter = Default.class, lmin = 0, lmax = 100000, json = true)
   public int laplace = 0;
 
-  @Override protected JobState execImpl() {
+  @Override protected void execImpl() {
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false);
 
     // TODO: Temporarily reject data with missing entries until NA handling implemented
@@ -40,7 +40,6 @@ public class NaiveBayes extends ModelJob {
     NBModel myModel = buildModel(dinfo, tsk, laplace);
     myModel.delete_and_lock(self());
     myModel.unlock(self());
-    return JobState.DONE;
   }
 
   @Override protected void init() {

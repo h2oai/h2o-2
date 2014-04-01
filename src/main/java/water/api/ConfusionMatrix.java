@@ -1,9 +1,6 @@
 package water.api;
 
-import water.MRTask2;
-import water.Model;
-import water.Request2;
-import water.UKV;
+import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.TransfVec;
@@ -35,7 +32,7 @@ import static water.util.Utils.printConfusionMatrix;
  *
  *  @author cliffc
  */
-public class ConfusionMatrix extends Request2 {
+public class ConfusionMatrix extends Func {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -68,8 +65,7 @@ public class ConfusionMatrix extends Request2 {
 
   private boolean classification;
 
-  @Override public Response serve() {
-    Vec va = null,vp = null, avp = null;
+  @Override protected void init() throws IllegalArgumentException {
     classification = vactual.isInt() && vpredict.isInt();
     // Input handling
     if( vactual==null || vpredict==null )
@@ -81,7 +77,10 @@ public class ConfusionMatrix extends Request2 {
       throw new IllegalArgumentException("Actual vector cannot be categorical for regression scoring.");
     if (!classification && vpredict.isEnum())
       throw new IllegalArgumentException("Predicted vector cannot be categorical for regression scoring.");
+  }
 
+  @Override protected void execImpl() {
+    Vec va = null,vp = null, avp = null;
     try {
       if (classification) {
         // Create a new vectors - it is cheap since vector are only adaptation vectors
@@ -105,7 +104,7 @@ public class ConfusionMatrix extends Request2 {
       } else {
         mse = new CM(1).doAll(vactual,vpredict).mse();
       }
-      return Response.done(this);
+      return;
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
       if (vp!=null) UKV.remove(vp._key);
