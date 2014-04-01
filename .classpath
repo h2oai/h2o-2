@@ -19,6 +19,7 @@
 	<classpathentry kind="lib" path="lib/javassist.jar" sourcepath="lib/javassist-sources.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-codec-1.4.jar" sourcepath="lib/apache/commons-codec-1.4-sources.zip"/>
 	<classpathentry kind="lib" path="lib/mockito/mockito-all-1.9.5.jar" sourcepath="lib/mockito/mockito-all-1.9.5-sources.jar"/>
+	<classpathentry kind="lib" path="lib/apache/commons-math3-3.2.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/jets3t/commons-httpclient-3.1.jar" sourcepath="lib/jets3t/commons-httpclient-3.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jets3t/jets3t-0.6.1.jar"/>

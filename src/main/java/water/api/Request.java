@@ -20,7 +20,6 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
@@ -201,7 +200,7 @@ public abstract class Request extends RequestBuilders {
       Log.err(e);
       Log.die(e.getMessage());
     } finally {
-      Closeables.closeQuietly(resource);
+      Utils.close(resource);
     }
     return null;
   }
