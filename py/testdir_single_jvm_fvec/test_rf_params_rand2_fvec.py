@@ -8,7 +8,6 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     # 2 new
-    'build_tree_per_node': [None, None, 0, 1],
     'score_each_iteration': [None, None, None, 0, 1],
     'response': [None,'C54'],
     'validation': [None, 'covtype.data.hex'],

@@ -15,6 +15,7 @@ setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2ONBModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
 
@@ -189,6 +190,15 @@ setMethod("show", "H2OPCAModel", function(object) {
   model = object@model
   cat("\n\nStandard deviations:\n", model$sdev)
   cat("\n\nRotation:\n"); print(model$rotation)
+})
+
+setMethod("show", "H2ONBModel", function(object) {
+  print(object@data)
+  cat("Naive Bayes Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nA-priori probabilities:\n"); print(model$apriori)
+  cat("\n\nConditional probabilities:\n"); print(model$tables)
 })
 
 setMethod("show", "H2OGBMModel", function(object) {

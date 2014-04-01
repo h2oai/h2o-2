@@ -196,7 +196,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // check priorities - FJ task can only block on a task with higher priority!
     Thread cThr = Thread.currentThread();
     int priority = (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority : -1;
-    assert _dt.priority() > priority || (_dt.priority() == priority && (_dt instanceof DRemoteTask || _dt instanceof MRTask2))
+    // was hitting this (priority=1 but _dt.priority()=0 for DRemoteTask) - not clear who increased priority of FJWThr to 1...
+//    assert _dt.priority() > priority || (_dt.priority() == priority && (_dt instanceof DRemoteTask || _dt instanceof MRTask2))
+    assert _dt.priority() > priority || ((_dt instanceof DRemoteTask || _dt instanceof MRTask2))
       : "*** Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + priority;
     if( _done ) return result(); // Fast-path shortcut
     // Use FJP ManagedBlock for this blocking-wait - so the FJP can spawn

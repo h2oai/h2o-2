@@ -409,7 +409,7 @@ public final class ParseDataset2 extends Job {
             DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
             dp.setCompleter(this);
-            dp.dfork(new Frame(vec));
+            dp.asyncExec(new Frame(vec));
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
           }else {
@@ -603,7 +603,7 @@ public final class ParseDataset2 extends Job {
     }
     @Override public FVecDataOut close(Futures fs){
       if( _nvs == null ) return this; // Might call close twice
-      for(NewChunk nv:_nvs)nv.close(_cidx, fs);
+      for(NewChunk nv:_nvs) nv.close(_cidx, fs);
       _nvs = null;  // Free for GC
       return this;
     }

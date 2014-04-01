@@ -3,6 +3,8 @@
      "_comment" : "no password, or None,  means none will be used in ssh. Assumes keys have been exchanged. Watch out for common error: last entry in list can't have comma. Only ip is used. Others ignored, saved here for sometime use. Last ip value used if duplicates? Leading _ means not used. First ip/h2o is used for H2O json communication..vary ip list to direct that. See http://docs.python.org/library/json.html for json->python data types. Note lower case for true/false. null is None, but can just not have an entry. Defaults are in h2o_hosts.py",
 
     "username": "0xdiag", 
+    "key_filename": "~/.0xdiag/0xdiag_id_rsa",
+
     "h2o_remote_buckets_root": "/home/0xdiag",
     "use_home_for_ice": true,
 
@@ -47,7 +49,38 @@
     "10.71.0.128",
     "10.71.0.129",
     "10.71.0.130",
+    "10.71.0.131",
     "10.71.0.132",
-    "10.71.0.133"
+    "10.71.0.133",
+    "10.71.0.134",
+    "10.71.0.135",
+    "10.71.0.136",
+    "10.71.0.137",
+    "10.71.0.138",
+    "10.71.0.139",
+    "10.71.0.140",
+    "10.71.0.141",
+    "10.71.0.142",
+    "10.71.0.143",
+    "10.71.0.144",
+    "10.71.0.145",
+    "10.71.0.146",
+    "10.71.0.147",
+    "10.71.0.148",
+    "10.71.0.149",
+    "10.71.0.150",
+    "10.71.0.151",
+    "10.71.0.152",
+    "10.71.0.153",
+    "10.71.0.154",
+    "10.71.0.155",
+    "10.71.0.156",
+    "10.71.0.157",
+    "10.71.0.158",
+    "10.71.0.159",
+    "10.71.0.160",
+    "10.71.0.161",
+    "10.71.0.162",
+    "10.71.0.163"
     ]
 }

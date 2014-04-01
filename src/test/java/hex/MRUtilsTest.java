@@ -38,7 +38,7 @@ public class MRUtilsTest extends TestUtil {
       frame.add("ASP", frame.remove("PSA"));
 
       f0 = MRUtils.sampleFrameStratified(frame, frame.vecs()[frame.find("response")], new float[]{1.3f, 2.3f}, 0x1c3db4b3, true);
-      f1 = MRUtils.shuffleAndBalance(frame, 0x600ddad, true /*shuffle*/);
+      f1 = MRUtils.shuffleAndBalance(frame, 0x600ddad, true /*shuffle*/, false /*create many (global) chunks*/);
       f2 = MRUtils.sampleFrameStratified(frame, frame.vecs()[frame.find("response")], new float[]{1.3f, 2.3f}, 0x1c3db4b3, true);
       f3 = MRUtils.sampleFrame(frame, 7, 0xdecaf);
       f4 = MRUtils.sampleFrame(f2, 15, 0xdecaf);

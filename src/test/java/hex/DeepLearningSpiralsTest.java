@@ -59,8 +59,9 @@ public class DeepLearningSpiralsTest extends TestUtil {
       p.score_training_samples = 1000;
       p.score_validation_samples = 10000;
       p.shuffle_training_data = false;
-      //p.force_load_balance = true; //make it multi-threaded
-      p.force_load_balance = false; //make it single-threaded (1 chunk)
+      //p.force_load_balance = true; //multi-threaded
+      p.force_load_balance = false; //single-threaded (1 chunk)
+      p.replicate_training_data = false;
       p.destination_key = dest;
       p.adaptive_rate = true;
       p.rho = 0.99;

@@ -5,6 +5,7 @@ from jenkinsapi.jenkins import Jenkins
 # only used when we wanted to see what objects were available (below)
 from see import see
 
+DO_LAST_GOOD = False
 
 # using the env variables to force jenkinsapi to use proxy..but after to clear to avoid
 # problems in other python stuff that uses requests!
@@ -261,7 +262,7 @@ print "last_good_buildnumber", job.get_last_good_buildnumber()
 print "last_buildnumber", job.get_last_buildnumber()
 
 
-if True:
+if DO_LAST_GOOD:
     print "Using last_good_buildnumber %s for result set" % job.get_last_good_buildnumber()
     build = job.get_build(job.get_last_good_buildnumber())
 else:

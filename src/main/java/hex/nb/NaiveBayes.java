@@ -27,12 +27,12 @@ public class NaiveBayes extends ModelJob {
   public int laplace = 0;
 
   @Override protected JobState execImpl() {
-    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, true);
+    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false);
 
     // TODO: Temporarily reject data with missing entries until NA handling implemented
     Vec[] vecs = fr.vecs();
     for(int i = 0; i < vecs.length; i++) {
-      if(!vecs[i].isEnum() || vecs[i].naCnt() != 0) throw H2O.unimpl();
+      if(vecs[i].naCnt() != 0) throw H2O.unimpl();
     }
 
     DataInfo dinfo = new DataInfo(fr, 1, false, false);
@@ -43,13 +43,11 @@ public class NaiveBayes extends ModelJob {
     return JobState.DONE;
   }
 
-  /* @Override protected void init() {
+  @Override protected void init() {
     super.init();
-    Vec[] vecs = selectFrame(source).vecs();
-    for(int i = 0; i < vecs.length; i++) {
-      if(!vecs[i].isEnum()) throw H2O.unimpl();
-    }
-  } */
+    if(!response.isEnum())
+      throw new IllegalArgumentException("Response must be a categorical column");
+  }
 
   @Override protected Response redirect() {
     return NBProgressPage.redirect(this, self(), dest());
@@ -73,18 +71,32 @@ public class NaiveBayes extends ModelJob {
     double[][][] pcond = tsk._jntcnt.clone();
     String[][] domains = dinfo._adaptedFrame.domains();
 
-    // Probability of predictor x_j conditional on response y
-    for(int col = 0; col < pcond.length; col++) {
-      for(int i = 0; i < pcond[0].length; i++) {
-        for(int j = 0; j < pcond[0][0].length; j++)
-          pcond[col][i][j] = (pcond[col][i][j] + laplace)/(pprior[i] + domains[col].length*laplace);
-      }
-    }
-
     // A-priori probability of response y
     for(int i = 0; i < pprior.length; i++)
       pprior[i] = (pprior[i] + laplace)/(tsk._nobs + tsk._nres*laplace);
       // pprior[i] = pprior[i]/tsk._nobs;     // Note: R doesn't apply laplace smoothing to priors, even though this is textbook definition
+
+    // Probability of categorical predictor x_j conditional on response y
+    for(int col = 0; col < dinfo._cats; col++) {
+      for(int i = 0; i < pcond[0].length; i++) {
+        for(int j = 0; j < pcond[0][0].length; j++)
+          pcond[col][i][j] = (pcond[col][i][j] + laplace)/(tsk._rescnt[i] + domains[col].length*laplace);
+      }
+    }
+
+    // Mean and stanard deviation of numeric predictor x_j for every level of response y
+    for(int col = 0; col < dinfo._nums; col++) {
+      for(int i = 0; i < pcond[0].length; i++) {
+        int cidx = dinfo._cats + col;
+        double num = tsk._rescnt[i];
+        double pmean = pcond[cidx][i][0]/num;
+        pcond[cidx][i][0] = pmean;
+
+        // double pvar = pcond[cidx][i][1]/num - pmean*pmean;
+        double pvar = pcond[cidx][i][1]/(num - 1) - pmean*pmean*num/(num - 1);
+        pcond[cidx][i][1] = Math.sqrt(pvar);
+      }
+    }
 
     Key dataKey = input("source") == null ? null : Key.make(input("source"));
     return new NBModel(destination_key, dataKey, dinfo, tsk, pprior, pcond, laplace);
@@ -98,9 +110,10 @@ public class NaiveBayes extends ModelJob {
     final protected DataInfo _dinfo;
     final int _nres;              // Number of levels for the response y
 
-    public int _nobs;             // Number of rows where y != NA
+    public int _nobs;             // Number of rows counted in calculation
     public double[] _rescnt;      // Count of each level in the response
-    public double[][][] _jntcnt;  // For each predictor, joint count of response and predictor level
+    public double[][][] _jntcnt;  // For each categorical predictor, joint count of response and predictor levels
+                                  // For each numeric predictor, sum of entries for every response level
 
     public NBTask(Job job, DataInfo dinfo) {
       _job = job;
@@ -113,30 +126,43 @@ public class NaiveBayes extends ModelJob {
 
       _rescnt = new double[_nres];
       _jntcnt = new double[ncol-1][][];
-      for(int i = 0; i < _jntcnt.length; i++)
-        _jntcnt[i] = new double[_nres][domains[i].length];
+      for(int i = 0; i < _jntcnt.length; i++) {
+        int ncnt = domains[i] == null ? 2 : domains[i].length;
+        _jntcnt[i] = new double[_nres][ncnt];
+      }
     }
 
     @Override public void map(Chunk[] chks) {
-      int res_idx = chks.length-1;
+      int res_idx = chks.length - 1;
       Chunk res = chks[res_idx];
 
+      OUTER:
       for(int row = 0; row < chks[0]._len; row++) {
-        if(res.isNA0(row)) continue;
-        int rlevel = (int)res.at0(row);
-        _rescnt[rlevel]++;
-        _nobs++;
+        // Skip row if any entries in it are NA
+        for(int col = 0; col < chks.length; col++) {
+          if(chks[col].isNA0(row)) continue OUTER;
+        }
 
-        for(int col = 0; col < res_idx; col++) {
-          Chunk C = chks[col];
-          if(C.isNA0(row)) continue;
-          int plevel = (int)C.at0(row);
+        // Record joint counts of categorical predictors and response
+        int rlevel = (int)res.at0(row);
+        for(int col = 0; col < _dinfo._cats; col++) {
+          int plevel = (int)chks[col].at0(row);
           _jntcnt[col][rlevel][plevel]++;
         }
+
+        // Record sum for each pair of numerical predictors and response
+        for(int col = 0; col < _dinfo._nums; col++) {
+          double x = chks[col+_dinfo._cats].at0(row);
+          _jntcnt[col][rlevel][0] += x;
+          _jntcnt[col][rlevel][1] += x*x;
+        }
+        _rescnt[rlevel]++;
+        _nobs++;
       }
     }
 
     @Override public void reduce(NBTask nt) {
+      _nobs += nt._nobs;
       Utils.add(_rescnt, nt._rescnt);
       for(int col = 0; col < _jntcnt.length; col++)
         _jntcnt[col] = Utils.add(_jntcnt[col], nt._jntcnt[col]);
