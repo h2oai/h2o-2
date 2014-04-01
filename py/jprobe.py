@@ -31,44 +31,6 @@ def my_hook(type, value, traceback):
 
 sys.excepthook = my_hook
 
-
-# from jenkins.py, we can copy jobs?
-#     def jobs(self):
-#     def get_jobs(self):
-#     def get_jobs_info(self):
-#     def get_job(self, jobname):
-#     def has_job(self, jobname):
-#     def create_job(self, jobname, config_):
-#        Create a job
-#        :param jobname: name of new job, str
-#        :param config: configuration of new job, xml
-#        :return: new Job obj
-#     def copy_job(self, jobname, newjobname):
-
-#     def build_job(self, jobname, params=None):
-#        Invoke a build by job name
-#        :param jobname: name of exist job, str
-#        :param params: the job params, dict
-#        :return: none
-
-#     def delete_job(self, jobname):
-#     def rename_job(self, jobname, newjobname):
-
-
-# load config calls get_config?
-# def load_config(self):
-# def get_config(self):
-# '''Returns the config.xml from the job'''
-# def get_config_xml_url(self):
-# def update_config(self, config):
-# def create(self, job_name, config):
-#        Create a job
-#        :param jobname: name of new job, str
-#        :param config: configuration of new job, xml
-#        :return: new Job obj
-
-
-
 parse = argparse.ArgumentParser()
 group = parse.add_mutually_exclusive_group()
 group.add_argument('-e', help="job number from a list of ec2 known jobs",  type=int, action='store', default=None)
@@ -76,6 +38,7 @@ group.add_argument('-x', help="job number from a list of 164 known jobs",  type=
 group.add_argument('-s', help="job number from a list of sm known jobs",  type=int, action='store', default=None)
 group.add_argument('-j', '--jobname', help="jobname. Correct url is found",  action='store', default=None)
 parse.add_argument('-l', '--logging', help="turn on logging.DEBUG msgs to see allUrls used",  action='store_true')
+parse.add_argument('-v', '--verbose', help="dump the last N stdout from the failed jobs",  action='store_true')
 group.add_argument('-c', help="do a hardwired special job copy between jenkins",  type=int, action='store', default=None)
 args = parse.parse_args()
 
@@ -273,6 +236,14 @@ lgb = job.get_last_good_build()
 print "\nlast good build revision:"
 print lgb.get_revision()
 
+from jenkinsapi.api import get_latest_complete_build
+from jenkinsapi.api import get_latest_test_results
+
+# print "************************HELLO****************************"
+# print get_latest_complete_build(jenkins_url, jobname, username=username, password=password)
+# print "************************HELLO****************************"
+# get_latest_test_results(jenkinsurl, jobname, username=None, password=None)[source]
+
 
 # search_artifact_by_regexp.py
 if 1==0:
@@ -370,6 +341,8 @@ failName = "%s_%s_%s_%s%s" % ("fail", jobname, buildnumber, hm, ".txt")
 print "failName:", failName
 regressName = "%s_%s_%s_%s%s" % ("regress", jobname, buildnumber, hm, ".txt")
 print "regressName:", regressName
+fixedName = "%s_%s_%s_%s%s" % ("fixed", jobname, buildnumber, hm, ".txt")
+print "fixedName:", fixedName
 
 stats = {}
 
@@ -396,29 +369,31 @@ def printStuff():
     fprint (i, "v.duration", v.duration)
     fprint (i, "v.errorStackTrace", v.errorStackTrace)
     fprint (i, "v.failedSince", v.failedSince)
-    fprint (i, "v.stderr", v.stderr)
-    # lines = v.stdout.splitlines()
-    # keep newlines in the list elements
-    if not v.stdout:
-        fprint ("v.stdout is empty")
-    else:
-        fprint ("len(v.stdout):", len(v.stdout))
-        # have to fix the \n and \tat in the strings
-        stdout = v.stdout
-        # json string has the actual '\' and 'n' or 'tat' chars
-        stdout = string.replace(stdout,'\\n', '\n');
-        stdout = string.replace(stdout,'\\tat', '\t');
-        # don't need double newlines
-        stdout = string.replace(stdout,'\n\n', '\n');
-        lineList = stdout.splitlines()
-        fprint ("len(lineList):", len(lineList))
-        num = min(20, len(lineList))
-        if num!=0:
-            # print i, "Last %s lineList of stdout %s" % (num, "\n".join(lineList[-num]))
-            fprint (i, "Last %s lineList of stdout\n" % num)
-            fprint ("\n".join(lineList[-num:]))
-        else:
+
+    if args.verbose:
+        fprint (i, "v.stderr", v.stderr)
+        # lines = v.stdout.splitlines()
+        # keep newlines in the list elements
+        if not v.stdout:
             fprint ("v.stdout is empty")
+        else:
+            fprint ("len(v.stdout):", len(v.stdout))
+            # have to fix the \n and \tat in the strings
+            stdout = v.stdout
+            # json string has the actual '\' and 'n' or 'tat' chars
+            stdout = string.replace(stdout,'\\n', '\n');
+            stdout = string.replace(stdout,'\\tat', '\t');
+            # don't need double newlines
+            stdout = string.replace(stdout,'\n\n', '\n');
+            lineList = stdout.splitlines()
+            fprint ("len(lineList):", len(lineList))
+            num = min(20, len(lineList))
+            if num!=0:
+                # print i, "Last %s lineList of stdout %s" % (num, "\n".join(lineList[-num]))
+                fprint (i, "Last %s lineList of stdout\n" % num)
+                fprint ("\n".join(lineList[-num:]))
+            else:
+                fprint ("v.stdout is empty")
 
 
 #******************************************************
@@ -435,13 +410,18 @@ for i, (k, v) in enumerate(rs.items()):
     aTxt.write(e2+"\n")
 
     # only if not PASSED
-    if v.status != 'PASSED':
+    if v.status == 'FAILED':
         fTxt = open(LOG_DIR + "/" + failName, "a")
         printStuff()
         fTxt.close()
 
     if v.status == 'REGRESSION':
         fTxt = open(LOG_DIR + "/" + regressName, "a")
+        printStuff()
+        fTxt.close()
+
+    if v.status == 'FIXED':
+        fTxt = open(LOG_DIR + "/" + fixedName, "a")
         printStuff()
         fTxt.close()
 
@@ -503,3 +483,38 @@ print "Results are in", dirname
 
 print "#***********************************************"
 clear_env()
+
+# from jenkins.py, we can copy jobs?
+#     def jobs(self):
+#     def get_jobs(self):
+#     def get_jobs_info(self):
+#     def get_job(self, jobname):
+#     def has_job(self, jobname):
+#     def create_job(self, jobname, config_):
+#        Create a job
+#        :param jobname: name of new job, str
+#        :param config: configuration of new job, xml
+#        :return: new Job obj
+#     def copy_job(self, jobname, newjobname):
+
+#     def build_job(self, jobname, params=None):
+#        Invoke a build by job name
+#        :param jobname: name of exist job, str
+#        :param params: the job params, dict
+#        :return: none
+
+#     def delete_job(self, jobname):
+#     def rename_job(self, jobname, newjobname):
+
+
+# load config calls get_config?
+# def load_config(self):
+# def get_config(self):
+# '''Returns the config.xml from the job'''
+# def get_config_xml_url(self):
+# def update_config(self, config):
+# def create(self, job_name, config):
+#        Create a job
+#        :param jobname: name of new job, str
+#        :param config: configuration of new job, xml
+#        :return: new Job obj
