@@ -426,7 +426,7 @@ public class GLMModelView extends Request2 {
       glm_model = v.get();
       if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
     }
-    if( jjob == null || jjob.end_time > 0 || jjob.isCancelled() )
+    if( jjob == null || jjob.end_time > 0 || jjob.isCancelledOrCrashed() )
       return Response.done(this);
     return Response.poll(this,(int)(100*jjob.progress()),100,"_modelKey",_modelKey.toString());
   }
