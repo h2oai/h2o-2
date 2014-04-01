@@ -654,7 +654,8 @@ public class DeepLearning extends Job.ValidatedJob {
     final int chunks = 4*cores;
     if (force_load_balance && chunks < fr.numRows()) {
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data) : fr;
-      return rebalanceDataset(Key.make(fr._key.toString() + ".balanced"), fr, chunks);
+      Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
+      return rebalanceDataset(newKey, fr, chunks);
     }
     else return fr;
   }
