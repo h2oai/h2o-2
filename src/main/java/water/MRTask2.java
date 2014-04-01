@@ -221,6 +221,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     return getResult();
   }
 
+  public final void asyncExec(Vec... vecs){asyncExec(0,new Frame(vecs),false);}
   public final void asyncExec(Frame fr){asyncExec(0,fr,false);}
 
   /**

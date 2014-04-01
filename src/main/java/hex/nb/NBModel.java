@@ -1,5 +1,7 @@
 package hex.nb;
 
+import org.apache.commons.math3.distribution.NormalDistribution;
+
 import hex.FrameTask.DataInfo;
 import hex.nb.NaiveBayes.NBTask;
 import water.Key;
@@ -19,6 +21,12 @@ public class NBModel extends Model {
   @API(help = "For every predictor variable, a table giving, for each attribute level, the conditional probabilities given the target class")
   final double[][][] pcond;
 
+  @API(help = "Number of categorical predictor variables")
+  final int ncats;
+
+  @API(help = "Number of numeric predictor variables")
+  final int nnums;
+
   @API(help = "Laplace smoothing parameter", required = true, filter = Default.class, lmin = 0, lmax = 100000, json = true)
   final double laplace;
 
@@ -26,6 +34,8 @@ public class NBModel extends Model {
     super(selfKey, dataKey, dinfo._adaptedFrame);
     this.pprior = pprior;
     this.pcond = pcond;
+    this.ncats = dinfo._cats;
+    this.nnums = dinfo._nums;
     this.laplace = laplace;
   }
 
@@ -40,11 +50,19 @@ public class NBModel extends Model {
     // Compute joint probability of predictors for every response class
     for(int rlevel = 0; rlevel < pprior.length; rlevel++) {
       double num = 1;
-      for(int col = 0; col < data.length; col++) {
+      for(int col = 0; col < ncats; col++) {
         if(Double.isNaN(data[col])) continue;   // Skip predictor in joint x_1,...,x_m if NA
         int plevel = (int)data[col];
         num *= pcond[col][rlevel][plevel];    // p(x|y) = \Pi_{j = 1}^m p(x_j|y)
       }
+
+      // For numeric predictors, assume Gaussian distribution with sample mean and variance from model
+      for(int col = ncats; col < data.length; col++) {
+        if(Double.isNaN(data[col])) continue;
+        NormalDistribution nd = new NormalDistribution(pcond[col][rlevel][0], pcond[col][rlevel][1]);
+        num *= nd.density(data[col]);
+      }
+
       num *= pprior[rlevel];    // p(x,y) = p(x|y)*p(y)
       denom += num;             // p(x) = \Sum_{levels of y} p(x,y)
       preds[rlevel+1] = (float)num;
@@ -95,7 +113,8 @@ public class NBModel extends Model {
     sb.append("</table></span>");
 
     DocGen.HTML.section(sb, "Conditional Probabilities");
-    for(int col = 0; col < pcond.length; col++) {
+    // Display table of conditional probabilities for categorical predictors
+    for(int col = 0; col < ncats; col++) {
       DocGen.HTML.paragraph(sb, "Column: " + _names[col]);
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
@@ -116,6 +135,33 @@ public class NBModel extends Model {
           double e = pcond[col][r][c];
           sb.append("<td>").append(ElementBuilder.format(e)).append("</td>");
         }
+        sb.append("</tr>");
+      }
+      sb.append("</table></span>");
+    }
+
+    // Display table of statistics for numeric predictors
+    for(int col = ncats; col < ncats + nnums; col++) {
+      DocGen.HTML.paragraph(sb, "Column: " + _names[col]);
+      sb.append("<span style='display: inline-block;'>");
+      sb.append("<table class='table table-striped table-bordered'>");
+
+      // Labels for the predictor variable columns
+      sb.append("<tr>");
+      sb.append("<th>").append("Response/Predictor").append("</th>");
+      sb.append("<th>").append("Mean").append("</th>");
+      sb.append("<th>").append("Standard Deviation").append("</th>");
+      sb.append("</tr>");
+
+      // For each predictor, display mean and standard deviation within every response level
+      for(int r = 0; r < pcond[col].length; r++) {
+        sb.append("<tr>");
+        sb.append("<th>").append(resdom[r]).append("</th>");
+
+        double pmean = pcond[col][r][0];
+        double psdev = pcond[col][r][1];
+        sb.append("<td>").append(ElementBuilder.format(pmean)).append("</td>");
+        sb.append("<td>").append(ElementBuilder.format(psdev)).append("</td>");
         sb.append("</tr>");
       }
       sb.append("</table></span>");
