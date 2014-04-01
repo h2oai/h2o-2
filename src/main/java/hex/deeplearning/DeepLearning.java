@@ -166,6 +166,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true)
   public boolean replicate_training_data = true;
 
+  @API(help = "Run on a single node for fine-tuning of model parameters", filter = Default.class, json = true)
+  public boolean single_node = false;
+
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and mini_batch is close to #nodes x #rows)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
@@ -217,6 +220,7 @@ public class DeepLearning extends Job.ValidatedJob {
     super.queryArgumentValueSet(arg, inputArgs);
     // these parameters can be changed when re-starting from a checkpointed model
     if (!arg._name.equals("checkpoint")
+            //trivial parameters that only affect the scoring or the printout
             && !arg._name.equals("epochs")
             && !arg._name.equals("expert_mode")
             && !arg._name.equals("seed")
@@ -224,6 +228,9 @@ public class DeepLearning extends Job.ValidatedJob {
             && !arg._name.equals("score_duty_cycle")
             && !arg._name.equals("quiet_mode")
             && !arg._name.equals("diagnostics")
+            //non-trivial parameters that can affect training accuracy
+            && !arg._name.equals("mini_batch")
+            && !arg._name.equals("single_node")
             ) {
       if (checkpoint != null) {
         arg.disable("Taken from model checkpoint.");
@@ -306,6 +313,7 @@ public class DeepLearning extends Job.ValidatedJob {
             || arg._name.equals("max_confusion_matrix_size")
             || arg._name.equals("max_hit_ratio_k")
             || arg._name.equals("hidden_dropout_ratios")
+            || arg._name.equals("single_node")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
@@ -327,6 +335,9 @@ public class DeepLearning extends Job.ValidatedJob {
       if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
         arg.disable("Only for activation functions with dropout.", inputArgs);
       }
+    }
+    if (arg._name.equals("single_node") && H2O.CLOUD.size() == 1) {
+      arg.disable("Only for multi-node operation.");
     }
   }
 
@@ -412,6 +423,7 @@ public class DeepLearning extends Job.ValidatedJob {
           throw new IllegalArgumentException("classification must be the same as for the checkpointed model.");
         }
         // the following parameters might have been modified when restarting from a checkpoint
+        // trivial parameters that only affect scoring or printout
         cp.model_info().get_params().expert_mode = expert_mode;
         cp.model_info().get_params().seed = seed;
         cp.model_info().get_params().epochs = previous.epoch_counter + epochs; //add previously processed epochs to total epochs
@@ -419,6 +431,9 @@ public class DeepLearning extends Job.ValidatedJob {
         cp.model_info().get_params().score_duty_cycle = score_duty_cycle;
         cp.model_info().get_params().quiet_mode = quiet_mode;
         cp.model_info().get_params().diagnostics = diagnostics;
+        // non-trivial parameters
+        cp.model_info().get_params().mini_batch = mini_batch;
+        cp.model_info().get_params().single_node = single_node;
         cp.update(self());
       } finally {
         cp.unlock(self());
@@ -536,7 +551,7 @@ public class DeepLearning extends Job.ValidatedJob {
     Frame train, trainScoreFrame;
     try {
       lock_data();
-      logStart();
+      if (checkpoint == null) logStart(); //if checkpoint is given, some Job's params might be uninitialized (but the restarted model's parameters are correct)
       if (model == null) {
         model = UKV.get(dest());
       }
@@ -591,8 +606,9 @@ public class DeepLearning extends Job.ValidatedJob {
 
       //main loop
       do model.set_model_info(H2O.CLOUD.size() > 1 && replicate_training_data ?
-              new DeepLearningTask2(train, model.model_info(), sync_fraction/H2O.CLOUD.size()).invokeOnAllNodes().model_info() : //each node processes all chunks
-              new DeepLearningTask(model.model_info(), sync_fraction).doAll(train).model_info()); //each node processes local chunks only
+              (single_node ? new DeepLearningTask2(train, model.model_info(), sync_fraction).invoke(Key.make()).model_info() : //each node processes all chunks
+                      new DeepLearningTask2(train, model.model_info(), sync_fraction/H2O.CLOUD.size()).invokeOnAllNodes().model_info() //each node processes all chunks
+              ) : new DeepLearningTask(model.model_info(), sync_fraction).doAll(train).model_info()); //each node processes local chunks only
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
       Log.info("Finished training the Deep Learning model.");

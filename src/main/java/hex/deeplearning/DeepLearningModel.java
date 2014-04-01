@@ -959,7 +959,7 @@ public class DeepLearningModel extends Model {
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
-    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + H2O.CLOUD.size() + " (" + cores + " threads)");
+    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
     final boolean isEnded = Job.isEnded(model_info().job().self());
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
