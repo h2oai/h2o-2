@@ -5,75 +5,76 @@ import water.*;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.Future;
 
 /**
  * Created by tomasnykodym on 3/28/14.
  *
- * Utility to rebalance dataset so that:
- *   1) Each chunk has the same number of lines (+/-1)
- *   2) There is enough chunks for all cores in case of data parallel processing
- *      tries to get 4x as many chunks aas there are cores in the cloud.
+ * Utility to rebalance dataset so that it has requested number of chunks and each chunk has the same number of rows +/-1.
+ *
  * It *does not* guarantee even chunk-node placement.
  * (This can not currently be done in H2O, since the placement of chunks is governed only by key-hash /vector group/ for Vecs)
  */
-public class RebalanceDataSet {
-  /**
-   * Rebalance the dataset
-   * @param resKey
-   * @param f
-   * @param minRows
-   * @return
-   */
-  public static Frame rebalanceDataset(final Key resKey, final Frame f, final int nchunks){
-    H2O.H2OCountedCompleter cmp = new H2O.H2OEmptyCompleter();
-    rebalanceDataset(cmp,resKey,f,nchunks);
-    cmp.join();
-    return UKV.get(resKey);
+public class RebalanceDataSet extends H2O.H2OCountedCompleter {
+  final Frame _in;
+  final int _nchunks;
+  Key _okey;
+  Frame _out;
+  final Key _jobKey;
+
+  public RebalanceDataSet(H2O.H2OCountedCompleter cmp, Job job, Frame srcFrame, Key dstKey, int nchunks){
+    super(cmp);
+    _in = srcFrame;
+    _nchunks = nchunks;
+    _jobKey = job == null?null:job.self();
+    _okey = dstKey;
   }
 
+  public Frame getResult(){join(); return _out;}
 
-  public static void rebalanceDataset(H2O.H2OCountedCompleter cmp, final Key resKey, final Frame f, final int nchunks){
-    final Vec [] newVecs = new Vec[f.numCols()];
-    f.read_lock(null);
-    H2O.submitTask(new H2O.H2OCountedCompleter(cmp) {
-      @Override
-      public void compute2() {
-        // simply create a bogus new vector (don't even put it into KV) with appropriate number of lines per chunk and then use it as a source to do multiple makeZero calls
-        // to create empty vecs and than call RebalanceTask on each one of them.
-        // RebalanceTask will fetch the appropriate src chunks and fetch the data from them.
-        int rpc = (int)(f.numRows() / nchunks);
-        int rem = (int)(f.numRows() % nchunks);
-        long [] espc = new long[nchunks+1];
-        Arrays.fill(espc,rpc);
-        for(int i = 0; i < rem; ++i)++espc[i];
-        long sum = 0;
-        for(int i = 0; i < espc.length; ++i) {
-          long  s = espc[i];
-          espc[i] = sum;
-          sum += s;
-        }
-        assert espc[espc.length-1] == f.numRows():"unexpected number of rows, expected " + f.numRows() + ", got " + espc[espc.length-1];
-        Vec v0 = new Vec(Vec.newKey(),espc);
-
-        final Vec [] srcVecs = f.vecs();
-        addToPendingCount(newVecs.length);
-        for(int i = 0; i < newVecs.length; ++i)newVecs[i] = v0.makeZero(srcVecs[i].domain());
-        new Frame(resKey,f.names(), newVecs).delete_and_lock(null);
-        for(int i = 0; i < newVecs.length; ++i)new RebalanceTask(this,srcVecs[i]).asyncExec(newVecs[i]);
-        tryComplete();
-      }
-      @Override public void onCompletion(CountedCompleter caller){
-        f.unlock(null);
-        Frame res = new Frame(resKey,f.names(),newVecs);
-        res.update(null);
-        assert res.numRows() == f.numRows();
-        assert res.anyVec()._espc.length == (nchunks+1);
-        res.unlock(null);
-      }
-    });
+  @Override
+  public void compute2() {
+    _in.read_lock(_jobKey);
+    // simply create a bogus new vector (don't even put it into KV) with appropriate number of lines per chunk and then use it as a source to do multiple makeZero calls
+    // to create empty vecs and than call RebalanceTask on each one of them.
+    // RebalanceTask will fetch the appropriate src chunks and fetch the data from them.
+    int rpc = (int)(_in.numRows() / _nchunks);
+    int rem = (int)(_in.numRows() % _nchunks);
+    long [] espc = new long[_nchunks+1];
+    Arrays.fill(espc,rpc);
+    for(int i = 0; i < rem; ++i)++espc[i];
+    long sum = 0;
+    for(int i = 0; i < espc.length; ++i) {
+      long  s = espc[i];
+      espc[i] = sum;
+      sum += s;
+    }
+    assert espc[espc.length-1] == _in.numRows():"unexpected number of rows, expected " + _in.numRows() + ", got " + espc[espc.length-1];
+    Vec v0 = new Vec(Vec.newKey(),espc);
+    Vec [] newVecs = new Vec[_in.numCols()];
+    final Vec [] srcVecs = _in.vecs();
+    addToPendingCount(newVecs.length);
+    for(int i = 0; i < newVecs.length; ++i)newVecs[i] = v0.makeZero(srcVecs[i].domain());
+    _out = new Frame(_okey,_in.names(), newVecs);
+    _out.delete_and_lock(_jobKey);
+    for(int i = 0; i < newVecs.length; ++i)new RebalanceTask(this,srcVecs[i]).asyncExec(newVecs[i]);
+    tryComplete();
   }
 
-  private static class RebalanceTask extends MRTask2<RebalanceTask> {
+  @Override public void onCompletion(CountedCompleter caller){
+    assert _out.numRows() == _in.numRows();
+    assert _out.anyVec()._espc.length == (_nchunks+1);
+    _in.unlock(null);
+    _out.update(null);
+    _out.unlock(null);
+  }
+  @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter caller){
+    _in.unlock(_jobKey);
+    if(_out != null)_out.delete(_jobKey,0.0f);
+    return true;
+  }
+
+  public static class RebalanceTask extends MRTask2<RebalanceTask> {
     final Vec _srcVec;
     public RebalanceTask(H2O.H2OCountedCompleter cmp, Vec srcVec){super(cmp);_srcVec = srcVec;}
     @Override public void map(Chunk chk){
