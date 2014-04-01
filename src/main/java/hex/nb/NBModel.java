@@ -1,5 +1,7 @@
 package hex.nb;
 
+import org.apache.commons.math3.distribution.NormalDistribution;
+
 import hex.FrameTask.DataInfo;
 import hex.nb.NaiveBayes.NBTask;
 import water.Key;
@@ -48,11 +50,19 @@ public class NBModel extends Model {
     // Compute joint probability of predictors for every response class
     for(int rlevel = 0; rlevel < pprior.length; rlevel++) {
       double num = 1;
-      for(int col = 0; col < data.length; col++) {
+      for(int col = 0; col < ncats; col++) {
         if(Double.isNaN(data[col])) continue;   // Skip predictor in joint x_1,...,x_m if NA
         int plevel = (int)data[col];
         num *= pcond[col][rlevel][plevel];    // p(x|y) = \Pi_{j = 1}^m p(x_j|y)
       }
+
+      // For numeric predictors, assume Gaussian distribution with sample mean and variance from model
+      for(int col = ncats; col < data.length; col++) {
+        if(Double.isNaN(data[col])) continue;
+        NormalDistribution nd = new NormalDistribution(pcond[col][rlevel][0], pcond[col][rlevel][1]);
+        num *= nd.density(data[col]);
+      }
+
       num *= pprior[rlevel];    // p(x,y) = p(x|y)*p(y)
       denom += num;             // p(x) = \Sum_{levels of y} p(x,y)
       preds[rlevel+1] = (float)num;
