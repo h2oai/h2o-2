@@ -13,7 +13,7 @@
 
     "create_json": true,
 
-    "hdfs_name_node": "ch-0:8020"
+    "hdfs_name_node": "ch-0:8020",
     "hdfs_version": "cdh4",
     "use_hdfs": false,
 
