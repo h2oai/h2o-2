@@ -12,7 +12,7 @@ import java.util.Iterator;
  * Utility to rebalance dataset so that:
  *   1) Each chunk has the same number of lines (+/-1)
  *   2) There is enough chunks for all cores in case of data parallel processing
- *      tries to get 4x as many chunks aas there are cores in the cloud.
+ *      tries to get 4x as many chunks as there are cores in the cloud.
  * It *does not* guarantee even chunk-node placement.
  * (This can not currently be done in H2O, since the placement of chunks is governed only by key-hash /vector group/ for Vecs)
  */
@@ -77,7 +77,6 @@ public class RebalanceDataSet {
     final Vec _srcVec;
     public RebalanceTask(H2O.H2OCountedCompleter cmp, Vec srcVec){super(cmp);_srcVec = srcVec;}
     @Override public void map(Chunk chk){
-      final int dstrows = chk._len;
       NewChunk dst = new NewChunk(chk);
       dst._len = dst._len2 = 0;
       int rem = chk._len;
@@ -88,12 +87,10 @@ public class RebalanceDataSet {
         src = srcRaw.inflate_impl(src);
         assert src._len2 == srcRaw._len;
         int srcFrom = (int)(chk._start+dst._len2 - src._start);
-        boolean sparse = false;
         // check if the result is sparse (not exact since we only take subset of src in general)
         if((src.sparse() && dst.sparse()) || (src._len + dst._len < NewChunk.MIN_SPARSE_RATIO*(src._len2 + dst._len2))){
           src.set_sparse(src._len);
           dst.set_sparse(dst._len);
-          sparse = true;
         }
         final int srcTo = srcFrom + rem;
         int off = srcFrom-1;
