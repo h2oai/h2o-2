@@ -22,11 +22,12 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
   Frame _out;
   final Key _jobKey;
 
-  public RebalanceDataSet(H2O.H2OCountedCompleter cmp, Job job, Frame srcFrame, Key dstKey, int nchunks){
+  public RebalanceDataSet(Frame srcFrame, Key dstKey, int nchunks) { this(srcFrame, dstKey,nchunks,null,null);}
+  public RebalanceDataSet(Frame srcFrame, Key dstKey, int nchunks, H2O.H2OCountedCompleter cmp, Key jobKey){
     super(cmp);
     _in = srcFrame;
     _nchunks = nchunks;
-    _jobKey = job == null?null:job.self();
+    _jobKey = jobKey;
     _okey = dstKey;
   }
 
@@ -84,17 +85,14 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
       int rem = chk._len;
       while(rem > 0 && dst._len2 < chk._len){
         Chunk srcRaw = _srcVec.chunkForRow(chk._start+dst._len2);
-        if(srcRaw == null)System.out.println("missing chunk for row " + chk._start+dst._len2);
         NewChunk src = new NewChunk((srcRaw));
         src = srcRaw.inflate_impl(src);
         assert src._len2 == srcRaw._len;
         int srcFrom = (int)(chk._start+dst._len2 - src._start);
-        boolean sparse = false;
         // check if the result is sparse (not exact since we only take subset of src in general)
         if((src.sparse() && dst.sparse()) || (src._len + dst._len < NewChunk.MIN_SPARSE_RATIO*(src._len2 + dst._len2))){
           src.set_sparse(src._len);
           dst.set_sparse(dst._len);
-          sparse = true;
         }
         final int srcTo = srcFrom + rem;
         int off = srcFrom-1;
