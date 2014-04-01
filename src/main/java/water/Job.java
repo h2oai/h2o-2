@@ -224,6 +224,8 @@ public abstract class Job extends Func {
    */
   public boolean isRunning() { return state == JobState.RUNNING; }
 
+  public JobState getState() { return state; }
+
 
   /** Returns a list of all jobs in a system.
    * @return list of all jobs including running, done, cancelled, crashed jobs.

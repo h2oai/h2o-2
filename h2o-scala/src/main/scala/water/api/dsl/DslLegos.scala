@@ -271,9 +271,8 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def jobs() = { 
     val aj = Job.all()
     aj foreach { j:Job =>
-      val cancelled = if (j.end_time == 0) Job.isRunning(j.self()) else j.end_time == Job.CANCELLED_END_TIME
-      val progress = if (j.end_time == 0) (if (cancelled) "DONE" else j.progress()) else "DONE" 
-      println(j.description + " | " + (if (cancelled) "CANCELLED" else progress))
+      val progress = if (!j.isRunning()) j.getState().toString else j.progress()*100+" %" 
+      println(j.description + " | " + progress)
       }
   }
   // We need shutdown for sure ! :-)
