@@ -27,7 +27,7 @@ mkdir -p sandbox
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 5g for now. node count 2"
 echo "need to adjust the cdh5 cloudera config (yarn memory?)"
-HDFS_NAME_NODE=10.71.0.100
+HDFS_NAME_NODE=ch-0:8020
 
 CDH5_YARN_JOBTRACKER=ch-10:8032
 CDH5_YARN_NODES=32

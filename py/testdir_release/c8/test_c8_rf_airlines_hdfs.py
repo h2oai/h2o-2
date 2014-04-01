@@ -41,6 +41,24 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
 
         start = time.time()
+        # do an import first, because we want to get the size of the file
+        (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs)
+        succeeded = importResult['succeeded']
+        if len(succeeded) < 1:
+            raise Exception("Should have imported at least 1 key for %s" % csvPathname)
+
+        # just do a search
+        foundIt = None
+        for f in succeeded:
+            if csvPathname in f['key']:
+                foundIt = f
+		print "foundit f:", f
+                break
+
+        if not foundIt:
+            raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
+
+
         parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=timeoutSecs)
         elapsed = time.time() - start
         print "Parse of", parseResult['destination_key'], "took", elapsed, "seconds"
