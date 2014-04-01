@@ -1,6 +1,5 @@
 package hex.deeplearning;
 
-import static water.fvec.RebalanceDataSet.rebalanceDataset;
 import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
 import hex.FrameTask;
@@ -10,6 +9,7 @@ import water.api.DeepLearningProgressPage;
 import water.api.DocGen;
 import water.api.RequestServer;
 import water.fvec.Frame;
+import water.fvec.RebalanceDataSet;
 import water.util.Log;
 import water.util.MRUtils;
 import water.util.RString;
@@ -684,7 +684,11 @@ public class DeepLearning extends Job.ValidatedJob {
     if (force_load_balance && chunks < fr.numRows()) {
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data) : fr;
       Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
-      return rebalanceDataset(newKey, fr, chunks);
+      RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
+      H2O.submitTask(rb);
+      rb.join();
+      Frame rebalanced = UKV.get(newKey);
+      return rebalanced;
     }
     else return fr;
   }

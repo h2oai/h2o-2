@@ -1,6 +1,5 @@
 package hex;
 
-import static water.fvec.RebalanceDataSet.rebalanceDataset;
 import water.H2O;
 import water.Key;
 import water.Request2;
@@ -9,6 +8,7 @@ import water.api.DocGen;
 import water.api.Request;
 import water.api.RequestBuilders;
 import water.fvec.Frame;
+import water.fvec.RebalanceDataSet;
 import water.util.RString;
 
 import java.util.Random;
@@ -37,7 +37,10 @@ public class ReBalance extends Request2 {
     try {
       if (chunks > before.numRows()) throw new IllegalArgumentException("Cannot create more than " + before.numRows() + " chunks.");
       if( after==null ) after = before._key.toString() + ".balanced";
-      rebalanceDataset(Key.make(after), before, chunks);
+      final Key newKey = Key.make(after);
+      RebalanceDataSet rb = new RebalanceDataSet(before, newKey, chunks);
+      H2O.submitTask(rb);
+      rb.join();
       return RequestBuilders.Response.done(this);
     } catch( Throwable t ) {
       return RequestBuilders.Response.error(t);
