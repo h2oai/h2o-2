@@ -167,7 +167,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean replicate_training_data = true;
 
   @API(help = "Run on a single node for fine-tuning of model parameters", filter = Default.class, json = true)
-  public boolean single_node = false;
+  public boolean single_node_mode = false;
 
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and mini_batch is close to #nodes x #rows)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
@@ -205,6 +205,7 @@ public class DeepLearning extends Job.ValidatedJob {
     for (Argument arg : _arguments) {
       if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")
               || arg._name.equals("expert_mode") || arg._name.equals("adaptive_rate")
+              || arg._name.equals("replicate_training_data")
               || arg._name.equals("balance_classes") || arg._name.equals("checkpoint")) {
         arg.setRefreshOnChange();
       }
@@ -230,7 +231,8 @@ public class DeepLearning extends Job.ValidatedJob {
             && !arg._name.equals("diagnostics")
             //non-trivial parameters that can affect training accuracy
             && !arg._name.equals("mini_batch")
-            && !arg._name.equals("single_node")
+            && !arg._name.equals("single_node_mode")
+            && !arg._name.equals("replicate_training_data")
             ) {
       if (checkpoint != null) {
         arg.disable("Taken from model checkpoint.");
@@ -249,7 +251,6 @@ public class DeepLearning extends Job.ValidatedJob {
         score_training_samples = cp.score_training_samples;
         score_validation_samples = cp.score_validation_samples;
         force_load_balance = cp.force_load_balance;
-        replicate_training_data = cp.replicate_training_data;
         shuffle_training_data = cp.shuffle_training_data;
         classification = cp.classification;
         state = JobState.RUNNING;
@@ -313,7 +314,7 @@ public class DeepLearning extends Job.ValidatedJob {
             || arg._name.equals("max_confusion_matrix_size")
             || arg._name.equals("max_hit_ratio_k")
             || arg._name.equals("hidden_dropout_ratios")
-            || arg._name.equals("single_node")
+            || arg._name.equals("single_node_mode")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
@@ -336,8 +337,9 @@ public class DeepLearning extends Job.ValidatedJob {
         arg.disable("Only for activation functions with dropout.", inputArgs);
       }
     }
-    if (arg._name.equals("single_node") && H2O.CLOUD.size() == 1) {
-      arg.disable("Only for multi-node operation.");
+    if (arg._name.equals("single_node_mode") && (H2O.CLOUD.size() == 1 || !replicate_training_data)) {
+      arg.disable("Only for multi-node operation with replication.");
+      single_node_mode = false;
     }
   }
 
@@ -433,7 +435,8 @@ public class DeepLearning extends Job.ValidatedJob {
         cp.model_info().get_params().diagnostics = diagnostics;
         // non-trivial parameters
         cp.model_info().get_params().mini_batch = mini_batch;
-        cp.model_info().get_params().single_node = single_node;
+        cp.model_info().get_params().single_node_mode = single_node_mode;
+        cp.model_info().get_params().replicate_training_data = replicate_training_data;
         cp.update(self());
       } finally {
         cp.unlock(self());
@@ -589,26 +592,19 @@ public class DeepLearning extends Job.ValidatedJob {
         validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, seed+1, false /*always split up globally since scoring should be distributed*/));
         Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
-      if ((mini_batch == -1 || mini_batch == 0 || mini_batch > train.numRows()) && !replicate_training_data) {
-        Log.warn("Setting mini_batch (" + mini_batch
-                + ") to one epoch: #rows (" + (mini_batch=train.numRows()) + ").");
-      }
-      if ((mini_batch == -1 || mini_batch > H2O.CLOUD.size()*train.numRows()) && replicate_training_data) {
-        Log.warn("Setting mini_batch (" + mini_batch
-                + ") to the largest possible number: #nodes x #rows (" + (mini_batch=H2O.CLOUD.size()*train.numRows()) + ").");
-      }
-      // mini_batch determines the number of rows processed during one iteration, affects synchronization period
-      final float sync_fraction = mini_batch == 0l ? 1.0f : (float)mini_batch / train.numRows();
+
+      // Set mini_batch size (cannot be done earlier since this depends on whether stratified sampling is done)
+      model.model_info().get_params().mini_batch = computeMiniBatchSize(mini_batch, train.numRows(), replicate_training_data);
+      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), model.model_info().get_params().mini_batch, replicate_training_data, single_node_mode);
 
       if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
-
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
-      do model.set_model_info(H2O.CLOUD.size() > 1 && replicate_training_data ?
-              (single_node ? new DeepLearningTask2(train, model.model_info(), sync_fraction).invoke(Key.make()).model_info() : //each node processes all chunks
-                      new DeepLearningTask2(train, model.model_info(), sync_fraction/H2O.CLOUD.size()).invokeOnAllNodes().model_info() //each node processes all chunks
-              ) : new DeepLearningTask(model.model_info(), sync_fraction).doAll(train).model_info()); //each node processes local chunks only
+      do model.set_model_info(H2O.CLOUD.size() > 1 && replicate_training_data ? ( single_node_mode ?
+              new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invoke(Key.make()).model_info() : //replicated data + single node mode
+              new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
+              new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
       Log.info("Finished training the Deep Learning model.");
@@ -666,6 +662,37 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   private Frame reBalance(final Frame fr, long seed, boolean local) {
     return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, local, shuffle_training_data) : fr;
+  }
+
+  /**
+   * Compute the actual mini_batch size from the user-given parameter
+   * @param mini_batch user-given mini_batch size
+   * @param numRows number of training rows
+   * @param replicate_training_data whether or not the training data is replicated on each node
+   * @return The total number of training rows to be processed per iteration (summed over on all nodes)
+   */
+  private static long computeMiniBatchSize(long mini_batch, final long numRows, final boolean replicate_training_data) {
+    if (mini_batch == 0 || (!replicate_training_data && (mini_batch == -1 || mini_batch > numRows)))
+      Log.info("Setting mini_batch (" + mini_batch + ") to one epoch: #rows (" + (mini_batch=numRows) + ").");
+    else if (mini_batch == -1 || mini_batch > H2O.CLOUD.size()*numRows)
+      Log.info("Setting mini_batch (" + mini_batch + ") to the largest possible number: #nodes x #rows (" + (mini_batch=H2O.CLOUD.size()*numRows) + ").");
+
+    assert(mini_batch != 0 && mini_batch != -1);
+    return mini_batch;
+  }
+
+  /**
+   * Compute the fraction of rows that need to be used for training during one iteration
+   * @param numRows number of training rows
+   * @param mini_batch number of training rows to be processed per iteration
+   * @param replicate_training_data whether of not the training data is replicated on each node
+   * @param single_node_mode whether or not the single node mode is enabled
+   * @return fraction of rows to be used for training during one iteration
+   */
+  private static float computeRowUsageFraction(final long numRows, long mini_batch, boolean replicate_training_data, boolean single_node_mode) {
+    float rowUsageFraction = (float)mini_batch / numRows;
+    if (replicate_training_data && !single_node_mode) rowUsageFraction /= H2O.CLOUD.size();
+    return rowUsageFraction;
   }
 
 }
