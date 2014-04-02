@@ -1,5 +1,6 @@
 package hex;
 
+import static water.util.ModelUtils.getPrediction;
 import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import hex.deeplearning.DeepLearningTask;
@@ -17,8 +18,6 @@ import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
-
-import static water.util.ModelUtils.getPrediction;
 
 public class DeepLearningIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
@@ -164,6 +163,7 @@ public class DeepLearningIrisTest extends TestUtil {
                         p.shuffle_training_data = false;
                         p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
                         p.force_load_balance = false; //keep just 1 chunk for reproducibility
+                        p.replicate_training_data = false; //keep just 1 chunk for reproducibility
                         DeepLearningModel mymodel = p.initModel(); //randomize weights, but don't start training yet
 
                         Neurons[] neurons = DeepLearningTask.makeNeuronsForTraining(mymodel.model_info());
@@ -197,8 +197,8 @@ public class DeepLearningIrisTest extends TestUtil {
                         /**
                          * Tolerances (super tight -> expect the same double/float precision math inside both algos)
                          */
-                        final double abseps = 1e-13;
-                        final double releps = 1e-13;
+                        final double abseps = 1e-4;
+                        final double releps = 1e-4;
 
                         /**
                          * Compare weights and biases in hidden layer

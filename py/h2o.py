@@ -92,6 +92,8 @@ def get_ip_address():
 
     import socket
     ip = '127.0.0.1'
+    socket.setdefaulttimeout(0.5)
+    hostname = socket.gethostname()
     # this method doesn't work if vpn is enabled..it gets the vpn ip
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -102,23 +104,37 @@ def get_ip_address():
         pass
 
     if ip.startswith('127'):
-        ip = socket.getaddrinfo(socket.gethostname(), None)[0][4][0]
+        # drills down into family
+        ip = socket.getaddrinfo(hostname, None)[0][4][0]
         verboseprint("get_ip case 3:", ip)
 
     ipa = None
-    hostname = socket.gethostname()
     badHosts = ['lg1', 'ch-0', 'ch-63']
-    if hostname not in badHosts: # hack for hosts that don't support this
-        for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
-             # only take the first
-             if ipa is None and not ips.startswith("127."):
-                ipa = ips[:]
-                verboseprint("get_ip case 4:", ipa)
-                if ip != ipa:
-                    print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                    print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
+    # hack for hosts that don't support this
+    # the gethostbyname_ex can be slow. the timeout above will save us quickly
+    if hostname not in badHosts:
+        try:
+            # Translate a host name to IPv4 address format, extended interface. 
+            # Return a triple (hostname, aliaslist, ipaddrlist) 
+            # where hostname is the primary host name responding to the given ip_address, 
+            # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
+            # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
+            ghbx = socket.gethostbyname_ex(hostname)
+            for ips in ghbx[2]:
+                 # only take the first
+                 if ipa is None and not ips.startswith("127."):
+                    ipa = ips[:]
+                    verboseprint("get_ip case 4:", ipa)
+                    if ip != ipa:
+                        print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                        print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
+        except:
+            pass
+            # print "Timeout during socket.gethostbyname_ex(hostname)"
 
     verboseprint("get_ip_address:", ip)
+    # set it back to default higher timeout (None would be no timeout?)
+    socket.setdefaulttimeout(5)
     return ip
 
 def get_sandbox_name():
@@ -132,14 +148,12 @@ def unit_main():
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
-    python_cmd_ip = get_ip_address()
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     python_username = getpass.getuser()
     # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
     # so this is correct, for stuff run with 'python ..."
     print "\nTest: %s    command line: %s" % (python_test_name, python_cmd_line)
-    print "Python runs on: %s" % python_cmd_ip
 
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -166,7 +180,13 @@ disable_time_stamp = False
 debug_rest = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
-python_cmd_ip = get_ip_address()
+
+# trust what the user says!
+if ipaddr_from_cmd_line:
+    python_cmd_ip = ipaddr_from_cmd_line
+else:
+    python_cmd_ip = get_ip_address()
+
 # no command line args if run with just nose
 python_cmd_args = ""
 # don't really know what it is if nosetests did some stuff. Should be just the test with no args
@@ -409,7 +429,7 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
     # doing this list outside the loops so we can shuffle for better test variation
     hostPortList = []
     if hosts is None:
-        ip = get_ip_address()
+        ip = python_cmd_ip
         for i in range(node_count):
             hostPortList.append(ip + ":" + str(base_port + ports_per_node*i))
     else:
@@ -565,7 +585,9 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
     log("#*********************************************************************")
 
     # start up h2o to report the java version (once). output to python stdout
-    check_h2o_version()
+    # only do this for regression testing
+    if getpass.getuser()=='jenkins':
+        check_h2o_version()
 
     # keep this param in kwargs, because we pass it to the H2O node build, so state
     # is created that polling and other normal things can check, to decide to dump
@@ -1071,15 +1093,17 @@ class H2O(object):
             key = os.path.basename(f)
             ### print "putfile specifying this key:", key
 
+        fileObj = open(f, 'rb')
         resp = self.__do_json_request(
                 '2/PostFile.json' if beta_features else 'PostFile.json',
                 cmd='post',
                 timeout=timeoutSecs,
                 params={"key": key},
-                files={"file": open(f, 'rb')},
+                files={"file": fileObj},
                 extraComment = str(f))
 
         verboseprint("\nput_file response: ", dump_json(resp))
+        fileObj.close()
         return key
 
     def get_key(self, key, timeoutSecs=30):
@@ -1500,6 +1524,14 @@ class H2O(object):
             timeout=timeoutSecs)
         return a
 
+    def rebalance(self, before=None, after=None, seed=None, timeoutSecs=180):
+        a = self.__do_json_request('2/ReBalance.json',
+            timeout=timeoutSecs,
+            params={"path": before, "after": after, "seed": seed}
+        )
+        verboseprint("\n rebalance result:", dump_json(a))
+        return a
+
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
@@ -1859,6 +1891,21 @@ class H2O(object):
         verboseprint("\nquantiles result:", dump_json(a))
         return a
 
+    def naive_bayes(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source_key': None,
+            'response': None,
+            'ignored_cols': None,
+            'classification': None,
+            'laplace': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'naive_bayes', print_params)
+        a = self.__do_json_request('2/NaiveBayes.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nnaive_bayes result:", dump_json(a))
+        return a
+
+
     def gbm_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             '_modelKey': model_key,
@@ -1959,6 +2006,19 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'predict_confusion_matrix', print_params)
         a = self.__do_json_request('2/ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
+        return a
+
+    def hit_ratio(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'actual': None,
+            'vactual': 'predict',
+            'predict': None,
+            'max_k': seed,
+            'make_k': 'None',
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'auc', print_params)
+        a = self.__do_json_request('2/HitRatio.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nhit_ratio result:", dump_json(a))
         return a
 
     def generate_auc(self, timeoutSecs=300, print_params=True, **kwargs):

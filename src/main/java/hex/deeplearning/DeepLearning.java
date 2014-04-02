@@ -4,6 +4,7 @@ import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
+import water.H2O;
 import water.Job;
 import water.Key;
 import water.UKV;
@@ -43,7 +44,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
   public double epochs = 10;
 
-  @API(help = "Number of training samples after which multi-node synchronization and scoring can happen (0 for all, i.e., one epoch)", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Number of training samples between multi-node synchronization and scoring, can be > #rows if replicate_training_data is enabled (0: one epoch, -1: all available data)", filter = Default.class, lmin = -1, json = true)
   public long mini_batch = 10000l;
 
   @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
@@ -85,6 +86,9 @@ public class DeepLearning extends Job.ValidatedJob {
   /*Regularization*/
   @API(help = "Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double input_dropout_ratio = 0.0;
+
+  @API(help = "Hidden layer dropout ratios (can improve generalization), specify one value per hidden layer, defaults to 0.5", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  public double[] hidden_dropout_ratios;
 
   @API(help = "L1 regularization (can add stability and improve generalization, causes many weights to become 0)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double l1 = 0.0;
@@ -147,19 +151,22 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
 
-  @API(help = "Compute input variable importances", filter = Default.class, json = true)
+  @API(help = "Compute variable importances for input features (Gedeon method)", filter = Default.class, json = true)
   public boolean variable_importances = true;
 
   @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
   public boolean fast_mode = true;
 
-  @API(help = "Ignore constant training columns", filter = Default.class, json = true)
+  @API(help = "Ignore constant training columns (no information can be gained anyway)", filter = Default.class, json = true)
   public boolean ignore_const_cols = true;
 
-  @API(help = "Force extra load balancing to increase training speed for small datasets", filter = Default.class, json = true)
+  @API(help = "Force extra load balancing to increase training speed for small datasets (to keep all cores busy)", filter = Default.class, json = true)
   public boolean force_load_balance = true;
 
-  @API(help = "Enable shuffling of training data (beta)", filter = Default.class, json = true)
+  @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true)
+  public boolean replicate_training_data = true;
+
+  @API(help = "Enable shuffling of training data (recommended if training data is replicated and mini_batch is close to #nodes x #rows)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
   public enum ClassSamplingMethod {
@@ -234,8 +241,9 @@ public class DeepLearning extends Job.ValidatedJob {
         max_after_balance_size = cp.max_after_balance_size;
         score_training_samples = cp.score_training_samples;
         score_validation_samples = cp.score_validation_samples;
-        shuffle_training_data = cp.shuffle_training_data;
         force_load_balance = cp.force_load_balance;
+        replicate_training_data = cp.replicate_training_data;
+        shuffle_training_data = cp.shuffle_training_data;
         classification = cp.classification;
         state = JobState.RUNNING;
         return;
@@ -289,6 +297,7 @@ public class DeepLearning extends Job.ValidatedJob {
             || arg._name.equals("max_after_balance_size")
             || arg._name.equals("ignore_const_cols")
             || arg._name.equals("force_load_balance")
+            || arg._name.equals("replicate_training_data")
             || arg._name.equals("shuffle_training_data")
             || arg._name.equals("nesterov_accelerated_gradient")
             || arg._name.equals("classification_stop")
@@ -296,6 +305,7 @@ public class DeepLearning extends Job.ValidatedJob {
             || arg._name.equals("quiet_mode")
             || arg._name.equals("max_confusion_matrix_size")
             || arg._name.equals("max_hit_ratio_k")
+            || arg._name.equals("hidden_dropout_ratios")
             ) {
       if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
     }
@@ -311,6 +321,11 @@ public class DeepLearning extends Job.ValidatedJob {
         arg.disable("Only for non-adaptive learning rate.", inputArgs);
         momentum_start = 0;
         momentum_stable = 0;
+      }
+    }
+    if (arg._name.equals("hidden_dropout_ratios")) {
+      if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
+        arg.disable("Only for activation functions with dropout.", inputArgs);
       }
     }
   }
@@ -428,11 +443,26 @@ public class DeepLearning extends Job.ValidatedJob {
     if (source.numCols() <= 1)
       throw new IllegalArgumentException("Training data must have at least 2 features (incl. response).");
 
+    if (hidden == null) throw new IllegalArgumentException("There must be at least one hidden layer.");
+
     for (int i=0;i<hidden.length;++i) {
       if (hidden[i]==0)
         throw new IllegalArgumentException("Hidden layer size must be >0.");
     }
 
+    //Auto-fill defaults
+    if (hidden_dropout_ratios == null) {
+      hidden_dropout_ratios = new double[hidden.length];
+      if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
+        Arrays.fill(hidden_dropout_ratios, 0.5);
+      }
+    }
+    else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
+
+    if(replicate_training_data && (mini_batch >= source.numRows()*H2O.CLOUD.size()) && !shuffle_training_data) {
+      Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
+      shuffle_training_data = true;
+    }
     if(!classification && loss != Loss.MeanSquare) {
       Log.warn("Setting loss to MeanSquare for regression.");
       loss = Loss.MeanSquare;
@@ -516,7 +546,7 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
-      train = updateFrame(train, reBalance(train, seed));
+      train = updateFrame(train, reBalance(train, seed, replicate_training_data /*rebalance into only 4*cores per node*/));
       float[] trainSamplingFactors;
       if (classification && balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
@@ -534,21 +564,25 @@ public class DeepLearning extends Job.ValidatedJob {
         if (getValidAdaptor().needsAdaptation2CM()) {
           adaptedValid.add(getValidAdaptor().adaptedValidationResponse(_responseName), getValidAdaptor().getAdaptedValidationResponse2CM());
         }
-        validScoreFrame = updateFrame(adaptedValid, reBalance(adaptedValid, seed+1)); //rebalance for load balancing, shuffle for "fairness"
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
         if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
-          validScoreFrame = updateFrame(validScoreFrame, sampleFrameStratified(validScoreFrame, validScoreFrame.lastVec(), null,
-                  score_validation_samples > 0 ? score_validation_samples : validScoreFrame.numRows(), seed+1, false /* no oversampling */, false));
+          validScoreFrame = updateFrame(adaptedValid, sampleFrameStratified(adaptedValid, adaptedValid.lastVec(), null,
+                  score_validation_samples > 0 ? score_validation_samples : adaptedValid.numRows(), seed+1, false /* no oversampling */, false));
         } else {
-          validScoreFrame = updateFrame(validScoreFrame, sampleFrame(validScoreFrame, score_validation_samples, seed+1));
+          validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, score_validation_samples, seed+1));
         }
+        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, seed+1, false /*always split up globally since scoring should be distributed*/));
         Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
-      if (mini_batch > train.numRows()) {
+      if ((mini_batch == -1 || mini_batch == 0 || mini_batch > train.numRows()) && !replicate_training_data) {
         Log.warn("Setting mini_batch (" + mini_batch
-                + ") to the number of rows of the training data (" + (mini_batch=train.numRows()) + ").");
+                + ") to one epoch: #rows (" + (mini_batch=train.numRows()) + ").");
       }
-      // determines the number of rows processed during DeepLearningTask, affects synchronization (happens at the end of each DeepLearningTask)
+      if ((mini_batch == -1 || mini_batch > H2O.CLOUD.size()*train.numRows()) && replicate_training_data) {
+        Log.warn("Setting mini_batch (" + mini_batch
+                + ") to the largest possible number: #nodes x #rows (" + (mini_batch=H2O.CLOUD.size()*train.numRows()) + ").");
+      }
+      // mini_batch determines the number of rows processed during one iteration, affects synchronization period
       final float sync_fraction = mini_batch == 0l ? 1.0f : (float)mini_batch / train.numRows();
 
       if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
@@ -556,7 +590,9 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
-      do model.set_model_info(new DeepLearningTask(model.model_info(), sync_fraction).doAll(train).model_info());
+      do model.set_model_info(H2O.CLOUD.size() > 1 && replicate_training_data ?
+              new DeepLearningTask2(train, model.model_info(), sync_fraction/H2O.CLOUD.size()).invokeOnAllNodes().model_info() : //each node processes all chunks
+              new DeepLearningTask(model.model_info(), sync_fraction).doAll(train).model_info()); //each node processes local chunks only
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
       Log.info("Finished training the Deep Learning model.");
@@ -609,10 +645,11 @@ public class DeepLearning extends Job.ValidatedJob {
    * Rebalance a frame for load balancing
    * @param fr Input frame
    * @param seed RNG seed
-   * @return Frame that can be load-balanced (and shuffled), depending on whether force_load_balance and shuffle_training_data are set
+   * @param local whether to only create enough chunks to max out all cores on one node only
+   * @return Frame that has potentially more chunks and might be shuffled (if shuffle_training_data is set)
    */
-  private Frame reBalance(final Frame fr, long seed) {
-    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, shuffle_training_data) : fr;
+  private Frame reBalance(final Frame fr, long seed, boolean local) {
+    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, local, shuffle_training_data) : fr;
   }
 
 }

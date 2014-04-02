@@ -29,9 +29,9 @@ public class DeepLearningVsNeuralNet extends TestUtil {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
-  void compareVal(double a, double b, double abseps, double releps) {
+  void compareVal(float a, float b, float abseps, float releps) {
     // check for equality
-    if (Double.compare(a, b) == 0) {
+    if (Float.compare(a, b) == 0) {
     }
     // check for small relative error
     else if (Math.abs(a-b)/Math.max(a,b) < releps) {
@@ -50,10 +50,10 @@ public class DeepLearningVsNeuralNet extends TestUtil {
     DeepLearning.Activation[] activations = {
             DeepLearning.Activation.Maxout,
             DeepLearning.Activation.MaxoutWithDropout,
-            DeepLearning.Activation.RectifierWithDropout,
             DeepLearning.Activation.Tanh,
+            DeepLearning.Activation.TanhWithDropout,
             DeepLearning.Activation.Rectifier,
-            DeepLearning.Activation.TanhWithDropout
+            DeepLearning.Activation.RectifierWithDropout,
     };
     DeepLearning.Loss[] losses = {
             DeepLearning.Loss.MeanSquare,
@@ -87,13 +87,13 @@ public class DeepLearningVsNeuralNet extends TestUtil {
             new Random().nextFloat() * 0.5
     };
 
-    double p0 = 0.5 * new Random().nextFloat();
-    long pR = 1000 + new Random().nextInt(1000);
-    double p1 = 0.5 + 0.49 * new Random().nextFloat();
-    double l1 = 1e-5 * new Random().nextFloat();
-    double l2 = 1e-5 * new Random().nextFloat();
-    double max_w2 = new Random().nextInt(50);
-    double rate_annealing = 1e-7 + new Random().nextFloat() * 1e-6;
+    double p0 = 0; //0.5 * new Random().nextFloat();
+    long pR = 1; //1000 + new Random().nextInt(1000);
+    double p1 = 0; //0.5 + 0.49 * new Random().nextFloat();
+    double l1 = 0; //1e-5 * new Random().nextFloat();
+    double l2 = 0; //1e-5 * new Random().nextFloat();
+    double max_w2 = Double.POSITIVE_INFINITY; //new Random().nextInt(50);
+    double rate_annealing = 0; //1e-7 + new Random().nextFloat() * 1e-6;
 
 
 
@@ -126,12 +126,12 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                     for (double rate : rates) {
                       for (String file : files) {
                         for (boolean fast_mode : new boolean[]{true,false}) {
-                          double reftrainerr=0, trainerr=0;
-                          double reftesterr=0, testerr=0;
-                          double[] a = new double[hidden.length+2];
-                          double[] b = new double[hidden.length+2];
-                          double[] ba = new double[hidden.length+2];
-                          double[] bb = new double[hidden.length+2];
+                          float reftrainerr=0, trainerr=0;
+                          float reftesterr=0, testerr=0;
+                          float[] a = new float[hidden.length+2];
+                          float[] b = new float[hidden.length+2];
+                          float[] ba = new float[hidden.length+2];
+                          float[] bb = new float[hidden.length+2];
                           long numweights = 0, numbiases = 0;
                           for (int repeat = 0; repeat < num_repeats; ++repeat) {
                             long seed = new Random().nextLong();
@@ -342,16 +342,16 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                             _test.delete();
                             frame.delete();
                           }
-                          trainerr /= (double)num_repeats;
-                          reftrainerr /= (double)num_repeats;
-                          testerr /= (double)num_repeats;
-                          reftesterr /= (double)num_repeats;
+                          trainerr /= (float)num_repeats;
+                          reftrainerr /= (float)num_repeats;
+                          testerr /= (float)num_repeats;
+                          reftesterr /= (float)num_repeats;
 
                           /**
                            * Tolerances
                            */
-                          final double abseps = threaded ? 1e-2 : 1e-13;
-                          final double releps = threaded ? 1e-2 : 1e-13;
+                          final float abseps = threaded ? 1e-2f : 1e-5f;
+                          final float releps = threaded ? 1e-2f : 1e-5f;
 
                           // training set scoring
                           Log.info("NeuralNet     train error " + reftrainerr);

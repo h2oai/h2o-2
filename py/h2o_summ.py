@@ -105,14 +105,17 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
         print "numpy or scipy is not installed. Will only do sort-based checking"
         SCIPY_INSTALLED = False
 
+    if not SCIPY_INSTALLED:
+        return
+
     if use_genfromtxt:
-        print "Using numpy.genfromtxt. Better handling of null bytes"
-        target = np.genfromtxt(
-            open(csvPathname, 'r'),
-            delimiter=',',
-            skip_header=1 if skipHeader else 0,
-            dtype=None) # guess!
-        # print "shape:", target.shape()
+            print "Using numpy.genfromtxt. Better handling of null bytes"
+            target = np.genfromtxt(
+                open(csvPathname, 'r'),
+                delimiter=',',
+                skip_header=1 if skipHeader else 0,
+                dtype=None) # guess!
+            # print "shape:", target.shape()
 
     else:
         print "Using python csv reader"
@@ -129,57 +132,54 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
     if datatype=='int':
         targetFP = map(int, target)
 
-
     # http://docs.scipy.org/doc/numpy-dev/reference/generated/numpy.percentile.html
     # numpy.percentile has simple linear interpolate and midpoint
     # need numpy 1.9 for interpolation. numpy 1.8 doesn't have
     # p = np.percentile(targetFP, 50 if DO_MEDIAN else 99.9, interpolation='midpoint')
     # 1.8
-    if SCIPY_INSTALLED:
-        p = np.percentile(targetFP, quantile*100)
-        h2p.red_print("numpy.percentile", p)
+    p = np.percentile(targetFP, quantile*100)
+    h2p.red_print("numpy.percentile", p)
 
-        # per = [100 * t for t in thresholds]
-        from scipy import stats
-        s1 = stats.scoreatpercentile(targetFP, quantile*100)
-        h2p.red_print("scipy stats.scoreatpercentile", s1)
+    # per = [100 * t for t in thresholds]
+    from scipy import stats
+    s1 = stats.scoreatpercentile(targetFP, quantile*100)
+    h2p.red_print("scipy stats.scoreatpercentile", s1)
 
-        # scipy apparently doesn't have the use of means (type 2)
-        # http://en.wikipedia.org/wiki/Quantile
-        # it has median (R-8) with 1/3, 1/3
+    # scipy apparently doesn't have the use of means (type 2)
+    # http://en.wikipedia.org/wiki/Quantile
+    # it has median (R-8) with 1/3, 1/3
 
-        if 1==0:
-            # type 6
-            alphap=0
-            betap=0
+    if 1==0:
+        # type 6
+        alphap=0
+        betap=0
 
-            # type 5 okay but not perfect
-            alphap=0.5
-            betap=0.5
+        # type 5 okay but not perfect
+        alphap=0.5
+        betap=0.5
 
-            # type 8
-            alphap=1/3.0
-            betap=1/3.0
+        # type 8
+        alphap=1/3.0
+        betap=1/3.0
 
-        if interpolate=='mean':
-            # an approx? (was good when comparing to h2o type 2)
-            alphap=0.4
-            betap=0.4
+    if interpolate=='mean':
+        # an approx? (was good when comparing to h2o type 2)
+        alphap=0.4
+        betap=0.4
 
-        if interpolate=='linear':
-            # this is type 7
-            alphap=1
-            betap=1
+    if interpolate=='linear':
+        # this is type 7
+        alphap=1
+        betap=1
 
-        s2List = stats.mstats.mquantiles(targetFP, prob=quantile, alphap=alphap, betap=betap)
-        s2 = s2List[0]
-        # http://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mstats.mquantiles.html
-        # type 7 
-        # alphap=0.4, betap=0.4, 
-        # type 2 not available? (mean)
-        # alphap=1/3.0, betap=1/3.0 is approx median?
-        h2p.red_print("scipy stats.mstats.mquantiles:", s2)
-
+    s2List = stats.mstats.mquantiles(targetFP, prob=quantile, alphap=alphap, betap=betap)
+    s2 = s2List[0]
+    # http://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mstats.mquantiles.html
+    # type 7 
+    # alphap=0.4, betap=0.4, 
+    # type 2 not available? (mean)
+    # alphap=1/3.0, betap=1/3.0 is approx median?
+    h2p.red_print("scipy stats.mstats.mquantiles:", s2)
 
     # also get the median with a painful sort (h2o_summ.percentileOnSortedlist()
     # inplace sort
@@ -189,15 +189,13 @@ def quantile_comparisons(csvPathname, skipHeader=False, col=0, datatype='float',
     # b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='linear')
     # this matches h2o type 2 (mean)
     # b = h2o_summ.percentileOnSortedList(targetFP, 0.50 if DO_MEDIAN else 0.999, interpolate='mean')
+
     b = percentileOnSortedList(targetFP, quantile, interpolate='linear')
     label = str(quantile * 100) + '%'
     h2p.blue_print(label, "from sort:", b)
-
-    if SCIPY_INSTALLED:
-        h2p.blue_print(label, "from numpy:", p)
-        h2p.blue_print(label, "from scipy 1:", s1)
-        h2p.blue_print(label, "from scipy 2:", s2)
-
+    h2p.blue_print(label, "from numpy:", p)
+    h2p.blue_print(label, "from scipy 1:", s1)
+    h2p.blue_print(label, "from scipy 2:", s2)
     h2p.blue_print(label, "from h2o summary:", h2oSummary2)
     h2p.blue_print(label, "from h2o multipass:", h2oQuantilesExact)
     h2p.blue_print(label, "from h2o singlepass:", h2oQuantilesApprox)

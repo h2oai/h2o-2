@@ -547,20 +547,26 @@ public class Vec extends Iced {
   /** Fetch the missing-status the slow way. */
   public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
 
+
   /** Write element the slow way, as a long.  There is no way to write a
    *  missing value with this call.  Under rare circumstances this can throw:
    *  if the long does not fit in a double (value is larger magnitude than
    *  2^52), AND float values are stored in Vector.  In this case, there is no
-   *  common compatible data representation. */
-  public final long   set( long i, long   l) { return chunkForRow(i).set(i, l); }
+   *  common compatible data representation.
+   *
+   *  */
+  public final long   set( long i, long   l) {return chunkForRow(i).set(i,l);}
+
   /** Write element the slow way, as a double.  Double.NaN will be treated as
-   *  a set of a missing element. */
-  public final double set( long i, double d) { return chunkForRow(i).set(i, d); }
+   *  a set of a missing element.
+   *  */
+  public final double set( long i, double d) {return chunkForRow(i).set(i,d);}
   /** Write element the slow way, as a float.  Float.NaN will be treated as
-   *  a set of a missing element. */
-  public final float  set( long i, float  f) { return chunkForRow(i).set(i, f); }
+   *  a set of a missing element.
+   *  */
+  public final float  set( long i, float  f) {return chunkForRow(i).set(i,f);}
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i); }
+  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i);}
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {

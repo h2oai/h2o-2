@@ -113,7 +113,7 @@ class Basic(unittest.TestCase):
                     # FIX! apparently we can't reuse a model key after a cancel
                     kwargs['destination_key'] = 'GBMBad' + str(j)
                     # rjson error in poll_url: Job was cancelled by user!
-                    GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, ignoreH2oError=True, **kwargs)
+                    GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
                     jobids.append(GBMFirstResult['job_key'])
                     h2o.check_sandbox_for_errors()
                     

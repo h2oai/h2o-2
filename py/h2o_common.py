@@ -79,6 +79,8 @@ class SetupThreeJVM4(object):
 class ReleaseCommon(object):
     def tearDown(self):
         print "tearDown"
+        # try to download the logs...may fail again! If we have no logs, h2o_sandbox will complain about not being able to look at anything
+        h2o.nodes[0].log_download()
         h2o.check_sandbox_for_errors()
 
     @classmethod
@@ -99,9 +101,6 @@ class ReleaseCommon(object):
         print "tearDownClass"
         # DON"T
         ### h2o.tear_down_cloud()
-
-        # try to download the logs...may fail again!
-        h2o.nodes[0].log_download()
 
         # this could fail too
         if h2o.nodes[0].delete_keys_at_teardown:

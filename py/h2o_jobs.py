@@ -9,8 +9,8 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
     start = time.time()
     polls = 0
     statSum = {}
-    # just init for worst case 32 nodes?
-    lastUsedMemBytes = [1 for i in range(32)]
+    # just init for worst case 64 nodes?
+    lastUsedMemBytes = [1 for i in range(64)]
     while busy:
         polls += 1
         # get utilization and print it

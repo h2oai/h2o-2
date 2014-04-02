@@ -35,8 +35,17 @@ public class C0DChunk extends Chunk {
     _len = UDP.get4(_mem,8);
     return this;
   }
+  @Override public int sparseLen(){return _con == 0?0:_len;}
   @Override NewChunk inflate_impl(NewChunk nc) {
-    Arrays.fill(nc._ds = MemoryManager.malloc8d(_len),_con);
+    if(_con == 0) {
+      nc._id = new int[0];
+      nc._ls = new long[0];
+      nc._xs = new int[0];
+    }
+    else {
+      nc._ds = MemoryManager.malloc8d(_len);
+      Arrays.fill(nc._ds,_con);
+    }
     return nc;
   }
   // 3.3333333e33

@@ -10,36 +10,44 @@ echo "current PID: $$"
 source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
-if [[ $USER == "jenkins" ]]
-then 
-    # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
-    # only do this if you're jenksin
-    echo "If we use more machines, expand this cleaning list."
-    echo "The possibilities should be relatively static over time"
-    echo "Could be problems if other threads also using that user on these machines at same time"
-    echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-    echo "Who cleans up on the target 172-180 machines?"
-    
-    echo "Also: Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
-    echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
-    echo "okay to ls the top level here...no secret info..do all the machines we might be using"
 
-    for mr in 171 172 173 174 175 176 177 178 179 180
-    do
-        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
-            'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
-    done
-
-    python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
+if [[ $HOSTNAME == "lg1" || $HOSTNAME == "ch-63" ]]
+then
+    # in sm land. clean up!
+    pssh -h /home/0xdiag/hosts_minus_9_22 -i 'rm -f -r /home/0xdiag/ice*'
+    python ../four_hour_cloud.py -v -cj pytest_config-jenkins-sm32.json &
 else
-    if [[ $USER == "kevin" ]]
-    then
-        python ../four_hour_cloud.py -cj pytest_config-kevin.json &
-        # python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
+    if [[ $USER == "jenkins" ]]
+    then 
+        # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
+        # only do this if you're jenksin
+        echo "If we use more machines, expand this cleaning list."
+        echo "The possibilities should be relatively static over time"
+        echo "Could be problems if other threads also using that user on these machines at same time"
+        echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
+        echo "Who cleans up on the target 172-180 machines?"
+        
+        echo "Also: Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
+        echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
+        echo "okay to ls the top level here...no secret info..do all the machines we might be using"
+
+        for mr in 171 172 173 174 175 176 177 178 179 180
+        do
+            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
+                'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
+        done
+
+        python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
     else
-        python ../four_hour_cloud.py &
-    fi
-fi 
+        if [[ $USER == "kevin" ]]
+        then
+            python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+            # python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
+        else
+            python ../four_hour_cloud.py &
+        fi
+    fi 
+fi
 
 CLOUD_PID=$!
 jobs -l

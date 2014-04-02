@@ -48,7 +48,8 @@ public abstract class Atomic<T extends Atomic> extends DTask {
 
   // The (remote) workhorse:
   @Override public final void compute2( ) {
-    assert _key.home();         // Key is at Home!
+    assert _key.home() : "Atomic on wrong node; SELF="+H2O.SELF+
+      ", key_home="+_key.home_node()+", key_is_home="+_key.home()+", class="+getClass();
     Futures fs = new Futures(); // Must block on all invalidates eventually
     Value val1 = DKV.get(_key);
     while( true ) {

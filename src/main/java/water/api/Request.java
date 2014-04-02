@@ -2,6 +2,7 @@ package water.api;
 
 import hex.KMeansModel;
 import hex.glm.GLMModel;
+import hex.nb.NBModel;
 import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
@@ -19,7 +20,6 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
@@ -200,7 +200,7 @@ public abstract class Request extends RequestBuilders {
       Log.err(e);
       Log.die(e.getMessage());
     } finally {
-      Closeables.closeQuietly(resource);
+      Utils.close(resource);
     }
     return null;
   }
@@ -297,6 +297,8 @@ public abstract class Request extends RequestBuilders {
     if(c != null) {
       if( PCAModel.class.isAssignableFrom(c) )
         return TypeaheadPCAModelKeyRequest.class;
+      if( NBModel.class.isAssignableFrom(c) )
+        return TypeaheadNBModelKeyRequest.class;
       if( GLMModel.class.isAssignableFrom(c))
         return TypeaheadGLMModelKeyRequest.class;
       if( RFModel.class.isAssignableFrom(c))

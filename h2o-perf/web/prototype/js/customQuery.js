@@ -34,7 +34,13 @@ function GetUrlValue(){
 function doQuery(phpQueryPage) {
     d3.json(phpQueryPage, function(json) {
     //d3.json(phpQueryPage+'?'+GetUrlValue(), function(json) {
-        makeGraph(json, "#graph_area")
+        try {
+          makeGraph(json, "#graph_area")
+        } catch(err) {
+          var graph = document.getElementById("graph_area")
+          graph.style.height = "20px"
+          console.log("No graph...")
+        }
         makeTable(json, '#results_table')
     });
 }
