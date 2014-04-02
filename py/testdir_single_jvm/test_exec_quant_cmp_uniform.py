@@ -183,7 +183,11 @@ class Basic(unittest.TestCase):
                 else:
                     # This seemed to "work" but how do I get the key name for the list of values returned
                     # the browser result field seemed right, but nulls in the key
-                    execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, ",".join(map(str,thresholds)))
+                    if 1==0:
+                        execExpr = "r2=c(1); r2=quantile(%s[,1], c(%s));" % (hex_key, ",".join(map(str,thresholds)))
+                    else:
+                        # does this way work (column getting)j
+                        execExpr = "r2=c(1); r2=quantile(%s$C1, c(%s));" % (hex_key, ",".join(map(str,thresholds)))
                     (resultExec, result) = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                     inspect = h2o_cmd.runInspect(key='r2') 
                     numCols = inspect['numCols']
