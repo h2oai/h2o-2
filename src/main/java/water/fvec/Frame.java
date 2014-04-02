@@ -47,7 +47,16 @@ public class Frame extends Lockable<Frame> {
       if(_names[i].equals(name))return vecs[i];
     return null;
   }
-
+  /** Returns the vector by given index.
+   * <p>The call is direct equivalent to call <code>vecs()[i]</code> and
+   * it does not do any array bounds checking.</p>
+   * @param idx idx of column
+   * @return this frame idx-th vector, never returns <code>null</code>
+   */
+  public Vec vec(int idx) {
+    Vec[] vecs = vecs();
+    return vecs[idx];
+  }
   /** Returns a subframe of this frame containing only vectors with desired names.
    *
    * @param names list of vector names
