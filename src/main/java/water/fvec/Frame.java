@@ -195,8 +195,8 @@ public class Frame extends Lockable<Frame> {
     int j = 0;
     int k = 0;
     int l = 0;
-    for(int i = 0; i < _vecs.length; ++i)
-      if(j < idxs.length && i == idxs[j]){
+    for(int i = 0; i < _vecs.length; ++i) {
+      if(j < idxs.length && i == idxs[j]) {
         ++j;
         res[k++] = _vecs[i];
       } else {
@@ -205,6 +205,7 @@ public class Frame extends Lockable<Frame> {
         keys [l] = _keys [i];
         ++l;
       }
+    }
     _vecs = rem;
     _names = names;
     _keys = keys;

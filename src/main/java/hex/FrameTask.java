@@ -130,7 +130,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      * @param dropConstantCols Whether or not to drop constant columns
      * @return Frame to be used by FrameTask
      */
-    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
+    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
       Frame fr = new Frame(source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
@@ -156,7 +156,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         for(int i = 0; i < vecs.length-1; ++i) {
           // remove constant cols and cols with too many NAs
           final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
-          final boolean droptoomanyNAs = vecs[i].naCnt() > vecs[i].length()*0.2;
+          final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*0.2;
           if(dropconstant) {
             constantCols.add(i);
           } else if (droptoomanyNAs) {
@@ -169,9 +169,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         // Report what is dropped
         String msg = "";
         if (constantCols.size() > 0) msg += "Dropping constant column(s): ";
-        for (int i : constantCols) msg += source._names[i] + " ";
+        for (int i : constantCols) msg += fr._names[i] + " ";
         if (NACols.size() > 0) msg += "Dropping column(s) with too many missing values: ";
-        for (int i : NACols) msg += source._names[i] + " (" + String.format("%.2f", vecs[i].naCnt() * 100. / vecs[i].length()) + "%) ";
+        for (int i : NACols) msg += fr._names[i] + " (" + String.format("%.2f", vecs[i].naCnt() * 100. / vecs[i].length()) + "%) ";
         for (String s : msg.split("\n")) Log.info(s);
       }
       if(!constantOrNAs.isEmpty()){
@@ -181,6 +181,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         fr.remove(cols);
       }
       return fr;
+    }
+    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
+      return prepareFrame(source, response, ignored_cols, toEnum, dropConstantCols, false);
     }
     public DataInfo(Frame fr, int nResponses, boolean standardize) {
       this(fr, nResponses, standardize, false);
