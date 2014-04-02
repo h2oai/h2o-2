@@ -100,22 +100,27 @@
         font-size: 11px;
         text-transform: uppercase;
         border-bottom: 1px solid #ddd;
-        text-align:center;
       }
       #tabs span {
         display: inline-block;
-        color: #fff;
         height: 25px;
         line-height: 25px;
         padding: 0px 15px;
-        background-color: #999;
         cursor: pointer;
+        color: #aaa;
       }
       #tabs span:hover {
-        color: #fbe93a;
+        color: #4388db;
+        text-decoration: underline;
       }
       #tabs span.active {
-        background-color: #1c1c1c;
+        color: #000;
+        background: #fff;
+        position: relative;
+        top: 1px;
+        border: 1px solid #ddd;
+        border-bottom-width: 0;
+        text-decoration: none;
       }
       #content p {
         margin-bottom: 15px;
@@ -131,6 +136,27 @@
       }
       #content p.terminal em {
         color: green;
+      }
+      #downloads {
+        text-align: center;
+        margin-top: 20px;
+      }
+      a.download-button {
+        display: inline-block;
+        background-color: #1c1c1c;
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAzUlEQVRIx+2TzQ2DMAyFMwCHHjoop4oVmKJj9MQkjFAxQX6oLWFkpYlxcNUTlp6UQ9578SdwTpgY45hSWiXhHXd2IGBcDwbvmAropVvY1/lnBYIuRBeifyLy3t/B0DNNCkQT92CGWAK//uMIS+2MXtUmvEQrdXheokDUHt6C63Q4KxkELIMpPC/JsLSFg+kJeqHgU+ukTUrh6CE/ZpUKZgoIIdxqm9Rejh6Gby4WEIJagTToYQjLBcTZUiBuwFZcQO9GLWpE1tFsYNVe8AFIAT1j7+DRSgAAAABJRU5ErkJggg==);
+        background-repeat: no-repeat;
+        background-position: 15px center;
+        color: #fff;
+        text-transform: uppercase;
+        font-size: 11px;
+        height: 50px;
+        line-height: 50px;
+        padding: 0 20px 0 45px;
+      }
+      a.download-button:hover {
+        text-decoration: none;
+        background-color: #555;
       }
       #documentation {
         border-top: 1px solid #ddd;
@@ -203,13 +229,16 @@
       </div>
       <div id="content">
         <div id="tabs">
-          <span id="quickstart-zip-tab" class="active">Download and Run</span>
+          &nbsp; <span id="quickstart-zip-tab" class="active">Download and Run</span>
           <span id="quickstart-r-tab">Install in R</span>
         </div>
         <div id="panels">
           <div id="quickstart-zip">
+            <div id="downloads">
+              <a id="dzip" class="download-button" href="h2o-SUBST_PROJECT_VERSION.zip">Download H<sub>2</sub>O</a>
+            </div>
             <h2>Get started with H<sub>2</sub>O in 3 easy steps</h2>
-            <p>1. <a id="dzip" href="h2o-SUBST_PROJECT_VERSION.zip">Download H<sub>2</sub>O.</a> This is a zip file that contains everything you need to get started.</p>
+            <p>1. Download H<sub>2</sub>O. This is a zip file that contains everything you need to get started.</p>
             <p>2. From your terminal, run:</p>
             <p class="terminal">
               cd ~/Downloads<br/>
