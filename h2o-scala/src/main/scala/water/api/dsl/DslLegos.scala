@@ -281,15 +281,11 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def shutdown() = H2O.CLOUD.shutdown()
   
   // DRF API call
-  def drf(f: VT, r: VT, ntrees: Int = 50, classification:Boolean = false): DRF.DRFModel = {
+  def drf(ftrain: VT, ftest:VT, x:Seq[Int], y:Int, params: (DRF)=>DRF ): DRF.DRFModel = {
     val drf:DRF = new DRF()
-    val response = r.frame().vecs()(0)
-    response.rollupStats()
-    drf.source = new Frame(f.frame().names() ++ Array("response"), f.frame.vecs()++Array(response))
-    drf.response = response
-    drf.classification = classification
-    drf.ntrees = ntrees;
-    drf.invoke()
+    drf.source = ftrain(x++Seq(y)).frame()
+    drf.response = ftrain.frame().vec(y)
+    params(drf).invoke()
     return UKV.get(drf.dest())
   }
   
