@@ -365,7 +365,7 @@ public class ConfusionMatrixTest extends TestUtil {
     // Ohh nooo, this is block call :-)
     // Finally time for joke:
     //  """ Two men walk into a bar. The first one says "I'll have some H2O." The next man says "I'll have some H2O too" :-D """
-    cm.serve();
+    cm.invoke();
     return cm;
   }
 

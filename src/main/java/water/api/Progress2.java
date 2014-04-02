@@ -32,7 +32,7 @@ public class Progress2 extends Request2 {
     Job jjob = null;
     if( job_key != null )
       jjob = Job.findJob(job_key);
-    if( jjob != null && jjob.isCancelled()) // Handle cancelled job
+    if( jjob != null && jjob.isCancelledOrCrashed()) // Handle cancelled job
       return Response.error(jjob.isCrashed() ? jjob.exception : "Job was cancelled by user!" );
     if( jjob == null || jjob.isDone() ) // Handle done job
       return jobDone(destination_key);

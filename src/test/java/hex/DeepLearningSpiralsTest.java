@@ -66,7 +66,7 @@ public class DeepLearningSpiralsTest extends TestUtil {
       p.adaptive_rate = true;
       p.rho = 0.99;
       p.epsilon = 5e-3;
-      p.execImpl();
+      p.invoke();
     }
 
     // score and check result
@@ -78,7 +78,7 @@ public class DeepLearningSpiralsTest extends TestUtil {
       CM.vactual = frame.lastVec();
       CM.predict = pred;
       CM.vpredict = pred.vecs()[0];
-      CM.serve();
+      CM.invoke();
       StringBuilder sb = new StringBuilder();
       CM.toASCII(sb);
       double error = new ConfusionMatrix(CM.cm).err();

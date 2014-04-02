@@ -136,7 +136,7 @@ public class RFView extends /* Progress */ Request {
     // Handle cancelled/aborted jobs
     if (_job.value()!=null) {
       Job jjob = Job.findJob(_job.value());
-      if (jjob!=null && jjob.isCancelled())
+      if (jjob!=null && jjob.isCancelledOrCrashed())
         return Response.error(jjob.exception == null ? "Job was cancelled by user!" : jjob.exception);
     }
 

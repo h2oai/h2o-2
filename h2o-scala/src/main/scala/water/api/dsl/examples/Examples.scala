@@ -23,10 +23,18 @@ object Examples {
     H2O.main(args)
     example1()
     example2()
+    example3()
+    water.api.dsl.H2ODsl.shutdown()
+  }
+  
+  def banner(id:Int, desc: String) = {
+    println("\n==== Example #"+id+" ====\n== \""+desc+"\"" )
+    println(  "====\n")
   }
   
   /** Compute average for given column. */
   def example1() = {
+    banner(1, "Compute average of 2nd column in cars dataset")
     import water.api.dsl.H2ODsl._
     
     /** Mutable class */
@@ -44,12 +52,11 @@ object Examples {
     	} ) 
     
     println("Average of 2. column is: " + r.sum / r.cnt);
-    shutdown()
   }
   
   /** Call DRF, make a model, predict on a train data, compute MSE. */ 
   def example2() = {
-    
+    banner(2, "Call DRF API and make a forest for cars dataset")
     import water.api.dsl.H2ODsl._
     val f = parse("../private/cars.csv")
     val source = f(1) ++ f(3 to 7)
@@ -73,8 +80,24 @@ object Examples {
     })
 
     println("RSS: " + rss)
+  }
+  
+  /** Compute quantiles for all vectors in a given frame. */ 
+  def example3() = {
+    banner(3, "Call quantiles API and compute quantiles for all columns in cars dataset.")
+    import water.api.dsl.H2ODsl._
+    val f = parse("../private/cars.csv")
     
-    shutdown()
+    // Iterate over columns, pick only non-enum column and compute quantile for the column
+    for (columnId <-  0 until f.ncol) {
+      val colname = f.frame().names()(columnId)
+      if (f.frame().vecs()(columnId).isEnum()) {
+    	  println("Column '" + colname + "' is enum => skipped!")
+      } else {
+	      val q = quantiles(f, columnId)
+	      println("Column '" + colname + "' quantile is " + q)
+      }
+    }   
   }
 }
 

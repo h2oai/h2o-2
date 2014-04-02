@@ -17,6 +17,7 @@ import water.util.MRUtils;
 import water.util.RString;
 import water.util.Utils;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -195,6 +196,58 @@ public class DeepLearning extends Job.ValidatedJob {
     MeanSquare, CrossEntropy
   }
 
+  // the following parameters can only be specified in expert mode
+  transient final String [] expert_options = new String[] {
+          "loss",
+          "max_w2",
+          "warmup_samples",
+          "score_training_samples",
+          "score_validation_samples",
+          "initial_weight_distribution",
+          "initial_weight_scale",
+          "diagnostics",
+          "rate_decay",
+          "score_duty_cycle",
+          "variable_importances",
+          "fast_mode",
+          "score_validation_sampling",
+          "balance_classes",
+          "max_after_balance_size",
+          "max_after_balance_size",
+          "ignore_const_cols",
+          "force_load_balance",
+          "replicate_training_data",
+          "shuffle_training_data",
+          "nesterov_accelerated_gradient",
+          "classification_stop",
+          "regression_stop",
+          "quiet_mode",
+          "max_confusion_matrix_size",
+          "max_hit_ratio_k",
+          "hidden_dropout_ratios",
+          "single_node_mode",
+  };
+
+  // the following parameters can be modified when restarting from a checkpoint
+  transient final String [] cp_modifiable = new String[] {
+          "expert_mode",
+          "seed",
+          "epochs",
+          "score_interval",
+          "mini_batch",
+          "score_duty_cycle",
+          "classification_stop",
+          "regression_stop",
+          "quiet_mode",
+          "max_confusion_matrix_size",
+          "max_hit_ratio_k",
+          "diagnostics",
+          "variable_importances",
+          "force_load_balance",
+          "replicate_training_data",
+          "single_node_mode",
+  };
+
   /**
    * Helper to specify which arguments trigger a refresh on change
    * @param ver
@@ -219,21 +272,8 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
-    // these parameters can be changed when re-starting from a checkpointed model
-    if (!arg._name.equals("checkpoint")
-            //trivial parameters that only affect the scoring or the printout
-            && !arg._name.equals("epochs")
-            && !arg._name.equals("expert_mode")
-            && !arg._name.equals("seed")
-            && !arg._name.equals("score_interval")
-            && !arg._name.equals("score_duty_cycle")
-            && !arg._name.equals("quiet_mode")
-            && !arg._name.equals("diagnostics")
-            //non-trivial parameters that can affect training accuracy
-            && !arg._name.equals("mini_batch")
-            && !arg._name.equals("single_node_mode")
-            && !arg._name.equals("replicate_training_data")
-            ) {
+
+    if (!arg._name.equals("checkpoint") && !Utils.contains(cp_modifiable, arg._name)) {
       if (checkpoint != null) {
         arg.disable("Taken from model checkpoint.");
         final DeepLearningModel cp_model = UKV.get(checkpoint);
@@ -243,16 +283,6 @@ public class DeepLearning extends Job.ValidatedJob {
         if (cp_model.model_info().unstable()) {
           throw new IllegalArgumentException("Checkpointed model was unstable. Not restarting.");
         }
-        final DeepLearning cp = cp_model.model_info().get_params();
-        // the following parameters are needed in the DeepLearning class for training
-        balance_classes = cp.balance_classes;
-        score_validation_sampling = cp.score_validation_sampling;
-        max_after_balance_size = cp.max_after_balance_size;
-        score_training_samples = cp.score_training_samples;
-        score_validation_samples = cp.score_validation_samples;
-        force_load_balance = cp.force_load_balance;
-        shuffle_training_data = cp.shuffle_training_data;
-        classification = cp.classification;
         state = JobState.RUNNING;
         return;
       }
@@ -290,33 +320,8 @@ public class DeepLearning extends Job.ValidatedJob {
     if ((arg._name.equals("score_validation_samples") || arg._name.equals("score_validation_sampling")) && validation == null) {
       arg.disable("Requires a validation data set.", inputArgs);
     }
-    if (arg._name.equals("loss")
-            || arg._name.equals("max_w2")
-            || arg._name.equals("warmup_samples")
-            || arg._name.equals("score_training_samples")
-            || arg._name.equals("score_validation_samples")
-            || arg._name.equals("initial_weight_distribution")
-            || arg._name.equals("initial_weight_scale")
-            || arg._name.equals("diagnostics")
-            || arg._name.equals("rate_decay")
-            || arg._name.equals("score_duty_cycle")
-            || arg._name.equals("fast_mode")
-            || arg._name.equals("score_validation_sampling")
-            || arg._name.equals("max_after_balance_size")
-            || arg._name.equals("ignore_const_cols")
-            || arg._name.equals("force_load_balance")
-            || arg._name.equals("replicate_training_data")
-            || arg._name.equals("shuffle_training_data")
-            || arg._name.equals("nesterov_accelerated_gradient")
-            || arg._name.equals("classification_stop")
-            || arg._name.equals("regression_stop")
-            || arg._name.equals("quiet_mode")
-            || arg._name.equals("max_confusion_matrix_size")
-            || arg._name.equals("max_hit_ratio_k")
-            || arg._name.equals("hidden_dropout_ratios")
-            || arg._name.equals("single_node_mode")
-            ) {
-      if (!expert_mode) arg.disable("Only in expert mode.", inputArgs);
+    if (Utils.contains(expert_options, arg._name) && !expert_mode) {
+      arg.disable("Only in expert mode.", inputArgs);
     }
     if (!adaptive_rate) {
       if (arg._name.equals("rho") || arg._name.equals("epsilon")) {
@@ -398,7 +403,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Train a Deep Learning model, assumes that all members are populated
    * @return JobState
    */
-  @Override public JobState execImpl() {
+  @Override protected final void execImpl() {
     DeepLearningModel cp;
     if (checkpoint == null) cp = initModel();
     else {
@@ -424,19 +429,26 @@ public class DeepLearning extends Job.ValidatedJob {
         if (classification != previous.model_info().get_params().classification) {
           throw new IllegalArgumentException("classification must be the same as for the checkpointed model.");
         }
-        // the following parameters might have been modified when restarting from a checkpoint
-        // trivial parameters that only affect scoring or printout
-        cp.model_info().get_params().expert_mode = expert_mode;
-        cp.model_info().get_params().seed = seed;
-        cp.model_info().get_params().epochs = previous.epoch_counter + epochs; //add previously processed epochs to total epochs
-        cp.model_info().get_params().score_interval = score_interval;
-        cp.model_info().get_params().score_duty_cycle = score_duty_cycle;
-        cp.model_info().get_params().quiet_mode = quiet_mode;
-        cp.model_info().get_params().diagnostics = diagnostics;
-        // non-trivial parameters
-        cp.model_info().get_params().mini_batch = mini_batch;
-        cp.model_info().get_params().single_node_mode = single_node_mode;
-        cp.model_info().get_params().replicate_training_data = replicate_training_data;
+        Log.info("Resuming from checkpoint.");
+        final DeepLearning mp = cp.model_info().get_params();
+        Object A = mp, B = this;
+        for (Field fA : A.getClass().getDeclaredFields()) {
+          if (Utils.contains(cp_modifiable, fA.getName())) {
+            if (!expert_mode && Utils.contains(expert_options, fA.getName())) continue;
+            for (Field fB : B.getClass().getDeclaredFields()) {
+              if (fA.equals(fB)) {
+                try {
+                  if (!fA.get(A).toString().equals(fB.get(B).toString())) {
+                    Log.info("Applying user-requested modification of '" + fA.getName() + "': " + fA.get(A) + " -> " + fB.get(B));
+                    fA.set(A, fB.get(B));
+                  }
+                } catch (IllegalAccessException e) {
+                  e.printStackTrace();
+                }
+              }
+            }
+          }
+        }
         cp.update(self());
       } finally {
         cp.unlock(self());
@@ -444,7 +456,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     trainModel(cp);
     delete();
-    return JobState.DONE;
   }
 
   /**
@@ -477,10 +488,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
 
-    if(replicate_training_data && (mini_batch >= source.numRows()*H2O.CLOUD.size()) && !shuffle_training_data) {
-      Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
-      shuffle_training_data = true;
-    }
     if(!classification && loss != Loss.MeanSquare) {
       Log.warn("Setting loss to MeanSquare for regression.");
       loss = Loss.MeanSquare;
@@ -559,21 +566,23 @@ public class DeepLearning extends Job.ValidatedJob {
         model = UKV.get(dest());
       }
       model.write_lock(self());
+      final DeepLearning mp = model.model_info().get_params(); //use the model's parameters for everything below - NOT the job's parameters (can be different after checkpoint restart)
+
       prepareValidationWithModel(model);
       final long model_size = model.model_info().size();
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
-      train = updateFrame(train, reBalance(train, seed, replicate_training_data /*rebalance into only 4*cores per node*/));
+      train = updateFrame(train, reBalance(train, mp.seed, mp.replicate_training_data, mp.force_load_balance, mp.shuffle_training_data));
       float[] trainSamplingFactors;
-      if (classification && balance_classes) {
+      if (mp.classification && mp.balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
         train = updateFrame(train, sampleFrameStratified(
-                train, train.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*train.numRows()), seed, true, false));
+                train, train.lastVec(), trainSamplingFactors, (long)(mp.max_after_balance_size*train.numRows()), mp.seed, true, false));
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
       model.training_rows = train.numRows();
-      trainScoreFrame = sampleFrame(train, score_training_samples, seed); //training scoring dataset is always sampled uniformly from the training dataset
+      trainScoreFrame = sampleFrame(train, mp.score_training_samples, mp.seed); //training scoring dataset is always sampled uniformly from the training dataset
       if (train != trainScoreFrame) ltrash(trainScoreFrame);
 
       Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
@@ -583,25 +592,30 @@ public class DeepLearning extends Job.ValidatedJob {
           adaptedValid.add(getValidAdaptor().adaptedValidationResponse(_responseName), getValidAdaptor().getAdaptedValidationResponse2CM());
         }
         // validation scoring dataset can be sampled in multiple ways from the given validation dataset
-        if (classification && balance_classes && score_validation_sampling == ClassSamplingMethod.Stratified) {
+        if (mp.classification && mp.balance_classes && mp.score_validation_sampling == ClassSamplingMethod.Stratified) {
           validScoreFrame = updateFrame(adaptedValid, sampleFrameStratified(adaptedValid, adaptedValid.lastVec(), null,
-                  score_validation_samples > 0 ? score_validation_samples : adaptedValid.numRows(), seed+1, false /* no oversampling */, false));
+                  mp.score_validation_samples > 0 ? mp.score_validation_samples : adaptedValid.numRows(), mp.seed+1, false /* no oversampling */, false));
         } else {
-          validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, score_validation_samples, seed+1));
+          validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
-        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, seed+1, false /*always split up globally since scoring should be distributed*/));
+        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, mp.seed+1, false, mp.force_load_balance, mp.shuffle_training_data));
         Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
       // Set mini_batch size (cannot be done earlier since this depends on whether stratified sampling is done)
-      model.model_info().get_params().mini_batch = computeMiniBatchSize(mini_batch, train.numRows(), replicate_training_data);
-      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), model.model_info().get_params().mini_batch, replicate_training_data, single_node_mode);
+      mp.mini_batch = computeMiniBatchSize(mp.mini_batch, train.numRows(), mp.replicate_training_data, mp.single_node_mode);
+      // Determine whether shuffling is enforced
+      if(mp.replicate_training_data && (mp.mini_batch == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+        Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
+        mp.shuffle_training_data = true;
+      }
+      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.mini_batch, mp.replicate_training_data);
 
-      if (!quiet_mode) Log.info("Initial model:\n" + model.model_info());
+      if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
-      do model.set_model_info(H2O.CLOUD.size() > 1 && replicate_training_data ? ( single_node_mode ?
+      do model.set_model_info(H2O.CLOUD.size() > 1 && mp.replicate_training_data ? ( mp.single_node_mode ?
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invoke(Key.make()).model_info() : //replicated data + single node mode
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
@@ -660,7 +674,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param local whether to only create enough chunks to max out all cores on one node only
    * @return Frame that has potentially more chunks and might be shuffled (if shuffle_training_data is set)
    */
-  private Frame reBalance(final Frame fr, long seed, boolean local) {
+  private static Frame reBalance(final Frame fr, long seed, boolean local, boolean force_load_balance, boolean shuffle_training_data) {
     return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, local, shuffle_training_data) : fr;
   }
 
@@ -669,15 +683,16 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param mini_batch user-given mini_batch size
    * @param numRows number of training rows
    * @param replicate_training_data whether or not the training data is replicated on each node
+   * @param single_node_mode whether or not the single node mode is enabled
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeMiniBatchSize(long mini_batch, final long numRows, final boolean replicate_training_data) {
-    if (mini_batch == 0 || (!replicate_training_data && (mini_batch == -1 || mini_batch > numRows)))
+  private static long computeMiniBatchSize(long mini_batch, final long numRows, final boolean replicate_training_data, final boolean single_node_mode) {
+    assert(mini_batch == 0 || mini_batch == -1 || mini_batch >= 1);
+    if (mini_batch == 0 || (!replicate_training_data && (mini_batch == -1 || mini_batch > numRows)) || (replicate_training_data && single_node_mode))
       Log.info("Setting mini_batch (" + mini_batch + ") to one epoch: #rows (" + (mini_batch=numRows) + ").");
     else if (mini_batch == -1 || mini_batch > H2O.CLOUD.size()*numRows)
       Log.info("Setting mini_batch (" + mini_batch + ") to the largest possible number: #nodes x #rows (" + (mini_batch=H2O.CLOUD.size()*numRows) + ").");
-
-    assert(mini_batch != 0 && mini_batch != -1);
+    assert(mini_batch != 0 && mini_batch != -1 && mini_batch >= 1);
     return mini_batch;
   }
 
@@ -686,12 +701,12 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param numRows number of training rows
    * @param mini_batch number of training rows to be processed per iteration
    * @param replicate_training_data whether of not the training data is replicated on each node
-   * @param single_node_mode whether or not the single node mode is enabled
    * @return fraction of rows to be used for training during one iteration
    */
-  private static float computeRowUsageFraction(final long numRows, long mini_batch, boolean replicate_training_data, boolean single_node_mode) {
+  private static float computeRowUsageFraction(final long numRows, long mini_batch, boolean replicate_training_data) {
     float rowUsageFraction = (float)mini_batch / numRows;
-    if (replicate_training_data && !single_node_mode) rowUsageFraction /= H2O.CLOUD.size();
+    if (replicate_training_data) rowUsageFraction /= H2O.CLOUD.size();
+    assert(rowUsageFraction > 0 && rowUsageFraction <= 1.);
     return rowUsageFraction;
   }
 

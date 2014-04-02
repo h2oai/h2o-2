@@ -31,7 +31,7 @@ public class PCAScore extends FrameJob {
   @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
   int num_pc = 1;
 
-  @Override protected JobState execImpl() {
+  @Override protected void execImpl() {
     // Note: Source data MUST contain all features (matched by name) used to build PCA model!
     // If additional columns exist in source, they are automatically ignored in scoring
     new Frame(destination_key, new String[0], new Vec[0]).delete_and_lock(self());
@@ -47,7 +47,6 @@ public class PCAScore extends FrameJob {
       domains[i] = null;
     }
     tsk.outputFrame(destination_key, names, domains).unlock(self());
-    return JobState.DONE;
   }
 
   @Override protected void init() {

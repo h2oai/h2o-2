@@ -63,7 +63,12 @@ public class TransfVec extends WrappedVec {
     @Override boolean set_impl(int idx, float f)  { return false; }
     @Override boolean setNA_impl(int idx)         { return false; }
     @Override boolean hasFloat() { return _c.hasFloat(); }
-    @Override NewChunk inflate_impl(NewChunk nc)     { throw new UnsupportedOperationException(); }
+    @Override NewChunk inflate_impl(NewChunk nc) {
+      nc._xs = MemoryManager.malloc4(_len);
+      nc._ls = MemoryManager.malloc8(_len);
+      for( int i=0; i<_len; i++ ) nc._ls[i] = at8_impl(i);
+      return nc;
+    }
     @Override public AutoBuffer write(AutoBuffer bb) { throw new UnsupportedOperationException(); }
     @Override public Chunk read(AutoBuffer bb)       { throw new UnsupportedOperationException(); }
 

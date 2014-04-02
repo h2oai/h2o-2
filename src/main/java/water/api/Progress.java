@@ -21,7 +21,7 @@ public class Progress extends Request {
     Job job = findJob();
     JsonObject jsonResponse = defaultJsonResponse();
 
-    if( job != null && job.isCancelled() ) {
+    if( job != null && job.isCancelledOrCrashed() ) {
       String msg = job.isCrashed() ? job.exception : "Job was cancelled by user!";
       return Response.error(msg);
     }
