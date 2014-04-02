@@ -332,6 +332,9 @@ public class AUC extends Func {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     if (thresholds == null) return false;
+    if (threshold_criteria == null) return false;
+    if (_cms == null) return false;
+    if (idxCriter == null) return false;
     if (actual_domain == null) actual_domain = new String[]{"false","true"};
 
     sb.append("<div>");
