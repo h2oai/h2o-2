@@ -964,14 +964,18 @@ public class Utils {
   public static class approxMathTester {
     @Test
     public void run() {
-      final int loops = 100000;
-      for (float maxVal : new float[]{1, Float.MAX_VALUE/2}) {
+      final int loops = 1000000;
+      final long seed = new Random().nextLong();
+      final float eps = 1e-20f;
+      Random rng = new Random(seed);
+      Log.info("Seed: " + seed);
+      for (float maxVal : new float[]{1, Float.MAX_VALUE}) {
         Log.info("Testing " + loops + " numbers in interval [0, " + maxVal + "].");
         // float square
         {
           float err = 0;
           for (int i=0;i<loops;++i) {
-            final float x = new Random().nextFloat() * maxVal;
+            final float x = eps + rng.nextFloat() * maxVal;
             err = Math.max(Math.abs(err), Math.abs((float)Math.sqrt(x)-approxSqrt(x))/(float)Math.sqrt(x));
           }
           Log.info("rel. error for approxSqrt(float): " + err);
@@ -982,7 +986,7 @@ public class Utils {
         {
           double err = 0;
           for (int i=0;i<loops;++i) {
-            final double x = new Random().nextFloat() * maxVal;
+            final double x = eps + rng.nextFloat() * maxVal;
             err = Math.max(Math.abs(err), Math.abs(Math.sqrt(x)-approxSqrt(x))/Math.sqrt(x));
           }
           Log.info("rel. error for approxSqrt(double): " + err);
@@ -993,7 +997,7 @@ public class Utils {
         {
           float err = 0;
           for (int i=0;i<loops;++i) {
-            final float x = new Random().nextFloat() * maxVal;
+            final float x = eps + rng.nextFloat() * maxVal;
             err = Math.max(Math.abs(err), Math.abs((float)(1./Math.sqrt(x))-approxInvSqrt(x))*(float)Math.sqrt(x));
           }
           Log.info("rel. error for approxInvSqrt(float): " + err);
@@ -1004,7 +1008,7 @@ public class Utils {
         {
           double err = 0;
           for (int i=0;i<loops;++i) {
-            final double x = new Random().nextFloat() * maxVal;
+            final double x = eps + rng.nextFloat() * maxVal;
             err = Math.max(Math.abs(err), Math.abs((1./Math.sqrt(x))-approxInvSqrt(x))*Math.sqrt(x));
           }
           Log.info("rel. error for approxInvSqrt(double): " + err);
@@ -1015,7 +1019,7 @@ public class Utils {
         {
           double err = 0;
           for (int i=0;i<loops;++i) {
-            final double x = 30 - new Random().nextDouble() * 60;
+            final double x = 30 - rng.nextDouble() * 60;
             err = Math.max(Math.abs(err), Math.abs(Math.exp(x)-approxExp(x))/Math.exp(x));
           }
           Log.info("rel. error for approxExp(double): " + err);
@@ -1026,7 +1030,7 @@ public class Utils {
         {
           double err = 0;
           for (int i=0;i<loops;++i) {
-            final double x = new Random().nextFloat() * maxVal;
+            final double x = eps + rng.nextFloat() * maxVal;
             err = Math.abs(Math.log(x)-approxLog(x))/Math.abs(Math.log(x));
             if (!Double.isInfinite(err) && !Double.isNaN(err))
               err = Math.max(err, Math.abs(Math.log(x)-approxLog(x))/Math.abs(Math.log(x)));
