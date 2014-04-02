@@ -89,6 +89,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
+    Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",         "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
     Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning (Beta)",       "Model");
 
@@ -138,7 +139,6 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new NaiveBayes()),     "Naive Bayes",          "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
