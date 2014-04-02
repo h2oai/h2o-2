@@ -260,7 +260,6 @@ public class Frame extends Lockable<Frame> {
   }
 
   public Vec replace(int col, Vec nv) {
-    assert col < _names.length;
     Vec rv = vecs()[col];
     assert rv.group().equals(nv.group());
     _vecs[col] = nv;
@@ -441,7 +440,7 @@ public class Frame extends Lockable<Frame> {
   public String[] toStringHdr( StringBuilder sb ) {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
-      String n = (c < _names.length) ? _names[c] : ("C"+c);
+      String n = (_names != null && c < _names.length) ? _names[c] : ("C"+c);
       int nlen = n.length();
       if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       int w=0;

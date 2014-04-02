@@ -538,14 +538,22 @@ public class Vec extends Iced {
     return chunkForChunkIdx(elem2ChunkIdx(i));
   }
 
+  // Cache of last Chunk accessed via at/set api
+  Chunk _cache;
+  private Chunk c(long i) {
+    Chunk c = _cache;
+    if( c != null && c._start == -1 )
+      System.out.println("crunk");
+    return (c != null && c._start <= i && i < c._start+c._len) ? c : (_cache = chunkForRow(i));
+  }
   /** Fetch element the slow way, as a long.  Floating point values are
    *  silently rounded to an integer.  Throws if the value is missing. */
-  public final long  at8( long i ) { return chunkForRow(i).at8(i); }
+  public final long  at8( long i ) { return c(i).at8(i); }
   /** Fetch element the slow way, as a double.  Missing values are
    *  returned as Double.NaN instead of throwing. */
-  public final double at( long i ) { return chunkForRow(i).at(i); }
+  public final double at( long i ) { return c(i).at(i); }
   /** Fetch the missing-status the slow way. */
-  public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
+  public final boolean isNA(long row){ return c(row).isNA(row); }
 
 
   /** Write element the slow way, as a long.  There is no way to write a
@@ -555,18 +563,18 @@ public class Vec extends Iced {
    *  common compatible data representation.
    *
    *  */
-  public final long   set( long i, long   l) {return chunkForRow(i).set(i,l);}
+  public final long   set( long i, long   l) {return c(i).set(i,l);}
 
   /** Write element the slow way, as a double.  Double.NaN will be treated as
    *  a set of a missing element.
    *  */
-  public final double set( long i, double d) {return chunkForRow(i).set(i,d);}
+  public final double set( long i, double d) {return c(i).set(i,d);}
   /** Write element the slow way, as a float.  Float.NaN will be treated as
    *  a set of a missing element.
    *  */
-  public final float  set( long i, float  f) {return chunkForRow(i).set(i,f);}
+  public final float  set( long i, float  f) {return c(i).set(i,f);}
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i);}
+  public final boolean setNA( long i ) { return c(i).setNA(i);}
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {

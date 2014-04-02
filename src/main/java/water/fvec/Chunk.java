@@ -92,6 +92,8 @@ public abstract class Chunk extends Iced implements Cloneable {
   private void setWrite() {
     if( _chk2 != null ) return; // Already setWrite
     assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
+    if( _vec==null )
+      System.out.println("crunk");
     _vec.preWriting();          // One-shot writing-init
     _chk2 = clone();            // Flag this chunk as having been written into
     assert _chk2._chk2 == null; // Clone has NOT been written into
@@ -144,6 +146,7 @@ public abstract class Chunk extends Iced implements Cloneable {
     if( _chk2 == null ) return;          // No change?
     if( _chk2 instanceof NewChunk ) _chk2 = ((NewChunk)_chk2).new_close();
     DKV.put(_vec.chunkKey(cidx),_chk2,fs,true); // Write updated chunk back into K/V
+    if( _vec._cache == this ) _vec._cache = null;
   }
 
   public int cidx() { return _vec.elem2ChunkIdx(_start); }
