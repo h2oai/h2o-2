@@ -127,7 +127,7 @@ public class DeepLearningProstateTest extends TestUtil {
                           auc.predict = pred;
                           auc.vpredict = pred.vecs()[2];
                           auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
-                          auc.serve();
+                          auc.invoke();
                           auc.toASCII(sb);
                           threshold = auc.threshold();
                           error = auc.err();
@@ -149,7 +149,7 @@ public class DeepLearningProstateTest extends TestUtil {
                           CM.vactual = valid.vecs()[resp];
                           CM.predict = pred;
                           CM.vpredict = pred.vecs()[0];
-                          CM.serve();
+                          CM.invoke();
                           sb.append("\n");
                           CM.toASCII(sb);
                           Log.info(sb);
@@ -174,7 +174,7 @@ public class DeepLearningProstateTest extends TestUtil {
                           CM.vactual = valid.vecs()[1];
                           CM.predict = pred2;
                           CM.vpredict = pred2.vecs()[0];
-                          CM.serve();
+                          CM.invoke();
                           sb = new StringBuilder();
                           sb.append("\n");
                           CM.toASCII(sb);
@@ -193,7 +193,7 @@ public class DeepLearningProstateTest extends TestUtil {
                           CM.vactual = valid.vecs()[1];
                           CM.predict = pred2;
                           CM.vpredict = pred2.vecs()[0];
-                          CM.serve();
+                          CM.invoke();
                           sb = new StringBuilder();
                           sb.append("\n");
                           CM.toASCII(sb);

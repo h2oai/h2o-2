@@ -185,7 +185,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               p.nesterov_accelerated_gradient = true; //same as old NeuralNet code
                               p.classification_stop = -1; //don't stop early -> need to compare against old NeuralNet code, which doesn't stop either
                               p.force_load_balance = false; //keep 1 chunk for reproducibility
-                              p.execImpl();
+                              p.invoke();
 
                               mymodel = UKV.get(p.dest());
                               neurons = DeepLearningTask.makeNeuronsForTesting(mymodel.model_info());
@@ -291,7 +291,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               CM.vactual = _train.lastVec();
                               CM.predict = fpreds;
                               CM.vpredict = fpreds.vecs()[0];
-                              CM.serve();
+                              CM.invoke();
                               StringBuilder sb = new StringBuilder();
                               CM.toASCII(sb);
                               trainerr += new ConfusionMatrix(CM.cm).err();
@@ -304,7 +304,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               CM.vactual = _test.lastVec();
                               CM.predict = fpreds2;
                               CM.vpredict = fpreds2.vecs()[0];
-                              CM.serve();
+                              CM.invoke();
                               sb = new StringBuilder();
                               testerr += new ConfusionMatrix(CM.cm).err();
                               for (String s : sb.toString().split("\n")) Log.info(s);

@@ -48,7 +48,7 @@ Various information related to the H\ :sub:`2`\ O project and data available in 
    resources/algoroadmap
    resources/glossary
    resources/publicdata
-   
+   resources/h2odatasheet
    
 
 

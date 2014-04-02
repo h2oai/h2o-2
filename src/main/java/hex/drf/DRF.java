@@ -148,18 +148,16 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
   // ==========================================================================
 
-  // Compute a DRF tree.
-
-  // Start by splitting all the data according to some criteria (minimize
-  // variance at the leaves).  Record on each row which split it goes to, and
-  // assign a split number to it (for next pass).  On *this* pass, use the
-  // split-number to build a per-split histogram, with a per-histogram-bucket
-  // variance.
-
-  @Override protected JobState execImpl() {
+  /** Compute a DRF tree.
+   *
+   * Start by splitting all the data according to some criteria (minimize
+   * variance at the leaves).  Record on each row which split it goes to, and
+   * assign a split number to it (for next pass).  On *this* pass, use the
+   * split-number to build a per-split histogram, with a per-histogram-bucket
+   * variance. */
+  @Override protected void execImpl() {
     logStart();
     buildModel();
-    return JobState.DONE;
   }
 
   @Override protected Response redirect() {

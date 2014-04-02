@@ -147,7 +147,7 @@ public class GBMTest extends TestUtil {
       CM.vactual = ftest.vecs()[ftest.find("Angaus")];
       CM.predict = fpreds;
       CM.vpredict = fpreds.vecs()[fpreds.find("predict")];
-      CM.serve();               // Start it, do it
+      CM.invoke();               // Start it, do it
 
       StringBuilder sb = new StringBuilder();
       CM.toASCII(sb);

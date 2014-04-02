@@ -1,6 +1,7 @@
 # This is a demo of H2O's PCA function
 # It imports a data set, parses it, and prints a summary
 # Then, it runs PCA on a subset of the features
+# Note: This demo runs H2O on localhost:54321
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 

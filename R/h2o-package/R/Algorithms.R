@@ -679,15 +679,16 @@ h2o.naiveBayes <- function(x, y, data, laplace = 0) {
   result = list()
   result$laplace = res$laplace
   result$levels = tail(res$'_domains',1)[[1]]
-  result$apriori = as.numeric(res$pprior)
-  names(result$apriori) = result$levels
+  result$apriori_prob = as.table(as.numeric(res$pprior))
+  result$apriori = as.table(as.numeric(res$rescnt))
+  dimnames(result$apriori) = dimnames(result$apriori_prob) = list(Y = result$levels)
   
   pred_names = res$'_names'[-length(res$'_names')]
   pred_domains = res$'_domains'[-length(res$'_domains')]
   result$tables = mapply(function(dat, nam, doms) { temp = t(matrix(unlist(dat), nrow = length(doms)))
                                                     myList = list(result$levels, doms); names(myList) = c("Y", nam)
                                                     dimnames(temp) = myList
-                                                    return(temp) }, 
+                                                    return(as.table(temp)) }, 
                          res$pcond, pred_names, pred_domains, SIMPLIFY = FALSE)
   names(result$tables) = pred_names
   return(result)
