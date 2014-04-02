@@ -20,7 +20,7 @@ public class GridSearch extends Job {
   public GridSearch(){
 
   }
-  @Override protected JobState execImpl() {
+  @Override protected void execImpl() {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
@@ -35,7 +35,6 @@ public class GridSearch extends Job {
         }
       }
     }
-    return JobState.DONE;
   }
 
   @Override protected void onCancelled() {

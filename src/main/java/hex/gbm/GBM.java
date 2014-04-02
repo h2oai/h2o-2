@@ -119,10 +119,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return rs.toString();
   }
 
-  @Override protected JobState execImpl() {
+  @Override protected void execImpl() {
     logStart();
     buildModel();
-    return JobState.DONE;
   }
 
   @Override public int gridParallelism() {

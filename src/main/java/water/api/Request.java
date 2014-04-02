@@ -96,6 +96,13 @@ public abstract class Request extends RequestBuilders {
     return this;
   }
 
+  /** Implements UI call.
+   *
+   * <p>This should be call only from
+   * UI layer - i.e., RequestServer.</p>
+   *
+   * @see RequestServer
+   */
   protected abstract Response serve();
 
   protected String serveJava() { throw new UnsupportedOperationException("This request does not provide Java code!"); }
