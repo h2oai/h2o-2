@@ -329,7 +329,7 @@ public abstract class Job extends Func {
         try {
           try {
             // Exec always waits till the end of computation
-            exec();
+            Job.this.exec();
             Job.this.remove();
           } catch (Throwable t) {
             if(!(t instanceof ExpectedExceptionForDebug))
