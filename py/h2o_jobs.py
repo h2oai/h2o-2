@@ -80,9 +80,10 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
     # now print man 
     print "Did %s polls" % polls
     statMean = {}
+    print "Values are summed across all nodes (cloud members), so divide by node count"
     for s in statSum:
         statMean[s] = round((statSum[s] + 0.0) / polls, 2)
-        print "mean", s + ':', statMean[s]
+        print "per poll mean", s + ':', statMean[s]
 
     return  statMean
     # statMean['tot_mem_bytes'],

@@ -412,7 +412,7 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
     # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]
     if not pattern:
-        node.remove_all_keys()
+        node.remove_all_keys(timeoutSecs=timeoutSecs)
         return 0 # don't have a count of keys?
 
     totalDeletedCnt = 0
