@@ -971,7 +971,8 @@ summary.H2OParsedData <- function(object, ...) {
   })
   # Filter out rows with nothing in them
   cidx <- apply(cols, 1, function(x) { any(!is.na(x)) })
-  cols <- cols[cidx,]
+  if(ncol(cols) == 1) { cols <- as.matrix(cols[cidx,]) } else { cols <- cols[cidx,] }
+  # cols <- as.matrix(cols[cidx,])
 
   result = as.table(cols)
   rownames(result) <- rep("", nrow(result))
@@ -1392,7 +1393,8 @@ summary.H2OParsedDataVA <- function(object, ...) {
   })
   # Filter out rows with nothing in them
   cidx <- apply(cols, 1, function(x) { any(!is.na(x)) })
-  cols <- cols[cidx,]
+  if(ncol(cols) == 1) { cols <- as.matrix(cols[cidx,]) } else { cols <- cols[cidx,] }
+  # cols <- cols[cidx,]
   
   result = as.table(cols)
   rownames(result) <- rep("", nrow(result))
