@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 import sys, psutil, os, stat, tempfile, argparse, time, datetime
 sys.path.extend(['.','..','../..','py'])
 import h2o_sandbox
