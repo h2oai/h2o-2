@@ -191,7 +191,8 @@ else:
         "r.hex[,1]=r.hex[,1]+1",#  Replace a col
         # "r.hex[1,]=r.hex[1,]+1",
         "r.hex[,ncol(r.hex)+1]=4",#  Extend a col
-        "r.hex[nrow(r.hex)+1,]=4",
+        # can't do arith on the row
+        # "r.hex[nrow(r.hex)+1,]=4",
         "a=ncol(r.hex); r.hex[,c(a+1,a+2)]=5",#  Extend two cols
         # doesn't work
         # "table(r.hex)",
