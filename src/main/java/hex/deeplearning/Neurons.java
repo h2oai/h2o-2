@@ -2,15 +2,16 @@ package hex.deeplearning;
 
 import static hex.deeplearning.DeepLearning.Loss;
 import hex.FrameTask;
-import org.junit.Ignore;
 import org.junit.Test;
+import water.Iced;
 import water.MemoryManager;
 import water.PrettyPrint;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.util.Log;
 import water.util.Utils;
 
-import java.util.Arrays;
+import java.util.*;
 
 /**
  * This class implements the concept of a Neuron layer in a Neural Network
@@ -290,6 +291,7 @@ public abstract class Neurons {
   public static class Input extends Neurons {
 
     private FrameTask.DataInfo _dinfo; //training data
+    SparseVector _svec;
 
     Input(int units, final FrameTask.DataInfo d) {
       super(units);
@@ -341,6 +343,7 @@ public abstract class Neurons {
       if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
       _dropout.randomlySparsifyActivation(_a, seed);
+      _svec = new SparseVector(_a);
     }
 
   }
@@ -351,7 +354,11 @@ public abstract class Neurons {
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
+      if (_previous instanceof Input)
+        gemv_naive(new DenseVector(_a), new DenseRowMatrix(_w, _b.length, _a.length), ((Input)_previous)._svec, new DenseVector(_b), _dropout != null ? _dropout.bits() : null);
+      else
+        gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
+
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 1f - 2f / (1f + (float)Math.exp(2*_a[o])); //evals faster than tanh(x), but is slightly less numerically stable - OK
 //        _a[o] = (float)(1 - 2 / (1 + Utils.approxExp(2d*_a[o]))); //even faster, but ~ 4% relative error - not worth it here
@@ -445,7 +452,11 @@ public abstract class Neurons {
   public static class Rectifier extends Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-      gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
+      if (_previous instanceof Input)
+        gemv_naive(new DenseVector(_a), new DenseRowMatrix(_w, _b.length, _a.length), ((Input)_previous)._svec, new DenseVector(_b), _dropout != null ? _dropout.bits() : null);
+      else
+        gemv(_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
+
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = Math.max(_a[o], 0f);
       }
@@ -632,14 +643,129 @@ public abstract class Neurons {
     }
   }
 
+
+  static void gemv_naive(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
+    final int cols = x.size();
+    final int rows = y.size();
+    assert(res.size() == rows);
+    for(int r = 0; r<rows; r++) {
+      res.set(r, 0);
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      for(int c = 0; c<cols; c++)
+        res.add(r, a.get(r,c) * x.get(c));
+      res.add(r, y.get(r));
+    }
+  }
+
+  static void gemv_naive(final DenseVector res, final DenseColMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
+    final int cols = x.size();
+    final int rows = y.size();
+    assert(res.size() == rows);
+    for(int r = 0; r<rows; r++) {
+      res.set(r, 0);
+    }
+    for(int c = 0; c<cols; c++) {
+      final float val = x.get(c);
+      for(int r = 0; r<rows; r++) {
+        if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+        res.add(r, a.get(r,c) * val);
+      }
+    }
+    for(int r = 0; r<rows; r++) {
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      res.add(r, y.get(r));
+    }
+  }
+
+  static void gemv_naive(final DenseVector res, final DenseRowMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+    final int rows = y.size();
+    assert(res.size() == rows);
+    for(int r = 0; r<rows; r++) {
+      res.set(r, 0);
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      for (SparseVector.Iterator it=x.begin(); !it.equals(x.end()); it.next())
+        res.add(r, a.get(r,it.index()) * it.value());
+      res.add(r, y.get(r));
+    }
+  }
+
+  static void gemv_naive(final DenseVector res, final DenseColMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+    final int rows = y.size();
+    assert(res.size() == rows);
+    for(int r = 0; r<rows; r++) {
+      res.set(r, 0);
+    }
+    for (SparseVector.Iterator it=x.begin(); !it.equals(x.end()); it.next()) {
+      final float val = it.value();
+      if (val == 0f) continue;
+      for(int r = 0; r<rows; r++) {
+        if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+        res.add(r, a.get(r,it.index()) * val);
+      }
+    }
+    for(int r = 0; r<rows; r++) {
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      res.add(r, y.get(r));
+    }
+  }
+
+  static void gemv_naive(final DenseVector res, final SparseRowMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+    final int rows = y.size();
+    assert(res.size() == rows);
+    for(int r = 0; r<rows; r++) {
+      res.set(r, 0);
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      // iterate over all non-empty columns for this row
+      TreeMap<Integer, Float> row = a.row(r);
+      Set<Map.Entry<Integer,Float>> set = row.entrySet();
+
+      Iterator<Map.Entry<Integer,Float>> itA = set.iterator();
+      SparseVector.Iterator itB=x.begin();
+//      while(itA.hasNext() && itB.hasNext()) {
+//      }
+
+      for (Map.Entry<Integer,Float> e : set) {
+        final float val = x.get(e.getKey());
+        if (val != 0f) res.add(r, e.getValue() * val); //TODO: iterate over both iterators and only add where there are matching indices
+      }
+      res.add(r, y.get(r));
+    }
+  }
+
+  static void gemv_naive(final DenseVector res, final SparseColMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+    final int rows = y.size();
+    assert(res.size() == rows);
+    for(int r = 0; r<rows; r++) {
+      res.set(r, 0);
+    }
+    for(int c = 0; c<a.cols(); c++) {
+      TreeMap<Integer, Float> col = a.col(c);
+      final float val = x.get(c);
+      if (val == 0f) continue;
+      for (Map.Entry<Integer,Float> e : col.entrySet()) {
+        final int r = e.getKey();
+        if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+        // iterate over all non-empty columns for this row
+        res.add(r, e.getValue() * val);
+      }
+    }
+    for(int r = 0; r<rows; r++) {
+      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
+      res.add(r, y.get(r));
+    }
+  }
+
   // Test mat-vec performance
   static public class MatVecTester {
     @Test
-    @Ignore
+//    @Ignore
     public void run() {
       int rows = 2048;
-      int cols = 1024;
-      int loops = 5000;
+      int cols = 8192;
+      int loops = 50;
+      int warmup_loops = 50;
+      float nnz_ratio_vec = 0.01f; //fraction of non-zeroes for vector
+      float nnz_ratio_mat = 0.1f; //fraction of non-zeroes for matrix
 
       float [] a = new float[rows*cols];
       float [] x = new float[cols];
@@ -652,31 +778,65 @@ public abstract class Neurons {
         res[i] = 0;
         bits[i] = (byte)(new String("abcdefghijklmnopqrstuvwxyz").toCharArray()[i%26]);
       }
-      for (int i=0;i<cols;++i) {
-        x[i] = ((float)i)/cols;
-      }
+      Random rng = new Random();
+      for (int i=0;i<cols;++i)
+        if (rng.nextFloat() < nnz_ratio_vec)
+          x[i] = ((float)i)/cols;
+
       for (int i=0;i<rows;++i) {
         int off = i*cols;
         for (int j=0;j<cols;++j) {
-          a[off+j] = ((float)(i+j))/cols;
+          if (rng.nextFloat() < nnz_ratio_mat)
+            a[off+j] = ((float)(i+j))/cols;
         }
       }
+      DenseRowMatrix dra = new DenseRowMatrix(a, rows, cols);
+      DenseColMatrix dca = new DenseColMatrix(dra, rows, cols);
+      SparseRowMatrix sra = new SparseRowMatrix(dra, rows, cols);
+      SparseColMatrix sca = new SparseColMatrix(dca, rows, cols);
+      DenseVector dx = new DenseVector(x);
+      DenseVector dy = new DenseVector(y);
+      DenseVector dres = new DenseVector(res);
+      SparseVector sx = new SparseVector(x);
 
       /**
-       * naive version
+       * warmup
        */
       System.out.println("warming up.");
       float sum = 0;
-      //warmup
-      for (int l=0;l<11000;++l) {
+      for (int l=0;l<warmup_loops;++l) {
         gemv_naive(res, a, x, y, bits);
         sum += res[rows/2];
       }
-      //warmup
-      for (int l=0;l<11000;++l) {
+      for (int l=0;l<warmup_loops;++l) {
+        gemv_naive(dres, dra, dx, dy, bits);
+        sum += res[rows/2];
+      }
+      for (int l=0;l<warmup_loops;++l) {
         gemv(res, a, x, y, bits);
         sum += res[rows/2];
       }
+      for (int l=0;l<warmup_loops;++l) {
+        gemv_naive(dres, dca, dx, dy, bits);
+        sum += res[rows/2];
+      }
+      for (int l=0;l<warmup_loops;++l) {
+        gemv_naive(dres, dra, sx, dy, bits);
+        sum += res[rows/2];
+      }
+      for (int l=0;l<warmup_loops;++l) {
+        gemv_naive(dres, dca, sx, dy, bits);
+        sum += res[rows/2];
+      }
+      for (int l=0;l<warmup_loops;++l) {
+        gemv_naive(dres, sra, sx, dy, bits);
+        sum += res[rows/2];
+      }
+      for (int l=0;l<warmup_loops;++l) {
+        gemv_naive(dres, sca, sx, dy, bits);
+        sum += res[rows/2];
+      }
+
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
@@ -686,7 +846,7 @@ public abstract class Neurons {
       /**
        * naive version
        */
-      System.out.println("starting naive.");
+      System.out.println("\nstarting naive.");
       sum = 0;
       long start = System.currentTimeMillis();
       for (int l=0;l<loops;++l) {
@@ -694,12 +854,23 @@ public abstract class Neurons {
         sum += res[rows/2]; //do something useful
       }
       System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("Naive time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+      System.out.println("naive time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
 
-      /**
-       * optimized version
-       */
-      System.out.println("starting optimized.");
+
+
+      System.out.println("\nstarting dense row * dense.");
+      sum = 0;
+      start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv_naive(dres, dra, dx, dy, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("dense row * dense time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+
+
+
+      System.out.println("\nstarting optimized dense row * dense.");
       sum = 0;
       start = System.currentTimeMillis();
       for (int l=0;l<loops;++l) {
@@ -707,8 +878,322 @@ public abstract class Neurons {
         sum += res[rows/2]; //do something useful
       }
       System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("Optimized time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+      System.out.println("optimized dense row * dense time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+
+
+
+      System.out.println("\nstarting dense col * dense.");
+      sum = 0;
+      start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv_naive(dres, dca, dx, dy, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("dense col * dense time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+
+
+
+      System.out.println("\nstarting dense row * sparse.");
+      sum = 0;
+      start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv_naive(dres, dra, sx, dy, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("dense row * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+
+
+
+      System.out.println("\nstarting dense col * sparse.");
+      sum = 0;
+      start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv_naive(dres, dca, sx, dy, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("dense col * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+
+
+
+      System.out.println("\nstarting sparse row * sparse.");
+      sum = 0;
+      start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv_naive(dres, sra, sx, dy, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("sparse row * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
+
+
+
+      System.out.println("\nstarting sparse col * sparse.");
+      sum = 0;
+      start = System.currentTimeMillis();
+      for (int l=0;l<loops;++l) {
+        gemv_naive(dres, sca, sx, dy, bits);
+        sum += res[rows/2]; //do something useful
+      }
+      System.out.println("result: " + sum + " and " + Utils.sum(res));
+      System.out.println("sparse col * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
     }
   }
 
+  /**
+   * Abstract vector interface
+   */
+  abstract interface Vector {
+    abstract float get(int i);
+    abstract void set(int i, float val);
+    abstract void add(int i, float val);
+    abstract int size();
+  }
+
+  /**
+   * Dense vector implementation
+   */
+  static class DenseVector extends Iced implements Vector {
+    private float[] _data;
+    DenseVector(int len) { _data = new float[len]; }
+    DenseVector(float[] v) { _data = v; }
+    @Override public float get(int i) { return _data[i]; }
+    @Override public void set(int i, float val) { _data[i] = val; }
+    @Override public void add(int i, float val) { _data[i] += val; }
+    @Override public int size() { return _data.length; }
+  }
+
+  /**
+   * Sparse vector implementation
+   */
+  static class SparseVector extends Iced implements Vector {
+    private int[] _indices;
+    private float[] _values;
+    private int _size;
+    private int _nnz;
+
+    @Override public int size() { return _size; }
+    public int nnz() { return _nnz; }
+
+    SparseVector(float[] v) { this(new DenseVector(v)); }
+    SparseVector(DenseVector dv) {
+      _size = dv.size();
+      // first count non-zeros
+      for (int i=0; i<dv._data.length; ++i) {
+        if (dv.get(i) != 0.0f) {
+          _nnz++;
+        }
+      }
+      // only allocate what's needed
+      _indices = new int[_nnz];
+      _values = new float[_nnz];
+      // fill values
+      int idx = 0;
+      for (int i=0; i<dv._data.length; ++i) {
+        if (dv.get(i) != 0.0f) {
+          _indices[idx] = i;
+          _values[idx] = dv.get(i);
+          idx++;
+        }
+      }
+      assert(idx == nnz());
+    }
+
+    /**
+     * Slow path access to i-th element
+     * @param i
+     * @return
+     */
+    @Override public float get(int i) {
+      final int idx = Arrays.binarySearch(_indices, i);
+      return idx < 0 ? 0f : _values[idx];
+    }
+
+    @Override
+    public void set(int i, float val) {
+      throw new UnsupportedOperationException("setting values in a sparse vector is not implemented.");
+    }
+
+    @Override
+    public void add(int i, float val) {
+      throw new UnsupportedOperationException("adding values in a sparse vector is not implemented.");
+    }
+
+    /**
+     * Iterator over a sparse vector
+     */
+    public class Iterator {
+      int _idx; //which nnz
+      Iterator(int id) { _idx = id; }
+      Iterator next() {
+        _idx++;
+        return this;
+      }
+      boolean hasNext() {
+        return _idx < _indices.length-1;
+      }
+      boolean equals(Iterator other) {
+        return _idx == other._idx;
+      }
+      @Override
+      public String toString() {
+        return index() + " -> " + value();
+      }
+      float value() { return _values[_idx]; }
+      int index() { return _indices[_idx]; }
+    }
+
+    public Iterator begin() { return new Iterator(0); }
+    public Iterator end() { return new Iterator(_indices.length); }
+  }
+
+  /**
+   * Abstract matrix interface
+   */
+  abstract interface Matrix {
+    abstract float get(int i, int j);
+    abstract void set(int i, int j, float val);
+    abstract void add(int i, int j, float val);
+    abstract int cols();
+    abstract int rows();
+  }
+
+  /**
+   * Dense row matrix implementation
+   */
+  static class DenseRowMatrix extends Iced implements Matrix {
+    private float[] _data;
+    private int _cols;
+    private int _rows;
+    DenseRowMatrix(int rows, int cols) { this(new float[cols*rows], rows, cols); }
+    DenseRowMatrix(float[] v, int rows, int cols) { _data = v; _rows = rows; _cols = cols; }
+    @Override public float get(int i, int j) { return _data[i*_cols + j]; }
+    @Override public void set(int i, int j, float val) { _data[i*_cols + j] = val; }
+    @Override public void add(int i, int j, float val) { _data[i*_cols + j] += val; }
+    @Override public int cols() { return _cols; }
+    @Override public int rows() { return _rows; }
+  }
+
+  /**
+   * Dense column matrix implementation
+   */
+  static class DenseColMatrix extends Iced implements Matrix {
+    private float[] _data;
+    private int _cols;
+    private int _rows;
+    DenseColMatrix(int rows, int cols) { this(new float[cols*rows], rows, cols); }
+    DenseColMatrix(float[] v, int rows, int cols) { _data = v; _rows = rows; _cols = cols; }
+    DenseColMatrix(DenseRowMatrix m, int rows, int cols) { this(rows, cols); for (int i=0;i<rows;++i) for (int j=0;j<cols;++j) set(i,j, m.get(i,j)); }
+    @Override public float get(int i, int j) { return _data[j*_rows + i]; }
+    @Override public void set(int i, int j, float val) { _data[j*_rows + i] = val; }
+    @Override public void add(int i, int j, float val) { _data[j*_rows + i] += val; }
+    @Override public int cols() { return _cols; }
+    @Override public int rows() { return _rows; }
+  }
+
+  /**
+   * Sparse row matrix implementation
+   */
+  static class SparseRowMatrix implements Matrix {
+    private TreeMap<Integer, Float>[] _rows;
+    private int _cols;
+    SparseRowMatrix(int rows, int cols) { this(null, rows, cols); }
+    SparseRowMatrix(Matrix v, int rows, int cols) {
+      _rows = new TreeMap[rows];
+      for (int i=0;i<rows;++i) _rows[i] = new TreeMap<Integer, Float>();
+      _cols = cols;
+      if (v!=null)
+        for (int i=0;i<rows;++i)
+          for (int j=0;j<cols;++j)
+            if (v.get(i,j) != 0f)
+              add(i,j, v.get(i,j));
+    }
+    @Override public float get(int i, int j) { Float v = _rows[i].get(j); if (v == null) return 0f; else return v; }
+    @Override public void add(int i, int j, float val) { set(i,j,get(i,j)+val); }
+    @Override public void set(int i, int j, float val) { _rows[i].put(j, val); }
+    @Override public int cols() { return _cols; }
+    @Override public int rows() { return _rows.length; }
+    TreeMap<Integer, Float> row(int i) { return _rows[i]; }
+  }
+
+  /**
+   * Sparse col matrix implementation
+   */
+  static class SparseColMatrix implements Matrix {
+    private TreeMap<Integer, Float>[] _cols;
+    private int _rows;
+    SparseColMatrix(int rows, int cols) { this(null, rows, cols); }
+    SparseColMatrix(Matrix v, int rows, int cols) {
+      _rows = rows;
+      _cols = new TreeMap[cols];
+      for (int j=0;j<cols;++j) _cols[j] = new TreeMap<Integer, Float>();
+      if (v!=null)
+        for (int i=0;i<rows;++i)
+          for (int j=0;j<cols;++j)
+            if (v.get(i,j) != 0f)
+              add(i,j, v.get(i,j));
+    }
+    @Override public float get(int i, int j) { Float v = _cols[j].get(i); if (v == null) return 0f; else return v; }
+    @Override public void add(int i, int j, float val) { set(i,j,get(i,j)+val); }
+    @Override public void set(int i, int j, float val) { _cols[j].put(i, val); }
+    @Override public int cols() { return _cols.length; }
+    @Override public int rows() { return _rows; }
+    TreeMap<Integer, Float> col(int j) { return _cols[j]; }
+  }
+
+  /**
+   * Test sparse data structures
+   */
+  public static class SparseTester {
+    @Test
+    public void run() {
+      DenseVector dv = new DenseVector(20);
+      dv.set(3,0.21f);
+      dv.set(7,0.13f);
+      dv.set(18,0.14f);
+      SparseVector sv = new SparseVector(dv);
+      assert(sv.size() == 20);
+      assert(sv.nnz() == 3);
+
+      // dense treatment
+      for (int i=0;i<sv.size();++i)
+        Log.info("sparse [" + i + "] = " + sv.get(i));
+
+      // sparse treatment
+      for (SparseVector.Iterator it=sv.begin(); !it.equals(sv.end()); it.next()) {
+//        Log.info(it.toString());
+        Log.info(it.index() + " -> " + it.value());
+      }
+
+      DenseColMatrix dcm = new DenseColMatrix(3,5);
+      dcm.set(2,1,3.2f);
+      dcm.set(1,3,-1.2f);
+      assert(dcm.get(2,1)==3.2f);
+      assert(dcm.get(1,3)==-1.2f);
+      assert(dcm.get(0,0)==0f);
+
+      DenseRowMatrix drm = new DenseRowMatrix(3,5);
+      drm.set(2,1,3.2f);
+      drm.set(1,3,-1.2f);
+      assert(drm.get(2,1)==3.2f);
+      assert(drm.get(1,3)==-1.2f);
+      assert(drm.get(0,0)==0f);
+
+      SparseColMatrix scm = new SparseColMatrix(3,5);
+      scm.set(2,1,3.2f);
+      scm.set(1,3,-1.2f);
+      assert(scm.get(2,1)==3.2f);
+      assert(scm.get(1,3)==-1.2f);
+      assert(scm.get(0,0)==0f);
+
+      SparseRowMatrix srm = new SparseRowMatrix(3,5);
+      srm.set(2,1,3.2f);
+      srm.set(1,3,-1.2f);
+      assert(srm.get(2,1)==3.2f);
+      assert(srm.get(1,3)==-1.2f);
+      assert(srm.get(0,0)==0f);
+    }
+  }
 }
