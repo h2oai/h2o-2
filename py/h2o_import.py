@@ -411,7 +411,8 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
     # TEMP: change this to remove_all_keys which ignores locking and removes keys?
     # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]
-    if not pattern:
+    # FIX! stop using RemoveAll for now. doesn't it hang or ?
+    if 1==0 and not pattern:
         node.remove_all_keys(timeoutSecs=timeoutSecs)
         return 0 # don't have a count of keys?
 
