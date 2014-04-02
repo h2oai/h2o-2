@@ -15,6 +15,9 @@ public class NBModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  @API(help = "Class counts of the dependent variable")
+  final double[] rescnt;
+
   @API(help = "Class distribution of the dependent variable")
   final double[] pprior;
 
@@ -32,6 +35,7 @@ public class NBModel extends Model {
 
   public NBModel(Key selfKey, Key dataKey, DataInfo dinfo, NBTask tsk, double[] pprior, double[][][] pcond, double laplace) {
     super(selfKey, dataKey, dinfo._adaptedFrame);
+    this.rescnt = tsk._rescnt;
     this.pprior = pprior;
     this.pcond = pcond;
     this.ncats = dinfo._cats;

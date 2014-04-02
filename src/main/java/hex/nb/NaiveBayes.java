@@ -83,14 +83,14 @@ public class NaiveBayes extends ModelJob {
       }
     }
 
-    // Mean and stanard deviation of numeric predictor x_j for every level of response y
+    // Mean and standard deviation of numeric predictor x_j for every level of response y
     for(int col = 0; col < dinfo._nums; col++) {
       for(int i = 0; i < pcond[0].length; i++) {
         int cidx = dinfo._cats + col;
         double num = tsk._rescnt[i];
         double pmean = pcond[cidx][i][0]/num;
-        pcond[cidx][i][0] = pmean;
 
+        pcond[cidx][i][0] = pmean;
         // double pvar = pcond[cidx][i][1]/num - pmean*pmean;
         double pvar = pcond[cidx][i][1]/(num - 1) - pmean*pmean*num/(num - 1);
         pcond[cidx][i][1] = Math.sqrt(pvar);
