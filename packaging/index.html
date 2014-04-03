@@ -252,13 +252,9 @@
             <h2>Use H<sub>2</sub>O directly from R</h2>
             <p>Copy and paste these commands into R one line at a time:
             <p class="terminal">
-              <em>
-              # The following two commands remove any previously installed H<sub>2</sub>O packages for R.<br/>
-              # These commands might give error output if H<sub>2</sub>O is not currently loaded or was<br/>
-              # &nbsp; not previously installed.<br/>
-              # We can safely ignore any such errors.</em><br/>
-              detach("package:h2o", unload=TRUE)<br/>
-              remove.packages("h2o")<br/><br/>
+              <em># The following two commands remove any previously installed H<sub>2</sub>O packages for R.</em><br/>
+              if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }<br/>
+              if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }<br/><br/>
               <em># Next, we download, install and initialize the H<sub>2</sub>O package for R.</em><br/>
               install.packages("h2o", repos=(c("<script type="text/javascript">var url = location.href; var url2 = url.substring(0, url.lastIndexOf("/")); document.write(url2);</script>/R", getOption("repos"))))<br/>
               library(h2o)<br/>
