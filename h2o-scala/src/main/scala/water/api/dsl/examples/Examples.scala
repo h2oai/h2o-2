@@ -57,9 +57,9 @@ makes a prediction over train data and compute MSE of prediction."""")
     val predict:DFrame = model.score(f.frame())
     
     println("Prediction on train data: \n" + predict)
-    
-    // compute mean squared errors
-    val serr = (response - predict)^2
+
+    val response = f(2) // take 2nd column as response
+    val serr = (response - predict)^2 // compute mean squared errors
     println("Errors per row: " + serr)
     // make a sum
     val rss = serr collect (0.0, new CDOp() {

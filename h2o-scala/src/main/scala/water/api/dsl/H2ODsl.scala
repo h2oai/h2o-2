@@ -5,7 +5,7 @@ import water.fvec.Frame
 import water.Key
 
 /** The object carry global environment and provides basic global methods such as head, tail, nrows, ... */
-object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[HexKey, DFrame] with DefaultEnv[HexKey, DFrame] {
+object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[HexKey, DFrame] {
   // Binary operator type alias
   type BOp = T_NV_Transf[scala.Double]
   // Filter operator type alias
