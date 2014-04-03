@@ -87,13 +87,13 @@ public class DeepLearningVsNeuralNet extends TestUtil {
             new Random().nextFloat() * 0.5
     };
 
-    double p0 = 0; //0.5 * new Random().nextFloat();
-    long pR = 1; //1000 + new Random().nextInt(1000);
-    double p1 = 0; //0.5 + 0.49 * new Random().nextFloat();
-    double l1 = 0; //1e-5 * new Random().nextFloat();
-    double l2 = 0; //1e-5 * new Random().nextFloat();
-    double max_w2 = Double.POSITIVE_INFINITY; //new Random().nextInt(50);
-    double rate_annealing = 0; //1e-7 + new Random().nextFloat() * 1e-6;
+    double p0 = 0.5 * new Random().nextFloat();
+    long pR = 1000 + new Random().nextInt(1000);
+    double p1 = 0.5 + 0.49 * new Random().nextFloat();
+    double l1 = 1e-5 * new Random().nextFloat();
+    double l2 = 1e-5 * new Random().nextFloat();
+    double max_w2 = Double.POSITIVE_INFINITY; // new Random().nextInt(50);
+    double rate_annealing = 1e-7 + new Random().nextFloat() * 1e-6;
 
 
 
@@ -185,6 +185,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               p.nesterov_accelerated_gradient = true; //same as old NeuralNet code
                               p.classification_stop = -1; //don't stop early -> need to compare against old NeuralNet code, which doesn't stop either
                               p.force_load_balance = false; //keep 1 chunk for reproducibility
+                              p.replicate_training_data = false;
                               p.invoke();
 
                               mymodel = UKV.get(p.dest());
@@ -266,14 +267,14 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                             for (int n=1; n<ls.length; ++n) {
                               Neurons l = neurons[n];
                               Layer ref = ls[n];
-                              for (int o = 0; o < l._a.length; o++) {
-                                for (int i = 0; i < l._previous._a.length; i++) {
-                                  a[n] += ref._w[o * l._previous._a.length + i];
-                                  b[n] += l._w[o * l._previous._a.length + i];
+                              for (int o = 0; o < l._a.size(); o++) {
+                                for (int i = 0; i < l._previous._a.size(); i++) {
+                                  a[n] += ref._w[o * l._previous._a.size() + i];
+                                  b[n] += l._w.raw()[o * l._previous._a.size() + i];
                                   numweights++;
                                 }
                                 ba[n] += ref._b[o];
-                                bb[n] += l._b[o];
+                                bb[n] += l._b.get(o);
                                 numbiases++;
                               }
                             }
