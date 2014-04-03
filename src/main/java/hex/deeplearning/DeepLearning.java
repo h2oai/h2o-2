@@ -339,6 +339,10 @@ public class DeepLearning extends Job.ValidatedJob {
         arg.disable("Only for activation functions with dropout.", inputArgs);
       }
     }
+    if (arg._name.equals("replicate_training_data") && (H2O.CLOUD.size() == 1)) {
+      arg.disable("Only for multi-node operation.");
+      replicate_training_data = false;
+    }
     if (arg._name.equals("single_node_mode") && (H2O.CLOUD.size() == 1 || !replicate_training_data)) {
       arg.disable("Only for multi-node operation with replication.");
       single_node_mode = false;
