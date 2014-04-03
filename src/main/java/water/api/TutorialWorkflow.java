@@ -76,13 +76,16 @@ abstract public class TutorialWorkflow extends HTMLOnlyRequest {
     sb.append("</div>"); // Close top-level row for left and right columns
 
     // Pager in the bottom of left/right column
-    sb.append("<div class='row'><div class='span3'>&nbsp;</div><div class='span7'>");
-    sb.append("<ul class='pager'>");
-    String next = getStepUrl(activeStepNum+1);
-    String prev = getStepUrl(activeStepNum-1);
-    sb.append(activeStepNum > 1 ? "<li><a href='"+prev+"'>Previous</a></li>" : "<li class='disabled'><a href='#'>Previous</a></li>");
-    sb.append(activeStepNum < len ? "<li><a href='"+next+"'>Next</a></li>" : "<li class='disabled'><a href='#'>Next</a></li>");
-    sb.append("</ul>");
+    sb.append("<div class='row'>");
+      sb.append("<div class='span3'>&nbsp;</div>");
+      sb.append("<div class='span7'>");
+        sb.append("<ul class='pager'>");
+        String next = getStepUrl(activeStepNum+1);
+        String prev = getStepUrl(activeStepNum-1);
+        sb.append(activeStepNum > 1 ? "<li><a href='"+prev+"'>Previous</a></li>" : "<li class='disabled'><a href='#'>Previous</a></li>");
+        sb.append(activeStepNum < len ? "<li><a href='"+next+"'>Next</a></li>" : "<li class='disabled'><a href='#'>Next</a></li>");
+        sb.append("</ul>");
+       sb.append("</div>");
     sb.append("</div>");
 
     // Close top-level container
