@@ -542,8 +542,6 @@ public class Vec extends Iced {
   transient Chunk _cache;
   private Chunk c(long i) {
     Chunk c = _cache;
-    if( c != null && c._start == -1 )
-      System.out.println("crunk");
     return (c != null && c._chk2==null && c._start <= i && i < c._start+c._len) ? c : (_cache = chunkForRow(i));
   }
   /** Fetch element the slow way, as a long.  Floating point values are
