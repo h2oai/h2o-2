@@ -13,8 +13,8 @@ import water.fvec.ParseDataset2
 import water.Job
 import hex.drf.DRF
 import water.fvec.NewChunk
-import hex.Quantiles
 import water.api.QuantilesPage
+import hex.deeplearning.{DeepLearning, DeepLearningModel}
 
 trait TRef {}
 
@@ -244,10 +244,12 @@ abstract trait T_MR[T <: DFrame] {
 trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given representation of key
 
   // Parse a dataset
-  def parse(s:String):DFrame = parse(s, s+".hex")
-  def parse(s:String, destKey:String):DFrame = {
+  def parse(s:String):DFrame = parse(new File(s))
+  def parse(file:File):DFrame = parse(file, file.getName+".hex")
+  def parse(s:String, destKey:String):DFrame = parse(new File(s), destKey)
+  def parse(file:File, destKey:String):DFrame = {
     val dest: Key = Key.make(destKey)
-    val fkey = NFSFileVec.make(new File(s))
+    val fkey:Key = NFSFileVec.make(file)
     val f = ParseDataset2.parse(dest, Array(fkey))
     UKV.remove(fkey)
     // Wrap the frame
@@ -279,15 +281,11 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def shutdown() = H2O.CLOUD.shutdown()
   
   // DRF API call
-  def drf(f: VT, r: VT, ntrees: Int = 50, classification:Boolean = false): DRF.DRFModel = {
+  def drf(ftrain: VT, ftest:VT, x:Seq[Int], y:Int, params: (DRF)=>DRF ): DRF.DRFModel = {
     val drf:DRF = new DRF()
-    val response = r.frame().vecs()(0)
-    response.rollupStats()
-    drf.source = new Frame(f.frame().names() ++ Array("response"), f.frame.vecs()++Array(response))
-    drf.response = response
-    drf.classification = classification
-    drf.ntrees = ntrees;
-    drf.invoke()
+    drf.source = ftrain(x++Seq(y)).frame()
+    drf.response = ftrain.frame().vec(y)
+    params(drf).invoke()
     return UKV.get(drf.dest())
   }
   
@@ -297,6 +295,16 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     qp.column = f.frame().vecs()(column)
     qp.invoke()
     return qp.result
+  }
+  
+  def deeplearning(ftrain: VT, ftest: VT, x:Seq[Int], y:Int, params: (DeepLearning)=>DeepLearning):DeepLearningModel = {
+    val dl = new DeepLearning
+    dl.source = ftrain(x++Seq(y)).frame()
+    dl.response = ftrain.frame().vec(y)
+    dl.validation = if (ftest != null) ftest.frame() else null
+    // Fill parameters and invoke computation
+    params(dl).invoke()
+    return UKV.get(dl.dest())
   }
 }
 

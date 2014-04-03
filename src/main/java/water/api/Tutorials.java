@@ -7,7 +7,7 @@ package water.api;
  */
 public class Tutorials extends HTMLOnlyRequest {
 
-  protected String build(Response response) {
+  @Override protected String build(Response response) {
     return "<div class='container'><div class='hero-unit' style='overflow: hidden'>"
     + "<style scoped='scoped'>"
     + "  .col { height: 330px; position: relative;}"
