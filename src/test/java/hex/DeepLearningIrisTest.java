@@ -43,7 +43,7 @@ public class DeepLearningIrisTest extends TestUtil {
 
   @Test public void compare() throws Exception {
 
-    long seed = 0xDECAF;
+    long seed0 = 0xDECAF;
     for (int repeat = 0; repeat < 1; ++repeat) {
       // Testing different things
       // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
@@ -56,7 +56,8 @@ public class DeepLearningIrisTest extends TestUtil {
 //              DeepLearning.InitialWeightDistribution.Uniform,
               DeepLearning.InitialWeightDistribution.UniformAdaptive
       };
-      Random rng = new Random(seed+repeat);
+      final long seed = seed0 + repeat;
+      Random rng = new Random(seed);
 
       double[] initial_weight_scales = { 1e-4 + rng.nextDouble() };
       double[] holdout_ratios = { 0.1 + rng.nextDouble() * 0.8 };
