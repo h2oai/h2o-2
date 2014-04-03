@@ -1,16 +1,8 @@
 package water.api.dsl
 
-import water.fvec.Frame
 import scala.collection.immutable.Range
 import water.fvec.Frame
-import water.UKV
 import water.Key
-import water.H2O
-import water.TestUtil
-import java.io.File
-import water.fvec.NFSFileVec
-import water.fvec.ParseDataset2
-import java.util.UUID
 
 /** The object carry global environment and provides basic global methods such as head, tail, nrows, ... */
 object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[HexKey, DFrame] with DefaultEnv[HexKey, DFrame] {
@@ -34,7 +26,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   def save(k:HexKey, d:DFrame) = put(k,d)
   
   def example():DFrame = example(System.getProperty("user.dir") + "/../../")
-  
+
   def example(topdir:String):DFrame = {
     println("topdir is: " + topdir)
     val tdir = if (topdir==null) "" else if (!topdir.endsWith("/")) topdir+"/" else topdir
