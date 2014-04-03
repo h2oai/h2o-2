@@ -771,6 +771,7 @@ public abstract class Neurons {
       int cols = 8192;
       int loops = 50;
       int warmup_loops = 50;
+      long seed = 0x533D;
       float nnz_ratio_vec = 0.01f; //fraction of non-zeroes for vector
       float nnz_ratio_mat = 0.1f; //fraction of non-zeroes for matrix
 
@@ -785,7 +786,7 @@ public abstract class Neurons {
         res[row] = 0;
         bits[row] = (byte)(new String("abcdefghijklmnopqrstuvwxyz").toCharArray()[row%26]);
       }
-      Random rng = new Random();
+      Random rng = new Random(seed);
       for (int col=0;col<cols;++col)
         if (rng.nextFloat() < nnz_ratio_vec)
           x[col] = ((float)col)/cols;
