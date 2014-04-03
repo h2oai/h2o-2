@@ -58,7 +58,7 @@ public abstract class Neurons {
    */
 //  public transient float[] _a, _e;
   public transient Vector _a; //can be sparse for input layer
-  public transient DenseVector  _e;
+  public transient DenseVector _e;
 
   /**
    * References for feed-forward connectivity
@@ -306,12 +306,14 @@ public abstract class Neurons {
   public static class Input extends Neurons {
 
     private FrameTask.DataInfo _dinfo; //training data
-    SparseVector _svec;
+//    SparseVector _svec;
+//    DenseVector _dvec;
 
     Input(int units, final FrameTask.DataInfo d) {
       super(units);
       _dinfo = d;
       _a = new DenseVector(units);
+//      _dvec = (DenseVector)_a;
     }
 
     @Override protected void bprop() { throw new UnsupportedOperationException(); }
@@ -356,7 +358,14 @@ public abstract class Neurons {
       // Input Dropout
       if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
+//      assert(_dvec instanceof DenseVector);
       _dropout.randomlySparsifyActivation(_a.raw(), seed);
+//      _a = _dvec;
+// FIXME: HACK TO ALWAYS BE SPARSE
+//      _svec = new SparseVector(_dvec);
+//      assert(_svec instanceof SparseVector);
+//      _a = _svec;
+//      assert(_a instanceof SparseVector);
     }
 
   }
@@ -415,17 +424,40 @@ public abstract class Neurons {
     public Maxout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
       float max = 0;
-      for( int o = 0; o < _a.size(); o++ ) {
-        _a.set(o, 0);
-        if( !training || _dropout == null || _dropout.unit_active(o) ) {
-          _a.set(o, Float.NEGATIVE_INFINITY);
-          for( int i = 0; i < _previous._a.size(); i++ )
-            _a.set(o, Math.max(_a.get(o), _w.get(o, i) * _previous._a.get(i)));
-          _a.add(o, _b.get(o));
-          max = Math.max(_a.get(o), max);
+      if (_previous._a instanceof DenseVector) {
+        for( int o = 0; o < _a.size(); o++ ) {
+          _a.set(o, 0);
+          if( !training || _dropout == null || _dropout.unit_active(o) ) {
+            _a.set(o, Float.NEGATIVE_INFINITY);
+            for( int i = 0; i < _previous._a.size(); i++ )
+              _a.set(o, Math.max(_a.get(o), _w.get(o, i) * _previous._a.get(i)));
+            if (Float.isInfinite(-_a.get(o))) _a.set(o, 0); //catch the case where there is dropout (and/or input sparsity) -> no max found!
+            _a.add(o, _b.get(o));
+            max = Math.max(_a.get(o), max);
+          }
         }
+        if( max > 1 ) Utils.div(_a.raw(), max);
       }
-      if( max > 1 ) Utils.div(_a.raw(), max);
+      else {
+        SparseVector x = (SparseVector)_previous._a;
+        for( int o = 0; o < _a.size(); o++ ) {
+          _a.set(o, 0);
+          if( !training || _dropout == null || _dropout.unit_active(o) ) {
+//            _a.set(o, Float.NEGATIVE_INFINITY);
+//            for( int i = 0; i < _previous._a.size(); i++ )
+//              _a.set(o, Math.max(_a.get(o), _w.get(o, i) * _previous._a.get(i)));
+            float mymax = Float.NEGATIVE_INFINITY;
+            for (SparseVector.Iterator it=x.begin(); !it.equals(x.end()); it.next()) {
+              mymax = Math.max(mymax, _w.get(o, it.index()) * it.value());
+            }
+            _a.set(o, mymax);
+            if (Float.isInfinite(-_a.get(o))) _a.set(o, 0); //catch the case where there is dropout (and/or input sparsity) -> no max found!
+            _a.add(o, _b.get(o));
+            max = Math.max(_a.get(o), max);
+          }
+        }
+        if( max > 1 ) Utils.div(_a.raw(), max);
+      }
     }
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
@@ -464,7 +496,6 @@ public abstract class Neurons {
   public static class Rectifier extends Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-//      gemv(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), _dropout != null ? _dropout.bits() : null);
       if (_previous instanceof Input && _previous._a instanceof SparseVector)
         gemv_naive((DenseVector)_a, (DenseRowMatrix)_w, (SparseVector)_previous._a, _b, _dropout != null ? _dropout.bits() : null);
       else
@@ -988,7 +1019,7 @@ public abstract class Neurons {
     public int nnz() { return _nnz; }
 
     SparseVector(float[] v) { this(new DenseVector(v)); }
-    SparseVector(DenseVector dv) {
+    SparseVector(final DenseVector dv) {
       _size = dv.size();
       // first count non-zeros
       for (int i=0; i<dv._data.length; ++i) {
