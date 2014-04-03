@@ -281,7 +281,6 @@ public class DeepLearning extends Job.ValidatedJob {
         if (cp_model.model_info().unstable()) {
           throw new IllegalArgumentException("Checkpointed model was unstable. Not restarting.");
         }
-        state = JobState.RUNNING;
         return;
       }
     }
@@ -409,6 +408,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       cp = new DeepLearningModel(previous, destination_key, job_key);
+      cp.model_info().get_params().state = JobState.RUNNING;
       try {
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
