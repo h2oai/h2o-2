@@ -1,3 +1,176 @@
+Release 2.4.0.4 (Kahan build 4)
+================================
+
+* [Download this release](http://s3.amazonaws.com/h2o-release/h2o/rel-kahan/4/index.html)
+* [Query JIRAs for this release](https://0xdata.atlassian.net/issues/?jql=fixVersion%20%3D%20kahan%20and%20resolution%20is%20not%20empty)
+
+Bug
+---
+    * [PUB-6] - columns with no data reporting standard error
+    * [PUB-30] - bin names for summary when data is reals, (seems like round to int, then str)..leads to same bin names
+    * [PUB-40] - Summary results incorrect  percentiles incorrect 
+    * [PUB-48] - Different lists of masked functions between install and library
+    * [PUB-105] - import folder (va) parse (va) ...then exec causing va to fvec ..caused looping across all in store view
+    * [PUB-116] - R imports shouldn't name h2o keys beginning with a number
+    * [PUB-118] - kmeans1 (from R)
+    * [PUB-121] - summary2 broken (or massive memory leak)
+    * [PUB-122] - GLM Binomial produces questionable coeffs 
+    * [PUB-124] - R tests do not correctly terminate H2O JVM if target/R does not exist
+    * [PUB-137] - runit_NN_multiclass.R is failing
+    * [PUB-146] - summary histogram wrong
+    * [PUB-148] - R: head broken with NAs
+    * [PUB-149] - GBM: MSE is different for runs with/without validation dataset which is the same as train dataset
+    * [PUB-161] - table in R still broken
+    * [PUB-162] - For h2o.glm, there is no way to get the info about the parameters from the model object
+    * [PUB-169] - apply in R not working for columns 
+    * [PUB-170] - R: can't assign to columns that don't exist yet
+    * [PUB-176] - R/h2o can't do nested ifelse
+    * [PUB-178] - R: apply(X,1,sum) wrong
+    * [PUB-179] - quantiles and summary give inconsistent information 
+    * [PUB-180] - R: need ddply
+    * [PUB-190] - h2o.uploadFile throwing internal server error on git hash: 9f70e2080eec3884af7268da79bec095f4e93c5f
+    * [PUB-191] - make for h2o fails for 32 bit linux machine
+    * [PUB-194] - h2o.gbm grid throws Internal Server Error 
+    * [PUB-195] - R: can filter w/ columns that don't exist
+    * [PUB-198] - Change windows tmp directory to someplace that's not c:\
+    * [PUB-199] - Why do i get the following Warning msg when run h2o.gbm on a large categorical response variable
+    * [PUB-200] - Scala REPL produces IFCE during parsing/showing tsv file.
+    * [PUB-204] - GLM grid: When click on models built on allyr airlines with default params, get NPE
+    * [PUB-210] - Creating a new column results in a synthesized colname Cx that is 0-based not 1-based
+    * [PUB-211] - R: can't install local build of R package
+    * [PUB-214] - R: upgrading h2oRClient no longer works correctly
+    * [PUB-215] - exec dies on files with - in the name
+    * [PUB-216] - Wrong Confusion Matrix (and wrong classification error) if the first element of the prediction domain is not predicted
+    * [PUB-225] - Can't Inspect (fvec) a created KMeans2 Model. assume we want to be able to
+    * [PUB-228] - Exec2: apply causes json response with  d != java.lang.Double (d is not part of the expression)
+    * [PUB-233] - glm1 tweedie: java.lang.AssertionError: invalid weight NaN while mapping key $00000000000000000000$covtype.20k.hex
+    * [PUB-238] - AIOOB Error in Parse Dataset
+    * [PUB-239] - Every-time you refresh the Prediction page a new random Destination key name should be generated
+    * [PUB-246] - win 8.1, R 3.0.2, h2o launched from R per jacobi. Old log file (127.0.0.1) isn't removed?
+    * [PUB-251] - K-Means result summary of clusters should be categorical, not numerical
+    * [PUB-253] - win8.1, r3.0.2 h2o.init(). h2o seems to start with 54321 port open to outside network
+    * [PUB-254] - browser: admin/get script should be removed (404 error)
+    * [PUB-257] - KMeans FV End to End Issues
+    * [PUB-258] - clustering vector in K means returns nonsense information 
+    * [PUB-259] - With an h2o data frame I should be able to run at least one of the K means algos
+    * [PUB-261] - ROCPlot html stack trace in h2o. just doing prostate GLM1
+    * [PUB-262] - When Validate a GLM model on a dataset, get an ROC curve with only single observation point
+    * [PUB-263] - K means initialization in both K means 1 and 2 
+    * [PUB-264] - PCA error not very informative
+    * [PUB-267] - runif producing constant column
+    * [PUB-270] - NPE during multi-machine/multifile gz fvec parse
+    * [PUB-275] - Kmeans 1 returns error running on enums, Kmeans 2 does not
+    * [PUB-278] - as.h2o not behaving as expected
+    * [PUB-301] - intermittent NPE on neural net 	at hex.Trainer$MapReduce.done(Trainer.java:320)
+    * [PUB-303] - On Neural Net Score page, response and ignore colums fileds have no effect on scoring  
+    * [PUB-304] - neural nets need user sampling control for validation set size
+    * [PUB-305] - as.data.frame is broken
+    * [PUB-306] - R needs colnames implementation
+    * [PUB-308] - DRF2 on customer churn data with 3000 trees, default depth,  gives java.lang.IllegalArgumentException:at java.util.Arrays.copyOfRange
+    * [PUB-311] - Minor R-package bugs
+    * [PUB-316] - Model specification needs to be reported on model results page Kmeans
+    * [PUB-318] - neural net samples/s counter wrong
+    * [PUB-319] - fvec upload/parse. source/dest overwrite. NPE around frame delete and lock?
+    * [PUB-324] - Standard deviation should not be reported for enums
+    * [PUB-329] - ImportFolder2 broken from R
+    * [PUB-330] - GBM: gives MSE of an extra tree in the output 
+    * [PUB-331] - Neural Net:While scoring on full dataset, On single/multi Nodes, get ArrayIndexOutOfBoundsException: 53 
+    * [PUB-332] - Neural Net Regression
+    * [PUB-337] - GLM2:java.lang.ArrayIndexOutOfBoundsException on Prostate
+    * [PUB-340] - nn npe on c9 data
+    * [PUB-343] - DRF Variable importance : variable importance from H2O and R on prostate dataset do not match
+    * [PUB-348] - drf2 illegal argument exception mid run
+    * [PUB-350] - Model specification needs to be reported on model results page - NN
+    * [PUB-351] - Exec slice issues (2): first: java.lang.RuntimeException: java.lang.NegativeArraySizeException: null while mapping key $00000000400100000000$4c637938-7084-4aec-ad32-198c4b0595d8
+    * [PUB-352] - Support ignored columns in Neural Nets
+    * [PUB-353] - h2o parse assertion fail (VA). The assertion is either true and lies, or is false and tells the truth
+    * [PUB-354] - parse should reject if column names are not unique
+    * [PUB-355] - GLM2: Key is not a frame
+    * [PUB-357] - exec2 AIOOBE. 8. Happens in a number of exec2 tests (started last Fri?)
+    * [PUB-358] - NPE: fvec multi-file import/parse on 4 jvm cloud (164) (50 nflx files
+    * [PUB-359] - NN Returns Finished Before Task Completed
+    * [PUB-361] - exec2. adding two single value keys gets AIOBE (sometimes?)
+    * [PUB-362] - Neural Net Score Key DNE
+    * [PUB-364] - Assertion during parse leaves key locked
+    * [PUB-374] - Make ROC curve output for GBM
+    * [PUB-375] - windows c:\tmp issues and R
+    * [PUB-377] - Kmeans in R rejects H2O parsed dataframes 
+    * [PUB-380] - ddply: can't return > 1 value
+    * [PUB-381] - ddply: results lose their enum-ness
+    * [PUB-383] - R/Exec need unique
+    * [PUB-390] - runit_gbm_1_golden.R failure
+    * [PUB-392] - Oracle javac - 1.6.0_25 - build.sh is failing to compile source code
+    * [PUB-394] - multi-jvm, autoframe triggered by exec, exec doesn't see the resulting key 
+    * [PUB-395] - R hang: bad relative pathname on h2o.importFile() seems to cause R hang?
+    * [PUB-396] - Predict page shows dates instead of real-number 
+    * [PUB-399] - h2o R package errors on startup and beginning of workflow
+    * [PUB-403] - Incorrect ordering  of classes in CM
+    * [PUB-408] - Import/Parse File Must Auto-Generate Legal Keynames
+    * [PUB-410] - R breaks with more than 1000 columns
+    * [PUB-411] - wrong year extracted from date
+    * [PUB-413] - Summary2: only 10 bins in the histogram (all negative numbers). you can see it affects quantile accuracy (don't we need at least 100 bins always for quantile to get 1% accuracy at the edges)
+    * [PUB-414] - summary2: if we keep current threshold=bin edge, there's an end condition for the 99% threshold where value might need to be estimated? (because 1% bin is smaller than bin size?)
+    * [PUB-416] - Summary2: smalldata/runifA.csv. only creates 2 and 4 bins on the col histograms
+    * [PUB-420] - R: need to be able to create complex functions
+    * [PUB-425] - Quantiles with NAs in col
+    * [PUB-427] - R: ddply / exec2 functions need named column referencing
+    * [PUB-429] - NN on Covtype with  -1 to 6 labels has an extra NA level in the confusion matrix
+    * [PUB-431] - h2o.uploadFile breaks when path contains spaces in Windows
+    * [PUB-433] - R: installing h2o package sometimes doesn't auto install dependencies
+    * [PUB-437] - ddply wrong answers
+    * [PUB-445] - NPE on GLM2 with regularization through R
+    * [PUB-447] - please report deviance explained in R GLM results 
+    * [PUB-448] - Sort variable importance values 
+    * [PUB-458] - click thru link on 2/Inspect.hml is wrong. it does 2/SummaryPage.html. should be 2/SummaryPage2.html?
+    * [PUB-462] - AUC page throws assertion error
+    * [PUB-468] - stop capitalizing column names
+    * [PUB-469] - as.factor buttons slowly fill with a darker color (but not all the way)
+    * [PUB-472] - cant cbind expressions
+    * [PUB-473] - The display table for parameters on GLM2 model page looks weird
+    * [PUB-477] - R needs matrix mult / %*%
+    * [PUB-494] - Mismatch between H2O and R quantiles
+    * [PUB-501] - The R-h2o Confusion matrix function should throw appropriate error msg, if user gives an different dataset than the one used for prediction
+    * [PUB-504] - h2o.confustionMatrix printing transpose of the correct CM
+    * [PUB-510] - DRF2 only uses cores from one of 4 hosts on big airlines
+    * [PUB-515] - h2o.ls() throws Warning message: In matrix(unlist(myList), nrow = res$num_keys, ncol = 2, byrow = TRUE) :
+    * [PUB-517] - h2o.glm.FV  - has a nan in CM printing 
+    * [PUB-519] - NPE during Parse2 on 64 nodes
+    * [PUB-520] - h2o.confusionMatrix throws error when test set has extra level
+
+Improvement
+-----------
+    * [PUB-298] - How to debug R problems at the customer
+    * [PUB-309] - Plot function in R is broken
+    * [PUB-369] - NN should randomize rows for every epoch
+    * [PUB-370] - FV: no-headers column name defaults should be C1, C2, C3, ...
+    * [PUB-407] - NN tuning to handle imbalanced datasets and adding F1score/AUC 
+    * [PUB-449] - Grid Search should Return Exception if Model Error
+    * [PUB-465] - Feature importance for Deep Learning
+    * [PUB-471] - Quantile should take multiple cutoffs
+    * [PUB-493] - cd5 with h2o installed as service. Don't see a way to configure h2o java -jar params, notably heap size
+    * [PUB-514] - can get odd errors with h2o on hadoop driver, if local node doesn't have the right yarn config (i.e. local runner)
+    * [PUB-538] - Make forward and back prop faster
+    * [PUB-544] - Add scala interface for quantile
+
+New Feature
+-----------
+    * [PUB-209] - R: add clusterInfo
+    * [PUB-236] - can we please add key assignment option to as.h2o
+    * [PUB-269] - Add Support Button / Tab on our Product
+    * [PUB-295] - Make ROC curve output for RandomForest
+    * [PUB-366] - report on error movement by epoch
+    * [PUB-367] - calculate auc
+    * [PUB-368] - make sure validation set sample includes enough minority class members
+    * [PUB-412] - Report Prediction Error in JSON
+    * [PUB-480] - Naive matrix transpose and multiply
+
+Task
+----
+    * [PUB-372] - Document h2oRClient Methods
+    * [PUB-373] - Document h2oRClient S4 Objects
+
+
+
 Release 2.2.0.3 (Jacobi build 3)
 ================================
 
