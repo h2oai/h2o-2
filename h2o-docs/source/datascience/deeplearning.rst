@@ -6,7 +6,7 @@ Deep Learning
 
 Deep Learning relies on interconnected nodes and weighted
 information paths, which are adapted to minimize prediction error via
-back propogation,  to produce non-linear models of complex
+back propagation,  to produce non-linear models of complex
 relationships. 
   
   
@@ -28,7 +28,7 @@ Defining a Deep Learning Model
 **Classification** 
      
      Checkbox indicating whether the dependent variable is to be
-     treated as a factor or a continious variable. 
+     treated as a factor or a continuous variable. 
 
 **Validation** 
 
@@ -40,7 +40,7 @@ Defining a Deep Learning Model
       
      A model key associated with a previously run deep learning
      model. This option allows users to build a new model as a
-     continuation of a prevously generated model.  
+     continuation of a previously generated model.  
 
 
 **Expert mode** 
@@ -57,9 +57,9 @@ Defining a Deep Learning Model
 
       *Tanh* :Hyperbolic tangent function
       
-      *Rectifier*
+      *Rectifier:* Chooses the maximum of (0, x) where x is the input value for a feature. 
 
-      *Maxout*
+      *Maxout:* Choose the maximum coordinate of the input vector. 
 
       *With Dropout* A percentage of the data will be omitted from
       training as data are presented to each hidden layer in order to
@@ -123,7 +123,7 @@ Defining a Deep Learning Model
        predicted value and the target value. That difference,
        generally called delta, is only available at the output
        layer. To correct the output at each hidden layer, back
-       propogation is used. Momentum modifies back propogation
+       propagation is used. Momentum modifies back propagation
        by allowing prior iterations to influence the current
        update. Using the momentum parameter can aid in avoiding local
        minima and the associated instability. 
@@ -148,12 +148,12 @@ Defining a Deep Learning Model
 
 **Input dropout ratio**
 
-        A percentage of the data to be omited from training in order
+        A percentage of the data to be omitted from training in order
 	to improve generalization. 
 
 **L1 regularization** 
 
-        A regularization method that contrains the size of individual
+        A regularization method that constrains the size of individual
 	coefficients and has the net effect of dropping some
 	coefficients from a model to reduce complexity and avoid
 	overfitting. 
@@ -175,7 +175,7 @@ Defining a Deep Learning Model
 
 **Initial weight distribution**
 
-         The distribution from which intial path weights are to be
+         The distribution from which initial path weights are to be
 	 drawn. When the norma option is selected weights are drawn
 	 from the standard normal with a mean of 0 and a standard
 	 deviation of 1. 
@@ -186,11 +186,11 @@ Defining a Deep Learning Model
 
          *Cross Entropy* Used when the model output consists of
 	 independent hypothesis, and the outputs can be interpreted as
-	 the probabilty that each hypotesis is true. Cross entropy is
-	 the reccomended loss function when the target values are
+	 the probability that each hypothesis is true. Cross entropy is
+	 the recommended loss function when the target values are
 	 classifications, and especially when data are unbalanced. 
 
-	 *Mean Square* Used when the model output are continuious real
+	 *Mean Square* Used when the model output are continuous real
 	 values. 
 
 **Score Interval**
@@ -248,6 +248,67 @@ Defining a Deep Learning Model
 	  of the data as a whole, which can produce poor
 	  models. Shuffling training data ensures that all prediction
 	  classes are present in all chunks of data. 
+
+
+Interpreting the Model
+""""""""""""""""""""""""
+
+**Progress Table**
+
+          The Progress table displays information about each of the
+	  hidden layers in the deep learning model. 
+
+	  *Units* The number of units or nodes in the layer
+
+	  *Type* The type of layer or activation function. Each model
+	  will have one input and one softmax layer, where the softmax
+	  layer is the output of the model. Hidden layers are
+	  identified by the activation function specified. 
+
+	  *Dropout* The percentage of training data dropped from
+	  training at that layer. 
+
+	  *L1, L2* The L1 and L2 regularization penalty applied to the
+	  layer. 
+
+ 
+**Classification Error** 
+
+          The percentage of times that a class was incorrectly
+	  predicted by the model. 
+
+**Epochs** 
+
+          The final number of full epochs carried out. 
+
+**Mini Batch Size**
+
+          The numebr of observations in each mini-batch used to update
+	  path weights. 
+
+**Confusion Matrix**
+
+          A table showing the number of actual observations in a
+	  particular class relative to the number of predicted
+	  observations in a class. This is omitted when the model
+	  specified is regression. 
+
+**Hit Ratio Table**
+
+           A table displaying the percentage of instances where the
+	   actual class label assigned to an observation is in the top
+	   K classes predicted by the network. For instance, in a four
+	   class classifier on values A, B, C, D, a particular
+	   observation is labeled class A, with a probability of .6 of
+	   being A, .2 probability of being B, a .1 probability of
+	   being C, and a .1 probability of being D. If the true class
+	   is B, the observation will be counted in the hit rate for
+	   K=2, but not in the hit rate of K=1. 
+
+**Variable Importance** 
+
+           A table listing the importance of variables listed from
+	   greatest importance, to least importance. 
 
 
 
