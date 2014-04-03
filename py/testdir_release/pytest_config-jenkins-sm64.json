@@ -9,7 +9,7 @@
     "use_home_for_ice": true,
 
     "h2o_per_host": 1, 
-    "java_heap_GB": 28, 
+    "java_heap_GB": 20, 
 
     "create_json": true,
 

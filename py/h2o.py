@@ -2925,13 +2925,38 @@ class RemoteHost(object):
             # log('Uploading to %s: %s -> %s' % (self.http_addr, f, dest))
             sftp = self.ssh.open_sftp()
             # check if file exists on remote side
+            # does paramiko have issues with big files? (>1GB, or 650MB?). maybe we don't care.
+            # This would arise (as mentioned in the source, line no 667, 
+            # http://www.lag.net/paramiko/docs/paramiko.sftp_client-pysrc.html) when there is 
+            # any error reading the packet or when there is EOFError
+
+            # but I'm getting sftp close here randomly at sm.
+            # http://stackoverflow.com/questions/22708942/python-paramiko-module-error-with-callback
+            # http://stackoverflow.com/questions/15010540/paramiko-sftp-server-connection-dropped
+            # http://stackoverflow.com/questions/12322210/handling-paramiko-sshexception-server-connection-dropped
             try:
+                # note we don't do a md5 compare. so if a corrupted file was uploaded we won't re-upload 
+                # until we do another build.
                 sftp.stat(dest)
-                print "Skipping upload of file {0}. File {1} exists on remote side!".format(f, dest)
+                print "{0} Skipping upload of file {1}. File {2} exists on remote side!".format(self, f, dest)
             except IOError, e:
-                if e.errno == errno.ENOENT:
+                # if self.channel.closed or self.channel.exit_status_ready():
+                #     raise Exception("something bad happened to our %s being used for sftp. keepalive? %s %s" % \
+                #         (self, self.channel.closed, self.channel.exit_status_ready()))
+
+                if e.errno == errno.ENOENT: # no such file or directory
+                    verboseprint("{0} uploading file {1}.".format(self, f))
                     sftp.put(f, dest, callback=progress)
+                    # if you want to track upload times
                     ### print "\n{0:.3f} seconds".format(time.time() - start)
+                elif e.errno == errno.EEXIST: # File Exists
+                    pass
+                else:
+                    print "Got unexpected errno: %s on paramiko sftp." % e.errno
+                    print "Lookup here: https://docs.python.org/2/library/errno.html"
+                    # throw the exception again, if not what we expected
+                    exc_info = sys.exc_info()
+                    raise exc_info[1], None, exc_info[2]
             finally:
                 sftp.close()
             self.uploaded[f] = dest
