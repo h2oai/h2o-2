@@ -13,6 +13,7 @@ Data Science in H\ :sub:`2`\ O
    pca
    summary
    gbm
+   deeplearning
    machlearning
    sgd
    references
