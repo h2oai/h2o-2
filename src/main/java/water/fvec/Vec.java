@@ -328,7 +328,8 @@ public class Vec extends Iced {
   // the rollup in the background.  *Always* returns "this".
   public Vec rollupStats(Futures fs) {
     Vec vthis = DKV.get(_key).get();
-    if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    if( vthis._naCnt==-2 )
+      throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
       if( vthis == this ) return this;
       _min  = vthis._min;   _max   = vthis._max;
@@ -534,24 +535,23 @@ public class Vec extends Iced {
     return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
-  public final Chunk chunkForRow(long i) {
-    return chunkForChunkIdx(elem2ChunkIdx(i));
-  }
+  private Chunk chunkForRow_impl(long i) { return chunkForChunkIdx(elem2ChunkIdx(i)); }
 
   // Cache of last Chunk accessed via at/set api
   transient Chunk _cache;
-  private Chunk c(long i) {
+  /** The Chunk for a row#.  Warning: this loads the data locally!  */
+  public final Chunk chunkForRow(long i) {
     Chunk c = _cache;
-    return (c != null && c._chk2==null && c._start <= i && i < c._start+c._len) ? c : (_cache = chunkForRow(i));
+    return (c != null && c._chk2==null && c._start <= i && i < c._start+c._len) ? c : (_cache = chunkForRow_impl(i));
   }
   /** Fetch element the slow way, as a long.  Floating point values are
    *  silently rounded to an integer.  Throws if the value is missing. */
-  public final long  at8( long i ) { return c(i).at8(i); }
+  public final long  at8( long i ) { return chunkForRow(i).at8(i); }
   /** Fetch element the slow way, as a double.  Missing values are
    *  returned as Double.NaN instead of throwing. */
-  public final double at( long i ) { return c(i).at(i); }
+  public final double at( long i ) { return chunkForRow(i).at(i); }
   /** Fetch the missing-status the slow way. */
-  public final boolean isNA(long row){ return c(row).isNA(row); }
+  public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
 
 
   /** Write element the slow way, as a long.  There is no way to write a
@@ -561,18 +561,18 @@ public class Vec extends Iced {
    *  common compatible data representation.
    *
    *  */
-  public final long   set( long i, long   l) {return c(i).set(i,l);}
+  public final long   set( long i, long   l) {return chunkForRow(i).set(i,l);}
 
   /** Write element the slow way, as a double.  Double.NaN will be treated as
    *  a set of a missing element.
    *  */
-  public final double set( long i, double d) {return c(i).set(i,d);}
+  public final double set( long i, double d) {return chunkForRow(i).set(i,d);}
   /** Write element the slow way, as a float.  Float.NaN will be treated as
    *  a set of a missing element.
    *  */
-  public final float  set( long i, float  f) {return c(i).set(i,f);}
+  public final float  set( long i, float  f) {return chunkForRow(i).set(i,f);}
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) { return c(i).setNA(i);}
+  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i);}
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {
