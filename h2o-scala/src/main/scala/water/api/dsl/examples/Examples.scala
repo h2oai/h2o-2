@@ -2,10 +2,7 @@ package water.api.dsl.examples
 
 import water.{Boot, H2O, Iced}
 import water.api.dsl.{Row, T_T_Collect, DFrame}
-import hex.deeplearning.DeepLearning
-import java.io.File
 import java.util.Random
-import hex.deeplearning.DeepLearning.ClassSamplingMethod
 import hex.drf.DRF
 
 /**
@@ -94,7 +91,11 @@ makes a prediction over train data and compute MSE of prediction."""")
   /** Simple example of deep learning model builder. */
   def example4() = {
     banner(4, "Call deep learning model builder and validate it on test data.")
+    // Import favorite classes
     import water.api.dsl.H2ODsl._
+    import hex.deeplearning.DeepLearning
+    import hex.deeplearning.DeepLearning.ClassSamplingMethod
+
     // Parse train dataset
     val ftrain = parse(ffind("smalldata/logreg/prostate.csv"))
     // Create parameters for deep learning

@@ -8,7 +8,7 @@ import water.MRTask2
 import water.fvec.Chunk
 import water.Iced
 import water.fvec.NFSFileVec
-import java.io.File
+import java.io.{FileNotFoundException, File}
 import water.fvec.ParseDataset2
 import water.Job
 import hex.drf.DRF
@@ -248,6 +248,7 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def parse(file:File):DFrame = parse(file, file.getName+".hex")
   def parse(s:String, destKey:String):DFrame = parse(new File(s), destKey)
   def parse(file:File, destKey:String):DFrame = {
+    if (!file.exists()) throw new FileNotFoundException(file.getName)
     val dest: Key = Key.make(destKey)
     val fkey:Key = NFSFileVec.make(file)
     val f = ParseDataset2.parse(dest, Array(fkey))
@@ -267,7 +268,7 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     if (!file.exists())
       file = new File("../../smalldata/" + fname)
     if (!file.exists())
-      file = null
+      throw new FileNotFoundException(fname)
     file
   }
   def keys:Unit = keys(false)
@@ -300,7 +301,8 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     val drf:DRF = new DRF()
     drf.source = ftrain(x++Seq(y)).frame()
     drf.response = ftrain.frame().vec(y)
-    params(drf).invoke()
+    if (params!=null) params(drf)
+    drf.invoke()
     return UKV.get(drf.dest())
   }
   
@@ -318,7 +320,8 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     dl.response = ftrain.frame().vec(y)
     dl.validation = if (ftest != null) ftest.frame() else null
     // Fill parameters and invoke computation
-    params(dl).invoke()
+    if (params!=null) params(dl)
+    dl.invoke()
     return UKV.get(dl.dest())
   }
 }
