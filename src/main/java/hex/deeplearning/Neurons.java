@@ -207,10 +207,11 @@ public abstract class Neurons {
     for( int col = 0; col < cols; col++ ) {
       final float weight = _w.get(row,col);
       if( update_prev ) _previous._e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
-      if (params.fast_mode && _previous._a.get(col) == 0) continue;
+      final float previous_a = _previous._a.get(col);
+      if (params.fast_mode && previous_a == 0) continue;
 
       //this is the actual gradient dE/dw
-      final float grad = partial_grad * _previous._a.get(col) - Math.signum(weight) * l1 - weight * l2;
+      final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
