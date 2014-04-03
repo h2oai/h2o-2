@@ -401,7 +401,8 @@ public class DeepLearning extends Job.ValidatedJob {
    * Train a Deep Learning model, assumes that all members are populated
    * @return JobState
    */
-  @Override protected final void execImpl() {
+  @Override
+  public final void execImpl() {
     DeepLearningModel cp;
     if (checkpoint == null) cp = initModel();
     else {
