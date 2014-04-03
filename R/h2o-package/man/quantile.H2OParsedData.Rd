@@ -1,13 +1,14 @@
 \name{quantile.H2OParsedData}
 \alias{quantile.H2OParsedData}
-\title{ Obtain and display quantiles for H2O parsed data.}
+\title{Obtain and display quantiles for H2O parsed data.}
 \description{ \code{quantile.H2OParsedData}, a method for the \code{\link{quantile}} generic. Obtain and return quantiles for an \code{\linkS4class{H2OParsedData}} object.}
-\usage{\method{quantile}{H2OParsedData}(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, ...)}
+\usage{\method{quantile}{H2OParsedData}(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...)}
 \arguments{
   \item{x}{An \code{\linkS4class{H2OParsedData}} object with a single numeric column.}
   \item{probs}{numeric vector of probabilities with values in [0,1].}
   \item{na.rm}{logical; if true, any NA and NaN's are removed from x before the quantiles are computed.}
   \item{names}{logical; if true, the result has a names attribute.}
+  \item{type}{integer selecting the quantile algorithm to use. Currently, only type 7 (linear interpolation) is supported.}
   \item{...}{further arguments passed to or from other methods.}
 }
 \details{

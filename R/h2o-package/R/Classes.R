@@ -369,7 +369,6 @@ h2o.unique <- function(x, incomparables = FALSE, ...){
 # 
 #   res[,1:(ncol(res)-1)]
 }
-unique.H2OParsedDataVA <- h2o.unique
 unique.H2OParsedData <- h2o.unique
 
 h2o.runif <- function(x, min = 0, max = 1) {
@@ -557,7 +556,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
-`[[.H2OParsedData` <- function(x, ..., exact=TRUE){
+`[[.H2OParsedData` <- function(x, ..., exact = TRUE) {
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
 
@@ -571,10 +570,10 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   x[, cols]
 }
 
-`[[<-.H2OParsedData` <- function(x, i, j, value){
+`[[<-.H2OParsedData` <- function(x, i, j, value) {
   if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
-  if( !class(value) == 'H2OParsedData') stop('can only append h2o data to h2o data')
+  if( !inherits(x, 'H2OParsedData')) stop('x is the wrong class')
+  if( !inherits(value, 'H2OParsedData')) stop('can only append H2O data to H2O data')
   if( ncol(value) > 1 ) stop('may only set a single column')
   if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
 
@@ -601,11 +600,11 @@ cbind.H2OParsedData <- function(...) {
   klass <- 'H2OParsedData'
   h2o <- l[[1]]@h2o
   nrows <- nrow(l[[1]])
-  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem) }, l)
+  m <- Map(function(elem){ inherits(elem, klass) & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem) }, l)
   compatible <- Reduce(function(l,r) l & r, x=m, init=T)
   if(!compatible){ stop(paste('cbind: all elements must be of type', klass, 'and in the same H2O instance'))}
   
-  # TODO: if cbind(x,x), fix up the column names so unique. sigh.
+  # If cbind(x,x), dupe colnames will automatically be renamed by H2O
   # TODO: cbind(df[,1], df[,2]) should retain colnames of original data frame (not temp keys from slice)
   if(is.null(names(l)))
     tmp <- Map(function(x) x@key, l)
@@ -613,10 +612,10 @@ cbind.H2OParsedData <- function(...) {
     tmp <- mapply(function(x,n) { ifelse(is.null(n) || is.na(n) || nchar(n) == 0, x@key, paste(n, x@key, sep = "=")) }, l, names(l))
   
   exec_cmd <- sprintf("cbind(%s)", paste(as.vector(tmp), collapse = ","))
-  # exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
   res <- .h2o.__exec2(h2o, exec_cmd)
   new('H2OParsedData', h2o=h2o, key=res$dest_key)
 }
+cbind.H2OParsedDataVA <- cbind.H2OParsedData
 
 #--------------------------------- Arithmetic ----------------------------------#
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
@@ -1210,41 +1209,6 @@ setMethod("show", "H2ORFModelVA", function(object) {
   cat("\nTree Stats:\n"); print(model$tree_sum)
 })
 
-`[[.H2OParsedDataVA` <- function(x, ..., exact=TRUE){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
-  
-  cols <- sapply(as.list(...), function(x) x)
-  if( length(cols) == 0 )
-    return(x)
-  if( length(cols) > 1 ) stop('[[]] may only select one column')
-  if( ! cols[1] %in% colnames(x) )
-    return(NULL)
-  
-  x[, cols]
-}
-
-`[[<-.H2OParsedDataVA` <- function(x, i, j, value){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
-  if( !class(value) == 'H2OParsedDataVA') stop('can only append h2o data to h2o data')
-  if( ncol(value) > 1 ) stop('may only set a single column')
-  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
-  
-  mm <- match.call()
-  col_name <- as.list(i)[[1]]
-  
-  cc <- colnames(x)
-  if( col_name %in% cc ){
-    x[, match( col_name, cc ) ] <- value
-  } else {
-    x <- cbind(x, value)
-    cc <- c( cc, col_name )
-    colnames(x) <- cc
-  }
-  x
-}
-
 setMethod("colnames", "H2OParsedDataVA", function(x) {
   if(ncol(x) > .MAX_INSPECT_COL_VIEW)
     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
@@ -1276,23 +1240,6 @@ setMethod("dim", "H2OParsedDataVA", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key)
   as.numeric(c(res$num_rows, res$num_cols))
 })
-
-cbind.H2OParsedDataVA <- function(...){
-  l <- list(...)
-  if( length(l) == 0 ) stop('cbind requires an h2o data')
-  klass <- 'H2OParsedDataVA'
-  h2o <- l[[1]]@h2o
-  nrows <- nrow(l[[1]])
-  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem)}, l)
-  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
-  
-  if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same h2o instance'))}
-  
-  # todo: if cbind(x,x), fix up the column names so unique.  sigh.
-  exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
-  res <- .h2o.__exec2(h2o, exec_cmd)
-  new('H2OParsedDataVA', h2o=h2o, key=res$dest_key)
-}
 
 head.H2OParsedDataVA <- function(x, n = 6L, ...) {
   numRows = nrow(x)
