@@ -11,7 +11,7 @@ import water.parser.ParseDataset;
 
 public class KVTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // ---
   // Run some basic tests.  Create a key, test that it does not exist, insert a
@@ -33,6 +33,7 @@ public class KVTest extends TestUtil {
   // ---
   // Make 100 keys, verify them all, delete them all.
   @Test public void test100Keys() {
+    Scope.enter();
     Key   keys[] = new Key  [100];
     Value vals[] = new Value[keys.length];
     for( int i=0; i<keys.length; i++ ) {
@@ -43,22 +44,17 @@ public class KVTest extends TestUtil {
       DKV.put(k,v1);
       assertEquals(v1._key,k);
     }
-    for( int i=0; i<keys.length; i++ ) {
-      Value v = DKV.get(keys[i]);
-      assertEquals(vals[i],v);
-    }
-    for( int i=0; i<keys.length; i++ ) {
-      DKV.remove(keys[i]);
-    }
-    for( int i=0; i<keys.length; i++ ) {
-      Value v3 = DKV.get(keys[i]);
-      assertNull(v3);
-    }
+    for( int i=0; i<keys.length; i++ )
+      assertEquals(vals[i],DKV.get(keys[i]));
+    Scope.exit();
+    for( int i=0; i<keys.length; i++ )
+      assertNull(DKV.get(keys[i]));
   }
 
   // ---
   // Issue a slew of remote puts, then issue a DFJ job on the array of keys.
   @Test public void testRemoteBitSet() throws Exception {
+    Scope.enter();
     // Issue a slew of remote key puts
     Key[] keys = new Key[32];
     for( int i = 0; i < keys.length; ++i ) {
@@ -73,7 +69,8 @@ public class KVTest extends TestUtil {
     RemoteBitSet r = new RemoteBitSet();
     r.invoke(keys);
     assertEquals((int)((1L<<keys.length)-1), r._x);
-    for( Key k : keys ) DKV.remove(k);
+    //for( Key k : keys ) DKV.remove(k);
+    Scope.exit();
   }
 
   // Remote Bit Set: OR together the result of a single bit-mask where the

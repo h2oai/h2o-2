@@ -87,11 +87,16 @@ public class Frame extends Lockable<Frame> {
         cnames[ccv] = names[i];
         vecs[i] = cvecs[ccv++] = anyVec().makeCon(c);
       }
-  return new Frame[] { new Frame(names,vecs), ccv>0 ?  new Frame(Arrays.copyOf(cnames, ccv), Arrays.copyOf(cvecs,ccv)) : null };
+    return new Frame[] { new Frame(names,vecs), ccv>0 ?  new Frame(Arrays.copyOf(cnames, ccv), Arrays.copyOf(cvecs,ccv)) : null };
   }
+
+  // Return (and cache) vectors
   public final Vec[] vecs() {
     Vec[] tvecs = _vecs; // read the content
-    if( tvecs != null ) return tvecs; // compare and return directly
+    return tvecs == null ? (_vecs=vecs_impl()) : tvecs;
+  }
+  // Compute vectors for caching
+  private Vec[] vecs_impl() {
     // Load all Vec headers; load them all in parallel by spawning F/J tasks.
     final Vec [] vecs = new Vec[_keys.length];
     Futures fs = new Futures();
@@ -115,7 +120,7 @@ public class Frame extends Lockable<Frame> {
       fs.add(t);
     }
     fs.blockForPending();
-    return _vecs = vecs;
+    return vecs;
   }
   // Force a cache-flush & reload, assuming vec mappings were altered remotely
   public final Vec[] reloadVecs() { _vecs=null; return vecs(); }
@@ -261,7 +266,6 @@ public class Frame extends Lockable<Frame> {
   }
 
   public Vec replace(int col, Vec nv) {
-    assert col < _names.length;
     Vec rv = vecs()[col];
     assert rv.group().equals(nv.group());
     _vecs[col] = nv;
@@ -406,17 +410,19 @@ public class Frame extends Lockable<Frame> {
 
   @Override public String toString() {
     // Across
-    Vec vecs[] = vecs();
+    Vec vecs[] = _vecs;
+    // Do Not Cache _vecs in toString lest IdeaJ variable display cause side-effects
+    if( vecs == null ) vecs = vecs_impl(); 
     if( vecs.length==0 ) return "{}";
-    String s="{"+_names[0];
+    String s="{"+(_names==null?"C0":_names[0]);
     long bs=vecs[0].byteSize();
     for( int i=1; i<vecs.length; i++ ) {
-      s += ","+_names[i];
+      s += ","+(_names==null?"C"+i:_names[i]);
       bs+= vecs[i].byteSize();
     }
     s += "}, "+PrettyPrint.bytes(bs)+"\n";
     // Down
-    Vec v0 = anyVec();
+    Vec v0 = _vecs[0];          // Do Not Cache, no side-effects
     if( v0 == null ) return s;
     int nc = v0.nChunks();
     s += "Chunk starts: {";
@@ -442,7 +448,7 @@ public class Frame extends Lockable<Frame> {
   public String[] toStringHdr( StringBuilder sb ) {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
-      String n = (c < _names.length) ? _names[c] : ("C"+c);
+      String n = (_names != null && c < _names.length) ? _names[c] : ("C"+c);
       int nlen = n.length();
       if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       int w=0;
@@ -783,18 +789,18 @@ public class Frame extends Lockable<Frame> {
         }
         // Process this next set of rows
         // For all cols in the new set
-          for( int i=0; i<_cols.length; i++ ) {
-              Chunk    oc =  chks[_cols[i]];
-              NewChunk nc = nchks[      i ];
-              if( oc._vec.isInt() ) { // Slice on integer columns
-                  for( int j=rlo; j<rhi; j++ )
-                      if( oc.isNA0(j) ) nc.addNA();
-                      else              nc.addNum(oc.at80(j),0);
-              } else {                // Slice on double columns
-                  for( int j=rlo; j<rhi; j++ )
-                      nc.addNum(oc.at0(j));
-              }
+        for( int i=0; i<_cols.length; i++ ) {
+          Chunk    oc =  chks[_cols[i]];
+          NewChunk nc = nchks[      i ];
+          if( oc._vec.isInt() ) { // Slice on integer columns
+            for( int j=rlo; j<rhi; j++ )
+              if( oc.isNA0(j) ) nc.addNA();
+              else              nc.addNum(oc.at80(j),0);
+          } else {                // Slice on double columns
+            for( int j=rlo; j<rhi; j++ )
+              nc.addNum(oc.at0(j));
           }
+        }
         rlo=rhi;
         if( _rows==null ) break;
       }

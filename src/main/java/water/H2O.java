@@ -508,7 +508,6 @@ public final class H2O {
   // from the STORE. If this happens, some of replication management bits in
   // the Key will be set in the wrong Key copy... leading to extra rounds of
   // replication.
-
   public static final Value putIfMatch( Key key, Value val, Value old ) {
     if( old != null ) // Have an old value?
       key = old._key; // Use prior key
@@ -523,7 +522,10 @@ public final class H2O {
     // If the K/V mapping is changing, let the store cleaner just overwrite.
     // If the K/V mapping is new, let the store cleaner just create
     if( old != null && val == null ) old.removeIce(); // Remove the old guy
-    if( val != null ) dirty_store(); // Start storing the new guy
+    if( val != null ) {
+      dirty_store();            // Start storing the new guy
+      Scope.track(key);
+    }
     return old; // Return success
   }
 
