@@ -255,6 +255,21 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     // Wrap the frame
     new DFrame(f)
   }
+  // Find a given filename
+  def ffind(fname: String):File = {
+    var file = new File(fname)
+    if (!file.exists())
+      file = new File("../" + fname)
+    if (!file.exists())
+      file = new File("../../" + fname)
+    if (!file.exists())
+      file = new File("../smalldata/" + fname)
+    if (!file.exists())
+      file = new File("../../smalldata/" + fname)
+    if (!file.exists())
+      file = null
+    file
+  }
   def keys:Unit = keys(false)
   // Simply print a list of keys in KV store
   def keys(verbose:Boolean = false) = {

@@ -129,10 +129,10 @@ makes a prediction over train data and compute MSE of prediction."""")
   def userMain(args: Array[String]):Unit = {
     H2O.main(args)
     try {
-      //example1()
+      example1()
       example2()
-      //example3()
-      //example4()
+      example3()
+      example4()
     } catch {
       case t:Throwable => t.printStackTrace() // Simple debug
     } finally {
@@ -145,20 +145,6 @@ makes a prediction over train data and compute MSE of prediction."""")
     println("\n==== Example #"+id+" ====\n "+desc )
     println(  "====================\n")
   }
-
-  // Find a given filename
-  private def ffind(fname: String):File = {
-    var file = new File(fname)
-    if (!file.exists())
-      file = new File("../" + fname)
-    if (!file.exists())
-      file = new File("../../" + fname)
-    if (!file.exists())
-      file = null
-    file
-  }
-
-
 }
 
 // Companion class
