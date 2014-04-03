@@ -7,12 +7,12 @@ myPort = readline("Enter port number of H2O server: ")
 remoteH2O = h2o.init(ip = myIP, port = as.numeric(myPort), startH2O = FALSE)
 
 # This is a demo of H2O's naive Bayes modeling and prediction with categorical variables
-votes.hex = h2o.uploadFile(remoteH2O, system.file("extdata", "housevotes.csv", package="h2o"), "votes.hex")
+votes.hex = h2o.uploadFile(remoteH2O, path = system.file("extdata", "housevotes.csv", package="h2o"), key = "votes.hex", header = TRUE)
 summary(votes.hex)
-votes.nb = h2o.naiveBayes(x = 2:17, y = 1, data = votes.hex, lambda = 3)
+votes.nb = h2o.naiveBayes(x = 2:17, y = 1, data = votes.hex, laplace = 3)
 print(votes.nb)
 votes.pred = h2o.predict(votes.nb, votes.hex)
-print(votes.pred)
+head(votes.pred)
 
 # This is a demo of H2O's naive Bayes with continuous predictors
 iris.hex = h2o.uploadFile(remoteH2O, path = system.file("extdata", "iris.csv", package="h2o"), key = "iris.hex")

@@ -3,15 +3,15 @@
 # Then, it runs naive Bayes with and without laplace smoothing
 # Note: This demo runs H2O on localhost:54321
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
 # This is a demo of H2O's naive Bayes modeling and prediction with categorical variables
-votes.hex = h2o.uploadFile(localH2O, system.file("extdata", "housevotes.csv", package="h2o"), "votes.hex")
+votes.hex = h2o.uploadFile(localH2O, path = system.file("extdata", "housevotes.csv", package="h2o"), key = "votes.hex", header = TRUE)
 summary(votes.hex)
-votes.nb = h2o.naiveBayes(x = 2:17, y = 1, data = votes.hex, lambda = 3)
+votes.nb = h2o.naiveBayes(x = 2:17, y = 1, data = votes.hex, laplace = 3)
 print(votes.nb)
 votes.pred = h2o.predict(votes.nb, votes.hex)
-print(votes.pred)
+head(votes.pred)
 
 # This is a demo of H2O's naive Bayes with continuous predictors
 iris.hex = h2o.uploadFile(localH2O, path = system.file("extdata", "iris.csv", package="h2o"), key = "iris.hex")

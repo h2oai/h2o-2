@@ -15,7 +15,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
         polls += 1
         # get utilization and print it
         # any busy jobs
-        a = h2o.nodes[0].jobs_admin(timeoutSecs=10)
+        a = h2o.nodes[0].jobs_admin(timeoutSecs=30)
         busy = False
         for j in a['jobs']:
             if j['end_time']=='' and not (j['cancelled'] or (j['result'].get('val', None)=='CANCELLED')):
