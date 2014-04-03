@@ -43,6 +43,7 @@ public class DeepLearningIrisTest extends TestUtil {
 
   @Test public void compare() throws Exception {
 
+    long seed = 0xDECAF;
     for (int repeat = 0; repeat < 1; ++repeat) {
       // Testing different things
       // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
@@ -55,12 +56,14 @@ public class DeepLearningIrisTest extends TestUtil {
 //              DeepLearning.InitialWeightDistribution.Uniform,
               DeepLearning.InitialWeightDistribution.UniformAdaptive
       };
-      double[] initial_weight_scales = { 1e-4 + new Random().nextDouble() };
-      double[] holdout_ratios = { 0.1 + new Random().nextDouble() * 0.8 };
-      double[] momenta = { new Random().nextDouble() * 0.99 };
-      int[] hiddens = { 1, 2 + new Random().nextInt(50) };
-      int[] epochs = { 1, 2 + new Random().nextInt(50) };
-      double[] rates = { 0.01, 1e-5 + new Random().nextDouble() * .1 };
+      Random rng = new Random(seed+repeat);
+
+      double[] initial_weight_scales = { 1e-4 + rng.nextDouble() };
+      double[] holdout_ratios = { 0.1 + rng.nextDouble() * 0.8 };
+      double[] momenta = { rng.nextDouble() * 0.99 };
+      int[] hiddens = { 1, 2 + rng.nextInt(50) };
+      int[] epochs = { 1, 2 + rng.nextInt(50) };
+      double[] rates = { 0.01, 1e-5 + rng.nextDouble() * .1 };
 
       int num_runs = 0;
       for (DeepLearning.Activation activation : activations) {
@@ -72,7 +75,6 @@ public class DeepLearningIrisTest extends TestUtil {
                   for (int hidden : hiddens) {
                     for (int epoch : epochs) {
                       for (double rate : rates) {
-                        long seed = new Random().nextLong();
                         Log.info("");
                         Log.info("STARTING.");
                         Log.info("Running with " + activation.name() + " activation function and " + loss.name() + " loss function.");
