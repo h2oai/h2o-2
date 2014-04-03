@@ -179,25 +179,31 @@ public abstract class Neurons {
    * @param rate
    * @param momentum
    */
-  final void bprop(final int row, final float partial_grad, float rate, final float momentum) {
+  final void bprop(final int row, final float partial_grad, final float rate, final float momentum) {
     // only correct weights if the gradient is large enough
     if (params.fast_mode || (
             // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
             !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
       if (Math.abs(partial_grad) <= 1e-10) return;
     }
+
+    if (_w instanceof DenseRowMatrix)
+      bprop(_w, row, partial_grad, rate, momentum);
+    else throw new UnsupportedOperationException("bprop col matrix not implemented.");
+  }
+
+  private final void bprop(final Matrix _w, final int row, final float partial_grad, float rate, final float momentum) {
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
     final float l2 = (float)params.l2;
-    final boolean update_prev = _previous._e != null;
     final boolean have_momenta = _wm != null;
     final boolean have_ada = _ada != null;
     final boolean nesterov = params.nesterov_accelerated_gradient;
+    final boolean update_prev = _previous._e != null;
     final int cols = _previous._a.size();
     final int idx = row * cols;
 
-    //FIXME: use iterator over sparse vector (if sparse)
     for( int col = 0; col < cols; col++ ) {
       if( update_prev ) _previous._e.add(col, partial_grad * _w.get(row, col)); // propagate the error dE/dnet to the previous layer, via connecting weights
       if (params.fast_mode && _previous._a.get(col) == 0) continue;
@@ -256,16 +262,15 @@ public abstract class Neurons {
 
     // C.f. Improving neural networks by preventing co-adaptation of feature detectors
     if (params.max_w2 != Double.POSITIVE_INFINITY) {
-      if (_w instanceof DenseRowMatrix) {
-        final double r2 = Utils.sumSquares(_w.raw(), idx, idx+cols);
-        if( r2 > params.max_w2 ) {
-          final float scale = Utils.approxSqrt((float)(params.max_w2 / r2));
-          for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
-        }
-      } else throw new UnsupportedOperationException("only DenseRowMatrix is implemented.");
+      final double r2 = Utils.sumSquares(_w.raw(), idx, idx+cols);
+      if( r2 > params.max_w2 ) {
+        final float scale = Utils.approxSqrt((float)(params.max_w2 / r2));
+        for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
+      }
     }
     if (Float.isInfinite(_b.get(row))) _minfo.set_unstable();
   }
+
 
   /**
    * The learning rate
@@ -362,10 +367,10 @@ public abstract class Neurons {
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-//      if (_previous instanceof Input && _previous._a instanceof SparseVector)
-//        gemv_naive((DenseVector)_a, (DenseRowMatrix)_w, (SparseVector)_previous._a, _b, _dropout != null ? _dropout.bits() : null);
-//      else
-        gemv(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), _dropout != null ? _dropout.bits() : null);
+      if (_previous instanceof Input && _previous._a instanceof SparseVector)
+        gemv_naive((DenseVector)_a, (DenseRowMatrix)_w, (SparseVector)_previous._a, _b, _dropout != null ? _dropout.bits() : null);
+      else
+        gemv((DenseVector)_a, (DenseRowMatrix)_w, (DenseVector)_previous._a, _b, _dropout != null ? _dropout.bits() : null);
 
       for( int o = 0; o < _a.size(); o++ ) {
         _a.set(o, 1f - 2f / (1f + (float)Math.exp(2*_a.get(o)))); //evals faster than tanh(x), but is slightly less numerically stable - OK
@@ -459,10 +464,11 @@ public abstract class Neurons {
   public static class Rectifier extends Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
-//      if (_previous instanceof Input && _previous._a instanceof SparseVector)
-//        gemv_naive((DenseVector)_a, (DenseRowMatrix)_w, (SparseVector)_previous._a, _b, _dropout != null ? _dropout.bits() : null);
-//      else
-        gemv(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), _dropout != null ? _dropout.bits() : null);
+//      gemv(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), _dropout != null ? _dropout.bits() : null);
+      if (_previous instanceof Input && _previous._a instanceof SparseVector)
+        gemv_naive((DenseVector)_a, (DenseRowMatrix)_w, (SparseVector)_previous._a, _b, _dropout != null ? _dropout.bits() : null);
+      else
+        gemv((DenseVector)_a, (DenseRowMatrix)_w, (DenseVector)_previous._a, _b, _dropout != null ? _dropout.bits() : null);
 
       for( int o = 0; o < _a.size(); o++ ) {
         _a.set(o, Math.max(_a.get(o), 0f));
@@ -650,18 +656,12 @@ public abstract class Neurons {
     }
   }
 
+  static void gemv(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
+    gemv(res.raw(), a.raw(), x.raw(), y.raw(), row_bits);
+  }
 
   static void gemv_naive(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
-    final int cols = x.size();
-    final int rows = y.size();
-    assert(res.size() == rows);
-    for(int r = 0; r<rows; r++) {
-      res.set(r, 0);
-      if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
-      for(int c = 0; c<cols; c++)
-        res.add(r, a.get(r,c) * x.get(c));
-      res.add(r, y.get(r));
-    }
+    gemv_naive(res.raw(), a.raw(), x.raw(), y.raw(), row_bits);
   }
 
   static void gemv_naive(final DenseVector res, final DenseColMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
