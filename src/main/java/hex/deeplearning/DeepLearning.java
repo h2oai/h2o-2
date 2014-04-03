@@ -407,9 +407,12 @@ public class DeepLearning extends Job.ValidatedJob {
     else {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
+      epochs += previous.epoch_counter; //add new epochs to existing model
+      Log.info("Adding " + String.format("%.3f", previous.epoch_counter) + " epochs from the checkpointed model.");
       cp = new DeepLearningModel(previous, destination_key, job_key);
       cp.model_info().get_params().state = JobState.RUNNING;
       try {
+        Log.info("Resuming from checkpoint.");
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
         if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
@@ -426,9 +429,8 @@ public class DeepLearning extends Job.ValidatedJob {
           throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
         }
         if (classification != previous.model_info().get_params().classification) {
-          throw new IllegalArgumentException("classification must be the same as for the checkpointed model.");
+          Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
         }
-        Log.info("Resuming from checkpoint.");
         final DeepLearning mp = cp.model_info().get_params();
         Object A = mp, B = this;
         for (Field fA : A.getClass().getDeclaredFields()) {
