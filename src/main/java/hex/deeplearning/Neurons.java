@@ -187,9 +187,9 @@ public abstract class Neurons {
       if (Math.abs(partial_grad) <= 1e-10) return;
     }
 
-    if (_w instanceof DenseRowMatrix)
+//    if (_w instanceof DenseRowMatrix)
       bprop(_w, row, partial_grad, rate, momentum);
-    else throw new UnsupportedOperationException("bprop col matrix not implemented.");
+//    else throw new UnsupportedOperationException("bprop col matrix not implemented.");
   }
 
   private final void bprop(final Matrix _w, final int row, final float partial_grad, float rate, final float momentum) {
@@ -205,11 +205,12 @@ public abstract class Neurons {
     final int idx = row * cols;
 
     for( int col = 0; col < cols; col++ ) {
-      if( update_prev ) _previous._e.add(col, partial_grad * _w.get(row, col)); // propagate the error dE/dnet to the previous layer, via connecting weights
+      final float weight = _w.get(row,col);
+      if( update_prev ) _previous._e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
       if (params.fast_mode && _previous._a.get(col) == 0) continue;
 
       //this is the actual gradient dE/dw
-      final float grad = partial_grad * _previous._a.get(col) - Math.signum(_w.get(row,col)) * l1 - _w.get(row,col) * l2;
+      final float grad = partial_grad * _previous._a.get(col) - Math.signum(weight) * l1 - weight * l2;
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
