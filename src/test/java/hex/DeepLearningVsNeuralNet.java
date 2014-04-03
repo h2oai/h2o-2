@@ -186,6 +186,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               p.classification_stop = -1; //don't stop early -> need to compare against old NeuralNet code, which doesn't stop either
                               p.force_load_balance = false; //keep 1 chunk for reproducibility
                               p.replicate_training_data = false;
+                              p.single_node_mode = true;
                               p.invoke();
 
                               mymodel = UKV.get(p.dest());
