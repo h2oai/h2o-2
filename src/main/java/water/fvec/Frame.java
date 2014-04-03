@@ -799,7 +799,7 @@ public class Frame extends Lockable<Frame> {
         for( int i=0; i<_cols.length; i++ ) {
           Chunk    oc =  chks[_cols[i]];
           NewChunk nc = nchks[      i ];
-          if( _isInt[_cols[i]] == 1 ) { // Slice on integer columns
+          if( _isInt[i] == 1 ) { // Slice on integer columns
             for( int j=rlo; j<rhi; j++ )
               if( oc.isNA0(j) ) nc.addNA();
               else              nc.addNum(oc.at80(j),0);
