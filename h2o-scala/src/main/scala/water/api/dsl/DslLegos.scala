@@ -8,11 +8,13 @@ import water.MRTask2
 import water.fvec.Chunk
 import water.Iced
 import water.fvec.NFSFileVec
-import java.io.File
+import java.io.{FileNotFoundException, File}
 import water.fvec.ParseDataset2
 import water.Job
 import hex.drf.DRF
 import water.fvec.NewChunk
+import water.api.QuantilesPage
+import hex.deeplearning.{DeepLearning, DeepLearningModel}
 
 trait TRef {}
 
@@ -242,14 +244,32 @@ abstract trait T_MR[T <: DFrame] {
 trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given representation of key
 
   // Parse a dataset
-  def parse(s:String):DFrame = parse(s, s+".hex")
-  def parse(s:String, destKey:String):DFrame = {
+  def parse(s:String):DFrame = parse(new File(s))
+  def parse(file:File):DFrame = parse(file, file.getName+".hex")
+  def parse(s:String, destKey:String):DFrame = parse(new File(s), destKey)
+  def parse(file:File, destKey:String):DFrame = {
+    if (!file.exists()) throw new FileNotFoundException(file.getName)
     val dest: Key = Key.make(destKey)
-    val fkey = NFSFileVec.make(new File(s))
+    val fkey:Key = NFSFileVec.make(file)
     val f = ParseDataset2.parse(dest, Array(fkey))
     UKV.remove(fkey)
     // Wrap the frame
     new DFrame(f)
+  }
+  // Find a given filename
+  def ffind(fname: String):File = {
+    var file = new File(fname)
+    if (!file.exists())
+      file = new File("../" + fname)
+    if (!file.exists())
+      file = new File("../../" + fname)
+    if (!file.exists())
+      file = new File("../smalldata/" + fname)
+    if (!file.exists())
+      file = new File("../../smalldata/" + fname)
+    if (!file.exists())
+      throw new FileNotFoundException(fname)
+    file
   }
   def keys:Unit = keys(false)
   // Simply print a list of keys in KV store
@@ -269,25 +289,40 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def jobs() = { 
     val aj = Job.all()
     aj foreach { j:Job =>
-      val cancelled = if (j.end_time == 0) Job.isRunning(j.self()) else j.end_time == Job.CANCELLED_END_TIME
-      val progress = if (j.end_time == 0) (if (cancelled) "DONE" else j.progress()) else "DONE" 
-      println(j.description + " | " + (if (cancelled) "CANCELLED" else progress))
+      val progress = if (!j.isRunning()) j.getState().toString else j.progress()*100+" %" 
+      println(j.description + " | " + progress)
       }
   }
   // We need shutdown for sure ! :-)
   def shutdown() = H2O.CLOUD.shutdown()
   
   // DRF API call
-  def drf(f: VT, r: VT, ntrees: Int = 50, classification:Boolean = false): DRF.DRFModel = {
+  def drf(ftrain: VT, ftest:VT, x:Seq[Int], y:Int, params: (DRF)=>DRF ): DRF.DRFModel = {
     val drf:DRF = new DRF()
-    val response = r.frame().vecs()(0)
-    response.rollupStats()
-    drf.source = new Frame(f.frame().names() ++ Array("response"), f.frame.vecs()++Array(response))
-    drf.response = response
-    drf.classification = classification
-    drf.ntrees = ntrees;
+    drf.source = ftrain(x++Seq(y)).frame()
+    drf.response = ftrain.frame().vec(y)
+    if (params!=null) params(drf)
     drf.invoke()
     return UKV.get(drf.dest())
+  }
+  
+  def quantiles(f: VT, column:Int): scala.Double = {
+    val qp : QuantilesPage = new QuantilesPage
+    qp.source_key = f.frame()
+    qp.column = f.frame().vecs()(column)
+    qp.invoke()
+    return qp.result
+  }
+  
+  def deeplearning(ftrain: VT, ftest: VT, x:Seq[Int], y:Int, params: (DeepLearning)=>DeepLearning):DeepLearningModel = {
+    val dl = new DeepLearning
+    dl.source = ftrain(x++Seq(y)).frame()
+    dl.response = ftrain.frame().vec(y)
+    dl.validation = if (ftest != null) ftest.frame() else null
+    // Fill parameters and invoke computation
+    if (params!=null) params(dl)
+    dl.invoke()
+    return UKV.get(dl.dest())
   }
 }
 

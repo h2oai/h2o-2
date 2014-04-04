@@ -197,7 +197,7 @@ setMethod("show", "H2ONBModel", function(object) {
   cat("Naive Bayes Model Key:", object@key)
   
   model = object@model
-  cat("\n\nA-priori probabilities:\n"); print(model$apriori)
+  cat("\n\nA-priori probabilities:\n"); print(model$apriori_prob)
   cat("\n\nConditional probabilities:\n"); print(model$tables)
 })
 
@@ -369,7 +369,6 @@ h2o.unique <- function(x, incomparables = FALSE, ...){
 # 
 #   res[,1:(ncol(res)-1)]
 }
-unique.H2OParsedDataVA <- h2o.unique
 unique.H2OParsedData <- h2o.unique
 
 h2o.runif <- function(x, min = 0, max = 1) {
@@ -557,7 +556,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
-`[[.H2OParsedData` <- function(x, ..., exact=TRUE){
+`[[.H2OParsedData` <- function(x, ..., exact = TRUE) {
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
 
@@ -571,10 +570,10 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   x[, cols]
 }
 
-`[[<-.H2OParsedData` <- function(x, i, j, value){
+`[[<-.H2OParsedData` <- function(x, i, j, value) {
   if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
-  if( !class(value) == 'H2OParsedData') stop('can only append h2o data to h2o data')
+  if( !inherits(x, 'H2OParsedData')) stop('x is the wrong class')
+  if( !inherits(value, 'H2OParsedData')) stop('can only append H2O data to H2O data')
   if( ncol(value) > 1 ) stop('may only set a single column')
   if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
 
@@ -601,11 +600,11 @@ cbind.H2OParsedData <- function(...) {
   klass <- 'H2OParsedData'
   h2o <- l[[1]]@h2o
   nrows <- nrow(l[[1]])
-  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem) }, l)
+  m <- Map(function(elem){ inherits(elem, klass) & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem) }, l)
   compatible <- Reduce(function(l,r) l & r, x=m, init=T)
   if(!compatible){ stop(paste('cbind: all elements must be of type', klass, 'and in the same H2O instance'))}
   
-  # TODO: if cbind(x,x), fix up the column names so unique. sigh.
+  # If cbind(x,x), dupe colnames will automatically be renamed by H2O
   # TODO: cbind(df[,1], df[,2]) should retain colnames of original data frame (not temp keys from slice)
   if(is.null(names(l)))
     tmp <- Map(function(x) x@key, l)
@@ -613,10 +612,10 @@ cbind.H2OParsedData <- function(...) {
     tmp <- mapply(function(x,n) { ifelse(is.null(n) || is.na(n) || nchar(n) == 0, x@key, paste(n, x@key, sep = "=")) }, l, names(l))
   
   exec_cmd <- sprintf("cbind(%s)", paste(as.vector(tmp), collapse = ","))
-  # exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
   res <- .h2o.__exec2(h2o, exec_cmd)
   new('H2OParsedData', h2o=h2o, key=res$dest_key)
 }
+cbind.H2OParsedDataVA <- cbind.H2OParsedData
 
 #--------------------------------- Arithmetic ----------------------------------#
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
@@ -807,6 +806,13 @@ setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
   .h2o.__unop2("sd", x)
 })
 
+setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
+  if(!is.null(y) || !missing(use)) stop("Unimplemented")
+  if(h2o.anyFactor(x)) stop("x cannot contain any categorical columns")
+  if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
+  .h2o.__unop2("var", x)
+})
+
 as.data.frame.H2OParsedData <- function(x, ...) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), sep='')
   ttt <- getURL(url)
@@ -855,6 +861,8 @@ as.data.frame.H2OParsedData <- function(x, ...) {
 #   }
   return(df)
 }
+
+as.matrix.H2OParsedData <- function(x, ...) { as.matrix(as.data.frame(x, ...)) }
 
 head.H2OParsedData <- function(x, n = 6L, ...) {
   numRows = nrow(x)
@@ -945,24 +953,37 @@ summary.H2OParsedData <- function(object, ...) {
     }
     else {
       top.ix <- sort.int(col$hcnt, decreasing=T, index.return=T)$ix[1:6]
-      # domains <- col$hbrk[top.ix]
       if(is.null(col$hbrk)) domains <- top.ix[1:6] else domains <- col$hbrk[top.ix]
       counts <- col$hcnt[top.ix]
+      
+      # TODO: Make sure "NA's" isn't a legal domain level
+      if(!is.null(col$nacnt) && col$nacnt > 0) {
+        idx <- ifelse(any(is.na(top.ix)), which(is.na(top.ix))[1], 6)
+        domains[idx] <- "NA's"
+        counts[idx] <- col$nacnt
+      }
+      
       # width <- max(cbind(nchar(domains), nchar(counts)))
-      width <- max(nchar(domains) + nchar(counts))
+      width <- c(max(nchar(domains)), max(nchar(counts)))
       result <- paste(domains,
-                      mapply(function(x, y) { paste(rep(' ',width - nchar(x) - nchar(y)), collapse='') }, domains, counts),
-                      ":",
+                      sapply(domains, function(x) { ifelse(width[1] == nchar(x), "", paste(rep(' ', width[1] - nchar(x)), collapse='')) }),
+                      ":", 
+                      sapply(counts, function(y) { ifelse(width[2] == nchar(y), "", paste(rep(' ', width[2] - nchar(y)), collapse='')) }),
                       counts,
                       " ",
                       sep='')
-      result[is.na(top.ix)] <- NA
+      # result[is.na(top.ix)] <- NA
+      result[is.na(domains)] <- NA
       result
     }
   })
+  # Filter out rows with nothing in them
+  cidx <- apply(cols, 1, function(x) { any(!is.na(x)) })
+  if(ncol(cols) == 1) { cols <- as.matrix(cols[cidx,]) } else { cols <- cols[cidx,] }
+  # cols <- as.matrix(cols[cidx,])
 
   result = as.table(cols)
-  rownames(result) <- rep("", 6)
+  rownames(result) <- rep("", nrow(result))
   colnames(result) <- sapply(res$summaries, function(col) col$colname)
   result
 }
@@ -1197,41 +1218,6 @@ setMethod("show", "H2ORFModelVA", function(object) {
   cat("\nTree Stats:\n"); print(model$tree_sum)
 })
 
-`[[.H2OParsedDataVA` <- function(x, ..., exact=TRUE){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
-  
-  cols <- sapply(as.list(...), function(x) x)
-  if( length(cols) == 0 )
-    return(x)
-  if( length(cols) > 1 ) stop('[[]] may only select one column')
-  if( ! cols[1] %in% colnames(x) )
-    return(NULL)
-  
-  x[, cols]
-}
-
-`[[<-.H2OParsedDataVA` <- function(x, i, j, value){
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedDataVA') stop('x is the wrong class')
-  if( !class(value) == 'H2OParsedDataVA') stop('can only append h2o data to h2o data')
-  if( ncol(value) > 1 ) stop('may only set a single column')
-  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
-  
-  mm <- match.call()
-  col_name <- as.list(i)[[1]]
-  
-  cc <- colnames(x)
-  if( col_name %in% cc ){
-    x[, match( col_name, cc ) ] <- value
-  } else {
-    x <- cbind(x, value)
-    cc <- c( cc, col_name )
-    colnames(x) <- cc
-  }
-  x
-}
-
 setMethod("colnames", "H2OParsedDataVA", function(x) {
   if(ncol(x) > .MAX_INSPECT_COL_VIEW)
     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
@@ -1263,23 +1249,6 @@ setMethod("dim", "H2OParsedDataVA", function(x) {
   res = .h2o.__remoteSend(x@h2o, .h2o.__PAGE_INSPECT, key=x@key)
   as.numeric(c(res$num_rows, res$num_cols))
 })
-
-cbind.H2OParsedDataVA <- function(...){
-  l <- list(...)
-  if( length(l) == 0 ) stop('cbind requires an h2o data')
-  klass <- 'H2OParsedDataVA'
-  h2o <- l[[1]]@h2o
-  nrows <- nrow(l[[1]])
-  m <- Map(function(elem){ class(elem) == klass & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem)}, l)
-  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
-  
-  if( !compatible ){ stop(paste('cbind: all elements must be of type', klass, 'and in the same h2o instance'))}
-  
-  # todo: if cbind(x,x), fix up the column names so unique.  sigh.
-  exec_cmd <- sprintf('cbind(%s)', paste(as.vector(Map(function(x) x@key, l)), collapse=','))
-  res <- .h2o.__exec2(h2o, exec_cmd)
-  new('H2OParsedDataVA', h2o=h2o, key=res$dest_key)
-}
 
 head.H2OParsedDataVA <- function(x, n = 6L, ...) {
   numRows = nrow(x)
@@ -1339,39 +1308,52 @@ summary.H2OParsedDataVA <- function(object, ...) {
   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY, key=object@key, max_column_display=.Machine$integer.max)
-  res = res$summary$columns
-  result = NULL; cnames = NULL
-  for(i in 1:length(res)) {
-    cnames = c(cnames, paste("      ", res[[i]]$name, sep=""))
-    if(res[[i]]$type == "number") {
-      if(is.null(res[[i]]$min) || length(res[[i]]$min) == 0) res[[i]]$min = NaN
-      if(is.null(res[[i]]$max) || length(res[[i]]$max) == 0) res[[i]]$max = NaN
-      if(is.null(res[[i]]$mean) || length(res[[i]]$mean) == 0) res[[i]]$mean = NaN
-      if(is.null(res[[i]]$percentiles))
-        params = format(rep(round(as.numeric(res[[i]]$mean), 3), 6))
+  cols <- sapply(res$summary$columns, function(col) {
+    if(col$type == "number") {
+      if(is.null(col$min) || length(col$min) == 0) col$min = NaN
+      if(is.null(col$max) || length(col$max) == 0) col$max = NaN
+      if(is.null(col$mean) || length(col$mean) == 0) col$mean = NaN
+      if(is.null(col$percentiles))
+        params = format(rep(round(as.numeric(col$mean), 3), 6))
       else
-        params = format(round(as.numeric(c(res[[i]]$min[1], res[[i]]$percentiles$values[4], res[[i]]$percentiles$values[6], res[[i]]$mean, res[[i]]$percentiles$values[8], res[[i]]$max[1])), 3))
-      result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
-                               paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
-                               paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))
+        params = format(round(as.numeric(c(col$min[1], col$percentiles$values[4], col$percentiles$values[6], col$mean, col$percentiles$values[8], col$max[1])), 3))
+      result <- c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                  paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                  paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep=""))
     }
-    else if(res[[i]]$type == "enum") {
-      rhist = res[[i]]$histogram
-      len = min(length(rhist$bins), 6)
-      top.ix = sort.int(rhist$bins, decreasing=T, index.return=T)$ix[1:len]
-
+    else if(col$type == "enum") {
+      rhist = col$histogram
+      top.ix = sort.int(rhist$bins, decreasing=T, index.return=T)$ix[1:6]
+      
       counts = rhist$bins[top.ix]
-      if(is.null(rhist$bin_names)) domains = top.ix[1:len] else domains = rhist$bin_names[top.ix]
-      nspace = max(nchar(domains)) - nchar(domains)
-
-      col = matrix(rep("", 6), ncol=1)
-      for(j in 1:len)
-        col[j] = paste(domains[j], paste(rep(" ", nspace[j]), collapse = ""), ":", counts[j], sep="")
-      result = cbind(result, col)
+      if(is.null(rhist$bin_names)) domains = top.ix[1:6] else domains = rhist$bin_names[top.ix]
+      
+      # TODO: Make sure "NA's" isn't a legal domain level
+      if(!is.null(col$na) && col$na > 0) {
+        idx <- ifelse(any(is.na(top.ix)), which(is.na(top.ix))[1], 6)
+        domains[idx] <- "NA's"
+        counts[idx] <- col$na
+      }
+      
+      width <- c(max(nchar(domains)), max(nchar(counts)))
+      result <- paste(domains,
+                      sapply(domains, function(x) { nspaces = width[1] - nchar(x); ifelse(nspaces == 0, "", paste(rep(' ', nspaces), collapse='')) }),
+                      ":", 
+                      sapply(counts, function(y) { nspaces = width[2] - nchar(y); ifelse(nspaces == 0, "", paste(rep(' ', nspaces), collapse='')) }),
+                      counts,
+                      " ",
+                      sep='')
+      result[is.na(domains)] <- NA
+      result
     }
-  }
-  result = as.table(result)
-  rownames(result) <- rep("", 6)
-  colnames(result) <- cnames
+  })
+  # Filter out rows with nothing in them
+  cidx <- apply(cols, 1, function(x) { any(!is.na(x)) })
+  if(ncol(cols) == 1) { cols <- as.matrix(cols[cidx,]) } else { cols <- cols[cidx,] }
+  # cols <- cols[cidx,]
+  
+  result = as.table(cols)
+  rownames(result) <- rep("", nrow(result))
+  colnames(result) <- sapply(res$summary$columns, function(col) col$name)
   result
 }

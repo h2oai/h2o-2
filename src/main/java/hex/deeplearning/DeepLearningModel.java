@@ -805,7 +805,7 @@ public class DeepLearningModel extends Model {
       auc.predict = fpreds;
       auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
       auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
-      auc.serve();
+      auc.invoke();
       auc.toASCII(sb);
       error = auc.err(); //using optimal threshold for F1
     }
@@ -816,7 +816,7 @@ public class DeepLearningModel extends Model {
       cm.vactual = ftest.lastVec(); //original vector or adapted response (label) if CM adaptation was done
       cm.predict = fpreds;
       cm.vpredict = fpreds.vecs()[0]; //ditto
-      cm.serve();
+      cm.invoke();
       cm.toASCII(sb);
       error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
     }
@@ -959,7 +959,8 @@ public class DeepLearningModel extends Model {
     }
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
-    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + H2O.CLOUD.size() + " (" + cores + " threads)");
+    DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node_mode ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
+    DocGen.HTML.paragraph(sb, "Mini-batch size: " + String.format("%,d", model_info.parameters.mini_batch));
     final boolean isEnded = Job.isEnded(model_info().job().self());
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {

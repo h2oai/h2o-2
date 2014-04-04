@@ -16,11 +16,16 @@ echo "current PID: $$"
 NO_DOWNLOAD=0
 USE_EXISTING=0
 BRANCH=master
+VERSION=
 TESTDIR=
 TEST=
-while getopts hunb:d:t: flag
+while getopts v:hunb:d:t: flag
 do
     case $flag in
+        v)
+            VERSION=$OPTARG
+            echo "version is $VERSION"
+            ;;
         u)
             echo "Use existing target/h2o.jar and R stuff?"
             USE_EXISTING=1
@@ -46,6 +51,7 @@ do
             echo "-u Use existing target/h2o.jar, target/R/*  and existing downloaded hadoop drivers"
             echo "-n Init target/* from existing download of h2o stuff from s3 (h2o-downloaded)."
             echo "-b <BRANCH> Use this branch for any s3 download"
+            echo "-v <version> Use this version within a branch for any s3 download"
             echo "-d <dir> -t <python test> will run a single test"
             exit
             ;;
@@ -59,6 +65,7 @@ shift $(( OPTIND - 1 ))  # shift past the last flag or argument
 # echo remaining parameters to Bash are $*
 
 echo "using branch: $BRANCH"
+echo "using version: $VERSION"
 
 #**************************************
 
@@ -73,7 +80,12 @@ echo "using branch: $BRANCH"
 if [ $NO_DOWNLOAD -eq 0 ]
 then
     cd ../..
-    ./get_s3_jar.sh -b $BRANCH
+    if [[ $VERSION -eq "" ]]
+    then
+        ./get_s3_jar.sh -b $BRANCH
+    else
+        ./get_s3_jar.sh -b $BRANCH -v $VERSION
+    fi
     # I'm back!
     cd -
 fi

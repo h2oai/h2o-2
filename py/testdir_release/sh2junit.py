@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 import sys, psutil, os, stat, tempfile, argparse, time, datetime
 sys.path.extend(['.','..','../..','py'])
 import h2o_sandbox
@@ -195,7 +194,9 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, shdir=None, **kwa
     while linesMayExist:
         # get whatever accumulated, up to nothing returned 
         # only do up to 20 lines before we check timeout again
-        linesMayExist = ps.is_running() and not ps.status() == psutil.STATUS_ZOMBIE
+        # why was R processes not completing on centos?
+        # linesMayExist = ps.is_running() and not ps.status() == psutil.STATUS_ZOMBIE
+        linesMayExist = ps.is_running()
         lineBurstCnt = 0
         # stdout from subprocess
         line = ps.stdout.readline()

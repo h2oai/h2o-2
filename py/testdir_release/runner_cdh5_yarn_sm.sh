@@ -27,11 +27,11 @@ mkdir -p sandbox
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 5g for now. node count 2"
 echo "need to adjust the cdh5 cloudera config (yarn memory?)"
-HDFS_NAME_NODE=10.71.0.100
+HDFS_NAME_NODE=ch-0:8020
 
 CDH5_YARN_JOBTRACKER=ch-10:8032
-CDH5_YARN_NODES=1
-CDH5_YARN_HEAP=5g
+CDH5_YARN_NODES=32
+CDH5_YARN_HEAP=16g
 CDH5_YARN_JAR=h2odriver_cdh4_yarn.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
@@ -100,13 +100,13 @@ cp -f h2o_one_node sandbox
 
 #***********************************************************************************
 
-echo "Touch all the 0xdiag-datasets mnt points, to get autofs to mount them."
-echo "Permission rights extend to the top level now, so only 0xdiag can automount them"
-echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
-for mr in 161 162 163 
-do
-    ssh -i $HOME/.0xdiag/0xdiag_id_rsa 0xdiag@192.168.1.$mr 'cd /mnt/0xdiag-datasets'
-done
+# echo "Touch all the 0xdiag-datasets mnt points, to get autofs to mount them."
+# echo "Permission rights extend to the top level now, so only 0xdiag can automount them"
+# echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
+# for mr in 161 162 163 
+# do
+#     ssh -i $HOME/.0xdiag/0xdiag_id_rsa 0xdiag@192.168.1.$mr 'cd /mnt/0xdiag-datasets'
+# done
 
 # We now have the h2o-nodes.json, that means we started the jvms
 # Shouldn't need to wait for h2o cloud here..
@@ -136,11 +136,13 @@ myPy() {
 # myPy c5 test_c5_KMeans_sphere15_180GB.py
 # don't run this until we know whether 0xdiag permissions also exist for the hadoop job
 # myPy c1 test_c1_rel.py
-
 myPy c2 test_c2_rel.py
+myPy c8 test_c8_rf_airlines_hdfs.py
+myPy c9 test_c9_GBM_airlines_hdfs.py
+
 # myPy c3 test_c3_rel.py
 # myPy c4 test_c4_four_billion_rows.py
-myPy c6 test_c6_hdfs.py
+# myPy c6 test_c6_hdfs.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.

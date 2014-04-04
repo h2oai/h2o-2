@@ -663,12 +663,12 @@ h2o.deeplearning <- function(x, y, data, classification=TRUE, activation='Tanh',
 }
 
 # -------------------------------- Naive Bayes ----------------------------- #
-h2o.naiveBayes <- function(x, y, data, laplace = 0) {
+h2o.naiveBayes <- function(x, y, data, laplace = 0, dropNACols = FALSE) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(laplace)) stop("laplace must be numeric")
   if(laplace < 0) stop("laplace must be a non-negative number")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_BAYES, source = data@key, response = args$y, ignored_cols = args$x_ignore, laplace = laplace)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_BAYES, source = data@key, response = args$y, ignored_cols = args$x_ignore, laplace = laplace, drop_na_cols = as.numeric(dropNACols))
   .h2o.__waitOnJob(data@h2o, res$job_key)
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NBModelView, '_modelKey' = res$destination_key)
   result = .h2o.__getNBResults(res2$nb_model)
@@ -679,15 +679,19 @@ h2o.naiveBayes <- function(x, y, data, laplace = 0) {
   result = list()
   result$laplace = res$laplace
   result$levels = tail(res$'_domains',1)[[1]]
-  result$apriori = as.numeric(res$pprior)
-  names(result$apriori) = result$levels
+  result$apriori_prob = as.table(as.numeric(res$pprior))
+  result$apriori = as.table(as.numeric(res$rescnt))
+  dimnames(result$apriori) = dimnames(result$apriori_prob) = list(Y = result$levels)
   
   pred_names = res$'_names'[-length(res$'_names')]
   pred_domains = res$'_domains'[-length(res$'_domains')]
-  result$tables = mapply(function(dat, nam, doms) { temp = t(matrix(unlist(dat), nrow = length(doms)))
-                                                    myList = list(result$levels, doms); names(myList) = c("Y", nam)
-                                                    dimnames(temp) = myList
-                                                    return(temp) }, 
+  result$tables = mapply(function(dat, nam, doms) {
+                            if(is.null(doms))
+                              doms = c("Mean", "StdDev")
+                           temp = t(matrix(unlist(dat), nrow = length(doms)))
+                            myList = list(result$levels, doms); names(myList) = c("Y", nam)
+                            dimnames(temp) = myList
+                            return(as.table(temp)) }, 
                          res$pcond, pred_names, pred_domains, SIMPLIFY = FALSE)
   names(result$tables) = pred_names
   return(result)

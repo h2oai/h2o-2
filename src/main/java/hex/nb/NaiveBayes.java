@@ -26,21 +26,16 @@ public class NaiveBayes extends ModelJob {
   @API(help = "Laplace smoothing parameter", filter = Default.class, lmin = 0, lmax = 100000, json = true)
   public int laplace = 0;
 
-  @Override protected JobState execImpl() {
-    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false);
+  @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
+  public boolean drop_na_cols = true;
 
-    // TODO: Temporarily reject data with missing entries until NA handling implemented
-    Vec[] vecs = fr.vecs();
-    for(int i = 0; i < vecs.length; i++) {
-      if(vecs[i].naCnt() != 0) throw H2O.unimpl();
-    }
-
+  @Override protected void execImpl() {
+    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false, drop_na_cols);
     DataInfo dinfo = new DataInfo(fr, 1, false, false);
     NBTask tsk = new NBTask(this, dinfo).doAll(dinfo._adaptedFrame);
     NBModel myModel = buildModel(dinfo, tsk, laplace);
     myModel.delete_and_lock(self());
     myModel.unlock(self());
-    return JobState.DONE;
   }
 
   @Override protected void init() {
@@ -84,14 +79,14 @@ public class NaiveBayes extends ModelJob {
       }
     }
 
-    // Mean and stanard deviation of numeric predictor x_j for every level of response y
+    // Mean and standard deviation of numeric predictor x_j for every level of response y
     for(int col = 0; col < dinfo._nums; col++) {
       for(int i = 0; i < pcond[0].length; i++) {
         int cidx = dinfo._cats + col;
         double num = tsk._rescnt[i];
         double pmean = pcond[cidx][i][0]/num;
-        pcond[cidx][i][0] = pmean;
 
+        pcond[cidx][i][0] = pmean;
         // double pvar = pcond[cidx][i][1]/num - pmean*pmean;
         double pvar = pcond[cidx][i][1]/(num - 1) - pmean*pmean*num/(num - 1);
         pcond[cidx][i][1] = Math.sqrt(pvar);
@@ -102,9 +97,9 @@ public class NaiveBayes extends ModelJob {
     return new NBModel(destination_key, dataKey, dinfo, tsk, pprior, pcond, laplace);
   }
 
-  // TODO: Need to handle NAs in some reasonable fashion
+  // Note: NA handling differs from R for efficiency purposes
   // R's method: For each predictor x_j, skip counting that row for p(x_j|y) calculation if x_j = NA. If response y = NA, skip counting row entirely in all calculations
-  // Irene's method: Just skip all rows where any x_j = NA or y = NA. Should be more memory-efficient, but results incomparable with R.
+  // H2O's method: Just skip all rows where any x_j = NA or y = NA. Should be more memory-efficient, but results incomparable with R.
   public static class NBTask extends MRTask2<NBTask> {
     final Job _job;
     final protected DataInfo _dinfo;
@@ -152,7 +147,7 @@ public class NaiveBayes extends ModelJob {
 
         // Record sum for each pair of numerical predictors and response
         for(int col = 0; col < _dinfo._nums; col++) {
-          double x = chks[col+_dinfo._cats].at0(row);
+          double x = chks[col + _dinfo._cats].at0(row);
           _jntcnt[col][rlevel][0] += x;
           _jntcnt[col][rlevel][1] += x*x;
         }

@@ -24,13 +24,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
-public abstract class Job extends Request2 {
+public abstract class Job extends Func {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   /** A system key for global list of Job keys. */
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
-  public static final long CANCELLED_END_TIME = -1;
+  /** Shared empty int array. */
   private static final int[] EMPTY = new int[0];
 
   @API(help = "Job key")
@@ -43,7 +43,7 @@ public abstract class Job extends Request2 {
         throw new IllegalArgumentException("Key '" + value + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
     }
   }
-  // FIXME: all these fields should be private or at least protected
+  // Output parameters
   @API(help = "Job description") public String   description;
   @API(help = "Job start time")  public long     start_time;
   @API(help = "Job end time")    public long     end_time;
@@ -54,6 +54,7 @@ public abstract class Job extends Request2 {
 
   /** Possible job states. */
   public static enum JobState {
+    CREATED,   // Job was created
     RUNNING,   // Job is running
     CANCELLED, // Job was cancelled by user
     CRASHED,   // Job crashed, error message/exception is available
@@ -63,12 +64,12 @@ public abstract class Job extends Request2 {
   public Job(Key jobKey, Key dstKey){
     job_key = jobKey;
     destination_key = dstKey;
-    state = JobState.RUNNING;
+    state = JobState.CREATED;
   }
   public Job() {
     job_key = defaultJobKey();
     description = getClass().getSimpleName();
-    state = JobState.RUNNING;
+    state = JobState.CREATED;
   }
   /** Private copy constructor used by {@link JobHandle}. */
   private Job(final Job prior) {
@@ -87,51 +88,8 @@ public abstract class Job extends Request2 {
     return 1;
   }
 
-  /** A set containing a temporary vectors which are <strong>automatically</strong> deleted when job is done.
-   *  Deletion is by {@link #cleanup()} call. */
-  private transient HashSet<Key> _gVecTrash = new HashSet<Key>();
-  /** Local trash which can be deleted by user call */
-  private transient HashSet<Key> _lVecTrash = new HashSet<Key>();
-  /** Clean-up code which is executed after each {@link Job#exec()} call in any case (normal/exceptional). */
-  protected void cleanup() {
-    // Clean-up global list of temporary vectors
-    Futures fs = new Futures();
-    cleanupTrash(_gVecTrash, fs);
-    if (!_lVecTrash.isEmpty()) cleanupTrash(_lVecTrash, fs);
-    fs.blockForPending();
-  }
-  /** User call which empty local trash of vectors. */
-  protected final void emptyLTrash() {
-    if (_lVecTrash.isEmpty()) return;
-    Futures fs = new Futures();
-    cleanupTrash(_lVecTrash, fs);
-    fs.blockForPending();
-  }
-  /** Append all vectors from  given frame to a global clean up list.
-   * @see #cleanup()
-   * @see #_gVecTrash */
-  protected final void gtrash(Frame fr) { gtrash(fr.vecs());  }
-  /** Append given vector to clean up list.
-   * @see #cleanup()*/
-  protected final void gtrash(Vec ...vec)  { appendToTrash(_gVecTrash, vec); }
-  /** Put given frame vectors into local trash which can be emptied by a user calling the {@link #emptyLTrash()} method.
-   * @see #emptyLTrash() */
-  protected final void ltrash(Frame fr) {  ltrash(fr.vecs()); }
-  /** Put given vectors into local trash.
-   * * @see #emptyLTrash() */
-  protected final void ltrash(Vec ...vec) { appendToTrash(_lVecTrash, vec); }
-
-  /** Put given vectors into a given trash. */
-  private void appendToTrash(HashSet<Key> t, Vec[] vec) {
-    for (Vec v : vec) t.add(v._key);
-  }
-  /** Delete all vectors in given trash. */
-  private void cleanupTrash(HashSet<Key> trash, Futures fs) {
-    for (Key k : trash) UKV.remove(k, fs);
-  }
-
   protected Key defaultJobKey() {
-    // Pinned to self, because it should be almost always updated locally
+    // Pinned to this node (i.e., the node invoked computation), because it should be almost always updated locally
     return Key.make((byte) 0, Key.JOB, H2O.SELF);
   }
 
@@ -139,9 +97,17 @@ public abstract class Job extends Request2 {
     return Key.make(getClass().getSimpleName() + Key.rand());
   }
 
-  public Job start(final H2OCountedCompleter fjtask) {
+  /** Start this task based on given top-level fork-join task representing job computation.
+   * @param fjtask top-level job computation task.
+   * @return this job in {@link JobState#RUNNING} state
+   *
+   * @see JobState
+   * @see H2OCountedCompleter
+   */
+  public /** FIXME: should be final or at least protected */ Job start(final H2OCountedCompleter fjtask) {
+    assert state == JobState.CREATED : "Trying to run job which was already run?";
+    assert fjtask != null : "Starting a job with null working task is not permitted! Fix you API";
     _fjtask = fjtask;
-    //Futures fs = new Futures();
     start_time = System.currentTimeMillis();
     state      = JobState.RUNNING;
     // Save the full state of the job
@@ -158,7 +124,11 @@ public abstract class Job extends Request2 {
     }.invoke(LIST);
     return this;
   }
-  // Overridden for Parse
+
+  /** Return progress of this job.
+   *
+   * @return the value in interval &lt;0,1&gt; representing job progress.
+   */
   public float progress() {
     Freezable f = UKV.get(destination_key);
     if( f instanceof Progress )
@@ -166,7 +136,15 @@ public abstract class Job extends Request2 {
     return 0;
   }
 
-  // Block until the Job finishes.
+  /** Blocks and get result of this job.
+   * <p>
+   * The call blocks on working task which was passed via {@link #start(H2OCountedCompleter)} method
+   * and returns the result which is fetched from UKV based on job destination key.
+   * </p>
+   * @return result of this job fetched from UKV by destination key.
+   * @see #start(H2OCountedCompleter)
+   * @see UKV
+   */
   public <T> T get() {
     _fjtask.join();             // Block until top-level job is done
     T ans = (T) UKV.get(destination_key);
@@ -174,22 +152,34 @@ public abstract class Job extends Request2 {
     return ans;
   }
 
+  /** Signal cancellation of this job.
+   * <p>The job will be switched to state {@link JobState#CANCELLED} which signals that
+   * the job was cancelled by a user. */
   public void cancel() {
-    cancel((String)null);
+    cancel((String)null, JobState.CANCELLED);
   }
+  /** Signal exceptional cancellation of this job.
+   * @param ex exception causing the termination of job.
+   */
   public void cancel(Throwable ex){
-    ex.printStackTrace();
-    if(_fjtask != null && !_fjtask.isDone())_fjtask.completeExceptionally(ex);
+    if(_fjtask != null && !_fjtask.isDone()) _fjtask.completeExceptionally(ex);
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
     String stackTrace = sw.toString();
-    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
+    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace, JobState.CRASHED);
   }
+  /** Signal exceptional cancellation of this job.
+   * @param msg cancellation message explaining reason for cancelation
+   */
   public void cancel(final String msg) {
-    state = msg == null ? JobState.CANCELLED : JobState.CRASHED;
-    if(state == JobState.CANCELLED)Log.info("Job " + self() + "("  + description + ") was cancelled.");
+    JobState js = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    cancel(msg, js);
+  }
+  private void cancel(final String msg, JobState resultingState ) {
+    if(state == JobState.CANCELLED) Log.info("Job " + self() + "("  + description + ") was cancelled.");
     exception = msg;
+    state = resultingState;
     // replace finished job by a job handle
     replaceByJobHandle();
     DKV.write_barrier();
@@ -207,15 +197,34 @@ public abstract class Job extends Request2 {
   protected void onCancelled() {
   }
 
-  // This querys the *current object* for its status.
-  // Only valid if you have a Job object that is being updated by somebody.
-  public boolean isCancelled() {
+  /** Returns true if the job was cancelled by the user or crashed.
+   * @return true if the job is in state {@link JobState#CANCELLED} or {@link JobState#CRASHED}
+   */
+  public boolean isCancelledOrCrashed() {
     return state == JobState.CANCELLED || state == JobState.CRASHED;
   }
 
+  /** Returns true if the job was cancelled by the user.
+   * @return true if the job is in state {@link JobState#CANCELLED}.
+   */
+  public boolean isCancelledXX() { return state == JobState.CANCELLED; }
+
+  /** Returns true if the job was terminated by unexpected exception.
+   * @return true, if the job was terminated by unexpected exception.
+   */
   public boolean isCrashed() { return state == JobState.CRASHED; }
 
+  /** Returns true if this job is correctly finished.
+   * @return returns true if the job finished and it was not cancelled or crashed by an exception.
+   */
   public boolean isDone() { return state == JobState.DONE; }
+
+  /** Returns true if this job is running
+   * @return returns true only if this job is in running state.
+   */
+  public boolean isRunning() { return state == JobState.RUNNING; }
+
+  public JobState getState() { return state; }
 
 
   /** Returns a list of all jobs in a system.
@@ -239,7 +248,8 @@ public abstract class Job extends Request2 {
    */
   public static boolean isRunning(Key job_key) {
     Job j = UKV.get(job_key);
-    return j!=null && j.state == JobState.RUNNING;
+    assert j!=null : "Job should be always in DKV!";
+    return j.isRunning();
   }
   /**
    * Returns true if job is not running.
@@ -316,20 +326,19 @@ public abstract class Job extends Request2 {
     init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        Throwable t = null;
         try {
-          JobState status = Job.this.exec();
-          if(status == JobState.DONE)
+          try {
+            // Exec always waits till the end of computation
+            Job.this.exec();
             Job.this.remove();
-        } catch (Throwable t_) {
-          t = t_;
-          if(!(t instanceof ExpectedExceptionForDebug))
-            Log.err(t);
+          } catch (Throwable t) {
+            if(!(t instanceof ExpectedExceptionForDebug))
+              Log.err(t);
+            Job.this.cancel(t);
+          }
         } finally {
-          tryComplete();
+            tryComplete();
         }
-        if(t != null)
-          Job.this.cancel(t);
       }
     };
     start(task);
@@ -337,12 +346,11 @@ public abstract class Job extends Request2 {
     return this;
   }
 
-  public void invoke() {
+  @Override public void invoke() {
     init();
-    start(new H2OEmptyCompleter());
-    JobState status = exec();
-    if(status == JobState.DONE)
-      remove();
+    start(new H2OEmptyCompleter());  // mark job started
+    exec(); // execute the implementation
+    remove();     // remove the job
   }
 
   /**
@@ -352,24 +360,9 @@ public abstract class Job extends Request2 {
    * @throws IllegalArgumentException throws the exception if initialization fails to ensure
    * correct job runtime environment.
    */
-  protected void init() throws IllegalArgumentException {
+  @Override protected void init() throws IllegalArgumentException {
     if (destination_key == null) destination_key = defaultDestKey();
   }
-
-  /**
-   * Actual job code.
-   *
-   * @return true if job is done, false if it will still be running after the method returns.
-   */
-  private final JobState exec() {
-    try {
-      return execImpl();
-    } finally {
-      cleanup();
-    }
-  }
-
-  protected JobState execImpl() { throw new RuntimeException("Job does not support exec call! Please implement execImpl method!"); };
 
   /**
    * Block synchronously waiting for a job to end, success or not.

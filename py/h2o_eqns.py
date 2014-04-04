@@ -193,8 +193,12 @@ class Expression(object):
     # has problems with <= and >=
     # OPS = ['+', '-', '*', '/', '^', '<', '>', '|', '&']
     OPS = ['+', '-', '*', '/']
+    OPS = ['<', '<=', '>', '>=', '==', '!=', '|', '&']
+    # how to include !?
+    OPS = ['|', '&']
     GROUP_PROB = 0.3
-    MIN_NUM, MAX_NUM = 1e10, 1e15
+    # MIN_NUM, MAX_NUM = 1e10, 1e15
+    MIN_NUM, MAX_NUM = 0, 1
 
     def __init__(self, maxNumbers, _maxdepth=None, _depth=0):
         """

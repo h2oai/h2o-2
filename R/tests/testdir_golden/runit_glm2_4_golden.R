@@ -1,41 +1,79 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
-test.glm2vanilla.golden <- function(H2Oserver) {
+test.glm2Ridge.golden <- function(H2Oserver) {
 	
+#RT's solver:
+ridgeLinear<-
+function(x, y, L)
+{
+ybar=mean(y)
+coef=c(ybar,rep(0,ncol(x)))
+if(L< 10e9){
+        m <- t(x) %*% x + L * diag(ncol(x))
+        coef <- solve(m, t(x) %*% (y-ybar))
+        coef=c(coef,ybar)
+names(coef)=c(paste("b",as.character(1:ncol(x)),sep=""),"b0")
+}
+coef
+}
+
 #Import data: 
-Log.info("Importing Swiss data...") 
-swissH2O<- h2o.uploadFile.FV(H2Oserver, locate("../smalldata/swiss.csv"), key="swissH2O")
-swissR<- read.csv(locate("../smalldata/swiss.csv"), header=T)
-
-Log.info("Test H2O treatment vanilla GLM - continuious real predictors, gaussian family")
-Log.info("Run matching models in R and H2O")
-fitH2O<- h2o.glm.FV(x=c("Agriculture", "Examination", "Education", "Catholic", "Infant.Mortality"), y="Fertility", lambda=0, alpha=0, nfolds=0, family="gaussian", data=swissH2O)
-fitR<- glm(Fertility ~ Agriculture + Examination + Education + Catholic + Infant.Mortality, family="gaussian", data=swissR)
+Log.info("Importing HANDMADE data...") 
+hmR<- read.csv(locate("../smalldata/handmade.csv"), header=T)
 
 
-Log.info("Print model coefficients, and test that number of params returned match for R and H2O... \n")
-H2Ocoeffs<- sort(t(fitH2O@model$coefficients))
-Rcoeffs<- sort(t(fitR$coefficients))
-Log.info(paste("H2O Coeffs  : ", H2Ocoeffs,      "\t\t", "R Coeffs   : ", Rcoeffs))
-expect_equal(H2Ocoeffs, Rcoeffs, tolerance = 0.01)
+#fit R model in glmnet and RT's solver
+hmR[,8]<- hmR[,2]-mean(hmR[,2])
+hmR[,9]<- hmR[,3]-mean(hmR[,3])
+hmR[,10]<- hmR[,4]-mean(hmR[,4])
+hmR[,11]<- hmR[,5]-mean(hmR[,5])
+hmR[,12]<- hmR[,6]-mean(hmR[,6])
+hmR[,13]<- hmR[,7]-mean(hmR[,7])
 
-Log.info("Print model statistics for R and H2O... \n")
-Log.info(paste("H2O Deviance  : ", fitH2O@model$deviance,      "\t\t", "R Deviance   : ", fitR$deviance))
-Log.info(paste("H2O Null Dev  : ", fitH2O@model$null.deviance, "\t\t", "R Null Dev   : ", fitR$null.deviance))
-Log.info(paste("H2O residul df: ", fitH2O@model$df.residual,    "\t\t\t\t", "R residual df: ", fitR$df.residual))
-Log.info(paste("H2O null df   : ", fitH2O@model$df.null,       "\t\t\t\t", "R null df    : ", fitR$df.null))
-Log.info(paste("H2O aic       : ", fitH2O@model$aic,           "\t\t", "R aic        : ", fitR$aic))
+x<- as.matrix(hmR[,8:12])
+y<- as.matrix(hmR[,13])
+L=10/nrow(hmR)
+hmH2O<- as.h2o(H2Oserver, hmR)
+fitRglmnet<-glmnet(x=x, y=y, family="gaussian", alpha=0, lambda=L, nlambda=1, standardize=F)
+RT1<- ridgeLinear(x, y, L)
+
+#fit corresponding H2O model
+
+fitH2O<- h2o.glm.FV(x=c("V8", "V9", "V10", "V11", "V12"), y="V13", family="gaussian", nfolds=0, alpha=0, lambda=0.01, data=hmH2O)
+
+#test that R coefficients and basic descriptives are equal
+Rcoeffsglmnet<- sort(as.matrix(coefficients(fitRglmnet)))
+H2Ocoeffs<- sort(fitH2O@model$coefficients)
+H2Ocoeffs<- as.data.frame(H2Ocoeffs)
+
+RTcoeffs<- sort(as.matrix(RT1)) 
+
+#Log.info(paste("H2O Coeffs  : ", H2Ocoeffs,  "\t\t\t", "R GLMNET Coeffs  :", Rcoeffsglmnet))
+
+expect_equal(H2Ocoeffs[1,1], Rcoeffsglmnet[1], tolerance = 0.1)
+expect_equal(H2Ocoeffs[2,1], Rcoeffsglmnet[2], tolerance = 0.1)
+expect_equal(H2Ocoeffs[3,1], Rcoeffsglmnet[3], tolerance = 0.9)
+expect_equal(H2Ocoeffs[4,1], Rcoeffsglmnet[4], tolerance = 0.1)
+expect_equal(H2Ocoeffs[5,1], Rcoeffsglmnet[5], tolerance = 0.1)
+expect_equal(H2Ocoeffs[6,1], Rcoeffsglmnet[6], tolerance = 0.1)
+expect_equal(H2Ocoeffs[1,1], RTcoeffs[1], tolerance = 0.1)
+expect_equal(H2Ocoeffs[2,1], RTcoeffs[2], tolerance = 0.1)
+expect_equal(H2Ocoeffs[3,1], RTcoeffs[3], tolerance = 0.1)
+expect_equal(H2Ocoeffs[4,1], RTcoeffs[4], tolerance = 0.1)
+expect_equal(H2Ocoeffs[5,1], RTcoeffs[5], tolerance = 0.1)
+expect_equal(H2Ocoeffs[6,1], RTcoeffs[6], tolerance = 0.1)
 
 
-Log.info("Compare model coefficients in R to model statistics in H2O")
-expect_equal(fitH2O@model$null.deviance, fitR$null.deviance, tolerance = 0.01)
-expect_equal(fitH2O@model$deviance, fitR$deviance, tolerance = 0.01)
-expect_equal(fitH2O@model$df.residual, fitR$df.residual, tolerance = 0.01)
-expect_equal(fitH2O@model$df.null, fitR$df.null, tolerance = 0.01)
-expect_equal(fitH2O@model$aic, fitR$aic, tolerance = 0.01)
+H2Oratio<- 1-(fitH2O@model$deviance/fitH2O@model$null.deviance)
+Log.info(paste("H2O Deviance  : ", fitH2O@model$deviance,      "\t\t\t", "R Deviance   : ", deviance(fitRglmnet)))
+Log.info(paste("H2O Null Dev  : ", fitH2O@model$null.deviance, "\t\t\t", "R Null Dev   : ", fitRglmnet$nulldev))
+Log.info(paste("H2O Dev Ratio  : ", H2Oratio, "\t\t", "R Dev Ratio   : ", fitRglmnet$dev.ratio))
+expect_equal(fitH2O@model$null.deviance, fitRglmnet$nulldev, tolerance = 0.01)
+expect_equal(H2Oratio, fitRglmnet$dev.ratio, tolerance = 0.01)
+
+
    testEnd()
 }
 
-doTest("GLM Test: Golden GLM2 - Vanilla Gaussian", test.glm2vanilla.golden)
-
+doTest("GLM2 SimpleRidge", test.glm2Ridge.golden)
