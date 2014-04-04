@@ -10,10 +10,13 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
+        # want detail on the cloud building to see what node fails
+        h2o.verbose = True
         if (localhost):
             h2o.build_cloud(1, java_heap_GB=2, base_port=54323)
         else:
             h2o_hosts.build_cloud_with_hosts(base_port=54323)
+        h2o.verbose = False
 
     @classmethod
     def tearDownClass(cls):
@@ -48,13 +51,13 @@ class Basic(unittest.TestCase):
             'activation'                   : 'RectifierWithDropout',
             'input_dropout_ratio'          : 0.2,
             'hidden'                       : '1024,1024,2048',
-            'adaptive_rate'                : 0,
+            'adaptive_rate'                : 1,
             'mini_batch'                   : 0, ## 0: better accuracy!  -1: best scalability!  10000: best accuracy?
-            'rate'                         : 0.01,
-            'rate_annealing'               : 1e-6,
-            'momentum_start'               : 0.5,
-            'momentum_ramp'                : 1800000,
-            'momentum_stable'              : 0.99,
+#            'rate'                         : 0.01,
+#            'rate_annealing'               : 1e-6,
+#            'momentum_start'               : 0.5,
+#            'momentum_ramp'                : 1800000,
+#            'momentum_stable'              : 0.99,
             'l1'                           : 1e-5,
             'l2'                           : 0.0,
             'seed'                         : 98037452452,
