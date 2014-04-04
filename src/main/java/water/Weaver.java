@@ -15,7 +15,7 @@ public class Weaver {
   private final CtClass _fielddoc;
   private final CtClass _arg;
   public static Class _typeMap;
-  public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata.h2o" };
+  public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata.math" };
 
   Weaver() {
     try {
