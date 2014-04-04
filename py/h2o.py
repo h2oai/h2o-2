@@ -642,6 +642,7 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time()-start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
             hostCount, (time.time() - start)))
+        h2p.red_print("Built cloud:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
