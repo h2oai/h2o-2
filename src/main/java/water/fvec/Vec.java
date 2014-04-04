@@ -102,7 +102,7 @@ public class Vec extends Iced {
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs);
+      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs,true);
       row = nrow;
     }
     DKV.put(v0._key,v0,fs);
