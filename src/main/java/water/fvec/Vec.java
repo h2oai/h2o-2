@@ -102,7 +102,7 @@ public class Vec extends Iced {
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs);
+      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs,true);
       row = nrow;
     }
     DKV.put(v0._key,v0,fs);
@@ -755,7 +755,7 @@ public class Vec extends Iced {
       return ab.putA8(_uniques==null ? null : _uniques.keySetLong());
     }
 
-    @Override public CollectDomain read( AutoBuffer ab ) {
+    @Override public Freezable read( AutoBuffer ab ) {
       super.read(ab);
       assert _uniques == null || _uniques.size()==0;
       long ls[] = ab.getA8();
@@ -763,7 +763,7 @@ public class Vec extends Iced {
       if( ls != null ) for( long l : ls ) _uniques.put(l,"");
       return this;
     }
-    @Override public void copyOver(DTask that) {
+    @Override public void copyOver(Freezable that) {
       super.copyOver(that);
       _uniques = ((CollectDomain)that)._uniques;
     }
