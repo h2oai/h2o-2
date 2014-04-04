@@ -5,6 +5,7 @@ package water;
 
 import java.util.HashSet;
 
+import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
@@ -12,6 +13,9 @@ import water.fvec.Vec;
  * Short-time computation which is not a job.
  */
 public abstract class Func extends Request2 {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
   /** A set containing a temporary vectors which are <strong>automatically</strong> deleted when job is done.
    *  Deletion is by {@link #cleanup()} call. */
   private transient HashSet<Key> _gVecTrash = new HashSet<Key>();
