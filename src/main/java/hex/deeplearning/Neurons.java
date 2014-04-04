@@ -187,20 +187,23 @@ public abstract class Neurons {
       if (Math.abs(partial_grad) <= 1e-10) return;
     }
 
-//    if (_w instanceof DenseRowMatrix)
-      bprop(_w, row, partial_grad, rate, momentum);
-//    else throw new UnsupportedOperationException("bprop col matrix not implemented.");
+    if (_w instanceof DenseRowMatrix)
+      bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, _b, _bm, row, partial_grad, rate, momentum);
+    else throw new UnsupportedOperationException("bprop for types not yet implemented.");
   }
 
-  private final void bprop(final Matrix _w, final int row, final float partial_grad, float rate, final float momentum) {
+  private final void bprop_dense_row_dense(final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseVector _b, final DenseVector _bm,
+                                           final int row, final float partial_grad, float rate, final float momentum) {
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
     final float l2 = (float)params.l2;
+    final double max_w2 = params.max_w2;
     final boolean have_momenta = _wm != null;
     final boolean have_ada = _ada != null;
     final boolean nesterov = params.nesterov_accelerated_gradient;
     final boolean update_prev = _previous._e != null;
+    final boolean fast_mode = params.fast_mode;
     final int cols = _previous._a.size();
     final int idx = row * cols;
 
@@ -208,15 +211,15 @@ public abstract class Neurons {
       final float weight = _w.get(row,col);
       if( update_prev ) _previous._e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
       final float previous_a = _previous._a.get(col);
-      if (params.fast_mode && previous_a == 0) continue;
+      if (fast_mode && previous_a == 0) continue;
 
       //this is the actual gradient dE/dw
       final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
+      final int w = idx + col;
 
       // adaptive learning rate r from ADADELTA
       // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (have_ada) {
-        final int w = idx + col;
         assert(!have_momenta);
         final float grad2 = grad*grad;
         _ada[2*w+1] *= rho;
@@ -225,26 +228,47 @@ public abstract class Neurons {
         final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
         rate = RMS_dx*invRMS_g;
         _ada[2*w] = rho * _ada[2*w] + (1f-rho)*rate*rate*grad2;
-        _w.add(row, col, rate * grad);
+        _w.raw()[w] += rate * grad;
       } else {
         if (!nesterov) {
           final float delta = rate * grad;
-          _w.add(row, col, delta);
+          _w.raw()[w] += delta;
           if( have_momenta ) {
-            _w.add(row, col, momentum * _wm.get(row, col));
-            _wm.set(row, col, delta);
+            _w.raw()[w] += momentum * _wm.raw()[w];
+            _wm.raw()[w] = delta;
           }
         } else {
           float tmp = grad;
           if( have_momenta ) {
-            _wm.set(row, col, _wm.get(row,col) * momentum);
-            _wm.add(row, col, tmp);
-            tmp = _wm.get(row, col);
+            _wm.raw()[w] *= momentum;
+            _wm.raw()[w] += tmp;
+            tmp = _wm.raw()[w];
           }
-          _w.add(row, col, rate * tmp);
+          _w.raw()[w] += rate * tmp;
         }
       }
     }
+    if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
+    update_bias(_b, _bm, row, rate, partial_grad, momentum);
+  }
+
+  // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+  final void rescale_weights(final int row) {
+    if (_w instanceof DenseRowMatrix) {
+      final int cols = _previous._a.size();
+      final int idx = row * cols;
+      final double max_w2 = params.max_w2;
+      double r2 = Utils.sumSquares(_w.raw(), idx, idx+cols);
+      if( r2 > max_w2 ) {
+        final float scale = Utils.approxSqrt((float)(max_w2 / r2));
+        for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
+      }
+    }
+    else throw new UnsupportedOperationException("not yet implemented.");
+  }
+
+  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row, final float rate, final float partial_grad, final float momentum) {
+    final boolean have_momenta = _wm != null;
     if (!params.nesterov_accelerated_gradient) {
       final float delta = rate * partial_grad;
       _b.add(row, delta);
@@ -260,15 +284,6 @@ public abstract class Neurons {
         d = _bm.get(row);
       }
       _b.add(row, rate * d);
-    }
-
-    // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-    if (params.max_w2 != Double.POSITIVE_INFINITY) {
-      final double r2 = Utils.sumSquares(_w.raw(), idx, idx+cols);
-      if( r2 > params.max_w2 ) {
-        final float scale = Utils.approxSqrt((float)(params.max_w2 / r2));
-        for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
-      }
     }
     if (Float.isInfinite(_b.get(row))) _minfo.set_unstable();
   }
@@ -556,7 +571,7 @@ public abstract class Neurons {
   public static class Softmax extends Output {
     public Softmax(int units) { super(units); }
     @Override protected void fprop() {
-      gemv(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), null);
+      gemv_row_optimized(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), null);
       final float max = Utils.maxValue(_a.raw());
       float scale = 0;
       for( int o = 0; o < _a.size(); o++ ) {
@@ -607,7 +622,9 @@ public abstract class Neurons {
   public static class Linear extends Output {
     public Linear(int units) { super(units); }
     @Override protected void fprop() {
-      gemv(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), null);
+      if (_w instanceof DenseRowMatrix)
+        gemv_row_optimized(_a.raw(), _w.raw(), _previous._a.raw(), _b.raw(), null);
+      else throw new UnsupportedOperationException("only row matrix");
     }
 
     /**
@@ -657,7 +674,7 @@ public abstract class Neurons {
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  static void gemv(float[] res, float[] a, float[] x, final float[] y, byte[] row_bits) {
+  static void gemv_row_optimized(float[] res, float[] a, float[] x, final float[] y, byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
@@ -690,13 +707,14 @@ public abstract class Neurons {
   }
 
   static void gemv(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
-    gemv(res.raw(), a.raw(), x.raw(), y.raw(), row_bits);
+    gemv_row_optimized(res.raw(), a.raw(), x.raw(), y.raw(), row_bits);
   }
 
   static void gemv_naive(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
     gemv_naive(res.raw(), a.raw(), x.raw(), y.raw(), row_bits);
   }
 
+  //TODO: make optimized version for col matrix
   static void gemv_naive(final DenseVector res, final DenseColMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
     final int cols = x.size();
     final int rows = y.size();
@@ -854,7 +872,7 @@ public abstract class Neurons {
         sum += res[rows/2];
       }
       for (int l=0;l<warmup_loops;++l) {
-        gemv(res, a, x, y, bits);
+        gemv_row_optimized(res, a, x, y, bits);
         sum += res[rows/2];
       }
       for (int l=0;l<warmup_loops;++l) {
@@ -915,7 +933,7 @@ public abstract class Neurons {
       sum = 0;
       start = System.currentTimeMillis();
       for (int l=0;l<loops;++l) {
-        gemv(res, a, x, y, bits);
+        gemv_row_optimized(res, a, x, y, bits);
         sum += res[rows/2]; //do something useful
       }
       System.out.println("result: " + sum + " and " + Utils.sum(res));
@@ -1113,7 +1131,7 @@ public abstract class Neurons {
   /**
    * Dense row matrix implementation
    */
-  public static class DenseRowMatrix extends Iced implements Matrix {
+  public final static class DenseRowMatrix extends Iced implements Matrix {
     private float[] _data;
     private int _cols;
     private int _rows;
@@ -1131,7 +1149,7 @@ public abstract class Neurons {
   /**
    * Dense column matrix implementation
    */
-  public static class DenseColMatrix extends Iced implements Matrix {
+  public final static class DenseColMatrix extends Iced implements Matrix {
     private float[] _data;
     private int _cols;
     private int _rows;
