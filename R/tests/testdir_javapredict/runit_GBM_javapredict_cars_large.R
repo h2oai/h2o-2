@@ -40,8 +40,8 @@ print(paste("n.minobsinnode", n.minobsinnode))
 print(paste("shrinkage", shrinkage))
 print(paste("train", train))
 print(paste("test", test))
-print(paste("x=", x)
-print(paste("y=", y)
+print(paste("x=", x))
+print(paste("y=", y))
 #----------------------------------------------------------------------
 # Run the test
 #----------------------------------------------------------------------
