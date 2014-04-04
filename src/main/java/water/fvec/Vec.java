@@ -97,14 +97,22 @@ public class Vec extends Iced {
   public Vec makeCon( final long l, String[] domain ) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
-    int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc, domain);
-    long row=0;                 // Start row
-    for( int i=0; i<nchunks; i++ ) {
-      long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs,true);
-      row = nrow;
-    }
+    final int nchunks = nChunks();
+    final Vec v0 = new Vec(group().addVecs(1)[0],_espc, domain);
+    new DRemoteTask(){
+      @Override public void lcompute(){
+        long row=0;                 // Start row
+        Key k;
+        for( int i=0; i<nchunks; i++ ) {
+          long nrow = chunk2StartElem(i+1); // Next row
+          if((k = v0.chunkKey(i)).home())
+            DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
+          row = nrow;
+        }
+        tryComplete();
+      }
+      @Override public void reduce(DRemoteTask drt){}
+    }.invokeOnAllNodes();
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
@@ -125,6 +133,7 @@ public class Vec extends Iced {
             DKV.put(k,new C0DChunk(d,(int)(nrow-row)),_fs);
           row = nrow;
         }
+        tryComplete();
       }
       @Override public void reduce(DRemoteTask drt){}
     }.invokeOnAllNodes();
