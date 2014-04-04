@@ -199,8 +199,9 @@ public class GLM2 extends ModelJob {
 
   @Override public void cancel(Throwable ex){
     if( _model != null ) _model.unlock(self());
-    if(ex instanceof JobCancelledException)cancel();
-    else super.cancel(ex);
+    if(ex instanceof JobCancelledException){
+      if(!isCancelledOrCrashed())cancel();
+    } else super.cancel(ex);
   }
 
   @Override protected Response serve() {
