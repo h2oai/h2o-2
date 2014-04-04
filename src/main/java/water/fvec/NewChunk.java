@@ -263,7 +263,7 @@ public class NewChunk extends Chunk {
     if(_ls != null && _ls.length > 0){
       if(_id == null){ // check for sparseness
         int nzs = 0;
-        for(long l:_ls) if(l != 0)++nzs;
+        for(int i = 0; i < _ls.length; ++i) if(_ls[i] != 0 || _xs[i] != 0)++nzs;
         if((nzs+1)*MIN_SPARSE_RATIO < _len2){
           set_sparse(nzs);
           assert _len == 0 || _len  <= _ls.length:"_len = " + _len + ", _ls.length = " + _ls.length + ", nzs = " + nzs +  ", len2 = " + _len2;
@@ -325,7 +325,7 @@ public class NewChunk extends Chunk {
       assert nzeros < _ls.length;
       _id = MemoryManager.malloc4(_ls.length);
       for(int i = 0; i < _len; ++i){
-        if(_ls[i] == 0)++zs;
+        if(_ls[i] == 0 && _xs[i] == 0)++zs;
         else {
           _ls[i-zs] = _ls[i];
           _xs[i-zs] = _xs[i];

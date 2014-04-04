@@ -19,7 +19,7 @@ DO_MEDIAN = False
 # the test compares to summary which has fixed quantiles.
 # but if we DO_MEDIAN=False, we can pick from any "other" here
 thresholds = [0.001, 0.01, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
-OTHER_Q_SUMM_INDEX = 9
+OTHER_Q_SUMM_INDEX = 3
 # has to point to one of the summmary2 choices
 OTHER_Q = thresholds[OTHER_Q_SUMM_INDEX]
 
@@ -53,9 +53,10 @@ class Basic(unittest.TestCase):
         # new with 1000 bins. copy expected from R
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            # ('syn_binary_100000x1.csv', 'x.hex', [ ('C1', None, None, None, None, None)], '.', None),
-            ('breadth.csv', 'b.hex', [ ('C1', None, None, None, None, None)], 'smalldata', 'quantiles'),
-            ('covtype.data', 'c.hex', [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
+            ('breadth.csv', 'b.hex', False, [ ('C1', None, None, None, None, None)], 'smalldata', 'quantiles'),
+            # ('wonkysummary.csv', 'b.hex', False, [ ('X1', 7, 22, 876713, 100008, 1000046)], 'smalldata', None),
+            ('wonkysummary.csv', 'b.hex', True, [ ('X1', None, None, None, None, None)], 'smalldata', None),
+            ('covtype.data', 'c.hex', False, [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
 
         ]
 
@@ -66,7 +67,7 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (csvFilename, hex_key, expectedCols, bucket, pathPrefix) in tryList:
+        for (csvFilename, hex_key, skipHeader, expectedCols, bucket, pathPrefix) in tryList:
             h2o.beta_features = False
 
             if pathPrefix:
@@ -75,8 +76,12 @@ class Basic(unittest.TestCase):
                 csvPathname = csvFilename
 
             csvPathnameFull = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
+            if skipHeader:
+                header = 1
+            else:
+                header = 0
             parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, 
-                schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+                schema='put', header=header, hex_key=hex_key, timeoutSecs=10, doSummary=False)
 
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -188,11 +193,11 @@ class Basic(unittest.TestCase):
                         # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                         h2o_summ.quantile_comparisons(
                             csvPathnameFull,
-                            skipHeader=False, # important!!
+                            skipHeader=skipHeader, # important!!
                             col=scipyCol,
                             datatype='float',
                             quantile=0.5 if DO_MEDIAN else OTHER_Q,
-                            # h2oSummary2=pctile[5 if DO_MEDIAN else OTHER_Q_SUMM_INDEX],
+                            h2oSummary2=pctile[5 if DO_MEDIAN else OTHER_Q_SUMM_INDEX],
                             h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
                             )
