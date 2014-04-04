@@ -308,14 +308,14 @@ public abstract class Neurons {
   public static class Input extends Neurons {
 
     private FrameTask.DataInfo _dinfo; //training data
-//    SparseVector _svec;
-//    DenseVector _dvec;
+    SparseVector _svec;
+    DenseVector _dvec;
 
     Input(int units, final FrameTask.DataInfo d) {
       super(units);
       _dinfo = d;
       _a = new DenseVector(units);
-//      _dvec = (DenseVector)_a;
+      _dvec = (DenseVector)_a;
     }
 
     @Override protected void bprop() { throw new UnsupportedOperationException(); }
@@ -354,6 +354,7 @@ public abstract class Neurons {
      *             (This allows this array to be re-usable by the caller, without re-allocating each time)
      */
     public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
+      _a = _dvec;
       for (int i=0; i<numcat; ++i) _a.set(cats[i], 1f);
       for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f : (float) nums[i]);
 
@@ -362,7 +363,6 @@ public abstract class Neurons {
       seed += params.seed + 0x1337B4BE;
 //      assert(_dvec instanceof DenseVector);
       _dropout.randomlySparsifyActivation(_a.raw(), seed);
-//      _a = _dvec;
 // FIXME: HACK TO ALWAYS BE SPARSE
 //      _svec = new SparseVector(_dvec);
 //      assert(_svec instanceof SparseVector);
