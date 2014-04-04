@@ -754,7 +754,7 @@ public class Vec extends Iced {
       return ab.putA8(_uniques==null ? null : _uniques.keySetLong());
     }
 
-    @Override public CollectDomain read( AutoBuffer ab ) {
+    @Override public Freezable read( AutoBuffer ab ) {
       super.read(ab);
       assert _uniques == null || _uniques.size()==0;
       long ls[] = ab.getA8();
@@ -762,7 +762,7 @@ public class Vec extends Iced {
       if( ls != null ) for( long l : ls ) _uniques.put(l,"");
       return this;
     }
-    @Override public void copyOver(DTask that) {
+    @Override public void copyOver(Freezable that) {
       super.copyOver(that);
       _uniques = ((CollectDomain)that)._uniques;
     }
