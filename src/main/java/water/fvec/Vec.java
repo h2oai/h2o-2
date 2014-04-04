@@ -102,7 +102,7 @@ public class Vec extends Iced {
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs);
+      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs,true);
       row = nrow;
     }
     DKV.put(v0._key,v0,fs);
@@ -113,14 +113,21 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     if( (long)d==d ) return makeCon((long)d);
-    int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
-    long row=0;                 // Start row
-    for( int i=0; i<nchunks; i++ ) {
-      long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0DChunk(d,(int)(nrow-row)),fs);
-      row = nrow;
-    }
+    final int nchunks = nChunks();
+    final Vec v0 = new Vec(group().addVecs(1)[0],_espc);
+    new DRemoteTask(){
+      @Override public void lcompute(){
+        long row=0;                 // Start row
+        Key k;
+        for( int i=0; i<nchunks; i++ ) {
+          long nrow = chunk2StartElem(i+1); // Next row
+          if((k = v0.chunkKey(i)).home())
+            DKV.put(k,new C0DChunk(d,(int)(nrow-row)),_fs);
+          row = nrow;
+        }
+      }
+      @Override public void reduce(DRemoteTask drt){}
+    }.invokeOnAllNodes();
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
@@ -527,10 +534,11 @@ public class Vec extends Iced {
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     Chunk c = dvec.get();               // Chunk data to compression wrapper
     long cstart = c._start;             // Read once, since racily filled in
-    if( cstart == start ) return c;     // Already filled-in
+    Vec v = c._vec;
+    if( cstart == start && v != null) return c;     // Already filled-in
     assert cstart == -1;       // Was not filled in (everybody racily writes the same start value)
-    c._start = start;          // Fields not filled in by unpacking from Value
     c._vec = this;             // Fields not filled in by unpacking from Value
+    c._start = start;          // Fields not filled in by unpacking from Value
     return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
@@ -754,7 +762,7 @@ public class Vec extends Iced {
       return ab.putA8(_uniques==null ? null : _uniques.keySetLong());
     }
 
-    @Override public CollectDomain read( AutoBuffer ab ) {
+    @Override public Freezable read( AutoBuffer ab ) {
       super.read(ab);
       assert _uniques == null || _uniques.size()==0;
       long ls[] = ab.getA8();
@@ -762,7 +770,7 @@ public class Vec extends Iced {
       if( ls != null ) for( long l : ls ) _uniques.put(l,"");
       return this;
     }
-    @Override public void copyOver(DTask that) {
+    @Override public void copyOver(Freezable that) {
       super.copyOver(that);
       _uniques = ((CollectDomain)that)._uniques;
     }

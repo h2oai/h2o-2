@@ -364,7 +364,7 @@ class ASTddply extends ASTOp {
         _groups.put(ab.get(Group.class),new NewChunk(null,-99));
       return this;
     }
-    @Override public void copyOver( DTask dt ) {
+    @Override public void copyOver( Freezable dt ) {
       ddplyPass1 that = (ddplyPass1)dt;
       super.copyOver(that);
       this._gatherRows = that._gatherRows;
