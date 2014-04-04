@@ -862,6 +862,8 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   return(df)
 }
 
+as.matrix.H2OParsedData <- function(x, ...) { as.matrix(as.data.frame(x, ...)) }
+
 head.H2OParsedData <- function(x, n = 6L, ...) {
   numRows = nrow(x)
   stopifnot(length(n) == 1L)

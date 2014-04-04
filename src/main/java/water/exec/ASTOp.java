@@ -1259,6 +1259,7 @@ class ASTVar extends ASTOp {
       for(int i = 0; i < fr.numCols(); i++)
         sdev[i] = fr.vecs()[i].sigma();
 
+      // TODO: Might be more efficient to modify DataInfo to allow for separate standardization of mean and std dev
       DataInfo dinfo = new DataInfo(fr, 0, true);
       GramTask tsk = new GramTask(null, dinfo, false, false).doAll(dinfo._adaptedFrame);
       double[][] var = tsk._gram.getXX();
