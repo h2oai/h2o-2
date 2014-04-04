@@ -536,7 +536,7 @@ public class Vec extends Iced {
     long cstart = c._start;             // Read once, since racily filled in
     Vec v = c._vec;
     if( cstart == start && v != null) return c;     // Already filled-in
-    assert cstart == -1;       // Was not filled in (everybody racily writes the same start value)
+    assert cstart == -1 || v == null;       // Was not filled in (everybody racily writes the same start value)
     c._vec = this;             // Fields not filled in by unpacking from Value
     c._start = start;          // Fields not filled in by unpacking from Value
     return c;
