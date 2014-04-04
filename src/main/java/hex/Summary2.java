@@ -817,7 +817,8 @@ public class Summary2 extends Iced {
       }
       else { // single pass approx..with unresolved bin
         assert hcnt2[k]!=0 : hcnt2[k]+" "+k;
-        dDiff = (nextVal - hcnt2_min[k]) / hcnt2[k]; 
+        // use max within this bin, to stay within the guaranteed error bounds
+        dDiff = (hcnt2_max[k] - hcnt2_min[k]) / hcnt2[k]; 
         guess = hcnt2_min[k] + (targetCntFull-currentCnt) * dDiff;
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)

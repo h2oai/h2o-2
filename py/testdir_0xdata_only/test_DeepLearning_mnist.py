@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
             'input_dropout_ratio'          : 0.2,
             'hidden'                       : '1024,1024,2048',
             'adaptive_rate'                : 0,
-            'mini_batch'                   : -1,
+            'mini_batch'                   : 0, ## 0: better accuracy!  -1: best scalability!  10000: best accuracy?
             'rate'                         : 0.01,
             'rate_annealing'               : 1e-6,
             'momentum_start'               : 0.5,
@@ -101,7 +101,6 @@ class Basic(unittest.TestCase):
         actualErr = h2o_gbm.pp_cm_summary(cm)/100.;
 
         print "actual   classification error:" + format(actualErr)
-        print "expected classification error:" + format(expectedErr)
 
         h2o.beta_features = False
 

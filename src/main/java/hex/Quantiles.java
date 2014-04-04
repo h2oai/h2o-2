@@ -492,7 +492,9 @@ public class Quantiles extends Iced {
         guess = hcnt2_max[k] + (targetCntFract * dDiff);
       }
       else if ( forceBestApprox ) { // single pass approx..with unresolved bin
-        dDiff = (nextVal - hcnt2_min[k]) / hcnt2[k]; 
+        // best to use hcnt2_max[k] instead of nextVal here, to keep
+        // within the guaranteed worst case error bounds
+        dDiff = (hcnt2_max[k] - hcnt2_min[k]) / hcnt2[k]; 
         guess = hcnt2_min[k] + (targetCntFull-currentCnt) * dDiff;
       }
       else { // type 2 (mean)
