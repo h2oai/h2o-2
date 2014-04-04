@@ -1,11 +1,12 @@
 package water.fvec;
 
 import jsr166y.CountedCompleter;
-import water.*;
+import water.H2O;
+import water.Key;
+import water.MRTask2;
 
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.concurrent.Future;
 
 /**
  * Created by tomasnykodym on 3/28/14.
@@ -78,6 +79,7 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
   public static class RebalanceTask extends MRTask2<RebalanceTask> {
     final Vec _srcVec;
     public RebalanceTask(H2O.H2OCountedCompleter cmp, Vec srcVec){super(cmp);_srcVec = srcVec;}
+    @Override public boolean logVerbose() { return false; }
     @Override public void map(Chunk chk){
       final int dstrows = chk._len;
       NewChunk dst = new NewChunk(chk);
