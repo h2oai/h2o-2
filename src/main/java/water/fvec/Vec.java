@@ -527,10 +527,11 @@ public class Vec extends Iced {
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     Chunk c = dvec.get();               // Chunk data to compression wrapper
     long cstart = c._start;             // Read once, since racily filled in
-    if( cstart == start ) return c;     // Already filled-in
+    Vec v = c._vec;
+    if( cstart == start && v != null) return c;     // Already filled-in
     assert cstart == -1;       // Was not filled in (everybody racily writes the same start value)
-    c._start = start;          // Fields not filled in by unpacking from Value
     c._vec = this;             // Fields not filled in by unpacking from Value
+    c._start = start;          // Fields not filled in by unpacking from Value
     return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
