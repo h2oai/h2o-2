@@ -45,7 +45,7 @@ rm -f ./latest_h2o_jar_version
 
 curl -k --silent -o latest_h2o_jar_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/latest
 
-if [[ $VERSION == "" ]]
+if [[ $VERSION == "" || $VERSION == "latest" ]]
 then
     version=$(<latest_h2o_jar_version)
 else
