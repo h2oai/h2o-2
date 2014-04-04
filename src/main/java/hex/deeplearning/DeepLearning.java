@@ -681,13 +681,8 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return Frame that has potentially more chunks
    */
   private Frame reBalance(final Frame fr, boolean local) {
-    int cores = 0;
-    for( H2ONode node : H2O.CLOUD._memary ) {
-      if (local) cores = Math.max(cores, node._heartbeat._num_cpus);
-      else cores += node._heartbeat._num_cpus;
-    }
-    final int chunks = 4*cores;
-    if (force_load_balance && chunks < fr.numRows()) {
+    final int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
+    if (force_load_balance) {
       Log.info("Starting load balancing into (at least) " + chunks + " chunks.");
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
       Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
