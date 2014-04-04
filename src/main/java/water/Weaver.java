@@ -1,6 +1,5 @@
 package water;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 import javassist.*;
@@ -181,8 +180,9 @@ public class Weaver {
     CtField ctfs[] = cc.getDeclaredFields();
     boolean api = false;
     for( CtField ctf : ctfs )
-      if( ctf.getName().equals("API_WEAVER") )
-        api = true;
+      if( ctf.getName().equals("API_WEAVER") ) {
+        api = true; break;
+      }
     if( api == false ) return;
 
     CtField fielddoc=null;
