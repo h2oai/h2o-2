@@ -118,9 +118,9 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
       assert dst._len2 == chk._len:"len2 = " + dst._len2 + ", _len = " + chk._len;
       dst.close(dst.cidx(),_fs);
     }
-    @Override public void map(Chunk... chk){
-      for(int i = 0; i < chk.length; ++i)
-        rebalanceChunk(_srcVecs[i],chk[i]);
+    @Override public void map(Chunk [] chks){
+      for(int i = 0; i < chks.length; ++i)
+        rebalanceChunk(_srcVecs[i],chks[i]);
     }
   }
 }
