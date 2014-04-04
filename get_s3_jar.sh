@@ -11,7 +11,7 @@ NO_DOWNLOAD=0
 # default to hilbert
 BRANCH=master
 VERSION=
-while getopts nbv: flag
+while getopts nb:v: flag
 do
     case $flag in
         n)
@@ -35,6 +35,7 @@ shift $(( OPTIND - 1 ))  # shift past the last flag or argument
 echo remaining parameters to Bash are $*
 
 echo "using branch: $BRANCH"
+echo "using version: $VERSION"
 
 #**************************************
 d=`dirname $0`
