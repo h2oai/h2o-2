@@ -30,7 +30,11 @@ public class Frame extends Lockable<Frame> {
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
-    // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
+    if( names==null ) {
+      names = new String[vecs.length];
+      for( int i=0; i<vecs.length; i++ ) names[i] = "C"+(i+1);
+    } 
+    assert names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
