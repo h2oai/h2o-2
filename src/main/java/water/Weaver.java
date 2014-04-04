@@ -10,7 +10,7 @@ import water.util.Log.Tag.Sys;
 
 public class Weaver {
   private final ClassPool _pool;
-  private final CtClass _dtask, _iced, _enum;
+  private final CtClass _dtask, _iced, _enum, _freezable;
   private final CtClass[] _serBases;
   private final CtClass _fielddoc;
   private final CtClass _arg;
@@ -23,7 +23,8 @@ public class Weaver {
       _iced = _pool.get("water.Iced"); // Needs serialization
       _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
-      _serBases = new CtClass[] { _iced, _dtask, _enum, };
+      _freezable = _pool.get("water.Freezable"); // Needs serialization
+      _serBases = new CtClass[] { _iced, _dtask, _enum, _freezable };
       for( CtClass c : _serBases ) c.freeze();
       _fielddoc = _pool.get("water.api.DocGen$FieldDoc");// Is auto-documentation result
       _arg  = _pool.get("water.api.RequestArguments$Argument"); // Needs auto-documentation
@@ -65,6 +66,16 @@ public class Weaver {
       for( CtClass base : _serBases )
         if( cc.subclassOf(base) )
           return javassistLoadClass(cc);
+
+      // Subtype of an alternative freezable?
+      if( cc.subtypeOf( _freezable ) ) {
+        // Find the alternative freezable base
+        CtClass xcc = cc;
+        CtClass ycc = null;
+        while( xcc.subtypeOf(_freezable) ) { ycc = xcc; xcc = xcc.getSuperclass(); }
+        if( !ycc.isFrozen() ) ycc.freeze(); // Freeze the alternative base
+        return cc == ycc ? cc : javassistLoadClass(cc); // And weave the subclass
+      }
 
       return cc;
     } catch( NotFoundException nfe ) {
@@ -114,7 +125,8 @@ public class Weaver {
     if( cc.subclassOf(_enum) ) exposeRawEnumArray(cc);
     if( cc.subclassOf(_iced) ) ensureAPImethods(cc);
     if( cc.subclassOf(_iced) ||
-        cc.subclassOf(_dtask) ) {
+        cc.subclassOf(_dtask)||
+        cc.subtypeOf(_freezable)) {
       cc.setModifiers(javassist.Modifier.setPublic(cc.getModifiers()));
       ensureSerMethods(cc);
       ensureNullaryCtor(cc);
@@ -324,11 +336,11 @@ public class Weaver {
     boolean w = hasExisting("write", "(Lwater/AutoBuffer;)Lwater/AutoBuffer;", ccms);
     boolean r = hasExisting("read" , "(Lwater/AutoBuffer;)Lwater/Freezable;" , ccms);
     boolean d = cc.subclassOf(_dtask); // Subclass of DTask?
-    boolean c = hasExisting("copyOver" , "(Lwater/DTask;)V" , ccms);
+    boolean c = hasExisting("copyOver" , "(Lwater/Freezable;)V" , ccms);
     if( w && r && (!d || c) ) return;
     if( w || r || c )
       throw new RuntimeException(cc.getName() +" must implement all of " +
-      "read(AutoBuffer) and write(AutoBuffer) and copyOver(DTask) or none");
+      "read(AutoBuffer) and write(AutoBuffer) and copyOver(Freezable) or none");
 
     // Add the serialization methods: read, write.
     CtField ctfs[] = cc.getDeclaredFields();
@@ -385,7 +397,7 @@ public class Weaver {
     //       _d = s._d;
     //     }
     if( d ) make_body(cc,ctfs,callsuper,
-              "public void copyOver(water.DTask i) {\n"+
+              "public void copyOver(water.Freezable i) {\n"+
               "  "+cc.getName()+" s = ("+cc.getName()+")i;\n",
               "  super.copyOver(s);\n",
               "  %s = s.%s;\n",
