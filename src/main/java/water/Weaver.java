@@ -14,7 +14,7 @@ public class Weaver {
   private final CtClass _fielddoc;
   private final CtClass _arg;
   public static Class _typeMap;
-  public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata.h2o" };
+  public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata.math" };
 
   Weaver() {
     try {
@@ -55,6 +55,15 @@ public class Weaver {
   // See if javaassist can find this class; if so then check to see if it is a
   // subclass of water.DTask, and if so - alter the class before returning it.
   private synchronized CtClass javassistLoadClass(String name) {
+    // Always use this weaver's classloader to preserve correct top-level classloader
+    // for loading H2O's classes.
+    // The point is to load all the time weaved classes by the same classloader
+    // and do not let JavaAssist to use thread context classloader.
+    // For normal H2O execution it will be always the same classloader
+    // but for running from 3rd party code, we preserve Boot's parent loader
+    // for all H2O internal classes.
+    final ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+    Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
     try {
       if( name.equals("water.Boot") ) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
@@ -70,6 +79,9 @@ public class Weaver {
       return null;              // Not found?  Use the normal loader then
     } catch( CannotCompileException e ) { // Expected to compile
       throw new RuntimeException(e);
+    } finally {
+      // Do not forget to configure classloader back to original value
+      Thread.currentThread().setContextClassLoader(ccl);
     }
   }
 
@@ -203,11 +215,10 @@ public class Weaver {
               ";\n  return ab;\n}",
               new FieldFilter() {
     	        @Override boolean filter(CtField ctf) throws NotFoundException {
-                  Object[] as;
-                  try { as = ctf.getAnnotations(); }
-                  catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
                   API api = null;
-                  for(Object o : as) if(o instanceof API) { api = (API) o; break; }
+                  try {
+                    api = (API) ctf.getAnnotation(API.class);
+                  } catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
                   return api != null && (api.json() || !isInput(ctf.getType(), api));
                 }
               });

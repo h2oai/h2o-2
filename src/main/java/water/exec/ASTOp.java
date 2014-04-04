@@ -1,18 +1,16 @@
 package water.exec;
-import water.util.Log;
+
 import hex.Quantiles;
 import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import hex.la.Matrix;
-
 import java.util.*;
-
 import org.joda.time.DateTime;
 import org.joda.time.MutableDateTime;
-
 import water.*;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
+import water.util.Log;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -1259,6 +1257,7 @@ class ASTVar extends ASTOp {
       for(int i = 0; i < fr.numCols(); i++)
         sdev[i] = fr.vecs()[i].sigma();
 
+      // TODO: Might be more efficient to modify DataInfo to allow for separate standardization of mean and std dev
       DataInfo dinfo = new DataInfo(fr, 0, true);
       GramTask tsk = new GramTask(null, dinfo, false, false).doAll(dinfo._adaptedFrame);
       double[][] var = tsk._gram.getXX();
@@ -1482,16 +1481,20 @@ class ASTIfElse extends ASTOp {
     Frame fr  = new Frame(frtst); // Do-All frame
     final int  ncols = frtst.numCols(); // Result column count
     final long nrows = frtst.numRows(); // Result row count
+    String names[]=null;
     if( frtru !=null ) {          // True is a Frame?
       if( frtru.numCols() != ncols ||  frtru.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frtru);
       fr.add(frtru,true);
+      names = frtru._names;
     }
     if( frfal !=null ) {          // False is a Frame?
       if( frfal.numCols() != ncols ||  frfal.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frfal);
       fr.add(frfal,true);
+      names = frfal._names;
     }
+    if( names==null && frtst!=null ) names = frtst._names;
     final boolean t = frtru != null;
     final boolean f = frfal != null;
     final double fdtru = dtru;
@@ -1512,7 +1515,7 @@ class ASTIfElse extends ASTOp {
               else n.addNum(ctst.at0(r)!=0 ? (t ? ctru.at0(r) : fdtru) : (f ? cfal.at0(r) : fdfal));
           }
         }
-      }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
+      }.doAll(ncols,fr).outputFrame(names,fr.domains());
     env.subRef(frtst,kq);
     if( frtru != null ) env.subRef(frtru,kt);
     if( frfal != null ) env.subRef(frfal,kf);
