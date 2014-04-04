@@ -5,9 +5,9 @@ import numpy as np
 import scipy as sp
 import math
 import argparse
-OTHER_T = 0.99
+OTHER_T = 0.25
 
-echo "FIX! have to update this to match current multipass exactQuantiles in Quantiles.java"
+# echo "FIX! have to update this to match current multipass exactQuantiles in Quantiles.java"
 
 BIN_COUNT = 20
 BIN_COUNT = 50
@@ -418,6 +418,7 @@ csvPathname = './runif_.csv'
 csvPathname = '/home/0xdiag/datasets/kmeans_big/syn_sphere_gen.csv'
 csvPathname = './syn_binary_100000x1.csv'
 csvPathname = '/home/kevin/h2o/smalldata/quantiles/breadth.csv'
+csvPathname = './wonky1'
 col = 0
 
 print "Reading csvPathname"
