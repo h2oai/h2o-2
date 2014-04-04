@@ -806,6 +806,13 @@ setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
   .h2o.__unop2("sd", x)
 })
 
+setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
+  if(!is.null(y) || !missing(use)) stop("Unimplemented")
+  if(h2o.anyFactor(x)) stop("x cannot contain any categorical columns")
+  if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
+  .h2o.__unop2("var", x)
+})
+
 as.data.frame.H2OParsedData <- function(x, ...) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), sep='')
   ttt <- getURL(url)
@@ -854,6 +861,8 @@ as.data.frame.H2OParsedData <- function(x, ...) {
 #   }
   return(df)
 }
+
+as.matrix.H2OParsedData <- function(x, ...) { as.matrix(as.data.frame(x, ...)) }
 
 head.H2OParsedData <- function(x, n = 6L, ...) {
   numRows = nrow(x)

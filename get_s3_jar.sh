@@ -10,7 +10,8 @@ echo "also copies the R/* downloaded stuff to target/R"
 NO_DOWNLOAD=0
 # default to hilbert
 BRANCH=master
-while getopts nb: flag
+VERSION=
+while getopts nb:v: flag
 do
     case $flag in
         n)
@@ -21,6 +22,10 @@ do
             BRANCH=$OPTARG
             echo "branch is $BRANCH"
             ;;
+        v)
+            VERSION=$OPTARG
+            echo "version is $VERSION"
+            ;;
         ?)
             exit
             ;;
@@ -30,6 +35,7 @@ shift $(( OPTIND - 1 ))  # shift past the last flag or argument
 echo remaining parameters to Bash are $*
 
 echo "using branch: $BRANCH"
+echo "using version: $VERSION"
 
 #**************************************
 d=`dirname $0`
@@ -39,8 +45,14 @@ rm -f ./latest_h2o_jar_version
 
 curl -k --silent -o latest_h2o_jar_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/latest
 
-version=$(<latest_h2o_jar_version)
-echo "latest h2o jar version is: $version"
+if [[ $VERSION == "" || $VERSION == "latest" ]]
+then
+    version=$(<latest_h2o_jar_version)
+else
+    version=$VERSION
+fi
+
+echo "Using h2o jar version: $version"
 
 curl -k --silent -o latest_h2o_project_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/${version}/project_version
 project_version=$(<latest_h2o_project_version)
