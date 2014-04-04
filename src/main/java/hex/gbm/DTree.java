@@ -273,7 +273,7 @@ public class DTree extends Iced {
     // node otherwise induces.  Happens if we find out too-late that we have a
     // perfect prediction here, and we want to turn into a leaf.
     public void do_not_split( ) {
-      if( _pid == -1 ) return;
+      if( _pid == -1 ) return; // skip root
       DecidedNode dn = _tree.decided(_pid);
       for( int i=0; i<dn._nids.length; i++ )
         if( dn._nids[i]==_nid )
@@ -282,7 +282,6 @@ public class DTree extends Iced {
     }
 
     @Override public String toString() {
-      final int nclass = _tree._nclass;
       final String colPad="  ";
       final int cntW=4, mmmW=4, menW=5, varW=5;
       final int colW=cntW+1+mmmW+1+mmmW+1+menW+1+varW;
@@ -523,6 +522,8 @@ public class DTree extends Iced {
     public final double pred() { return _pred; }
     public final void pred(double pred) { _pred = pred; }
   }
+
+  static public final boolean isRootNode(Node n)   { return n._pid == -1; }
 
   // --------------------------------------------------------------------------
   public static abstract class TreeModel extends water.Model {
