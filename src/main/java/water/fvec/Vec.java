@@ -113,14 +113,21 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     if( (long)d==d ) return makeCon((long)d);
-    int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
-    long row=0;                 // Start row
-    for( int i=0; i<nchunks; i++ ) {
-      long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0DChunk(d,(int)(nrow-row)),fs);
-      row = nrow;
-    }
+    final int nchunks = nChunks();
+    final Vec v0 = new Vec(group().addVecs(1)[0],_espc);
+    new DRemoteTask(){
+      @Override public void lcompute(){
+        long row=0;                 // Start row
+        Key k;
+        for( int i=0; i<nchunks; i++ ) {
+          long nrow = chunk2StartElem(i+1); // Next row
+          if((k = v0.chunkKey(i)).home())
+            DKV.put(k,new C0DChunk(d,(int)(nrow-row)),_fs);
+          row = nrow;
+        }
+      }
+      @Override public void reduce(DRemoteTask drt){}
+    }.invokeOnAllNodes();
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
