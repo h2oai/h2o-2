@@ -232,7 +232,7 @@ public abstract class Neurons {
           _w.add(row, col, delta);
           if( have_momenta ) {
             _w.add(row, col, momentum * _wm.get(row, col));
-            _wm.add(row, col, delta);
+            _wm.set(row, col, delta);
           }
         } else {
           float tmp = grad;
