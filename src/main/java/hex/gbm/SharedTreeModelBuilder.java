@@ -107,6 +107,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       throw new IllegalArgumentException("Constant response column!");
     if (_nclass > MAX_SUPPORTED_LEVELS)
       throw new IllegalArgumentException("Too many levels in response column!");
+
+    int usableColumns = 0;
+    for (int i = 0; i < _ncols; i++) {
+      Vec v = source.vec(i);
+      if (v.isBad() || v.isConst()) continue;
+      usableColumns++;
+    }
+    if (usableColumns==0) throw new IllegalArgumentException("There is no usable column to generate model!");
   }
 
   // --------------------------------------------------------------------------
