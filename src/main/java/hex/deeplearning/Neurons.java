@@ -187,13 +187,15 @@ public abstract class Neurons {
       if (Math.abs(partial_grad) <= 1e-10) return;
     }
 
-    if (_w instanceof DenseRowMatrix)
-      bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, _b, _bm, row, partial_grad, rate, momentum);
+    if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
+      bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
+    else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
+      bprop_dense_row_sparse((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
     else throw new UnsupportedOperationException("bprop for types not yet implemented.");
   }
 
-  private final void bprop_dense_row_dense(final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseVector _b, final DenseVector _bm,
-                                           final int row, final float partial_grad, float rate, final float momentum) {
+  private final void bprop_dense_row_dense(final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseVector prev_a, final DenseVector prev_e,
+                                           final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
@@ -202,16 +204,77 @@ public abstract class Neurons {
     final boolean have_momenta = _wm != null;
     final boolean have_ada = _ada != null;
     final boolean nesterov = params.nesterov_accelerated_gradient;
-    final boolean update_prev = _previous._e != null;
+    final boolean update_prev = prev_e != null;
     final boolean fast_mode = params.fast_mode;
-    final int cols = _previous._a.size();
+    final int cols = prev_a.size();
     final int idx = row * cols;
 
     for( int col = 0; col < cols; col++ ) {
       final float weight = _w.get(row,col);
-      if( update_prev ) _previous._e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
-      final float previous_a = _previous._a.get(col);
+      if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
+      final float previous_a = prev_a.get(col);
       if (fast_mode && previous_a == 0) continue;
+
+      //this is the actual gradient dE/dw
+      final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
+      final int w = idx + col;
+
+      // adaptive learning rate r from ADADELTA
+      // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
+      if (have_ada) {
+        assert(!have_momenta);
+        final float grad2 = grad*grad;
+        _ada[2*w+1] *= rho;
+        _ada[2*w+1] += (1f-rho)*grad2;
+        final float RMS_dx = Utils.approxSqrt(_ada[2*w] + eps);
+        final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
+        rate = RMS_dx*invRMS_g;
+        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*rate*rate*grad2;
+        _w.raw()[w] += rate * grad;
+      } else {
+        if (!nesterov) {
+          final float delta = rate * grad;
+          _w.raw()[w] += delta;
+          if( have_momenta ) {
+            _w.raw()[w] += momentum * _wm.raw()[w];
+            _wm.raw()[w] = delta;
+          }
+        } else {
+          float tmp = grad;
+          if( have_momenta ) {
+            _wm.raw()[w] *= momentum;
+            _wm.raw()[w] += tmp;
+            tmp = _wm.raw()[w];
+          }
+          _w.raw()[w] += rate * tmp;
+        }
+      }
+    }
+    if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
+    update_bias(_b, _bm, row, rate, partial_grad, momentum);
+  }
+
+  private final void bprop_dense_row_sparse(final DenseRowMatrix _w, final DenseRowMatrix _wm, final SparseVector prev_a, final DenseVector prev_e,
+                                           final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
+    final float rho = (float)params.rho;
+    final float eps = (float)params.epsilon;
+    final float l1 = (float)params.l1;
+    final float l2 = (float)params.l2;
+    final double max_w2 = params.max_w2;
+    final boolean have_momenta = _wm != null;
+    final boolean have_ada = _ada != null;
+    final boolean nesterov = params.nesterov_accelerated_gradient;
+    final boolean update_prev = prev_e != null;
+    final boolean fast_mode = params.fast_mode;
+    final int cols = prev_a.size();
+    final int idx = row * cols;
+
+    for (SparseVector.Iterator it=prev_a.begin(); !it.equals(prev_a.end()); it.next()) {
+      final int col = it.index();
+      final float weight = _w.get(row,col);
+      if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
+      final float previous_a = it.value();
+      assert (previous_a != 0); //only iterate over non-zeros!
 
       //this is the actual gradient dE/dw
       final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
@@ -376,7 +439,6 @@ public abstract class Neurons {
       // Input Dropout
       if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
-//      assert(_dvec instanceof DenseVector);
       _dropout.randomlySparsifyActivation(_a.raw(), seed);
 // FIXME: HACK TO ALWAYS BE SPARSE
 //      _svec = new SparseVector(_dvec);
