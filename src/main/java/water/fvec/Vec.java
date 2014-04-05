@@ -279,6 +279,14 @@ public class Vec extends Iced {
   public final int timeMode(){ return _time; }
   public final String timeParse(){ return ParseTime.TIME_PARSE[_time]; }
 
+  /** Is the column constant.
+   * <p>Returns true if the column contains only constant values and it is not full of NAs.</p> */
+  public final boolean isConst() { return min() == max(); }
+  /** Is the column bad.
+   * <p>Returns true if the column is full of NAs.</p>
+   */
+  public final boolean isBad() { return naCnt() == length(); }
+
   /** Map the integer value for a enum/factor/categorical to it's String.
    *  Error if it is not an ENUM.  */
   public String domain(long i) { return _domain[(int)i]; }
