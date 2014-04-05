@@ -4,9 +4,9 @@
 Deep Learning
 ------------------------------
 
-H2O Deep Learning is based on a multi-layer feed-forward artifical neural
+H2O Deep Learning is based on a multi-layer feed-forward artificial neural
 network that is trained with stochastic gradient descent using
-back-propragation. The network can contain a large number of hidden layers
+back-propagation. The network can contain a large number of hidden layers
 consisting of neurons with tanh, rectifier and maxout activation functions.
 Advanced features such as adaptive learning rate, rate annealing, momentum
 training, dropout, L1/L2 regularization, checkpointing and grid search enable
@@ -20,7 +20,7 @@ References
 
     Deep Learning http://en.wikipedia.org/wiki/Deep_learning
 
-    Artifical Neural Network http://en.wikipedia.org/wiki/Artificial_neural_network
+    Artificial Neural Network http://en.wikipedia.org/wiki/Artificial_neural_network
 
     ADADELTA http://arxiv.org/abs/1212.5701
 
@@ -70,7 +70,7 @@ greatly.
 
 **classification** 
      
-    Checkbox indicating whether the dependent variable is to be
+    Check box indicating whether the dependent variable is to be
     treated as a factor or a continuous variable. 
 
 **validation** 
@@ -132,7 +132,7 @@ greatly.
     (dependent on scoring interval and duty factor). Special values are 0 for
     one epoch per iteration and -1 for processing the maximum amount of data
     per iteration. If "replicate training data" is enabled, N epochs will be trained
-    per iteration on N nodes, otherwse one epoch.
+    per iteration on N nodes, otherwise one epoch.
 
 **seed**
 
@@ -182,7 +182,7 @@ greatly.
 
     *Momentum stable* The final momentum value after the ramp is over.
 
-**nesterov accelerated gradient** 
+**Nesterov accelerated gradient** 
 
     The Nesterov Accelerated Gradient Descent method is a modification to
     traditional gradient descent for convex functions. The method relies on
@@ -196,7 +196,7 @@ greatly.
 
 **L1 regularization** 
 
-    A regularization method that contrains the absolute value of the weights and
+    A regularization method that constrains the absolute value of the weights and
     has the net effect of dropping some weights (setting them to zero) from a model
     to reduce complexity and avoid overfitting. 
 
@@ -317,7 +317,7 @@ greatly.
 **single node mode**
 
     Run on a single node for fine-tuning of model parameters. Can be useful for
-    checkpoing resumes after training on multiple nodes for fast initial
+    checkpoint resumes after training on multiple nodes for fast initial
     convergence.
 
 **shuffle training data** 
