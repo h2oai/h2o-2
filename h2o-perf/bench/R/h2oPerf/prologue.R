@@ -233,6 +233,12 @@ function() {
   summary(data)
 }
 
+runH2o.ddply<-
+function(.variables, .fun = NULL, ..., .progress = 'none') {
+  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
+  h2o.ddply(data, .variables, .fun, ..., .progress)
+}
+
 runGBM<-
 function(x, y, distribution='multinomial', 
          n.trees=10, interaction.depth=5, 
