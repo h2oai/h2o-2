@@ -82,13 +82,12 @@ public class DRFTest extends TestUtil {
     basicDRFTestOOBE(
         "./smalldata/poker/poker100","poker.hex",
         new PrepData() { @Override int prep(Frame fr) {
-          for (int i=0; i<7;i++) UKV.remove(fr.remove(4)._key);
-          return fr.find("C11");
+          for (int i=0; i<7;i++) UKV.remove(fr.remove(3)._key);
+          return 3;
           } },
         1,
-        a( a(46294, 202),
-           a( 3187, 107)),
-        s("0", "1"));
+        null,
+        null);
 
   }
 
