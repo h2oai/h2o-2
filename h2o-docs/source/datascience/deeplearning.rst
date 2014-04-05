@@ -4,318 +4,378 @@
 Deep Learning
 ------------------------------
 
-Deep Learning relies on interconnected nodes and weighted
-information paths, which are adapted to minimize prediction error via
-back propagation,  to produce non-linear models of complex
-relationships. 
-  
+H2O Deep Learning is based on a multi-layer feed-forward artifical neural
+network that is trained with stochastic gradient descent using
+back-propragation. The network can contain a large number of hidden layers
+consisting of neurons with tanh, rectifier and maxout activation functions.
+Advanced features such as adaptive learning rate, rate annealing, momentum
+training, dropout, L1/L2 regularization, checkpointing and grid search enable
+high predictive accuracy. Each compute node trains a copy of the global model
+parameters on its local data with multi-threading (asynchronously), and
+contributes periodically to the global model via model averaging across the
+network.
+
+References
+""""""""""""""""""""""""""""""""
+
+    Deep Learning http://en.wikipedia.org/wiki/Deep_learning
+
+    Artifical Neural Network http://en.wikipedia.org/wiki/Artificial_neural_network
+
+    ADADELTA http://arxiv.org/abs/1212.5701
+
+    Momentum http://www.cs.toronto.edu/~fritz/absps/momentum.pdf
+
+    Dropout http://arxiv.org/pdf/1207.0580.pdf and http://arxiv.org/abs/1307.1493
+
+    Feature Importance http://www.ncbi.nlm.nih.gov/pubmed/9327276
   
 Defining a Deep Learning Model
 """"""""""""""""""""""""""""""""
 
-**Response:**
-  The dependent or target variable of interest.   
+H2O Deep Learning models have many input parameters, many of which are only accessible via
+the expert mode, and their default values should be fine for most use cases.
+Please read the following instructions before building extensive Deep Learning
+models. Many of the parameters allow specification of multiple values for grid
+search (e.g., comma-separated list "10,25,40" or from:to:step range "10:40:5").
+The application of grid search and successive continuation of winning models
+via checkpoint restart is highly recommended as model performance can vary
+greatly.
+
+**destination key**
+
+    Name of the model to be trained. Will be auto-generated if omitted.
+
+**source**
+
+    Training data. For each row of the training data, its feature values
+    activate the input layer neurons and signals are propagated through all hidden
+    layers via connecting weights. A prediction is returned at the output layer.
+    Deviations between the predicted values and the actual values are used to
+    adjust the path weights to reduce the error between the predicted and true
+    value. 
+
+**response**
+
+    The dependent or target variable of interest.  Can be numerical or a factor (categorical).
 	
-**Ignored Columns:** 
+**ignored columns** 
      
-     This field will auto populate a list of the columns from the data
-     set in use. The user selected set of columns are the features
-     that will be omitted from the model. Additionally - users can
-     specify whether the model should omit constant columns by
-     selecting expert settings and checking the tic box indicating
-     **Ignore const cols**.
+    This field will auto populate a list of the columns from the data
+    set in use. The user-selected set of columns are the features
+    that will be omitted from the model. Additionally - users can
+    specify whether the model should omit constant columns by
+    selecting expert settings and checking the tic box indicating
+    **Ignore const cols**.
 
-**Classification** 
+**classification** 
      
-     Checkbox indicating whether the dependent variable is to be
-     treated as a factor or a continuous variable. 
+    Checkbox indicating whether the dependent variable is to be
+    treated as a factor or a continuous variable. 
 
-**Validation** 
+**validation** 
 
-     A unique data set with the same shape and features as the
-     training data to be used in model validation (i.e. production of
-     error rates on data not used in model building). 
+    A unique data set with the same shape and features as the
+    training data to be used in model validation (i.e., production of
+    error rates on data not used in model building). 
 
-**Checkpoint**
+**checkpoint**
       
-     A model key associated with a previously run deep learning
-     model. This option allows users to build a new model as a
-     continuation of a previously generated model.  
+    A model key associated with a previously trained Deep Learning
+    model. This option allows users to build a new model as a
+    continuation of a previously generated model (e.g., by a grid search).
 
+**expert mode** 
 
-**Expert mode** 
-
-     When selected **Expert mode** allows users to specify expert
-     settings, explained in more detail below. 
-     *max w2*
- 
+    Unlock expert mode parameters than can affect model building speed,
+    predictive accuracy and scoring. Leaving expert mode parameters at default
+    values is fine for many problems, but best results on complex datasets are often
+    only attainable via expert mode options.
     
-**Activation**
+**activation**
 
-      The activation function to be used at each of the nodes in the
-      hidden layers. 
+    The activation function (non-linearity) to be used the neurons in the
+    hidden layers.
 
-      *Tanh* :Hyperbolic tangent function
-      
-      *Rectifier:* Chooses the maximum of (0, x) where x is the input value for a feature. 
-
-      *Maxout:* Choose the maximum coordinate of the input vector. 
-
-      *With Dropout* A percentage of the data will be omitted from
-      training as data are presented to each hidden layer in order to
-      improve generalization. 
-
-**Hidden:**
-
-     The number of hidden layers in the model. Multiple models can be
-     specified and generated simultaneously. For example if a user
-     specifies (300,300,100) a model with 3 layers off 100 hidden nodes
-     each will be produced. To specify several different models with
-     different dimensions enter information in the format (300, 300, 100),
-     (200, 200), (200, 20).  
+    *Tanh*: Hyperbolic tangent function (same as scaled and shifted sigmoid).
     
+    *Rectifier*: Chooses the maximum of (0, x) where x is the input value.
 
-**Epochs** 
+    *Maxout*: Choose the maximum coordinate of the input vector.
 
-      The number of iterations to be carried out. In model training
-      data is fed into an input layer and passed down weighted
-      information paths, through each of the hidden layers, and a
-      prediction is returned at the output layer. Deviations between
-      the predicted values and the actual values are then calculated,
-      and used to adjust the path weights to reduce the error between
-      the predicted and true value. One full backward
-      pass over the weighted paths is one epoch. 
+    *With Dropout*: Zero out a random user-given fraction of the incoming weights to
+    each hidden layer during training, for each training row. This
+    effectively trains exponentially many models at once, and can improve generalization. 
 
-**Mini Batch**
+**hidden**
 
-      Batch learning is a method in which the aggregated gradient
-      contributions for all observations in the training set are
-      obtained before weights are updated. Alternatively, users can specify
-      mini-batch to update weights more frequently. If users specify
-      mini-batch = 2000, the training data will be split into chunks
-      of 2000 observations, and the model weights will be updated
-      after each chunk is passed through the network.  
+    The number and size of each hidden layer in the model. 
+    For example, if a user specifies "100,200,100" a model with 3 hidden
+    layers will be produced, and the middle hidden layer will have 200 neurons. To
+    specify a grid search, add parentheses around each model's specification:
+    "(100,100), (50,50,50), (20,20,20,20)".  
 
-**Seed**
+**epochs** 
 
-      Because of the random nature of the algorithm, models with the
-      same specification can sometimes produce slightly different
-      results. To control this behavior, users can specify a seed, 
-      which will produce the same values for random components on 
-      independent tries. 
+    The number of passes over the training dataset to be carried out.
 
-**Adaptive Rate:**
+**mini batch**
 
-       In the even that a model is specified over a topology with
-       local minima or long plateaus, it is possible for a constant
-       learning rate to produce sub-optimal results. When the gradient
-       is being estimated in a well, a large learning rate can cause
-       the gradient to oscillate and move in the wrong direction. When
-       the gradient is being taken on a relatively flat surface, the
-       model can converge far slower than necessary for small learning
-       rates. Adaptive learning rates self adjust to avoid local
-       minima or slow convergence.  
+    The number of training data rows to be processed per iteration. Note that
+    independent of this parameter, each row is used immediately to update the model
+    with (online) stochastic gradient descent. The mini batch size controls the
+    synchronization period between nodes in a distributed environment and the
+    frequency at which scoring and model cancellation can happen. For example, if
+    mini-batch is set to 10,000 on H2O running on 4 nodes, then each node will
+    process 2,500 rows per iteration, sampling randomly from their local data.
+    Then, model averaging between the nodes takes place, and scoring can happen
+    (dependent on scoring interval and duty factor). Special values are 0 for
+    one epoch per iteration and -1 for processing the maximum amount of data
+    per iteration. If "replicate training data" is enabled, N epochs will be trained
+    per iteration on N nodes, otherwse one epoch.
 
-**Momentum:**
+**seed**
 
-       The magnitude of the weight updates are determined by the user specified
-       learning rate, and are a function of the difference between the
-       predicted value and the target value. That difference,
-       generally called delta, is only available at the output
-       layer. To correct the output at each hidden layer, back
-       propagation is used. Momentum modifies back propagation
-       by allowing prior iterations to influence the current
-       update. Using the momentum parameter can aid in avoiding local
-       minima and the associated instability. 
+    The random seed controls sampling and initialization. Reproducible results are only expected
+    with single-threaded operation (i.e., when running on one node, turning off
+    load balancing and providing a small dataset that fits in one chunk).  In
+    general, the multi-threaded asynchronous updates to the model parameters will
+    result in (intentional) race conditions and non-reproducible results. Note that
+    deterministic sampling and initialization might still lead to some weak sense
+    of determinism in the model.
+
+**learning rate**
+
+    The implemented (ADADELTA) adaptive learning rate algorithm automatically
+    combines the benefits of learning rate annealing and momentum training to avoid
+    slow convergence. Specification of only two parameters (rho and epsilon)
+    simplifies hyper parameter search. 
+
+    In some cases, manually controlled (non-adaptive) learning rate and
+    momentum specifications can lead to better results, but require the
+    specification (and hyper parameter search) of up to 7 parameters.
+    If the model is built on a topology with many local minima or
+    long plateaus, it is possible for a constant learning rate to produce
+    sub-optimal results. Learning rate annealing allows digging deeper into
+    local minima, while rate decay allows specification of different learning rates
+    per layer.  When the gradient is being estimated in a long valley in the
+    optimization landscape, a large learning rate can cause the gradient to
+    oscillate and move in the wrong direction. When the gradient is computed on a
+    relatively flat surface with small learning rates, the model can converge far
+    slower than necessary.
+
+**momentum**
+
+    When adaptive learning rate is disabled, the magnitude of the weight
+    updates are determined by the user specified learning rate (potentially annealed), and are a function
+    of the difference between the predicted value and the target value. That
+    difference, generally called delta, is only available at the output layer. To
+    correct the output at each hidden layer, back propagation is used. Momentum
+    modifies back propagation by allowing prior iterations to influence the current
+    update. Using the momentum parameter can aid in avoiding local minima and
+    the associated instability. Too much momentum can lead to instability, that's
+    why the momentum is best ramped up slowly.
        
-       *Momentum start* The weight assigned to the results of the
-       first sample passed through the model. 
+    *Momentum start* Initial momentum at the start of model building.
        
-       *Momentum ramp* The number of data samples for which results
-       will be weighted. 
+    *Momentum ramp* The number of data samples for which the momentum rises from its starting value to its final value (momentum stable).
 
-       *Momentum stable* The minimum weight to be attributed to the
-       last weighted output. 
+    *Momentum stable* The final momentum value after the ramp is over.
 
-**Nestrov Accelerated** 
+**nesterov accelerated gradient** 
 
-        The Nestrov Accelerated Gradient Descent method is a
-	modification to traditional gradient descent for convex
-	functions. The method relies on gradient information at
-	various points to build a polynomial approximation that
-	minimizes the residuals in fewer iterations of the 
-        descent. 
+    The Nesterov Accelerated Gradient Descent method is a modification to
+    traditional gradient descent for convex functions. The method relies on
+    gradient information at various points to build a polynomial approximation that
+    minimizes the residuals in fewer iterations of the descent. 
 
-**Input dropout ratio**
+**input dropout ratio**
 
-        A percentage of the data to be omitted from training in order
-	to improve generalization. 
+    A fraction of the features for each training row to be omitted from training in order
+    to improve generalization (dimension sampling).
 
 **L1 regularization** 
 
-        A regularization method that constrains the size of individual
-	coefficients and has the net effect of dropping some
-	coefficients from a model to reduce complexity and avoid
-	overfitting. 
+    A regularization method that contrains the absolute value of the weights and
+    has the net effect of dropping some weights (setting them to zero) from a model
+    to reduce complexity and avoid overfitting. 
 
 **L2 regularization** 
 
-        A regularization method that constrains the sum of the squared
-	coefficients. This method introduces bias into parameter
-	estimates, but frequently produces substantial gains in
-	modeling as estimate variance is reduced. 
+    A regularization method that constrains the sum of the squared
+    weights. This method introduces bias into parameter estimates, but
+    frequently produces substantial gains in modeling as estimate variance is
+    reduced. 
 
+**max w2**
 
-**Max W2**
+    A maximum on the sum of the squared incoming weights into
+    any one neuron. This tuning parameter is especially useful for unbound
+    activation functions such as Maxout or Rectifier.
 
-        A maximum on the sum of the squared weights of information
-	paths input into any one unit. This tuning parameter functions
-	in a manner similar to L2 Regularization on the hidden layers
-	of the network. 
+**initial weight distribution**
 
-**Initial weight distribution**
+    The distribution from which initial weights are to be drawn. The default
+    option is an optimized initialization that considers the size of the network.
+    The "uniform" option uses a uniform distribution with a mean of 0 and a given
+    interval. The "normal" option draws weights from the standard normal
+    distribution with a mean of 0 and given standard deviation.
 
-         The distribution from which initial path weights are to be
-	 drawn. When the norma option is selected weights are drawn
-	 from the standard normal with a mean of 0 and a standard
-	 deviation of 1. 
+**loss function** 
 
-**Loss function** 
+    The loss (error) function to be optimized by the model. 
 
-         The loss function to be optimized by the model. 
+    *Cross Entropy* Used when the model output consists of independent
+    hypotheses, and the outputs can be interpreted as the probability that each
+    hypothesis is true. Cross entropy is the recommended loss function when the
+    target values are class labels, and especially for imbalanced data.
+    It strongly penalizes error in the prediction of the actual class label.
 
-         *Cross Entropy* Used when the model output consists of
-	 independent hypothesis, and the outputs can be interpreted as
-	 the probability that each hypothesis is true. Cross entropy is
-	 the recommended loss function when the target values are
-	 classifications, and especially when data are unbalanced. 
+    *Mean Square* Used when the model output are continuous real values, but can
+    be used for classification as well (where it emphasizes the error on all
+    output classes, not just for the actual class).
 
-	 *Mean Square* Used when the model output are continuous real
-	 values. 
+**score interval**
 
-**Score Interval**
+    The minimum time (in seconds) to elapse between model scoring. The actual
+    interval is determined by the size of mini batch and the scoring duty cycle.
 
-         The number of seconds to elapse between model scoring. 
+**score training samples**
 
-**Score Training Samples**
+    The number of training dataset points to be used for scoring. Will be
+    randomly sampled. Use 0 for selecting the entire training dataset.
 
-         The number of training set observations to be used in scoring. 
+**score validation samples** 
 
-**Score Validation Samples** 
+    The number of validation dataset points to be used for scoring. Can be
+    randomly sampled or stratified (if "balance classes" is set and "score
+    validation sampling" is set to stratify). Use 0 for selecting the entire
+    training dataset.
 
-         The number of validation set observations to be used in
-	 scoring. 
+**classification stop**
 
-**Classification Stop**
+    The stopping criteria in terms of classification error (1-accuracy) on the
+    training data scoring dataset. When the error is at or below this threshold,
+    training stops. 
 
-         The stopping criteria in terms of classification error. When
-	 error is at or below this threshold, the algorithm stops. 
+**regression stop**
 
-**Regression Stop**
+    The stopping criteria in terms of regression error (MSE) on the training
+    data scoring dataset. When the error is at or below this threshold, training
+    stops. 
 
-         The stopping criteria in terms of error. When error is at or
-	 below this threshold, the algorithm stops. 
+**max confusion matrix** 
 
-**Max Confusion Matrix** 
+    For classification models, the maximum size (in terms of classes) of the
+    confusion matrix for it to be printed. This option is meant to avoid printing
+    extremely large confusion matrices.
 
-         The maximum number of classes to be shown in the returned
-	 confusion matrix for classification models. 
+**max hit ratio K** 
 
-**Max Hit Ratio K** 
+    The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)
 
-           The maximum frequency of actual class label to be among the top-K
-	   predicted class labels).
+**balance classes** 
 
-**Balance Classes** 
+    For imbalanced data, balance training data class counts via
+    over/under-sampling. This can result in improved predictive accuracy.
 
-          When data are unbalanced selecting this option will
-	  oversample the minority class to train on. 
+**max after balance size** 
 
-**Variable Importance** 
+    When classes are balanced, limit the resulting dataset size to the
+    specified multiple of the original dataset size.
 
-          Report variable importance in the model output. 
+**score validation sampling**
 
-**Force Load Balance** 
+    Method used to sample the validation dataset for scoring, see Score Validation Samples above.
 
-          Increase training speed on small data sets to utilize all
-	  cores. 
+**diagnostics**
 
-**Shuffle Training Data** 
+    Gather diagnostics for hidden layers, such as mean and RMS values of learning
+    rate, momentum, weights and biases.
 
-          When data include classes with unbalanced distributions, or
-	  when data are ordered, it is possible to run the algorithm
-	  on chunks of data that do not accurately reflect the shape
-	  of the data as a whole, which can produce poor
-	  models. Shuffling training data ensures that all prediction
-	  classes are present in all chunks of data. 
+**variable importance** 
 
+    Report variable importances in the model output. 
+
+**fast mode**
+    
+    Enable fast mode (minor approximation in back-propagation), should not affect results significantly.
+
+**ignore const cols**
+
+    Ignore constant training columns (no information can be gained anyway).
+
+**force load balance** 
+
+    Increase training speed on small datasets by splitting it into many chunks
+    to allow utilization of all cores.
+
+**replicate training data**
+
+    Replicate the entire training dataset onto every node for faster training on small datasets.
+
+**single node mode**
+
+    Run on a single node for fine-tuning of model parameters. Can be useful for
+    checkpoing resumes after training on multiple nodes for fast initial
+    convergence.
+
+**shuffle training data** 
+
+    Enable shuffling of training data (on each node). This option is
+    recommended if training data is replicated on N nodes, and the mini batch size
+    is close to N times the dataset size, where all nodes train will (almost) all
+    the data. It is automatically enabled if the mini batch is set to -1 (or to N
+    times the dataset size or larger).
 
 Interpreting the Model
 """"""""""""""""""""""""
 
-**Progress Table**
+The model view page displays information about the Deep Learning model being trained.
 
-          The Progress table displays information about each of the
-	  hidden layers in the deep learning model. 
+**Diagnostics Table**
+    If diagnostics is enabled, information for each layer is displayed.
 
-	  *Units* The number of units or nodes in the layer
+    *Units* The number of units (or artificial neurons) in the layer
 
-	  *Type* The type of layer or activation function. Each model
-	  will have one input and one softmax layer, where the softmax
-	  layer is the output of the model. Hidden layers are
-	  identified by the activation function specified. 
+    *Type* The type of layer (used activation function). Each model
+    will have one input and one output layer. Hidden layers are
+    identified by the activation function specified. 
 
-	  *Dropout* The percentage of training data dropped from
-	  training at that layer. 
+    *Dropout* For input layer, the percentage of dropped features for
+    each training row. For hidden layers, the percentage of incoming
+    weights dropped from training at that layer. Note that dropout is
+    randomized for each training row.
 
-	  *L1, L2* The L1 and L2 regularization penalty applied to the
-	  layer. 
+    *L1, L2* The L1 and L2 regularization penalty applied to the
+    layer. 
 
+    *Rate, Weight and Bias* The per-layer learning rate, weight and bias statistics are displayed.
  
-**Classification Error** 
+**Scoring** 
 
-          The percentage of times that a class was incorrectly
-	  predicted by the model. 
-
-**Epochs** 
-
-          The final number of full epochs carried out. 
-
-**Mini Batch Size**
-
-          The numebr of observations in each mini-batch used to update
-	  path weights. 
+    If a validation set was given, the scoring results are displayed for
+    the validation set (or a sample thereof). Otherwise, scoring is performed on
+    the training dataset (or a sample thereof).
 
 **Confusion Matrix**
 
-          A table showing the number of actual observations in a
-	  particular class relative to the number of predicted
-	  observations in a class. This is omitted when the model
-	  specified is regression. 
+    For classification models, a table showing the number of actual
+    observations in a particular class relative to the number of predicted
+    observations in a class.
 
 **Hit Ratio Table**
 
-           A table displaying the percentage of instances where the
-	   actual class label assigned to an observation is in the top
-	   K classes predicted by the network. For instance, in a four
-	   class classifier on values A, B, C, D, a particular
-	   observation is labeled class A, with a probability of .6 of
-	   being A, .2 probability of being B, a .1 probability of
-	   being C, and a .1 probability of being D. If the true class
-	   is B, the observation will be counted in the hit rate for
-	   K=2, but not in the hit rate of K=1. 
+    A table displaying the percentage of instances where the actual
+    class label assigned to an observation is in the top K classes predicted by the
+    model. For instance, in a four class classifier on values A, B, C, D, a
+    particular observation is predicted to be class A with a probability of .6 of
+    being A, .2 probability of being B, a .1 probability of being C, and a .1
+    probability of being D. If the true class is B, the observation will be counted
+    in the hit rate for K=2, but not in the hit rate of K=1. 
 
 **Variable Importance** 
 
-           A table listing the importance of variables listed from
-	   greatest importance, to least importance. 
-
-
-
-
-
- 
-  
-
-	
-
+    A table listing the importance of variables listed from greatest
+    importance, to least importance. Note that variable importances are notoriously
+    difficult to compute for Neural Net models. Gedeon's method is implemented here.
