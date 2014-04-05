@@ -428,7 +428,8 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
     else:
         print "Total: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
         # do a remove_all_keys to clean out any locked keys also (locked keys will complain above)
-        node.remove_all_keys(timeoutSecs=timeoutSecs)
+        # doesn't work if you remove job keys first, since it looks at the job list and gets confused
+        ### node.remove_all_keys(timeoutSecs=timeoutSecs)
 
     return totalDeletedCnt
 
