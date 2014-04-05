@@ -592,7 +592,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
 }
 
 # Note: right now, all things must be H2OParsedData
-cbind.H2OParsedData <- function(...) {
+cbind.H2OParsedData <- function(..., deparse.level = 1) {
   l <- list(...)
   # l_dep <- sapply(substitute(placeholderFunction(...))[-1], deparse)
   if(length(l) == 0) stop('cbind requires an H2O parsed dataset')
@@ -615,7 +615,6 @@ cbind.H2OParsedData <- function(...) {
   res <- .h2o.__exec2(h2o, exec_cmd)
   new('H2OParsedData', h2o=h2o, key=res$dest_key)
 }
-cbind.H2OParsedDataVA <- cbind.H2OParsedData
 
 #--------------------------------- Arithmetic ----------------------------------#
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
