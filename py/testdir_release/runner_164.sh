@@ -100,7 +100,9 @@ then
     # myPy c5 test_c5_KMeans_sphere_67MB_fvec.py
     # myPy c6 test_c6_hdfs_fvec.py
     # myPy c6 test_c6_maprfs_fvec.py
-    myPy c7 test_c7_fvec.py
+
+    # causing problems. don't run for now
+    # myPy c7 test_c7_fvec.py
     myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     myPy c10 test_c10_glm_fvec.py
 else
