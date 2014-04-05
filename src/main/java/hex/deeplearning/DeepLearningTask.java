@@ -154,7 +154,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
         ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
         if (training) {
           for( int i = 1; i < neurons.length - 1; i++ )
-            Arrays.fill(neurons[i]._e, 0);
+            Arrays.fill(neurons[i]._e.raw(), 0);
           assert((double)(int)responses[0] == responses[0]);
           final int target_label = (int)responses[0];
           ((Neurons.Softmax)neurons[neurons.length-1]).bprop(target_label);
@@ -164,7 +164,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
         ((Neurons.Linear)neurons[neurons.length-1]).fprop();
         if (training) {
           for( int i = 1; i < neurons.length - 1; i++ )
-            Arrays.fill(neurons[i]._e, 0);
+            Arrays.fill(neurons[i]._e.raw(), 0);
           final float target_value = (float)responses[0];
           ((Neurons.Linear)neurons[neurons.length-1]).bprop(target_value);
         }

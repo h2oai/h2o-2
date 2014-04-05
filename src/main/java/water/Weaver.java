@@ -1,6 +1,5 @@
 package water;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 import javassist.*;
@@ -10,12 +9,12 @@ import water.util.Log.Tag.Sys;
 
 public class Weaver {
   private final ClassPool _pool;
-  private final CtClass _dtask, _iced, _enum;
+  private final CtClass _dtask, _iced, _enum, _freezable;
   private final CtClass[] _serBases;
   private final CtClass _fielddoc;
   private final CtClass _arg;
   public static Class _typeMap;
-  public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata.h2o" };
+  public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata.math" };
 
   Weaver() {
     try {
@@ -23,7 +22,8 @@ public class Weaver {
       _iced = _pool.get("water.Iced"); // Needs serialization
       _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
-      _serBases = new CtClass[] { _iced, _dtask, _enum, };
+      _freezable = _pool.get("water.Freezable"); // Needs serialization
+      _serBases = new CtClass[] { _iced, _dtask, _enum, _freezable };
       for( CtClass c : _serBases ) c.freeze();
       _fielddoc = _pool.get("water.api.DocGen$FieldDoc");// Is auto-documentation result
       _arg  = _pool.get("water.api.RequestArguments$Argument"); // Needs auto-documentation
@@ -56,6 +56,15 @@ public class Weaver {
   // See if javaassist can find this class; if so then check to see if it is a
   // subclass of water.DTask, and if so - alter the class before returning it.
   private synchronized CtClass javassistLoadClass(String name) {
+    // Always use this weaver's classloader to preserve correct top-level classloader
+    // for loading H2O's classes.
+    // The point is to load all the time weaved classes by the same classloader
+    // and do not let JavaAssist to use thread context classloader.
+    // For normal H2O execution it will be always the same classloader
+    // but for running from 3rd party code, we preserve Boot's parent loader
+    // for all H2O internal classes.
+    final ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+    Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
     try {
       if( name.equals("water.Boot") ) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
@@ -66,11 +75,24 @@ public class Weaver {
         if( cc.subclassOf(base) )
           return javassistLoadClass(cc);
 
+      // Subtype of an alternative freezable?
+      if( cc.subtypeOf( _freezable ) ) {
+        // Find the alternative freezable base
+        CtClass xcc = cc;
+        CtClass ycc = null;
+        while( xcc.subtypeOf(_freezable) ) { ycc = xcc; xcc = xcc.getSuperclass(); }
+        if( !ycc.isFrozen() ) ycc.freeze(); // Freeze the alternative base
+        return cc == ycc ? cc : javassistLoadClass(cc); // And weave the subclass
+      }
+
       return cc;
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
     } catch( CannotCompileException e ) { // Expected to compile
       throw new RuntimeException(e);
+    } finally {
+      // Do not forget to configure classloader back to original value
+      Thread.currentThread().setContextClassLoader(ccl);
     }
   }
 
@@ -114,7 +136,8 @@ public class Weaver {
     if( cc.subclassOf(_enum) ) exposeRawEnumArray(cc);
     if( cc.subclassOf(_iced) ) ensureAPImethods(cc);
     if( cc.subclassOf(_iced) ||
-        cc.subclassOf(_dtask) ) {
+        cc.subclassOf(_dtask)||
+        cc.subtypeOf(_freezable)) {
       cc.setModifiers(javassist.Modifier.setPublic(cc.getModifiers()));
       ensureSerMethods(cc);
       ensureNullaryCtor(cc);
@@ -181,8 +204,9 @@ public class Weaver {
     CtField ctfs[] = cc.getDeclaredFields();
     boolean api = false;
     for( CtField ctf : ctfs )
-      if( ctf.getName().equals("API_WEAVER") )
-        api = true;
+      if( ctf.getName().equals("API_WEAVER") ) {
+        api = true; break;
+      }
     if( api == false ) return;
 
     CtField fielddoc=null;
@@ -203,11 +227,10 @@ public class Weaver {
               ";\n  return ab;\n}",
               new FieldFilter() {
     	        @Override boolean filter(CtField ctf) throws NotFoundException {
-                  Object[] as;
-                  try { as = ctf.getAnnotations(); }
-                  catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
                   API api = null;
-                  for(Object o : as) if(o instanceof API) { api = (API) o; break; }
+                  try {
+                    api = (API) ctf.getAnnotation(API.class);
+                  } catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
                   return api != null && (api.json() || !isInput(ctf.getType(), api));
                 }
               });
@@ -324,11 +347,11 @@ public class Weaver {
     boolean w = hasExisting("write", "(Lwater/AutoBuffer;)Lwater/AutoBuffer;", ccms);
     boolean r = hasExisting("read" , "(Lwater/AutoBuffer;)Lwater/Freezable;" , ccms);
     boolean d = cc.subclassOf(_dtask); // Subclass of DTask?
-    boolean c = hasExisting("copyOver" , "(Lwater/DTask;)V" , ccms);
+    boolean c = hasExisting("copyOver" , "(Lwater/Freezable;)V" , ccms);
     if( w && r && (!d || c) ) return;
     if( w || r || c )
       throw new RuntimeException(cc.getName() +" must implement all of " +
-      "read(AutoBuffer) and write(AutoBuffer) and copyOver(DTask) or none");
+      "read(AutoBuffer) and write(AutoBuffer) and copyOver(Freezable) or none");
 
     // Add the serialization methods: read, write.
     CtField ctfs[] = cc.getDeclaredFields();
@@ -385,7 +408,7 @@ public class Weaver {
     //       _d = s._d;
     //     }
     if( d ) make_body(cc,ctfs,callsuper,
-              "public void copyOver(water.DTask i) {\n"+
+              "public void copyOver(water.Freezable i) {\n"+
               "  "+cc.getName()+" s = ("+cc.getName()+")i;\n",
               "  super.copyOver(s);\n",
               "  %s = s.%s;\n",

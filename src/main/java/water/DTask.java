@@ -124,7 +124,8 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   @Override public int frozenType() {throw barf("frozeType");}
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
-  public void copyOver(T that) {
+  public void copyOver(Freezable other) {
+    DTask that = (DTask)other;
     this._exception = that._exception;
     this._eFromNode = that._eFromNode;
     this._lineNum   = that._lineNum;

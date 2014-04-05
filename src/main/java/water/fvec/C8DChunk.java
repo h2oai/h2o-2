@@ -1,6 +1,8 @@
 package water.fvec;
 
-import water.*;
+import water.AutoBuffer;
+import water.MemoryManager;
+import water.UDP;
 
 /**
  * The empty-compression function, where data is in 'double's.
@@ -33,7 +35,13 @@ public class C8DChunk extends Chunk {
     assert _mem.length == _len<<3;
     return this;
   }
-  @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    //nothing to inflate - just copy
+    nc._ds = MemoryManager.malloc8d(_len);
+    for( int i=0; i<_len; i++ ) //use unsafe?
+      nc._ds[i] = UDP.get8d(_mem,(i<<3));
+    return nc;
+  }
   // 3.3333333e33
   public int pformat_len0() { return 22; }
   public String pformat0() { return "% 21.15e"; }

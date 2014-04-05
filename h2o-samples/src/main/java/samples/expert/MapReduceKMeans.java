@@ -1,12 +1,14 @@
 package samples.expert;
 
+import water.Job;
+import water.Key;
+import water.MRTask2;
+import water.fvec.*;
+import water.util.Utils;
+
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.Random;
-
-import water.*;
-import water.fvec.*;
-import water.util.Utils;
 
 /**
  * Simplified version of H2O's k-means algorithm. Shows how to write your own algorithm.
@@ -16,7 +18,7 @@ public class MapReduceKMeans extends Job {
     samples.launchers.CloudProcess.launch(MapReduceKMeans.class, 2);
   }
 
-  @Override protected JobState execImpl() {
+  @Override protected void execImpl() {
     // Load and parse a file. Data is distributed to other nodes in a round-robin way
     Key file = NFSFileVec.make(new File("../lib/resources/datasets/gaussian.csv"));
     Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
@@ -62,7 +64,6 @@ public class MapReduceKMeans extends Job {
         System.out.print(df.format(clusters[c][v]) + ", ");
       System.out.println("");
     }
-    return JobState.DONE;
   }
 
   /**

@@ -77,6 +77,21 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
+  @Test(expected=IllegalArgumentException.class)
+  public void testConstantCols() throws Throwable {
+    basicDRFTestOOBE(
+        "./smalldata/poker/poker100","poker.hex",
+        new PrepData() { @Override int prep(Frame fr) {
+          for (int i=0; i<7;i++) UKV.remove(fr.remove(4)._key);
+          return fr.find("C11");
+          } },
+        1,
+        a( a(46294, 202),
+           a( 3187, 107)),
+        s("0", "1"));
+
+  }
+
   //@Test
   public void testCreditSample1() throws Throwable {
     basicDRFTestOOBE(

@@ -117,7 +117,7 @@ public class WordCountTest extends TestUtil {
       System.out.println("WC Read takes "+t+"msec for "+cnt+" words");
       return this;
     }
-    @Override public void copyOver(DTask wc) { _words = ((WordCount)wc)._words; }
+    @Override public void copyOver(Freezable wc) { _words = ((WordCount)wc)._words; }
   }
 
 
