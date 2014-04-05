@@ -395,6 +395,9 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
         for k in keys:
             if k in triedKeys:
                 print "Already tried to delete %s. Must have failed. Not trying again" % k
+            # don't delete the DRF __Tree__ keys. deleting the model does that. causes race conditions
+            elif '__Tree__' in k:
+                print "Not deleting a tree key from DRF: %s" % k
             else:
                 node.remove_key(k['key'], timeoutSecs=timeoutSecs)
                 deletedCnt += 1
