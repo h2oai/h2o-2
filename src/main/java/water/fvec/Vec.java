@@ -97,14 +97,22 @@ public class Vec extends Iced {
   public Vec makeCon( final long l, String[] domain ) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
-    int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc, domain);
-    long row=0;                 // Start row
-    for( int i=0; i<nchunks; i++ ) {
-      long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0LChunk(l,(int)(nrow-row)),fs,true);
-      row = nrow;
-    }
+    final int nchunks = nChunks();
+    final Vec v0 = new Vec(group().addVecs(1)[0],_espc, domain);
+    new DRemoteTask(){
+      @Override public void lcompute(){
+        long row=0;                 // Start row
+        Key k;
+        for( int i=0; i<nchunks; i++ ) {
+          long nrow = chunk2StartElem(i+1); // Next row
+          if((k = v0.chunkKey(i)).home())
+            DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
+          row = nrow;
+        }
+        tryComplete();
+      }
+      @Override public void reduce(DRemoteTask drt){}
+    }.invokeOnAllNodes();
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
@@ -113,14 +121,22 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     if( (long)d==d ) return makeCon((long)d);
-    int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
-    long row=0;                 // Start row
-    for( int i=0; i<nchunks; i++ ) {
-      long nrow = chunk2StartElem(i+1); // Next row
-      DKV.put(v0.chunkKey(i),new C0DChunk(d,(int)(nrow-row)),fs);
-      row = nrow;
-    }
+    final int nchunks = nChunks();
+    final Vec v0 = new Vec(group().addVecs(1)[0],_espc);
+    new DRemoteTask(){
+      @Override public void lcompute(){
+        long row=0;                 // Start row
+        Key k;
+        for( int i=0; i<nchunks; i++ ) {
+          long nrow = chunk2StartElem(i+1); // Next row
+          if((k = v0.chunkKey(i)).home())
+            DKV.put(k,new C0DChunk(d,(int)(nrow-row)),_fs);
+          row = nrow;
+        }
+        tryComplete();
+      }
+      @Override public void reduce(DRemoteTask drt){}
+    }.invokeOnAllNodes();
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
@@ -529,7 +545,7 @@ public class Vec extends Iced {
     long cstart = c._start;             // Read once, since racily filled in
     Vec v = c._vec;
     if( cstart == start && v != null) return c;     // Already filled-in
-    assert cstart == -1;       // Was not filled in (everybody racily writes the same start value)
+    assert cstart == -1 || v == null;       // Was not filled in (everybody racily writes the same start value)
     c._vec = this;             // Fields not filled in by unpacking from Value
     c._start = start;          // Fields not filled in by unpacking from Value
     return c;

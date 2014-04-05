@@ -1,9 +1,1 @@
-Movie,age,gender,occupation,zip_code,Adventure,Animation,Children,Comedy,Crime,Documentary,Drama,Fantasy,Film-Noir,Horror,Musical,Mystery,Romance,Sci-Fi,Thriller,War,Western
-frozen,27,F ,Programmer,94532,1,1,1,1,0,0,0,1,0,0,1,0,1,0,0,0,0
-threehund,27,F ,Programmer,94532,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0
-monmntmen,27,F ,Programmer,94532,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
-muppets,27,F ,Programmer,94532,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0
-divergent,27,F ,Programmer,94532,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0
-peabody,27,F ,Programmer,94532,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0
-NonStop,27,F ,Programmer,94532,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0
-Her,27,F ,Programmer,94532,0,0,0,1,0,0,1,0,0,0,0,0,1,1,0,0,0
+Movie,age,gender,occupation,Adventure,Animation,Children,Comedy,Crime,Documentary,Drama,Fantasy,Film-Noir,Horror,Musical,Mystery,Romance,Sci-Fi,Thriller,War,Western,StateFrozen,27,F ,Programmer,1,1,1,1,0,0,0,1,0,0,1,0,1,0,0,0,0,CAThreeHund,27,F ,Programmer,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,CAMonMen,27,F ,Programmer,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,CAMuppets,27,F ,Programmer,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0,CADivergent,27,F ,Programmer,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,CAPeabody,27,F ,Programmer,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,CANonStop,27,F ,Programmer,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,CAHer,27,F ,Programmer,0,0,0,1,0,0,1,0,0,0,0,0,1,1,0,0,0,CACapAmerica,27,F,Programmer,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,CAGrandBdHot,27,F,Programmer,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,CANeedForSpeed,27,F,Programmer,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,CAOcculus,27,F,Programmer,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,CALoversAlive,27,F,Programmer,0,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,CA
