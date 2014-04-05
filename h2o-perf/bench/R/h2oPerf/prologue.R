@@ -223,13 +223,13 @@ function(pkey, dataPath) {
 #Modeling
 runSummary.VA<-
 function() {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
   summary(data)
 }
 
 runSummary.FV<-
 function() {
-  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
+  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
   summary(data)
 }
 
