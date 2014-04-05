@@ -9,7 +9,7 @@
   \item{\dots}{Additional arguments to be passed to or from methods.}
  }
 \value{
-Returns a data frame in the R environment. Note that this call establishes the data set in the R environment, and subsequent operations on the data frame take place within R, not H2O. When data are large, users may experience 
+Returns a data frame in the R environment. Note that this call establishes the data set in the R environment, and subsequent operations on the data frame take place within R, not H2O. When data are large, users may experience significant slowdown.
 }
 
 \examples{

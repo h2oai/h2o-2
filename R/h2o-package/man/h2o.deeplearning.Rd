@@ -7,9 +7,10 @@ H2O: Deep Learning Neural Networks
 Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
-h2o.deeplearning(x, y, data, classification = TRUE, activation = "Tanh", dropout = as.numeric(NA), 
-  layers = 500, rate = 0.01, annealing_rate = 1e-6, l1_reg = 1e-4, l2_reg = 0.0010, 
-  mom_start = 0.0, mom_ramp = 1e6, mom_stable = 0.0, epochs = 100, validation)
+h2o.deeplearning(x, y, data, classification = TRUE, activation = "Tanh", 
+  dropout = as.numeric(NA), layers = 500, rate = 0.01, annealing_rate = 1e-6, 
+  l1_reg = 1e-4, l2_reg = 0.0010, mom_start = 0.0, mom_ramp = 1e6, 
+  mom_stable = 0.0, epochs = 100, validation)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -64,7 +65,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 }
 
 \value{
-An object of class \code{\linkS4class{H2ONNModel}} with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2ODeepLearningModel}} with slots key, data, and model, where the last is a list of the following components:
   \item{confusion }{The confusion matrix of the response, with actual observations as rows and predicted values as columns.}
   \item{train_class_err }{Classification error on the training dataset.}
   \item{train_sqr_err }{Mean-squared error on the training dataset.}

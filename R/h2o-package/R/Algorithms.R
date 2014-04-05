@@ -856,7 +856,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=20, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, validation, nodesize=1) {
+h2o.randomForest.FV <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, validation, nodesize=1) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
@@ -1013,7 +1013,7 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   if(!measure %in% c("F1", "accuracy", "precision", "recall", "specificity", "max_per_class_error"))
     stop("measure must be one of [F1, accuracy, precision, recall, specificity, max_per_class_error]")
   if(!missing(thresholds) && !is.numeric(thresholds)) stop("thresholds must be a numeric vector")
-
+  
   criterion = switch(measure, F1 = "maximum_F1", accuracy = "maximum_Accuracy", precision = "maximum_Precision",
                      recall = "maximum_Recall", specificity = "maximum_Specificity", max_per_class_error = "minimizing_max_per_class_Error")
   if(missing(thresholds))

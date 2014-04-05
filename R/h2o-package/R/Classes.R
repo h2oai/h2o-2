@@ -1116,7 +1116,7 @@ setMethod("findInterval", "H2OParsedData", function(x, vec, rightmost.closed = F
   new('H2OParsedData', h2o=x@h2o, key=res$dest_key)
 })
 
-merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all) {
+merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all, ...) {
   if(!inherits(y, "H2OParsedData")) stop("y must be a H2O parsed data object")
   if(!is.character(by)) stop("by must be of class character")
   if(!is.logical(all)) stop("all must be of class logical")

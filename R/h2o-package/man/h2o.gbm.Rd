@@ -6,12 +6,11 @@ H2O: Gradient Boosted Machines
 }
 %%  ~~function to do ... ~~
 
-\description{Builds gradient boosted classification trees, and gradient boosed regression trees
-	 on a parsed data set.
+\description{Builds gradient boosted classification trees, and gradient boosted regression trees on a parsed data set.
 }
 \usage{
 h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 5, 
-  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, validation)
+  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, validation)
 }
 \arguments{
   \item{x}{
@@ -41,6 +40,9 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{n.bins}{
 (Optional) Number of bins to use in building histogram.
 }
+  \item{importance}{
+(Optional) A logical value indicating whether variable importance should be computed. (Model-building will take longer if set to TRUE).
+  }
   \item{validation}{
   (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
   }
