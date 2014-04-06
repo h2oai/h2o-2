@@ -556,30 +556,21 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
-`[[.H2OParsedData` <- function(x, ..., exact = TRUE) {
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
+setMethod("[[", "H2OParsedData", function(x, i, exact = TRUE) {
+  if(missing(i)) stop("Must specify column index")
+  if(length(i) > 1) stop("[[ may only select one column")
+  if(is.character(i) && !i %in% colnames(x)) return(NULL)
+  x[,i]
+})
 
-  cols <- sapply(as.list(...), function(x) x)
-  if( length(cols) == 0 )
-    return(x)
-  if( length(cols) > 1 ) stop('[[]] may only select one column')
-  if( ! cols[1] %in% colnames(x) )
-    return(NULL)
-
-  x[, cols]
-}
-
-`[[<-.H2OParsedData` <- function(x, i, j, value) {
-  if( missing(x) ) stop('must specify x')
-  if( !inherits(x, 'H2OParsedData')) stop('x is the wrong class')
-  if( !inherits(value, 'H2OParsedData')) stop('can only append H2O data to H2O data')
-  if( ncol(value) > 1 ) stop('may only set a single column')
-  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
-
+setMethod("[[<-", "H2OParsedData", function(x, i, value) {
+  if(!inherits(value, 'H2OParsedData')) stop('Can only append H2O data to H2O data')
+  if(ncol(value) > 1 ) stop('Can only set a single column')
+  if(nrow(value) != nrow(x)) stop(sprintf('Replacement has %d row, data has %d', nrow(value), nrow(x)))
+  
   mm <- match.call()
   col_name <- as.list(i)[[1]]
-
+  
   cc <- colnames(x)
   if( col_name %in% cc ){
     x[, match( col_name, cc ) ] <- value
@@ -589,7 +580,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
     colnames(x) <- cc
   }
   x
-}
+})
 
 # Note: right now, all things must be H2OParsedData
 cbind.H2OParsedData <- function(..., deparse.level = 1) {

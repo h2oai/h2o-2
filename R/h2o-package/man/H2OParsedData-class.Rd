@@ -11,6 +11,8 @@
 \alias{!=,numeric,H2OParsedData-method}
 \alias{[,H2OParsedData-method}
 \alias{[<-,H2OParsedData-method}
+\alias{[[,H2OParsedData-method}
+\alias{[[<-,H2OParsedData-method}
 \alias{*,H2OParsedData,H2OParsedData-method}
 \alias{*,H2OParsedData,numeric-method}
 \alias{*,numeric,H2OParsedData-method}
@@ -117,6 +119,8 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{!=}{\code{signature(e1 = "numeric", e2 = "H2OParsedData")}: ... }
     \item{[}{\code{signature(x = "H2OParsedData")}: ... }
     \item{[<-}{\code{signature(x = "H2OParsedData")}: ... }
+    \item{[[}{\code{signature(x = "H2OParsedData")}: ... }
+    \item{[[<-}{\code{signature(x = "H2OParsedData")}: ... }
     \item{*}{\code{signature(e1 = "H2OParsedData", e2 = "H2OParsedData")}: ... }
     \item{*}{\code{signature(e1 = "H2OParsedData", e2 = "numeric")}: ... }
     \item{*}{\code{signature(e1 = "numeric", e2 = "H2OParsedData")}: ... }
