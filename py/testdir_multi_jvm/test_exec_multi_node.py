@@ -6,10 +6,12 @@ import h2o_util
 import multiprocessing, os, signal, time
 from multiprocessing import Process, Queue
 
-print "dueling increments"
+print "single writer, single reader flows (after sequential init)"
+print "restrict outstanding to # of nodes"
 
 # overrides the calc below if not None
-OUTSTANDING = 5
+NODES = 3
+OUTSTANDING = NODES
 TRIALMAX = 10
 
 # problem with keyboard interrupt described
@@ -53,7 +55,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # for the beta tab in the browser
         if (localhost):
-            h2o.build_cloud(node_count=3, java_heap_GB=4, base_port=54323,
+            h2o.build_cloud(node_count=NODES, java_heap_GB=4, base_port=54323,
                 # use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3'
             )
         else:

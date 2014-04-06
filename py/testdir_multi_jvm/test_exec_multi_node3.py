@@ -6,14 +6,16 @@ import h2o_util
 import multiprocessing, os, signal, time
 from multiprocessing import Process, Queue
 
-print "dueling reads"
-print "a variant with just the sequential init, iterated (didn't fail), plus reads only"
+print "dueling inc"
+print "a variant with c(0,0) style vectors everywhere, including compares"
+print "restrict outstanding to number of nodes"
 
 # overrides the calc below if not None
-OUTSTANDING = 5
+NODES = 3
+OUTSTANDING = NODES
 TRIALMAX = 10
 INIT_ONLY = False
-TEST_MUX_STORE = False
+TEST_MUX_STORE = True
 INIT_MANY = False
 
 # problem with keyboard interrupt described
@@ -61,7 +63,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # for the beta tab in the browser
         if (localhost):
-            h2o.build_cloud(node_count=3, java_heap_GB=4, base_port=54323,
+            h2o.build_cloud(node_count=NODES, java_heap_GB=4, base_port=54323,
                 # use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3'
             )
         else:

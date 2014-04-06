@@ -7,10 +7,12 @@ import multiprocessing, os, signal, time
 from multiprocessing import Process, Queue
 
 print "dueling increments"
-print "a variant with more than one c() value"
+print "a variant with ability to do just reads, plus just  use of c(0) style, except for compares"
+print "restrict outstanding to # of nodes"
 
 # overrides the calc below if not None
-OUTSTANDING = 5
+NODES = 3
+OUTSTANDING = NODES
 TRIALMAX = 10
 TEST_MUX = True
 READ_ONLY = True
@@ -62,7 +64,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # for the beta tab in the browser
         if (localhost):
-            h2o.build_cloud(node_count=3, java_heap_GB=4, base_port=54323,
+            h2o.build_cloud(node_count=NODES, java_heap_GB=4, base_port=54323,
                 # use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3'
             )
         else:
