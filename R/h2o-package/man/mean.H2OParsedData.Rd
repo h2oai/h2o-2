@@ -11,7 +11,7 @@ Arithmetic Mean of H2O Dataset
 }
 \arguments{
   \item{x}{An \code{\linkS4class{H2OParsedData}} object.}
-  \item{trim}{(The fraction (0 to 0.5) of observations to trim from each end of \code{x} before the mean is computed. (Currently unimplemented).}
+  \item{trim}{The fraction (0 to 0.5) of observations to trim from each end of \code{x} before the mean is computed. (Currently unimplemented).}
   \item{na.rm}{Logical value indicating whether \code{NA} or missing values should be stripped before the computation.}
   \item{\dots}{Potential further arguments. (Currently unimplemented).}
 }

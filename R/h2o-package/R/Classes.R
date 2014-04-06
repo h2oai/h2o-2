@@ -230,7 +230,7 @@ setMethod("show", "H2OPerfModel", function(object) {
 
 #--------------------------------- Unique H2O Methods ----------------------------------#
 # TODO: s4 year, month impls as well?
-h2o.year <- function(x){
+h2o.year <- function(x) {
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
   res1 <- .h2o.__unop2('year', x)
@@ -351,7 +351,7 @@ h2o.addFunction <- function(object, fun, name){
   res <- .h2o.__exec2(object, exec_cmd)
 }
 
-h2o.unique <- function(x, incomparables = FALSE, ...){
+unique.H2OParsedData <- function(x, incomparables = FALSE, ...) {
   # NB: we do nothing with incomparables right now
   # NB: we only support MARGIN = 2 (which is the default)
 
@@ -369,7 +369,7 @@ h2o.unique <- function(x, incomparables = FALSE, ...){
 # 
 #   res[,1:(ncol(res)-1)]
 }
-unique.H2OParsedData <- h2o.unique
+h2o.unique <- unique.H2OParsedData
 
 h2o.runif <- function(x, min = 0, max = 1) {
   if(missing(x)) stop("Must specify data set")
@@ -1114,12 +1114,6 @@ setMethod("findInterval", "H2OParsedData", function(x, vec, rightmost.closed = F
   res = .h2o.__exec2(x@h2o, expr)
   new('H2OParsedData', h2o=x@h2o, key=res$dest_key)
 })
-
-merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all, ...) {
-  if(!inherits(y, "H2OParsedData")) stop("y must be a H2O parsed data object")
-  if(!is.character(by)) stop("by must be of class character")
-  if(!is.logical(all)) stop("all must be of class logical")
-}
 
 # setGeneric("histograms", function(object) { standardGeneric("histograms") })
 # setMethod("histograms", "H2OParsedData", function(object) {

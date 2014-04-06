@@ -5,7 +5,7 @@
 Build a Confusion Matrix from H2O Classification Predictions 
 }
 \description{
-Constructs a confusion matrix from a column of predicted responses and a column of actual (reference) responses in H2O. Note that confusion matrices describe prediciton errors for classification data only. 
+Constructs a confusion matrix from a column of predicted responses and a column of actual (reference) responses in H2O. Note that confusion matrices describe prediction errors for classification data only. 
 }
 \usage{
 h2o.confusionMatrix(data, reference)
