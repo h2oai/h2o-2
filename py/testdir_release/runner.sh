@@ -98,7 +98,7 @@ then
     myPy c1 test_c1_rel.py
     myPy c2 test_c2_rel.py
     myPy c3 test_c3_rel.py
-    myPy c4 test_c4_four_billion_rows.py
+    # myPy c4 test_c4_four_billion_rows.py
     myPy c6 test_c6_hdfs.py
     myPy c8 test_c8_rf_airlines_hdfs.py
     myPy c9 test_c9_GBM_airlines_hdfs.py
