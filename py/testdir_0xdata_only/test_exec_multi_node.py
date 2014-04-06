@@ -26,14 +26,17 @@ def execit(n, bucket, path, src_key, hex_key, timeoutSecs=60, retryDelaySecs=1, 
     # execExpr = "r2 = (r2==%s) ? %s+1 : %s" % (np1, np1)
     if np == 0:
         execExpr = "r%s = 1" % np1
+        print "Sending request to node: %s" % h2o.nodes[np1],
         h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
     else:
         # flip to one if the prior value is 1 (unless you're the zero case
         execExpr = "r%s = (r%s==1) ? 1 : 0;" % (np1, np)
+        print "Sending request to node: %s" % h2o.nodes[np1],
         (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
         while fpResult != 1:
+            print "to node: %s" % h2o.nodes[np1]
             (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
-        
+
     hex_key = np1
     return hex_key
 
@@ -67,10 +70,12 @@ class Basic(unittest.TestCase):
         for node in h2o.nodes:
             # get this key known to this node
             execExpr = "r1 = c(0); r2 = c(0); r3 = c(0); r4 = c(0)"
+            print "Sending request to node: %s" % node
             h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
             # test the store expression
             execExpr = "(r1==0) ? 0 : 1"
+            print "Sending request to node: %s" % node
             h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
         global OUTSTANDING
@@ -100,7 +105,7 @@ class Basic(unittest.TestCase):
             # now sync on them
             for worker in workers:
                 try:
-                    # this should synchronize 
+                    # this should synchronize
                     worker.join()
                     print "worker joined:", worker
                     # don't need him any more

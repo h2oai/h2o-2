@@ -33,7 +33,7 @@ def check_params_update_kwargs(params_dict, kw, function, print_params):
             raise Exception("illegal parameter '%s' in %s" % (k, function))
 
     if print_params:
-        print "\n%s parameters:" % function, params_dict
+        print "%s parameters:" % function, params_dict
         sys.stdout.flush()
 
 def verboseprint(*args, **kwargs):
@@ -1591,7 +1591,6 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=print_params)
-        verboseprint("\nexec_query:", params_dict)
         a = self.__do_json_request('2/Exec2.json',
             timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
