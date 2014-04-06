@@ -65,16 +65,16 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_covtype_loop_fvec(self):
+    def test_exec_multi_node(self):
         h2o.beta_features = True
         for node in h2o.nodes:
             # get this key known to this node
-            execExpr = "r1 = c(0); r2 = c(0); r3 = c(0); r4 = c(0)"
+            execExpr = "r1 = c(0,0); r2 = c(0,0); r3 = c(0,0); r4 = c(0,0)"
             print "Sending request to node: %s" % node
             h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
             # test the store expression
-            execExpr = "(r1==0) ? 0 : 1"
+            execExpr = "(r1==0) ? c(0,0) : c(1,1)"
             print "Sending request to node: %s" % node
             h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
