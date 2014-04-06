@@ -4,13 +4,12 @@ import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs, 
 import h2o_util
 
 import multiprocessing, os, signal, time
-from multiprocessing import Process, Queue, Pool
+from multiprocessing import Process, Queue
 
 print "dueling increments"
 
 # overrides the calc below if not None
 OUTSTANDING = 5
-RANDOM_HEAP = False
 TRIALMAX = 10
 
 # problem with keyboard interrupt described
@@ -45,7 +44,6 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        print "Will build_cloud() with random heap size and do overlapped import folder/parse (groups)"
         global SEED, localhost
         SEED = h2o.setup_random_seed()
 
@@ -66,14 +64,11 @@ class Basic(unittest.TestCase):
 
     def test_parse_covtype_loop_fvec(self):
         h2o.beta_features = True
-        # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
-        # don't raise exception if we find something bad in h2o stdout/stderr?
-        # h2o.nodes[0].sandboxIgnoreErrors = True
-
         for node in h2o.nodes:
             # get this key known to this node
             execExpr = "r1 = c(0); r2 = c(0); r3 = c(0); r4 = c(0)"
             h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
+
             # test the store expression
             execExpr = "(r1==0) ? 0 : 1"
             h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
@@ -102,7 +97,6 @@ class Basic(unittest.TestCase):
                 execTrial += 1
 
             # Exec doesn't get tracked as a job. So can still have outstanding
-
             # now sync on them
             for worker in workers:
                 try:
@@ -120,9 +114,6 @@ class Basic(unittest.TestCase):
             elapsed = time.time() - start
             print "Group end at #", execTrial, "completed in", "%6.2f" % elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-
-
-        # h2o_jobs.pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=0.25)
 
 if __name__ == '__main__':
     h2o.unit_main()
