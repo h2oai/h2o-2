@@ -11,10 +11,11 @@ print "a variant with ability to do just reads, plus just  use of c(0) style, ex
 print "restrict outstanding to # of nodes"
 
 # overrides the calc below if not None
-NODES = 3
+NODES = 2
 OUTSTANDING = NODES
+OUTSTANDING = 1
 TRIALMAX = 10
-TEST_MUX = True
+TEST_MUX = False
 READ_ONLY = True
 
 # problem with keyboard interrupt described

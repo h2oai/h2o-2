@@ -400,6 +400,8 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
                 print "Not deleting a tree key from DRF: %s" % k
             elif 'DRF_' in k:
                 print "Not deleting DRF key..they may be problematic in flight: %s" % k
+            elif '_distcp_' in k:
+                print "Not deleting _distcp_ key..got a timeout before trying: %s" % k
             else:
                 node.remove_key(k['key'], timeoutSecs=timeoutSecs)
                 deletedCnt += 1
