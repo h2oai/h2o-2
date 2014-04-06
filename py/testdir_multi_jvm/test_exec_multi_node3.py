@@ -13,6 +13,8 @@ print "a variant with just the sequential init, iterated (didn't fail), plus rea
 OUTSTANDING = 5
 TRIALMAX = 10
 INIT_ONLY = False
+TEST_MUX_STORE = False
+INIT_MANY = False
 
 # problem with keyboard interrupt described
 # http://bryceboe.com/2012/02/14/python-multiprocessing-pool-and-keyboardinterrupt-revisited/
@@ -30,18 +32,19 @@ def execit(n, bucket, path, src_key, hex_key, timeoutSecs=60, retryDelaySecs=1, 
         print "Do Nothing"
         return hex_key
 
-    for j in range(3):
+    for j in range(1):
         execExpr = "(r%s==c(1,1)) ? c(1,1) : c(0,0);" % np
         print "Sending request to node: %s" % h2o.nodes[np1],
         (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
 
-        execExpr = "(r%s==c(1,1)) ? c(1,1) : c(0,0);" % np1
-        print "Sending request to node: %s" % h2o.nodes[np1],
-        (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
+        if INIT_MANY:
+            execExpr = "(r%s==c(1,1)) ? c(1,1) : c(0,0);" % np1
+            print "Sending request to node: %s" % h2o.nodes[np1],
+            (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
 
-        execExpr = "(r%s==c(1,1)) ? c(1,1) : c(0,0);" % np2
-        print "Sending request to node: %s" % h2o.nodes[np1],
-        (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
+            execExpr = "(r%s==c(1,1)) ? c(1,1) : c(0,0);" % np2
+            print "Sending request to node: %s" % h2o.nodes[np1],
+            (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
 
     return hex_key
 
@@ -73,17 +76,18 @@ class Basic(unittest.TestCase):
     def test_exec_multi_node3(self):
         h2o.beta_features = True
 
-        for initTrial in range(2):
+        for initTrial in range(1):
             for node in h2o.nodes:
                 # get this key known to this node
                 execExpr = "r0 = c(0,0); r1 = c(0,0); r2 = c(0,0);"
                 print "Sending request to node: %s" % node
                 h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
-                # test the store expression
-                execExpr = "(r1==c(0,0)) ? c(0,0) : c(1,1)"
-                print "Sending request to node: %s" % node
-                h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
+                if TEST_MUX_STORE:
+                    # test the store expression
+                    execExpr = "(r1==c(0,0)) ? c(0,0) : c(1,1)"
+                    print "Sending request to node: %s" % node
+                    h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
         global OUTSTANDING
         if not OUTSTANDING:

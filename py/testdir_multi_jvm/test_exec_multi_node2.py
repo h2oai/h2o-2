@@ -12,6 +12,8 @@ print "a variant with more than one c() value"
 # overrides the calc below if not None
 OUTSTANDING = 5
 TRIALMAX = 10
+TEST_MUX = True
+READ_ONLY = True
 
 # problem with keyboard interrupt described
 # http://bryceboe.com/2012/02/14/python-multiprocessing-pool-and-keyboardinterrupt-revisited/
@@ -26,12 +28,18 @@ def execit(n, bucket, path, src_key, hex_key, timeoutSecs=60, retryDelaySecs=1, 
     # doesn't work cause we can't have racing writers
     # execExpr = "r2 = (r2==%s) ? %s+1 : %s" % (np1, np1)
     if np == 0:
-        execExpr = "r%s = c(1,1)" % np1
+        if READ_ONLY:
+            execExpr = "(r%s==1) ? c(1) : c(0);" % np
+        else:
+            execExpr = "r%s = c(1)" % np1
         print "Sending request to node: %s" % h2o.nodes[np1],
         h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
     else:
         # flip to one if the prior value is 1 (unless you're the zero case
-        execExpr = "r%s = (r%s==c(1,1)) ? c(1,1) : c(0,0);" % (np1, np)
+        if READ_ONLY:
+            execExpr = "(r%s==1) ? c(1) : c(0);" % np
+        else:
+            execExpr = "r%s = (r%s==1) ? c(1) : c(0);" % (np1, np)
         print "Sending request to node: %s" % h2o.nodes[np1],
         (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
         while fpResult != 1:
@@ -70,14 +78,15 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         for node in h2o.nodes:
             # get this key known to this node
-            execExpr = "r1 = c(0,0); r2 = c(0,0); r3 = c(0,0); r4 = c(0,0)"
+            execExpr = "r0=c(0); r1 = c(0); r2 = c(0);"
             print "Sending request to node: %s" % node
             h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
-            # test the store expression
-            execExpr = "(r1==c(0,0)) ? c(0,0) : c(1,1)"
-            print "Sending request to node: %s" % node
-            h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
+            if TEST_MUX:
+                # test the store expression
+                execExpr = "(r1==0) ? c(0) : c(1)"
+                print "Sending request to node: %s" % node
+                h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
 
         global OUTSTANDING
         if not OUTSTANDING:
