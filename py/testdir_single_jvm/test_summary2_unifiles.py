@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             ),
             ('runifB.csv', 'B.hex', [
                 (None,  1.00, 2501.00, 5001.00, 7501.00, 10000.00),
-                ('x', -100.00, -50.0, 0.99, 51.7, 100,00),
+                ('x', -100.00, -50.1, 0.974, 51.7, 100,00),
             ],
             ),
 
@@ -182,15 +182,15 @@ class Basic(unittest.TestCase):
 
                 # hack..assume just one None is enough to ignore for cars.csv
                 if expected[1]:
-                    h2o_util.assertApproxEqual(mins[0], expected[1], rel=0.02, msg='min is not approx. expected')
+                    h2o_util.assertApproxEqual(mins[0], expected[1], tol=maxErr, msg='min is not approx. expected')
                 if expected[2]:
-                    h2o_util.assertApproxEqual(pctile[3], expected[2], rel=0.02, msg='25th percentile is not approx. expected')
+                    h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxErr, msg='25th percentile is not approx. expected')
                 if expected[3]:
-                    h2o_util.assertApproxEqual(pctile[5], expected[3], rel=0.02, msg='50th percentile (median) is not approx. expected')
+                    h2o_util.assertApproxEqual(pctile[5], expected[3], tol=maxErr, msg='50th percentile (median) is not approx. expected')
                 if expected[4]:
-                    h2o_util.assertApproxEqual(pctile[7], expected[4], rel=0.02, msg='75th percentile is not approx. expected')
+                    h2o_util.assertApproxEqual(pctile[7], expected[4], tol=maxErr, msg='75th percentile is not approx. expected')
                 if expected[5]:
-                    h2o_util.assertApproxEqual(maxs[0], expected[5], rel=0.02, msg='max is not approx. expected')
+                    h2o_util.assertApproxEqual(maxs[0], expected[5], tol=maxErr, msg='max is not approx. expected')
 
                 hstart = column['hstart']
                 hstep = column['hstep']
