@@ -111,7 +111,7 @@ mySetup() {
     echo "Running this cmd:"
     echo $cmd
     # it's gotten long now because of all the installs
-    ./sh2junit.py -name 'libPaths' -timeout 300 -- $cmd
+    python ./sh2junit.py -name 'libPaths' -timeout 300 -- $cmd
 }
 
 myR() {
@@ -159,7 +159,7 @@ myR() {
     set +e
     # executes the $cmd in the target dir, but the logs stay in sandbox here
     # -dir is optional
-    ./sh2junit.py -shdir $shdir -name $testName -timeout $timeout -- $cmd || true
+    python ./sh2junit.py -shdir $shdir -name $testName -timeout $timeout -- $cmd || true
 
     set -e
     popd
