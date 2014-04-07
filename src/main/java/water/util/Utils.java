@@ -180,7 +180,7 @@ public class Utils {
     double result = 0;
     final int cols = to-from;
     final int extra=cols-cols%8;
-    final int multiple = (cols/8)*4-1;
+    final int multiple = (cols/8)*8-1;
     double psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0;
     for (int c = from; c < from + multiple; c += 8) {
       psum1 += a[c+0]*a[c+0] + a[c+1]*a[c+1];
@@ -189,10 +189,19 @@ public class Utils {
       psum4 += a[c+6]*a[c+6] + a[c+7]*a[c+7];
     }
     result += psum1 + psum2 + psum3 + psum4;
-    for (int c = from + extra; c < to; c += 4) {
+    for (int c = from + extra; c < to; ++c) {
       result += a[c]*a[c];
     }
     return result;
+  }
+
+  static public class SumSquareTester {
+    @Test
+    public void run() {
+      float[] a = new float[993];
+      for (int i=0;i<a.length;++i) a[i] = new Random().nextFloat();
+      assert(Math.abs(sumSquares(a) - sumSquares(a, 0,443) - sumSquares(a, 443,983) - sumSquares(a, 983,993)) < 1e-5);
+    }
   }
 
   public static String sampleToString(int[] val, int max) {
