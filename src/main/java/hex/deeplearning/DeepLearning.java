@@ -4,12 +4,16 @@ import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import water.*;
+import water.H2O;
+import water.Job;
+import water.Key;
+import water.UKV;
 import water.api.DeepLearningProgressPage;
 import water.api.DocGen;
 import water.api.RequestServer;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
+import water.fvec.Vec;
 import water.util.Log;
 import water.util.MRUtils;
 import water.util.RString;
@@ -160,7 +164,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean ignore_const_cols = true;
 
   @API(help = "Force extra load balancing to increase training speed for small datasets (to keep all cores busy)", filter = Default.class, json = true)
-  public boolean force_load_balance = false;
+  public boolean force_load_balance = true;
 
   @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true)
   public boolean replicate_training_data = true;
@@ -523,10 +527,12 @@ public class DeepLearning extends Job.ValidatedJob {
       final boolean del_enum_resp = (classification && !response.isEnum());
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
-      float[] priorDist = classification ? new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist() : null;
+      final Vec resp = dinfo._adaptedFrame.lastVec();
+      assert(!classification ^ resp.isEnum()); //either regression or enum response
+      float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
-      if (del_enum_resp) model.toDelete(dinfo._adaptedFrame.lastVec()._key);
+      if (del_enum_resp) model.toDelete(resp._key);
       return model;
     }
     finally {
@@ -578,7 +584,7 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
-      train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
+      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
 //      train = updateFrame(train, reBalance(train, mp.seed, mp.replicate_training_data, mp.force_load_balance, mp.shuffle_training_data));
       float[] trainSamplingFactors;
       if (mp.classification && mp.balance_classes) {
@@ -604,8 +610,7 @@ public class DeepLearning extends Job.ValidatedJob {
         } else {
           validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
-        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
-//        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, mp.seed+1, false, mp.force_load_balance, mp.shuffle_training_data));
+        if (mp.force_load_balance) validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
         Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
@@ -682,18 +687,19 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   private Frame reBalance(final Frame fr, boolean local) {
     final int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
-    if (force_load_balance) {
-      Log.info("Starting load balancing into (at least) " + chunks + " chunks.");
-//      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
-      Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
-      RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
-      H2O.submitTask(rb);
-      rb.join();
-      Frame rebalanced = UKV.get(newKey);
-      Log.info("Load balancing done.");
-      return rebalanced;
+    if (fr.anyVec().nChunks() > chunks) {
+      Log.info("Dataset already contains " + fr.anyVec().nChunks() + " chunks. No need to rebalance.");
+      return fr;
     }
-    else return fr;
+    Log.info("Starting load balancing into (at least) " + chunks + " chunks.");
+//      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
+    Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
+    RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
+    H2O.submitTask(rb);
+    rb.join();
+    Frame rebalanced = UKV.get(newKey);
+    Log.info("Load balancing done.");
+    return rebalanced;
   }
 
   /**
