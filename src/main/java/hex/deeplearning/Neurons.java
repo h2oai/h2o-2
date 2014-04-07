@@ -290,11 +290,13 @@ public abstract class Neurons {
     final int cols = prev_a.size();
     final int idx = row * cols;
 
-    for (SparseVector.Iterator it=prev_a.begin(); !it.equals(prev_a.end()); it.next()) {
-      final int col = it.index();
+    final int start = 0;
+    final int end = prev_a._indices.length;
+    for (int it = start; it<end; ++it) {
+      final int col = prev_a._indices[it];
       final float weight = _w.get(row,col);
       if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
-      final float previous_a = it.value();
+      final float previous_a = prev_a._values[it];
       assert (previous_a != 0); //only iterate over non-zeros!
 
       //this is the actual gradient dE/dw
@@ -477,8 +479,8 @@ public abstract class Neurons {
         _dropout.randomlySparsifyActivation((DenseVector)_a, seed);
       else
         _dropout.randomlySparsifyActivation((SparseVector)_a, seed);
-//// FIXME: HACK TO ALWAYS BE SPARSE
-//      _svec = new SparseVector(_dvec);
+// FIXME: HACK TO ALWAYS BE SPARSE
+//      _svec = new SparseVector(_dvec); //HACK
 //      assert(_svec instanceof SparseVector);
 //      _a = _svec;
 //      assert(_a instanceof SparseVector);
@@ -875,11 +877,6 @@ public abstract class Neurons {
       // iterate over all non-empty columns for this row
       TreeMap<Integer, Float> row = a.row(r);
       Set<Map.Entry<Integer,Float>> set = row.entrySet();
-
-      Iterator<Map.Entry<Integer,Float>> itA = set.iterator();
-      SparseVector.Iterator itB=x.begin();
-//      while(itA.hasNext() && itB.hasNext()) {
-//      }
 
       for (Map.Entry<Integer,Float> e : set) {
         final float val = x.get(e.getKey());
