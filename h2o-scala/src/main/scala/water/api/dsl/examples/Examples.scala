@@ -105,7 +105,7 @@ makes a prediction over train data and compute MSE of prediction."""")
       hidden = Array(1+new Random(seed).nextInt(4), 1+new Random(seed).nextInt(6))
       classification = true
       seed = seed
-      mini_batch = 0
+      train_samples_per_iteration = 0
       force_load_balance = false
       replicate_training_data = true
       shuffle_training_data = true

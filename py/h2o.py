@@ -2245,7 +2245,7 @@ class H2O(object):
             'activation'                   : None,
             'hidden'                       : None,
             'epochs'                       : None,
-            'mini_batch'                   : None,
+            'train_samples_per_iteration'  : None,
             'seed'                         : None,
             'adaptive_rate'                : None,
             'rho'                          : None,
