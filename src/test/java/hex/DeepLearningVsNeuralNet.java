@@ -179,7 +179,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               p.validation = null;
                               p.quiet_mode = true;
                               p.fast_mode = fast_mode;
-                              p.mini_batch = 0; //sync once per period
+                              p.train_samples_per_iteration = 0; //sync once per period
                               p.ignore_const_cols = false; //same as old NeuralNet code
                               p.shuffle_training_data = false; //same as old NeuralNet code
                               p.nesterov_accelerated_gradient = true; //same as old NeuralNet code

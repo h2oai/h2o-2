@@ -48,7 +48,7 @@ public class DeepLearningSpiralsTest extends TestUtil {
       p.validation = null;
       p.score_interval = 10;
       p.ignored_cols = null;
-      p.mini_batch = 0; //sync once per period
+      p.train_samples_per_iteration = 0; //sync once per period
       p.quiet_mode = true;
       p.fast_mode = true;
       p.ignore_const_cols = true;
