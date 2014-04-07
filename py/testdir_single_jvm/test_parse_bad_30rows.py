@@ -3,7 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
 
 print "h2o should automatically deduce the header for this guy"
-print "should probably check the names too ..right now failing on rows"
+print "if all are quotes, and single_quotes=1, then it should be enums for the header"
+print "and numbers for the data (all single quotes stripped)?"
 # 'comment, is okay
 # "this comment, is okay too
 # 'this' comment, is okay too
