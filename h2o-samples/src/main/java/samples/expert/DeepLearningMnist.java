@@ -65,6 +65,7 @@ public class DeepLearningMnist extends Job {
     p.source = trainf;
     p.response = trainf.lastVec();
     p.ignored_cols = null;
+    p.classification_stop = -1;
     p.mini_batch = -1;
     p.score_interval = 30;
 
