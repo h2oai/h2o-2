@@ -13,8 +13,8 @@ def find_config(base):
 
 # node_count is sometimes used positionally...break that out. all others are keyword args
 def build_cloud_with_hosts(node_count=None, **kwargs):
-    if not h2o.disable_time_stamp:
-        sys.stdout = h2o.OutWrapper(sys.stdout)
+    ## if not h2o.disable_time_stamp:
+    ##      sys.stdout = h2o.OutWrapper(sys.stdout)
     # legacy: we allow node_count to be positional. 
     # if it's used positionally, stick in in kwargs (overwrite if there too)
     if node_count is not None:

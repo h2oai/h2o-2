@@ -25,19 +25,21 @@ class Basic(unittest.TestCase):
         h2o.verify_cloud_size()
 
     def test_B_RF_iris2(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', noise=('StoreView',None))
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10, noise=('StoreView',None), retryDelaySecs=0.1)
 
     def test_C_RF_poker100(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put', noise=('StoreView',None))
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10, noise=('StoreView',None), retryDelaySecs=0.1)
 
     def test_D_GenParity1(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put', noise=('StoreView',None))
-        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
+        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=10, noise=('StoreView',None), retryDelaySecs=0.1)
 
     def test_E_ParseManyCols(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', noise=('StoreView',None))
+        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
+
+        print "parseResult:", h2o.dump_json(parseResult)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
     def test_F_StoreView(self):
