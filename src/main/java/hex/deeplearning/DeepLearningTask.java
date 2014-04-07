@@ -130,7 +130,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     }
     // output
     if(params.classification)
-      neurons[neurons.length - 1] = new Neurons.Softmax(dinfo._adaptedFrame.lastVec().domain().length);
+      neurons[neurons.length - 1] = new Neurons.Softmax(minfo.units[minfo.units.length-1]);
     else
       neurons[neurons.length - 1] = new Neurons.Linear(1);
 
