@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(3)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
 
@@ -33,12 +33,19 @@ class Basic(unittest.TestCase):
         # passes with suffix, fails without?
         # suffix = ""
         suffix = ".hex"
-        for i in range(54):
-            # try the funky c(6) thing like  R, instead of just 6
-            execExpr = "Result" + str(i) + suffix + " = c.hex[,c(" + str(i+1) + ")]"
-            print "execExpr:", execExpr
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result" + str(i) + suffix, 
-                timeoutSecs=4)
+        for j in range(2):
+            for k in range(54):
+                # try the funky c(6) thing like  R, instead of just 6
+                execExpr = "Result" + str(k) + suffix + " = c.hex[,c(" + str(k+1) + ")]"
+                print "execExpr:", execExpr
+                h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result" + str(k) + suffix, 
+                    timeoutSecs=4)
+                for node in h2o.nodes:
+                    storeView = h2o_cmd.runStoreView(node=node, noPrint=True)
+                    numKeys = len(storeView['keys'])
+                    # number of keys should = k + 2? (on each node)
+                    self.assertEqual(k + 2, numKeys, "# of keys: %s on %s doesn't match expected: %s\n%s" % \
+                        (numKeys, node, k+2, h2o.dump_json(storeView)))
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "covtype.data" , 'took', time.time() - start, 'seconds'
