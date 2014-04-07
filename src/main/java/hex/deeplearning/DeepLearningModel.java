@@ -273,8 +273,9 @@ public class DeepLearningModel extends Model {
       dense_row_weights = new Neurons.DenseRowMatrix[layers+1];
       dense_col_weights = new Neurons.DenseColMatrix[layers+1];
 
-      boolean sparse = true; //FIXME: set flag in dinfo
-      if (sparse) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+      // decide format of weight matrices row-major or col-major
+      boolean input_col_major = false;//FIXME: should be automatically tuned for whichever is faster
+      if (input_col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
       for (int i=1; i<=layers; ++i)
         dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i+1] /*rows*/, units[i] /*cols*/);

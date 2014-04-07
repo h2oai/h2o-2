@@ -187,13 +187,10 @@ public abstract class Neurons {
     }
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
       bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
-    else if (_previous._a instanceof SparseVector)
+    else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
+      bprop_dense_row_sparse((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
+    else if (_w instanceof DenseColMatrix && _previous._a instanceof SparseVector)
       bprop_dense_sparse(_w, _wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
-
-    // faster?
-//    else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
-//      bprop_dense_row_sparse((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
-//    else if (_w instanceof DenseColMatrix && _previous._a instanceof SparseVector)
 
     else
       throw new UnsupportedOperationException("bprop for types not yet implemented.");
