@@ -2,14 +2,13 @@ package hex.deeplearning;
 
 import hex.FrameTask;
 import hex.deeplearning.DeepLearning.Loss;
-
-import java.util.*;
-
 import water.Iced;
 import water.MemoryManager;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.util.Utils;
+
+import java.util.*;
 
 /**
  * This class implements the concept of a Neuron layer in a Neural Network
@@ -181,9 +180,8 @@ public abstract class Neurons {
     if (params.fast_mode || (
             // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
             !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
-      if (Math.abs(partial_grad) <= 1e-10) return;
+      if (partial_grad == 0) return;
     }
-
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
       bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
     else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
