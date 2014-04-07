@@ -1,24 +1,22 @@
 package hex.drf;
 
+import static hex.drf.TreeMeasuresCollector.asSSE;
+import static hex.drf.TreeMeasuresCollector.asVotes;
 import static water.util.Utils.div;
 import static water.util.Utils.sum;
-import static hex.drf.TreeMeasuresCollector.asVotes;
-import static hex.drf.TreeMeasuresCollector.asSSE;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.drf.TreeMeasuresCollector.TreeMeasures;
-import hex.drf.TreeMeasuresCollector.TreeVotes;
 import hex.drf.TreeMeasuresCollector.TreeSSE;
-import hex.gbm.*;
+import hex.drf.TreeMeasuresCollector.TreeVotes;
+import hex.gbm.DHistogram;
+import hex.gbm.DTree;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-import java.util.Random;
-
+import hex.gbm.SharedTreeModelBuilder;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
@@ -27,6 +25,9 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+
+import java.util.Arrays;
+import java.util.Random;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
@@ -69,8 +70,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    @API(help = "Model parameters")
+    @API(help = "Model parameters", json = true)
     public final DRF parameters;    // This is used purely for printing values out.
+    public final DRF get_params() { return parameters; }
+    public final Request2 job() { return get_params(); }
 
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
