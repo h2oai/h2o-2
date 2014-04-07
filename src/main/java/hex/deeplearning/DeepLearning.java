@@ -666,7 +666,7 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   private void unlock_data() {
     source.unlock(self());
-    if( validation != null && !source._key.equals(validation._key) )
+    if( validation != null && source._key != null && validation._key != null && !source._key.equals(validation._key) )
       validation.unlock(self());
   }
 
