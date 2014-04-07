@@ -6,7 +6,6 @@ import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
-import hex.NeuralNet.NeuralNetScore;
 import hex.ReBalance;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
@@ -98,7 +97,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",                     "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",               "Score");
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
-    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (deprecated)","Score");
+//    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (deprecated)","Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
     Request.addToNavbar(registerRequest(new Predict()),     "Predict2",                   "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
