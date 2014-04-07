@@ -49,6 +49,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)", filter = Default.class, lmin = -1, json = true)
   public long train_samples_per_iteration = 10000l;
+  public long actual_train_samples_per_iteration;
 
   @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
@@ -614,13 +615,13 @@ public class DeepLearning extends Job.ValidatedJob {
       }
 
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
-      mp.train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode);
+      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode);
       // Determine whether shuffling is enforced
-      if(mp.replicate_training_data && (mp.train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+      if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
         mp.shuffle_training_data = true;
       }
-      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.train_samples_per_iteration, mp.replicate_training_data);
+      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
       Log.info("Starting to train the Deep Learning model.");
@@ -709,14 +710,15 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param single_node_mode whether or not the single node mode is enabled
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeTrainSamplesPerIteration(long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode) {
-    assert(train_samples_per_iteration == 0 || train_samples_per_iteration == -1 || train_samples_per_iteration >= 1);
-    if (train_samples_per_iteration == 0 || (!replicate_training_data && (train_samples_per_iteration == -1 || train_samples_per_iteration > numRows)) || (replicate_training_data && single_node_mode))
-      Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to one epoch: #rows (" + (train_samples_per_iteration=numRows) + ").");
-    else if (train_samples_per_iteration == -1 || train_samples_per_iteration > H2O.CLOUD.size()*numRows)
-      Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to the largest possible number: #nodes x #rows (" + (train_samples_per_iteration=H2O.CLOUD.size()*numRows) + ").");
-    assert(train_samples_per_iteration != 0 && train_samples_per_iteration != -1 && train_samples_per_iteration >= 1);
-    return train_samples_per_iteration;
+  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode) {
+    long tspi = train_samples_per_iteration;
+    assert(tspi == 0 || tspi == -1 || tspi >= 1);
+    if (tspi == 0 || (!replicate_training_data && (tspi == -1 || tspi > numRows)) || (replicate_training_data && single_node_mode))
+      Log.info("Setting train_samples_per_iteration (" + tspi + ") to one epoch: #rows (" + (tspi=numRows) + ").");
+    else if (tspi == -1 || tspi > H2O.CLOUD.size()*numRows)
+      Log.info("Setting train_samples_per_iteration (" + tspi + ") to the largest possible number: #nodes x #rows (" + (tspi=H2O.CLOUD.size()*numRows) + ").");
+    assert(tspi != 0 && tspi != -1 && tspi >= 1);
+    return tspi;
   }
 
   /**
