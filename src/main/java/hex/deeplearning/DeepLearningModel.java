@@ -990,7 +990,7 @@ public class DeepLearningModel extends Model {
 
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
-    final boolean fulltrain = score_train==0 || score_train == model_info().data_info()._adaptedFrame.numRows();
+    final boolean fulltrain = score_train==0 || score_train == training_rows;
     final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
@@ -1048,9 +1048,9 @@ public class DeepLearningModel extends Model {
       DocGen.HTML.paragraph(sb, "Time taken for last scoring: " + PrettyPrint.msecs(errors[errors.length-1].scoring_time, true));
       // training
       {
-        final long pts = fulltrain ? model_info().data_info()._adaptedFrame.numRows() : score_train;
+        final long pts = fulltrain ? training_rows : score_train;
         String training = "Number of training data samples for scoring: " + (fulltrain ? "all " : "") + pts;
-        if (pts < 1000 && model_info().data_info()._adaptedFrame.numRows() >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (pts < 1000 && training_rows >= 1000) training += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
         if (pts > 100000 && errors[errors.length-1].scoring_time > 10000) training += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         DocGen.HTML.paragraph(sb, training);
       }
