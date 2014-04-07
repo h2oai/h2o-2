@@ -68,32 +68,14 @@ public class RequestServer extends NanoHTTPD {
 
 
 //    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data"); //disable for now
-    // Register VA-based stuff
-    registerRequest(new Inspect());
-    registerRequest(new SummaryPage());
-    registerRequest(new Parse());
-    registerRequest(new ImportFiles());
-    registerRequest(new Upload());
-    registerRequest(new ImportUrl());
-    registerRequest(new ImportS3());
-    registerRequest(new ExportS3());
-    registerRequest(new ImportHdfs());
-    registerRequest(new GLM());
-    registerRequest(new GLMGrid());
-    registerRequest(new KMeans());
-    registerRequest(new RF());
-    registerRequest(new RFScore());
-    registerRequest(new GLMScore());
-    registerRequest(new KMeansScore());
-    registerRequest(new KMeansApply());
-    registerRequest(new GeneratePredictionsPage());
-    registerRequest(new Score());
 
-    Request.addToNavbar(registerRequest(new Inspect2()),      "Inspect",                "Data");
-    Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
-    Request.addToNavbar(registerRequest(new Parse2()),        "Parse",                  "Data");
+    // Data
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
     Request.addToNavbar(registerRequest(new Upload2()),       "Upload",                 "Data");
+    Request.addToNavbar(registerRequest(new Parse2()),        "Parse",                  "Data");
+    Request.addToNavbar(registerRequest(new Inspect2()),      "Inspect",                "Data");
+    Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
+    Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
 
     // Not supported for now
@@ -116,21 +98,21 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
 
     // FVec scoring
-    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA",                      "Score");
     Request.addToNavbar(registerRequest(new Predict()),     "Predict",                  "Score");
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",     "Score");
     Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
     Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
+    Request.addToNavbar(registerRequest(new PCAScore()),    "PCAScore",                 "Score");
 
     // Admin
-    Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",            "Admin");
-    Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",  "Admin");
-    Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",     "Admin");
-    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",        "Admin");
-    Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",      "Admin");
-    Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",      "Admin");
-    Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",     "Admin");
-    Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
+    Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",                     "Admin");
+    Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",           "Admin");
+    Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
+    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
+    Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
+    Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",               "Admin");
+    Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
+    Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
     Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help", USE_NEW_TAB);
@@ -147,13 +129,56 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
     } else {
-      Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
+      Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
+      Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
+
+    // VA stuff
+    if (false) {
+      registerRequest(new Inspect());
+      registerRequest(new SummaryPage());
+      registerRequest(new Parse());
+      registerRequest(new ImportFiles());
+      registerRequest(new Upload());
+      registerRequest(new ImportUrl());
+      registerRequest(new ImportS3());
+      registerRequest(new ExportS3());
+      registerRequest(new ImportHdfs());
+      registerRequest(new GLM());
+      registerRequest(new GLMGrid());
+      registerRequest(new KMeans());
+      registerRequest(new RF());
+      registerRequest(new RFScore());
+      registerRequest(new GLMScore());
+      registerRequest(new KMeansScore());
+      registerRequest(new KMeansApply());
+      registerRequest(new GeneratePredictionsPage());
+      registerRequest(new Score());
+    } else {
+      Request.addToNavbar(registerRequest(new Upload()), "Upload", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new ImportFiles()), "Import", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new ImportUrl()), "ImportURL", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new ImportS3()), "ImportS3", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new ImportHdfs()), "ImportHDFS", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new Parse()), "Parse", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new Inspect()), "Inspect", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new SummaryPage()), "Summary", "VA (deprecated)");
+//    Request.addToNavbar(registerRequest(new ExportS3()), "ExportS3", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new GLM()), "GLM", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new GLMGrid()), "GLMGrid", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new GLMScore()), "GLMScore", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new KMeans()), "KMeans", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new KMeansScore()), "KMeansScore", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new KMeansApply()), "KMeansApply", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new RF()), "RF", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new RFScore()), "RFScore", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new GeneratePredictionsPage()), "GeneratePredictionsPage", "VA (deprecated)");
+      Request.addToNavbar(registerRequest(new Score()), "Score", "VA (deprecated)");
+    }
+
     registerRequest(new Get()); // Download
     //Column Expand
     registerRequest(new OneHot());
