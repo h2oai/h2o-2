@@ -1,18 +1,18 @@
 package hex.deeplearning;
 
+import junit.framework.Assert;
+import org.junit.Test;
+
 import java.util.Arrays;
 import java.util.Random;
-
-import junit.framework.Assert;
-
-import org.junit.Test;
 
 public class DropoutTest {
 
   @Test
   public void test() throws Exception {
     final int units = 1000;
-    float[] a = new float[units];
+
+    Neurons.DenseVector a = new Neurons.DenseVector(units);
     double sum1=0, sum2=0, sum3=0, sum4=0;
 
     final int loops = 10000;
@@ -20,19 +20,19 @@ public class DropoutTest {
       long seed = new Random().nextLong();
 
       Dropout d = new Dropout(units, 0.3);
-      Arrays.fill(a, 1f);
+      Arrays.fill(a.raw(), 1f);
       d.randomlySparsifyActivation(a, seed);
-      sum1 += water.util.Utils.sum(a);
+      sum1 += water.util.Utils.sum(a.raw());
 
       d = new Dropout(units, 0.0);
-      Arrays.fill(a, 1f);
+      Arrays.fill(a.raw(), 1f);
       d.randomlySparsifyActivation(a, seed + 1);
-      sum2 += water.util.Utils.sum(a);
+      sum2 += water.util.Utils.sum(a.raw());
 
       d = new Dropout(units, 1.0);
-      Arrays.fill(a, 1f);
+      Arrays.fill(a.raw(), 1f);
       d.randomlySparsifyActivation(a, seed + 2);
-      sum3 += water.util.Utils.sum(a);
+      sum3 += water.util.Utils.sum(a.raw());
 
       d = new Dropout(units, 0.314);
       d.fillBytes(seed+3);
