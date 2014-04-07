@@ -473,8 +473,11 @@ public abstract class Neurons {
       // Input Dropout
       if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
-      _dropout.randomlySparsifyActivation(_a.raw(), seed);
-// FIXME: HACK TO ALWAYS BE SPARSE
+      if (_a instanceof DenseVector)
+        _dropout.randomlySparsifyActivation((DenseVector)_a, seed);
+      else
+        _dropout.randomlySparsifyActivation((SparseVector)_a, seed);
+//// FIXME: HACK TO ALWAYS BE SPARSE
 //      _svec = new SparseVector(_dvec);
 //      assert(_svec instanceof SparseVector);
 //      _a = _svec;
@@ -1017,6 +1020,7 @@ public abstract class Neurons {
       }
       float value() { return _values[_idx]; }
       int index() { return _indices[_idx]; }
+      void setValue(float val) { _values[_idx] = val; }
     }
 
     public Iterator begin() { return new Iterator(0); }
