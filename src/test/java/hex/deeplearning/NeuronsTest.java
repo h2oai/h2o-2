@@ -1,28 +1,19 @@
 package hex.deeplearning;
 
-import static hex.deeplearning.Neurons.gemv_naive;
-import static hex.deeplearning.Neurons.gemv_row_optimized;
-import hex.deeplearning.Neurons.DenseColMatrix;
-import hex.deeplearning.Neurons.DenseRowMatrix;
-import hex.deeplearning.Neurons.DenseVector;
-import hex.deeplearning.Neurons.SparseColMatrix;
-import hex.deeplearning.Neurons.SparseRowMatrix;
-import hex.deeplearning.Neurons.SparseVector;
-
-import java.util.Random;
-
-import org.junit.Ignore;
+import static hex.deeplearning.Neurons.*;
+import hex.deeplearning.Neurons.*;
 import org.junit.Test;
-
 import water.PrettyPrint;
 import water.util.Log;
 import water.util.Utils;
+
+import java.util.Random;
 
 
 public class NeuronsTest {
 
   @Test
-  @Ignore
+//  @Ignore
   public void matrixVecTest() {
     int rows = 2048;
     int cols = 8192;
@@ -82,23 +73,23 @@ public class NeuronsTest {
       sum += res[rows/2];
     }
     for (int l=0;l<warmup_loops;++l) {
-      gemv_naive(dres, dca, dx, dy, bits);
+      gemv(dres, dca, dx, dy, bits);
       sum += res[rows/2];
     }
     for (int l=0;l<warmup_loops;++l) {
-      gemv_naive(dres, dra, sx, dy, bits);
+      gemv(dres, dra, sx, dy, bits);
       sum += res[rows/2];
     }
     for (int l=0;l<warmup_loops;++l) {
-      gemv_naive(dres, dca, sx, dy, bits);
+      gemv(dres, dca, sx, dy, bits);
       sum += res[rows/2];
     }
     for (int l=0;l<warmup_loops;++l) {
-      gemv_naive(dres, sra, sx, dy, bits);
+      gemv(dres, sra, sx, dy, bits);
       sum += res[rows/2];
     }
     for (int l=0;l<warmup_loops;++l) {
-      gemv_naive(dres, sca, sx, dy, bits);
+      gemv(dres, sca, sx, dy, bits);
       sum += res[rows/2];
     }
 
@@ -151,7 +142,7 @@ public class NeuronsTest {
     sum = 0;
     start = System.currentTimeMillis();
     for (int l=0;l<loops;++l) {
-      gemv_naive(dres, dca, dx, dy, bits);
+      gemv(dres, dca, dx, dy, bits);
       sum += res[rows/2]; //do something useful
     }
     System.out.println("result: " + sum + " and " + Utils.sum(res));
@@ -163,7 +154,7 @@ public class NeuronsTest {
     sum = 0;
     start = System.currentTimeMillis();
     for (int l=0;l<loops;++l) {
-      gemv_naive(dres, dra, sx, dy, bits);
+      gemv(dres, dra, sx, dy, bits);
       sum += res[rows/2]; //do something useful
     }
     System.out.println("result: " + sum + " and " + Utils.sum(res));
@@ -175,7 +166,7 @@ public class NeuronsTest {
     sum = 0;
     start = System.currentTimeMillis();
     for (int l=0;l<loops;++l) {
-      gemv_naive(dres, dca, sx, dy, bits);
+      gemv(dres, dca, sx, dy, bits);
       sum += res[rows/2]; //do something useful
     }
     System.out.println("result: " + sum + " and " + Utils.sum(res));
@@ -187,7 +178,7 @@ public class NeuronsTest {
     sum = 0;
     start = System.currentTimeMillis();
     for (int l=0;l<loops;++l) {
-      gemv_naive(dres, sra, sx, dy, bits);
+      gemv(dres, sra, sx, dy, bits);
       sum += res[rows/2]; //do something useful
     }
     System.out.println("result: " + sum + " and " + Utils.sum(res));
@@ -199,7 +190,7 @@ public class NeuronsTest {
     sum = 0;
     start = System.currentTimeMillis();
     for (int l=0;l<loops;++l) {
-      gemv_naive(dres, sca, sx, dy, bits);
+      gemv(dres, sca, sx, dy, bits);
       sum += res[rows/2]; //do something useful
     }
     System.out.println("result: " + sum + " and " + Utils.sum(res));
