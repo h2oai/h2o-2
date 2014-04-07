@@ -20,24 +20,6 @@ else
 	@echo npm ... OK
 endif
 
-ifeq ($(shell which ruby),)
-	$(error Dependency ruby not found. Exiting.)
-else
-	@echo ruby ... OK
-endif
-
-ifeq ($(shell which slimrb),)
-	$(error Dependency slimrb not found. Exiting.)
-else
-	@echo slimrb ... OK
-endif
-
-ifeq ($(shell which sass),)
-	$(error Dependency sass not found. Exiting.)
-else
-	@echo sass ... OK
-endif
-
 build:
 
 pack:\
@@ -106,11 +88,11 @@ $(BUILD)/bin/%.js: src/components/%.coffee
 $(BUILD)/test/%.js: test/components/%.coffee
 	$(BIN)/coffee -o $(@D) -c $<
 
-$(BUILD)/bin/%.part.html: src/templates/%.slim
-	slimrb --pretty $< $@
+$(BUILD)/bin/%.part.html: src/templates/%.jade
+	$(BIN)/jade --pretty < $< > $@
 
-$(BUILD)/bin/%.part.css: src/styles/%.sass
-	sass --no-cache $< $@
+$(BUILD)/bin/%.part.css: src/styles/%.styl
+	$(BIN)/stylus < $< > $@
 
 $(BUILD)/doc/index.html: pack doc/header.html doc/footer.html
 	@$(BIN)/mocha \
