@@ -27,10 +27,8 @@ public class Scope {
   static public void exit () {
     Stack<HashSet<Key>> keys = _scope.get()._keys;
     if( keys.size()==0 ) return;
-    Futures fs = new Futures();
     for( Key key : keys.pop() )
-      UKV.remove(key,fs);
-    fs.blockForPending();
+      Lockable.delete(key);
   }
   static public Key exit(Key key) { throw H2O.unimpl(); }
   static public Key[] exit(Key... key) { throw H2O.unimpl(); }
