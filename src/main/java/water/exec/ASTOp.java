@@ -1,16 +1,16 @@
 package water.exec;
-import water.util.Log;
+
 import hex.Quantiles;
+import hex.FrameTask.DataInfo;
+import hex.gram.Gram.GramTask;
 import hex.la.Matrix;
-
 import java.util.*;
-
 import org.joda.time.DateTime;
 import org.joda.time.MutableDateTime;
-
 import water.*;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
+import water.util.Log;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -126,6 +126,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMax ());
     putPrefix(new ASTSum ());
     putPrefix(new ASTSdev());
+    putPrefix(new ASTVar());
     putPrefix(new ASTMean());
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
@@ -1237,6 +1238,62 @@ class ASTSdev extends ASTOp {
   }
 }
 
+class ASTVar extends ASTOp {
+  ASTVar() { super(new String[]{"var", "ary"}, new Type[]{Type.dblary(),Type.dblary()},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT); }
+  @Override String opStr() { return "var"; }
+  @Override ASTOp make() { return new ASTVar(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(env.isDbl()) {
+      env.pop(2); env.push(Double.NaN);
+    } else {
+      Frame fr = env.ary(-1);
+      String[] colnames = fr.names();
+
+      // Save standard deviations for later use
+      double[] sdev = new double[fr.numCols()];
+      for(int i = 0; i < fr.numCols(); i++)
+        sdev[i] = fr.vecs()[i].sigma();
+
+      // TODO: Might be more efficient to modify DataInfo to allow for separate standardization of mean and std dev
+      DataInfo dinfo = new DataInfo(fr, 0, true);
+      GramTask tsk = new GramTask(null, dinfo, false, false).doAll(dinfo._adaptedFrame);
+      double[][] var = tsk._gram.getXX();
+      long nobs = tsk._nobs;
+
+      assert sdev.length == var.length;
+      assert sdev.length == var[0].length;
+
+      // Just push the scalar if input is a single col
+      if(var.length == 1 && var[0].length == 1) {
+        env.pop(2);
+        double x = var[0][0]*sdev[0]*sdev[0];   // Undo normalization of each col's standard deviation
+        x = x*nobs/(nobs-1);   // Divide by n-1 rather than n so unbiased
+        env.push(x);
+      } else {
+        // Build output vecs for var-cov matrix
+        Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(var.length);
+        Vec[] vecs = new Vec[var.length];
+        for(int i = 0; i < var.length; i++) {
+          AppendableVec v = new AppendableVec(keys[i]);
+          NewChunk c = new NewChunk(v,0);
+          v._domain = null;
+          for (int j = 0; j < var[0].length; j++) {
+            double x = var[i][j]*sdev[i]*sdev[j];   // Undo normalization of each col's standard deviation
+            x = x*nobs/(nobs-1);   // Divide by n-1 rather than n so unbiased
+            c.addNum(x);
+          }
+          c.close(0, null);
+          vecs[i] = v.close(null);
+        }
+        env.pop(2); env.push(new Frame(colnames, vecs));
+      }
+    }
+  }
+}
+
 class ASTMean extends ASTOp {
   ASTMean() { super(new String[]{"mean", "ary"}, new Type[]{Type.DBL,Type.ARY},
                     OPF_PREFIX,
@@ -1263,10 +1320,10 @@ class ASTMean extends ASTOp {
   }
 }
 
-class ASTXorSum extends ASTReducerOp { ASTXorSum() {super(0,false); } 
+class ASTXorSum extends ASTReducerOp { ASTXorSum() {super(0,false); }
   @Override String opStr(){ return "xorsum";}
   @Override ASTOp make() {return new ASTXorSum();}
-  @Override double op(double d0, double d1) { 
+  @Override double op(double d0, double d1) {
     long d0Bits = Double.doubleToLongBits(d0);
     long d1Bits = Double.doubleToLongBits(d1);
     long xorsumBits = d0Bits ^ d1Bits;
@@ -1424,16 +1481,20 @@ class ASTIfElse extends ASTOp {
     Frame fr  = new Frame(frtst); // Do-All frame
     final int  ncols = frtst.numCols(); // Result column count
     final long nrows = frtst.numRows(); // Result row count
+    String names[]=null;
     if( frtru !=null ) {          // True is a Frame?
       if( frtru.numCols() != ncols ||  frtru.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frtru);
       fr.add(frtru,true);
+      names = frtru._names;
     }
     if( frfal !=null ) {          // False is a Frame?
       if( frfal.numCols() != ncols ||  frfal.numRows() != nrows )
         throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frfal);
       fr.add(frfal,true);
+      names = frfal._names;
     }
+    if( names==null && frtst!=null ) names = frtst._names;
     final boolean t = frtru != null;
     final boolean f = frfal != null;
     final double fdtru = dtru;
@@ -1454,7 +1515,7 @@ class ASTIfElse extends ASTOp {
               else n.addNum(ctst.at0(r)!=0 ? (t ? ctru.at0(r) : fdtru) : (f ? cfal.at0(r) : fdfal));
           }
         }
-      }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
+      }.doAll(ncols,fr).outputFrame(names,fr.domains());
     env.subRef(frtst,kq);
     if( frtru != null ) env.subRef(frtru,kt);
     if( frfal != null ) env.subRef(frfal,kf);

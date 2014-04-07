@@ -7,37 +7,42 @@ package water.api;
  */
 public class Tutorials extends HTMLOnlyRequest {
 
-  protected String build(Response response) {
+  @Override protected String build(Response response) {
     return "<div class='container'><div class='hero-unit' style='overflow: hidden'>"
     + "<style scoped='scoped'>"
-    + "  .col { height: 330px; position: relative;}"
-    + "  .col p { overflow: hidden; text-overflow: ellipsis; -o-text-overflow: ellipsis;}"
-    + "  .col a { position: absolute; right: 40px; bottom: 10px; } "
+    + "  h2 { font-size:18px; }"
+    + "  p { font-size:16px; }"
     + "</style>"
     + "<h1>H<sub>2</sub>O Tutorials</h1>"
     + "<blockquote><small>A unique way to explore H<sub>2</sub>O</small></blockquote>"
 
+    + "</div>"
     + "<div class='row'>"
 
     + "<div class='span3 col'>"
-    + "  <h2 style='margin: 20px 0 0 0'>Random Forest</h2>"
+    + "  <h2>Random Forest</h2>"
     +   "<p>Random Forest is a classical machine learning algorithm serving for data classification. Learn how to use it with H<sub>2</sub>O.</it></p>"
-    +   "<a href='/TutorialRFIris.html' class='btn btn-primary btn-large'>Try it!</a>"
+    +   "<a href='/TutorialRFIris.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span3 col'>"
-    +   "<h2 style='margin: 20px 0 0 0'>GLM</h2>"
+    +   "<h2>GLM</h2>"
     +   "<p>Generalized linear model is a generalization of linear regression. Experience its unique power on the top of H<sub>2</sub>O.</p>"
-    +   "<a href='/TutorialGLMProstate.html' class='btn btn-primary btn-large'>Try it!</a>"
+    +   "<a href='/TutorialGLMProstate.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span3 col'>"
-    + "<h2 style='margin: 20px 0 0 0'>K-means</h2>"
+    + "<h2>K-means</h2>"
     + "<p>Perform cluster analysis with H<sub>2</sub>O and K-means algorithm. H<sub>2</sub>O implements K-means, a highly scalable version.</p>"
-    +   "<a href='/TutorialKMeans.html' class='btn btn-primary btn-large'>Try it!</a>"
+    +   "<a href='/TutorialKMeans.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
+    + "<div class='span3 col'>"
+    + "<h2>Deep Learning</h2>"
+    + "<p>Use H<sub>2</sub>O to model high-level abstractions in data by using architectures composed of multiple non-linear transformations.</p>"
+    +   "<a href='/TutorialDeepLearning.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
+
     + "</div>"
     + "</div>";
   }

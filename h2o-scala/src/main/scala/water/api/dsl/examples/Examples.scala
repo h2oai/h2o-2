@@ -2,36 +2,19 @@ package water.api.dsl.examples
 
 import water.{Boot, H2O, Iced}
 import water.api.dsl.{Row, T_T_Collect, DFrame}
+import java.util.Random
+import hex.drf.DRF
 
 /**
  * Simple example project.
  *
  * Ideas:
- * GroupBy for H2O.
- * Histogram.
- * Matrix product.
+ *  - GroupBy for H2O.
+ *  - Histogram.
+ *  - Matrix product.
  */
 object Examples {
 
-  // Call in the context of main classloader
-  def main(args: Array[String]):Unit = {
-    Boot.main(classOf[Examples], args)
-  }
-
-  // Call in the context of H2O classloader
-  def userMain(args: Array[String]):Unit = {
-    H2O.main(args)
-    example1()
-    example2()
-    example3()
-    water.api.dsl.H2ODsl.shutdown()
-  }
-  
-  def banner(id:Int, desc: String) = {
-    println("\n==== Example #"+id+" ====\n== \""+desc+"\"" )
-    println(  "====\n")
-  }
-  
   /** Compute average for given column. */
   def example1() = {
     banner(1, "Compute average of 2nd column in cars dataset")
@@ -40,7 +23,7 @@ object Examples {
     /** Mutable class */
     class Avg(var sum:scala.Double, var cnt:Int) extends Iced;
     
-    val f = parse("../private/cars.csv")
+    val f = parse("../smalldata/cars.csv")
     val r = f collect ( new Avg(0,0), 
       new T_T_Collect[Avg] {
 	      override def apply(acc:Avg, rhs:Row):Avg = {
@@ -56,22 +39,27 @@ object Examples {
   
   /** Call DRF, make a model, predict on a train data, compute MSE. */ 
   def example2() = {
-    banner(2, "Call DRF API and make a forest for cars dataset")
+    banner(2, """The example calls DRF API and produces a forest of regression trees for cars dataset.
+The response column represents number of cylinders for each car included in train data. Example then
+makes a prediction over train data and compute MSE of prediction."""")
+
     import water.api.dsl.H2ODsl._
-    val f = parse("../private/cars.csv")
-    val source = f(1) ++ f(3 to 7)
-    val response = f(2)
-    
+    val f = parse(ffind("smalldata/cars.csv"))
+    val params = (p:DRF) => { import p._
+      ntrees = 10
+      classification = false
+      p
+    }
     // build a model
-    val model = drf(source, response, 10, false)  // doing regression
+    val model = drf(f, null, 3 to 7, 2, params)  // doing regression
     println("The DRF model is: \n" + model)
     // make a prediction
-    val predict:DFrame = model.score(source.frame())
+    val predict:DFrame = model.score(f.frame())
     
     println("Prediction on train data: \n" + predict)
-    
-    // compute squared errors
-    val serr = (response - predict)^2
+
+    val response = f(2) // take 2nd column as response
+    val serr = (response - predict)^2 // compute mean squared errors
     println("Errors per row: " + serr)
     // make a sum
     val rss = serr collect (0.0, new CDOp() {
@@ -86,7 +74,7 @@ object Examples {
   def example3() = {
     banner(3, "Call quantiles API and compute quantiles for all columns in cars dataset.")
     import water.api.dsl.H2ODsl._
-    val f = parse("../private/cars.csv")
+    val f = parse("../smalldata/cars.csv")
     
     // Iterate over columns, pick only non-enum column and compute quantile for the column
     for (columnId <-  0 until f.ncol) {
@@ -98,6 +86,65 @@ object Examples {
 	      println("Column '" + colname + "' quantile is " + q)
       }
     }   
+  }
+
+  /** Simple example of deep learning model builder. */
+  def example4() = {
+    banner(4, "Call deep learning model builder and validate it on test data.")
+    // Import favorite classes
+    import water.api.dsl.H2ODsl._
+    import hex.deeplearning.DeepLearning
+    import hex.deeplearning.DeepLearning.ClassSamplingMethod
+
+    // Parse train dataset
+    val ftrain = parse(ffind("smalldata/logreg/prostate.csv"))
+    // Create parameters for deep learning
+    val params = (p:DeepLearning) => {
+      import p._
+      epochs = 1.0
+      hidden = Array(1+new Random(seed).nextInt(4), 1+new Random(seed).nextInt(6))
+      classification = true
+      seed = seed
+      mini_batch = 0
+      force_load_balance = false
+      replicate_training_data = true
+      shuffle_training_data = true
+      score_training_samples = 0
+      score_validation_samples = 0
+      balance_classes = true
+      quiet_mode = false
+      score_validation_sampling = ClassSamplingMethod.Stratified
+      p
+    }
+
+    val dlModel = deeplearning(ftrain, null, 2 to 8, 1, params)
+    println("Resulting model: " + dlModel)
+  }
+
+  // Call in the context of main classloader
+  def main(args: Array[String]):Unit = {
+    Boot.main(classOf[Examples], args)
+  }
+
+  // Call in the context of H2O classloader
+  def userMain(args: Array[String]):Unit = {
+    H2O.main(args)
+    try {
+      example1()
+      example2()
+      example3()
+      example4()
+    } catch {
+      case t:Throwable => t.printStackTrace() // Simple debug
+    } finally {
+      water.api.dsl.H2ODsl.shutdown()
+    }
+  }
+
+  // Print simple banner
+  private def banner(id:Int, desc: String) = {
+    println("\n==== Example #"+id+" ====\n "+desc )
+    println(  "====================\n")
   }
 }
 

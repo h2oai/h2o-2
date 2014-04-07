@@ -1,10 +1,13 @@
 package samples.expert;
 
-import java.io.File;
-
-import water.*;
+import water.Futures;
+import water.Job;
+import water.Key;
+import water.UKV;
 import water.deploy.VM;
 import water.fvec.*;
+
+import java.io.File;
 
 /**
  * Demonstration of H2O's Frame API, the distributed table-like data structure.
@@ -20,7 +23,7 @@ public class Frames extends Job {
   }
 
   @Override
-  protected JobState execImpl() {
+  protected void execImpl() {
     // From file
     parse(new File(VM.h2oFolder(), "smalldata/iris/iris.csv"));
 
@@ -34,8 +37,6 @@ public class Frames extends Job {
     // Store frame in H2O's K/V store
     Key key = Key.make("MyFrame");
     UKV.put(key, frame);
-
-    return JobState.DONE;
   }
 
   /**

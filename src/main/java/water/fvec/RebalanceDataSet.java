@@ -1,11 +1,12 @@
 package water.fvec;
 
 import jsr166y.CountedCompleter;
-import water.*;
+import water.H2O;
+import water.Key;
+import water.MRTask2;
 
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.concurrent.Future;
 
 /**
  * Created by tomasnykodym on 3/28/14.
@@ -54,12 +55,10 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     Vec v0 = new Vec(Vec.newKey(),espc);
     Vec [] newVecs = new Vec[_in.numCols()];
     final Vec [] srcVecs = _in.vecs();
-    addToPendingCount(newVecs.length);
     for(int i = 0; i < newVecs.length; ++i)newVecs[i] = v0.makeZero(srcVecs[i].domain());
     _out = new Frame(_okey,_in.names(), newVecs);
     _out.delete_and_lock(_jobKey);
-    for(int i = 0; i < newVecs.length; ++i)new RebalanceTask(this,srcVecs[i]).asyncExec(newVecs[i]);
-    tryComplete();
+    new RebalanceTask(this,srcVecs).asyncExec(newVecs);
   }
 
   @Override public void onCompletion(CountedCompleter caller){
@@ -76,15 +75,18 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
   }
 
   public static class RebalanceTask extends MRTask2<RebalanceTask> {
-    final Vec _srcVec;
-    public RebalanceTask(H2O.H2OCountedCompleter cmp, Vec srcVec){super(cmp);_srcVec = srcVec;}
-    @Override public void map(Chunk chk){
+    final Vec [] _srcVecs;
+    public RebalanceTask(H2O.H2OCountedCompleter cmp, Vec... srcVecs){super(cmp);_srcVecs = srcVecs;}
+
+    @Override public boolean logVerbose() { return false; }
+
+    private void rebalanceChunk(Vec srcVec, Chunk chk){
       final int dstrows = chk._len;
       NewChunk dst = new NewChunk(chk);
       dst._len = dst._len2 = 0;
       int rem = chk._len;
       while(rem > 0 && dst._len2 < chk._len){
-        Chunk srcRaw = _srcVec.chunkForRow(chk._start+dst._len2);
+        Chunk srcRaw = srcVec.chunkForRow(chk._start+dst._len2);
         NewChunk src = new NewChunk((srcRaw));
         src = srcRaw.inflate_impl(src);
         assert src._len2 == srcRaw._len;
@@ -115,6 +117,10 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
       assert rem == 0:"rem = " + rem;
       assert dst._len2 == chk._len:"len2 = " + dst._len2 + ", _len = " + chk._len;
       dst.close(dst.cidx(),_fs);
+    }
+    @Override public void map(Chunk [] chks){
+      for(int i = 0; i < chks.length; ++i)
+        rebalanceChunk(_srcVecs[i],chks[i]);
     }
   }
 }

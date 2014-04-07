@@ -30,7 +30,11 @@ public class Frame extends Lockable<Frame> {
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
-    // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
+    if( names==null ) {
+      names = new String[vecs.length];
+      for( int i=0; i<vecs.length; i++ ) names[i] = "C"+(i+1);
+    } 
+    assert names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
@@ -47,7 +51,16 @@ public class Frame extends Lockable<Frame> {
       if(_names[i].equals(name))return vecs[i];
     return null;
   }
-
+  /** Returns the vector by given index.
+   * <p>The call is direct equivalent to call <code>vecs()[i]</code> and
+   * it does not do any array bounds checking.</p>
+   * @param idx idx of column
+   * @return this frame idx-th vector, never returns <code>null</code>
+   */
+  public Vec vec(int idx) {
+    Vec[] vecs = vecs();
+    return vecs[idx];
+  }
   /** Returns a subframe of this frame containing only vectors with desired names.
    *
    * @param names list of vector names
@@ -201,8 +214,8 @@ public class Frame extends Lockable<Frame> {
     int j = 0;
     int k = 0;
     int l = 0;
-    for(int i = 0; i < _vecs.length; ++i)
-      if(j < idxs.length && i == idxs[j]){
+    for(int i = 0; i < _vecs.length; ++i) {
+      if(j < idxs.length && i == idxs[j]) {
         ++j;
         res[k++] = _vecs[i];
       } else {
@@ -211,6 +224,7 @@ public class Frame extends Lockable<Frame> {
         keys [l] = _keys [i];
         ++l;
       }
+    }
     _vecs = rem;
     _names = names;
     _keys = keys;

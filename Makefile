@@ -218,6 +218,7 @@ dw_3:
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
+	cp -p docs/h2o_datasheet.pdf $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
 	@if [ -f R/h2o_package.pdf ]; then \

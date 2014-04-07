@@ -4,14 +4,12 @@ import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import water.H2O;
-import water.Job;
-import water.Key;
-import water.UKV;
+import water.*;
 import water.api.DeepLearningProgressPage;
 import water.api.DocGen;
 import water.api.RequestServer;
 import water.fvec.Frame;
+import water.fvec.RebalanceDataSet;
 import water.util.Log;
 import water.util.MRUtils;
 import water.util.RString;
@@ -48,7 +46,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Number of training samples between multi-node synchronization and scoring, can be > #rows if replicate_training_data is enabled (0: one epoch, -1: all available data)", filter = Default.class, lmin = -1, json = true)
   public long mini_batch = 10000l;
 
-  @API(help = "Seed for random numbers (reproducible results for small (single-chunk) datasets only, cf. Hogwild!)", filter = Default.class, json = true)
+  @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
   /*Adaptive Learning Rate*/
@@ -72,13 +70,13 @@ public class DeepLearning extends Job.ValidatedJob {
   public double rate_decay = 1.0;
 
   /*Momentum*/
-  @API(help = "Initial momentum at the beginning of training", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
+  @API(help = "Initial momentum at the beginning of training (try 0.5)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_start = 0;
 
   @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 1, json = true)
   public long momentum_ramp = 1000000;
 
-  @API(help = "Final momentum after the ramp is over", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
+  @API(help = "Final momentum after the ramp is over (try 0.99)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_stable = 0;
 
   @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
@@ -283,7 +281,6 @@ public class DeepLearning extends Job.ValidatedJob {
         if (cp_model.model_info().unstable()) {
           throw new IllegalArgumentException("Checkpointed model was unstable. Not restarting.");
         }
-        state = JobState.RUNNING;
         return;
       }
     }
@@ -341,6 +338,10 @@ public class DeepLearning extends Job.ValidatedJob {
       if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
         arg.disable("Only for activation functions with dropout.", inputArgs);
       }
+    }
+    if (arg._name.equals("replicate_training_data") && (H2O.CLOUD.size() == 1)) {
+      arg.disable("Only for multi-node operation.");
+      replicate_training_data = false;
     }
     if (arg._name.equals("single_node_mode") && (H2O.CLOUD.size() == 1 || !replicate_training_data)) {
       arg.disable("Only for multi-node operation with replication.");
@@ -403,14 +404,19 @@ public class DeepLearning extends Job.ValidatedJob {
    * Train a Deep Learning model, assumes that all members are populated
    * @return JobState
    */
-  @Override protected final void execImpl() {
+  @Override
+  public final void execImpl() {
     DeepLearningModel cp;
     if (checkpoint == null) cp = initModel();
     else {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
+      epochs += previous.epoch_counter; //add new epochs to existing model
+      Log.info("Adding " + String.format("%.3f", previous.epoch_counter) + " epochs from the checkpointed model.");
       cp = new DeepLearningModel(previous, destination_key, job_key);
+      cp.model_info().get_params().state = JobState.RUNNING;
       try {
+        Log.info("Resuming from checkpoint.");
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
         if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
@@ -427,9 +433,8 @@ public class DeepLearning extends Job.ValidatedJob {
           throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
         }
         if (classification != previous.model_info().get_params().classification) {
-          throw new IllegalArgumentException("classification must be the same as for the checkpointed model.");
+          Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
         }
-        Log.info("Resuming from checkpoint.");
         final DeepLearning mp = cp.model_info().get_params();
         Object A = mp, B = this;
         for (Field fA : A.getClass().getDeclaredFields()) {
@@ -573,7 +578,8 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
-      train = updateFrame(train, reBalance(train, mp.seed, mp.replicate_training_data, mp.force_load_balance, mp.shuffle_training_data));
+      train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
+//      train = updateFrame(train, reBalance(train, mp.seed, mp.replicate_training_data, mp.force_load_balance, mp.shuffle_training_data));
       float[] trainSamplingFactors;
       if (mp.classification && mp.balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
@@ -598,7 +604,8 @@ public class DeepLearning extends Job.ValidatedJob {
         } else {
           validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
-        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, mp.seed+1, false, mp.force_load_balance, mp.shuffle_training_data));
+        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
+//        validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, mp.seed+1, false, mp.force_load_balance, mp.shuffle_training_data));
         Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
@@ -670,12 +677,23 @@ public class DeepLearning extends Job.ValidatedJob {
   /**
    * Rebalance a frame for load balancing
    * @param fr Input frame
-   * @param seed RNG seed
    * @param local whether to only create enough chunks to max out all cores on one node only
-   * @return Frame that has potentially more chunks and might be shuffled (if shuffle_training_data is set)
+   * @return Frame that has potentially more chunks
    */
-  private static Frame reBalance(final Frame fr, long seed, boolean local, boolean force_load_balance, boolean shuffle_training_data) {
-    return force_load_balance || shuffle_training_data ? MRUtils.shuffleAndBalance(fr, seed, local, shuffle_training_data) : fr;
+  private Frame reBalance(final Frame fr, boolean local) {
+    final int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
+    if (force_load_balance) {
+      Log.info("Starting load balancing into (at least) " + chunks + " chunks.");
+//      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
+      Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
+      RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
+      H2O.submitTask(rb);
+      rb.join();
+      Frame rebalanced = UKV.get(newKey);
+      Log.info("Load balancing done.");
+      return rebalanced;
+    }
+    else return fr;
   }
 
   /**
