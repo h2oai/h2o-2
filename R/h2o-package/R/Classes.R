@@ -237,7 +237,7 @@ h2o.year <- function(x) {
   .h2o.__binop2("-", res1, 1900)
 }
 
-h2o.month <- function(x){
+h2o.month <- function(x) {
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
   .h2o.__unop2('month', x)
@@ -291,7 +291,7 @@ h2o.table <- function(x) {
   .h2o.__unop2("table", x)
 }
 
-h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
+h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none') {
   if( missing(.data) ) stop('must specify .data')
   if( !(class(.data) %in% c('H2OParsedData', 'H2OParsedDataVA')) ) stop('.data must be an h2o data object')
   if( missing(.variables) ) stop('must specify .variables')
@@ -337,11 +337,11 @@ ddply <- h2o.ddply
 
 `.` <- `h2o..`
 
-h2o.addFunction <- function(object, fun, name){
-  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
+h2o.addFunction <- function(object, fun, name) {
+  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify H2O connection in object')
   if( missing(fun) ) stop('must specify fun')
   if( !missing(name) ){
-    if( class(name) != 'character' ) stop('name must be a name')
+    if( class(name) != 'character' ) stop('name must be a character string')
     fun_name <- name
   } else {
     fun_name <- match.call()[['fun']]

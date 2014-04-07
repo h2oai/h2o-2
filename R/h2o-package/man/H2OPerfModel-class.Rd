@@ -43,7 +43,7 @@ Objects can be created by calls of the form \code{new("H2OPerfModel", ...)}.
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
-\code{\link{h2o.performance}}
+\code{\link{h2o.performance}}, \code{\link{plot.H2OPerfModel}}
 }
 \examples{
 showClass("H2OPerfModel")
