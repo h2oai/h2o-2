@@ -1,5 +1,6 @@
 package water.fvec;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.nbhm.NonBlockingHashMapLong;
 import water.util.Utils;
@@ -87,6 +88,43 @@ public class Vec extends Iced {
 
   protected Vec( Key key, Vec v ) { this(key, v._espc); assert group()==v.group(); }
 
+  public Vec [] makeZeros(int n){return makeZeros(n,null);}
+  public Vec [] makeZeros(int n, String [][] domain){ return makeCons(n, 0, domain);}
+  public Vec [] makeCons(int n, final long l, String [][] domain){
+    if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    final int nchunks = nChunks();
+    Key [] keys = group().addVecs(n);
+    final Vec [] vs = new Vec[keys.length];
+    for(int i = 0; i < vs.length; ++i) vs[i] = new Vec(keys[i],_espc,domain == null?null:domain[i]);
+    new DRemoteTask(){
+      @Override public void lcompute(){
+        addToPendingCount(vs.length);
+        for(int i = 0; i < vs.length; ++i){
+          final int fi = i;
+          new H2O.H2OCountedCompleter(this){
+            @Override public void compute2(){
+              long row=0;                 // Start row
+              Key k;
+              for( int i=0; i<nchunks; i++ ) {
+                long nrow = chunk2StartElem(i+1); // Next row
+                if((k = vs[i].chunkKey(i)).home())
+                  DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
+                row = nrow;
+              }
+            }
+          }.fork();
+        }
+        tryComplete();
+      }
+      @Override public final void lonCompletion( CountedCompleter caller ) {
+        Futures fs = new Futures();
+        for(Vec v:vs) if(v._key.home()) DKV.put(v._key,v,fs);
+        fs.blockForPending();
+      }
+      @Override public void reduce(DRemoteTask drt){}
+    }.invokeOnAllNodes();
+    return vs;
+  }
    /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
   public Vec makeZero()                { return makeCon(0); }
