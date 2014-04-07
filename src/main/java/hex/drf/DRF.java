@@ -71,7 +71,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
     @API(help = "Model parameters", json = true)
-    public final DRF parameters;    // This is used purely for printing values out.
+    private final DRF parameters;    // This is used purely for printing values out.
     public final DRF get_params() { return parameters; }
     public final Request2 job() { return get_params(); }
 
