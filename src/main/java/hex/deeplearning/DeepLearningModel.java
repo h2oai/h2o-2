@@ -719,10 +719,7 @@ public class DeepLearningModel extends Model {
         }
 
         _timeLastScoreEnd = System.currentTimeMillis();
-        // print the freshly scored model to ASCII
-        for (String s : toString().split("\n")) Log.info(s);
         err.scoring_time = System.currentTimeMillis() - now;
-        if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
         // enlarge the error array by one, push latest score back
         if (errors == null) {
           errors = new Errors[]{err};
@@ -732,6 +729,9 @@ public class DeepLearningModel extends Model {
           err2[err2.length-1] = err;
           errors = err2;
         }
+        // print the freshly scored model to ASCII
+        for (String s : toString().split("\n")) Log.info(s);
+        if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
       }
       if (model_info().unstable()) {
         Log.err("Canceling job since the model is unstable (exponential growth observed).");
