@@ -26,9 +26,10 @@
   "dependencies": {
     "jquery": "~2.1.0",
     "jquery-timeago": "~1.4.0",
-    "knockout.js": "~3.0.0",
-    "underscore": "~1.6.0",
     "d3": "~3.4.4",
-    "bootstrap": "~3.1.1"
+    "bootstrap": "~3.1.1",
+    "knockoutjs": "~3.1.0",
+    "finchjs": "~0.5.14",
+    "lodash": "~2.4.1"
   }
 }
