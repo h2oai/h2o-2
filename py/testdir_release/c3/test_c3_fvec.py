@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common
+import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common, h2o_exec as h2e,
 import h2o_print
 
 DO_GLM = True
@@ -20,15 +20,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ### importFolderPath = 'more1_1200_link'
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
-        if len(h2o.nodes)==1:
-            csvFilenameList= [
-                ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
-            ]
-        else:
-            csvFilenameList= [
-                ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 1800),
-            ]
+        csvFilenameList= [
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+            # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 1800),
+        ]
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
