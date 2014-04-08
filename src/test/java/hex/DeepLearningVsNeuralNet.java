@@ -1,7 +1,5 @@
 package hex;
 
-import static hex.NeuralNet.*;
-import static water.util.MRUtils.sampleFrame;
 import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import hex.deeplearning.DeepLearningTask;
@@ -21,6 +19,9 @@ import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
+
+import static hex.NeuralNet.*;
+import static water.util.MRUtils.sampleFrame;
 
 public class DeepLearningVsNeuralNet extends TestUtil {
   Frame _train, _test;
@@ -47,6 +48,9 @@ public class DeepLearningVsNeuralNet extends TestUtil {
   }
 
   @Test public void compare() throws Exception {
+    final long seed = 0xc0ffee;
+    Random rng = new Random(seed);
+
     DeepLearning.Activation[] activations = {
             DeepLearning.Activation.Maxout,
             DeepLearning.Activation.MaxoutWithDropout,
@@ -65,35 +69,35 @@ public class DeepLearningVsNeuralNet extends TestUtil {
             DeepLearning.InitialWeightDistribution.UniformAdaptive
     };
     double[] initial_weight_scales = {
-            1e-3 + 1e-2 * new Random().nextFloat()
+            1e-3 + 1e-2 * rng.nextFloat()
     };
     double[] holdout_ratios = {
-            0.7 + 0.2 * new Random().nextFloat()
+            0.7 + 0.2 * rng.nextFloat()
     };
     int[][] hiddens = {
             {1},
-            {1+new Random().nextInt(50)},
+            {1+rng.nextInt(50)},
             {17,13},
             {20,10,5}
     };
     double[] rates = {
-            0.005 + 1e-2 * new Random().nextFloat()
+            0.005 + 1e-2 * rng.nextFloat()
     };
     int[] epochs = {
-            5 + new Random().nextInt(5)
+            5 + rng.nextInt(5)
     };
     double[] input_dropouts = {
             0,
-            new Random().nextFloat() * 0.5
+            rng.nextFloat() * 0.5
     };
 
-    double p0 = 0.5 * new Random().nextFloat();
-    long pR = 1000 + new Random().nextInt(1000);
-    double p1 = 0.5 + 0.49 * new Random().nextFloat();
-    double l1 = 1e-5 * new Random().nextFloat();
-    double l2 = 1e-5 * new Random().nextFloat();
-    double max_w2 = Double.POSITIVE_INFINITY; // new Random().nextInt(50);
-    double rate_annealing = 1e-7 + new Random().nextFloat() * 1e-6;
+    double p0 = 0.5 * rng.nextFloat();
+    long pR = 1000 + rng.nextInt(1000);
+    double p1 = 0.5 + 0.49 * rng.nextFloat();
+    double l1 = 1e-5 * rng.nextFloat();
+    double l2 = 1e-5 * rng.nextFloat();
+    double max_w2 = Double.POSITIVE_INFINITY; // rng.nextInt(50);
+    double rate_annealing = 1e-7 + rng.nextFloat() * 1e-6;
 
 
 
@@ -134,7 +138,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                           float[] bb = new float[hidden.length+2];
                           long numweights = 0, numbiases = 0;
                           for (int repeat = 0; repeat < num_repeats; ++repeat) {
-                            long seed = new Random().nextLong();
+                            long myseed = seed + repeat;
                             Log.info("");
                             Log.info("STARTING.");
                             Log.info("Running with " + activation.name() + " activation function and " + loss.name() + " loss function.");
@@ -155,7 +159,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               p.source = (Frame)_train.clone();
                               p.response = _train.lastVec();
                               p.ignored_cols = null;
-                              p.seed = seed;
+                              p.seed = myseed;
                               p.hidden = hidden;
                               p.adaptive_rate = false;
                               p.rho = 0;
@@ -201,7 +205,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
                               Vec labels = _train.lastVec();
 
-                              p.seed = seed;
+                              p.seed = myseed;
                               p.hidden = hidden;
                               p.rate = rate;
                               p.max_w2 = max_w2;
