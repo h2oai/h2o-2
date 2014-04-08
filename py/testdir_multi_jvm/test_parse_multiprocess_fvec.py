@@ -12,10 +12,9 @@ DO_SUMMARY = True
 DO_XORSUM = False
 
 DO_BIGFILE = True
-DO_IRIS = False
+DO_IRIS = True
 
 # overrides the calc below if not None
-OUTSTANDING = 5
 
 DO_PARSE_ALSO = True
 UPLOAD_PARSE_DIFF_NODES = True
@@ -55,6 +54,7 @@ def uploadit(n, bucket, path, src_key, hex_key, timeoutSecs=60, retryDelaySecs=1
     if DO_PARSE_ALSO:
         parseit(np1, importPattern, hex_key, 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        h2o.nodes[0].rebalance(before=hex_key, after=hex_key + "_2", chunks=32)
     return (importPattern, hex_key)
 
 
@@ -100,9 +100,7 @@ class Basic(unittest.TestCase):
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         # don't raise exception if we find something bad in h2o stdout/stderr?
         # h2o.nodes[0].sandboxIgnoreErrors = True
-        global OUTSTANDING
-        if not OUTSTANDING:
-            OUTSTANDING = min(10, len(h2o.nodes))
+        OUTSTANDING = min(10, len(h2o.nodes))
 
         if DO_IRIS:
             global DO_BIGFILE

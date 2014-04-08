@@ -1528,10 +1528,18 @@ class H2O(object):
             timeout=timeoutSecs)
         return a
 
-    def rebalance(self, before=None, after=None, seed=None, timeoutSecs=180):
+    def rebalance(self, timeoutSecs=180, **kwargs):
+        params_dict = {
+            # now we should default to a big number, so we see everything
+            'before': None,
+            'after': None,
+            'chunks': None,
+            'seed': None,
+            }
+        params_dict.update(kwargs)
         a = self.__do_json_request('2/ReBalance.json',
-            timeout=timeoutSecs,
-            params={"path": before, "after": after, "seed": seed}
+            params=params_dict,
+            timeout=timeoutSecs
         )
         verboseprint("\n rebalance result:", dump_json(a))
         return a
