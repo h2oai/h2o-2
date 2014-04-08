@@ -2,26 +2,21 @@ package water;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import com.google.common.io.Closeables;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import org.junit.*;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+
 import water.Job.JobState;
-import water.deploy.Node;
-import water.deploy.NodeVM;
-import water.deploy.VM;
+import water.deploy.*;
 import water.fvec.*;
 import water.parser.ParseDataset;
 import water.util.*;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
@@ -337,24 +332,19 @@ public class TestUtil {
 
   public static Frame parseFromH2OFolder(String path) {
     File file = new File(VM.h2oFolder(), path);
-    return parseFrame(null, file);
+    return FrameUtils.parseFrame(null, file);
   }
 
   public static Frame parseFrame(File file) {
-    return parseFrame(null, file);
+    return FrameUtils.parseFrame(null, file);
   }
 
   public static Frame parseFrame(Key okey, String path) {
-    return parseFrame(okey, find_test_file(path));
+    return FrameUtils.parseFrame(okey, find_test_file(path));
   }
 
-  public static Frame parseFrame(Key okey, File file) {
-    if( !file.exists() )
-      throw new RuntimeException("File not found " + file);
-    if(okey == null)
-      okey = Key.make(file.getName());
-    Key fkey = NFSFileVec.make(file);
-    return ParseDataset2.parse(okey, new Key[] { fkey });
+  public static Frame parseFrame(Key okey, File f) {
+    return FrameUtils.parseFrame(okey, f);
   }
 
   public static Vec vec(int...rows) { return vec(null, null, rows); }

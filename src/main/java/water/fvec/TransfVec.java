@@ -67,8 +67,8 @@ public class TransfVec extends WrappedVec {
       nc._xs = MemoryManager.malloc4(_len);
       nc._ls = MemoryManager.malloc8(_len);
       for( int i=0; i<_len; i++ ) {
-        if(isNA0(i))nc.addNA();
-        else nc.addNum(at80(i),0);
+        if(isNA0(i)) nc.setNA_impl2(i);
+        else nc._ls[i] = at80(i);
       }
       return nc;
     }

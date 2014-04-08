@@ -9,18 +9,18 @@ import hex.GridSearch;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeansModel;
-import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetModel;
+import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
 import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM;
 import hex.gbm.GBM.GBMModel;
+import hex.glm.GLM2;
 import hex.glm.GLMModelView;
-import hex.deeplearning.DeepLearning;
-import hex.deeplearning.DeepLearningModel;
+import hex.nb.NBModelView;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
-import hex.nb.NBModelView;
 import hex.rf.RFModel;
 import water.*;
 import water.ValueArray.Column;
@@ -345,8 +345,9 @@ public class Inspect extends Request {
           + DRF.link(key, "Distributed Random Forest") + ", "
           + GBM.link(key, "GBM") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
+          + GLM2.link(key, "Generalized Linear Modeling (beta)") +", "
           + KMeans.link(key, "KMeans") + ", "
-          + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
+//          + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
           + DeepLearning.link(key, DeepLearning.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
