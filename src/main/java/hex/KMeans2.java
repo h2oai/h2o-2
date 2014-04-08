@@ -340,6 +340,8 @@ public class KMeans2 extends ColumnsJob {
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
 
+    @Override public double mse() { return total_within_SS; }
+
     @Override public float progress() {
       return Math.min(1f, iterations / (float) max_iter);
     }

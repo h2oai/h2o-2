@@ -102,15 +102,14 @@ greatly.
 
     The number of passes over the training dataset to be carried out. 
 
-**mini batch**
+**train samples per iteration**
 
     The number of training data rows to be processed per iteration. Note that
-    independent of this parameter, each row is used immediately to
-    update the model with (online) stochastic gradient descent. The
-    mini batch size controls the synchronization period between nodes
-    in a distributed environment and the frequency at which scoring
-    and model cancellation can happen. For example, if mini-batch is
-    set to 10,000 on H2O running on 4 nodes, then each node will
+    independent of this parameter, each row is used immediately to update the model
+    with (online) stochastic gradient descent. This parameter controls the
+    synchronization period between nodes in a distributed environment and the
+    frequency at which scoring and model cancellation can happen. For example, if
+    it is set to 10,000 on H2O running on 4 nodes, then each node will
     process 2,500 rows per iteration, sampling randomly from their local data.
     Then, model averaging between the nodes takes place, and scoring can happen
     (dependent on scoring interval and duty factor). Special values are 0 for
@@ -227,7 +226,7 @@ greatly.
 **score interval**
 
     The minimum time (in seconds) to elapse between model scoring. The actual
-    interval is determined by the size of mini batch and the scoring duty cycle.
+    interval is determined by the number of training samples per iteration and the scoring duty cycle.
 
 **score training samples**
 
@@ -312,9 +311,9 @@ greatly.
 **shuffle training data** 
 
     Enable shuffling of training data (on each node). This option is
-    recommended if training data is replicated on N nodes, and the mini batch size
+    recommended if training data is replicated on N nodes, and the number of training samples per iteration
     is close to N times the dataset size, where all nodes train will (almost) all
-    the data. It is automatically enabled if the mini batch is set to -1 (or to N
+    the data. It is automatically enabled if the number of training samples per iteration is set to -1 (or to N
     times the dataset size or larger).
 
 Interpreting the Model
