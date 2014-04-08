@@ -111,6 +111,7 @@ public class Vec extends Iced {
                   DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
                 row = nrow;
               }
+              tryComplete();;
             }
           }.fork();
         }
