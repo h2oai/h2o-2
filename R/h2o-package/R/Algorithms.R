@@ -655,7 +655,8 @@ h2o.deeplearning <- function(x, y, data, classification=TRUE, activation='Tanh',
   # BUG: Why is the confusion matrix returning an extra row and column with all zeroes?
   cm = confusion$cm[-length(confusion$cm)]
   cm = lapply(cm, function(x) { x[-length(x)] })
-  result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+  # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+  result$confusion = .build_cm(cm, confusion$domain)
   result$train_class_error = errs$train_err
   result$train_sqr_error = errs$train_mse
   result$valid_class_error = errs$valid_err
