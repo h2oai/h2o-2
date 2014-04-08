@@ -58,7 +58,7 @@ public class JUnitRunnerDebug {
       tests.add(DeepLearningProstateTest.class); //test Deep Learning
       tests.add(NeuronsTest.class); //test Deep Learning
       tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
-      tests.add(Dropout.class); //test NN Dropput
+      tests.add(DropoutTest.class); //test NN Dropput
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}
