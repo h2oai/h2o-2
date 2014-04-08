@@ -11,7 +11,7 @@
 
     "create_json": true,
 
-    "hdfs_name_node": "10.71.0.100",
+    "hdfs_name_node": "ch-0",
     "hdfs_version": "cdh5",
     "use_hdfs": true,
 
