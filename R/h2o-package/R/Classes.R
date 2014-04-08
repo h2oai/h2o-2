@@ -942,7 +942,7 @@ summary.H2OParsedData <- function(object, ...) {
                  paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep=""))
     }
     else {
-      top.ix <- sort.int(col$hcnt, decreasing=T, index.return=T)$ix[1:6]
+      top.ix <- sort.int(col$hcnt, decreasing=TRUE, index.return=TRUE)$ix[1:6]
       if(is.null(col$hbrk)) domains <- top.ix[1:6] else domains <- col$hbrk[top.ix]
       counts <- col$hcnt[top.ix]
       
