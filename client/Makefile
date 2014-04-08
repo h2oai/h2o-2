@@ -73,7 +73,7 @@ clean:
 setup: check
 	@echo Prerequisites OK. Installing dependencies...
 	npm install
-	./node_modules/bower/bin/bower install
+	bower install
 	@echo Done!
 
 reset: clean
