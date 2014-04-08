@@ -5,7 +5,7 @@
 Compute Hit Ratio from H2O Classification Predictions 
 }
 \description{
-Compute the hit ratios from a prediction dataset and a column of actual (reference) responses in H2O. Note that the hit ratio can only be calculated for classification models.
+Compute the hit ratios from a prediction dataset and a column of actual (reference) responses in H2O. The hit ratio is the percentage of instances where the actual class of an observation is in the top k classes predicted by the model, where k is specified by the user. Note that the hit ratio can only be calculated for classification models.
 }
 \usage{
 h2o.hitRatio(prediction, reference, k = 10, seed = 0)
@@ -18,7 +18,7 @@ h2o.hitRatio(prediction, reference, k = 10, seed = 0)
   \item{seed}{(Optional) Random number seed for breaking ties between equal probabilities.}
 }
 \value{
-Returns a numeric vector with the hit ratio for every level in the reference domain.
+Returns a numeric vector with the hit ratio for every level in the reference domain. 
 }
 \seealso{
 \code{\linkS4class{H2OParsedData}}
