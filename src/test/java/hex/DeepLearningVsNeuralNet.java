@@ -361,8 +361,8 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                           /**
                            * Tolerances
                            */
-                          final float abseps = threaded ? 1e-2f : 1e-4f;
-                          final float releps = threaded ? 1e-2f : 1e-4f;
+                          final float abseps = threaded ? 1e-2f : 1e-7f;
+                          final float releps = threaded ? 1e-2f : 1e-5f;
 
                           // training set scoring
                           Log.info("NeuralNet     train error " + reftrainerr);
