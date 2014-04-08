@@ -13,6 +13,9 @@
 
 import sys, os
 
+sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath('./test_py_module'))
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -25,7 +28,16 @@ import sys, os
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.pngmath', 'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode', 'sphinxcontrib.fulltoc']
+extensions = [
+    'sphinx.ext.pngmath',
+    'sphinx.ext.ifconfig',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+]
+
+# Math
+mathjax_path = "http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -35,24 +47,6 @@ source_suffix = '.rst'
 
 #themes
 # html_theme = "default"
-html_theme_options = {
-    "footerbgcolor": "black",
-    "footertextcolor": "yellow",
-    "sidebarbgcolor": "#FBE91F",
-    "sidebartextcolor": "black",
-    "sidebarlinkcolor": "black",
-#    "stickysidebar":"true",
-    "relbarbgcolor": "black",
-    "relbartextcolor": "yellow",
-    "relbarlinkcolor": "yellow",
-    "headtextcolor":"black",
-    "headlinkcolor":"black",
-    "textcolor":"black",
-    "linkcolor":"black",
-    "codetextcolor":"black",
-    "bodyfont":"HelveticaNeue-Light",
-    "bgcolor":"white"
-}
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -61,7 +55,7 @@ html_theme_options = {
 master_doc = 'index'
 
 # General information about the project.
-project = u'H2O'
+project = u'H2O Documentation'
 copyright = u'2013, 0xdata, Inc'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -115,7 +109,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -123,7 +117,7 @@ html_theme = 'default'
 #html_theme_options = {sidebarbgcolor:'yellow'}
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_path = ["../../h2o-docs-theme"]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -171,7 +165,7 @@ html_static_path = ['_static']
 #html_split_index = False
 
 # If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
+html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 #html_show_sphinx = True
