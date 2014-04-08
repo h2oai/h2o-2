@@ -107,7 +107,7 @@ public class Vec extends Iced {
               Key k;
               for( int i=0; i<nchunks; i++ ) {
                 long nrow = chunk2StartElem(i+1); // Next row
-                if((k = vs[i].chunkKey(i)).home())
+                if((k = vs[fi].chunkKey(i)).home())
                   DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
                 row = nrow;
               }
