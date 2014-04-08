@@ -4,8 +4,12 @@
 
 ## Setup
 
-**Step 1** Download and install Node.js from [http://nodejs.org/download/](http://nodejs.org/download/).
-As of Node.js version 0.6.3, npm is bundled and installed automatically with the environment.
+**Step 1** Install Node and Bower
+
+Note: You might need to `sudo` these commands.
+
+    brew install node
+    npm install -g bower
 
 **Step 2** Setup local dependencies. Assuming you've already cloned the h2o git repo -
 
