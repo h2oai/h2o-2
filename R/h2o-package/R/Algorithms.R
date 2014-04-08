@@ -270,7 +270,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
   x_ignore = setdiff(1:ncol(data), c(args$x_i, args$y_i)) - 1
   if(length(x_ignore) == 0) x_ignore = ''
 
-  if(length(alpha) == 1 && length(lambda) == 1) {
+  if(length(alpha) == 1) {
     rand_glm_key = .h2o.__uniqID("GLM2Model")
     if(family != "tweedie")
       res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize))
@@ -363,7 +363,8 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 
   result = list()
   params$alpha = model$alpha
-  params$lambda = model$lambdas[[model$best_lambda_idx+1]]
+  params$lambda = model$lambdas
+  params$best_lambda = model$lambdas[[model$best_lambda_idx+1]]
   result$params = params
   if(model$glm$family == "tweedie")
     result$params$family = .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
