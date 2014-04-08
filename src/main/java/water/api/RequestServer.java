@@ -2,22 +2,22 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
-import hex.NeuralNet;
 import hex.NeuralNet.NeuralNetScore;
 import hex.ReBalance;
+import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
 import hex.glm.GLMGridView;
 import hex.glm.GLMModelView;
 import hex.glm.GLMProgress;
-import hex.deeplearning.DeepLearning;
-import hex.nb.*;
+import hex.nb.NBModelView;
+import hex.nb.NBProgressPage;
+import hex.nb.NaiveBayes;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
@@ -86,12 +86,12 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM",                        "Model");
     Request.addToNavbar(registerRequest(new RF()),          "Single Node RF",             "Model");
+    Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",              "Model");
     Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",         "Model");
-    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
-    Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning (Beta)",       "Model");
+//    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
