@@ -66,7 +66,10 @@ public class TransfVec extends WrappedVec {
     @Override NewChunk inflate_impl(NewChunk nc) {
       nc._xs = MemoryManager.malloc4(_len);
       nc._ls = MemoryManager.malloc8(_len);
-      for( int i=0; i<_len; i++ ) nc._ls[i] = at8_impl(i);
+      for( int i=0; i<_len; i++ ) {
+        if(isNA0(i))nc.addNA();
+        else nc.addNum(at80(i),0);
+      }
       return nc;
     }
     @Override public AutoBuffer write(AutoBuffer bb) { throw new UnsupportedOperationException(); }
