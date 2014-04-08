@@ -299,7 +299,6 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               CM.vpredict = fpreds.vecs()[0];
                               CM.invoke();
                               StringBuilder sb = new StringBuilder();
-                              CM.toASCII(sb);
                               trainerr += new ConfusionMatrix(CM.cm).err();
                               for (String s : sb.toString().split("\n")) Log.info(s);
                               fpreds.delete();
@@ -312,6 +311,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               CM.vpredict = fpreds2.vecs()[0];
                               CM.invoke();
                               sb = new StringBuilder();
+                              CM.toASCII(sb);
                               testerr += new ConfusionMatrix(CM.cm).err();
                               for (String s : sb.toString().split("\n")) Log.info(s);
                               fpreds2.delete();
