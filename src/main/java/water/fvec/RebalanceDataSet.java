@@ -52,13 +52,10 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
       sum += s;
     }
     assert espc[espc.length-1] == _in.numRows():"unexpected number of rows, expected " + _in.numRows() + ", got " + espc[espc.length-1];
-    Vec v0 = new Vec(Vec.newKey(),espc);
-    Vec [] newVecs = new Vec[_in.numCols()];
     final Vec [] srcVecs = _in.vecs();
-    for(int i = 0; i < newVecs.length; ++i)newVecs[i] = v0.makeZero(srcVecs[i].domain());
-    _out = new Frame(_okey,_in.names(), newVecs);
+    _out = new Frame(_okey,_in.names(), new Vec(Vec.newKey(),espc).makeZeros(srcVecs.length));
     _out.delete_and_lock(_jobKey);
-    new RebalanceTask(this,srcVecs).asyncExec(newVecs);
+    new RebalanceTask(this,srcVecs).asyncExec(_out);
   }
 
   @Override public void onCompletion(CountedCompleter caller){

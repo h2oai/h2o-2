@@ -63,10 +63,9 @@ public class HitRatio extends Request2 {
 
       if (max_k > predict.numCols()-1)
         throw new IllegalArgumentException("K cannot be larger than " + String.format("%,d", predict.numCols()-1));
-      final Frame actual_predict = new Frame(predict.names(), predict.vecs());
+      final Frame actual_predict = new Frame(predict.names().clone(), predict.vecs().clone());
       actual_predict.replace(0, va); // place actual labels in first column
       hit_ratios = new HitRatioTask(max_k, seed).doAll(actual_predict).hit_ratios();
-
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
