@@ -127,9 +127,10 @@ class Basic(unittest.TestCase):
                 for execExpr in exprList:
                     for r in range(10):
                         start = time.time()
-                        (execResult, fpResult) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
+                        (execResult, fpResult) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey='h', timeoutSecs=300)
                         print r, 'exec took', time.time() - start, 'seconds'
                         print r, "execResult:", h2o.dump_json(execResult)
+                        h2o_cmd.runStoreView()
                         ullResult = h2o_util.doubleToUnsignedLongLong(fpResult)
                         ullResultList.append((ullResult, fpResult))
 

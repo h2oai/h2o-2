@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
             response = 'response'
             skipSrcOutputHeader = 1
             skipPredictHeader = 1
-            trees = 6
+            trees = 40
             bucket = 'smalldata'
             csvPathname = 'iris/iris2.csv'
             hexKey = 'iris2.csv.hex'
@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
             response = 'C54'
             skipSrcOutputHeader = 1
             skipPredictHeader = 1
-            trees = 6
+            trees = 40
             # try smaller data set compared to covtype
             bucket = 'home-0xdiag-datasets'
             csvPathname = 'standard/covtype.shuffled.10pct.data'

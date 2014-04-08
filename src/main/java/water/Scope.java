@@ -24,11 +24,11 @@ public class Scope {
   private final Stack<HashSet<Key>> _keys = new Stack<HashSet<Key>>();
 
   static public void enter() { _scope.get()._keys.push(new HashSet<Key>()); }
-  static public void exit () { 
-    Futures fs = new Futures();
-    for( Key key : _scope.get()._keys.pop() )
-      UKV.remove(key,fs);
-    fs.blockForPending();
+  static public void exit () {
+    Stack<HashSet<Key>> keys = _scope.get()._keys;
+    if( keys.size()==0 ) return;
+    for( Key key : keys.pop() )
+      Lockable.delete(key);
   }
   static public Key exit(Key key) { throw H2O.unimpl(); }
   static public Key[] exit(Key... key) { throw H2O.unimpl(); }

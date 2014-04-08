@@ -15,7 +15,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
         polls += 1
         # get utilization and print it
         # any busy jobs
-        a = h2o.nodes[0].jobs_admin(timeoutSecs=30)
+        a = h2o.nodes[0].jobs_admin(timeoutSecs=60)
         busy = False
         for j in a['jobs']:
             if j['end_time']=='' and not (j['cancelled'] or (j['result'].get('val', None)=='CANCELLED')):
@@ -102,7 +102,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
 # what the heck, just look for a match in any of the 3 (no regex)
 # if pattern is not None, only stall on jobs that match the pattern (in any of those 3)
 
-def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
+def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=60, pollTimeoutSecs=60, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
     wait = True
     waitTime = 0
     ignoredJobs = set()

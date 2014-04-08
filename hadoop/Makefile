@@ -10,7 +10,7 @@ cdh4_JAR_DIR=../lib/hadoop/cdh4
 cdh4_JARS=$(cdh4_JAR_DIR)/hadoop-common.jar${SEP}${cdh4_JAR_DIR}/hadoop-annotations-2.0.0-cdh4.2.0.jar${SEP}$(cdh4_JAR_DIR)/hadoop-mapreduce-client-core-2.0.0-cdh4.2.0.jar
 
 cdh5_JAR_DIR=../lib/hadoop/cdh5
-cdh5_JARS=$(cdh5_JAR_DIR)/common/hadoop-common-2.2.0-cdh5.0.0-beta-2.jar${SEP}${cdh5_JAR_DIR}/common/lib/hadoop-annotations-2.2.0-cdh5.0.0-beta-2.jar${SEP}$(cdh5_JAR_DIR)/mapreduce2/hadoop-mapreduce-client-core-2.2.0-cdh5.0.0-beta-2.jar
+cdh5_JARS=$(cdh5_JAR_DIR)/hadoop-common-2.2.0-cdh5.0.0-beta-2.jar${SEP}${cdh5_JAR_DIR}/hadoop-annotations-2.2.0-cdh5.0.0-beta-2.jar${SEP}$(cdh5_JAR_DIR)/hadoop-mapreduce-client-core-2.2.0-cdh5.0.0-beta-2.jar
 
 cdh4_yarn_JAR_DIR=../lib/hadoop/cdh4_yarn
 cdh4_yarn_JAR_DIR=../lib/hadoop/cdh4_yarn

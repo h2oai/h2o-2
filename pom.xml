@@ -1,0 +1,224 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- Share H2O-parent POM -->
+  <parent>
+    <groupId>ai.h2o</groupId>
+    <artifactId>h2o-parent</artifactId>
+    <version>2.5-SNAPSHOT</version>
+  </parent>
+
+  <!-- This artifact setup. 
+      NOTE: groupId, version are inherited from parent POM 
+  -->
+  <artifactId>h2o-core</artifactId>
+  <packaging>jar</packaging>
+  <name>H2O Core</name>
+  <description>A core of distributed platform for large data analysis.</description>
+  
+  <!-- List of build properties. -->
+  <properties>
+    <!-- Default compile time version of Hadoop client: in H2O lib-directory structured referenced as cdh3. -->
+    <h2o.hadoop.version>0.20.2-cdh3u6</h2o.hadoop.version>
+  </properties>
+
+  <!-- Repositories -->
+  <repositories>
+    <!-- Cloudera release repository -->
+    <repository>
+        <id>cloudera-releases</id>
+        <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+        <releases>
+          <enabled>true</enabled>
+        </releases>
+        <snapshots>
+          <enabled>false</enabled>
+        </snapshots>
+      </repository>
+  </repositories>
+  <!-- Project dependencies -->
+  <dependencies>
+    <!-- = Test dependencies = -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.9.5</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- = Compile time dependencies = -->
+    <!-- == Apache dependencies == -->
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.4</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.1.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.15</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>mail</artifactId>
+          <groupId>javax.mail</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jms</artifactId>
+          <groupId>javax.jms</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jmxtools</artifactId>
+          <groupId>com.sun.jdmk</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jmxri</artifactId>
+          <groupId>com.sun.jmx</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- ===Apache math3 dependency=== -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-math3</artifactId>
+      <version>3.2</version>
+    </dependency>
+    <!-- ==Google dependencies== -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>12.0.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.2.2</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==Jama is given explicitely - it was modified and compiled by @tomas == -->
+    <dependency>
+      <groupId>gov.nist.math</groupId>
+      <artifactId>jama</artifactId>
+      <version>1.0.3</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==POI dependencies== -->
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
+      <version>3.8</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==jets3t dependencies== -->
+    <dependency>
+      <groupId>net.java.dev.jets3t</groupId>
+      <artifactId>jets3t</artifactId>
+      <version>0.6.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==Java AWS SDK dependencies== -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk</artifactId>
+      <version>1.3.27</version>
+      <scope>compile</scope>
+    </dependency>   
+    <!-- ==Javassist dependency -->
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <version>3.16.1-GA</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==Jogamp dependencies for NN== -->
+    <dependency>
+      <groupId>org.jogamp.gluegen</groupId>
+      <artifactId>gluegen-rt-main</artifactId>
+      <version>2.0.2-rc12</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jogamp.jocl</groupId>
+      <artifactId>jocl</artifactId>
+      <version>2.0.2-rc12</version>
+    </dependency>
+    <!-- ==Hadoop core dependencies== -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <version>${h2o.hadoop.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- ==Joda time dependencies== -->
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <version>2.3</version>
+    </dependency>
+  </dependencies>
+  <!-- Configure build -->
+  <build>
+    <defaultGoal>package</defaultGoal>
+    <!-- Setup plugins for this POM and all kids POMs. -->
+    <pluginManagement>
+    <plugins>
+      <!-- Configure creation of source package. -->
+      <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-source-plugin</artifactId>
+         <version>2.2.1</version>
+         <configuration>
+           <attach>true</attach>
+         </configuration>
+         <executions>
+           <execution>
+             <id>create-source-jar</id>
+             <goals>
+               <goal>jar-no-fork</goal>
+             </goals>
+           </execution>
+         </executions>
+       </plugin>
+       <!-- Configure invocation of tests. -->
+       <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-surefire-plugin</artifactId>
+         <version>2.12.4</version>
+         <configuration>
+           <!-- FIXME: we still have no proper JUnit runner for H2O tests -->
+           <skipTests>true</skipTests>
+         </configuration>
+       </plugin>
+    </plugins>
+    </pluginManagement>
+    <!-- Plugins activation and setup -->
+    <plugins>
+        <!-- FIXME: DatasetCompare serves as a sandbox for Tomas. It should be
+             user private and removed! -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <excludes>
+              <exclude>water/fvec/DatasetCompare.java</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+    </plugins>
+  </build>
+
+<!-- TODO: have profiles for each end-user: Mr. Jenkins, developer, ... -->
+</project>

@@ -162,7 +162,7 @@ class Basic(unittest.TestCase):
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
-            self.assertAlmostEqual(classification_error, 5, delta=5, 
+            self.assertAlmostEqual(classification_error, 50, delta=50, 
                 msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest2)

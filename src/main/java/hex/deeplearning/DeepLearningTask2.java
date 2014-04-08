@@ -44,7 +44,7 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
   public void lcompute() {
     _res = new DeepLearningTask(_model_info, _sync_fraction);
     _res.setCompleter(this);
-    _res.dfork(0, _fr, true /*run_local*/);
+    _res.asyncExec(0, _fr, true /*run_local*/);
   }
 
   /**

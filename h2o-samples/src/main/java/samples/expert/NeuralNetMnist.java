@@ -94,7 +94,7 @@ public class NeuralNetMnist extends Job {
     _trainer.start();
   }
 
-  @Override protected JobState execImpl() {
+  @Override protected void execImpl() {
     Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
     Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
     train = trainf.vecs();
@@ -145,7 +145,6 @@ public class NeuralNetMnist extends Job {
       }
     }, 0, 10);
     startTraining(ls);
-    return JobState.RUNNING;
   }
 
   // Remaining code was used to shuffle & convert to CSV

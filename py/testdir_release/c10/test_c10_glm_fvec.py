@@ -98,11 +98,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
         # GLMScore Test***********************************************************
-        start = time.time()
-        # score with same dataset (will change to recreated dataset with one less enum
-        glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
-            model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-        print "glmScore end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+        # start = time.time()
+        # # score with same dataset (will change to recreated dataset with one less enum
+        # glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
+        #     model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
+        # print "glmScore end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
          
 
 if __name__ == '__main__':

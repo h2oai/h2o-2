@@ -1,17 +1,15 @@
 package water.deploy;
 
-import water.Boot;
-import water.H2O;
+import java.io.File;
+import java.io.Serializable;
+import java.util.*;
+
+import water.*;
 import water.H2O.FlatFileEntry;
-import water.TestUtil;
 import water.deploy.VM.Params;
 import water.deploy.VM.Watchdog;
 import water.util.Log;
 import water.util.Utils;
-
-import java.io.File;
-import java.io.Serializable;
-import java.util.*;
 
 /**
  * Deploys and starts a remote cluster.
@@ -144,7 +142,7 @@ public class Cloud {
         w.start();
       }
       H2O.main(Utils.append(workerArgs, args));
-      TestUtil.stall_till_cloudsize(1 + workers.size());
+      stall_till_cloudsize(1 + workers.size(), 10000); // stall for cloud 10seconds
       Log.unwrap(System.out, "");
       Log.unwrap(System.out, "Cloud is up, local port " + FORWARDED_LOCAL_PORT + " forwarded");
       Log.unwrap(System.out, "Go to http://127.0.0.1:" + FORWARDED_LOCAL_PORT);
@@ -155,6 +153,10 @@ public class Cloud {
         LaunchJar.weavePackages(pack);
         Boot.run(args);
       }
+    }
+    public static void stall_till_cloudsize(int x, long ms) {
+      H2O.waitForCloudSize(x, ms);
+      UKV.put(Job.LIST, new Job.List()); // Jobs.LIST must be part of initial keys
     }
   }
 }

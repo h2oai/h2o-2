@@ -1,7 +1,5 @@
 package hex;
 
-import static hex.NeuralNet.*;
-import static water.util.MRUtils.sampleFrame;
 import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import hex.deeplearning.DeepLearningTask;
@@ -21,6 +19,9 @@ import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
+
+import static hex.NeuralNet.*;
+import static water.util.MRUtils.sampleFrame;
 
 public class DeepLearningVsNeuralNet extends TestUtil {
   Frame _train, _test;
@@ -47,6 +48,9 @@ public class DeepLearningVsNeuralNet extends TestUtil {
   }
 
   @Test public void compare() throws Exception {
+    final long seed = 0xc0ffee;
+    Random rng = new Random(seed);
+
     DeepLearning.Activation[] activations = {
             DeepLearning.Activation.Maxout,
             DeepLearning.Activation.MaxoutWithDropout,
@@ -65,35 +69,35 @@ public class DeepLearningVsNeuralNet extends TestUtil {
             DeepLearning.InitialWeightDistribution.UniformAdaptive
     };
     double[] initial_weight_scales = {
-            1e-3 + 1e-2 * new Random().nextFloat()
+            1e-3 + 1e-2 * rng.nextFloat()
     };
     double[] holdout_ratios = {
-            0.7 + 0.2 * new Random().nextFloat()
+            0.7 + 0.2 * rng.nextFloat()
     };
     int[][] hiddens = {
             {1},
-            {1+new Random().nextInt(50)},
+            {1+rng.nextInt(50)},
             {17,13},
             {20,10,5}
     };
     double[] rates = {
-            0.005 + 1e-2 * new Random().nextFloat()
+            0.005 + 1e-2 * rng.nextFloat()
     };
     int[] epochs = {
-            5 + new Random().nextInt(5)
+            5 + rng.nextInt(5)
     };
     double[] input_dropouts = {
             0,
-            new Random().nextFloat() * 0.5
+            rng.nextFloat() * 0.5
     };
 
-    double p0 = 0; //0.5 * new Random().nextFloat();
-    long pR = 1; //1000 + new Random().nextInt(1000);
-    double p1 = 0; //0.5 + 0.49 * new Random().nextFloat();
-    double l1 = 0; //1e-5 * new Random().nextFloat();
-    double l2 = 0; //1e-5 * new Random().nextFloat();
-    double max_w2 = Double.POSITIVE_INFINITY; //new Random().nextInt(50);
-    double rate_annealing = 0; //1e-7 + new Random().nextFloat() * 1e-6;
+    double p0 = 0.5 * rng.nextFloat();
+    long pR = 1000 + rng.nextInt(1000);
+    double p1 = 0.5 + 0.49 * rng.nextFloat();
+    double l1 = 1e-5 * rng.nextFloat();
+    double l2 = 1e-5 * rng.nextFloat();
+    double max_w2 = Double.POSITIVE_INFINITY; // rng.nextInt(50);
+    double rate_annealing = 1e-7 + rng.nextFloat() * 1e-6;
 
 
 
@@ -134,7 +138,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                           float[] bb = new float[hidden.length+2];
                           long numweights = 0, numbiases = 0;
                           for (int repeat = 0; repeat < num_repeats; ++repeat) {
-                            long seed = new Random().nextLong();
+                            long myseed = seed + repeat;
                             Log.info("");
                             Log.info("STARTING.");
                             Log.info("Running with " + activation.name() + " activation function and " + loss.name() + " loss function.");
@@ -155,7 +159,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               p.source = (Frame)_train.clone();
                               p.response = _train.lastVec();
                               p.ignored_cols = null;
-                              p.seed = seed;
+                              p.seed = myseed;
                               p.hidden = hidden;
                               p.adaptive_rate = false;
                               p.rho = 0;
@@ -179,12 +183,14 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               p.validation = null;
                               p.quiet_mode = true;
                               p.fast_mode = fast_mode;
-                              p.mini_batch = 0; //sync once per period
+                              p.train_samples_per_iteration = 0; //sync once per period
                               p.ignore_const_cols = false; //same as old NeuralNet code
                               p.shuffle_training_data = false; //same as old NeuralNet code
                               p.nesterov_accelerated_gradient = true; //same as old NeuralNet code
                               p.classification_stop = -1; //don't stop early -> need to compare against old NeuralNet code, which doesn't stop either
                               p.force_load_balance = false; //keep 1 chunk for reproducibility
+                              p.replicate_training_data = false;
+                              p.single_node_mode = true;
                               p.invoke();
 
                               mymodel = UKV.get(p.dest());
@@ -199,7 +205,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
                               Vec labels = _train.lastVec();
 
-                              p.seed = seed;
+                              p.seed = myseed;
                               p.hidden = hidden;
                               p.rate = rate;
                               p.max_w2 = max_w2;
@@ -266,14 +272,14 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                             for (int n=1; n<ls.length; ++n) {
                               Neurons l = neurons[n];
                               Layer ref = ls[n];
-                              for (int o = 0; o < l._a.length; o++) {
-                                for (int i = 0; i < l._previous._a.length; i++) {
-                                  a[n] += ref._w[o * l._previous._a.length + i];
-                                  b[n] += l._w[o * l._previous._a.length + i];
+                              for (int o = 0; o < l._a.size(); o++) {
+                                for (int i = 0; i < l._previous._a.size(); i++) {
+                                  a[n] += ref._w[o * l._previous._a.size() + i];
+                                  b[n] += l._w.raw()[o * l._previous._a.size() + i];
                                   numweights++;
                                 }
                                 ba[n] += ref._b[o];
-                                bb[n] += l._b[o];
+                                bb[n] += l._b.get(o);
                                 numbiases++;
                               }
                             }
@@ -283,17 +289,17 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                              * Note: Reference and H2O each do their internal data normalization,
                              * so we must use their "own" test data, which is assumed to be created correctly.
                              */
+                            water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
                             // Deep Learning scoring
                             {
                               Frame fpreds = mymodel.score(_train); //[0] is label, [1]...[4] are the probabilities
-                              water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+                              CM = new water.api.ConfusionMatrix();
                               CM.actual = _train;
                               CM.vactual = _train.lastVec();
                               CM.predict = fpreds;
                               CM.vpredict = fpreds.vecs()[0];
                               CM.invoke();
                               StringBuilder sb = new StringBuilder();
-                              CM.toASCII(sb);
                               trainerr += new ConfusionMatrix(CM.cm).err();
                               for (String s : sb.toString().split("\n")) Log.info(s);
                               fpreds.delete();
@@ -306,11 +312,13 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               CM.vpredict = fpreds2.vecs()[0];
                               CM.invoke();
                               sb = new StringBuilder();
+                              CM.toASCII(sb);
                               testerr += new ConfusionMatrix(CM.cm).err();
                               for (String s : sb.toString().split("\n")) Log.info(s);
                               fpreds2.delete();
                             }
                             // NeuralNet scoring
+                            long [][] cm;
                             {
                               Log.info("\nNeuralNet Scoring:");
                               //training set
@@ -325,7 +333,6 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               input.vecs = data;
                               input._len = data[0].length();
                               ((Layer.VecSoftmax) ls[ls.length-1]).vec = labels;
-                              long [][] cm;
                               int classes = ls[ls.length - 1].units; //WARNING: only works if training set is large enough to have all classes
                               cm = new long[classes][classes];
                               NeuralNet.Errors test = NeuralNet.eval(ls, 0, cm);
@@ -334,6 +341,10 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               reftesterr += test.classification;
                               adapted[1].delete();
                             }
+                            Assert.assertEquals(cm[0][0], CM.cm[0][0]);
+                            Assert.assertEquals(cm[1][0], CM.cm[1][0]);
+                            Assert.assertEquals(cm[0][1], CM.cm[0][1]);
+                            Assert.assertEquals(cm[1][1], CM.cm[1][1]);
 
                             // cleanup
                             mymodel.delete();
@@ -350,7 +361,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                           /**
                            * Tolerances
                            */
-                          final float abseps = threaded ? 1e-2f : 1e-5f;
+                          final float abseps = threaded ? 1e-2f : 1e-7f;
                           final float releps = threaded ? 1e-2f : 1e-5f;
 
                           // training set scoring

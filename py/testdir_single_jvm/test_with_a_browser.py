@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         if (localhost):
             h2o.build_cloud(1, use_hdfs=True, 
-            hdfs_name_node='10.71.0.100', hdfs_version='cdh5',
+            hdfs_name_node='192.168.1.180', hdfs_version='cdh5',
             java_heap_GB=4, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(1, base_port=54321)
@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_poker_1m_rf_w_browser(self):
+    def test_with_a_browser(self):
         h2b.browseTheCloud()
 
         if not h2o.browse_disable:

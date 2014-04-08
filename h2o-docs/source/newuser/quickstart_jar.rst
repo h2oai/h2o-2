@@ -4,9 +4,9 @@ Getting Started from a Downloaded Zip File
 -------------------------------------------
  
 
-Quick Step-by-step
+Quick Step-by-Step
 """"""""""""""""""
-1. Download the latest release of H\ :sub:`2`\ O as a .zip file from
+1. Download the latest release of H\ :sub:`2`\ O as a .zip file from the
    H\ :sub:`2`\ O `downloads page <http://0xdata.com/downloadtable//>`_.
 
 2. From your terminal change your working directory to the same directory where your .zip file is saved.
@@ -76,9 +76,11 @@ in order to run H\ :sub:`2`\ O. The program is available free on the web,
 and can be quickly installed. Even though you will use Java to 
 run H\ :sub:`2`\ O, no programming is necessary. 
 
+`Java Download Here <https://www.java.com/en/download/>`_
+
 In the Java command entered the term -Xmx1g was used. Xmx is the
 amount of memory given to H\ :sub:`2`\ O.  If your data set is large,
-give H\ :sub:`2`\ O more memory (for example, -Xmx4g gives H\ :sub:`2`\ O four gigabytes of
-memory).  For best performance, Xmx should be 4x the size of your
-data, but never more than the total amount of memory on your
-computer.
+give H\ :sub:`2`\ O more memory (for example, -Xmx4g gives H\
+:sub:`2`\ O four gigabytes of memory).  For best performance, Xmx
+should be 4x the size of your data, but never more than the total
+amount of memory on your computer.

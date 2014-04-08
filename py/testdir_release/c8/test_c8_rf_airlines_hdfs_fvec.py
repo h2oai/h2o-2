@@ -36,7 +36,7 @@ PARSE_TIMEOUT=1800
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def parseFile(self, importFolderPath='datasets/airlines', csvFilename='airlines_all.csv', 
+    def parseFile(self, importFolderPath='datasets', csvFilename='airlines_all.csv', 
         timeoutSecs=500, **kwargs):
         csvPathname = importFolderPath + "/" + csvFilename
 

@@ -5,6 +5,7 @@ import java.util.*;
 import water.*;
 import water.fvec.*;
 import water.nbhm.NonBlockingHashMap;
+import water.util.FrameUtils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -57,7 +58,7 @@ class ASTRApply extends ASTOp {
         throw iae;
       }
       env.pop(4);
-      if( ds != null ) env.push(TestUtil.frame(new String[]{"C1"},ds));
+      if( ds != null ) env.push(FrameUtils.frame(new String[]{"C1"},ds));
       else { env.push(1);  env._ary[env._sp-1] = fr2;  }
       assert env.isAry();
       return;
@@ -364,7 +365,7 @@ class ASTddply extends ASTOp {
         _groups.put(ab.get(Group.class),new NewChunk(null,-99));
       return this;
     }
-    @Override public void copyOver( DTask dt ) {
+    @Override public void copyOver( Freezable dt ) {
       ddplyPass1 that = (ddplyPass1)dt;
       super.copyOver(that);
       this._gatherRows = that._gatherRows;
@@ -580,7 +581,7 @@ class ASTUnique extends ASTddply {
     int i=0;
     for( Group g : p1._groups.keySet() )
       dss[i++] = g._ds;
-    Frame res = TestUtil.frame(fr._names,dss);
+    Frame res = FrameUtils.frame(fr._names,dss);
     env.poppush(2,res,null);
   }
 }

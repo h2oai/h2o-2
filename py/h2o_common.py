@@ -88,7 +88,13 @@ class ReleaseCommon(object):
         print "setUpClass"
         # standard method for being able to reproduce the random.* seed
         h2o.setup_random_seed()
-        h2o.build_cloud_with_json()
+        # do a hack so we can run release tests with a -cj arg. so we don't have to build the cloud separately
+        # those tests will always want to run non-local (big machien) so detecting -cj is fine
+        if h2o.config_json:
+            h2o_hosts.build_cloud_with_hosts()
+        else:
+            # this is the normal thing for release tests (separate cloud was built. clone it)
+            h2o.build_cloud_with_json()
         # if you're fast with a test and cloud building, you may need to wait for cloud to stabilize
         # normally this is baked into build_cloud, but let's leave it here for now
         h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)

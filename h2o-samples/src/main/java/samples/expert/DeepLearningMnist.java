@@ -26,7 +26,7 @@ public class DeepLearningMnist extends Job {
 //    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
-  @Override protected JobState execImpl() {
+  @Override protected void execImpl() {
     Log.info("Parsing data.");
     //long seed = 0xC0FFEE;
     long seed = new Random().nextLong();
@@ -65,7 +65,8 @@ public class DeepLearningMnist extends Job {
     p.source = trainf;
     p.response = trainf.lastVec();
     p.ignored_cols = null;
-    p.mini_batch = 240000;
+    p.classification_stop = -1;
+    p.train_samples_per_iteration = -1;
     p.score_interval = 30;
 
     p.fast_mode = true; //to match old NeuralNet behavior
@@ -74,6 +75,6 @@ public class DeepLearningMnist extends Job {
     p.force_load_balance = true;
     p.replicate_training_data = true;
     p.quiet_mode = false;
-    return p.execImpl();
+    p.execImpl();
   }
 }

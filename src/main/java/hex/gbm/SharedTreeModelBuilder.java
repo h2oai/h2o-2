@@ -107,6 +107,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       throw new IllegalArgumentException("Constant response column!");
     if (_nclass > MAX_SUPPORTED_LEVELS)
       throw new IllegalArgumentException("Too many levels in response column!");
+
+    int usableColumns = 0;
+    for (int i = 0; i < _ncols; i++) {
+      Vec v = source.vec(i);
+      if (v.isBad() || v.isConst()) continue;
+      usableColumns++;
+    }
+    if (usableColumns==0) throw new IllegalArgumentException("There is no usable column to generate model!");
   }
 
   // --------------------------------------------------------------------------
@@ -379,6 +387,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         boolean oob = isOOBRow(nid);
         if( oob ) nid = oob2Nid(nid); // sampled away - we track the position in the tree
         DTree.DecidedNode dn = _tree.decided(nid);
+        if (dn._split._col == -1 && DTree.isRootNode(dn)) { nnids[row] = (nid-_leaf); continue; }
         if( dn._split._col == -1 ) { // Might have a leftover non-split
           nid = dn._pid;             // Use the parent split decision then
           int xnid = oob ? nid2Oob(nid) : nid;
@@ -386,6 +395,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
           nnids[row] = xnid-_leaf;
           dn = _tree.decided(nid); // Parent steers us
         }
+
         assert !isDecidedRow(nid);
         nid = dn.ns(chks,row); // Move down the tree 1 level
         if( !isDecidedRow(nid) ) {

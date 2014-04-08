@@ -395,6 +395,13 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
         for k in keys:
             if k in triedKeys:
                 print "Already tried to delete %s. Must have failed. Not trying again" % k
+            # don't delete the DRF __Tree__ keys. deleting the model does that. causes race conditions
+            elif '__Tree__' in k:
+                print "Not deleting a tree key from DRF: %s" % k
+            elif 'DRF_' in k:
+                print "Not deleting DRF key..they may be problematic in flight: %s" % k
+            elif '_distcp_' in k:
+                print "Not deleting _distcp_ key..got a timeout before trying: %s" % k
             else:
                 node.remove_key(k['key'], timeoutSecs=timeoutSecs)
                 deletedCnt += 1
@@ -411,11 +418,6 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
     # TEMP: change this to remove_all_keys which ignores locking and removes keys?
     # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]
-    # FIX! stop using RemoveAll for now. doesn't it hang or ?
-    if 1==0 and not pattern:
-        node.remove_all_keys(timeoutSecs=timeoutSecs)
-        return 0 # don't have a count of keys?
-
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
     # this will be interesting if the others don't have a complete set
@@ -429,6 +431,10 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
         print "Total: Deleted", totalDeletedCnt, "keys with filter=", pattern, "at", len(h2o.nodes), "nodes"
     else:
         print "Total: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
+        # do a remove_all_keys to clean out any locked keys also (locked keys will complain above)
+        # doesn't work if you remove job keys first, since it looks at the job list and gets confused
+        ### node.remove_all_keys(timeoutSecs=timeoutSecs)
+
     return totalDeletedCnt
 
 
