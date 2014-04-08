@@ -15,20 +15,6 @@ parameters on its local data with multi-threading (asynchronously), and
 contributes periodically to the global model via model averaging across the
 network.
 
-References
-""""""""""""""""""""""""""""""""
-
-    Deep Learning http://en.wikipedia.org/wiki/Deep_learning
-
-    Artificial Neural Network http://en.wikipedia.org/wiki/Artificial_neural_network
-
-    ADADELTA http://arxiv.org/abs/1212.5701
-
-    Momentum http://www.cs.toronto.edu/~fritz/absps/momentum.pdf
-
-    Dropout http://arxiv.org/pdf/1207.0580.pdf and http://arxiv.org/abs/1307.1493
-
-    Feature Importance http://www.ncbi.nlm.nih.gov/pubmed/9327276
   
 Defining a Deep Learning Model
 """"""""""""""""""""""""""""""""
@@ -48,16 +34,12 @@ greatly.
 
 **source**
 
-    Training data. For each row of the training data, its feature values
-    activate the input layer neurons and signals are propagated through all hidden
-    layers via connecting weights. A prediction is returned at the output layer.
-    Deviations between the predicted values and the actual values are used to
-    adjust the path weights to reduce the error between the predicted and true
-    value. 
-
+   A hex key associated with the parsed traing data.
+ 
 **response**
 
-    The dependent or target variable of interest.  Can be numerical or a factor (categorical).
+    The dependent or target variable of interest.  Can be numerical or
+    a factor (categorical).
 	
 **ignored columns** 
      
@@ -103,53 +85,55 @@ greatly.
 
     *Maxout*: Choose the maximum coordinate of the input vector.
 
-    *With Dropout*: Zero out a random user-given fraction of the incoming weights to
-    each hidden layer during training, for each training row. This
-    effectively trains exponentially many models at once, and can improve generalization. 
+    *With Dropout*: Zero out a random user-given fraction of the
+    incoming weights to each hidden layer during training, for each
+    training row. This effectively trains exponentially many models at
+    once, and can improve generalization. 
 
 **hidden**
 
     The number and size of each hidden layer in the model. 
     For example, if a user specifies "100,200,100" a model with 3 hidden
-    layers will be produced, and the middle hidden layer will have 200 neurons. To
-    specify a grid search, add parentheses around each model's specification:
-    "(100,100), (50,50,50), (20,20,20,20)".  
+    layers will be produced, and the middle hidden layer will have 200
+    neurons.To specify a grid search, add parentheses around each
+    model's specification: "(100,100), (50,50,50), (20,20,20,20)".  
 
 **epochs** 
 
-    The number of passes over the training dataset to be carried out.
+    The number of passes over the training dataset to be carried out. 
 
-**mini batch**
+**train samples per iteration**
 
     The number of training data rows to be processed per iteration. Note that
     independent of this parameter, each row is used immediately to update the model
-    with (online) stochastic gradient descent. The mini batch size controls the
+    with (online) stochastic gradient descent. This parameter controls the
     synchronization period between nodes in a distributed environment and the
     frequency at which scoring and model cancellation can happen. For example, if
-    mini-batch is set to 10,000 on H2O running on 4 nodes, then each node will
+    it is set to 10,000 on H2O running on 4 nodes, then each node will
     process 2,500 rows per iteration, sampling randomly from their local data.
     Then, model averaging between the nodes takes place, and scoring can happen
     (dependent on scoring interval and duty factor). Special values are 0 for
     one epoch per iteration and -1 for processing the maximum amount of data
-    per iteration. If "replicate training data" is enabled, N epochs will be trained
-    per iteration on N nodes, otherwise one epoch.
+    per iteration. If **replicate training data** is enabled, N epochs
+    will be trained per iteration on N nodes, otherwise one epoch.
 
 **seed**
 
-    The random seed controls sampling and initialization. Reproducible results are only expected
-    with single-threaded operation (i.e., when running on one node, turning off
-    load balancing and providing a small dataset that fits in one chunk).  In
-    general, the multi-threaded asynchronous updates to the model parameters will
-    result in (intentional) race conditions and non-reproducible results. Note that
-    deterministic sampling and initialization might still lead to some weak sense
-    of determinism in the model.
+    The random seed controls sampling and initialization. Reproducible
+    results are only expected with single-threaded operation (i.e.,
+    when running on one node, turning off load balancing and providing
+    a small dataset that fits in one chunk).  In general, the
+    multi-threaded asynchronous updates to the model parameters will
+    result in (intentional) race conditions and non-reproducible
+    results. Note that deterministic sampling and initialization might
+    still lead to some weak sense of determinism in the model.
 
 **learning rate**
 
     The implemented (ADADELTA) adaptive learning rate algorithm automatically
-    combines the benefits of learning rate annealing and momentum training to avoid
-    slow convergence. Specification of only two parameters (rho and epsilon)
-    simplifies hyper parameter search. 
+    combines the benefits of learning rate annealing and momentum
+    training to avoid slow convergence. Specification of only two
+    parameters (rho and epsilon)  simplifies hyper parameter search. 
 
     In some cases, manually controlled (non-adaptive) learning rate and
     momentum specifications can lead to better results, but require the
@@ -157,34 +141,38 @@ greatly.
     If the model is built on a topology with many local minima or
     long plateaus, it is possible for a constant learning rate to produce
     sub-optimal results. Learning rate annealing allows digging deeper into
-    local minima, while rate decay allows specification of different learning rates
-    per layer.  When the gradient is being estimated in a long valley in the
-    optimization landscape, a large learning rate can cause the gradient to
-    oscillate and move in the wrong direction. When the gradient is computed on a
-    relatively flat surface with small learning rates, the model can converge far
+    local minima, while rate decay allows specification of different
+    learning rates per layer.  When the gradient is being estimated in
+    a long valley in the optimization landscape, a large learning rate
+    can cause the gradient to oscillate and move in the wrong
+    direction. When the gradient is computed on a relatively flat
+    surface with small learning rates, the model can converge far
     slower than necessary.
 
 **momentum**
 
     When adaptive learning rate is disabled, the magnitude of the weight
-    updates are determined by the user specified learning rate (potentially annealed), and are a function
-    of the difference between the predicted value and the target value. That
-    difference, generally called delta, is only available at the output layer. To
-    correct the output at each hidden layer, back propagation is used. Momentum
-    modifies back propagation by allowing prior iterations to influence the current
-    update. Using the momentum parameter can aid in avoiding local minima and
-    the associated instability. Too much momentum can lead to instability, that's
+    updates are determined by the user specified learning rate
+    (potentially annealed), and are a function  of the difference
+    between the predicted value and the target value. That difference,
+    generally called delta, is only available at the output layer. To
+    correct the output at each hidden layer, back propagation is
+    used. Momentum modifies back propagation by allowing prior
+    iterations to influence the current update. Using the momentum
+    parameter can aid in avoiding local minima and the associated
+    instability. Too much momentum can lead to inst, that's
     why the momentum is best ramped up slowly.
        
-    *Momentum start* Initial momentum at the start of model building.
+    *Momentum start:* Initial momentum at the start of model building.
        
-    *Momentum ramp* The number of data samples for which the momentum rises from its starting value to its final value (momentum stable).
+    *Momentum ramp:* The number of data samples for which the momentum
+    rises from its starting value to its final value (momentum stable).
 
-    *Momentum stable* The final momentum value after the ramp is over.
+    *Momentum stable:* The final momentum value after the ramp is over.
 
-**Nesterov accelerated gradient** 
+**Nesterov accelerated Gaadient** 
 
-    The Nesterov Accelerated Gradient Descent method is a modification to
+    The Nesterov accelerated gradient descent method is a modification to
     traditional gradient descent for convex functions. The method relies on
     gradient information at various points to build a polynomial approximation that
     minimizes the residuals in fewer iterations of the descent. 
@@ -202,7 +190,7 @@ greatly.
 
 **L2 regularization** 
 
-    A regularization method that constrains the sum of the squared
+    A regularization method that constrdains the sum of the squared
     weights. This method introduces bias into parameter estimates, but
     frequently produces substantial gains in modeling as estimate variance is
     reduced. 
@@ -238,7 +226,7 @@ greatly.
 **score interval**
 
     The minimum time (in seconds) to elapse between model scoring. The actual
-    interval is determined by the size of mini batch and the scoring duty cycle.
+    interval is determined by the number of training samples per iteration and the scoring duty cycle.
 
 **score training samples**
 
@@ -323,9 +311,9 @@ greatly.
 **shuffle training data** 
 
     Enable shuffling of training data (on each node). This option is
-    recommended if training data is replicated on N nodes, and the mini batch size
+    recommended if training data is replicated on N nodes, and the number of training samples per iteration
     is close to N times the dataset size, where all nodes train will (almost) all
-    the data. It is automatically enabled if the mini batch is set to -1 (or to N
+    the data. It is automatically enabled if the number of training samples per iteration is set to -1 (or to N
     times the dataset size or larger).
 
 Interpreting the Model
@@ -333,7 +321,7 @@ Interpreting the Model
 
 The model view page displays information about the Deep Learning model being trained.
 
-**Diagnostics Table**
+**Diagnostics table**
     If diagnostics is enabled, information for each layer is displayed.
 
     *Units* The number of units (or artificial neurons) in the layer
@@ -358,13 +346,13 @@ The model view page displays information about the Deep Learning model being tra
     the validation set (or a sample thereof). Otherwise, scoring is performed on
     the training dataset (or a sample thereof).
 
-**Confusion Matrix**
+**Confusion matrix**
 
     For classification models, a table showing the number of actual
     observations in a particular class relative to the number of predicted
     observations in a class.
 
-**Hit Ratio Table**
+**Hit ratio table**
 
     A table displaying the percentage of instances where the actual
     class label assigned to an observation is in the top K classes predicted by the
@@ -379,3 +367,20 @@ The model view page displays information about the Deep Learning model being tra
     A table listing the importance of variables listed from greatest
     importance, to least importance. Note that variable importances are notoriously
     difficult to compute for Neural Net models. Gedeon's method is implemented here.
+
+
+
+References
+""""""""""""""""""""""""""""""""
+
+    Deep Learning http://en.wikipedia.org/wiki/Deep_learning
+
+    Artificial Neural Network http://en.wikipedia.org/wiki/Artificial_neural_network
+
+    ADADELTA http://arxiv.org/abs/1212.5701
+
+    Momentum http://www.cs.toronto.edu/~fritz/absps/momentum.pdf
+
+    Dropout http://arxiv.org/pdf/1207.0580.pdf and http://arxiv.org/abs/1307.1493
+
+    Feature Importance http://www.ncbi.nlm.nih.gov/pubmed/9327276

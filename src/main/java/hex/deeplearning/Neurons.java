@@ -194,6 +194,19 @@ public abstract class Neurons {
     else throw new UnsupportedOperationException("bprop for types not yet implemented.");
   }
 
+  /**
+   * Specialization of backpropagation for DenseRowMatrices and DenseVectors
+   * @param _w weight matrix
+   * @param _wm weight momentum matrix
+   * @param prev_a activation of previous layer
+   * @param prev_e error of previous layer
+   * @param _b bias vector
+   * @param _bm bias momentum vector
+   * @param row index of the neuron for which we back-propagate
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate learning rate
+   * @param momentum momentum factor (needed only if ADADELTA isn't used)
+   */
   private final void bprop_dense_row_dense(final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseVector prev_a, final DenseVector prev_e,
                                            final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
     final float rho = (float)params.rho;
@@ -251,9 +264,22 @@ public abstract class Neurons {
       }
     }
     if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
-    update_bias(_b, _bm, row, rate, partial_grad, momentum);
+    update_bias(_b, _bm, row, partial_grad, rate, momentum);
   }
 
+  /**
+   * Specialization of backpropagation for DenseRowMatrices and SparseVector for previous layer's activation and DenseVector for everything else
+   * @param _w weight matrix
+   * @param _wm weight momentum matrix
+   * @param prev_a sparse activation of previous layer
+   * @param prev_e error of previous layer
+   * @param _b bias vector
+   * @param _bm bias momentum vector
+   * @param row index of the neuron for which we back-propagate
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate learning rate
+   * @param momentum momentum factor (needed only if ADADELTA isn't used)
+   */
   private final void bprop_dense_row_sparse(final DenseRowMatrix _w, final DenseRowMatrix _wm, final SparseVector prev_a, final DenseVector prev_e,
                                            final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
     final float rho = (float)params.rho;
@@ -312,10 +338,14 @@ public abstract class Neurons {
       }
     }
     if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
-    update_bias(_b, _bm, row, rate, partial_grad, momentum);
+    update_bias(_b, _bm, row, partial_grad, rate, momentum);
   }
 
-  // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+  /**
+   * Helper to scale down incoming weights if their squared sum exceeds a given value
+   * C.f. Improving neural networks by preventing co-adaptation of feature detectors
+   * @param row index of the neuron for which to scale the weights
+   */
   final void rescale_weights(final int row) {
     if (_w instanceof DenseRowMatrix) {
       final int cols = _previous._a.size();
@@ -330,7 +360,16 @@ public abstract class Neurons {
     else throw new UnsupportedOperationException("not yet implemented.");
   }
 
-  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row, final float rate, final float partial_grad, final float momentum) {
+  /**
+   * Helper to update the bias values
+   * @param _b bias vector
+   * @param _bm bias momentum vector
+   * @param row index of the neuron for which we back-propagate
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate learning rate
+   * @param momentum momentum factor (needed only if ADADELTA isn't used)
+   */
+  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, final float rate, final float momentum) {
     final boolean have_momenta = _wm != null;
     if (!params.nesterov_accelerated_gradient) {
       final float delta = rate * partial_grad;

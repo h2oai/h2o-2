@@ -92,7 +92,7 @@ public class DeepLearningProstateTest extends TestUtil {
                         p.destination_key = dest;
                         p.seed = seed;
                         p.validation = valid;
-                        p.mini_batch = 0;
+                        p.train_samples_per_iteration = 0;
                         p.force_load_balance = load_balance;
                         p.replicate_training_data = replicate;
                         p.shuffle_training_data = shuffle;

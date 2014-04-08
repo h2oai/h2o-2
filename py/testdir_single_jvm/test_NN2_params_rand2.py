@@ -30,7 +30,7 @@ def define_params():
         'score_training_samples'       : [None, 0, 1],
         'score_validation_samples'     : [None, 0, 1],
         'score_interval'               : [None, 0, 1],
-        'mini_batch'                   : [None, 0, 1],
+        'train_samples_per_iteration'  : [None, 0, 1],
         'diagnostics'                  : [None, 0, 0, 0, 0, 1],
         'fast_mode'                    : [None, 0, 1],
         'ignore_const_cols'            : [None, 0, 1],
