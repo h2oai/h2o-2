@@ -11,6 +11,9 @@ import water.api.Request.API;
 import water.api.Request.Default;
 import water.api.RequestBuilders.ElementBuilder;
 
+/**
+ * FIXME comment please
+ */
 public class NBModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.

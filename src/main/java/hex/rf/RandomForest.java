@@ -15,6 +15,8 @@ import water.Timer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
+import static water.util.VAUtils.*;
+
 /**
  * A RandomForest can be used for growing or validation. The former starts with a known target number of trees,
  * the latter is incrementally populated with trees as they are built.
@@ -126,12 +128,12 @@ public class RandomForest {
     if(ARGS.parsedKey != null) // data already parsed
       va = DKV.get(Key.make(ARGS.parsedKey)).get();
     else if(ARGS.rawKey != null) // data loaded in K/V, not parsed yet
-      va = TestUtil.parse_test_key(Key.make(ARGS.rawKey),Key.make(TestUtil.getHexKeyFromRawKey(ARGS.rawKey)));
+      va = parseKey(Key.make(ARGS.rawKey),Key.make(getHexKeyFromRawKey(ARGS.rawKey)));
     else { // data outside of H2O, load and parse
       File f = new File(ARGS.file);
       Log.debug(Sys.RANDF,"Loading file ", f);
-      Key fk = TestUtil.load_test_file(f);
-      va = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
+      Key fk = loadFile(f);
+      va = parseKey(fk,Key.make(getHexKeyFromFile(f)));
       DKV.remove(fk);
     }
     if(ARGS.ntrees == 0) {
@@ -210,8 +212,8 @@ public class RandomForest {
     if(ARGS.validationFile != null && !ARGS.validationFile.isEmpty()){ // validate on the supplied file
       File f = new File(ARGS.validationFile);
       Log.debug(Sys.RANDF,"Loading validation file ",f);
-      Key fk = TestUtil.load_test_file(f);
-      ValueArray v = TestUtil.parse_test_key(fk,Key.make(TestUtil.getHexKeyFromFile(f)));
+      Key fk = loadFile(f);
+      ValueArray v = parseKey(fk,Key.make(getHexKeyFromFile(f)));
       valKey = v._key;
       DKV.remove(fk);
       CMFinal cm = ConfusionTask.make( model, valKey, classcol, null, false).get();
@@ -221,4 +223,23 @@ public class RandomForest {
     Log.debug(Sys.RANDF,"Validation done in: " + t_valid);
     UDPRebooted.T.shutdown.broadcast();
   }
+
+  private static String replaceExtension(String fname, String newExt) {
+    int i = fname.lastIndexOf('.');
+    if( i == -1 )
+      return fname + "." + newExt;
+    return fname.substring(0, i) + "." + newExt;
+  }
+
+  private static String getHexKeyFromFile(File f) {
+    return replaceExtension(f.getName(), "hex");
+  }
+
+  private static String getHexKeyFromRawKey(String str) {
+    if( str.startsWith("hdfs://") )
+      str = str.substring(7);
+    return replaceExtension(str, "hex");
+  }
+
+
 }
