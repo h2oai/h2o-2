@@ -289,10 +289,11 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                              * Note: Reference and H2O each do their internal data normalization,
                              * so we must use their "own" test data, which is assumed to be created correctly.
                              */
+                            water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
                             // Deep Learning scoring
                             {
                               Frame fpreds = mymodel.score(_train); //[0] is label, [1]...[4] are the probabilities
-                              water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+                              CM = new water.api.ConfusionMatrix();
                               CM.actual = _train;
                               CM.vactual = _train.lastVec();
                               CM.predict = fpreds;
@@ -317,6 +318,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               fpreds2.delete();
                             }
                             // NeuralNet scoring
+                            long [][] cm;
                             {
                               Log.info("\nNeuralNet Scoring:");
                               //training set
@@ -331,7 +333,6 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               input.vecs = data;
                               input._len = data[0].length();
                               ((Layer.VecSoftmax) ls[ls.length-1]).vec = labels;
-                              long [][] cm;
                               int classes = ls[ls.length - 1].units; //WARNING: only works if training set is large enough to have all classes
                               cm = new long[classes][classes];
                               NeuralNet.Errors test = NeuralNet.eval(ls, 0, cm);
@@ -340,6 +341,10 @@ public class DeepLearningVsNeuralNet extends TestUtil {
                               reftesterr += test.classification;
                               adapted[1].delete();
                             }
+                            Assert.assertEquals(cm[0][0], CM.cm[0][0]);
+                            Assert.assertEquals(cm[1][0], CM.cm[1][0]);
+                            Assert.assertEquals(cm[0][1], CM.cm[0][1]);
+                            Assert.assertEquals(cm[1][1], CM.cm[1][1]);
 
                             // cleanup
                             mymodel.delete();
