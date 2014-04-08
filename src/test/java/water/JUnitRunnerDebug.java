@@ -4,8 +4,8 @@ import hex.DeepLearningIrisTest;
 import hex.DeepLearningProstateTest;
 import hex.DeepLearningSpiralsTest;
 import hex.MRUtilsTest;
-import hex.deeplearning.Dropout;
-import hex.deeplearning.Neurons;
+import hex.deeplearning.*;
+
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -56,7 +56,7 @@ public class JUnitRunnerDebug {
       tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
       tests.add(DeepLearningIrisTest.class); //compare Deep Learning vs reference
       tests.add(DeepLearningProstateTest.class); //test Deep Learning
-      tests.add(Neurons.MatVecTester.class); //test Deep Learning
+      tests.add(NeuronsTest.class); //test Deep Learning
       tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
       tests.add(Dropout.class); //test NN Dropput
 

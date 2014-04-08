@@ -2,34 +2,30 @@ package water;
 
 import static water.util.Utils.difference;
 import static water.util.Utils.isEmpty;
-import com.google.gson.JsonNull;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
-import water.api.Constants;
-import water.api.DocGen;
-import water.api.Progress2;
-import water.api.Request.Validator.NOPValidator;
-import water.api.RequestServer.API_VERSION;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Log;
-import water.util.Utils;
-import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
+
+import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
+import water.api.*;
+import water.api.Request.Validator.NOPValidator;
+import water.api.RequestServer.API_VERSION;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.*;
+import water.util.Utils.ExpectedExceptionForDebug;
+
+import com.google.gson.*;
 
 public abstract class Job extends Func {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   /** A system key for global list of Job keys. */
-  static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
+  public static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
   /** Shared empty int array. */
   private static final int[] EMPTY = new int[0];
 
@@ -857,7 +853,7 @@ public abstract class Job extends Func {
     public Fail(String message) { _message = message; }
   }
 
-  static final class List extends Iced {
+  public static final class List extends Iced {
     Key[] _jobs = new Key[0];
 
     @Override

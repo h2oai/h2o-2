@@ -15,7 +15,7 @@ import water.deploy.NodeVM;
 import water.deploy.VM;
 import water.fvec.*;
 import water.parser.ParseDataset;
-import water.util.Log;
+import water.util.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -128,21 +128,17 @@ public class TestUtil {
   }
 
   public static Key load_test_file(File file, String keyname) {
-    Key key = null;
-    FileInputStream fis = null;
-    try {
-      fis = new FileInputStream(file);
-      key = ValueArray.readPut(keyname, fis);
-    } catch( IOException e ) {
-      Closeables.closeQuietly(fis);
-    }
+    Key key = VAUtils.loadFile(file, keyname);
     if( key == null )
       fail("failed load to " + file.getName());
     return key;
   }
 
   public static Key load_test_file(File file) {
-    return load_test_file(file, file.getPath());
+    Key key = VAUtils.loadFile(file);
+    if( key == null )
+      fail("failed load to " + file.getName());
+    return key;
   }
 
   public static Key loadAndParseFile(String keyName, String path) {
@@ -161,25 +157,7 @@ public class TestUtil {
   }
 
   public static ValueArray parse_test_key(Key fileKey, Key parsedKey) {
-    ParseDataset.parse(parsedKey, new Key[] { fileKey });
-    return DKV.get(parsedKey).get();
-  }
-
-  public static String replaceExtension(String fname, String newExt) {
-    int i = fname.lastIndexOf('.');
-    if( i == -1 )
-      return fname + "." + newExt;
-    return fname.substring(0, i) + "." + newExt;
-  }
-
-  public static String getHexKeyFromFile(File f) {
-    return replaceExtension(f.getName(), "hex");
-  }
-
-  public static String getHexKeyFromRawKey(String str) {
-    if( str.startsWith("hdfs://") )
-      str = str.substring(7);
-    return replaceExtension(str, "hex");
+    return VAUtils.parseKey(fileKey, parsedKey);
   }
 
   // --------
@@ -396,24 +374,9 @@ public class TestUtil {
     return vec;
   }
 
-  public static Frame frame(String name, Vec vec) { return new Frame().add(name, vec); }
-  public static Frame frame(String[] names, Vec[] vecs) { return new Frame(names, vecs); }
-  public static Frame frame(String[] names, double[]... rows) {
-    assert names == null || names.length == rows[0].length;
-    Futures fs = new Futures();
-    Vec[] vecs = new Vec[rows[0].length];
-    Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(vecs.length);
-    for( int c = 0; c < vecs.length; c++ ) {
-      AppendableVec vec = new AppendableVec(keys[c]);
-      NewChunk chunk = new NewChunk(vec, 0);
-      for( int r = 0; r < rows.length; r++ )
-        chunk.addNum(rows[r][c]);
-      chunk.close(0, fs);
-      vecs[c] = vec.close(fs);
-    }
-    fs.blockForPending();
-    return new Frame(names, vecs);
-  }
+  public static Frame frame(String name, Vec vec)       { return FrameUtils.frame(name, vec); }
+  public static Frame frame(String[] names, Vec[] vecs) { return FrameUtils.frame(names, vecs); }
+  public static Frame frame(String[] names, double[]... rows) { return FrameUtils.frame(names, rows); }
 
   public static void dumpKeys(String msg) {
     System.err.println("-->> Store dump <<--");

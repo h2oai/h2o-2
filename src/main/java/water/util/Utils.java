@@ -1,19 +1,8 @@
 package water.util;
 
-import hex.rng.H2ORandomRNG;
+import hex.rng.*;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
-import hex.rng.MersenneTwisterRNG;
-import hex.rng.XorShiftRNG;
-import org.junit.Assert;
-import org.junit.Test;
-import sun.misc.Unsafe;
-import water.*;
-import water.api.DocGen;
-import water.api.DocGen.FieldDoc;
-import water.nbhm.UtilUnsafe;
-import water.parser.ParseDataset;
-import water.parser.ParseDataset.Compression;
 
 import java.io.*;
 import java.net.Socket;
@@ -22,10 +11,15 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
+import java.util.zip.*;
+
+import sun.misc.Unsafe;
+import water.*;
+import water.api.DocGen;
+import water.api.DocGen.FieldDoc;
+import water.nbhm.UtilUnsafe;
+import water.parser.ParseDataset;
+import water.parser.ParseDataset.Compression;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -193,15 +187,6 @@ public class Utils {
       result += a[c]*a[c];
     }
     return result;
-  }
-
-  static public class SumSquareTester {
-    @Test
-    public void run() {
-      float[] a = new float[993];
-      for (int i=0;i<a.length;++i) a[i] = new Random().nextFloat();
-      assert(Math.abs(sumSquares(a) - sumSquares(a, 0,443) - sumSquares(a, 443,983) - sumSquares(a, 983,993)) < 1e-5);
-    }
   }
 
   public static String sampleToString(int[] val, int max) {
@@ -968,87 +953,6 @@ public class Utils {
   public static double approxLog(double x){
     if (x > 1) return ((Double.doubleToLongBits(x) >> 32) - 1072632447d) / 1512775d;
     else return Math.log(x);
-  }
-
-  public static class approxMathTester {
-    @Test
-    public void run() {
-      final int loops = 1000000;
-      final long seed = new Random().nextLong();
-      final float eps = 1e-20f;
-      Random rng = new Random(seed);
-      Log.info("Seed: " + seed);
-      for (float maxVal : new float[]{1, Float.MAX_VALUE}) {
-        Log.info("Testing " + loops + " numbers in interval [0, " + maxVal + "].");
-        // float square
-        {
-          float err = 0;
-          for (int i=0;i<loops;++i) {
-            final float x = eps + rng.nextFloat() * maxVal;
-            err = Math.max(Math.abs(err), Math.abs((float)Math.sqrt(x)-approxSqrt(x))/(float)Math.sqrt(x));
-          }
-          Log.info("rel. error for approxSqrt(float): " + err);
-          Assert.assertTrue("rel. error for approxSqrt(float): " + err, Math.abs(err) < 5e-2);
-        }
-
-        // double square
-        {
-          double err = 0;
-          for (int i=0;i<loops;++i) {
-            final double x = eps + rng.nextFloat() * maxVal;
-            err = Math.max(Math.abs(err), Math.abs(Math.sqrt(x)-approxSqrt(x))/Math.sqrt(x));
-          }
-          Log.info("rel. error for approxSqrt(double): " + err);
-          Assert.assertTrue("rel. error for approxSqrt(double): " + err, Math.abs(err) < 5e-2);
-        }
-
-        // float inv square
-        {
-          float err = 0;
-          for (int i=0;i<loops;++i) {
-            final float x = eps + rng.nextFloat() * maxVal;
-            err = Math.max(Math.abs(err), Math.abs((float)(1./Math.sqrt(x))-approxInvSqrt(x))*(float)Math.sqrt(x));
-          }
-          Log.info("rel. error for approxInvSqrt(float): " + err);
-          Assert.assertTrue("rel. error for approxInvSqrt(float): " + err, Math.abs(err) < 2e-2);
-        }
-
-        // double inv square
-        {
-          double err = 0;
-          for (int i=0;i<loops;++i) {
-            final double x = eps + rng.nextFloat() * maxVal;
-            err = Math.max(Math.abs(err), Math.abs((1./Math.sqrt(x))-approxInvSqrt(x))*Math.sqrt(x));
-          }
-          Log.info("rel. error for approxInvSqrt(double): " + err);
-          Assert.assertTrue("rel. error for approxInvSqrt(double): " + err, Math.abs(err) < 2e-2);
-        }
-
-        // double exp
-        {
-          double err = 0;
-          for (int i=0;i<loops;++i) {
-            final double x = 30 - rng.nextDouble() * 60;
-            err = Math.max(Math.abs(err), Math.abs(Math.exp(x)-approxExp(x))/Math.exp(x));
-          }
-          Log.info("rel. error for approxExp(double): " + err);
-          Assert.assertTrue("rel. error for approxExp(double): " + err, Math.abs(err) < 5e-2);
-        }
-
-        // double log
-        {
-          double err = 0;
-          for (int i=0;i<loops;++i) {
-            final double x = eps + rng.nextFloat() * maxVal;
-            err = Math.abs(Math.log(x)-approxLog(x))/Math.abs(Math.log(x));
-            if (!Double.isInfinite(err) && !Double.isNaN(err))
-              err = Math.max(err, Math.abs(Math.log(x)-approxLog(x))/Math.abs(Math.log(x)));
-          }
-          Log.info("rel. error for approxLog(double): " + err);
-          Assert.assertTrue("rel. error for approxLog(double): " + err, Math.abs(err) < 1e-3);
-        }
-      }
-    }
   }
 
   /**
