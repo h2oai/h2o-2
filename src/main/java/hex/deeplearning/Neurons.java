@@ -478,10 +478,10 @@ public abstract class Neurons {
       else
         _dropout.randomlySparsifyActivation((SparseVector)_a, seed);
 // FIXME: HACK TO ALWAYS BE SPARSE
-      _svec = new SparseVector(_dvec);
-      assert(_svec instanceof SparseVector);
-      _a = _svec;
-      assert(_a instanceof SparseVector);
+//      _svec = new SparseVector(_dvec);
+//      assert(_svec instanceof SparseVector);
+//      _a = _svec;
+//      assert(_a instanceof SparseVector);
     }
 
   }
