@@ -125,7 +125,6 @@ public class RequestServer extends NanoHTTPD {
 
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
-      registerRequest(new QuantilesPage());
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
     } else {
