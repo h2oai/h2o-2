@@ -160,7 +160,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean ignore_const_cols = true;
 
   @API(help = "Force extra load balancing to increase training speed for small datasets (to keep all cores busy)", filter = Default.class, json = true)
-  public boolean force_load_balance = true;
+  public boolean force_load_balance = false;
 
   @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true)
   public boolean replicate_training_data = true;
