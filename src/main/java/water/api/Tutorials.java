@@ -21,25 +21,25 @@ public class Tutorials extends HTMLOnlyRequest {
 
     + "<div class='span3 col'>"
     + "  <h2>Random Forest</h2>"
-    +   "<p>Random Forest is a classical machine learning algorithm serving for data classification. Learn how to use it with H<sub>2</sub>O.</it></p>"
+    +   "<p>Random Forest is a classical machine learning algorithm for classification and regression. Learn how to use it with H<sub>2</sub>O.</it></p>"
     +   "<a href='/TutorialRFIris.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span3 col'>"
     +   "<h2>GLM</h2>"
-    +   "<p>Generalized linear model is a generalization of linear regression. Experience its unique power on the top of H<sub>2</sub>O.</p>"
+    +   "<p>Generalized linear model is a generalization of linear regression. Experience its unique power on top of H<sub>2</sub>O.</p>"
     +   "<a href='/TutorialGLMProstate.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span3 col'>"
     + "<h2>K-means</h2>"
-    + "<p>Perform cluster analysis with H<sub>2</sub>O and K-means algorithm. H<sub>2</sub>O implements K-means, a highly scalable version.</p>"
+    + "<p>Perform cluster analysis with H<sub>2</sub>O. It employs K-means, a highly scalable clustering algorithm.</p>"
     +   "<a href='/TutorialKMeans.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span3 col'>"
     + "<h2>Deep Learning</h2>"
-    + "<p>Use H<sub>2</sub>O to model high-level abstractions in data by using architectures composed of multiple non-linear transformations.</p>"
+    + "<p>H<sub>2</sub>O's distributed Deep Learning models high-level abstractions in data with deep artificial neural networks.</p>"
     +   "<a href='/TutorialDeepLearning.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
