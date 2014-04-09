@@ -327,10 +327,12 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     return new RPC(H2O.CLOUD._memary[node], rpc).addCompleter(this).call();
   }
 
+  protected long _t0;
   /** Called from FJ threads to do local work.  The first called Task (which is
    *  also the last one to Complete) also reduces any global work.  Called
    *  internal by F/J.  Not expected to be user-called.  */
   @Override public final void compute2() {
+    _t0 = System.nanoTime();
     assert _left == null && _rite == null && _res == null;
     _profile._mapstart = System.currentTimeMillis();
     if( _hi-_lo >= 2 ) { // Multi-chunk case: just divide-and-conquer to 1 chunk

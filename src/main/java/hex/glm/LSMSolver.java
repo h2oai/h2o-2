@@ -197,6 +197,7 @@ public abstract class LSMSolver extends Iced{
     public static class NonSPDMatrixException extends LSMSolverException {
       public NonSPDMatrixException(){super("Matrix is not SPD, can't solve without regularization\n");}
       public NonSPDMatrixException(Gram grm){
+
         super("Matrix is not SPD, can't solve without regularization\n" + grm);
       }
     }
@@ -304,8 +305,9 @@ public abstract class LSMSolver extends Iced{
         if( r_norm < eps_pri && s_norm < eps_dual){
           double d2 = -gram._diagAdded + d;
           gram.addDiag(d2);
-          if(_converged = converged(gram,z,xy,1e-8)) break;
-          else gram.addDiag(-d2);
+          break;
+//          if(_converged = converged(gram,z,xy,1e-8)) break;
+//          else gram.addDiag(-d2);
         }
       }
       if(!_converged)gram.addDiag(-gram._diagAdded + d);

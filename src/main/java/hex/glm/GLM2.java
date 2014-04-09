@@ -46,7 +46,7 @@ public class GLM2 extends ModelJob {
   Family family = Family.gaussian;
 
   private DataInfo _dinfo;
-  private GLMParams _glm;
+  public GLMParams _glm;
   @API(help = "", json=true)
   private double [] _wgiven;
   @API(help = "", json=true)
@@ -72,7 +72,7 @@ public class GLM2 extends ModelJob {
   @API(help = "lambda max", json=true)
   double lambda_max;
   @API(help = "lambda", filter = Default.class, json=true)
-  double [] lambda;// = new double[]{1e-5};
+  public double [] lambda;// = new double[]{1e-5};
   @API(help = "beta_eps", filter = Default.class, json=true)
   double beta_epsilon = DEFAULT_BETA_EPS;
   int _lambdaIdx = 0;
@@ -204,12 +204,15 @@ public class GLM2 extends ModelJob {
     } else super.cancel(ex);
   }
 
+  @Override public void init(){
+    super.init();
+    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
+    _dinfo = new DataInfo(fr, 1, standardize);
+  }
   @Override protected Response serve() {
     init();
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
-    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
-    _dinfo = new DataInfo(fr, 1, standardize);
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
       if(destination_key == null)destination_key = Key.make("GLMGridModel_"+Key.make());
@@ -285,9 +288,11 @@ public class GLM2 extends ModelJob {
     }
   }
   public void nextLambda(final GLMIterationTask glmt){
+    System.out.println("computing validation at t = " + (System.currentTimeMillis() - start));
     // We're done with this lambda, launch validation
     H2OCallback fin = new H2OCallback<GLMValidationTask>() {
       @Override public void callback(GLMValidationTask tsk) {
+        System.out.println("validation computed at t = " + (System.currentTimeMillis() - start));
         boolean improved = _model.setAndTestValidation(_lambdaIdx,tsk._res);
         _model.clone().update(self());
         if((improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
@@ -377,6 +382,7 @@ public class GLM2 extends ModelJob {
   @Override
   public GLM2 fork(){
     start(new H2O.H2OEmptyCompleter());
+
     run();
     return this;
   }
@@ -386,61 +392,73 @@ public class GLM2 extends ModelJob {
     GLM2.this._fjtask = fjt;
     run();
   }
+  public long start = 0;
   public void run(){
     logStart();
     assert alpha.length == 1;
-    new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
-      @Override public void callback(final YMUTask ymut){
-        if(ymut._ymin == ymut._ymax){
-          String msg = "Attempting to run GLM on column with constant value = " + ymut._ymin;
-          GLM2.this.cancel(msg);
-          GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
-        }
-
-        new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
-          @Override public void callback(LMAXTask t){
-            final double lmax = lambda_max = t.lmax();
-            String [] warns = null;
-            if(lambda == null){
-              lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
-              _runAllLambdas = false;
-            } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)
-              int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
-              if(i != 0) {
-                Log.info("GLM: removing " + i + " lambdas > lambda_max: " + Arrays.toString(Arrays.copyOf(lambda,i)));
-                warns = i == lambda.length?new String[] {"Removed " + i + " lambdas > lambda_max","No lambdas < lambda_max, returning null model."}:new String[] {"Removed " + i + " lambdas > lambda_max"};
+    start = System.currentTimeMillis();
+    if(lambda == null){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
+      new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
+        @Override public void callback(final YMUTask ymut){
+          System.out.println("LMAX task called after " + (System.currentTimeMillis()-start) + "ms");
+          if(ymut._ymin == ymut._ymax){
+            String msg = "Attempting to run GLM on column with constant value = " + ymut._ymin;
+            GLM2.this.cancel(msg);
+            GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
+          }
+          new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
+            @Override public void callback(LMAXTask t){
+              final double lmax = lambda_max = t.lmax();
+              String [] warns = null;
+              if(lambda == null){
+                lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
+                _runAllLambdas = false;
+              } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)
+                int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
+                if(i != 0) {
+                  Log.info("GLM: removing " + i + " lambdas > lambda_max: " + Arrays.toString(Arrays.copyOf(lambda,i)));
+                  warns = i == lambda.length?new String[] {"Removed " + i + " lambdas > lambda_max","No lambdas < lambda_max, returning null model."}:new String[] {"Removed " + i + " lambdas > lambda_max"};
+                }
+                lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
               }
-              lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
+              _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
+              _model.warnings = warns;
+              _model.clone().delete_and_lock(self());
+              if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
+                _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
+                _beta[_beta.length-1] = _glm.link(ymut.ymu());
+                _model.setLambdaSubmodel(0,_beta,_beta,0);
+                t._val.finalize_AIC_AUC();
+                _model.setAndTestValidation(0,t._val);
+                _lambdaIdx = 1;
+              }
+              if(_lambdaIdx == lambda.length) // ran only with one lambda > lambda_max => return null model
+                GLM2.this.complete(); // signal we're done to anyone waiting for the job
+              else {
+                ++_iter;
+                Log.info("GLM2: staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
+                new GLMIterationTask(GLM2.this,_dinfo,_glm,null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).asyncExec(_dinfo._adaptedFrame);
+              }
             }
-            _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
-            _model.warnings = warns;
-            _model.clone().delete_and_lock(self());
-            if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
-              _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
-              _beta[_beta.length-1] = _glm.link(ymut.ymu());
-              _model.setLambdaSubmodel(0,_beta,_beta,0);
-              t._val.finalize_AIC_AUC();
-              _model.setAndTestValidation(0,t._val);
-              _lambdaIdx = 1;
+            @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
+              GLM2.this.cancel(ex);
+              return true;
             }
-            if(_lambdaIdx == lambda.length) // ran only with one lambda > lambda_max => return null model
-              GLM2.this.complete(); // signal we're done to anyone waiting for the job
-            else {
-              ++_iter;
-              new GLMIterationTask(GLM2.this,_dinfo,_glm,null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).asyncExec(_dinfo._adaptedFrame);
-            }
-          }
-          @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-            GLM2.this.cancel(ex);
-            return true;
-          }
-        }).asyncExec(_dinfo._adaptedFrame);
-      }
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-        GLM2.this.cancel(ex);
-        return true;
-      }
-    }).asyncExec(_dinfo._adaptedFrame);
+          }).asyncExec(_dinfo._adaptedFrame);
+        }
+        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
+          GLM2.this.cancel(ex);
+          return true;
+        }
+      }).asyncExec(_dinfo._adaptedFrame);
+    } else {
+      Log.info("GLM2: staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
+      double ymu = _dinfo._adaptedFrame.lastVec().mean();
+      _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymu);
+      _model.warnings = new String[0];
+      _model.clone().delete_and_lock(self());
+      new GLMIterationTask(GLM2.this,_dinfo,_glm,null,_ymu = ymu,_reg = 1.0/_dinfo._adaptedFrame.numRows(), new Iteration()).asyncExec(_dinfo._adaptedFrame);
+    }
   }
 
   private void xvalidate(final GLMModel model, int lambdaIxd,final H2OCountedCompleter cmp){
