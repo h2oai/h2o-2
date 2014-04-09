@@ -108,7 +108,7 @@ public class Inspect2 extends Request2 {
               DRF.link(skey, "Distributed Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
               GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
-              DeepLearning.link(skey, "Deep Learning (beta)") +", "+
+              DeepLearning.link(skey, "Deep Learning") +", "+
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV") +
@@ -291,16 +291,19 @@ public class Inspect2 extends Request2 {
   }
 
   public String link(String txt,Key k, long offset, long max){
-    if(offset != this.offset && 0 <= offset && offset <= max)return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=" + offset + "'>" + txt + "</a>";
+    if(offset != this.offset && 0 <= offset && offset <= max)return "<a href='/2/Inspect2.html?src_key=" + k.toString() + "&offset=" + offset + "'>" + txt + "</a>";
     return "<span>" + txt + "</span>";
   }
 
   private String infoLink(Key k){
-    return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=-1'>info</a>";
+    return "<a href='/2/Inspect2.html?src_key=" + k.toString() + "&offset=-1'>info</a>";
   }
 
   public String link(String txt,Key k) {
-    return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=0'>" + txt + "</a>";
+    return link(txt, k.toString());
+  }
+  public static String link(String txt,String key) {
+    return "<a href='/2/Inspect2.html?src_key=" + key + "&offset=0'>" + txt + "</a>";
   }
 
   private static int viewsz = 100;

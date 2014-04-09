@@ -41,11 +41,18 @@ public class Dropout {
   }
 
   // for input layer
-  public void randomlySparsifyActivation(float[] a, long seed) {
+  public void randomlySparsifyActivation(Neurons.DenseVector a, long seed) {
     if (_rate == 0) return;
     setSeed(seed);
-    for( int i = 0; i < a.length; i++ )
-      if (_rand.nextFloat() < _rate) a[i] = 0;
+    for( int i = 0; i < a.size(); i++ )
+      if (_rand.nextFloat() < _rate) a.set(i, 0);
+  }
+
+  public void randomlySparsifyActivation(Neurons.SparseVector a, long seed) {
+    if (_rate == 0) return;
+    setSeed(seed);
+    for (Neurons.SparseVector.Iterator it=a.begin(); !it.equals(a.end()); it.next())
+      if (_rand.nextFloat() < _rate) it.setValue(0f);
   }
 
   // for hidden layers

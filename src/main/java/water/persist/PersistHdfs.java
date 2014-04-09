@@ -4,14 +4,12 @@ import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3.S3Exception;
-import org.jets3t.service.S3ServiceException;
 
 import water.*;
 import water.Job.ProgressMonitor;
@@ -40,13 +38,13 @@ public final class PersistHdfs extends Persist {
   static {
     Configuration conf = null;
     if( H2O.OPT_ARGS.hdfs_config != null ) {
-      conf = new Configuration();
+      conf = new Configuration(false);
       File p = new File(H2O.OPT_ARGS.hdfs_config);
       if( !p.exists() ) Log.die("Unable to open hdfs configuration file " + p.getAbsolutePath());
       conf.addResource(new Path(p.getAbsolutePath()));
       Log.debug(Sys.HDFS_, "resource ", p.getAbsolutePath(), " added to the hadoop configuration");
     } else {
-      conf = new Configuration();
+      conf = new Configuration(false);
       if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {
         // setup default remote Filesystem - for version 0.21 and higher
         conf.set("fs.defaultFS", H2O.OPT_ARGS.hdfs);
