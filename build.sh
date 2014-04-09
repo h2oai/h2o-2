@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -x
 
 # determine the correct separator of multiple paths
 if [ `uname` = "Darwin" ]
@@ -65,6 +65,8 @@ fi
 JAVAC_ARGS="-g
     -source 1.6
     -target 1.6
+    -J-Xms1024m 
+    -J-Xmx1024m
     -XDignore.symbol.file
     -Xlint:all
     -Xlint:-deprecation
@@ -188,7 +190,7 @@ function build_javadoc() {
     echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     mkdir -p target/logs
-    "${JAVADOC}" -overview ${SRC}/overview.html -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
+    "${JAVADOC}" -J-Xms256m -J-Xmx256m -overview ${SRC}/overview.html -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
 }
 
 function junit() {

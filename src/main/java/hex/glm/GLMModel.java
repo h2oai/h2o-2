@@ -294,6 +294,14 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
   }
 
+  public GLMParams getParams() {
+      return glm;
+  }
+
+  public Key getJobKey() {
+      return job_key;
+  }
+
   @Override
   public String toString(){
     final double [] beta = beta(), norm_beta = norm_beta();

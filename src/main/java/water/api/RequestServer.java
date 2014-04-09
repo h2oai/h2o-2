@@ -212,6 +212,9 @@ public class RequestServer extends NanoHTTPD {
 //    registerRequest(new GLMValidationView());
     registerRequest(new LaunchJar());
     Request.initializeNavBar();
+
+    // Pure APIs, no HTML, to support The New World
+    registerRequest(new Models());
   }
 
   /**

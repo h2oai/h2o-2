@@ -194,4 +194,8 @@ public class GLMParams extends Iced {
     return (y != 0) ? (y * Math.log(y / mu)) : 0;
   }
 
+ public Family getFamily() {
+   return family;
+ }
+
 }
