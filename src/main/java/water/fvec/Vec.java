@@ -1,5 +1,6 @@
 package water.fvec;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.nbhm.NonBlockingHashMapLong;
 import water.util.Utils;
@@ -87,6 +88,44 @@ public class Vec extends Iced {
 
   protected Vec( Key key, Vec v ) { this(key, v._espc); assert group()==v.group(); }
 
+  public Vec [] makeZeros(int n){return makeZeros(n,null);}
+  public Vec [] makeZeros(int n, String [][] domain){ return makeCons(n, 0, domain);}
+  public Vec [] makeCons(int n, final long l, String [][] domain){
+    if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    final int nchunks = nChunks();
+    Key [] keys = group().addVecs(n);
+    final Vec [] vs = new Vec[keys.length];
+    for(int i = 0; i < vs.length; ++i) vs[i] = new Vec(keys[i],_espc,domain == null?null:domain[i]);
+    new DRemoteTask(){
+      @Override public void lcompute(){
+        addToPendingCount(vs.length);
+        for(int i = 0; i < vs.length; ++i){
+          final int fi = i;
+          new H2O.H2OCountedCompleter(this){
+            @Override public void compute2(){
+              long row=0;                 // Start row
+              Key k;
+              for( int i=0; i<nchunks; i++ ) {
+                long nrow = chunk2StartElem(i+1); // Next row
+                if((k = vs[fi].chunkKey(i)).home())
+                  DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
+                row = nrow;
+              }
+              tryComplete();;
+            }
+          }.fork();
+        }
+        tryComplete();
+      }
+      @Override public final void lonCompletion( CountedCompleter caller ) {
+        Futures fs = new Futures();
+        for(Vec v:vs) if(v._key.home()) DKV.put(v._key,v,fs);
+        fs.blockForPending();
+      }
+      @Override public void reduce(DRemoteTask drt){}
+    }.invokeOnAllNodes();
+    return vs;
+  }
    /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
   public Vec makeZero()                { return makeCon(0); }
@@ -279,6 +318,14 @@ public class Vec extends Iced {
   public final int timeMode(){ return _time; }
   public final String timeParse(){ return ParseTime.TIME_PARSE[_time]; }
 
+  /** Is the column constant.
+   * <p>Returns true if the column contains only constant values and it is not full of NAs.</p> */
+  public final boolean isConst() { return min() == max(); }
+  /** Is the column bad.
+   * <p>Returns true if the column is full of NAs.</p>
+   */
+  public final boolean isBad() { return naCnt() == length(); }
+
   /** Map the integer value for a enum/factor/categorical to it's String.
    *  Error if it is not an ENUM.  */
   public String domain(long i) { return _domain[(int)i]; }
@@ -344,7 +391,8 @@ public class Vec extends Iced {
   // the rollup in the background.  *Always* returns "this".
   public Vec rollupStats(Futures fs) {
     Vec vthis = DKV.get(_key).get();
-    if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    if( vthis._naCnt==-2 )
+      throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
       if( vthis == this ) return this;
       _min  = vthis._min;   _max   = vthis._max;
@@ -551,24 +599,23 @@ public class Vec extends Iced {
     return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
-  public final Chunk chunkForRow(long i) {
-    return chunkForChunkIdx(elem2ChunkIdx(i));
-  }
+  private Chunk chunkForRow_impl(long i) { return chunkForChunkIdx(elem2ChunkIdx(i)); }
 
   // Cache of last Chunk accessed via at/set api
   transient Chunk _cache;
-  private Chunk c(long i) {
+  /** The Chunk for a row#.  Warning: this loads the data locally!  */
+  public final Chunk chunkForRow(long i) {
     Chunk c = _cache;
-    return (c != null && c._chk2==null && c._start <= i && i < c._start+c._len) ? c : (_cache = chunkForRow(i));
+    return (c != null && c._chk2==null && c._start <= i && i < c._start+c._len) ? c : (_cache = chunkForRow_impl(i));
   }
   /** Fetch element the slow way, as a long.  Floating point values are
    *  silently rounded to an integer.  Throws if the value is missing. */
-  public final long  at8( long i ) { return c(i).at8(i); }
+  public final long  at8( long i ) { return chunkForRow(i).at8(i); }
   /** Fetch element the slow way, as a double.  Missing values are
    *  returned as Double.NaN instead of throwing. */
-  public final double at( long i ) { return c(i).at(i); }
+  public final double at( long i ) { return chunkForRow(i).at(i); }
   /** Fetch the missing-status the slow way. */
-  public final boolean isNA(long row){ return c(row).isNA(row); }
+  public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
 
 
   /** Write element the slow way, as a long.  There is no way to write a
@@ -578,18 +625,18 @@ public class Vec extends Iced {
    *  common compatible data representation.
    *
    *  */
-  public final long   set( long i, long   l) {return c(i).set(i,l);}
+  public final long   set( long i, long   l) {return chunkForRow(i).set(i,l);}
 
   /** Write element the slow way, as a double.  Double.NaN will be treated as
    *  a set of a missing element.
    *  */
-  public final double set( long i, double d) {return c(i).set(i,d);}
+  public final double set( long i, double d) {return chunkForRow(i).set(i,d);}
   /** Write element the slow way, as a float.  Float.NaN will be treated as
    *  a set of a missing element.
    *  */
-  public final float  set( long i, float  f) {return c(i).set(i,f);}
+  public final float  set( long i, float  f) {return chunkForRow(i).set(i,f);}
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) { return c(i).setNA(i);}
+  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i);}
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {

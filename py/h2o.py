@@ -33,7 +33,7 @@ def check_params_update_kwargs(params_dict, kw, function, print_params):
             raise Exception("illegal parameter '%s' in %s" % (k, function))
 
     if print_params:
-        print "\n%s parameters:" % function, params_dict
+        print "%s parameters:" % function, params_dict
         sys.stdout.flush()
 
 def verboseprint(*args, **kwargs):
@@ -1169,8 +1169,8 @@ class H2O(object):
             r = response['response']
             status = r['status']
             progress = r.get('progress', "")
-        doFirstPoll = status != 'done'
 
+        doFirstPoll = status != 'done'
         (url, params) = get_redirect_url(response, beta_features)
         # no need to recreate the string for messaging, in the loop..
         if params:
@@ -1179,7 +1179,7 @@ class H2O(object):
             paramsStr = ''
 
         # FIX! don't do JStack noise for tests that ask for it. JStack seems to have problems
-        noise_enable = noise is not None and noise != ("JStack", None)
+        noise_enable = noise and noise != ("JStack", None)
         if noise_enable:
             print "Using noise during poll_url:", noise
             # noise_json should be like "Storeview"
@@ -1213,8 +1213,6 @@ class H2O(object):
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
-            print status, progress, url
-            time.sleep(retryDelaySecs)
             # every other one?
             create_noise = noise_enable and ((count%2)==0)
             if create_noise:
@@ -1227,6 +1225,9 @@ class H2O(object):
                 paramsUsed = params
                 paramsUsedStr = paramsStr
                 msgUsed = "\nPolling with"
+
+            print status, progress, urlUsed
+            time.sleep(retryDelaySecs)
 
             response = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
@@ -1514,7 +1515,9 @@ class H2O(object):
     # There is a offset= param that's useful also, and filter=
     def store_view(self, timeoutSecs=60, print_params=False, **kwargs):
         params_dict = {
-            'view': 20,
+            # now we should default to a big number, so we see everything
+            'view': 10000,
+            'offset': 0,
             }
         params_dict.update(kwargs)
         if print_params:
@@ -1525,10 +1528,18 @@ class H2O(object):
             timeout=timeoutSecs)
         return a
 
-    def rebalance(self, before=None, after=None, seed=None, timeoutSecs=180):
+    def rebalance(self, timeoutSecs=180, **kwargs):
+        params_dict = {
+            # now we should default to a big number, so we see everything
+            'before': None,
+            'after': None,
+            'chunks': None,
+            'seed': None,
+            }
+        params_dict.update(kwargs)
         a = self.__do_json_request('2/ReBalance.json',
-            timeout=timeoutSecs,
-            params={"path": before, "after": after, "seed": seed}
+            params=params_dict,
+            timeout=timeoutSecs
         )
         verboseprint("\n rebalance result:", dump_json(a))
         return a
@@ -1591,7 +1602,6 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=print_params)
-        verboseprint("\nexec_query:", params_dict)
         a = self.__do_json_request('2/Exec2.json',
             timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
@@ -2243,7 +2253,7 @@ class H2O(object):
             'activation'                   : None,
             'hidden'                       : None,
             'epochs'                       : None,
-            'mini_batch'                   : None,
+            'train_samples_per_iteration'  : None,
             'seed'                         : None,
             'adaptive_rate'                : None,
             'rho'                          : None,

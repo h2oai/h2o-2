@@ -188,7 +188,7 @@ public abstract class Layer extends Iced {
   final void bprop(int u, float g, float r, float m) {
     // only correct weights if the gradient is large enough
     if (params.fast_mode || (_w == null && params.l1 == 0.0 && params.l2 == 0.0)) {
-      if (Math.abs(g) <= 1e-10) return;
+      if (g == 0f) return;
     }
 
     final float l1 = (float)params.l1;

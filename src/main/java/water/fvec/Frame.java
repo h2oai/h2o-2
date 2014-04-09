@@ -171,8 +171,9 @@ public class Frame extends Lockable<Frame> {
   /** Appends an entire Frame */
   public Frame add( Frame fr, String names[] ) {
     assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group()) : "Adding a vector from different vector group. Current frame contains "+Arrays.toString(_names)+ " vectors. New frame contains "+Arrays.toString(fr.names()) + " vectors.";
-    for( String name : names )
-      if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
+    if( _names != null && fr._names != null )
+      for( String name : names )
+        if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
     final int len0= _names!=null ? _names.length : 0;
     final int len1=  names!=null ?  names.length : 0;
     final int len = len0+len1;
@@ -674,12 +675,12 @@ public class Frame extends Lockable<Frame> {
     // Do Da Slice
     // orows is either a long[] or a Vec
     if (orows == null)
-      return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+      return new DeepSlice((long[])orows,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
       if( rows.length==0 || rows[0] < 0 )
-        return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+        return new DeepSlice(rows,c2,vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
       // Vec'ize the index array
       Futures fs = new Futures();
       AppendableVec av = new AppendableVec("rownames");
@@ -759,8 +760,15 @@ public class Frame extends Lockable<Frame> {
   private static class DeepSlice extends MRTask2<DeepSlice> {
     final int  _cols[];
     final long _rows[];
+    final byte _isInt[];
     boolean _ex = true;
-    DeepSlice( long rows[], int cols[]) { _cols=cols; _rows=rows;}
+    DeepSlice( long rows[], int cols[], Vec vecs[] ) { 
+      _cols=cols; 
+      _rows=rows;
+      _isInt = new byte[cols.length];
+      for( int i=0; i<cols.length; i++ )
+        _isInt[i] = (byte)(vecs[cols[i]].isInt() ? 1 : 0);
+    }
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       long rstart = chks[0]._start;
       int rlen = chks[0]._len;  // Total row count
@@ -805,7 +813,7 @@ public class Frame extends Lockable<Frame> {
         for( int i=0; i<_cols.length; i++ ) {
           Chunk    oc =  chks[_cols[i]];
           NewChunk nc = nchks[      i ];
-          if( oc._vec.isInt() ) { // Slice on integer columns
+          if( _isInt[i] == 1 ) { // Slice on integer columns
             for( int j=rlo; j<rhi; j++ )
               if( oc.isNA0(j) ) nc.addNA();
               else              nc.addNum(oc.at80(j),0);

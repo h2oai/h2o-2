@@ -1,8 +1,5 @@
 package hex.deeplearning;
 
-import junit.framework.Assert;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.Random;
 
@@ -44,11 +41,18 @@ public class Dropout {
   }
 
   // for input layer
-  public void randomlySparsifyActivation(float[] a, long seed) {
+  public void randomlySparsifyActivation(Neurons.DenseVector a, long seed) {
     if (_rate == 0) return;
     setSeed(seed);
-    for( int i = 0; i < a.length; i++ )
-      if (_rand.nextFloat() < _rate) a[i] = 0;
+    for( int i = 0; i < a.size(); i++ )
+      if (_rand.nextFloat() < _rate) a.set(i, 0);
+  }
+
+  public void randomlySparsifyActivation(Neurons.SparseVector a, long seed) {
+    if (_rate == 0) return;
+    setSeed(seed);
+    for (Neurons.SparseVector.Iterator it=a.begin(); !it.equals(a.end()); it.next())
+      if (_rand.nextFloat() < _rate) it.setValue(0f);
   }
 
   // for hidden layers
@@ -70,52 +74,5 @@ public class Dropout {
     if ((seed >>> 32) < 0x0000ffffL)         seed |= 0x5b93000000000000L;
     if (((seed << 32) >>> 32) < 0x0000ffffL) seed |= 0xdb910000L;
     _rand.setSeed(seed);
-  }
-
-  @Test
-  public void test() throws Exception {
-    final int units = 1000;
-    float[] a = new float[units];
-    double sum1=0, sum2=0, sum3=0, sum4=0;
-
-    final int loops = 10000;
-    for (int l = 0; l < loops; ++l) {
-      long seed = new Random().nextLong();
-
-      Dropout d = new Dropout(units, 0.3);
-      Arrays.fill(a, 1f);
-      d.randomlySparsifyActivation(a, seed);
-      sum1 += water.util.Utils.sum(a);
-
-      d = new Dropout(units, 0.0);
-      Arrays.fill(a, 1f);
-      d.randomlySparsifyActivation(a, seed + 1);
-      sum2 += water.util.Utils.sum(a);
-
-      d = new Dropout(units, 1.0);
-      Arrays.fill(a, 1f);
-      d.randomlySparsifyActivation(a, seed + 2);
-      sum3 += water.util.Utils.sum(a);
-
-      d = new Dropout(units, 0.314);
-      d.fillBytes(seed+3);
-//      Log.info("loop: " + l + " sum4: " + sum4);
-      for (int i=0; i<units; ++i) {
-        if (d.unit_active(i)) {
-          sum4++;
-          assert(d.unit_active(i));
-        }
-        else assert(!d.unit_active(i));
-      }
-//      Log.info(d.toString());
-    }
-    sum1 /= loops;
-    sum2 /= loops;
-    sum3 /= loops;
-    sum4 /= loops;
-    Assert.assertTrue(Math.abs(sum1-700)<1);
-    Assert.assertTrue(sum2 == units);
-    Assert.assertTrue(sum3 == 0);
-    Assert.assertTrue(Math.abs(sum4-686)<1);
   }
 }

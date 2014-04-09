@@ -1,15 +1,11 @@
 package hex.deeplearning;
 
-import static hex.deeplearning.DeepLearning.Loss;
 import hex.FrameTask;
-import org.junit.Ignore;
-import org.junit.Test;
+import hex.deeplearning.DeepLearning.Loss;
 import water.Iced;
 import water.MemoryManager;
-import water.PrettyPrint;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.*;
@@ -184,9 +180,8 @@ public abstract class Neurons {
     if (params.fast_mode || (
             // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
             !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
-      if (Math.abs(partial_grad) <= 1e-10) return;
+      if (partial_grad == 0f) return;
     }
-
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
       bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
     else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
@@ -194,6 +189,19 @@ public abstract class Neurons {
     else throw new UnsupportedOperationException("bprop for types not yet implemented.");
   }
 
+  /**
+   * Specialization of backpropagation for DenseRowMatrices and DenseVectors
+   * @param _w weight matrix
+   * @param _wm weight momentum matrix
+   * @param prev_a activation of previous layer
+   * @param prev_e error of previous layer
+   * @param _b bias vector
+   * @param _bm bias momentum vector
+   * @param row index of the neuron for which we back-propagate
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate learning rate
+   * @param momentum momentum factor (needed only if ADADELTA isn't used)
+   */
   private final void bprop_dense_row_dense(final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseVector prev_a, final DenseVector prev_e,
                                            final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
     final float rho = (float)params.rho;
@@ -251,9 +259,22 @@ public abstract class Neurons {
       }
     }
     if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
-    update_bias(_b, _bm, row, rate, partial_grad, momentum);
+    update_bias(_b, _bm, row, partial_grad, rate, momentum);
   }
 
+  /**
+   * Specialization of backpropagation for DenseRowMatrices and SparseVector for previous layer's activation and DenseVector for everything else
+   * @param _w weight matrix
+   * @param _wm weight momentum matrix
+   * @param prev_a sparse activation of previous layer
+   * @param prev_e error of previous layer
+   * @param _b bias vector
+   * @param _bm bias momentum vector
+   * @param row index of the neuron for which we back-propagate
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate learning rate
+   * @param momentum momentum factor (needed only if ADADELTA isn't used)
+   */
   private final void bprop_dense_row_sparse(final DenseRowMatrix _w, final DenseRowMatrix _wm, final SparseVector prev_a, final DenseVector prev_e,
                                            final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
     final float rho = (float)params.rho;
@@ -312,10 +333,14 @@ public abstract class Neurons {
       }
     }
     if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
-    update_bias(_b, _bm, row, rate, partial_grad, momentum);
+    update_bias(_b, _bm, row, partial_grad, rate, momentum);
   }
 
-  // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+  /**
+   * Helper to scale down incoming weights if their squared sum exceeds a given value
+   * C.f. Improving neural networks by preventing co-adaptation of feature detectors
+   * @param row index of the neuron for which to scale the weights
+   */
   final void rescale_weights(final int row) {
     if (_w instanceof DenseRowMatrix) {
       final int cols = _previous._a.size();
@@ -330,7 +355,16 @@ public abstract class Neurons {
     else throw new UnsupportedOperationException("not yet implemented.");
   }
 
-  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row, final float rate, final float partial_grad, final float momentum) {
+  /**
+   * Helper to update the bias values
+   * @param _b bias vector
+   * @param _bm bias momentum vector
+   * @param row index of the neuron for which we back-propagate
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate learning rate
+   * @param momentum momentum factor (needed only if ADADELTA isn't used)
+   */
+  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, final float rate, final float momentum) {
     final boolean have_momenta = _wm != null;
     if (!params.nesterov_accelerated_gradient) {
       final float delta = rate * partial_grad;
@@ -439,8 +473,11 @@ public abstract class Neurons {
       // Input Dropout
       if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
-      _dropout.randomlySparsifyActivation(_a.raw(), seed);
-// FIXME: HACK TO ALWAYS BE SPARSE
+      if (_a instanceof DenseVector)
+        _dropout.randomlySparsifyActivation((DenseVector)_a, seed);
+      else
+        _dropout.randomlySparsifyActivation((SparseVector)_a, seed);
+//// FIXME: HACK TO ALWAYS BE SPARSE
 //      _svec = new SparseVector(_dvec);
 //      assert(_svec instanceof SparseVector);
 //      _a = _svec;
@@ -875,194 +912,6 @@ public abstract class Neurons {
     }
   }
 
-  // Test mat-vec performance
-  static public class MatVecTester {
-    @Test
-    @Ignore
-    public void run() {
-      int rows = 2048;
-      int cols = 8192;
-      int loops = 50;
-      int warmup_loops = 50;
-      long seed = 0x533D;
-      float nnz_ratio_vec = 0.01f; //fraction of non-zeroes for vector
-      float nnz_ratio_mat = 0.1f; //fraction of non-zeroes for matrix
-
-      float [] a = new float[rows*cols];
-      float [] x = new float[cols];
-      float [] y = new float[rows];
-      float [] res = new float[rows];
-      byte [] bits = new byte[rows];
-
-      for (int row=0;row<rows;++row) {
-        y[row] = 0;
-        res[row] = 0;
-        bits[row] = (byte)(new String("abcdefghijklmnopqrstuvwxyz").toCharArray()[row%26]);
-      }
-      Random rng = new Random(seed);
-      for (int col=0;col<cols;++col)
-        if (rng.nextFloat() < nnz_ratio_vec)
-          x[col] = ((float)col)/cols;
-
-      for (int row=0;row<rows;++row) {
-        int off = row*cols;
-        for (int col=0;col<cols;++col) {
-          if (rng.nextFloat() < nnz_ratio_mat)
-            a[off+col] = ((float)(row+col))/cols;
-        }
-      }
-      DenseRowMatrix dra = new DenseRowMatrix(a, rows, cols);
-      DenseColMatrix dca = new DenseColMatrix(dra, rows, cols);
-      SparseRowMatrix sra = new SparseRowMatrix(dra, rows, cols);
-      SparseColMatrix sca = new SparseColMatrix(dca, rows, cols);
-      DenseVector dx = new DenseVector(x);
-      DenseVector dy = new DenseVector(y);
-      DenseVector dres = new DenseVector(res);
-      SparseVector sx = new SparseVector(x);
-
-      /**
-       * warmup
-       */
-      System.out.println("warming up.");
-      float sum = 0;
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_naive(res, a, x, y, bits);
-        sum += res[rows/2];
-      }
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_naive(dres, dra, dx, dy, bits);
-        sum += res[rows/2];
-      }
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_row_optimized(res, a, x, y, bits);
-        sum += res[rows/2];
-      }
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_naive(dres, dca, dx, dy, bits);
-        sum += res[rows/2];
-      }
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_naive(dres, dra, sx, dy, bits);
-        sum += res[rows/2];
-      }
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_naive(dres, dca, sx, dy, bits);
-        sum += res[rows/2];
-      }
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_naive(dres, sra, sx, dy, bits);
-        sum += res[rows/2];
-      }
-      for (int l=0;l<warmup_loops;++l) {
-        gemv_naive(dres, sca, sx, dy, bits);
-        sum += res[rows/2];
-      }
-
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-
-      /**
-       * naive version
-       */
-      System.out.println("\nstarting naive.");
-      sum = 0;
-      long start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_naive(res, a, x, y, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("naive time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-
-
-
-      System.out.println("\nstarting dense row * dense.");
-      sum = 0;
-      start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_naive(dres, dra, dx, dy, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("dense row * dense time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-
-
-
-      System.out.println("\nstarting optimized dense row * dense.");
-      sum = 0;
-      start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_row_optimized(res, a, x, y, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("optimized dense row * dense time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-
-
-
-      System.out.println("\nstarting dense col * dense.");
-      sum = 0;
-      start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_naive(dres, dca, dx, dy, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("dense col * dense time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-
-
-
-      System.out.println("\nstarting dense row * sparse.");
-      sum = 0;
-      start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_naive(dres, dra, sx, dy, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("dense row * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-
-
-
-      System.out.println("\nstarting dense col * sparse.");
-      sum = 0;
-      start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_naive(dres, dca, sx, dy, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("dense col * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-
-
-
-      System.out.println("\nstarting sparse row * sparse.");
-      sum = 0;
-      start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_naive(dres, sra, sx, dy, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("sparse row * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-
-
-
-      System.out.println("\nstarting sparse col * sparse.");
-      sum = 0;
-      start = System.currentTimeMillis();
-      for (int l=0;l<loops;++l) {
-        gemv_naive(dres, sca, sx, dy, bits);
-        sum += res[rows/2]; //do something useful
-      }
-      System.out.println("result: " + sum + " and " + Utils.sum(res));
-      System.out.println("sparse col * sparse time: " + PrettyPrint.msecs(System.currentTimeMillis()-start, true));
-    }
-  }
-
   /**
    * Abstract vector interface
    */
@@ -1171,6 +1020,7 @@ public abstract class Neurons {
       }
       float value() { return _values[_idx]; }
       int index() { return _indices[_idx]; }
+      void setValue(float val) { _values[_idx] = val; }
     }
 
     public Iterator begin() { return new Iterator(0); }
@@ -1279,59 +1129,5 @@ public abstract class Neurons {
     @Override public long size() { return (long)_rows*(long)_cols.length; }
     TreeMap<Integer, Float> col(int col) { return _cols[col]; }
     public float[] raw() { throw new UnsupportedOperationException("raw access to the data in a sparse matrix is not implemented."); }
-  }
-
-  /**
-   * Test sparse data structures
-   */
-  public static class SparseTester {
-    @Test
-    public void run() {
-      DenseVector dv = new DenseVector(20);
-      dv.set(3,0.21f);
-      dv.set(7,0.13f);
-      dv.set(18,0.14f);
-      SparseVector sv = new SparseVector(dv);
-      assert(sv.size() == 20);
-      assert(sv.nnz() == 3);
-
-      // dense treatment
-      for (int i=0;i<sv.size();++i)
-        Log.info("sparse [" + i + "] = " + sv.get(i));
-
-      // sparse treatment
-      for (SparseVector.Iterator it=sv.begin(); !it.equals(sv.end()); it.next()) {
-//        Log.info(it.toString());
-        Log.info(it.index() + " -> " + it.value());
-      }
-
-      DenseColMatrix dcm = new DenseColMatrix(3,5);
-      dcm.set(2,1,3.2f);
-      dcm.set(1,3,-1.2f);
-      assert(dcm.get(2,1)==3.2f);
-      assert(dcm.get(1,3)==-1.2f);
-      assert(dcm.get(0,0)==0f);
-
-      DenseRowMatrix drm = new DenseRowMatrix(3,5);
-      drm.set(2,1,3.2f);
-      drm.set(1,3,-1.2f);
-      assert(drm.get(2,1)==3.2f);
-      assert(drm.get(1,3)==-1.2f);
-      assert(drm.get(0,0)==0f);
-
-      SparseColMatrix scm = new SparseColMatrix(3,5);
-      scm.set(2,1,3.2f);
-      scm.set(1,3,-1.2f);
-      assert(scm.get(2,1)==3.2f);
-      assert(scm.get(1,3)==-1.2f);
-      assert(scm.get(0,0)==0f);
-
-      SparseRowMatrix srm = new SparseRowMatrix(3,5);
-      srm.set(2,1,3.2f);
-      srm.set(1,3,-1.2f);
-      assert(srm.get(2,1)==3.2f);
-      assert(srm.get(1,3)==-1.2f);
-      assert(srm.get(0,0)==0f);
-    }
   }
 }

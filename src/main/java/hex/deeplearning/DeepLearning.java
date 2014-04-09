@@ -43,8 +43,8 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
   public double epochs = 10;
 
-  @API(help = "Number of training samples between multi-node synchronization and scoring, can be > #rows if replicate_training_data is enabled (0: one epoch, -1: all available data)", filter = Default.class, lmin = -1, json = true)
-  public long mini_batch = 10000l;
+  @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)", filter = Default.class, lmin = -1, json = true)
+  public long train_samples_per_iteration = 10000l;
 
   @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
@@ -160,7 +160,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean ignore_const_cols = true;
 
   @API(help = "Force extra load balancing to increase training speed for small datasets (to keep all cores busy)", filter = Default.class, json = true)
-  public boolean force_load_balance = true;
+  public boolean force_load_balance = false;
 
   @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true)
   public boolean replicate_training_data = true;
@@ -168,7 +168,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Run on a single node for fine-tuning of model parameters", filter = Default.class, json = true)
   public boolean single_node_mode = false;
 
-  @API(help = "Enable shuffling of training data (recommended if training data is replicated and mini_batch is close to #nodes x #rows)", filter = Default.class, json = true)
+  @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
   public enum ClassSamplingMethod {
@@ -232,7 +232,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "seed",
           "epochs",
           "score_interval",
-          "mini_batch",
+          "train_samples_per_iteration",
           "score_duty_cycle",
           "classification_stop",
           "regression_stop",
@@ -521,7 +521,7 @@ public class DeepLearning extends Job.ValidatedJob {
       lock_data();
       checkParams();
       final boolean del_enum_resp = (classification && !response.isEnum());
-      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols);
+      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
       float[] priorDist = classification ? new MRUtils.ClassDist(dinfo._adaptedFrame.lastVec()).doAll(dinfo._adaptedFrame.lastVec()).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
@@ -609,14 +609,14 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
-      // Set mini_batch size (cannot be done earlier since this depends on whether stratified sampling is done)
-      mp.mini_batch = computeMiniBatchSize(mp.mini_batch, train.numRows(), mp.replicate_training_data, mp.single_node_mode);
+      // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
+      mp.train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode);
       // Determine whether shuffling is enforced
-      if(mp.replicate_training_data && (mp.mini_batch == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+      if(mp.replicate_training_data && (mp.train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
         mp.shuffle_training_data = true;
       }
-      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.mini_batch, mp.replicate_training_data);
+      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
       Log.info("Starting to train the Deep Learning model.");
@@ -697,32 +697,32 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   /**
-   * Compute the actual mini_batch size from the user-given parameter
-   * @param mini_batch user-given mini_batch size
+   * Compute the actual train_samples_per_iteration size from the user-given parameter
+   * @param train_samples_per_iteration user-given train_samples_per_iteration size
    * @param numRows number of training rows
    * @param replicate_training_data whether or not the training data is replicated on each node
    * @param single_node_mode whether or not the single node mode is enabled
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeMiniBatchSize(long mini_batch, final long numRows, final boolean replicate_training_data, final boolean single_node_mode) {
-    assert(mini_batch == 0 || mini_batch == -1 || mini_batch >= 1);
-    if (mini_batch == 0 || (!replicate_training_data && (mini_batch == -1 || mini_batch > numRows)) || (replicate_training_data && single_node_mode))
-      Log.info("Setting mini_batch (" + mini_batch + ") to one epoch: #rows (" + (mini_batch=numRows) + ").");
-    else if (mini_batch == -1 || mini_batch > H2O.CLOUD.size()*numRows)
-      Log.info("Setting mini_batch (" + mini_batch + ") to the largest possible number: #nodes x #rows (" + (mini_batch=H2O.CLOUD.size()*numRows) + ").");
-    assert(mini_batch != 0 && mini_batch != -1 && mini_batch >= 1);
-    return mini_batch;
+  private static long computeTrainSamplesPerIteration(long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode) {
+    assert(train_samples_per_iteration == 0 || train_samples_per_iteration == -1 || train_samples_per_iteration >= 1);
+    if (train_samples_per_iteration == 0 || (!replicate_training_data && (train_samples_per_iteration == -1 || train_samples_per_iteration > numRows)) || (replicate_training_data && single_node_mode))
+      Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to one epoch: #rows (" + (train_samples_per_iteration=numRows) + ").");
+    else if (train_samples_per_iteration == -1 || train_samples_per_iteration > H2O.CLOUD.size()*numRows)
+      Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to the largest possible number: #nodes x #rows (" + (train_samples_per_iteration=H2O.CLOUD.size()*numRows) + ").");
+    assert(train_samples_per_iteration != 0 && train_samples_per_iteration != -1 && train_samples_per_iteration >= 1);
+    return train_samples_per_iteration;
   }
 
   /**
    * Compute the fraction of rows that need to be used for training during one iteration
    * @param numRows number of training rows
-   * @param mini_batch number of training rows to be processed per iteration
+   * @param train_samples_per_iteration number of training rows to be processed per iteration
    * @param replicate_training_data whether of not the training data is replicated on each node
    * @return fraction of rows to be used for training during one iteration
    */
-  private static float computeRowUsageFraction(final long numRows, long mini_batch, boolean replicate_training_data) {
-    float rowUsageFraction = (float)mini_batch / numRows;
+  private static float computeRowUsageFraction(final long numRows, long train_samples_per_iteration, boolean replicate_training_data) {
+    float rowUsageFraction = (float)train_samples_per_iteration / numRows;
     if (replicate_training_data) rowUsageFraction /= H2O.CLOUD.size();
     assert(rowUsageFraction > 0 && rowUsageFraction <= 1.);
     return rowUsageFraction;

@@ -1,18 +1,13 @@
 package water.api;
 
 import static water.util.ModelUtils.getPredictions;
-import org.junit.Assert;
-import org.junit.Test;
-import water.MRTask2;
-import water.Request2;
-import water.UKV;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
+
+import water.*;
+import water.fvec.*;
+import water.util.Utils;
 
 public class HitRatio extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -63,10 +58,9 @@ public class HitRatio extends Request2 {
 
       if (max_k > predict.numCols()-1)
         throw new IllegalArgumentException("K cannot be larger than " + String.format("%,d", predict.numCols()-1));
-      final Frame actual_predict = new Frame(predict.names(), predict.vecs());
+      final Frame actual_predict = new Frame(predict.names().clone(), predict.vecs().clone());
       actual_predict.replace(0, va); // place actual labels in first column
       hit_ratios = new HitRatioTask(max_k, seed).doAll(actual_predict).hit_ratios();
-
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -102,7 +96,7 @@ public class HitRatio extends Request2 {
    * @param actual_label 1 actual label
    * @param pred_labels K predicted labels
    */
-  private static void updateHits(long[] hits, int actual_label, int[] pred_labels) {
+  static void updateHits(long[] hits, int actual_label, int[] pred_labels) {
     assert(hits != null);
     for (long h : hits) assert(h >= 0);
     assert(pred_labels != null);
@@ -117,27 +111,6 @@ public class HitRatio extends Request2 {
       }
     }
   }
-
-  @Test
-  public void testHits() {
-    long[] hits = new long[4];
-    int actual_label = 3; int[] pred_labels = {0,3,2,1}; updateHits(hits, actual_label, pred_labels);
-    Assert.assertTrue(hits[0] == 0);
-    Assert.assertTrue(hits[1] == 1);
-    Assert.assertTrue(hits[2] == 1);
-    Assert.assertTrue(hits[3] == 1);
-    actual_label = 0; pred_labels = new int[]{1,2,3,0}; updateHits(hits, actual_label, pred_labels);
-    Assert.assertTrue(hits[0] == 0+0);
-    Assert.assertTrue(hits[1] == 1+0);
-    Assert.assertTrue(hits[2] == 1+0);
-    Assert.assertTrue(hits[3] == 1+1);
-    actual_label = 1; pred_labels = new int[]{0,3,1,2}; updateHits(hits, actual_label, pred_labels);
-    Assert.assertTrue(hits[0] == 0+0+0);
-    Assert.assertTrue(hits[1] == 1+0+0);
-    Assert.assertTrue(hits[2] == 1+0+1);
-    Assert.assertTrue(hits[3] == 1+1+1);
-  }
-
 
   // Compute CMs for different thresholds via MRTask2
   private static class HitRatioTask extends MRTask2<HitRatioTask> {

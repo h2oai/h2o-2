@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
             'input_dropout_ratio'          : 0.2,
             'hidden'                       : '1024,1024,2048',
             'adaptive_rate'                : 1,
-            'mini_batch'                   : 0, ## 0: better accuracy!  -1: best scalability!  10000: best accuracy?
+            'train_samples_per_iteration'  : 0, ## 0: better accuracy!  -1: best scalability!  10000: best accuracy?
 #            'rate'                         : 0.01,
 #            'rate_annealing'               : 1e-6,
 #            'momentum_start'               : 0.5,

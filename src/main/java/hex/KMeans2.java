@@ -340,11 +340,18 @@ public class KMeans2 extends ColumnsJob {
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
 
+    @Override public double mse() { return total_within_SS; }
+
     @Override public float progress() {
       return Math.min(1f, iterations / (float) max_iter);
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
+      // If only one cluster, then everything is trivially assigned to it
+      if(preds.length == 1) {
+        preds[0] = 0;
+        return preds;
+      }
       double[][] cs = centers;
       int numInputCols = tmp.length-1; // -1 as there is no response column here
       if( normalized && _normClust == null )

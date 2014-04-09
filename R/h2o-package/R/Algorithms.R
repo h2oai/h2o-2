@@ -93,7 +93,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1) {
+h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 2) {
   if(version == 1) {
     if(missing(thresholds))
       thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA))
@@ -270,7 +270,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
   x_ignore = setdiff(1:ncol(data), c(args$x_i, args$y_i)) - 1
   if(length(x_ignore) == 0) x_ignore = ''
 
-  if(length(alpha) == 1 && length(lambda) == 1) {
+  if(length(alpha) == 1) {
     rand_glm_key = .h2o.__uniqID("GLM2Model")
     if(family != "tweedie")
       res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize))
@@ -363,7 +363,8 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 
   result = list()
   params$alpha = model$alpha
-  params$lambda = model$lambdas[[model$best_lambda_idx+1]]
+  params$lambda = model$lambdas
+  params$best_lambda = model$lambdas[[model$best_lambda_idx+1]]
   result$params = params
   if(model$glm$family == "tweedie")
     result$params$family = .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
@@ -406,7 +407,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 }
 
 # ------------------------------ K-Means Clustering --------------------------------- #
-h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 1) {
+h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 2) {
   if(version == 1)
     h2o.kmeans.VA(data, centers, cols, iter.max, normalize, init, seed)
   else if(version == 2)
@@ -654,7 +655,8 @@ h2o.deeplearning <- function(x, y, data, classification=TRUE, activation='Tanh',
   # BUG: Why is the confusion matrix returning an extra row and column with all zeroes?
   cm = confusion$cm[-length(confusion$cm)]
   cm = lapply(cm, function(x) { x[-length(x)] })
-  result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+  # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+  result$confusion = .build_cm(cm, confusion$domain)
   result$train_class_error = errs$train_err
   result$train_sqr_error = errs$train_mse
   result$valid_class_error = errs$valid_err
@@ -785,7 +787,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, use_non_local = TRUE, version = 1) {
+h2o.randomForest <- function(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, use_non_local = TRUE, version = 2) {
   if(version == 1) {
     if(!missing(validation)) stop("validation not supported under ValueArray")
     if(nodesize != 1) stop("Random forest under ValueArray only runs on a single node")

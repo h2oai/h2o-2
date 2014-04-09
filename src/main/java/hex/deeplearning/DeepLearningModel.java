@@ -719,10 +719,7 @@ public class DeepLearningModel extends Model {
         }
 
         _timeLastScoreEnd = System.currentTimeMillis();
-        // print the freshly scored model to ASCII
-        for (String s : toString().split("\n")) Log.info(s);
         err.scoring_time = System.currentTimeMillis() - now;
-        if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
         // enlarge the error array by one, push latest score back
         if (errors == null) {
           errors = new Errors[]{err};
@@ -732,6 +729,9 @@ public class DeepLearningModel extends Model {
           err2[err2.length-1] = err;
           errors = err2;
         }
+        // print the freshly scored model to ASCII
+        for (String s : toString().split("\n")) Log.info(s);
+        if (printme) Log.info("Time taken for scoring: " + PrettyPrint.msecs(err.scoring_time, true));
       }
       if (model_info().unstable()) {
         Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -978,7 +978,7 @@ public class DeepLearningModel extends Model {
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", model_info.parameters.epochs));
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
     DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node_mode ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
-    DocGen.HTML.paragraph(sb, "Mini-batch size: " + String.format("%,d", model_info.parameters.mini_batch));
+    DocGen.HTML.paragraph(sb, "Training samples per iteration: " + String.format("%,d", model_info.parameters.train_samples_per_iteration));
     final boolean isEnded = Job.isEnded(model_info().job().self());
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {

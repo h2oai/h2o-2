@@ -12,6 +12,9 @@
 ./n0.doit test_dead_node_status.py
 ./n0.doit test_elapsed_time.py
 ./n0.doit test_exec2_autoframe2.py
+./n0.doit test_exec_multi_node2.py
+./n0.doit test_exec_multi_node3.py
+./n0.doit test_exec_multi_node.py
 ./n0.doit test_flatfile.py
 ./n0.doit test_GBM_cancel_model_reuse.py
 ./n0.doit test_GBM_covtype_train_test.py
