@@ -93,7 +93,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 1) {
+h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, version = 2) {
   if(version == 1) {
     if(missing(thresholds))
       thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA))
@@ -407,7 +407,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 }
 
 # ------------------------------ K-Means Clustering --------------------------------- #
-h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 1) {
+h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 2) {
   if(version == 1)
     h2o.kmeans.VA(data, centers, cols, iter.max, normalize, init, seed)
   else if(version == 2)
@@ -787,7 +787,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, use_non_local = TRUE, version = 1) {
+h2o.randomForest <- function(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, use_non_local = TRUE, version = 2) {
   if(version == 1) {
     if(!missing(validation)) stop("validation not supported under ValueArray")
     if(nodesize != 1) stop("Random forest under ValueArray only runs on a single node")
