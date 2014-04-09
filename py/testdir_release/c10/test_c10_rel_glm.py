@@ -62,7 +62,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
 
         kwargs = {
-            'x' x,
+            'x': x,
             'y': 'C1',
             # 'case_mode': '>',
             # 'case': 0,
