@@ -110,7 +110,7 @@ public class Models extends Request2 {
     // Get all the model keys.  Right now it's a hack to determine which values are models.
     Set<Key> keySet = H2O.globalKeySet(null);
 
-    Map map = new TreeMap(); // Sort for pretty display and reliable ordering.
+    Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
     for (Key key : keySet) {
       String keyString = key.toString();
       ModelSummary summary = new ModelSummary();
@@ -136,12 +136,15 @@ public class Models extends Request2 {
         continue;
       }
 
-      map.put(keyString, summary);
+      modelsMap.put(keyString, summary);
     }
 
+    Map resultsMap = new HashMap();
+    resultsMap.put("models", modelsMap);
+
     // TODO: temporary hack to get things going
-    String json = gson.toJson(map);
-    Log.info("Json for kv store: " + json);
+    String json = gson.toJson(resultsMap);
+    Log.info("Json for results: " + json);
 
     JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
     return Response.done(result);
