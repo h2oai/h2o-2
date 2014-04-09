@@ -40,15 +40,23 @@ public class Dropout {
     _rate = rate;
   }
 
+  public void randomlySparsifyActivation(Neurons.Vector a, long seed) {
+    if (a instanceof Neurons.DenseVector)
+      randomlySparsifyActivation((Neurons.DenseVector) a, seed);
+    else if (a instanceof Neurons.SparseVector)
+      randomlySparsifyActivation((Neurons.SparseVector)a, seed);
+    else throw new UnsupportedOperationException("randomlySparsifyActivation not implemented for this type: " + a.getClass().getSimpleName());
+  }
+
   // for input layer
-  public void randomlySparsifyActivation(Neurons.DenseVector a, long seed) {
+  private void randomlySparsifyActivation(Neurons.DenseVector a, long seed) {
     if (_rate == 0) return;
     setSeed(seed);
     for( int i = 0; i < a.size(); i++ )
       if (_rand.nextFloat() < _rate) a.set(i, 0);
   }
 
-  public void randomlySparsifyActivation(Neurons.SparseVector a, long seed) {
+  private void randomlySparsifyActivation(Neurons.SparseVector a, long seed) {
     if (_rate == 0) return;
     setSeed(seed);
     for (Neurons.SparseVector.Iterator it=a.begin(); !it.equals(a.end()); it.next())

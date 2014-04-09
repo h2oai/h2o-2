@@ -8,7 +8,10 @@ import water.api.DocGen;
 import water.api.Request.API;
 import water.util.Utils;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * This class implements the concept of a Neuron layer in a Neural Network
@@ -184,9 +187,16 @@ public abstract class Neurons {
     }
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
       bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
-    else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
-      bprop_dense_row_sparse((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
-    else throw new UnsupportedOperationException("bprop for types not yet implemented.");
+    else if (_previous._a instanceof SparseVector)
+      bprop_dense_sparse(_w, _wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
+
+    // faster?
+//    else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
+//      bprop_dense_row_sparse((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
+//    else if (_w instanceof DenseColMatrix && _previous._a instanceof SparseVector)
+
+    else
+      throw new UnsupportedOperationException("bprop for types not yet implemented.");
   }
 
   /**
@@ -263,6 +273,82 @@ public abstract class Neurons {
   }
 
   /**
+   * Specialization of backpropagation for DenseMatrices and SparseVector for previous layer's activation and DenseVector for everything else
+   * @param _w weight matrix
+   * @param _wm weight momentum matrix
+   * @param prev_a sparse activation of previous layer
+   * @param prev_e error of previous layer
+   * @param _b bias vector
+   * @param _bm bias momentum vector
+   * @param row index of the neuron for which we back-propagate
+   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param rate learning rate
+   * @param momentum momentum factor (needed only if ADADELTA isn't used)
+   */
+  private final void bprop_dense_sparse(final Matrix _w, final Matrix _wm, final SparseVector prev_a, final DenseVector prev_e,
+                                           final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
+    final float rho = (float)params.rho;
+    final float eps = (float)params.epsilon;
+    final float l1 = (float)params.l1;
+    final float l2 = (float)params.l2;
+    final double max_w2 = params.max_w2;
+    final boolean have_momenta = _wm != null;
+    final boolean have_ada = _ada != null;
+    final boolean nesterov = params.nesterov_accelerated_gradient;
+    final boolean update_prev = prev_e != null;
+    final boolean fast_mode = params.fast_mode;
+    final int cols = prev_a.size();
+    final int idx = row * cols;
+
+    for (SparseVector.Iterator it=prev_a.begin(); !it.equals(prev_a.end()); it.next()) {
+      final int col = it.index();
+      final float weight = _w.get(row,col);
+      if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
+      final float previous_a = it.value();
+      assert (previous_a != 0); //only iterate over non-zeros!
+
+      //this is the actual gradient dE/dw
+      final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
+      final int w = idx + col;
+
+      // adaptive learning rate r from ADADELTA
+      // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
+      if (have_ada) {
+        assert(!have_momenta);
+        final float grad2 = grad*grad;
+        _ada[2*w+1] *= rho;
+        _ada[2*w+1] += (1f-rho)*grad2;
+        final float RMS_dx = Utils.approxSqrt(_ada[2*w] + eps);
+        final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
+        rate = RMS_dx*invRMS_g;
+        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*rate*rate*grad2;
+        _w.add(row, col, rate * grad);
+      } else {
+        if (!nesterov) {
+          final float delta = rate * grad;
+          _w.add(row, col, delta);
+          if( have_momenta ) {
+            _w.add(row, col, momentum * _wm.get(row, col));
+            _wm.set(row, col, delta);
+          }
+        } else {
+          float tmp = grad;
+          if( have_momenta ) {
+            float val = _wm.get(row, col);
+            val *= momentum;
+            val += tmp;
+            tmp = val;
+            _wm.set(row, col, val);
+          }
+          _w.add(row, col, rate * tmp);
+        }
+      }
+    }
+    if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
+    update_bias(_b, _bm, row, partial_grad, rate, momentum);
+  }
+
+ /**
    * Specialization of backpropagation for DenseRowMatrices and SparseVector for previous layer's activation and DenseVector for everything else
    * @param _w weight matrix
    * @param _wm weight momentum matrix
@@ -352,7 +438,18 @@ public abstract class Neurons {
         for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
       }
     }
-    else throw new UnsupportedOperationException("not yet implemented.");
+    // TODO: speedup
+    else if (_w instanceof DenseColMatrix) {
+      final int cols = _previous._a.size();
+      final double max_w2 = params.max_w2;
+      double r2 = 0;
+      for (int col=0; col<cols;++col) r2 += _w.get(row,col)*_w.get(row,col);
+      if( r2 > max_w2 ) {
+        final float scale = Utils.approxSqrt((float)(max_w2 / r2));
+        for( int col=0; col < cols; col++ ) _w.set(row, col, _w.get(row,col) * scale);
+      }
+    }
+    else throw new UnsupportedOperationException("rescale weights for " + _w.getClass().getSimpleName() + " not yet implemented.");
   }
 
   /**
@@ -473,10 +570,8 @@ public abstract class Neurons {
       // Input Dropout
       if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
-      if (_a instanceof DenseVector)
-        _dropout.randomlySparsifyActivation((DenseVector)_a, seed);
-      else
-        _dropout.randomlySparsifyActivation((SparseVector)_a, seed);
+      _dropout.randomlySparsifyActivation(_a, seed);
+
 // FIXME: HACK TO ALWAYS BE SPARSE
       _svec = new SparseVector(_dvec);
       assert(_svec instanceof SparseVector);
@@ -663,7 +758,7 @@ public abstract class Neurons {
   public static class Softmax extends Output {
     public Softmax(int units) { super(units); }
     @Override protected void fprop() {
-      gemv((DenseVector)_a, (DenseRowMatrix)_w, (DenseVector)_previous._a, _b, null);
+      gemv((DenseVector) _a, (DenseRowMatrix) _w, (DenseVector) _previous._a, _b, null);
       final float max = Utils.maxValue(_a.raw());
       float scale = 0;
       for( int o = 0; o < _a.size(); o++ ) {
@@ -805,10 +900,15 @@ public abstract class Neurons {
    * @param row_bits Bit mask for which rows to use
    */
   static void gemv(final DenseVector res, final Matrix a, final Vector x, final DenseVector y, byte[] row_bits) {
-    if (a instanceof DenseRowMatrix && x instanceof DenseVector) gemv(res, (DenseRowMatrix)a, (DenseVector)x, y, row_bits); //default
-    else if (a instanceof DenseColMatrix && x instanceof SparseVector) gemv(res, (DenseColMatrix)a, (SparseVector)x, y, row_bits); //fast
-    else if (a instanceof DenseRowMatrix && x instanceof SparseVector) gemv(res, (DenseRowMatrix)a, (SparseVector)x, y, row_bits); //not as fast
-    else throw new UnsupportedOperationException("not yet implemented.");
+    if (a instanceof DenseRowMatrix && x instanceof DenseVector)
+      gemv(res, (DenseRowMatrix)a, (DenseVector)x, y, row_bits); //default
+    else if (a instanceof DenseColMatrix && x instanceof SparseVector)
+      gemv(res, (DenseColMatrix)a, (SparseVector)x, y, row_bits); //fast for really sparse
+    else if (a instanceof DenseRowMatrix && x instanceof SparseVector)
+      gemv(res, (DenseRowMatrix) a, (SparseVector) x, y, row_bits); //try
+    else if (a instanceof DenseColMatrix && x instanceof DenseVector)
+      gemv(res, (DenseColMatrix) a, (DenseVector) x, y, row_bits); //try
+    else throw new UnsupportedOperationException("gemv for matrix " + a.getClass().getSimpleName() + " and vector + " + x.getClass().getSimpleName() + " not yet implemented.");
   }
 
   static void gemv(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
