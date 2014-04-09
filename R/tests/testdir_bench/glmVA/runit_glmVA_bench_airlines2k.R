@@ -57,7 +57,7 @@ function(conn) {
   numCols <- ncol(air.hex)
   
   start_model <- round(System$currentTimeMillis())[[1]]
-  m <- h2o.glm.VA(x = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "UniqueCarrier", "CRSElapsedTime", "Origin", "Dest", "Distance"), y = "IsDepDelayed", data = air.hex, family = "binomial")
+  m <- h2o.glm(x = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "UniqueCarrier", "CRSElapsedTime", "Origin", "Dest", "Distance"), y = "IsDepDelayed", data = air.hex, family = "binomial")
   end_model <- round(System$currentTimeMillis())[[1]]
   modelTime <<- (end_model - start_model)/1000
   
