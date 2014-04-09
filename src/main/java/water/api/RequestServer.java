@@ -66,45 +66,63 @@ public class RequestServer extends NanoHTTPD {
     _http404 = registerRequest(new HTTP404());
     _http500 = registerRequest(new HTTP500());
 
-    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data");
-    Request.addToNavbar(registerRequest(new Inspect()),     "Inspect",                    "Data");
-    Request.addToNavbar(registerRequest(new StoreView()),   "View All",                   "Data");
-    Request.addToNavbar(registerRequest(new Parse()),       "Parse",                      "Data");
-    Request.addToNavbar(registerRequest(new ImportFiles()), "Import Files",               "Data");
-    Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",                 "Data");
-    Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",                  "Data");
-    Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",                  "Data");
-    Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",                "Data");
-    Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",                "Data");
-    Request.addToNavbar(registerRequest(new Upload()),      "Upload",                     "Data");
 
-    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Model");
-    Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
-    Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
-    Request.addToNavbar(registerRequest(new PCA()),         "PCA",                        "Model");
-    Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
-    Request.addToNavbar(registerRequest(new GBM()),         "GBM",                        "Model");
-    Request.addToNavbar(registerRequest(new RF()),          "Single Node RF",             "Model");
-    Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",              "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
-    Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
-    Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",         "Model");
-//    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
+//    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data"); //disable for now
+    // Register VA-based stuff
+    registerRequest(new Inspect());
+    registerRequest(new SummaryPage());
+    registerRequest(new Parse());
+    registerRequest(new ImportFiles());
+    registerRequest(new Upload());
+    registerRequest(new ImportUrl());
+    registerRequest(new ImportS3());
+    registerRequest(new ExportS3());
+    registerRequest(new ImportHdfs());
+    registerRequest(new GLM());
+    registerRequest(new GLMGrid());
+    registerRequest(new KMeans());
+    registerRequest(new RF());
+    registerRequest(new RFScore());
+    registerRequest(new GLMScore());
+    registerRequest(new KMeansScore());
+    registerRequest(new KMeansApply());
+    registerRequest(new GeneratePredictionsPage());
+    registerRequest(new Score());
 
-    Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
-    Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
-    Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",                     "Score");
-    Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",               "Score");
-    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
-//    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (deprecated)","Score");
-    Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
-    Request.addToNavbar(registerRequest(new Predict()),     "Predict2",                   "Score");
-    Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
-    Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
-    Request.addToNavbar(registerRequest(new AUC()),         "AUC",                        "Score");
-    Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                   "Score");
+    Request.addToNavbar(registerRequest(new Inspect2()),      "Inspect",                "Data");
+    Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
+    Request.addToNavbar(registerRequest(new Parse2()),        "Parse",                  "Data");
+    Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
+    Request.addToNavbar(registerRequest(new Upload2()),       "Upload",                 "Data");
+    Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
 
+    // Not supported for now
+//    Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",                  "Data");
+//    Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",                "Data");
+
+    // Remove VA based algos from GUI
+//    Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
+//    Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
+//    Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
+//    Request.addToNavbar(registerRequest(new RF()),          "Single Node RF",             "Model");
+
+    // FVec models
+    Request.addToNavbar(registerRequest(new PCA()),         "PCA",                      "Model");
+    Request.addToNavbar(registerRequest(new GBM()),         "GBM",                      "Model");
+    Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",            "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",    "Model");
+    Request.addToNavbar(registerRequest(new GLM2()),        "GLM (Beta)",               "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans (Beta)",            "Model");
+    Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
+
+    // FVec scoring
+    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA",                      "Score");
+    Request.addToNavbar(registerRequest(new Predict()),     "Predict",                  "Score");
+    Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",     "Score");
+    Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
+    Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
+
+    // Admin
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",            "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",  "Admin");
     Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",     "Admin");
@@ -114,6 +132,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",     "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
 
+    // Help and Tutorials
     Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help", USE_NEW_TAB);
     Request.addToNavbar(registerRequest(new Tutorials()),           "Tutorials Home",         "Help", USE_NEW_TAB);
     Request.addToNavbar(registerRequest(new TutorialDeepLearning()),"Deep Learning Tutorial", "Help", USE_NEW_TAB);
@@ -124,24 +143,16 @@ public class RequestServer extends NanoHTTPD {
 
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
-      registerRequest(new ImportFiles2());
-      registerRequest(new Parse2());
-      registerRequest(new Inspect2());
-      registerRequest(new SummaryPage2());
       registerRequest(new QuantilesPage());
       registerRequest(new hex.LR2());
+      registerRequest(new ReBalance());
     } else {
-      Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Upload2()),        "Upload2",              "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
+//      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
+//      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
     registerRequest(new Get()); // Download
     //Column Expand
