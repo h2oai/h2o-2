@@ -22,6 +22,7 @@ import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
 import hex.pca.PCAScore;
+//import hex.speedrf.SPDRFProgress;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
@@ -135,6 +136,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Upload2()),        "Upload2",              "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new SPDRF()),          "SpeeDRF ( ! )",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
@@ -178,6 +180,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PutValue());
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
+    registerRequest(new SPDRFView());
+//    registerRequest(new SPDRFProgress());
     registerRequest(new RReaderProgress());
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
@@ -325,6 +329,7 @@ public class RequestServer extends NanoHTTPD {
       // Some requests create an instance per call
       request = request.create(parms);
       // call the request
+      System.out.println("<<<<<<DEBUG>>>>>>>:" + parms + "    " + type);
       return request.serve(this,parms,type);
     } catch( Exception e ) {
       if(!(e instanceof ExpectedExceptionForDebug))
