@@ -181,6 +181,8 @@ public class Inspect extends Request {
       return NBModelView.redirect(this, key);
     if (f instanceof DRFModel)
       return DRFModelView.redirect(this, key);
+    if (f instanceof hex.speedrf.RFModel)
+      return water.api.SPDRFView.redirect(this, key);
     if (f instanceof GapStatisticModel)
       return GapStatisticModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
