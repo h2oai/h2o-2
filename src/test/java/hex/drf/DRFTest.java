@@ -89,8 +89,8 @@ public class DRFTest extends TestUtil {
         1,
         null,
         null);
-    Assert.fail();
-    } catch( IllegalArgumentException iae ) { /*pass*/}
+      Assert.fail();
+    } catch( IllegalArgumentException iae ) { /*pass*/ }
   }
 
   //@Test
@@ -197,9 +197,6 @@ public class DRFTest extends TestUtil {
       frTest = fnametest!=null ? parseFrame(destTest, fnametest) : null;
       pred = drf.score(frTest!=null?frTest:drf.source);
 
-    } catch (Throwable t) {
-      t.printStackTrace();
-      throw t;
     } finally {
       drf.source.delete();
       UKV.remove(drf.response._key);
