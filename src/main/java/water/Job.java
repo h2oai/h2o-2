@@ -371,7 +371,7 @@ public abstract class Job extends Func {
         return;
       }
 
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception _) {}
+      try { Thread.sleep (pollingIntervalMillis); } catch (Exception xe) {}
     }
   }
 
@@ -498,7 +498,7 @@ public abstract class Job extends Func {
   /**
    * A job which operates with a frame.
    *
-   * @INPUT frame
+   * INPUT frame
    */
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
@@ -525,7 +525,7 @@ public abstract class Job extends Func {
    * A job which has an input represented by a frame and frame column filter.
    * The filter can be specified by ignored columns or by used columns.
    *
-   * @INPUT list ignored columns by idx XOR list of ignored columns by name XOR list of used columns
+   * INPUT list ignored columns by idx XOR list of ignored columns by name XOR list of used columns
    *
    * @see FrameJob
    */
@@ -628,7 +628,7 @@ public abstract class Job extends Func {
   /**
    * A job producing a model.
    *
-   * @INPUT response column from source
+   * INPUT response column from source
    */
   public static abstract class ModelJob extends ColumnsJob {
     static final int API_WEAVER = 1;
@@ -690,7 +690,7 @@ public abstract class Job extends Func {
 
   /**
    * Job which produces model and validate it on a given dataset.
-   * @INPUT validation frame
+   * INPUT validation frame
    */
   public static abstract class ValidatedJob extends ModelJob {
     static final int API_WEAVER = 1;

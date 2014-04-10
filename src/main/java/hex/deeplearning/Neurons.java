@@ -482,7 +482,7 @@ public abstract class Neurons {
 
   /**
    * The learning rate
-   * @param n The number of training samples seen so far (for rate_annealing > 0)
+   * @param n The number of training samples seen so far (for rate_annealing greater than 0)
    * @return Learning rate
    */
   public float rate(long n) {
@@ -570,10 +570,10 @@ public abstract class Neurons {
       _dropout.randomlySparsifyActivation(_a, seed);
 
 // FIXME: HACK TO ALWAYS BE SPARSE
-      _svec = new SparseVector(_dvec);
-      assert(_svec instanceof SparseVector);
-      _a = _svec;
-      assert(_a instanceof SparseVector);
+//      _svec = new SparseVector(_dvec);
+//      assert(_svec instanceof SparseVector);
+//      _a = _svec;
+//      assert(_a instanceof SparseVector);
     }
 
   }

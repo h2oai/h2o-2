@@ -88,7 +88,7 @@ public abstract class VM {
     try {
       _process.exitValue();
       return false;
-    } catch( IllegalThreadStateException _ ) {
+    } catch( IllegalThreadStateException xe ) {
       return true;
     } catch( Exception e ) {
       throw Log.errRTExcept(e);
@@ -107,7 +107,7 @@ public abstract class VM {
     _process.destroy();
     try {
       _process.waitFor();
-    } catch( InterruptedException _ ) {
+    } catch( InterruptedException xe ) {
       // Ignore
     }
   }

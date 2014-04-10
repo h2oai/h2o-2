@@ -29,12 +29,12 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
   }
 
   /** Run some useful function over this <strong>local</strong> key, and
-   * record the results in the <em>this<em> MRTask. */
+   * record the results in the <em>this</em> MRTask. */
   abstract public void map( Key key );
 
   transient long _reservedMem;
   /** Do all the keys in the list associated with this Node.  Roll up the
-   * results into <em>this<em> MRTask. */
+   * results into <em>this</em> MRTask. */
   @Override public final void lcompute() {
     if( _hi-_lo >= 2 ) { // Multi-key case: just divide-and-conquer to 1 key
       final int mid = (_lo+_hi)>>>1; // Mid-point

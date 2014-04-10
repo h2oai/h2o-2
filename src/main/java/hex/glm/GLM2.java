@@ -412,7 +412,7 @@ public class GLM2 extends ModelJob {
               }
               lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
             }
-            _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
+            _model = new GLMModel(GLM2.this, self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
             _model.warnings = warns;
             _model.clone().delete_and_lock(self());
             if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max

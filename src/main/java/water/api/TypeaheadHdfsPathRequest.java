@@ -32,7 +32,7 @@ public class TypeaheadHdfsPathRequest extends TypeaheadRequest {
         }
         if( array.size() == limit) break;
       }
-    } catch( Throwable _ ) { }
+    } catch( Throwable xe ) { }
     return array;
   }
 

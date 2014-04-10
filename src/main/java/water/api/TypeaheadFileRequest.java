@@ -62,7 +62,7 @@ public class TypeaheadFileRequest extends TypeaheadRequest {
         }
         if( array.size() == limit) break;
       }
-    } catch( Throwable _ ) { }
+    } catch( Throwable xe ) { }
     return array;
   }
   protected JsonArray serveS3(String filter, int limit){
@@ -75,7 +75,7 @@ public class TypeaheadFileRequest extends TypeaheadRequest {
           array.add(new JsonPrimitive(b.getName()));
         if( array.size() == limit) break;
       }
-    } catch( IllegalArgumentException _ ) { }
+    } catch( IllegalArgumentException xe ) { }
     return array;
   }
 

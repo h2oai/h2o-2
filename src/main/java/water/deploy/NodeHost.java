@@ -41,7 +41,7 @@ public class NodeHost implements Node {
   @Override public void kill() {
     try {
       _ssh.kill();
-    } catch( Exception _ ) {
+    } catch( Exception xe ) {
     }
   }
 }

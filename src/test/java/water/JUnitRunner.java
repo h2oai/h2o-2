@@ -123,7 +123,7 @@ public class JUnitRunner {
         Class c = Class.forName(name);
         if( isTest(c) )
           tests.add(c);
-      } catch( Throwable _ ) {
+      } catch( Throwable xe ) {
       }
     }
     if( tests.size() == 0 )

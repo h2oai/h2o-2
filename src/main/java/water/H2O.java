@@ -1181,7 +1181,7 @@ public final class H2O {
   // disabled).
   static void multicast( ByteBuffer bb ) {
     try { multicast2(bb); }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   static private void multicast2( ByteBuffer bb ) {
@@ -1689,7 +1689,7 @@ public final class H2O {
       try {
         Thread.sleep (sleepMillis);
       }
-      catch (Exception _)
+      catch (Exception xe)
         {}
     }
 
@@ -1758,7 +1758,7 @@ public final class H2O {
           fail();
         }
         testForFailureShutdown();
-        try { s.close(); } catch (Exception _) {}
+        try { s.close(); } catch (Exception xe) {}
       }
     }
 

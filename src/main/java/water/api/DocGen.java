@@ -16,7 +16,7 @@ import hex.glm.GLMParams.Family;
 import hex.KMeans2;
 
 /**
- * Auto-gen doc support, for JSON & REST API docs
+ * Auto-gen doc support, for JSON and REST API docs
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
 public abstract class DocGen {

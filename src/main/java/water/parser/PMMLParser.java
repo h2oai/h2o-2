@@ -17,8 +17,8 @@ import water.util.Log;
  *
  *  Like a good R-D parser, uses a separate function for parsing each XML
  *  element.  Each function expects to be at a particular parse-point
- *  (generally after the openning '<' and before the tag is parsed), and
- *  always leaves the parse just after the close-tag '>'.  The semantic
+ *  (generally after the openning '&lt;' and before the tag is parsed), and
+ *  always leaves the parse just after the close-tag '&gt;'.  The semantic
  *  interpretation is then interleaved with the parsing, with higher levels
  *  passing down needed info to lower element levels, and lower levels
  *  directly returning results to the higher levels.

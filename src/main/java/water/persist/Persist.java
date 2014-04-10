@@ -57,7 +57,7 @@ public abstract class Persist {
 
   /**
    * Value should already be persisted to disk. A racing delete can trigger a failure where we get a
-   * null return, but no crash (although one could argue that a racing load&delete is a bug no
+   * null return, but no crash (although one could argue that a racing load and delete is a bug no
    * matter what).
    */
   public abstract byte[] load(Value v);
