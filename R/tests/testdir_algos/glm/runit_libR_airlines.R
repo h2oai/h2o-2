@@ -38,7 +38,8 @@ test.LiblineaR.airlines <- function(conn) {
                      lambda       = 1 / (3*100),
                      alpha        = 0.0,
                      standardize  = TRUE,
-                     epsilon = 1E-4)
+                     epsilon = 1E-4,
+                     version = 1)
     
     h2op         <- h2o.predict(h2o.m, testhex)
     h2opreds     <- head(h2op, nrow(h2op))

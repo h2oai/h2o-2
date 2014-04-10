@@ -180,7 +180,7 @@ public abstract class Neurons {
     if (params.fast_mode || (
             // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
             !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
-      if (partial_grad == 0) return;
+      if (partial_grad == 0f) return;
     }
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
       bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
@@ -473,8 +473,11 @@ public abstract class Neurons {
       // Input Dropout
       if (_dropout == null) return;
       seed += params.seed + 0x1337B4BE;
-      _dropout.randomlySparsifyActivation(_a.raw(), seed);
-// FIXME: HACK TO ALWAYS BE SPARSE
+      if (_a instanceof DenseVector)
+        _dropout.randomlySparsifyActivation((DenseVector)_a, seed);
+      else
+        _dropout.randomlySparsifyActivation((SparseVector)_a, seed);
+//// FIXME: HACK TO ALWAYS BE SPARSE
 //      _svec = new SparseVector(_dvec);
 //      assert(_svec instanceof SparseVector);
 //      _a = _svec;
@@ -1017,6 +1020,7 @@ public abstract class Neurons {
       }
       float value() { return _values[_idx]; }
       int index() { return _indices[_idx]; }
+      void setValue(float val) { _values[_idx] = val; }
     }
 
     public Iterator begin() { return new Iterator(0); }

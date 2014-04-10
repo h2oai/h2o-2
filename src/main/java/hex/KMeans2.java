@@ -347,6 +347,11 @@ public class KMeans2 extends ColumnsJob {
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
+      // If only one cluster, then everything is trivially assigned to it
+      if(preds.length == 1) {
+        preds[0] = 0;
+        return preds;
+      }
       double[][] cs = centers;
       int numInputCols = tmp.length-1; // -1 as there is no response column here
       if( normalized && _normClust == null )
