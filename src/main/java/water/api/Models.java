@@ -27,9 +27,9 @@ public class Models extends Request2 {
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   private class ModelSummary {
-    public String model_type = "unknown";
-    public String family = "unknown";
-    public String state = "unknown";
+    public String model_algorithm = "unknown";
+    public Model.ModelCategory model_category = Model.ModelCategory.Unknown;
+    public Model.ModelState state = Model.ModelState.Unknown;
     public List<String> input_column_names = new ArrayList<String>();
     public String response_column_name = null;
   }
@@ -40,7 +40,10 @@ public class Models extends Request2 {
   private void summarizeModel(ModelSummary summary, Value value, water.Model model) {
     String[] names = model._names;
 
-    summary.model_type = model.getClass().toString();
+    summary.model_algorithm = model.getClass().toString(); // fallback only
+
+    summary.state = model.getModelState();
+    summary.model_category = model.getModelCategory();
 
     summary.response_column_name = names[names.length - 1];
 
@@ -55,8 +58,7 @@ public class Models extends Request2 {
     // add generic fields such as column names
     summarizeModel(summary, value, model);
 
-    summary.model_type = "GLM";
-    summary.family = model.getParams().getFamily().toString();
+    summary.model_algorithm = "GLM";
 
     // Job.JobHandle = (Job)DKV.get(model.getJobKey());
     // summary.state = job.state.toString());
@@ -69,8 +71,8 @@ public class Models extends Request2 {
     // add generic fields such as column names
     summarizeModel(summary, value, model);
 
-    summary.model_type = "DRF";
-    // summary.family = model.getParams().getFamily().toString();
+    summary.model_algorithm = "DRF";
+    // summary.model_category = model.getParams().getFamily().toString();
 
     // Job.JobHandle = (Job)DKV.get(model.getJobKey());
     // summary.state = job.state.toString());
@@ -83,8 +85,8 @@ public class Models extends Request2 {
     // add generic fields such as column names
     summarizeModel(summary, value, model);
 
-    summary.model_type = "DeepLearning";
-    // summary.family = model.getParams().getFamily().toString();
+    summary.model_algorithm = "DeepLearning";
+    // summary.model_category = model.getParams().getFamily().toString();
 
     // Job.JobHandle = (Job)DKV.get(model.getJobKey());
     // summary.state = job.state.toString());
@@ -97,8 +99,8 @@ public class Models extends Request2 {
     // add generic fields such as column names
     summarizeModel(summary, value, model);
 
-    summary.model_type = "GBM";
-    // summary.family = model.getParams().getFamily().toString();
+    summary.model_algorithm = "GBM";
+    // summary.model_category = model.getParams().getFamily().toString();
 
     // Job.JobHandle = (Job)DKV.get(model.getJobKey());
     // summary.state = job.state.toString());
@@ -112,6 +114,11 @@ public class Models extends Request2 {
 
     Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
     for (Key key : keySet) {
+      if( !key.user_allowed() ) // Also filter out for user-keys
+        continue;
+      if( H2O.get(key) == null )
+        continue;
+
       String keyString = key.toString();
       ModelSummary summary = new ModelSummary();
 

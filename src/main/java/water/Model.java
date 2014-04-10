@@ -88,7 +88,32 @@ public abstract class Model extends Lockable<Model> {
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
 
-  /** Remove any Model internal Keys */
+  public enum ModelState {
+    Unknown,
+    Training,
+    Ready;
+  }
+
+  public enum ModelCategory {
+    Unknown,
+    Binomial,
+    Multinomial,
+    Regression,
+    Clustering;
+  }
+
+  public ModelState getModelState() {
+      return (is_wlocked() ? ModelState.Training : ModelState.Ready);
+  }
+
+  // TODO: override in KMeansModel once that's rewritten on water.Model
+  public ModelCategory getModelCategory() {
+    return (isClassifier() ?
+            (nclasses() > 2 ? ModelCategory.Multinomial : ModelCategory.Binomial) :
+            ModelCategory.Regression);
+  }
+
+    /** Remove any Model internal Keys */
   @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
   @Override public String errStr() { return "Model"; }
 
