@@ -50,20 +50,21 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         x_from_zero = [6,7,8,10,12,31,32,33,34,35,36,37,40,41,42,43,44,45,46,47,49,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]
 
         x = ['C' + str(i + 1) for i in x_from_zero]
+        y = 0
         # GLM Train***********************************************************
         keepPattern = None
         # don't need the intermediate Dicts produced from columnInfoFromInspect
         x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)
         print "from goodX (not used) x:", x
-        print "y:", 'C1'
+        print "y:", y
 
         # have to use named cols, and they start with 1
         
 
 
         kwargs = {
-            'x' x,
-            'y': 'C1',
+            'x': x,
+            'y': y,
             # 'case_mode': '>',
             # 'case': 0,
             'family': 'binomial',

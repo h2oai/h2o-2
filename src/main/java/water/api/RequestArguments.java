@@ -1374,7 +1374,7 @@ public class RequestArguments extends RequestStatics {
         try {
           d = Double.parseDouble(input);
           i = (long)d;
-        } catch ( NumberFormatException _) { d = i - 1; } // make d different from i
+        } catch ( NumberFormatException xe ) { d = i - 1; } // make d different from i
         if( i!=d ) throw new H2OIllegalArgumentException(this, "Value '"+input+"' is not a valid long integer.");
       }
       if ((i< _min) || (i > _max))

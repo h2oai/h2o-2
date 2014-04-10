@@ -9,7 +9,7 @@ import water.MRTask2;
 import water.fvec.*;
 import water.util.Utils;
 
-/** Simple shuffle task based on Fisher&Yates algo.
+/** Simple shuffle task based on Fisher/Yates algo.
  *
  * WARNING: It shuffles data only inside the chunk.
  */

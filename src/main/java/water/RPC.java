@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * for caller.tryComplete() to be called in a F/J thread, to support completion
  * style execution (i.e. Continuation Passing Style).
  * 3- DTask will be serialized and sent to the target; small objects via UDP
- * and large via TCP (using AutoBuffer & auto-gen serializers).
+ * and large via TCP (using AutoBuffer and auto-gen serializers).
  * 4- An RPC UDP control packet will be sent to target; this will also contain
  * the DTask if its small enough.
  * 4.5- The network may replicate (or drop) the UDP packet.  Dups may arrive.

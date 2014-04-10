@@ -5,7 +5,7 @@ import water.fvec.Frame;
 
 /**
  * DRemoteTask-based Deep Learning.
- * Every node has access to all the training data -> leads to optimal CPU utilization IF the data fits on every node.
+ * Every node has access to all the training data which leads to optimal CPU utilization IF the data fits on every node.
  */
 public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
   /**
@@ -48,7 +48,7 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
   }
 
   /**
-   * Reduce between worker ndoes, with network traffic (if >1 nodes)
+   * Reduce between worker ndoes, with network traffic (if greater than 1 nodes)
    * After all reduce()'s are done, postGlobal() will be called
    * @param drt
    */

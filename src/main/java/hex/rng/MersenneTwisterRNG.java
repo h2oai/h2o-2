@@ -33,7 +33,7 @@ import water.util.Utils;
  * This is a very fast random number generator with good statistical properties
  * (it passes the full DIEHARD suite). This is the best RNG for most
  * experiments. If a non-linear generator is required, use the slower
- * {@link AESCounterRNG} RNG.
+ * AESCounterRNG RNG.
  * </p>
  *
  * <p>
@@ -86,8 +86,7 @@ public class MersenneTwisterRNG extends Random {
   /**
    * Creates an RNG and seeds it with the specified seed data.
    *
-   * @param seed
-   *          The seed data used to initialise the RNG.
+   * @param seedInts  The seed data used to initialise the RNG.
    */
   public MersenneTwisterRNG(int... seedInts) {
 

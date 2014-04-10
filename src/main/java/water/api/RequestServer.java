@@ -9,6 +9,8 @@ import hex.KMeans2.KMeans2Progress;
 import hex.ReBalance;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
+import hex.gapstat.GapStatistic;
+import hex.gapstat.GapStatisticModelView;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
 import hex.glm.GLMGridView;
@@ -16,6 +18,7 @@ import hex.glm.GLMModelView;
 import hex.glm.GLMProgress;
 import hex.nb.NBModelView;
 import hex.nb.NBProgressPage;
+import hex.gapstat.GapStatisticProgressPage;
 import hex.nb.NaiveBayes;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
@@ -128,6 +131,7 @@ public class RequestServer extends NanoHTTPD {
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
+      registerRequest(new GapStatistic());
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
@@ -144,6 +148,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
+      Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic (Beta)", "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
@@ -215,7 +220,9 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
     registerRequest(new NBProgressPage());
+    registerRequest(new GapStatisticProgressPage());
     registerRequest(new NBModelView());
+    registerRequest(new GapStatisticModelView());
     registerRequest(new PCAProgressPage());
     registerRequest(new PCAModelView());
     registerRequest(new PostFile());

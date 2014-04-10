@@ -246,7 +246,7 @@ public class Boot extends ClassLoader {
               pid = m.group(1);
             }
           }
-          catch (Exception _) {}
+          catch (Exception xe) {}
         }
 
         tmproottmpdir = tmproot + File.separator + "h2o-temp-" + now + "-" + randomChars + "-" + pid;
