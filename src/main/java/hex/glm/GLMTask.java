@@ -155,7 +155,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
    * @author tomasnykodym
    *
    */
-  public static class GLMIterationTask extends GLMTask<GLMIterationTask> {
+  public static final class GLMIterationTask extends GLMTask<GLMIterationTask> {
     final double [] _beta;
     Gram      _gram;
     double [] _xy;
@@ -165,14 +165,20 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     final double _ymu;
     protected final double _reg;
     long _n;
+    final boolean _validate;
+    final boolean _computeGradient;
+    final boolean _computeGram;
 
-    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
+    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
       super(job, dinfo,glm,cmp);
       _beta = beta;
       _ymu = ymu;
       _reg = reg;
+      _computeGram = computeGram;
+      _validate = validate;
+      _computeGradient = computeGradient;
+      assert !_computeGradient || validate;
     }
-
 
     @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       ++_n;
@@ -186,9 +192,11 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         w = 1;
         z = y;
         assert _beta == null; // don't expect beta here, gaussian is non-iterative
-        for(int i = 0; i < ncats; ++i)
-          _grad[cats[i]] -= y;
-        for(int i = 0; i < nums.length; ++i)_grad[numStart+i] -= y*nums[i];
+        if(_computeGradient){
+          for(int i = 0; i < ncats; ++i)
+            _grad[cats[i]] -= y;
+          for(int i = 0; i < nums.length; ++i)_grad[numStart+i] -= y*nums[i];
+        }
         mu = 0;
       } else {
         if( _beta == null ) {
@@ -198,7 +206,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           eta = computeEta(ncats, cats,nums,_beta);
           mu = _glm.linkInv(eta);
         }
-        _val.add(y, mu);
+        if(_validate)
+          _val.add(y, mu);
         var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
         d = _glm.linkDeriv(mu);
         z = eta + (y-mu)*d;
@@ -207,32 +216,34 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       assert w >= 0 : "invalid weight " + w;
       final double wz = w * z;
       _yy += wz * z;
-
-      final double grad = w*d*(mu-y);
+      final double grad = _computeGradient?w*d*(mu-y):0;
       for(int i = 0; i < ncats; ++i){
-        _grad[cats[i]] += grad;
-        _xy[cats[i]] += wz;
+        final int ii = cats[i];
+        if(_computeGradient)_grad[ii] += grad;
+        _xy[ii] += wz;
       }
 
       for(int i = 0; i < nums.length; ++i){
         _xy[numStart+i] += wz*nums[i];
-        _grad[numStart+i] += grad*nums[i];
+        if(_computeGradient)
+          _grad[numStart+i] += grad*nums[i];
       }
-      _grad[numStart + _dinfo._nums] += grad;
+      if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
       _xy[numStart + _dinfo._nums] += wz;
-      _gram.addRow(nums, ncats, cats, w);
+      if(_computeGram)_gram.addRow(nums, ncats, cats, w);
     }
     @Override protected void chunkInit(){
       _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
       _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
-      _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
-      _val = new GLMValidation(null,_ymu, _glm,rank);
+      if(_validate)_val = new GLMValidation(null,_ymu, _glm,rank);
+      if(_computeGradient)
+        _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
     @Override protected void chunkDone(){
       _gram.mul(_reg);
-      _val.regularize(_reg);
+      if(_val != null)_val.regularize(_reg);
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;
       _yy *= _reg;
@@ -240,11 +251,11 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     @Override
     public void reduce(GLMIterationTask git){
       Utils.add(_xy, git._xy);
-      Utils.add(_grad,git._grad);
       _gram.add(git._gram);
       _yy += git._yy;
-      _val.add(git._val);
       _n += git._n;
+      if(_validate) _val.add(git._val);
+      if(_computeGradient) Utils.add(_grad,git._grad);
       super.reduce(git);
     }
   }

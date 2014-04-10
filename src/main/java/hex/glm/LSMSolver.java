@@ -174,17 +174,20 @@ public abstract class LSMSolver extends Iced{
     public double _rho = Double.NaN;
     public double [] _wgiven;
     public double _proximalPenalty;
+    final public double _gradientEps;
     private static final double GLM1_RHO = 1.0e-3;
 
     public boolean normalize() {return _lambda != 0;}
 
     public double _addedL2;
-    public ADMMSolver (double lambda, double alpha) {
+    public ADMMSolver (double lambda, double alpha, double gradEps) {
       super(lambda,alpha);
+      _gradientEps = gradEps;
     }
-    public ADMMSolver (double lambda, double alpha, double addedL2) {
+    public ADMMSolver (double lambda, double alpha, double gradEps,double addedL2) {
       super(lambda,alpha);
       _addedL2 = addedL2;
+      _gradientEps = gradEps;
     }
 
     public JsonObject toJson(){
@@ -305,9 +308,8 @@ public abstract class LSMSolver extends Iced{
         if( r_norm < eps_pri && s_norm < eps_dual){
           double d2 = -gram._diagAdded + d;
           gram.addDiag(d2);
-          break;
-//          if(_converged = converged(gram,z,xy,1e-8)) break;
-//          else gram.addDiag(-d2);
+          if(_converged = converged(gram,z,xy,_gradientEps)) break;
+          else gram.addDiag(-d2);
         }
       }
       if(!_converged)gram.addDiag(-gram._diagAdded + d);
@@ -327,7 +329,7 @@ public abstract class LSMSolver extends Iced{
      * @param newB
      * @param oldObj
      * @param oldB
-     * @param oldGrad
+     * @param
      * @param t
      * @return
      */
@@ -357,7 +359,7 @@ public abstract class LSMSolver extends Iced{
     }
     @Override
     public boolean solve(Gram gram, double [] xy, double yy, double[] beta) {
-      ADMMSolver admm = new ADMMSolver(_lambda,_alpha);
+      ADMMSolver admm = new ADMMSolver(_lambda,_alpha,1e-2);
       if(gram != null)return admm.solve(gram,xy,yy,beta);
       Arrays.fill(beta,0);
       long t1 = System.currentTimeMillis();
