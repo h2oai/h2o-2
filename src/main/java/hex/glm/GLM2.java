@@ -78,7 +78,7 @@ public class GLM2 extends ModelJob {
 
   private double ADMM_GRAD_EPS = 1e-2;
   @API(help="use line search (slower speed, possibly greater accuracy)",filter=Default.class)
-  boolean line_search;
+  boolean higher_accuracy;
 
   int _lambdaIdx = 0;
 
@@ -332,12 +332,12 @@ public class GLM2 extends ModelJob {
         _model.clone().update(self());
         lastValidation = System.currentTimeMillis();
       }
-      if(glmt._beta != null && line_search && _glm.family != Family.tweedie){
+      if(glmt._beta != null && higher_accuracy && _glm.family != Family.tweedie){
         converged = true;
         double l1pen = alpha[0]*lambda[_lambdaIdx]*glmt._n;
         double l2pen = (1-alpha[0])*lambda[_lambdaIdx]*glmt._n;
         final double eps = 1e-2;
-        if(line_search && glmt._val != null){
+        if(higher_accuracy && glmt._val != null){
           for(int i = 0; i < glmt._grad.length-1; ++i) {// add l2 reg. term to the gradient
             glmt._grad[i] += l2pen*glmt._beta[i];
             if(glmt._beta[i] < 0)
@@ -383,8 +383,8 @@ public class GLM2 extends ModelJob {
         }
         if(!converged && _glm.family != Family.gaussian && _iter < max_iter){
           ++_iter;
-          boolean validate = line_search || (System.currentTimeMillis() - lastValidation) > 8e3;
-          new GLMIterationTask(GLM2.this,_dinfo,glmt._glm, true, validate,line_search,newBeta,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
+          boolean validate = higher_accuracy || (System.currentTimeMillis() - lastValidation) > 8e3;
+          new GLMIterationTask(GLM2.this,_dinfo,glmt._glm, true, validate, higher_accuracy,newBeta,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
           return;
         }
       }
