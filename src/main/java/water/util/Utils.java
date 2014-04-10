@@ -1403,4 +1403,29 @@ public class Utils {
       sb.append("   " + String.format("%5.3f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
     }
   }
+
+  /** Divide given size into partitions based on given ratios.
+   * @param len  number to be split into partitions
+   * @param ratio  split ratio of each partition
+   * @return array of sizes based on given ratios, the size of the last segment is len-sum(ratio)*len.
+   */
+  public static final int[] partitione(int len, float[] ratio) {
+    int[] r = new int[ratio.length+1];
+    int sum = 0;
+    int i = 0;
+    for (i=0; i<ratio.length; i++) {
+      r[i] = (int) (ratio[i]*len);
+      sum += r[i];
+    }
+    r[i] = len - sum;
+    return r;
+  }
+
+  public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
+  public static Key[] generateNumKeys(Key mk, int num, String delim) {
+    Key[] ks = new Key[num];
+    String n = mk.toString();
+    for (int i=0; i<num; i++) ks[i] = Key.make(n+delim+i);
+    return ks;
+  }
 }
