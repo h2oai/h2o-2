@@ -121,7 +121,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     /**
      * Prepare a Frame (with a single response) to be processed by the FrameTask
      * 1) Place response at the end
-     * 2) (Optionally) Remove columns with constant values or with >20% NaNs
+     * 2) (Optionally) Remove columns with constant values or with greater than 20% NaNs
      * 3) Possibly turn integer categoricals into enums
      *
      * @param source A frame to be expanded and sanity checked

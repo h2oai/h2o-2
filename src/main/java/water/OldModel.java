@@ -22,7 +22,7 @@ public abstract class OldModel extends Lockable<OldModel> {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   /** Columns used in the model.  No dataset needs to be mapped to this
-   *  ValueArray, it is just used to control for valid column data.  The mean &
+   *  ValueArray, it is just used to control for valid column data.  The mean and
    *  sigma are from the training dataset listed below, and are used when
    *  normalizing scoring data.  The Column names are used to match up with
    *  scoring data columns.  The last Column is the response column. */

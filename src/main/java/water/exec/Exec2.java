@@ -4,7 +4,7 @@ import java.util.*;
 import water.*;
 import water.fvec.*;
 
-/** Parse & execute a generic R-like string, in the context of an H2O Cloud
+/** Parse and execute a generic R-like string, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
  */
 public class Exec2 {

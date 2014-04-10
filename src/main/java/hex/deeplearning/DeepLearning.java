@@ -406,7 +406,6 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /**
    * Train a Deep Learning model, assumes that all members are populated
-   * @return JobState
    */
   @Override
   public final void execImpl() {

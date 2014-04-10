@@ -131,7 +131,7 @@ public class DTree extends Iced {
      *  Formula for node splittin space into two subregions R1,R2 with predictions y1, y2:
      *    i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2
      *
-     * @see (35), (45) in J. Friedman - Greedy Function Approximation: A Gradient boosting machine */
+     *  (35), (45) in J. Friedman - Greedy Function Approximation: A Gradient boosting machine */
     public final float improvement() {
       double d = (_p0-_p1);
       return (float) ( d*d*_n0*_n1 / (_n0+_n1) );

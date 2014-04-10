@@ -6,7 +6,7 @@ import water.util.Utils;
 /**
    A Histogram, computed in parallel over a Vec.
    <p>
-   Sums & sums-of-squares of doubles
+   Sums and sums-of-squares of doubles
    <p>
    @author Cliff Click
 */

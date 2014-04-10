@@ -30,7 +30,7 @@ import static water.util.Utils.seq;
  *   long    at8 ( long row );  // Returns the value expressed as a long.  Throws if missing.
  *   boolean isNA( long row );  // True if the value is missing.
  *   set( long row, double d ); // Stores a double; NaN will be treated as missing.
- *   set( long row, long l );   // Stores a long; throws if l exceeds what fits in a double & any floats are ever set.
+ *   set( long row, long l );   // Stores a long; throws if l exceeds what fits in a double and any floats are ever set.
  *   setNA( long row );         // Sets the value as missing.
  * </pre>
  *

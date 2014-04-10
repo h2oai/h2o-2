@@ -1572,8 +1572,6 @@ public abstract class DGLM {
      * Computes area under the ROC curve. The ROC curve is computed from the confusion matrices
      * (there is one for each computed threshold). Area under this curve is then computed as a sum
      * of areas of trapezoids formed by each neighboring points.
-     *
-     * @return estimate of the area under ROC curve of this classifier.
      */
     protected void computeAUC() {
       if( _cm == null ) return;

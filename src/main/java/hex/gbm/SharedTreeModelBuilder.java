@@ -622,7 +622,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    // public double   auc()   { return _auc; }
 
     /**
-     * Compute CM & MSE on either the training or testing dataset.
+     * Compute CM and MSE on either the training or testing dataset.
      *
      * It expect already adapted validation dataset which is adapted to a model
      * and contains a response which is adapted to confusion matrix domain. Uff :)

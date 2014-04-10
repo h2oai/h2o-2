@@ -388,7 +388,7 @@ public abstract class Neurons {
 
   /**
    * The learning rate
-   * @param n The number of training samples seen so far (for rate_annealing > 0)
+   * @param n The number of training samples seen so far (for rate_annealing greater than 0)
    * @return Learning rate
    */
   public float rate(long n) {

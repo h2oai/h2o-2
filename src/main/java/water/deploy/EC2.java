@@ -16,7 +16,7 @@ import com.amazonaws.services.ec2.model.*;
 
 /**
  * Manages EC2 instances.
- * <nl>
+ * <br>
  * Note: This class is intended for debug and experimentation purposes only, please refer to the
  * documentation to run H2O on AWS.
  */
@@ -199,7 +199,7 @@ public class EC2 {
           if( canConnect(instances) )
             return instances;
         }
-      } catch( AmazonServiceException _ ) {
+      } catch( AmazonServiceException xe ) {
         // Ignore and retry
       }
       try {
