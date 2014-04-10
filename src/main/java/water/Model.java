@@ -109,7 +109,7 @@ public abstract class Model extends Lockable<Model> {
   /** Variable importance of individual input features measured by this model. */
   public VarImp varimp() { return null; }
 
-  /** Bulk score for given <code>fr<code> frame.
+  /** Bulk score for given <code>fr</code> frame.
    * The frame is always adapted to this model.
    *
    * @param fr frame to be scored
@@ -359,7 +359,7 @@ public abstract class Model extends Lockable<Model> {
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,
-   *  and expect the last Chunks are for the final distribution & prediction.
+   *  and expect the last Chunks are for the final distribution and prediction.
    *  Default method is to just load the data into the tmp array, then call
    *  subclass scoring logic. */
   protected float[] score0( Chunk chks[], int row_in_chunk, double[] tmp, float[] preds ) {
@@ -408,13 +408,13 @@ public abstract class Model extends Lockable<Model> {
    *      // main prediction (class for classifiers or value for regression),
    *      // and remaining columns hold a probability distribution for classifiers.
    *      float[] predict( double data[], float preds[] );
-   *      double[] map( HashMap<String,Double> row, double data[] );
+   *      double[] map( HashMap &lt; String,Double &gt; row, double data[] );
    *      // Does the mapping lookup for every row, no allocation
-   *      float[] predict( HashMap<String,Double> row, double data[], float preds[] );
+   *      float[] predict( HashMap &lt; String,Double &gt; row, double data[], float preds[] );
    *      // Allocates a double[] for every row
-   *      float[] predict( HashMap<String,Double> row, float preds[] );
+   *      float[] predict( HashMap &lt; String,Double &gt; row, float preds[] );
    *      // Allocates a double[] and a float[] for every row
-   *      float[] predict( HashMap<String,Double> row );
+   *      float[] predict( HashMap &lt; String,Double &gt; row );
    *    }
    *  </pre>
    */

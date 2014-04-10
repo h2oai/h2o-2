@@ -8,8 +8,8 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 * Keys
 *
 * This class defines:
-* - A Key's bytes (name) & hash
-* - Known Disk & memory replicas.
+* - A Key's bytes (name) and hash
+* - Known Disk and memory replicas.
 * - A cache of somewhat expensive to compute stuff related to the current
 * Cloud, plus a byte of the desired replication factor.
 *

@@ -464,7 +464,7 @@ public class Tree extends H2OCountedCompleter {
     }
   }
 
-  /** Return (depth<<32)|(leaves), in 1 pass. */
+  /** Return (depth &lt;&lt; 32)|(leaves), in 1 pass. */
   public static long depth_leaves( AutoBuffer tbits ) {
     return new TreeVisitor<RuntimeException>(tbits) {
       int _maxdepth, _depth, _leaves;
