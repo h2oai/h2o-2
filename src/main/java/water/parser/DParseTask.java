@@ -471,7 +471,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         String numLevelsStr = isCategorical ? String.format("numLevels(%d)", _colDomains[i].length) : "";
         Log.info(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
       }
-      catch (Exception _) {}
+      catch (Exception xe) {}
 
       off += Math.abs(cols[i]._size);
     }

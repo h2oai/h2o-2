@@ -341,11 +341,11 @@ public class Utils {
 
   public static void close(Closeable...closeable) {
     for(Closeable c : closeable)
-      try { if( c != null ) c.close(); } catch( IOException _ ) { }
+      try { if( c != null ) c.close(); } catch( IOException xe ) { }
   }
 
   public static void close(Socket s) {
-    try { if( s != null ) s.close(); } catch( IOException _ ) { }
+    try { if( s != null ) s.close(); } catch( IOException xe ) { }
   }
 
   public static String readConsole() {

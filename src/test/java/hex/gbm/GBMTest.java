@@ -215,12 +215,12 @@ public class GBMTest extends TestUtil {
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.learn_rate = .2f;
       gbm.fork();
-      try { Thread.sleep(100); } catch( Exception _ ) { }
+      try { Thread.sleep(100); } catch( Exception xe ) { }
 
       try {
         fr.delete();            // Attempted delete while model-build is active
         H2O.fail();             // Should toss IAE instead of reaching here
-      } catch( IllegalArgumentException _ ) {
+      } catch( IllegalArgumentException xe ) {
       } catch( DException.DistributedException de ) {
         assertTrue( de.getMessage().indexOf("java.lang.IllegalArgumentException") != -1 );
       }

@@ -32,7 +32,7 @@ public class LogCollectorTask extends DRemoteTask {
       try {
         zos.close();
         baos.close();
-      } catch (Exception _) {
+      } catch (Exception xe) {
         // do nothing
       }
 

@@ -61,7 +61,7 @@ public class Tree extends H2OCountedCompleter {
   }
 
   // Oops, uncaught exception
-  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter _) {
+  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter cc ) {
     ex.printStackTrace();
     return true;
   }

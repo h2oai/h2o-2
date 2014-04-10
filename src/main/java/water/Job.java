@@ -371,7 +371,7 @@ public abstract class Job extends Func {
         return;
       }
 
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception _) {}
+      try { Thread.sleep (pollingIntervalMillis); } catch (Exception xe) {}
     }
   }
 

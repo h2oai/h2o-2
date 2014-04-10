@@ -199,7 +199,7 @@ public class EC2 {
           if( canConnect(instances) )
             return instances;
         }
-      } catch( AmazonServiceException _ ) {
+      } catch( AmazonServiceException xe ) {
         // Ignore and retry
       }
       try {

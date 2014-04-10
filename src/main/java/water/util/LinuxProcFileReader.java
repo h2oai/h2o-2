@@ -67,7 +67,7 @@ public class LinuxProcFileReader {
       pid = getProcessId();
       _pid = pid;
     }
-    catch (Exception _) {}
+    catch (Exception xe) {}
 
     File f = new File ("/proc/stat");
     if (! f.exists()) {
@@ -81,7 +81,7 @@ public class LinuxProcFileReader {
       parseSystemProcFile(_systemData);
       parseProcessProcFile(_processData);
     }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   /**
@@ -137,7 +137,7 @@ public class LinuxProcFileReader {
     try {
       _systemData = readFile(new File("/proc/stat"));
     }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   /**
@@ -163,7 +163,7 @@ public class LinuxProcFileReader {
       _systemIdleTicks   = Long.parseLong(m.group(4));
       _systemTotalTicks = systemUserTicks + systemNiceTicks + systemSystemTicks + _systemIdleTicks;
     }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   private void readProcessProcFile(String pid) {
@@ -171,7 +171,7 @@ public class LinuxProcFileReader {
       String s = "/proc/" + pid + "/stat";
       _processData = readFile(new File(s));
     }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   private void parseProcessProcFile(String s) {
@@ -192,7 +192,7 @@ public class LinuxProcFileReader {
       long processSystemTicks   = Long.parseLong(m.group(15));
       _processTotalTicks = processUserTicks + processSystemTicks;
     }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   private void readProcessNumOpenFds(String pid) {
@@ -204,7 +204,7 @@ public class LinuxProcFileReader {
         _processNumOpenFds = arr.length;
       }
     }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   /**

@@ -84,7 +84,7 @@ public class Host {
       if( process != null ) {
         try {
           process.destroy();
-        } catch( Exception _ ) {
+        } catch( Exception xe ) {
           // Ignore
         }
       }
