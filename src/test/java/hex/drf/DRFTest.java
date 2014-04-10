@@ -77,18 +77,20 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testConstantCols() throws Throwable {
-    basicDRFTestOOBE(
+    try { 
+      basicDRFTestOOBE(
         "./smalldata/poker/poker100","poker.hex",
         new PrepData() { @Override int prep(Frame fr) {
           for (int i=0; i<7;i++) UKV.remove(fr.remove(3)._key);
           return 3;
-          } },
+        } },
         1,
         null,
         null);
-
+    Assert.fail();
+    } catch( IllegalArgumentException iae ) { /*pass*/}
   }
 
   //@Test
