@@ -11,7 +11,7 @@ import water.util.Utils;
    A Histogram, computed in parallel over a Vec.
    <p>
    A {@code DHistogram} bins every value added to it, and computes a the vec
-   min & max (for use in the next split), and response mean & variance for each
+   min and max (for use in the next split), and response mean and variance for each
    bin.  {@code DHistogram}s are initialized with a min, max and number-of-
    elements to be added (all of which are generally available from a Vec).
    Bins run from min to max in uniform sizes.  If the {@code DHistogram} can

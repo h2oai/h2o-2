@@ -75,7 +75,7 @@ public class PersistS3Task extends MRTask {
     } catch( Exception e ) {
       try {
         s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, object, uploadId));
-      } catch( Exception _ ) { }
+      } catch( Exception xe ) { }
       Log.err(e);
       Progress progress = new Progress();
       progress._error = e.toString();

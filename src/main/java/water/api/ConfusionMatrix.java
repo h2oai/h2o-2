@@ -13,21 +13,21 @@ import static water.util.Utils.printConfusionMatrix;
 
 /**
  *  Compare two categorical columns, reporting a grid of co-occurrences.
- *
- *  <p>The semantics follows R-approach - see R code:
+ *  <br>
+ *  The semantics follows R-approach - see R code:
  *  <pre>
- *  > l = c("A", "B", "C")
- *  > a = factor(c("A", "B", "C"), levels=l)
- *  > b = factor(c("A", "B", "A"), levels=l)
- *  > confusionMatrix(a,b)
+ *  &gt; l = c("A", "B", "C")
+ *  &gt; a = factor(c("A", "B", "C"), levels=l)
+ *  &gt; b = factor(c("A", "B", "A"), levels=l)
+ *  &gt; confusionMatrix(a,b)
  *
  *            Reference
  * Prediction A B C
  *          A 1 0 0
  *          B 0 1 0
  *          C 1 0 0
- *  </pre></p>
- *
+ *  </pre>
+  *
  *  <p>Note: By default we report zero rows and columns.</p>
  *
  *  @author cliffc

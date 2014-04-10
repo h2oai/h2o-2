@@ -78,9 +78,9 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
         try {
           e.printStackTrace();
         }
-        catch (Exception _) {
+        catch (Exception e2) {
           System.err.println("_context.write excepted in UserMain");
-          _.printStackTrace();
+          e2.printStackTrace();
         }
       }
       finally {

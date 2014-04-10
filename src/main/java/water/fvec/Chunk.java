@@ -67,8 +67,8 @@ public abstract class Chunk extends Iced implements Cloneable {
 
 
   /** Slightly slower than 'at0' inside a chunk; goes (very) slow outside the
-   *  chunk instead of throwing.  First outside-chunk fetches & caches whole
-   *  chunk; maybe takes multiple msecs.  2nd & later touches in the same
+   *  chunk instead of throwing.  First outside-chunk fetches and caches whole
+   *  chunk; maybe takes multiple msecs.  2nd and later touches in the same
    *  outside-chunk probably run 100x slower than inside-chunk accesses.  */ 
   public final double    at_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ?   at0((int)x) :  _vec. at(i); }
   public final long     at8_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ?  at80((int)x) :  _vec.at8(i); }
@@ -195,7 +195,7 @@ public abstract class Chunk extends Iced implements Cloneable {
    *  Bulk copy from the compressed form into the nc._ls array.   */ 
   abstract NewChunk inflate_impl(NewChunk nc);
   abstract boolean hasFloat();
-  /** Chunk-specific implementations of read & write  */ 
+  /** Chunk-specific implementations of read and write  */ 
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
 

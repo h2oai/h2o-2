@@ -3,16 +3,14 @@ package hex.glm;
 import hex.FrameTask.DataInfo;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
-
-import java.util.HashMap;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-import water.util.Log;
 import water.util.Utils;
+
+import java.util.HashMap;
 
 public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -25,6 +23,11 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   @API(help="job key assigned to the job building this model")
   final Key job_key;
+
+  @API(help = "Model parameters", json = true)
+  final private GLM2 parameters;
+  public final GLM2 get_params() { return parameters; }
+  public final Request2 job() { return get_params(); }
 
   @API(help="Input data info")
   DataInfo data_info;
@@ -142,8 +145,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
+  public GLMModel(GLM2 job, Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
     super(selfKey,null,dinfo._adaptedFrame);
+    parameters = job;
     job_key = jobKey;
     this.ymu = ymu;
     this.glm = glm;

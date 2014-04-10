@@ -2,23 +2,26 @@ package hex.gbm;
 
 import static water.util.ModelUtils.getPrediction;
 import static water.util.Utils.div;
-import hex.*;
+import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.VarImp.VarImpRI;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.Split;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-
 import water.*;
 import water.api.DocGen;
 import water.api.GBMProgressPage;
 import water.fvec.Chunk;
 import water.fvec.Frame;
-import water.util.*;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
+import water.util.SB;
+import water.util.Utils;
+
+import java.util.Arrays;
 
 // Gradient Boosted Trees
 //
@@ -39,21 +42,31 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+    @API(help = "Model parameters", json = true)
+    final private GBM parameters;
+    public final GBM get_params() { return parameters; }
+    public final Request2 job() { return get_params(); }
+
     @API(help = "Learning rate, from 0. to 1.0") final double learn_rate;
-    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {
+    public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins);
+      this.parameters = job;
       this.learn_rate = learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
+    public GBMModel(GBM job, DTree.TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
       super(prior, trees, err, cm, tstats);
+      this.parameters = job;
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, DTree[] trees, TreeStats tstats) {
+    public GBMModel(GBM job, DTree.TreeModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
+      this.parameters = job;
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
-    public GBMModel(DTree.TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    public GBMModel(GBM job, DTree.TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
+      this.parameters = job;
       this.learn_rate = ((GBMModel)prior).learn_rate;
     }
 
@@ -101,13 +114,13 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new GBMModel(outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
+    return new GBMModel(this, outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
-    return new GBMModel(model, err, cm, varimp, validAUC);
+    return new GBMModel(model.get_params(), model, err, cm, varimp, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
-    return new GBMModel(model, ktrees, tstats);
+    return new GBMModel(model.get_params(), model, ktrees, tstats);
   }
   public GBM() { description = "Distributed GBM"; }
 

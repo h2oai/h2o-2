@@ -4,14 +4,12 @@ import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3.S3Exception;
-import org.jets3t.service.S3ServiceException;
 
 import water.*;
 import water.Job.ProgressMonitor;

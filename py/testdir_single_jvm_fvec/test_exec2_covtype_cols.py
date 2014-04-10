@@ -33,19 +33,19 @@ class Basic(unittest.TestCase):
         # passes with suffix, fails without?
         # suffix = ""
         suffix = ".hex"
-        for j in range(2):
-            for k in range(54):
-                # try the funky c(6) thing like  R, instead of just 6
-                execExpr = "Result" + str(k) + suffix + " = c.hex[,c(" + str(k+1) + ")]"
-                print "execExpr:", execExpr
-                h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result" + str(k) + suffix, 
-                    timeoutSecs=4)
-                for node in h2o.nodes:
-                    storeView = h2o_cmd.runStoreView(node=node, noPrint=True)
-                    numKeys = len(storeView['keys'])
-                    # number of keys should = k + 2? (on each node)
-                    self.assertEqual(k + 2, numKeys, "# of keys: %s on %s doesn't match expected: %s\n%s" % \
-                        (numKeys, node, k+2, h2o.dump_json(storeView)))
+        for k in range(54):
+            # try the funky c(6) thing like  R, instead of just 6
+            execExpr = "Result" + str(k) + suffix + " = c.hex[,c(" + str(k+1) + ")]"
+            print "execExpr:", execExpr
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result" + str(k) + suffix, 
+                timeoutSecs=4)
+            for node in h2o.nodes:
+                storeView = h2o_cmd.runStoreView(node=node, noPrint=True)
+                numKeys = len(storeView['keys'])
+                # number of keys should = k + 2? (on each node)
+                self.assertEqual(k + 2, numKeys, "# of keys: %s on %s doesn't match expected: %s" % \
+                    (numKeys, node, k + 2))
+                    # (numKeys, node, k+2, h2o.dump_json(storeView)))
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "covtype.data" , 'took', time.time() - start, 'seconds'

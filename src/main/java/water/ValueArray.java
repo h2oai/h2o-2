@@ -13,7 +13,7 @@ import water.fvec.*;
 import water.util.Log;
 
 /**
-* Large Arrays & Arraylets
+* Large Arrays and Arraylets
 *
 * Large arrays are broken into 4Meg chunks (except the last chunk which may be
 * from 4 to 8Megs). Large arrays have a metadata section in this ValueArray.

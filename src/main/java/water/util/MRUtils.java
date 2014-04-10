@@ -164,7 +164,7 @@ public class MRUtils {
    * Stratified sampling for classifiers
    * @param fr Input frame
    * @param label Label vector (must be enum)
-   * @param maxrows Maximum number of rows in the returned frame, must be > minrows
+   * @param maxrows Maximum number of rows in the returned frame, must be greater than minrows
    * @param seed RNG seed for sampling
    * @param sampling_ratios Optional: array containing the requested sampling ratios per class (in order of domains), will be overwritten if it contains all 0s
    * @return Sampled frame, with approximately the same number of samples from each class (or given by the requested sampling ratios)

@@ -7,7 +7,7 @@ import water.util.Log;
 
 /**
  * Lockable Keys - locked during long running jobs, to prevent overwriting
- * in-use keys.  e.g. model-building: expected to read-lock input ValueArray &
+ * in-use keys.  e.g. model-building: expected to read-lock input ValueArray and
  * Frames, and write-lock the output Model.  Parser should write-lock the
  * output VA/Frame, to guard against double-parsing.
  *

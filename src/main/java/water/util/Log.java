@@ -263,7 +263,7 @@ public abstract class Log {
           }
         }
       }
-    } catch (OutOfMemoryError _) {
+    } catch (OutOfMemoryError xe) {
       synchronized (Event.class){
         if (Event.lastEvent.printMe == false)
          Event.lastEvent = e;
