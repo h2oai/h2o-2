@@ -48,9 +48,7 @@ class ASTRApply extends ASTOp {
           if( ds != null ) {    // Doubles or Frame results?
             ds[i][0] = env.popDbl();
           } else {                // Frame results
-            if( env.ary(-1).numCols() != 1 )
-              throw new IllegalArgumentException(err);
-            fr2.add(fr._names[i], env.popAry().theVec(err));
+            fr2.add(fr._names[i], env.popXAry().theVec(err));
           }
         }
       } catch( IllegalArgumentException iae ) {
@@ -59,7 +57,7 @@ class ASTRApply extends ASTOp {
       }
       env.pop(4);
       if( ds != null ) env.push(FrameUtils.frame(new String[]{"C1"},ds));
-      else { env.push(1);  env._ary[env._sp-1] = fr2;  }
+      else env.push(fr2);
       assert env.isAry();
       return;
     }

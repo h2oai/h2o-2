@@ -440,7 +440,7 @@ public class GLM2 extends ModelJob {
                 }
                 lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
               }
-              _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
+              _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
               _model.warnings = warns;
               _model.clone().delete_and_lock(self());
               if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
@@ -477,7 +477,7 @@ public class GLM2 extends ModelJob {
     } else {
       Log.info("GLM2: staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
       double ymu = _dinfo._adaptedFrame.lastVec().mean();
-      _model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymu);
+      _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymu);
       _model.warnings = new String[0];
       _model.clone().delete_and_lock(self());
       new GLMIterationTask(GLM2.this,_dinfo,_glm,true,false,false,null,_ymu = ymu,_reg = 1.0/_dinfo._adaptedFrame.numRows(), new Iteration()).asyncExec(_dinfo._adaptedFrame);

@@ -19,7 +19,7 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 # Single file cases.
 #----------------------------------------------------------------------
 
-heading("Testing single file importHDFS S3N for VA")
+heading("Testing single file importHDFS S3N for FV")
 s3n_iris_file <- "0xdata-public/examples/h2o/R/datasets/iris_wheader.csv"
 url <- sprintf("s3n://%s", s3n_iris_file)
 
@@ -31,7 +31,7 @@ print(n)
 if (n != 150) {
     stop("nrows is wrong")
 }
-if (class(iris.hex) != "H2OParsedDataVA") {
+if (class(iris.hex) != "H2OParsedData") {
     stop("iris.hex is the wrong type")
 }
 
@@ -40,7 +40,7 @@ if (class(iris.hex) != "H2OParsedDataVA") {
 # Directory cases.
 #----------------------------------------------------------------------
 
-heading("Testing directory importHDFS S3N for VA")
+heading("Testing directory importHDFS S3N for FV")
 s3n_iris_dir <- "0xdata-public/examples/h2o/R/datasets"
 url2 <- sprintf("s3n://%s", s3n_iris_dir)
 
@@ -52,7 +52,7 @@ print(n)
 if (n != 150) {
     stop("nrows is wrong")
 }
-if (class(irisdir.hex) != "H2OParsedDataVA") {
+if (class(irisdir.hex) != "H2OParsedData") {
     stop("irisdir.hex is the wrong type")
 }
 

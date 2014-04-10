@@ -13,7 +13,7 @@ import water.util.Utils;
 
 /**
  * Deploys and starts a remote cluster.
- * <nl>
+ * <br>
  * Note: This class is intended for debug and experimentation purposes only, please refer to the
  * documentation to run an H2O cluster.
  */

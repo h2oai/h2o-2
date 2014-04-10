@@ -68,7 +68,7 @@ public abstract class LSMSolver extends Iced{
   }
   /**
    *  @param xy - guassian: -X'y binomial: -(1/4)X'(XB + (y-p)/(p*1-p))
-   *  @param yy - <y,y>/2
+   *  @param yy - &lt; y,y &gt; /2
    *  @param newBeta - resulting vector of coefficients
    *  @return true if converged
    *

@@ -332,7 +332,7 @@ public abstract class Request extends RequestBuilders {
   }
 
   /**
-   * Example of passing & failing request. Will be prepended with
+   * Example of passing and failing request. Will be prepended with
    * "curl -s localhost:54321/Request.json". Return param/value pairs that will be used to build up
    * a URL, and the result from serving the URL will show up as an example.
    */

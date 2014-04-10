@@ -341,11 +341,11 @@ public class Utils {
 
   public static void close(Closeable...closeable) {
     for(Closeable c : closeable)
-      try { if( c != null ) c.close(); } catch( IOException _ ) { }
+      try { if( c != null ) c.close(); } catch( IOException xe ) { }
   }
 
   public static void close(Socket s) {
-    try { if( s != null ) s.close(); } catch( IOException _ ) { }
+    try { if( s != null ) s.close(); } catch( IOException xe ) { }
   }
 
   public static String readConsole() {
@@ -690,6 +690,7 @@ public class Utils {
       return ((IcedInt)o)._val == _val;
     }
     @Override public int hashCode() { return _val; }
+    @Override public String toString() { return Integer.toString(_val); }
   }
   public static class IcedLong extends Iced {
     public final long _val;
@@ -699,6 +700,7 @@ public class Utils {
       return ((IcedLong)o)._val == _val;
     }
     @Override public int hashCode() { return (int)_val; }
+    @Override public String toString() { return Long.toString(_val); }
   }
   public static class IcedDouble extends Iced {
     public final double _val;
@@ -708,6 +710,7 @@ public class Utils {
       return ((IcedDouble)o)._val == _val;
     }
     @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
+    @Override public String toString() { return Double.toString(_val); }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
@@ -752,7 +755,7 @@ public class Utils {
 
   /** Returns a mapping of given domain to values (0, ... max(dom)).
    * Unused domain items has mapping to -1.
-   * @precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
+   * precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
   public static int[] mapping(int[] dom) {
     if (dom.length == 0) return new int[] {};
     assert dom[0] <= dom[dom.length-1] : "Domain is not sorted";
@@ -857,7 +860,7 @@ public class Utils {
     }
     return Arrays.copyOf(r, cnt);
   }
-  /** Generates sequence <start, stop) of integers: (start, start+1, ...., stop-1) */
+  /** Generates sequence (start, stop) of integers: (start, start+1, ...., stop-1) */
   static public int[] seq(int start, int stop) {
     assert start<stop;
     int len = stop-start;
@@ -946,7 +949,7 @@ public class Utils {
     return Double.longBitsToDouble(((long)(1512775 * x + 1072632447)) << 32);
   }
   /**
-   * Fast approximate log for values > 1, otherwise exact
+   * Fast approximate log for values greater than 1, otherwise exact
    * @param x
    * @return log(x) with up to 0.1% relative error
    */
@@ -1097,7 +1100,7 @@ public class Utils {
    * For mixed domains it always expects lexicographical ordering since such a domain were produce
    * by a parser which sort string with Array.sort().
    *
-   * @PRECONDITION - string domain was sorted by Array.sort(String[]), integer domain by Array.sort(int[]) and switched to Strings !!!
+   * PRECONDITION - string domain was sorted by Array.sort(String[]), integer domain by Array.sort(int[]) and switched to Strings !!!
    *
    * @param a a set of strings
    * @param b a set of strings
@@ -1129,8 +1132,8 @@ public class Utils {
    * @param lexo - true if domains are sorted in lexicographical order or false for numeric domains
    * @return union of values in given arrays.
    *
-   * @precondition lexo ? a,b are lexicographically sorted : a,b are sorted numerically
-   * @precondition a!=null && b!=null
+   * precondition lexo ? a,b are lexicographically sorted : a,b are sorted numerically
+   * precondition a!=null &amp;&amp; b!=null
    */
   public static String[] union(String[] a, String[] b, boolean lexo) {
     assert a!=null && b!=null : "Union expect non-null input!";

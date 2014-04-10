@@ -8,7 +8,7 @@ import water.fvec.Vec.VectorGroup;
 
 /**
  * Map/Reduce style distributed computation.
- * <nl>
+ * <br>
  * MRTask2 provides several <code>map</code> and <code>reduce</code> methods that can be
  * overriden to specify a computation. Several instances of this class will be
  * created to distribute the computation over F/J threads and machines.  Non-transient
@@ -16,7 +16,7 @@ import water.fvec.Vec.VectorGroup;
  * methods can store their results in fields. Results are serialized and reduced all the
  * way back to the invoking node. When the last reduce method has been called, fields
  * of the initial MRTask2 instance contains the computation results.
- * <nl>
+ * <br>
  * Apart from small reduced POJO returned to the calling node, MRtask2 can
  * produce output vector(s) as a result.  These will have chunks co-located
  * with the input dataset, however, their number of lines will generally
@@ -117,13 +117,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   protected short _nxx, _nhi;   // Range of Nodes to work on - remotely
   private int addShift( int x ) { x += _nxx; int sz = H2O.CLOUD.size(); return x < sz ? x : x-sz; }
   private int subShift( int x ) { x -= _nxx; int sz = H2O.CLOUD.size(); return x <  0 ? x+sz : x; }
-  /** Internal field to track the left & right remote nodes/JVMs to work on */
+  /** Internal field to track the left and right remote nodes/JVMs to work on */
   transient protected RPC<T> _nleft, _nrite;
   /** Internal field to track if this is a top-level local call */
   transient protected boolean _topLocal; // Top-level local call, returning results over the wire
   /** Internal field to track a range of local Chunks to work on */
   transient protected int _lo, _hi;   // Range of Chunks to work on - locally
-  /** Internal field to track the left & right sub-range of chunks to work on */
+  /** Internal field to track the left and right sub-range of chunks to work on */
   transient protected T _left, _rite; // In-progress execution tree
 
   transient private T _res;           // Result
@@ -254,7 +254,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     return self();
   }
 
-  /** Block for & get any final results from a dfork'd MRTask2.
+  /** Block for and get any final results from a dfork'd MRTask2.
    *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
     try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
@@ -403,7 +403,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     tryComplete();              // And this task is complete
   }
 
-  /** OnCompletion - reduce the left & right into self.  Called internal by
+  /** OnCompletion - reduce the left and right into self.  Called internal by
    *  F/J.  Not expected to be user-called. */
   @Override public final void onCompletion( CountedCompleter caller ) {
     _profile._onCstart = System.currentTimeMillis();

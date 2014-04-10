@@ -138,7 +138,7 @@ public class h2odriver extends Configured implements Tool {
           Thread.sleep(1000);
         }
       }
-      catch (Exception _) {
+      catch (Exception e) {
       }
       finally {
         if (! killed) {

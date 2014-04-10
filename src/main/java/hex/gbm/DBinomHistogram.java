@@ -6,7 +6,7 @@ import water.util.Utils;
 /**
    A Histogram, computed in parallel over a Vec.
    <p>
-   Sums (& sums-of-squares) of binomials - 0 or 1.  Sums-of-squares==sums in this case.
+   Sums (and sums-of-squares) of binomials - 0 or 1.  Sums-of-squares==sums in this case.
    <p>
    @author Cliff Click
 */

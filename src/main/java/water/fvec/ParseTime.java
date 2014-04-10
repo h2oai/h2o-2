@@ -49,7 +49,7 @@ public abstract class ParseTime {
       if( t0 != Long.MIN_VALUE ) return t0;
       long t2 = attemptTimeParse_2 (str); // "dd-MMM-yy"
       if( t2 != Long.MIN_VALUE ) return t2;
-    } catch( org.joda.time.IllegalFieldValueException _ ) { }
+    } catch( org.joda.time.IllegalFieldValueException xe ) { }
     return Long.MIN_VALUE;
   }
   // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"

@@ -362,23 +362,23 @@ public abstract class DRF {
       StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
       Sampling.Strategy samplingStrategy, float sample, float[] strataSamples,
       int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
-    RandomForest.OptArgs _ = new RandomForest.OptArgs();
-    _.features = numSplitFeatures;
-    _.ntrees   = ntrees;
-    _.depth    = depth;
-    _.classcol = cols[cols.length-1];
-    _.seed     = seed;
-    _.binLimit = binLimit;
-    _.verbose  = verbose;
-    _.exclusive= exclusiveSplitLimit;
+    RandomForest.OptArgs o = new RandomForest.OptArgs();
+    o.features = numSplitFeatures;
+    o.ntrees   = ntrees;
+    o.depth    = depth;
+    o.classcol = cols[cols.length-1];
+    o.seed     = seed;
+    o.binLimit = binLimit;
+    o.verbose  = verbose;
+    o.exclusive= exclusiveSplitLimit;
     String w = "";
     if (classWt != null) for(int i=0;i<classWt.length;i++) w += i+":"+classWt[i]+",";
-    _.weights=w;
-    _.parallel = parallelTrees ? 1 : 0;
-    _.statType = stat.ordinal() == 1 ? "gini" : "entropy";
-    _.sample = (int)(sample * 100);
-    _.file = "";
+    o.weights=w;
+    o.parallel = parallelTrees ? 1 : 0;
+    o.statType = stat.ordinal() == 1 ? "gini" : "entropy";
+    o.sample = (int)(sample * 100);
+    o.file = "";
 
-    Log.info(Sys.RANDF,"Web arguments: " + _ + " key "+ary._key);
+    Log.info(Sys.RANDF,"Web arguments: " + o + " key "+ary._key);
   }
 }
