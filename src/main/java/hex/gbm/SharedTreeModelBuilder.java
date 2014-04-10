@@ -4,19 +4,23 @@ import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.rng.MersenneTwisterRNG;
-
-import java.util.Arrays;
-import java.util.Random;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.AUC;
 import water.api.DocGen;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.MRUtils;
+import water.util.ModelUtils;
+import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.Random;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
