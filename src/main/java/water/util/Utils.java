@@ -690,6 +690,7 @@ public class Utils {
       return ((IcedInt)o)._val == _val;
     }
     @Override public int hashCode() { return _val; }
+    @Override public String toString() { return Integer.toString(_val); }
   }
   public static class IcedLong extends Iced {
     public final long _val;
@@ -699,6 +700,7 @@ public class Utils {
       return ((IcedLong)o)._val == _val;
     }
     @Override public int hashCode() { return (int)_val; }
+    @Override public String toString() { return Long.toString(_val); }
   }
   public static class IcedDouble extends Iced {
     public final double _val;
@@ -708,6 +710,7 @@ public class Utils {
       return ((IcedDouble)o)._val == _val;
     }
     @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
+    @Override public String toString() { return Double.toString(_val); }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
