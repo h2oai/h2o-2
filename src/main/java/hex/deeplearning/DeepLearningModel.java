@@ -82,6 +82,9 @@ public class DeepLearningModel extends Model {
     @API(help="Do classification or regression")
     public boolean classification;
 
+    @API(help = "Variable importances")
+    VarImp variable_importances;
+
     // classification
     @API(help = "Confusion matrix on training data")
     public water.api.ConfusionMatrix train_confusion_matrix;
@@ -168,6 +171,12 @@ public class DeepLearningModel extends Model {
   public double mse() {
     if (errors == null) return super.mse();
     return last_scored().validation ? last_scored().valid_mse : last_scored().train_mse;
+  }
+
+  @Override
+  public VarImp varimp() {
+    if (errors == null) return null;
+    return last_scored().variable_importances;
   }
 
   // This describes the model, together with the parameters
@@ -480,6 +489,7 @@ public class DeepLearningModel extends Model {
      * @return variable importances for input features
      */
     public float[] computeVariableImportances() {
+      Log.info("Computing variable importances.");
       float[] vi = new float[units[0]];
       Arrays.fill(vi, 0f);
 
@@ -714,10 +724,16 @@ public class DeepLearningModel extends Model {
           validPredict.delete();
         }
 
+        if (model_info().get_params().variable_importances) {
+          final float [] vi = model_info().computeVariableImportances();
+          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
+        }
+
         // keep output JSON small
         if (errors.length > 1) {
           if (last_scored().trainAUC != null) last_scored().trainAUC.clear();
           if (last_scored().validAUC != null) last_scored().validAUC.clear();
+          last_scored().variable_importances = null;
         }
 
         // only keep confusion matrices for the last step if there are fewer than specified number of output classes
@@ -1047,9 +1063,8 @@ public class DeepLearningModel extends Model {
     }
 
     // Variable importance
-    if (model_info().get_params().variable_importances) {
-      final float [] varimp = model_info().computeVariableImportances();
-      new VarImp(varimp, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, varimp.length)).toHTML(sb);
+    if (error.variable_importances != null) {
+      error.variable_importances.toHTML(sb);
     }
 
     DocGen.HTML.title(sb, "Scoring history");
