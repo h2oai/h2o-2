@@ -93,8 +93,15 @@ class Basic(unittest.TestCase):
         for (execExpr, num) in exprList:
             start = time.time()
             resultExec, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=180)
-            print h2o.dump_json(resultExec)
             print 'exec end took', time.time() - start, 'seconds'
+            print h2o.dump_json(resultExec)
+            # do the quantiles page on the created nah key
+            kwargs = {
+                'column': 0,
+                'quantile': 0.4,
+                'multiple_pass': 2,
+            }
+            h2o.nodes[0].quantiles(source_key='nah', **kwargs)
 
             inspect = h2o_cmd.runInspect(key='abc')
             numCols = inspect['numCols']
