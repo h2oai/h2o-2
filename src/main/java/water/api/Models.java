@@ -234,7 +234,7 @@ public class Models extends Request2 {
   protected Response serve() {
 
     // Get all the model keys.  Right now it's a hack to determine which values are models.
-    Set<Key> keySet = H2O.globalKeySet(null);
+    Set<Key> keySet = H2O.globalKeySet("water.Model"); // filter by class, how cool is that?
 
     Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
     for (Key key : keySet) {
