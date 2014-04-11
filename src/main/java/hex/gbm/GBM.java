@@ -54,20 +54,20 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       this.parameters = job;
       this.learn_rate = learn_rate;
     }
-    public GBMModel(GBM job, DTree.TreeModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
+    public GBMModel(GBMModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
       super(prior, trees, err, cm, tstats);
-      this.parameters = job;
-      this.learn_rate = ((GBMModel)prior).learn_rate;
+      this.parameters = prior.parameters;
+      this.learn_rate = prior.learn_rate;
     }
-    public GBMModel(GBM job, DTree.TreeModel prior, DTree[] trees, TreeStats tstats) {
+    public GBMModel(GBMModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
-      this.parameters = job;
-      this.learn_rate = ((GBMModel)prior).learn_rate;
+      this.parameters = prior.parameters;
+      this.learn_rate = prior.learn_rate;
     }
-    public GBMModel(GBM job, DTree.TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    public GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
-      this.parameters = job;
-      this.learn_rate = ((GBMModel)prior).learn_rate;
+      this.parameters = prior.parameters;
+      this.learn_rate = prior.learn_rate;
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {
@@ -117,10 +117,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return new GBMModel(this, outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
-    return new GBMModel(model.get_params(), model, err, cm, varimp, validAUC);
+    return new GBMModel(model, err, cm, varimp, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
-    return new GBMModel(model.get_params(), model, ktrees, tstats);
+    return new GBMModel(model, ktrees, tstats);
   }
   public GBM() { description = "Distributed GBM"; }
 

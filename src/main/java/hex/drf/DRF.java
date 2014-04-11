@@ -85,17 +85,17 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = sample_rate;
       this.seed = seed;
     }
-    private DRFModel(DRF params, DRFModel prior, DTree[] trees, TreeStats tstats) {
+    private DRFModel(DRFModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
-      this.parameters = params;
+      this.parameters = prior.parameters;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
 
-    private DRFModel(DRF params, DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    private DRFModel(DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
-      this.parameters = params;
+      this.parameters = prior.parameters;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
@@ -134,10 +134,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
 
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
-    return new DRFModel(this, model, err, cm, varimp, validAUC);
+    return new DRFModel(model, err, cm, varimp, validAUC);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
-    return new DRFModel(this, model, ktrees, tstats);
+    return new DRFModel(model, ktrees, tstats);
   }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 20; min_rows = 1; }
 
