@@ -1421,11 +1421,21 @@ public class Utils {
     return r;
   }
 
+  /** Generate given numbers of keys by suffixing key by given numbered suffix. */
   public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
   public static Key[] generateNumKeys(Key mk, int num, String delim) {
     Key[] ks = new Key[num];
     String n = mk.toString();
     for (int i=0; i<num; i++) ks[i] = Key.make(n+delim+i);
     return ks;
+  }
+
+  /** Return the query link to this page */
+  public static <T extends Class> String link(T page, Key k, String content) {
+    RString rs = new RString("<a href='/2/%page.query?source=%$key'>%content</a>");
+    rs.replace("page", page.getSimpleName());
+    rs.replace("key", k.toString());
+    rs.replace("content", content);
+    return rs.toString();
   }
 }

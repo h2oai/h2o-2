@@ -1,18 +1,20 @@
 package water.api;
 
 import hex.FrameSplitter;
-import water.Func;
-import water.H2O;
+import water.*;
 import water.fvec.Frame;
+import water.util.RString;
 
-/** Small utility function to split frame
- * into two parts based on given ratio.
+/** Small utility page to split frame
+ * into n-parts parts based on given ratios.
  *
  * <p>User specifies n-split ratios, which expose parts of resulting
  * datasets and produces (n+1)-datasets based on random selection of rows
  * from original dataset.</p>
  *
  * <p>Keep original chunk distribution.</p>
+ *
+ * @see FrameSplitter
  */
 public class FrameSplitPage extends Func {
 
@@ -48,4 +50,5 @@ public class FrameSplitPage extends Func {
     System.err.println("Input has: " + source.numRows());
     System.err.println("Sum of splits has: " + sum);
   }
+
 }

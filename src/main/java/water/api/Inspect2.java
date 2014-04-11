@@ -10,6 +10,7 @@ import org.joda.time.format.DateTimeFormatter;
 import water.*;
 import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.*;
+import water.util.Utils;
 
 import java.text.DecimalFormat;
 
@@ -111,7 +112,8 @@ public class Inspect2 extends Request2 {
               DeepLearning.link(skey, "Deep Learning") +", "+
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
-              DownloadDataset.link(skey, "Download as CSV") +
+              DownloadDataset.link(skey, "Download as CSV")+", "+
+              Utils.link(FrameSplitPage.class, skey, "Split frame") +
               "</div>");
     String _scrollto = String.valueOf(offset - 1);
       sb.append(
