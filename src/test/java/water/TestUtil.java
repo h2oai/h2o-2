@@ -381,9 +381,9 @@ public class TestUtil {
   public static long[][]   ar (long[] ...a)   { return a; }
   public static int   []   ari(int    ...a)   { return a; }
   public static int [][]   ar (int[]  ...a)   { return a; }
-  public static float []   ar (float  ...a)   { return a; }
-  public static double[]   ar (double ...a)   { return a; }
-  public static double[][] ar (double[] ...a) { return a; }
+  public static float []   arf(float  ...a)   { return a; }
+  public static double[]   ard(double ...a)   { return a; }
+  public static double[][] ard(double[] ...a) { return a; }
   // Expanded array
   public static double[][] ear (double ...a)   {
     double[][] r = new double[a.length][1];

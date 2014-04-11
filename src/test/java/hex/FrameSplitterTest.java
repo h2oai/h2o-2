@@ -11,7 +11,7 @@ public class FrameSplitterTest extends TestUtil {
 
   @Test public void splitTinyFrame() {
     Frame   dataset = null;
-    float[] ratios  = ar(0.5f);
+    float[] ratios  = arf(0.5f);
     Frame[] splits  = null;
 
     try {
