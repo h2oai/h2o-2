@@ -138,7 +138,7 @@ endif
 setup: check
 	@echo Prerequisites OK. Installing dependencies...
 	npm install
-	bower install
+	bower --config.interactive=false install
 	@echo Done!
 
 reset: clean
