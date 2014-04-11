@@ -33,7 +33,7 @@ import water.util.Utils;
  * This is a very fast random number generator with good statistical properties
  * (it passes the full DIEHARD suite). This is the best RNG for most
  * experiments. If a non-linear generator is required, use the slower
- * AESCounterRNG RNG.
+ * <code>AESCounterRNG</code> RNG.
  * </p>
  *
  * <p>

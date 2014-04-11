@@ -208,6 +208,7 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[,3]=h.hex[,2]+1"); // Replace a col
       checkStr("h.hex[,ncol(h.hex)+1]=4"); // Extend a col
       checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
+      checkStr("h.hex[,7]=x=3; !(x+2)");
       checkStr("table(h.hex)");
       checkStr("table(h.hex[,5])");
       checkStr("table(h.hex[,c(2,7)])");

@@ -128,10 +128,12 @@ public class DTree extends Iced {
     public final long  rowsRight() { return _n1; }
     /** Returns empirical improvement in mean-squared error.
      *
-     *  Formula for node splittin space into two subregions R1,R2 with predictions y1, y2:
-     *    i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2
+     *  <p>Formula for node splitting space into two subregions R1,R2 with predictions y1, y2:</p>
+     *  <code>i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2</code>
      *
-     *  (35), (45) in J. Friedman - Greedy Function Approximation: A Gradient boosting machine */
+     *
+     *  <p>For more information see (35), (45) in the paper
+     *  <a href="www-stat.stanford.edu/~jhf/ftp/trebst.pdf‎"><i>J. Friedman - Greedy Function Approximation: A Gradient boosting machine</i></a></p> */
     public final float improvement() {
       double d = (_p0-_p1);
       return (float) ( d*d*_n0*_n1 / (_n0+_n1) );
