@@ -1425,7 +1425,7 @@ public class Utils {
   public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
   public static Key[] generateNumKeys(Key mk, int num, String delim) {
     Key[] ks = new Key[num];
-    String n = mk.toString();
+    String n = mk!=null ? mk.toString() : "noname";
     String suffix = "";
     if (n.endsWith(".hex")) {
       n = n.substring(0, n.length()-4); // be nice

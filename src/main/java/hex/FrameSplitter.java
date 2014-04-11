@@ -40,6 +40,7 @@ public class FrameSplitter extends H2OCountedCompleter {
   /** Output frames for each output split part */
   private Frame[] splits;
 
+  public FrameSplitter(Frame dataset, float[] ratios) { this(dataset, ratios, 43); }
   public FrameSplitter(Frame dataset, float[] ratios, long seed) {
     this(dataset, ratios, null, null, seed);
   }
