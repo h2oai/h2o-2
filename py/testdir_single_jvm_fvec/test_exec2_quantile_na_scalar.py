@@ -35,11 +35,11 @@ exprList = [
     ("nah = c(NA,NA,NA); abc = quantile(nah, c(0))", 1),
 
     # error, data should be first param
-    ("nah = c(0,0); abc = quantile(c(0), nah)", 3),
-    ("nah = c(0,0); abc = quantile(c(0.4), nah)", 3),
-    ("nah = c(0,0); abc = quantile(c(0.5), nah)", 3),
-    ("nah = c(0,0); abc = quantile(c(0.6), nah)", 3),
-    ("nah = c(0,0); abc = quantile(c(1), nah)", 3),
+    ("nah = c(0,0); abc = quantile(c(0), nah)", 2),
+    ("nah = c(0,0); abc = quantile(c(0.4), nah)", 2),
+    ("nah = c(0,0); abc = quantile(c(0.5), nah)", 2),
+    ("nah = c(0,0); abc = quantile(c(0.6), nah)", 2),
+    ("nah = c(0,0); abc = quantile(c(1), nah)", 2),
 
     ("nah = c(NA,NA); abc = quantile(nah, c(1))", 1),
     ("nah = c(NA,NA); abc = quantile(nah, c(0.4))", 1),
@@ -48,11 +48,11 @@ exprList = [
     ("nah = c(NA,NA); abc = quantile(nah, c(0))", 1),
 
     # error, data should be first param
-    ("nah = c(0); abc = quantile(c(0), nah)", 3),
-    ("nah = c(0); abc = quantile(c(0.4), nah)", 3),
-    ("nah = c(0); abc = quantile(c(0.5), nah)", 3),
-    ("nah = c(0); abc = quantile(c(0.6), nah)", 3),
-    ("nah = c(0); abc = quantile(c(1), nah)", 3),
+    ("nah = c(0); abc = quantile(c(0), nah)", 1),
+    ("nah = c(0); abc = quantile(c(0.4), nah)", 1),
+    ("nah = c(0); abc = quantile(c(0.5), nah)", 1),
+    ("nah = c(0); abc = quantile(c(0.6), nah)", 1),
+    ("nah = c(0); abc = quantile(c(1), nah)", 1),
 
     ("nah = c(NA); abc = quantile(nah, c(1))", 1),
     ("nah = c(NA); abc = quantile(nah, c(0.4))", 1),
