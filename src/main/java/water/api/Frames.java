@@ -97,7 +97,14 @@ public class Frames extends Request2 {
       Set<String> model_cols = entry.getValue();
 
       if (frame_column_names.containsAll(model_cols)) {
-        compatible_models.put(entry.getKey(), all_models.get(entry.getKey()));
+        try {
+          Model model = all_models.get(entry.getKey());
+          model.adapt(frame, false); // TODO: this does too much work; write canAdapt()
+          compatible_models.put(entry.getKey(), model);
+        }
+        catch (Exception e) {
+          // skip
+        }
       }
     }
 
