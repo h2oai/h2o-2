@@ -85,14 +85,12 @@ public abstract class Model extends Lockable<Model> {
     _priorClassDist = priorClassDist;
   }
 
+  // currently only implemented by GLM2, DeepLearning, GBM and DRF:
+  public Request2 get_params() { throw new UnsupportedOperationException("get_params() has not yet been implemented in class: " + this.getClass()); }
+  public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
+
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
-
-  public enum ModelState {
-    Unknown,
-    Training,
-    Ready;
-  }
 
   public enum ModelCategory {
     Unknown,
@@ -100,10 +98,6 @@ public abstract class Model extends Lockable<Model> {
     Multinomial,
     Regression,
     Clustering;
-  }
-
-  public ModelState getModelState() {
-      return (is_wlocked() ? ModelState.Training : ModelState.Ready);
   }
 
   // TODO: override in KMeansModel once that's rewritten on water.Model

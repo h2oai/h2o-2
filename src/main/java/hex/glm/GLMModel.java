@@ -26,8 +26,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   @API(help = "Model parameters", json = true)
   final private GLM2 parameters;
-  public final GLM2 get_params() { return parameters; }
-  public final Request2 job() { return get_params(); }
+  @Override public final GLM2 get_params() { return parameters; }
+  @Override public final Request2 job() { return get_params(); }
 
   @API(help="Input data info")
   DataInfo data_info;
@@ -300,10 +300,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public GLMParams getParams() {
       return glm;
-  }
-
-  public Key getJobKey() {
-      return job_key;
   }
 
   @Override

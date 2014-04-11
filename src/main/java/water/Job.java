@@ -722,7 +722,7 @@ public abstract class Job extends Func {
      * Annotate the number of columns and rows of the validation data set in the job parameter JSON
      * @return JsonObject annotated with num_cols and num_rows of the validation data set
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (validation != null) {
         jo.getAsJsonObject("validation").addProperty("num_cols", validation.numCols());

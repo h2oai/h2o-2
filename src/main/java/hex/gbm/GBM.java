@@ -45,8 +45,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
     @API(help = "Model parameters", json = true)
     final private GBM parameters;
-    public final GBM get_params() { return parameters; }
-    public final Request2 job() { return get_params(); }
+    @Override public final GBM get_params() { return parameters; }
+    @Override public final Request2 job() { return get_params(); }
 
     @API(help = "Learning rate, from 0. to 1.0") final double learn_rate;
     public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {

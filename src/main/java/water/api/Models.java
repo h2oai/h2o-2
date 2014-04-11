@@ -1,8 +1,13 @@
 package water.api;
 
+import java.lang.reflect.Field;
 import java.util.*;
 
 import com.google.gson.*;
+import hex.deeplearning.DeepLearning;
+import hex.drf.DRF;
+import hex.gbm.GBM;
+import hex.glm.GLM2;
 import water.*;
 import water.util.Log;
 
@@ -29,10 +34,27 @@ public class Models extends Request2 {
   private class ModelSummary {
     public String model_algorithm = "unknown";
     public Model.ModelCategory model_category = Model.ModelCategory.Unknown;
-    public Model.ModelState state = Model.ModelState.Unknown;
+    public Job.JobState state = Job.JobState.CREATED;
     public List<String> input_column_names = new ArrayList<String>();
-    public String response_column_name = null;
+    public String response_column_name = "unknown";
+    public Map parameters = new HashMap<String, Object>();
   }
+
+  private Map whitelistJsonObject(JsonObject unfiltered, Set<String> whitelist) {
+    // If we create a new JsonObject here and serialize it the key/value pairs are inside
+    // a superflouous "members" object, so create a Map instead.
+    JsonObject filtered = new JsonObject();
+
+    Set<Map.Entry<String,JsonElement>> entries = unfiltered.entrySet();
+    for (Map.Entry<String,JsonElement> entry : entries) {
+      String key = entry.getKey();
+
+      if (whitelist.contains(key))
+        filtered.add(key, entry.getValue());
+    }
+    return gson.fromJson(gson.toJson(filtered), Map.class);
+  }
+
 
   /**
    * Summarize fields which are generic to water.Model.
@@ -42,7 +64,7 @@ public class Models extends Request2 {
 
     summary.model_algorithm = model.getClass().toString(); // fallback only
 
-    summary.state = model.getModelState();
+    summary.state = ((Job)model.job()).getState();
     summary.model_category = model.getModelCategory();
 
     summary.response_column_name = names[names.length - 1];
@@ -50,6 +72,29 @@ public class Models extends Request2 {
     for (int i = 0; i < names.length - 1; i++)
       summary.input_column_names.add(names[i]);
   }
+
+
+  /******
+   * GLM2
+   ******/
+  private static final String[] GLM_whitelist_array = {
+    "max_iter",
+    "standardize",
+    "n_folds",
+    "family",
+    "_wgiven",
+    "_proximalPenalty",
+    "_beta",
+    "_runAllLambdas",
+    "link",
+    "tweedie_variance_power",
+    "tweedie_link_power",
+    "alpha",
+    "lambda_max",
+    "lambda",
+    "beta_epsilon"
+  };
+  private static final Set<String> GLM_whitelist = new HashSet<String>(Arrays.asList(GLM_whitelist_array));
 
   /**
    * Summarize fields which are specific to hex.glm.GLMModel.
@@ -60,9 +105,25 @@ public class Models extends Request2 {
 
     summary.model_algorithm = "GLM";
 
-    // Job.JobHandle = (Job)DKV.get(model.getJobKey());
-    // summary.state = job.state.toString());
+    JsonObject all_params = ((GLM2)model.get_params()).toJSON();
+    summary.parameters = whitelistJsonObject(all_params, GLM_whitelist);
   }
+
+
+  /******
+   * DRF
+   ******/
+  private static final String[] DRF_whitelist_array = {
+    "build_tree_one_node",
+    "ntrees",
+    "max_depth",
+    "min_rows",
+    "nbins",
+    "score_each_iteration",
+    "_mtry",
+    "_seed"
+  };
+  private static final Set<String> DRF_whitelist = new HashSet<String>(Arrays.asList(DRF_whitelist_array));
 
   /**
    * Summarize fields which are specific to hex.drf.DRF.DRFModel.
@@ -72,11 +133,61 @@ public class Models extends Request2 {
     summarizeModel(summary, value, model);
 
     summary.model_algorithm = "DRF";
-    // summary.model_category = model.getParams().getFamily().toString();
 
-    // Job.JobHandle = (Job)DKV.get(model.getJobKey());
-    // summary.state = job.state.toString());
+    JsonObject all_params = ((DRF)model.get_params()).toJSON();
+    summary.parameters = whitelistJsonObject(all_params, DRF_whitelist);
   }
+
+  /***************
+   * DeepLearning
+   ***************/
+  private static final String[] DL_whitelist_array = { // "checkpoint",
+    // "expert_mode",
+    "activation",
+    "hidden",
+    "epochs",
+    "train_samples_per_iteration",
+    "seed",
+    "adaptive_rate",
+    "rho",
+    "epsilon",
+    "rate",
+    "rate_annealing",
+    "rate_decay",
+    "momentum_start",
+    "momentum_ramp",
+    "momentum_stable",
+    "nesterov_accelerated_gradient",
+    "input_dropout_ratio",
+    "hidden_dropout_ratios;",
+    "l1",
+    "l2",
+    "max_w2",
+    "initial_weight_distribution",
+    "initial_weight_scale",
+    "loss",
+    "score_interval",
+    "score_training_samples",
+    "score_validation_samples",
+    "score_duty_cycle",
+    "classification_stop",
+    "regression_stop",
+    // "quiet_mode",
+    // "max_confusion_matrix_size",
+    "max_hit_ratio_k",
+    "balance_classes",
+    "max_after_balance_size",
+    "score_validation_sampling",
+    // "diagnostics",
+    // "variable_importances",
+    "fast_mode",
+    "ignore_const_cols",
+    // "force_load_balance",
+    // "replicate_training_data",
+    // "single_node_mode",
+    "shuffle_training_data"
+  };
+  private static final Set<String> DL_whitelist = new HashSet<String>(Arrays.asList(DL_whitelist_array));
 
   /**
    * Summarize fields which are specific to hex.deeplearning.DeepLearningModel.
@@ -86,11 +197,24 @@ public class Models extends Request2 {
     summarizeModel(summary, value, model);
 
     summary.model_algorithm = "DeepLearning";
-    // summary.model_category = model.getParams().getFamily().toString();
 
-    // Job.JobHandle = (Job)DKV.get(model.getJobKey());
-    // summary.state = job.state.toString());
+    JsonObject all_params = ((DeepLearning)model.get_params()).toJSON();
+    summary.parameters = whitelistJsonObject(all_params, DL_whitelist);
   }
+
+  /******
+   * GBM
+   ******/
+  private static final String[] GBM_whitelist_array = {
+    "ntrees",
+    "max_depth",
+    "min_rows",
+    "nbins",
+    "score_each_iteration",
+    "learn_rate",
+    "grid_parallelism",
+  };
+  private static final Set<String> GBM_whitelist = new HashSet<String>(Arrays.asList(GBM_whitelist_array));
 
   /**
    * Summarize fields which are specific to hex.gbm.GBM.GBMModel.
@@ -100,10 +224,10 @@ public class Models extends Request2 {
     summarizeModel(summary, value, model);
 
     summary.model_algorithm = "GBM";
-    // summary.model_category = model.getParams().getFamily().toString();
 
-    // Job.JobHandle = (Job)DKV.get(model.getJobKey());
-    // summary.state = job.state.toString());
+    JsonObject all_params = ((GBM)model.get_params()).toJSON();
+    summary.parameters = whitelistJsonObject(all_params, GBM_whitelist);
+
   }
 
   @Override

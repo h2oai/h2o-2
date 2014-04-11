@@ -46,8 +46,8 @@ public class DeepLearningModel extends Model {
   // return the most up-to-date model metrics
   Errors last_scored() { return errors[errors.length-1]; }
 
-  public final DeepLearning get_params() { return model_info.get_params(); }
-  public final Request2 job() { return get_params(); }
+  @Override public final DeepLearning get_params() { return model_info.get_params(); }
+  @Override public final Request2 job() { return get_params(); }
 
   // delete anything from the K-V store that's no longer needed after model building is over
   @Override public void delete() {
