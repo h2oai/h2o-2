@@ -868,12 +868,11 @@ public class DeepLearningModel extends Model {
     DocGen.HTML.title(sb, title);
 
     job().toHTML(sb);
-    Inspect2 is2 = new Inspect2();
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
-            + is2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
-            + (val_key != null ? (is2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
+            + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
+            + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key) + ", "
             + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
