@@ -1,5 +1,7 @@
 package water.api;
 
+// import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -35,7 +37,13 @@ public class Frames extends Request2 {
   @API(help="An existing H2O Frame key.", required=false, filter=Default.class)
   Frame key = null;
 
+  @API(help="Find Models that are compatible with the Frame.", required=false, filter=Default.class)
+  boolean find_matching_models = false;
 
+
+  /////////////////
+  // The Code (tm):
+  /////////////////
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   private class FrameSummary {
@@ -62,19 +70,23 @@ public class Frames extends Request2 {
   /**
    * Summarize fields in water.fvec.Frame.
    */
-  private void summarizeFrame(FrameSummary summary, water.fvec.Frame frame) {
+  private void summarizeFrame(FrameSummary summary, Frame frame) {
     summary.column_names = frame._names;
   }
 
 
-  private Response serveAll() {
+  /**
+   * Fetch all Frames from the KV store.
+   */
+  protected Map<String, Frame>fetchAll() {
     // Get all the fvec frame keys.
     //
     // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
     // but still returns local keys of all types so we need to filter below.
     Set<Key> keySet = H2O.globalKeySet("water.fvec.Frame"); // filter by class, how cool is that?
 
-    Map framesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+    Map<String, Frame> framesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+
     for (Key key : keySet) {
       if( !key.user_allowed() ) // Also filter out for user-keys
         continue;
@@ -82,24 +94,41 @@ public class Frames extends Request2 {
         continue;
 
       String keyString = key.toString();
-      FrameSummary summary = new FrameSummary();
 
       Value value = DKV.get(key);
       Iced pojo = value.get();
 
-      if (! (pojo instanceof water.fvec.Frame))
+      if (! (pojo instanceof Frame))
         continue;
+      Frame frame = (Frame)pojo;
 
-      summarizeFrame(summary, (water.fvec.Frame) pojo);
-      framesMap.put(keyString, summary);
+      framesMap.put(keyString, frame);
+    }
+
+    return framesMap;
+  }
+
+
+  /**
+   * Fetch all the Frames from the KV store, sumamrize and enhance them, and return a map of them.
+   */
+  private Response serveAll() {
+    Map<String, FrameSummary> frameSummariesMap = new TreeMap<String, FrameSummary>(); // Sort for pretty display and reliable ordering.
+    Map<String, Frame> framesMap = fetchAll();
+
+    for (Map.Entry<String, Frame> entry : framesMap.entrySet()) {
+      String keyString = entry.getKey();
+      FrameSummary summary = new FrameSummary();
+      Frame frame = entry.getValue();
+      summarizeFrame(summary, frame);
+      frameSummariesMap.put(keyString, summary);
     }
 
     Map resultsMap = new HashMap();
-    resultsMap.put("frames", framesMap);
+    resultsMap.put("frames", frameSummariesMap);
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);
-    // Log.info("Json for results: " + json);
 
     JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
     return Response.done(result);
@@ -107,14 +136,14 @@ public class Frames extends Request2 {
 
 
   private Response serveOne(Frame frame) {
-    Map framesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+    Map frameSummariesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
     FrameSummary summary = new FrameSummary();
 
     summarizeFrame(summary, frame);
-    framesMap.put(frame._key.toString(), summary);
+    frameSummariesMap.put(frame._key.toString(), summary);
 
     Map resultsMap = new HashMap();
-    resultsMap.put("frames", framesMap);
+    resultsMap.put("frames", frameSummariesMap);
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);

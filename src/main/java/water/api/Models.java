@@ -35,6 +35,9 @@ public class Models extends Request2 {
   Model key = null;
 
 
+  /////////////////
+  // The Code (tm):
+  /////////////////
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   private class ModelSummary {
@@ -65,7 +68,7 @@ public class Models extends Request2 {
   /**
    * Summarize subclasses of water.Model.
    */
-  private void summarizeModel(ModelSummary summary, water.Model model) {
+  private void summarizeModel(ModelSummary summary, Model model) {
     if (model instanceof hex.glm.GLMModel) {
       summarizeGLMModel(summary, (hex.glm.GLMModel) model);
     } else if (model instanceof hex.drf.DRF.DRFModel) {
@@ -76,7 +79,7 @@ public class Models extends Request2 {
       summarizeGBMModel(summary, (hex.gbm.GBM.GBMModel) model);
     } else {
       // catch-all
-      summarizeModelCommonFields(summary, (water.Model) model);
+      summarizeModelCommonFields(summary, (Model) model);
     }
   }
 
@@ -84,7 +87,7 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are generic to water.Model.
    */
-  private void summarizeModelCommonFields(ModelSummary summary, water.Model model) {
+  private void summarizeModelCommonFields(ModelSummary summary, Model model) {
     String[] names = model._names;
 
     summary.model_algorithm = model.getClass().toString(); // fallback only
@@ -256,14 +259,18 @@ public class Models extends Request2 {
   }
 
 
-  private Response serveAll() {
-    // Get all the model keys.
+  /**
+   * Fetch all Models from the KV store.
+   */
+  protected Map<String, Model>fetchAll() {
+    // Get all the water.model keys.
     //
     // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
     // but still returns local keys of all types so we need to filter below.
-    Set<Key> keySet = H2O.globalKeySet("water.Model");
+    Set<Key> keySet = H2O.globalKeySet("water.Model"); // filter by class, how cool is that?
 
-    Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+    Map<String, Model> modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+
     for (Key key : keySet) {
       if( !key.user_allowed() ) // Also filter out for user-keys
         continue;
@@ -271,37 +278,54 @@ public class Models extends Request2 {
         continue;
 
       String keyString = key.toString();
-      ModelSummary summary = new ModelSummary();
 
       Value value = DKV.get(key);
       Iced pojo = value.get();
 
-      if (pojo instanceof water.Model) {
-        summarizeModel(summary, (water.Model) pojo);
-      } else {
-        continue;  // skip
-      }
+      if (! (pojo instanceof Model))
+        continue;
+      Model model = (Model)pojo;
 
-      modelsMap.put(keyString, summary);
+      modelsMap.put(keyString, model);
+    }
+
+    return modelsMap;
+  }
+
+
+
+
+  /**
+   * Fetch all the Models from the KV store, sumamrize and enhance them, and return a map of them.
+   */
+  private Response serveAll() {
+    Map<String, ModelSummary> modelSummariesMap = new TreeMap<String, ModelSummary>(); // Sort for pretty display and reliable ordering.
+    Map<String, Model> modelsMap = fetchAll();
+
+    for (Map.Entry<String, Model> entry : modelsMap.entrySet()) {
+      String keyString = entry.getKey();
+      ModelSummary summary = new ModelSummary();
+      Model model = entry.getValue();
+      summarizeModel(summary, model);
+      modelSummariesMap.put(keyString, summary);
     }
 
     Map resultsMap = new HashMap();
-    resultsMap.put("models", modelsMap);
+    resultsMap.put("models", modelSummariesMap);
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);
-    // Log.info("Json for results: " + json);
 
     JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
     return Response.done(result);
   }
 
 
-  private Response serveOne(water.Model model) {
+  private Response serveOne(Model model) {
     Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
     ModelSummary summary = new ModelSummary();
 
-    summarizeModel(summary, (water.Model) model);
+    summarizeModel(summary, (Model) model);
     modelsMap.put(model._key.toString(), summary);
 
     Map resultsMap = new HashMap();
