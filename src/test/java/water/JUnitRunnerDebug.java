@@ -4,8 +4,8 @@ import hex.DeepLearningIrisTest;
 import hex.DeepLearningProstateTest;
 import hex.DeepLearningSpiralsTest;
 import hex.MRUtilsTest;
-import hex.deeplearning.*;
-
+import hex.deeplearning.DropoutTest;
+import hex.deeplearning.NeuronsTest;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
