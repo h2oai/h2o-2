@@ -1,9 +1,124 @@
 BUILD=build
+DIST=$(BUILD)/dist
+J=$(BUILD)/scripts
+T=$(BUILD)/tests
 LIB=lib
 MODULES=node_modules
 BIN=$(MODULES)/.bin
 
+BUILD_DIRS=\
+	$(BUILD)/scripts \
+	$(BUILD)/tests \
+	$(BUILD)/coverage \
+	$(BUILD)/doc \
+	$(BUILD)/spec \
+	$(DIST)
+
+SCRIPTS=\
+	$(BUILD)/scripts/prelude.global.js \
+	$(BUILD)/scripts/hypergraph.global.js \
+	$(BUILD)/scripts/base.js
+
+TESTS=\
+	$(BUILD)/tests/prelude.tests.js \
+	$(BUILD)/tests/hypergraph.tests.js \
+	$(BUILD)/tests/base.tests.js
+
+LIB_TEST_JS=\
+	$(LIB)/lodash/dist/lodash.js \
+	$(LIB)/knockout/knockout.js \
+	$(LIB)/chai/chai.js \
+	$(MODULES)/mocha/mocha.js
+
+LIB_TEST_CSS=\
+	$(MODULES)/mocha/mocha.css
+
 all: build
+
+build: \
+	$(DIST)/index.html \
+	$(DIST)/steam.css \
+	$(DIST)/steam.js
+
+unit: \
+	$(DIST)/lib.test.css \
+	$(DIST)/lib.test.js \
+	$(DIST)/tests.html \
+	$(DIST)/steam.test.js
+
+node: \
+	$(DIST)/steam.node.js
+
+help:
+	@echo "Please use \`make <target>' where <target> is one of -"
+	@echo ""
+	@echo "Setup tasks:"
+	@echo "  make check      Check prerequisites"
+	@echo "  make setup      Set up dev dependencies"
+	@echo "  make reset      Clean up dev dependencies"
+	@echo ""
+	@echo "Development tasks:"
+	@echo "  make build      Build and deploy"
+	@echo "  make unit       Build browser test suite"
+	@echo "  make test       Run all tests"
+	@echo "  make smoke      Run tests, but bail on first failure"
+	@echo "  make report     Run all tests, verbose, with specs"
+	@echo "  make debug      Run tests in debug mode"
+	@echo "  make spec       Compile test specs"
+	@echo "  make coverage   Compile test coverage"
+	@echo "  make doc        Compile code documentation"
+	@echo "  make clean      Clean up build directories"
+
+smoke: node
+	$(BIN)/mocha \
+		--reporter dot \
+		--bail \
+		--check-leaks \
+		$(DIST)/steam.node.js
+
+test: node
+	$(BIN)/mocha \
+		--reporter dot \
+		--check-leaks \
+		$(DIST)/steam.node.js
+
+debug: node
+	$(BIN)/mocha \
+		--reporter dot \
+		--check-leaks \
+		--debug-brk \
+		$(DIST)/steam.node.js
+
+report: node
+	$(BIN)/mocha \
+		--reporter spec \
+		--check-leaks \
+		$(DIST)/steam.node.js
+
+coverage: node
+	@mkdir -p $(BUILD)/coverage
+	$(BIN)/istanbul \
+		cover \
+		$(BIN)/_mocha \
+		--dir $(BUILD)/coverage \
+		-x "**/lib/**" \
+		$(DIST)/steam.node.js
+	@echo Coverage generated at $(BUILD)/coverage
+
+spec: $(BUILD)/spec/index.html
+
+doc: 
+	@mkdir -p $(BUILD)/doc
+	$(BIN)/groc \
+		--out $(BUILD)/doc \
+		--index src/README.md \
+		--index-page-title "index" \
+		src/scripts/**/*.coffee
+	@echo Docs generated at $(BUILD)/doc
+
+clean:
+	rm -rf $(BUILD_DIRS)
+	@echo Cleaned!
 
 check:
 	@echo Checking prerequisites...
@@ -20,56 +135,6 @@ else
 	@echo npm ... OK
 endif
 
-build:
-
-pack:\
-	build \
-	$(BUILD)/pack/steam.js
-
-smoke: pack
-	@$(BIN)/mocha \
-		--reporter dot \
-		--bail \
-		--check-leaks \
-		$(BUILD)/test/*.js
-
-test: pack
-	@$(BIN)/mocha \
-		--reporter dot \
-		--check-leaks \
-		$(BUILD)/test/*.js
-
-debug: pack
-	@$(BIN)/mocha \
-		--reporter dot \
-		--check-leaks \
-		--debug-brk \
-		$(BUILD)/test/*.js
-
-spec: pack
-	@$(BIN)/mocha \
-		--reporter spec \
-		--check-leaks \
-		$(BUILD)/test/*.js
-
-coverage: pack
-	$(BIN)/istanbul \
-		cover \
-		--dir build/coverage \
-		$(BIN)/_mocha build/test/*.js 
-
-doc: $(BUILD)/doc/index.html
-
-clean:
-	rm -rf \
-		$(BUILD)/bin \
-		$(BUILD)/test \
-		$(BUILD)/coverage \
-		$(BUILD)/doc \
-		$(BUILD)/pack \
-		$(BUILD)/steam.html
-	@echo Cleaned!
-
 setup: check
 	@echo Prerequisites OK. Installing dependencies...
 	npm install
@@ -80,25 +145,73 @@ reset: clean
 	rm -rf \
 		$(MODULES) \
 		$(LIB)
-	@echo Done! To set up your dev environment, run: make setup
+	@echo Done! To set up your dev environment again, run: make setup
 
-$(BUILD)/bin/%.js: src/components/%.coffee
-	$(BIN)/coffee -o $(@D) -c $<
+$(BUILD)/scripts/%.global.js: src/scripts/%.global.coffee
+	@mkdir -p $(@D)
+	$(BIN)/coffee --bare --output $(@D) --compile $<
 
-$(BUILD)/test/%.js: test/components/%.coffee
-	$(BIN)/coffee -o $(@D) -c $<
+$(BUILD)/tests/%.global.js: src/tests/%.global.coffee
+	@mkdir -p $(@D)
+	$(BIN)/coffee --bare --output $(@D) --compile $<
 
-$(BUILD)/bin/%.part.html: src/templates/%.jade
+$(BUILD)/scripts/%.js: src/scripts/%.coffee
+	@mkdir -p $(@D)
+	$(BIN)/coffee --output $(@D) --compile $<
+
+$(BUILD)/tests/%.js: src/tests/%.coffee
+	@mkdir -p $(@D)
+	$(BIN)/coffee --output $(@D) --compile $<
+
+$(DIST)/%.html: src/templates/%.jade
+	@mkdir -p $(@D)
 	$(BIN)/jade --pretty < $< > $@
 
-$(BUILD)/bin/%.part.css: src/styles/%.styl
+$(DIST)/%.css: src/styles/%.styl
+	@mkdir -p $(@D)
 	$(BIN)/stylus < $< > $@
 
-$(BUILD)/doc/index.html: pack doc/header.html doc/footer.html
+$(DIST)/steam.js: $(SCRIPTS)
+	@mkdir -p $(@D)
+	@echo '"use strict";' > $@
+	@echo '(function(){' >> $@
+	cat $^ >> $@
+	@echo '}).call(this);' >> $@
+
+$(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(SCRIPTS) $(TESTS)
+	@mkdir -p $(@D)
+	@echo '"use strict";' > $@
+	@echo '(function(){' >> $@
+	cat $^ >> $@
+	@echo '}).call(this);' >> $@
+
+$(DIST)/steam.test.js: $(BUILD)/tests/browser.global.js $(SCRIPTS) $(TESTS)
+	@mkdir -p $(@D)
+	@echo '"use strict";' > $@
+	@echo '(function(){' >> $@
+	cat $^ >> $@
+	@echo '}).call(this);' >> $@
+
+$(DIST)/tests.html: src/util/mocha-html/tests.html
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(DIST)/lib.test.css: $(LIB_TEST_CSS)
+	@mkdir -p $(@D)
+	cat $^ > $@
+
+$(DIST)/lib.test.js: $(LIB_TEST_JS)
+	@mkdir -p $(@D)
+	cat $^ > $@
+
+$(BUILD)/spec/index.html: node
+	@mkdir -p $(@D)
 	@$(BIN)/mocha \
 		--reporter doc \
-		$(BUILD)/test/*.js \
-		| cat doc/header.html - doc/footer.html \
+		$(DIST)/steam.node.js \
+		| cat src/util/mocha-doc/header.html - src/util/mocha-doc/footer.html \
 		> $@
+	@echo Spec generated at $(@D)
+	
 
-.PHONY: all build pack smoke test debug spec coverage doc clean setup reset
+.PHONY: all build node unit smoke test debug report spec coverage doc clean setup reset help

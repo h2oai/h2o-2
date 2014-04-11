@@ -27,14 +27,24 @@ Point your browser to [http://localhost:54321/steam.html](http://localhost:54321
 
 ## Make tasks
 
-* `make` or `make build` Build and deploy
-* `make check` Check prerequisites
-* `make test`  Run all tests
-* `make smoke` Run tests, but bail on first failure
-* `make debug` Run tests in debug mode
-* `make spec`  Generate test specs
-* `make coverage` Report test coverage
-* `make doc`  Generate documentation
-* `make clean` Clean up built sources
-* `make setup` Set up dev dependencies
-* `make reset` Clean up dev dependencies
+Run `make help` to get a list of `make` tasks.
+
+    $ make help
+    Please use `make <target>' where <target> is one of -
+
+    Setup tasks:
+      make check      Check prerequisites
+      make setup      Set up dev dependencies
+      make reset      Clean up dev dependencies
+
+    Development tasks:
+      make build      Build and deploy
+      make unit       Build browser test suite
+      make test       Run all tests
+      make smoke      Run tests, but bail on first failure
+      make report     Run all tests, verbose, with specs
+      make debug      Run tests in debug mode
+      make spec       Compile test specs
+      make coverage   Compile test coverage
+      make doc        Compile code documentation
+      make clean      Clean up build directories

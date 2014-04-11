@@ -1,2 +1,2 @@
-fswatch ./src:./test "make"
+fswatch ./src "make test"
 
