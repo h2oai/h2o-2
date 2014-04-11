@@ -1,9 +1,9 @@
 package hex;
 
+import static water.fvec.NewChunkHelper.extractChunkPart;
 import jsr166y.CountedCompleter;
-import water.Key;
-import water.MRTask2;
 import water.H2O.H2OCountedCompleter;
+import water.*;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -63,16 +63,15 @@ public class FrameSplitter extends H2OCountedCompleter {
     // Launch number of distributed FJ for each split part
     final Vec[] datasetVecs = dataset.vecs();
     splits = new Frame[nsplits];
-    setPendingCount(nsplits);
     for (int s=0; s<nsplits; s++) {
       Frame split = new Frame(destKeys[s], dataset.names(), templates[s] );
       split.delete_and_lock(jobKey);
       splits[s] = split;
     }
+    setPendingCount(nsplits);
     for (int s=0; s<nsplits; s++) {
       new FrameSplitTask(this, datasetVecs, ratios, s).asyncExec(splits[s]);
     }
-
     tryComplete();
   }
   @Override public void onCompletion(CountedCompleter caller) {
@@ -115,9 +114,7 @@ public class FrameSplitter extends H2OCountedCompleter {
   }
 
   private void onDone(boolean exceptional) {
-    System.err.println(getPendingCount());
     dataset.unlock(jobKey);
-    try {
     for (Frame s : splits) {
       if (!exceptional) { // just unlock if everything was ok
         s.update(jobKey);
@@ -126,10 +123,10 @@ public class FrameSplitter extends H2OCountedCompleter {
         if (s!=null) s.delete(jobKey,0f);
       }
     }
-    } catch (Throwable e) { e.printStackTrace(); }
   }
 
-  /** */
+  /** MR task extract specified part of <code>_srcVecs</code>
+   * into output chunk.*/
   private static class FrameSplitTask extends MRTask2<FrameSplitTask> {
     final Vec  [] _srcVecs;
     final float[] _ratios;
@@ -144,8 +141,8 @@ public class FrameSplitter extends H2OCountedCompleter {
       // Get corresponding input chunk for this chunk and its length
       // NOTE: expecting the same distribution of input chunks as output chanks
       int cidx = cs[0].cidx();
-      int len = _srcVecs[0].chunkLen(cidx); // length of original chunk
-      int[] splits = Utils.partitione(len, _ratios);
+      int len = _srcVecs[0].chunkLen(cidx); // get length of original chunk
+      int[] splits = Utils.partitione(len, _ratios); // compute partitions for different parts
       int startRow = 0;
       for (int i=0; i<_partIdx; i++) startRow += splits[i];
       // For each output chunk extract appropriate rows for partIdx-th part
@@ -153,15 +150,15 @@ public class FrameSplitter extends H2OCountedCompleter {
         // Extract correct rows of _partIdx-th split from i-th input vector into the i-th chunk
         assert cs[i]._len == splits[_partIdx]; // Be sure that we correctly prepared vector template
         // NOTE: we preserve co-location of cs[i] chunks with _srcVecs[i] chunks so it is local load of chunk
-        extractPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx]);
+        extractChunkPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx], _fs);
+        //extractPartXXX(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx]);
       }
     }
-
     // Now extract does not do any shuffling
-    private void extractPart(Chunk ic, Chunk oc, int startRow, int nrows) {
-      // Dummy implementation
-      for (int r=0; r<nrows; r++)
-        oc.set0(r, ic.at0(startRow+r));
+    private void extractPartXXX(Chunk ic, Chunk oc, int startRow, int nrows) {
+       // Dummy implementation
+       for (int r=0; r<nrows; r++)
+         oc.set0(r, ic.at0(startRow+r));
     }
   }
 }
