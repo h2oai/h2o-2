@@ -26,7 +26,13 @@ public class Models extends Request2 {
   public static String link(Key k, String content){
     return  "<a href='/2/Models'>" + content + "</a>";
   }
-  ///////////////////////
+
+
+  ////////////////
+  // Query params:
+  ////////////////
+  @API(help="An existing H2O Model key.", required=false, filter=Default.class)
+  Model key = null;
 
 
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
@@ -57,9 +63,28 @@ public class Models extends Request2 {
 
 
   /**
+   * Summarize subclasses of water.Model.
+   */
+  private void summarizeModel(ModelSummary summary, water.Model model) {
+    if (model instanceof hex.glm.GLMModel) {
+      summarizeGLMModel(summary, (hex.glm.GLMModel) model);
+    } else if (model instanceof hex.drf.DRF.DRFModel) {
+      summarizeDRFModel(summary, (hex.drf.DRF.DRFModel) model);
+    } else if (model instanceof hex.deeplearning.DeepLearningModel) {
+      summarizeDeepLearningModel(summary, (hex.deeplearning.DeepLearningModel) model);
+    } else if (model instanceof hex.gbm.GBM.GBMModel) {
+      summarizeGBMModel(summary, (hex.gbm.GBM.GBMModel) model);
+    } else {
+      // catch-all
+      summarizeModelCommonFields(summary, (water.Model) model);
+    }
+  }
+
+
+  /**
    * Summarize fields which are generic to water.Model.
    */
-  private void summarizeModel(ModelSummary summary, Value value, water.Model model) {
+  private void summarizeModelCommonFields(ModelSummary summary, water.Model model) {
     String[] names = model._names;
 
     summary.model_algorithm = model.getClass().toString(); // fallback only
@@ -99,9 +124,9 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.glm.GLMModel.
    */
-  private void summarizeGLMModel(ModelSummary summary, Value value, hex.glm.GLMModel model) {
+  private void summarizeGLMModel(ModelSummary summary, hex.glm.GLMModel model) {
     // add generic fields such as column names
-    summarizeModel(summary, value, model);
+    summarizeModelCommonFields(summary, model);
 
     summary.model_algorithm = "GLM";
 
@@ -128,9 +153,9 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.drf.DRF.DRFModel.
    */
-  private void summarizeDRFModel(ModelSummary summary, Value value, hex.drf.DRF.DRFModel model) {
+  private void summarizeDRFModel(ModelSummary summary, hex.drf.DRF.DRFModel model) {
     // add generic fields such as column names
-    summarizeModel(summary, value, model);
+    summarizeModelCommonFields(summary, model);
 
     summary.model_algorithm = "DRF";
 
@@ -192,9 +217,9 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.deeplearning.DeepLearningModel.
    */
-  private void summarizeDeepLearningModel(ModelSummary summary, Value value, hex.deeplearning.DeepLearningModel model) {
+  private void summarizeDeepLearningModel(ModelSummary summary, hex.deeplearning.DeepLearningModel model) {
     // add generic fields such as column names
-    summarizeModel(summary, value, model);
+    summarizeModelCommonFields(summary, model);
 
     summary.model_algorithm = "DeepLearning";
 
@@ -219,9 +244,9 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.gbm.GBM.GBMModel.
    */
-  private void summarizeGBMModel(ModelSummary summary, Value value, hex.gbm.GBM.GBMModel model) {
+  private void summarizeGBMModel(ModelSummary summary, hex.gbm.GBM.GBMModel model) {
     // add generic fields such as column names
-    summarizeModel(summary, value, model);
+    summarizeModelCommonFields(summary, model);
 
     summary.model_algorithm = "GBM";
 
@@ -230,9 +255,8 @@ public class Models extends Request2 {
 
   }
 
-  @Override
-  protected Response serve() {
 
+  private Response serveAll() {
     // Get all the model keys.
     //
     // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
@@ -252,20 +276,10 @@ public class Models extends Request2 {
       Value value = DKV.get(key);
       Iced pojo = value.get();
 
-      if (pojo instanceof hex.glm.GLMModel) {
-        summarizeGLMModel(summary, value, (hex.glm.GLMModel) pojo);
-      } else if (pojo instanceof hex.drf.DRF.DRFModel) {
-        summarizeDRFModel(summary, value, (hex.drf.DRF.DRFModel) pojo);
-      } else if (pojo instanceof hex.deeplearning.DeepLearningModel) {
-        summarizeDeepLearningModel(summary, value, (hex.deeplearning.DeepLearningModel) pojo);
-      } else if (pojo instanceof hex.gbm.GBM.GBMModel) {
-        summarizeGBMModel(summary, value, (hex.gbm.GBM.GBMModel) pojo);
-      } else if (pojo instanceof water.Model) {
-        // catch-all
-        summarizeModel(summary, value, (water.Model) pojo);
+      if (pojo instanceof water.Model) {
+        summarizeModel(summary, (water.Model) pojo);
       } else {
-        // skip
-        continue;
+        continue;  // skip
       }
 
       modelsMap.put(keyString, summary);
@@ -276,10 +290,41 @@ public class Models extends Request2 {
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);
-    Log.info("Json for results: " + json);
+    // Log.info("Json for results: " + json);
 
     JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
     return Response.done(result);
+  }
+
+
+  private Response serveOne(water.Model model) {
+    Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+    ModelSummary summary = new ModelSummary();
+
+    summarizeModel(summary, (water.Model) model);
+    modelsMap.put(model._key.toString(), summary);
+
+    Map resultsMap = new HashMap();
+    resultsMap.put("models", modelsMap);
+
+    // TODO: temporary hack to get things going
+    String json = gson.toJson(resultsMap);
+    // Log.info("Json for results: " + json);
+
+    JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
+    return Response.done(result);
+  }
+
+
+  @Override
+  protected Response serve() {
+
+    if (null == this.key) {
+      return serveAll();
+    } else {
+      return serveOne(this.key);
+    }
+
   } // serve()
 
 }

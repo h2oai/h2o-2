@@ -9,6 +9,7 @@ import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
 import water.*;
+import water.fvec.Frame;
 import water.util.Log;
 
 public class Frames extends Request2 {
@@ -26,7 +27,13 @@ public class Frames extends Request2 {
   public static String link(Key k, String content){
     return  "<a href='/2/Frames'>" + content + "</a>";
   }
-  ///////////////////////
+
+
+  ////////////////
+  // Query params:
+  ////////////////
+  @API(help="An existing H2O Frame key.", required=false, filter=Default.class)
+  Frame key = null;
 
 
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
@@ -55,14 +62,12 @@ public class Frames extends Request2 {
   /**
    * Summarize fields in water.fvec.Frame.
    */
-  private void summarizeFrame(FrameSummary summary, Value value, water.fvec.Frame frame) {
+  private void summarizeFrame(FrameSummary summary, water.fvec.Frame frame) {
     summary.column_names = frame._names;
   }
 
 
-  @Override
-  protected Response serve() {
-
+  private Response serveAll() {
     // Get all the fvec frame keys.
     //
     // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
@@ -85,9 +90,8 @@ public class Frames extends Request2 {
       if (! (pojo instanceof water.fvec.Frame))
         continue;
 
-      summarizeFrame(summary, value, (water.fvec.Frame) pojo);
+      summarizeFrame(summary, (water.fvec.Frame) pojo);
       framesMap.put(keyString, summary);
-      // framesMap.put(keyString, pojo);
     }
 
     Map resultsMap = new HashMap();
@@ -95,10 +99,41 @@ public class Frames extends Request2 {
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);
-    Log.info("Json for results: " + json);
+    // Log.info("Json for results: " + json);
 
     JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
     return Response.done(result);
+  }
+
+
+  private Response serveOne(Frame frame) {
+    Map framesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+    FrameSummary summary = new FrameSummary();
+
+    summarizeFrame(summary, frame);
+    framesMap.put(frame._key.toString(), summary);
+
+    Map resultsMap = new HashMap();
+    resultsMap.put("frames", framesMap);
+
+    // TODO: temporary hack to get things going
+    String json = gson.toJson(resultsMap);
+    // Log.info("Json for results: " + json);
+
+    JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
+    return Response.done(result);
+
+  }
+
+  @Override
+  protected Response serve() {
+
+    if (null == this.key) {
+      return serveAll();
+    } else {
+      return serveOne(this.key);
+    }
+
   } // serve()
 
 }
