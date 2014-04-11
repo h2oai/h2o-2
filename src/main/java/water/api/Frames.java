@@ -1,6 +1,6 @@
 package water.api;
 
-// import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.math3.util.Pair;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -13,6 +13,8 @@ import hex.glm.GLM2;
 import water.*;
 import water.fvec.Frame;
 import water.util.Log;
+
+import water.api.Models.ModelSummary;
 
 public class Frames extends Request2 {
 
@@ -38,7 +40,7 @@ public class Frames extends Request2 {
   Frame key = null;
 
   @API(help="Find Models that are compatible with the Frame.", required=false, filter=Default.class)
-  boolean find_matching_models = false;
+  boolean find_compatible_models = false;
 
 
   /////////////////
@@ -46,12 +48,13 @@ public class Frames extends Request2 {
   /////////////////
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
-  private class FrameSummary {
+  public static final class FrameSummary {
     public String[] column_names = { };
+    public Set<String> compatible_models = new HashSet<String>();
   }
 
   // TODO: refactor, since this is duplicated
-  private Map whitelistJsonObject(JsonObject unfiltered, Set<String> whitelist) {
+  private static Map whitelistJsonObject(JsonObject unfiltered, Set<String> whitelist) {
     // If we create a new JsonObject here and serialize it the key/value pairs are inside
     // a superflouous "members" object, so create a Map instead.
     JsonObject filtered = new JsonObject();
@@ -67,11 +70,53 @@ public class Frames extends Request2 {
   }
 
 
+
+  private Pair<Map<String, Model>, Map<String, Set<String>>> fetchModels() {
+    Map<String, Model> all_models = null;
+    Map<String, Set<String>> all_models_cols = null;
+
+    if (this.find_compatible_models) {
+      // caches for this request
+      all_models = (new Models()).fetchAll();
+      all_models_cols = new TreeMap<String, Set<String>>();
+
+      for (Map.Entry<String, Model> entry : all_models.entrySet()) {
+        all_models_cols.put(entry.getKey(), new TreeSet<String>(Arrays.asList(entry.getValue()._names)));
+      }
+    }
+    return new Pair<Map<String, Model>, Map<String, Set<String>>>(all_models, all_models_cols);
+  }
+
+
+  private static Map<String, Model> findCompatibleModels(Frame frame, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
+    Map<String, Model> compatible_models = new TreeMap<String, Model>();
+
+    Set<String> frame_column_names = new HashSet(Arrays.asList(frame._names));
+
+    for (Map.Entry<String, Set<String>> entry : all_models_cols.entrySet()) {
+      Set<String> model_cols = entry.getValue();
+
+      if (frame_column_names.containsAll(model_cols)) {
+        compatible_models.put(entry.getKey(), all_models.get(entry.getKey()));
+      }
+    }
+
+    return compatible_models;
+  }
+
+
+
+
   /**
    * Summarize fields in water.fvec.Frame.
    */
-  private void summarizeFrame(FrameSummary summary, Frame frame) {
+  private static void summarizeAndEnhanceFrame(FrameSummary summary, Frame frame, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
     summary.column_names = frame._names;
+
+    if (find_compatible_models) {
+      Map<String, Model> compatible_models = findCompatibleModels(frame, all_models, all_models_cols);
+      summary.compatible_models = compatible_models.keySet();
+    }
   }
 
 
@@ -116,16 +161,30 @@ public class Frames extends Request2 {
     Map<String, FrameSummary> frameSummariesMap = new TreeMap<String, FrameSummary>(); // Sort for pretty display and reliable ordering.
     Map<String, Frame> framesMap = fetchAll();
 
+    // returns empty sets if !this.find_compatible_models
+    Pair<Map<String, Model>, Map<String, Set<String>>> models_info = fetchModels();
+    Map<String, Model> all_models = models_info.getFirst();
+    Map<String, Set<String>> all_models_cols = models_info.getSecond();
+
+    Set<String> all_referenced_models = new TreeSet<String>();
     for (Map.Entry<String, Frame> entry : framesMap.entrySet()) {
       String keyString = entry.getKey();
       FrameSummary summary = new FrameSummary();
       Frame frame = entry.getValue();
-      summarizeFrame(summary, frame);
+
+      summarizeAndEnhanceFrame(summary, frame, this.find_compatible_models, all_models, all_models_cols);
+      all_referenced_models.addAll(summary.compatible_models);
       frameSummariesMap.put(keyString, summary);
     }
 
     Map resultsMap = new HashMap();
     resultsMap.put("frames", frameSummariesMap);
+
+    // If find_compatible_models then include a map of the model summaries.  Should we put this on a separate switch?
+    if (this.find_compatible_models) {
+      Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(all_referenced_models, all_models);
+      resultsMap.put("models", modelSummaries);
+    }
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);
@@ -139,11 +198,25 @@ public class Frames extends Request2 {
     Map frameSummariesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
     FrameSummary summary = new FrameSummary();
 
-    summarizeFrame(summary, frame);
+    // returns empty sets if !this.find_compatible_models
+    Pair<Map<String, Model>, Map<String, Set<String>>> models_info = fetchModels();
+    Map<String, Model> all_models = models_info.getFirst();
+    Map<String, Set<String>> all_models_cols = models_info.getSecond();
+
+    summarizeAndEnhanceFrame(summary, frame, this.find_compatible_models, all_models, all_models_cols);
     frameSummariesMap.put(frame._key.toString(), summary);
+
+    Set<String> all_referenced_models = new TreeSet<String>();
+    all_referenced_models.addAll(summary.compatible_models);
 
     Map resultsMap = new HashMap();
     resultsMap.put("frames", frameSummariesMap);
+
+    // If find_compatible_models then include a map of the model summaries.  Should we put this on a separate switch?
+    if (this.find_compatible_models) {
+      Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(all_referenced_models, all_models);
+      resultsMap.put("models", modelSummaries);
+    }
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);

@@ -40,7 +40,7 @@ public class Models extends Request2 {
   /////////////////
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
-  private class ModelSummary {
+  public static final class ModelSummary {
     public String model_algorithm = "unknown";
     public Model.ModelCategory model_category = Model.ModelCategory.Unknown;
     public Job.JobState state = Job.JobState.CREATED;
@@ -49,7 +49,7 @@ public class Models extends Request2 {
     public Map parameters = new HashMap<String, Object>();
   }
 
-  private Map whitelistJsonObject(JsonObject unfiltered, Set<String> whitelist) {
+  private static Map whitelistJsonObject(JsonObject unfiltered, Set<String> whitelist) {
     // If we create a new JsonObject here and serialize it the key/value pairs are inside
     // a superflouous "members" object, so create a Map instead.
     JsonObject filtered = new JsonObject();
@@ -65,10 +65,27 @@ public class Models extends Request2 {
   }
 
 
+  public static Map<String, ModelSummary> generateModelSummaries(Set<String>keys, Map<String, Model> models) {
+      Map<String, ModelSummary> modelSummaries = new TreeMap<String, ModelSummary>();
+
+      if (null == keys) {
+        keys = models.keySet();
+      }
+
+      for (String key : keys) {
+        ModelSummary summary = new ModelSummary();
+        Models.summarizeAndEnhanceModel(summary, models.get(key));
+        modelSummaries.put(key, summary);
+      }
+
+      return modelSummaries;
+  }
+
+
   /**
    * Summarize subclasses of water.Model.
    */
-  private void summarizeModel(ModelSummary summary, Model model) {
+  protected static void summarizeAndEnhanceModel(ModelSummary summary, Model model) {
     if (model instanceof hex.glm.GLMModel) {
       summarizeGLMModel(summary, (hex.glm.GLMModel) model);
     } else if (model instanceof hex.drf.DRF.DRFModel) {
@@ -87,7 +104,7 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are generic to water.Model.
    */
-  private void summarizeModelCommonFields(ModelSummary summary, Model model) {
+  private static void summarizeModelCommonFields(ModelSummary summary, Model model) {
     String[] names = model._names;
 
     summary.model_algorithm = model.getClass().toString(); // fallback only
@@ -127,7 +144,7 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.glm.GLMModel.
    */
-  private void summarizeGLMModel(ModelSummary summary, hex.glm.GLMModel model) {
+  private static void summarizeGLMModel(ModelSummary summary, hex.glm.GLMModel model) {
     // add generic fields such as column names
     summarizeModelCommonFields(summary, model);
 
@@ -156,7 +173,7 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.drf.DRF.DRFModel.
    */
-  private void summarizeDRFModel(ModelSummary summary, hex.drf.DRF.DRFModel model) {
+  private static void summarizeDRFModel(ModelSummary summary, hex.drf.DRF.DRFModel model) {
     // add generic fields such as column names
     summarizeModelCommonFields(summary, model);
 
@@ -220,7 +237,7 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.deeplearning.DeepLearningModel.
    */
-  private void summarizeDeepLearningModel(ModelSummary summary, hex.deeplearning.DeepLearningModel model) {
+  private static void summarizeDeepLearningModel(ModelSummary summary, hex.deeplearning.DeepLearningModel model) {
     // add generic fields such as column names
     summarizeModelCommonFields(summary, model);
 
@@ -247,7 +264,7 @@ public class Models extends Request2 {
   /**
    * Summarize fields which are specific to hex.gbm.GBM.GBMModel.
    */
-  private void summarizeGBMModel(ModelSummary summary, hex.gbm.GBM.GBMModel model) {
+  private static void summarizeGBMModel(ModelSummary summary, hex.gbm.GBM.GBMModel model) {
     // add generic fields such as column names
     summarizeModelCommonFields(summary, model);
 
@@ -293,47 +310,17 @@ public class Models extends Request2 {
   }
 
 
-
-
   /**
    * Fetch all the Models from the KV store, sumamrize and enhance them, and return a map of them.
    */
-  private Response serveAll() {
-    Map<String, ModelSummary> modelSummariesMap = new TreeMap<String, ModelSummary>(); // Sort for pretty display and reliable ordering.
-    Map<String, Model> modelsMap = fetchAll();
-
-    for (Map.Entry<String, Model> entry : modelsMap.entrySet()) {
-      String keyString = entry.getKey();
-      ModelSummary summary = new ModelSummary();
-      Model model = entry.getValue();
-      summarizeModel(summary, model);
-      modelSummariesMap.put(keyString, summary);
-    }
+  private Response serveOneOrAll(Map<String, Model> modelsMap) {
+    Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(null, modelsMap);
 
     Map resultsMap = new HashMap();
-    resultsMap.put("models", modelSummariesMap);
+    resultsMap.put("models", modelSummaries);
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);
-
-    JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
-    return Response.done(result);
-  }
-
-
-  private Response serveOne(Model model) {
-    Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
-    ModelSummary summary = new ModelSummary();
-
-    summarizeModel(summary, (Model) model);
-    modelsMap.put(model._key.toString(), summary);
-
-    Map resultsMap = new HashMap();
-    resultsMap.put("models", modelsMap);
-
-    // TODO: temporary hack to get things going
-    String json = gson.toJson(resultsMap);
-    // Log.info("Json for results: " + json);
 
     JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
     return Response.done(result);
@@ -344,9 +331,12 @@ public class Models extends Request2 {
   protected Response serve() {
 
     if (null == this.key) {
-      return serveAll();
+      return serveOneOrAll(fetchAll());
     } else {
-      return serveOne(this.key);
+      Model model = this.key;
+      Map<String, Model> modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+      modelsMap.put(model._key.toString(), model);
+      return serveOneOrAll(modelsMap);
     }
 
   } // serve()
