@@ -130,10 +130,12 @@ public class RequestServer extends NanoHTTPD {
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
+      registerRequest(new FrameSplitPage());
       registerRequest(new GapStatistic());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
+      Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic (Beta)", "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");

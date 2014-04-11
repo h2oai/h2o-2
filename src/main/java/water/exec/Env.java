@@ -194,11 +194,15 @@ public class Env extends Iced {
   public Frame  popXAry()  { 
     Frame fr = popAry();
     for( Vec vec : fr.vecs() ) {
-      int cnt = _refcnt.get(vec)._val-1;
-      if( cnt > 0 ) _refcnt.put(vec,new IcedInt(cnt));
-      else _refcnt.remove(vec);
+      popVec(vec);
+      if ( vec.masterVec() != null ) popVec(vec.masterVec());
     }
     return fr; 
+  }
+  public void popVec(Vec vec)  {
+    int cnt = _refcnt.get(vec)._val-1;
+    if( cnt > 0 ) _refcnt.put(vec,new IcedInt(cnt));
+    else _refcnt.remove(vec);
   }
 
   // Replace a function invocation with it's result
