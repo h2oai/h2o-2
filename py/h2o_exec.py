@@ -45,8 +45,8 @@ def checkScalarResult(resultExec, resultKey, allowEmptyResult=False):
     if (cols and (not num_rows or num_rows==0) ) and not allowEmptyResult:
         print "resultExec[0]:", h2o.dump_json(resultExec)
         raise Exception ("checkScalarResult says 'cols' exist in exec json response,"+\
-            " but num_rows: %s is 0 or None. Is that an expected 'empty' key state?"+\
-            " Use 'allowEmptyResult if so." % num_rows)
+            " but num_rows: %s is 0 or None. Is that an expected 'empty' key state?" % num_rows+\
+            " Use 'allowEmptyResult if so.")
 
     # Cycle thru rows and extract all the meta-data into a dict?   
     # assume "0" and "row" keys exist for each list entry in rows
