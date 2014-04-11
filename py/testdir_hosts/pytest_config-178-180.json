@@ -10,8 +10,8 @@
     "h2o_per_host": 1, 
     "java_heap_GB": 28, 
 
-    "hdfs_name_node": "192.168.1.176",
-    "hdfs_version": "cdh3",
+    "hdfs_name_node": "192.168.1.180",
+    "hdfs_version": "cdh5",
     "use_hdfs": true,
 
     "use_flatfile": true,
