@@ -22,7 +22,7 @@ public class FrameSplitPage extends Func {
   public Frame source;
 
   @API(help = "Split ratio - can be an array of split ratios", required = true, filter = Default.class)
-  public float[] ratio; // n-values => n+1 output datasets
+  public float[] ratio = new float[] {0.75f}; // n-values => n+1 output datasets
 
   // Check parameters
   @Override protected void init() throws IllegalArgumentException {
