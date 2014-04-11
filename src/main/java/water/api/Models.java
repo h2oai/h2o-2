@@ -24,7 +24,7 @@ public class Models extends Request2 {
   static final String DOC_GET = "Return the list of models.";
 
   public static String link(Key k, String content){
-    return  "<a href='/2/models'>" + content + "</a>";
+    return  "<a href='/2/Models'>" + content + "</a>";
   }
   ///////////////////////
 
@@ -233,8 +233,11 @@ public class Models extends Request2 {
   @Override
   protected Response serve() {
 
-    // Get all the model keys.  Right now it's a hack to determine which values are models.
-    Set<Key> keySet = H2O.globalKeySet("water.Model"); // filter by class, how cool is that?
+    // Get all the model keys.
+    //
+    // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
+    // but still returns local keys of all types so we need to filter below.
+    Set<Key> keySet = H2O.globalKeySet("water.Model");
 
     Map modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
     for (Key key : keySet) {
@@ -247,8 +250,6 @@ public class Models extends Request2 {
       ModelSummary summary = new ModelSummary();
 
       Value value = DKV.get(key);
-      // TODO: we don't have a way right now of getting the type without deserializing to a POJO.
-      // This is going to deserialize the enture KV store.  We need a less brute-force way.
       Iced pojo = value.get();
 
       if (pojo instanceof hex.glm.GLMModel) {
