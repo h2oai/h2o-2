@@ -115,7 +115,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
       if (testKey==null && sample_rate==1f) {
-        sb.append("<div class=\"alert\">There are now OOB data to report out-of-bag error, since sampling rate is 100%!</div>");
+        sb.append("<div class=\"alert alert-danger\">There are now OOB data to report out-of-bag error, since sampling rate is 100%!</div>");
       }
     }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
