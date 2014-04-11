@@ -77,6 +77,7 @@ public class GLM2 extends ModelJob {
   double beta_epsilon = DEFAULT_BETA_EPS;
 
   private double ADMM_GRAD_EPS = 1e-2;
+  private static final double MIN_ADMM_GRAD_EPS = 1e-8;
   @API(help="use line search (slower speed, possibly greater accuracy)",filter=Default.class)
   boolean higher_accuracy;
 
@@ -279,7 +280,7 @@ public class GLM2 extends ModelJob {
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
           Log.info("GLM line search: found admissible step=" + step);
           if(step < 1e-2) // too small a step, increase precision of the solver
-            ADMM_GRAD_EPS = 1e-8;
+            ADMM_GRAD_EPS = MIN_ADMM_GRAD_EPS;
           _lastResult = null; // set last result to null so that the Iteration will not attempt to verify whether or not it should do the line search.
           new GLMIterationTask(GLM2.this,_dinfo,_glm,true,true,true,glmt._betas[i],_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
           return;
@@ -287,8 +288,8 @@ public class GLM2 extends ModelJob {
         step *= 0.5;
       } // no line step works, forcibly converge
       // first try to increase precision of our solver
-      if(ADMM_GRAD_EPS > 1e-8) {
-        ADMM_GRAD_EPS = 1e-8;
+      if(ADMM_GRAD_EPS > MIN_ADMM_GRAD_EPS) {
+        ADMM_GRAD_EPS = MIN_ADMM_GRAD_EPS;
         new GLMIterationTask(GLM2.this,_dinfo,_glm,true,true,true,_lastResult._glmt._beta,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
       }
       Log.info("GLM: line search failed to find feasible step. Forcibly converged.");
@@ -299,28 +300,67 @@ public class GLM2 extends ModelJob {
       return true;
     }
   }
+
+  protected void nextLambda(final GLMIterationTask glmt, GLMValidation val){
+    boolean improved = _model.setAndTestValidation(_lambdaIdx,val);
+    _model.clone().update(self());
+    if((improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
+      ++_lambdaIdx;
+      new Iteration().callback(glmt);
+    } else    // nope, we're done
+      GLM2.this.complete(); // signal we're done to anyone waiting for the job
+  }
   public void nextLambda(final GLMIterationTask glmt){
     System.out.println("computing validation at t = " + (System.currentTimeMillis() - start));
     // We're done with this lambda, launch validation
-    H2OCallback fin = new H2OCallback<GLMValidationTask>() {
-      @Override public void callback(GLMValidationTask tsk) {
-        System.out.println("validation computed at t = " + (System.currentTimeMillis() - start));
-        boolean improved = _model.setAndTestValidation(_lambdaIdx,tsk._res);
-        _model.clone().update(self());
-        if((improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
-          glmt._val = null;
-          ++_lambdaIdx;
-          new Iteration().callback(glmt);
-        } else    // nope, we're done
-          GLM2.this.complete(); // signal we're done to anyone waiting for the job
+    if(glmt._val == null || glmt._grad == null){
+      // validate and check gradietn whether we have right result
+      new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,true,glmt._beta,_ymu,_reg,new H2OCallback<GLMIterationTask>() {
+        @Override public void callback(GLMIterationTask g){nextLambda2(g);}
+        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
+          GLM2.this.cancel(ex);
+          return true;
+        }
+      }).asyncExec(_dinfo._adaptedFrame);
+    } else nextLambda2(glmt);
+  }
+  private void nextLambda2(final GLMIterationTask glmt){
+    assert glmt._val != null && glmt._grad != null;
+    // check if we have the right solution
+    if(glmt._val.residual_deviance > glmt._val.null_deviance) {
+      if(!higher_accuracy || ADMM_GRAD_EPS > MIN_ADMM_GRAD_EPS){
+        higher_accuracy = true;
+        ADMM_GRAD_EPS = MIN_ADMM_GRAD_EPS;
+        Log.info("GLM2 run with default parameters failed completely, got deviance > null_deviance, rerunning from scratch with line_search and minimal ADMM gradient tolerance.");
+        new GLMIterationTask(GLM2.this,_dinfo,_glm,true,true,true,null,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
+      } else Log.info("GLM2 failed completely even with high precision settings.");
+    } else {
+      subgrad(alpha[0],lambda[_lambdaIdx],glmt._beta,glmt._grad);
+      double err = 0;
+      for(double d:glmt._grad)
+        if(d > err) err = d;
+        else if(d < -err) err = -d;
+      Log.info("GLM converged with err = " + err);
+      if(err > 1e-4){
+        Log.info("GLM failed to solve, gradient error = " + err + " which is greater than tolerance = 1e-4");
       }
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-        GLM2.this.cancel(ex);
-        return true;
-      }
-    };
-    if(GLM2.this.n_folds >= 2) xvalidate(_model.clone(), _lambdaIdx, fin);
-    else  new GLMValidationTask(_model.clone(),_lambdaIdx,fin).asyncExec(_dinfo._adaptedFrame);
+    }
+    if(n_folds > 1){
+      xvalidate(_model,_lambdaIdx,new H2OCallback<GLMXValidationTask>() {
+        @Override public void callback(GLMXValidationTask t){nextLambda(glmt,t._res);}
+      });
+    } else nextLambda(glmt,glmt._val);
+  }
+
+  public static void subgrad(final double alpha, final double lambda, final double [] beta, final double [] grad){
+    final double l2pen = 0.5*lambda*(1-alpha);
+    final double l1pen = lambda*alpha;
+    for(int i = 0; i < grad.length-1; ++i) {// add l2 reg. term to the gradient
+      grad[i] += l2pen*beta[i];
+      if(beta[i] < 0) grad[i] -= l1pen;
+      else if(beta[i] > 0) grad[i] += l1pen;
+      else grad[i] = LSMSolver.shrinkage(grad[i], l1pen);
+    }
   }
   private class Iteration extends H2OCallback<GLMIterationTask> {
     @Override public void callback(final GLMIterationTask glmt) {
@@ -334,21 +374,19 @@ public class GLM2 extends ModelJob {
       }
       if(glmt._beta != null && higher_accuracy && _glm.family != Family.tweedie){
         converged = true;
-        double l1pen = alpha[0]*lambda[_lambdaIdx]*glmt._n;
-        double l2pen = (1-alpha[0])*lambda[_lambdaIdx]*glmt._n;
         final double eps = 1e-2;
         if(higher_accuracy && glmt._val != null){
-          for(int i = 0; i < glmt._grad.length-1; ++i) {// add l2 reg. term to the gradient
-            glmt._grad[i] += l2pen*glmt._beta[i];
-            if(glmt._beta[i] < 0)
-              converged &= Math.abs(glmt._grad[i] - l1pen) < eps;
-            else if(glmt._beta[i] > 0)
-              converged &= Math.abs(glmt._grad[i] + l1pen) < eps;
-            else
-              converged &= LSMSolver.shrinkage(glmt._grad[i],l1pen+eps) == 0;
-          }
+          double l1pen = alpha[0]*lambda[_lambdaIdx]*glmt._n;
+          double l2pen = (1-alpha[0])*lambda[_lambdaIdx]*glmt._n;
+          subgrad(alpha[0],lambda[_lambdaIdx],glmt._beta,glmt._grad);
+          double err = 0;
+          for(double d:glmt._grad)
+            if(d > err)err = d;
+            else if(d < -err) err = -d;
+          converged = err <= eps;
           if(converged) Log.info("GLM converged by reaching 0 gradient/subgradient.");
-          double objval = glmt._val.residual_deviance + 0.5*l2pen*l2norm(glmt._beta);
+          // TODO - use proper objective, this one works only for binomial and gaussian
+          double objval = glmt._val.residual_deviance/glmt._n + 0.5*l2pen*l2norm(glmt._beta);
           if(!converged && _lastResult != null && needLineSearch(glmt._beta,objval,1)){
             new GLMTask.GLMLineSearchTask(GLM2.this,_dinfo,_glm,_lastResult._glmt._beta,glmt._beta,1e-8, new LineSearchIteration()).asyncExec(_dinfo._adaptedFrame);
             return;

@@ -246,6 +246,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if(_val != null)_val.regularize(_reg);
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;
+      if(_grad != null)
+        for(int i = 0; i < _grad.length; ++i)
+          _grad[i] *= _reg;
+
       _yy *= _reg;
     }
     @Override
