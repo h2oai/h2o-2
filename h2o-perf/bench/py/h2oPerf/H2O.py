@@ -176,9 +176,25 @@ class H2OCloudNode:
         sys_idle = int(r_sys.split()[4])
         sys_total_ticks = sys_user + sys_nice + sys_syst + sys_idle
 
-        proc_utime = int(r_proc[13])
-        proc_stime = int(r_proc[14])
-        process_total_ticks = proc_utime + proc_stime
+        try:
+            print "DEBUGGING /proc scraped values served up: "
+            print r_proc
+            print " End of try 1."
+  
+            proc_utime = int(r_proc[13])
+            proc_stime = int(r_proc[14])
+            process_total_ticks = proc_utime + proc_stime
+
+        except:
+            print "DEBUGGING /proc/<pid>/"
+            print "This is try 2... Try 1 failed!"
+            print "Did H2O shutdown first before this scrape occured?"
+            print r_proc
+            print "End of try 2...."
+            r_proc   = requests.get(url_proc).text.strip().split()
+            proc_utime = int(r_proc[13])
+            proc_stime = int(r_proc[14])
+            process_total_ticks = proc_utime + proc_stime
 
         return {"process_total_ticks": process_total_ticks, "system_total_ticks": sys_total_ticks, "system_idle_ticks": sys_idle}
 
