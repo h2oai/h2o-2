@@ -298,7 +298,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
-    long t0 = System.nanoTime(), t2 = 0;
     if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     final int nrows = chunks[0]._len;
     final long offset = chunks[0]._start;
@@ -331,8 +330,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
-    long nanos = 0;
-    long t1 = System.nanoTime();
     OUTER:
     for(int rr = start; rr < end; ++rr){
       final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
@@ -358,12 +355,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         processRow(offset+r, nums, ncats, cats, response, outputs);
       else
         processRow(offset+r, nums, ncats, cats, response);
-      t2 = System.nanoTime();
-      nanos += (t2-t1);
-      t1 = t2;
     }
     chunkDone();
-    System.out.println("FrameTask.map done, processRow took " + nanos + "ns, while while map took " + (t2 - t0) + "ns and compute2 took " + (t2-_t0)+"ns");
-    System.out.println();
   }
 }
