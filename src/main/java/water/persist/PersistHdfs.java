@@ -38,13 +38,13 @@ public final class PersistHdfs extends Persist {
   static {
     Configuration conf = null;
     if( H2O.OPT_ARGS.hdfs_config != null ) {
-      conf = new Configuration(false);
+      conf = new Configuration();
       File p = new File(H2O.OPT_ARGS.hdfs_config);
       if( !p.exists() ) Log.die("Unable to open hdfs configuration file " + p.getAbsolutePath());
       conf.addResource(new Path(p.getAbsolutePath()));
       Log.debug(Sys.HDFS_, "resource ", p.getAbsolutePath(), " added to the hadoop configuration");
     } else {
-      conf = new Configuration(false);
+      conf = new Configuration();
       if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {
         // setup default remote Filesystem - for version 0.21 and higher
         conf.set("fs.defaultFS", H2O.OPT_ARGS.hdfs);

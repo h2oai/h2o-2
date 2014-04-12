@@ -448,7 +448,7 @@ public class Weaver {
       CtClass base = ctf.getType();
       while( base.isArray() ) base = base.getComponentType();
 
-      int ftype = ftype(cc, ctf.getSignature() );   // Field type encoding
+      int ftype = ftype(ctf.getSignature(), cc, ctf );   // Field type encoding
       if( ftype%20 == 9 ) {
         sb.append(freezables);
       } else if( ftype%20 == 10 ) { // Enums
@@ -488,7 +488,7 @@ public class Weaver {
   // 20-27: array-of-prim
   // 28,29, 30: array-of-String, Freezable, Enum
   // Barfs on all others (eg Values or array-of-Frob, etc)
-  private int ftype( CtClass ct, String sig ) throws NotFoundException {
+  private int ftype( String sig, CtClass ct, CtField fld ) throws NotFoundException {
     switch( sig.charAt(0) ) {
     case 'Z': return 0;         // Booleans: I could compress these more
     case 'B': return 1;         // Primitives
@@ -507,9 +507,9 @@ public class Weaver {
       if( argClass.subtypeOf(_pool.get("java.lang.Enum")) ) return 10;
       break;
     case '[':                   // Arrays
-      return ftype(ct, sig.substring(1))+20; // Same as prims, plus 20
+      return ftype(sig.substring(1), ct, fld)+20; // Same as prims, plus 20
     }
-    throw barf(ct, sig);
+    throw barf(ct, fld);
   }
 
   // Replace 2-byte strings like "%s" with s2.
@@ -519,8 +519,8 @@ public class Weaver {
   }
 
 
-  private static RuntimeException barf( CtClass ct, String sig ) {
-    return new RuntimeException(ct.getSimpleName()+"."+sig+": Serialization not implemented");
+  private static RuntimeException barf( CtClass ct, CtField fld ) throws NotFoundException {
+    return new RuntimeException(ct.getSimpleName()+"."+fld.getName()+" of type "+(fld.getType().getSimpleName())+": Serialization not implemented; does not extend Iced or DTask");
   }
 
 }

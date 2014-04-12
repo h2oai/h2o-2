@@ -121,7 +121,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     /**
      * Prepare a Frame (with a single response) to be processed by the FrameTask
      * 1) Place response at the end
-     * 2) (Optionally) Remove columns with constant values or with >20% NaNs
+     * 2) (Optionally) Remove columns with constant values or with greater than 20% NaNs
      * 3) Possibly turn integer categoricals into enums
      *
      * @param source A frame to be expanded and sanity checked
@@ -330,7 +330,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
-
     OUTER:
     for(int rr = start; rr < end; ++rr){
       final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;

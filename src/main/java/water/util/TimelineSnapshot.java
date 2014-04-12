@@ -277,8 +277,7 @@ public final class TimelineSnapshot implements
      *   For two sends, pick the one with receives with smallest timestamp (ms)
      *   otherwise pick the sender with smallest timestamp (ms)
      *
-     * @param other
-     *          other Event to compare
+     * @param ev  other Event to compare
      * @return
      */
     public final int compareTo(Event ev) {

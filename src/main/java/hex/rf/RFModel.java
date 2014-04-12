@@ -48,9 +48,6 @@ public class RFModel extends OldModel implements Progress {
   public static final String KEY_PREFIX = "__RFModel_";
 
   /** A RandomForest Model
-   * @param treeskey    a key of keys of trees
-   * @param classes     the number of response classes
-   * @param data        the dataset
    */
   public RFModel(Key selfKey, int[] cols, Key dataKey, Key[] tkeys, int features, Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int splitFeatures, int totalTrees) {
     super(selfKey, cols, dataKey);

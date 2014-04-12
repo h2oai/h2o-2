@@ -189,6 +189,21 @@ public class Env extends Iced {
   public ASTOp  peekFcn() { assert isFcn(); ASTOp op = _fcn[_sp-1]; return op; }
   public String peekKey() { return _key[_sp-1]; }
   public String key()     { return _key[_sp]; }
+  // Pop frame from stack; lower refcnts... allowing to fall to zero without deletion.
+  // Assumption is that this Frame will get pushed again shortly.
+  public Frame  popXAry()  { 
+    Frame fr = popAry();
+    for( Vec vec : fr.vecs() ) {
+      popVec(vec);
+      if ( vec.masterVec() != null ) popVec(vec.masterVec());
+    }
+    return fr; 
+  }
+  public void popVec(Vec vec)  {
+    int cnt = _refcnt.get(vec)._val-1;
+    if( cnt > 0 ) _refcnt.put(vec,new IcedInt(cnt));
+    else _refcnt.remove(vec);
+  }
 
   // Replace a function invocation with it's result
   public void poppush( int n, Frame ary, String key) {
@@ -233,7 +248,6 @@ public class Env extends Iced {
   }
 
   public Futures subRef( Vec vec, Futures fs ) {
-
     if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)._val-1;
     //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);

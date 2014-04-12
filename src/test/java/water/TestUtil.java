@@ -376,9 +376,18 @@ public class TestUtil {
     System.err.println("----------------------");
   }
 
-  public static String[] ar (String ...a) { return a; }
-  public static long  [] ar (long   ...a) { return a; }
-  public static long[][] ar (long[] ...a) { return a; }
-  public static int   [] ari(int    ...a) { return a; }
-  public static int [][] ar (int[]  ...a) { return a; }
+  public static String[]   ar (String ...a)   { return a; }
+  public static long  []   ar (long   ...a)   { return a; }
+  public static long[][]   ar (long[] ...a)   { return a; }
+  public static int   []   ari(int    ...a)   { return a; }
+  public static int [][]   ar (int[]  ...a)   { return a; }
+  public static float []   arf(float  ...a)   { return a; }
+  public static double[]   ard(double ...a)   { return a; }
+  public static double[][] ard(double[] ...a) { return a; }
+  // Expanded array
+  public static double[][] ear (double ...a)   {
+    double[][] r = new double[a.length][1];
+    for (int i=0; i<a.length;i++) r[i][0] = a[i];
+    return r;
+  }
 }

@@ -1,9 +1,6 @@
 package water.fvec;
 
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.RandomAccess;
+import java.util.*;
 
 import water.*;
 import water.parser.DParseTask;

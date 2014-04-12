@@ -4,7 +4,7 @@ import jsr166y.CountedCompleter;
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 
-/** Objects which are passed & remotely executed.<p>
+/** Objects which are passed and remotely executed.<p>
  * <p>
  * Efficient serialization methods for subclasses will be automatically
  * generated, but explicit ones can be provided.  Transient fields will
@@ -12,7 +12,7 @@ import water.H2O.H2OCountedCompleter;
  * <ol>
  * <li>On the local vm, this task will be serialized and sent to a remote.</li>
  * <li>On the remote, the task will be deserialized.</li>
- * <li>On the remote, the {@link #invoke(H2ONode)} method will be executed.</li>
+ * <li>On the remote, the H2ONode invoke method will be executed.</li>
  * <li>On the remote, the task will be serialized and sent to the local vm</li>
  * <li>On the local vm, the task will be deserialized
  * <em>into the original instance</em></li>
@@ -90,7 +90,7 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   public void onAckAck() {}
 
   /** Override to remove 2 lines of logging per RPC.  0.5M RPC's will lead to
-   *  1M lines of logging at about 50 bytes/line --> 50M of log file, which
+   *  1M lines of logging at about 50 bytes/line produces 50M of log file, which
    *  will swamp all other logging output. */
   public boolean logVerbose() { return true; }
 

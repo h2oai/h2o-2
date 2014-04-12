@@ -1,15 +1,12 @@
 package hex.glm;
 
-import hex.ConfusionMatrix;
 import hex.glm.GLMModel.Submodel;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
-import water.api.*;
-import water.api.Request.API;
-import water.api.Request.Default;
-import water.api.RequestArguments.H2OKey;
-import water.api.RequestBuilders.Response;
+import water.api.AUC;
+import water.api.DocGen;
+import water.api.Request;
 import water.util.RString;
 
 import java.text.DecimalFormat;
@@ -51,6 +48,7 @@ public class GLMModelView extends Request2 {
       sb.append("No model yet...");
       return true;
     }
+    glm_model.get_params().makeJsonBox(sb);
     DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._key);
     if(glm_model.submodels != null)
       DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._key,"Predict!"));
