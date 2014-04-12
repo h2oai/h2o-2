@@ -420,7 +420,7 @@ public abstract class Neurons {
   }
 
   /**
-   * Helper to scale down incoming weights if their squared sum exceeds a given value
+   * Helper to scale down incoming weights if their squared sum exceeds a given value (by a factor of 2 -> to avoid doing costly rescaling too often)
    * C.f. Improving neural networks by preventing co-adaptation of feature detectors
    * @param row index of the neuron for which to scale the weights
    */
@@ -430,18 +430,17 @@ public abstract class Neurons {
       final int idx = row * cols;
       final double max_w2 = params.max_w2;
       double r2 = Utils.sumSquares(_w.raw(), idx, idx+cols);
-      if( r2 > max_w2 ) {
+      if( r2 > max_w2 * 2) {
         final float scale = Utils.approxSqrt((float)(max_w2 / r2));
         for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
       }
     }
-    // TODO: speedup
     else if (_w instanceof DenseColMatrix) {
       final int cols = _previous._a.size();
       final double max_w2 = params.max_w2;
       double r2 = 0;
       for (int col=0; col<cols;++col) r2 += _w.get(row,col)*_w.get(row,col);
-      if( r2 > max_w2 ) {
+      if( r2 > max_w2 * 2) {
         final float scale = Utils.approxSqrt((float)(max_w2 / r2));
         for( int col=0; col < cols; col++ ) _w.set(row, col, _w.get(row,col) * scale);
       }
