@@ -141,7 +141,7 @@ public class DeepLearningIrisTest extends TestUtil {
                         p.epsilon = 0;
                         p.rate = rate / (1 - momentum); //adapt to (1-m) correction that's done inside (only for constant momentum!)
                         p.activation = activation;
-                        p.max_w2 = Double.MAX_VALUE;
+                        p.max_w2 = Float.POSITIVE_INFINITY;
                         p.epochs = epoch;
                         p.input_dropout_ratio = 0;
                         p.rate_annealing = 0; //do not change - not implemented in reference

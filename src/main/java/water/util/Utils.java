@@ -167,22 +167,28 @@ public class Utils {
     for (double d: from) result += d;
     return result;
   }
-  public static double sumSquares(final float[] a) {
+  public static float sumSquares(final float[] a) {
     return sumSquares(a, 0, a.length);
   }
-  public static double sumSquares(final float[] a, int from, int to) {
-    double result = 0;
+  public static float sumSquares(final float[] a, int from, int to) {
+    float result = 0;
     final int cols = to-from;
     final int extra=cols-cols%8;
     final int multiple = (cols/8)*8-1;
-    double psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0;
+    float psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0;
+    float psum5 = 0, psum6 = 0, psum7 = 0, psum8 = 0;
     for (int c = from; c < from + multiple; c += 8) {
-      psum1 += a[c+0]*a[c+0] + a[c+1]*a[c+1];
-      psum2 += a[c+2]*a[c+2] + a[c+3]*a[c+3];
-      psum3 += a[c+4]*a[c+4] + a[c+5]*a[c+5];
-      psum4 += a[c+6]*a[c+6] + a[c+7]*a[c+7];
+      psum1 += a[c+0]*a[c+0];
+      psum2 += a[c+1]*a[c+1];
+      psum3 += a[c+2]*a[c+2];
+      psum4 += a[c+3]*a[c+3];
+      psum5 += a[c+4]*a[c+4];
+      psum6 += a[c+5]*a[c+5];
+      psum7 += a[c+6]*a[c+6];
+      psum8 += a[c+7]*a[c+7];
     }
     result += psum1 + psum2 + psum3 + psum4;
+    result += psum5 + psum6 + psum7 + psum8;
     for (int c = from + extra; c < to; ++c) {
       result += a[c]*a[c];
     }
