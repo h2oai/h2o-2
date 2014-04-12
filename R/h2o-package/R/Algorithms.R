@@ -1,7 +1,7 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
-h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.1, n.bins=100, importance=FALSE, validation) {
+h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, validation) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
@@ -653,10 +653,12 @@ h2o.deeplearning <- function(x, y, data, classification=TRUE, activation='Tanh',
   confusion = errs$valid_confusion_matrix
 
   # BUG: Why is the confusion matrix returning an extra row and column with all zeroes?
-  cm = confusion$cm[-length(confusion$cm)]
-  cm = lapply(cm, function(x) { x[-length(x)] })
-  # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
-  result$confusion = .build_cm(cm, confusion$domain)
+  if(!is.null(confusion$cm)) {
+    cm = confusion$cm[-length(confusion$cm)]
+    cm = lapply(cm, function(x) { x[-length(x)] })
+    # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+    result$confusion = .build_cm(cm, confusion$domain) 
+  }
   result$train_class_error = errs$train_err
   result$train_sqr_error = errs$train_mse
   result$valid_class_error = errs$valid_err

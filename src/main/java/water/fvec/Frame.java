@@ -436,7 +436,7 @@ public class Frame extends Lockable<Frame> {
     }
     s += "}, "+PrettyPrint.bytes(bs)+"\n";
     // Down
-    Vec v0 = _vecs[0];          // Do Not Cache, no side-effects
+    Vec v0 = vecs[0];          // Do Not Cache, no side-effects
     if( v0 == null ) return s;
     int nc = v0.nChunks();
     s += "Chunk starts: {";

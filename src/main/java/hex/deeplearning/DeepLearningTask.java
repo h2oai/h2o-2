@@ -180,6 +180,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
       }
     }
     catch(RuntimeException ex) {
+      Log.warn(ex.getMessage());
       minfo.set_unstable();
     }
   }
