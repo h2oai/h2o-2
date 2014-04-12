@@ -16,7 +16,7 @@ public class ProfileCollectorTask extends DRemoteTask<ProfileCollectorTask> {
     }
     public String[] _stacktraces;
     public int[] _counts;
-  };
+  }
 
   public NodeProfile[] _result;
 
@@ -57,7 +57,7 @@ public class ProfileCollectorTask extends DRemoteTask<ProfileCollectorTask> {
         if (!found) countedStackTraces.put(st, 1);
       }
       try {
-        Thread.sleep(10);
+        Thread.sleep(1);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
