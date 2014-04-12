@@ -68,7 +68,7 @@ public class DeepLearningMnist extends Job {
     p.classification_stop = -1;
     p.train_samples_per_iteration = -1;
     p.score_interval = 30;
-
+    p.variable_importances = false;
     p.fast_mode = true; //to match old NeuralNet behavior
     p.ignore_const_cols = true; //to match old NeuralNet behavior
     p.shuffle_training_data = false;
