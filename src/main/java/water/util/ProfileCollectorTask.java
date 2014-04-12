@@ -63,7 +63,6 @@ public class ProfileCollectorTask extends DRemoteTask<ProfileCollectorTask> {
       }
     }
 
-
     int i=0;
     _result[idx] = new NodeProfile(countedStackTraces.size());
     for (Entry<String, Integer> entry : countedStackTraces.entrySet()) {
@@ -75,19 +74,4 @@ public class ProfileCollectorTask extends DRemoteTask<ProfileCollectorTask> {
   }
 
   @Override public byte priority() { return H2O.GUI_PRIORITY; }
-
-  private void append(final StringBuilder sb, final Thread t) {
-    sb.append('"').append(t.getName()).append('"');
-    if (t.isDaemon()) sb.append(" daemon");
-    sb.append(" prio=").append(t.getPriority());
-    sb.append(" tid=").append(t.getId());
-    sb.append(" java.lang.Thread.State: ").append(t.getState());
-    sb.append('\n');
-  }
-
-  private void append(final StringBuilder sb, final StackTraceElement[] trace) {
-    for (int i=0; i < trace.length; i++)
-      sb.append("\tat ").append(trace[i]).append('\n');
-  }
-
 }
