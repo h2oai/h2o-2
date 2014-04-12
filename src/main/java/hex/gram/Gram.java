@@ -61,6 +61,19 @@ public final class Gram extends Iced {
       _xx[i][_xx[i].length - 1] += d;
   }
 
+  public double diagAvg(){
+    double res = 0;
+    int n = 0;
+    if(_diag != null){
+      n += _diag.length;
+      for(double d:_diag) res += d;
+    }
+    if(_xx != null){
+      n += _xx.length;
+      for(double [] x:_xx)res += x[x.length-1];
+    }
+    return res/n;
+  }
   public double diagMin(){
     double res = Double.POSITIVE_INFINITY;
     if(_diag != null)
