@@ -1,2 +1,2 @@
-fswatch ./src "make test"
+fswatch ./src "make build test"
 

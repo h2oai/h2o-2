@@ -1,7 +1,6 @@
 BUILD=build
 DIST=$(BUILD)/dist
-J=$(BUILD)/scripts
-T=$(BUILD)/tests
+DEPLOY=../lib/resources/steam
 LIB=lib
 MODULES=node_modules
 BIN=$(MODULES)/.bin
@@ -12,17 +11,31 @@ BUILD_DIRS=\
 	$(BUILD)/coverage \
 	$(BUILD)/doc \
 	$(BUILD)/spec \
-	$(DIST)
+	$(DIST) \
+	$(DEPLOY)
 
 SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
-	$(BUILD)/scripts/base.js
+	$(BUILD)/scripts/base.js \
+	$(BUILD)/scripts/steam.js
 
 TESTS=\
 	$(BUILD)/tests/prelude.tests.js \
 	$(BUILD)/tests/hypergraph.tests.js \
 	$(BUILD)/tests/base.tests.js
+
+LIB_JS=\
+	$(LIB)/jquery/dist/jquery.js \
+	$(LIB)/jquery-timeago/jquery.timeago.js \
+	$(LIB)/lodash/dist/lodash.js \
+	$(LIB)/finchjs/finch.js \
+	$(LIB)/bootstrap/dist/js/bootstrap.js \
+	$(LIB)/d3/d3.js \
+	$(LIB)/knockout/knockout.js
+
+LIB_CSS=\
+	$(LIB)/bootstrap/dist/css/bootstrap.css
 
 LIB_TEST_JS=\
 	$(LIB)/lodash/dist/lodash.js \
@@ -36,9 +49,15 @@ LIB_TEST_CSS=\
 all: build
 
 build: \
-	$(DIST)/index.html \
-	$(DIST)/steam.css \
-	$(DIST)/steam.js
+	$(DEPLOY)/index.html \
+	$(DEPLOY)/fonts/glyphicons-halflings-regular.eot \
+	$(DEPLOY)/fonts/glyphicons-halflings-regular.svg \
+	$(DEPLOY)/fonts/glyphicons-halflings-regular.ttf \
+	$(DEPLOY)/fonts/glyphicons-halflings-regular.woff \
+	$(DEPLOY)/css/lib.css \
+	$(DEPLOY)/css/steam.css \
+	$(DEPLOY)/js/lib.js \
+	$(DEPLOY)/js/steam.js
 
 unit: \
 	$(DIST)/lib.test.css \
@@ -58,7 +77,7 @@ help:
 	@echo "  make reset      Clean up dev dependencies"
 	@echo ""
 	@echo "Development tasks:"
-	@echo "  make build      Build and deploy"
+	@echo "  make build      Build and deploy to ../lib/resources/steam/"
 	@echo "  make unit       Build browser test suite"
 	@echo "  make test       Run all tests"
 	@echo "  make smoke      Run tests, but bail on first failure"
@@ -163,20 +182,29 @@ $(BUILD)/tests/%.js: src/tests/%.coffee
 	@mkdir -p $(@D)
 	$(BIN)/coffee --output $(@D) --compile $<
 
-$(DIST)/%.html: src/templates/%.jade
+$(DEPLOY)/%.html: src/templates/%.jade
 	@mkdir -p $(@D)
 	$(BIN)/jade --pretty < $< > $@
 
-$(DIST)/%.css: src/styles/%.styl
+$(DEPLOY)/css/%.css: src/styles/%.styl
 	@mkdir -p $(@D)
 	$(BIN)/stylus < $< > $@
 
-$(DIST)/steam.js: $(SCRIPTS)
+$(DEPLOY)/js/steam.js: $(SCRIPTS)
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@
 	cat $^ >> $@
 	@echo '}).call(this);' >> $@
+
+$(DEPLOY)/fonts/glyphicons-halflings-regular.eot: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.eot
+$(DEPLOY)/fonts/glyphicons-halflings-regular.svg: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.svg
+$(DEPLOY)/fonts/glyphicons-halflings-regular.ttf: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.ttf
+$(DEPLOY)/fonts/glyphicons-halflings-regular.woff: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.woff
+
+$(DEPLOY)/fonts/%: 
+	@mkdir -p $(@D)
+	cp $< $@
 
 $(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(SCRIPTS) $(TESTS)
 	@mkdir -p $(@D)
@@ -195,6 +223,14 @@ $(DIST)/steam.test.js: $(BUILD)/tests/browser.global.js $(SCRIPTS) $(TESTS)
 $(DIST)/tests.html: src/util/mocha-html/tests.html
 	@mkdir -p $(@D)
 	cp $< $@
+
+$(DEPLOY)/css/lib.css: $(LIB_CSS)
+	@mkdir -p $(@D)
+	cat $^ > $@
+
+$(DEPLOY)/js/lib.js: $(LIB_JS)
+	@mkdir -p $(@D)
+	cat $^ > $@
 
 $(DIST)/lib.test.css: $(LIB_TEST_CSS)
 	@mkdir -p $(@D)
