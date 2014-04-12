@@ -35,6 +35,7 @@ hadoop/build.log
 /.idea
 .Rproj.user
 lib/resources/R
+lib/resources/steam
 R/.RData
 R/.Rhistory
 R/tests/Rsandbox/
