@@ -1435,12 +1435,4 @@ public class Utils {
     return ks;
   }
 
-  /** Return the query link to this page */
-  public static <T> String link(Class<T> page, Key k, String content) {
-    RString rs = new RString("<a href='/2/%page.query?source=%$key'>%content</a>");
-    rs.replace("page", page.getSimpleName());
-    rs.replace("key", k.toString());
-    rs.replace("content", content);
-    return rs.toString();
-  }
 }

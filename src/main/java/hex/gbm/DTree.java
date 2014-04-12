@@ -5,8 +5,7 @@ import hex.VarImp;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 import water.*;
-import water.api.AUC;
-import water.api.DocGen;
+import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.util.*;
@@ -669,11 +668,17 @@ public class DTree extends Iced {
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
+      sb.append("<div class=\"alert\">").append("Actions: ");
+      sb.append(Inspect2.link("Inspect training data ("+_dataKey.toString()+")", _dataKey)).append(", ");
+      sb.append(Predict.link(_key,"Score on dataset")).append(", ");
+      sb.append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
+      sb.append("<i class=\"icon-play\"></i>&nbsp;").append("Continue training this model");
+      sb.append("</div>");
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
-      DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
-      DocGen.HTML.paragraph(sb,"Trees: " + ntrees());
+      DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins+", Trees: " + ntrees());
       generateModelDescription(sb);
-      DocGen.HTML.paragraph(sb,water.api.Predict.link(_key,"Predict!"));
+      sb.append("</pre>");
+
       String[] domain = cmDomain; // Domain of response col
 
       // Generate a display using the last scored Model.  Not all models are
