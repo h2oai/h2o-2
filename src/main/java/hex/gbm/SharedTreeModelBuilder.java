@@ -4,6 +4,7 @@ import static water.util.MRUtils.sampleFrameStratified;
 import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.VarImp;
+import hex.drf.DRF;
 import hex.rng.MersenneTwisterRNG;
 import jsr166y.CountedCompleter;
 import water.*;
@@ -24,17 +25,23 @@ import water.util.Utils;
 import java.util.Arrays;
 import java.util.Random;
 
-// Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
-// Forest, and really could be used for any decision-tree builder.
-//
-// While this is a wholly H2O-design, we found these papers afterwards that
-// describes our design fairly well.
-//   Parallel GBRT http://www.cse.wustl.edu/~kilian/papers/fr819-tyreeA.pdf
-//   Streaming parallel decision tree http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
-// Note that our dynamic Histogram technique is different (surely faster, and
-// probably less mathematically clean).  I'm sure a host of other smaller details
-// differ also - but in the Big Picture the paper and our algorithm are similar.
-
+/**
+ *  Shared (distributed) trees builder.
+ *
+ *  <p>Used for both <em>Gradient Boosted Method</em> (see {@link GBM}) and <em>Random
+ *  Forest</em> (see {@link DRF}), and really could be used for any decision-tree builder.</p>
+ *
+ *  <p>While this is a wholly H<sub>2</sub>O-design, we found these papers afterwards that
+ *  describes our design fairly well:</p>
+ * <ul>
+ *  <li><a href="http://www.cse.wustl.edu/~kilian/papers/fr819-tyreeA.pdf">Parallel GBRT</a></li>
+ *  <li><a href="http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf">Streaming parallel decision tree</a></li>
+ * </ul>
+ *
+ * <p>Note that our <em>dynamic histogram</em> technique is different (surely faster, and
+ * probably less mathematically clean).  I'm sure a host of other smaller details
+ * differ also - but in the Big Picture the paper and our algorithm are similar.</p>
+*/
 public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
