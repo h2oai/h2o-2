@@ -69,7 +69,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public double rate = .005;
 
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
-  public double rate_annealing = 1 / 1e6;
+  public double rate_annealing = 1e-6;
 
   @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
   public double rate_decay = 1.0;
@@ -666,7 +666,7 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   private void unlock_data() {
     source.unlock(self());
-    if( validation != null && !source._key.equals(validation._key) )
+    if( validation != null && source._key != null && validation._key != null && !source._key.equals(validation._key) )
       validation.unlock(self());
   }
 
