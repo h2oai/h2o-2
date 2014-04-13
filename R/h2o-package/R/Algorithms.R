@@ -680,7 +680,7 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, validation,
 
   if (! missing(classification)) {
     if (! is.logical(classification)) stop('classification must be true or false')
-    parms$classification = classification
+    parms$classification = as.numeric(classification)
   }
 
   if (missing(validation)) validation = data
