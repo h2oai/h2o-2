@@ -40,6 +40,12 @@ public class GapStatisticModel extends Model implements Job.Progress {
   @API(help = "The current value of B (1 <= b <= B.")
   int b;
 
+  @API(help = "The gap statistics per value of k.")
+  double[] gap_stats;
+
+   @API(help = "Optimal number of clusters.")
+   int k_best;
+
   public GapStatisticModel(Key selfKey, Key dataKey, Frame fr, int ks, double[] wks, double[] log_wks, double[] sk, int k_max, int b_max, int k, int b) {
     super(selfKey, dataKey, fr);
     this.ks = ks;
@@ -50,11 +56,13 @@ public class GapStatisticModel extends Model implements Job.Progress {
     this.b_max = b_max;
     this.k = k;
     this.b = b;
+    this.gap_stats = new double[this.wks.length];
   }
 
   public double[] wks() { return wks; }
   public double[] wkbs() { return wkbs; }
   public double[] sk() {return sk; }
+  public double[] gaps() {return gap_stats; }
 
   @Override
   public float progress() {
@@ -161,36 +169,52 @@ public class GapStatisticModel extends Model implements Job.Progress {
     }
     sb.append("</tr>");
 
+
+    double[] gaps = gaps();
+
     sb.append("<tr>");
-    double prev_val = Double.NEGATIVE_INFINITY;
-    int kmin = Integer.MAX_VALUE;
-    for (int i = 0; i < log_wkbs.length; ++i) {
-      if (log_wkbs[i] == 0) continue;
-      double val =  log_wkbs[i] - log_wks[i];
-      if (i > 0) {
-        if (prev_val >= (val - sks[i])) {
-          if (kmin > (i)) {
-            kmin = i;
-          }
-        }
-      }
-      prev_val = val;
+
+    for (int i = 0; i < gaps.length; ++i) {
+      if (gaps[i] == 0) continue;
+      double val =  gaps[i];
       sb.append("<td>").append(val).append("</td>");
     }
     sb.append("</tr>");
     sb.append("</table></span>");
 
+    //Compute optimal k: min k such that G_k >= G_(k+1) - s_(k+1)
+    int kmin = -1;
+    for (int i = 0; i < gaps.length; ++i) {
+      int cur_k = i + 1;
+      if(gaps[cur_k] == 0) {
+        kmin = 0;
+        k_best = kmin;
+        break;
+      }
+      if (i == gaps.length - 1) {
+        kmin = cur_k;
+        k_best = kmin;
+        break;
+      }
+      if ( gaps[i] >= (gaps[i+1] - sks[i+1])) {
+        kmin = cur_k;
+        k_best = kmin;
+        break;
+      }
+    }
+
+
     if (log_wks[log_wks.length -1] != 0) {
       DocGen.HTML.section(sb, "Best k:");
-      if (kmin == Integer.MAX_VALUE) {
-        sb.append("k = " + "NA");
+      if (kmin <= 0) {
+        sb.append("k = " + "No k computed yet...");
       } else {
       sb.append("k = " + kmin);
       }
     } else {
       DocGen.HTML.section(sb, "Best k so far:");
-      if (kmin == Integer.MAX_VALUE) {
-        sb.append("k = " + "NA");
+      if (kmin <= 0) {
+        sb.append("k = " + "No k computed yet...");
       } else {
       sb.append("k = " + kmin);
       }
