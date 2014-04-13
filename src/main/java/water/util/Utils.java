@@ -1379,9 +1379,9 @@ public class Utils {
       long err = acts[a]-correct;
       terr += err;
       if (html) {
-        sb.append(String.format("<th  style='min-width: 60px;'>%5.3f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
+        sb.append(String.format("<th  style='min-width: 60px;'>%.5f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
       } else {
-        sb.append("   " + String.format("%5.3f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
+        sb.append("   " + String.format("%.5f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
       }
     }
 
