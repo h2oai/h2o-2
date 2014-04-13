@@ -35,7 +35,11 @@ class Basic(unittest.TestCase):
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
-        response = inspect['numCols'] - 1
+        # this gives the last col number, which is IsDepDelayed_REC (1 or -1)
+        # response = inspect['numCols'] - 1
+
+        # this is "YES"/"NO"
+        response = 'IsDepDelayed'
 
         #Making random id
         identifier = ''.join(random.sample(string.ascii_lowercase + string.digits, 10))
@@ -60,8 +64,9 @@ class Basic(unittest.TestCase):
             'ignored_cols'                 : ignoredColsString,
             'response'                     : response,
             'classification'               : 1,
+            'destination_key'              : model_key,
             }
-        expectedErr = 0.057 ## expected validation error for the above model
+        expectedErr = 0.45 ## expected validation error for the above model
         relTol = 0.20 ## 20% rel. error tolerance due to Hogwild!
 
         timeoutSecs = 600
