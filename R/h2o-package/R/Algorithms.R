@@ -572,7 +572,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
 .addBooleanParm <- function(parms, k, v) {
   if (! missing(v)) {
     if (! is.logical(v)) stop(sprintf("%s must be of type logical"), k)
-    parms = .addParm(parms, k, v)
+    parms = .addParm(parms, k, as.numeric(v))
   }
   return(parms)
 }
