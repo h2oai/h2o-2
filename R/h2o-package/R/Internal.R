@@ -155,7 +155,7 @@ h2o.__changeLogPath <- function(path, type) {
   }
 
   cmd = sprintf("%s)", cmd)
-  cat(sprintf("TOM: cmd is %s\n", cmd))
+  #cat(sprintf("TOM: cmd is %s\n", cmd))
 
   eval(parse(text=cmd))
 

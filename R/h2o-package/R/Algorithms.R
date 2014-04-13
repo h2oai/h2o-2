@@ -572,7 +572,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
 .addBooleanParm <- function(parms, k, v) {
   if (! missing(v)) {
     if (! is.logical(v)) stop(sprintf("%s must be of type logical"), k)
-    parms = .addParm(parms, k, v)
+    parms = .addParm(parms, k, as.numeric(v))
   }
   return(parms)
 }
@@ -608,7 +608,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
 .addNumericArrayParm <- function(parms, k, v) {
   if (! missing(v)) {
     if (! is.numeric(v)) stop(sprintf("%s must be of type numeric"), k)
-    arrAsString = paste(arr, collapse=",")
+    arrAsString = paste(v, collapse=",")
     parms = .addParm(parms, k, arrAsString)
   }
   return(parms)
@@ -680,7 +680,7 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, validation,
 
   if (! missing(classification)) {
     if (! is.logical(classification)) stop('classification must be true or false')
-    parms$classification = classification
+    parms$classification = as.numeric(classification)
   }
 
   if (missing(validation)) validation = data
