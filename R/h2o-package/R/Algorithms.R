@@ -608,7 +608,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
 .addNumericArrayParm <- function(parms, k, v) {
   if (! missing(v)) {
     if (! is.numeric(v)) stop(sprintf("%s must be of type numeric"), k)
-    arrAsString = paste(arr, collapse=",")
+    arrAsString = paste(v, collapse=",")
     parms = .addParm(parms, k, arrAsString)
   }
   return(parms)
