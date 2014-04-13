@@ -79,14 +79,10 @@ public class QuantilesPage extends Func {
   }
 
   @Override protected void execImpl() {
-    Vec[] vecs = new Vec[1];
     String[] names = new String[1];
-    vecs[0] = column;
 
     Futures fs = new Futures();
-    for( Vec vec : vecs) {
-        vec.rollupStats(fs);
-    }
+    column.rollupStats(fs);
     fs.blockForPending();
 
     boolean multiPass;
@@ -112,10 +108,10 @@ public class QuantilesPage extends Func {
 
       // These are used as initial params, and setup for the next iteration
       // be sure to set again if multiple qbins are created
-      double valStart = vecs[0].min();
-      double valEnd = vecs[0].max();
+      double valStart = column.min();
+      double valEnd = column.max();
       // quantile doesn't matter for the map/reduce binning
-      qbins = new Quantiles.BinTask2(max_qbins, valStart, valEnd).doAll(vecs[0])._qbins;
+      qbins = new Quantiles.BinTask2(max_qbins, valStart, valEnd).doAll(column)._qbins;
       Log.debug("Q_ for approx. valStart: "+valStart+" valEnd: "+valEnd);
 
       // Have to get this internal state, and copy this state for the next iteration
@@ -133,7 +129,7 @@ public class QuantilesPage extends Func {
       interpolation_type_used = interpolation_type;
       quantile_requested = quantiles_to_do[0];
       if ( qbins != null ) { // if it's enum it will be null?
-        qbins[0].finishUp(vecs[0], quantiles_to_do, interpolation_type, multiPass);
+        qbins[0].finishUp(column, quantiles_to_do, interpolation_type, multiPass);
         column_name = names[0]; // the string name, not the param
         iterations = 1;
         done = qbins[0]._done;
@@ -160,8 +156,8 @@ public class QuantilesPage extends Func {
       final int MAX_ITERATIONS = 16;
       multiPass = true;
       exactResult = Double.NaN;
-      double valStart = vecs[0].min();
-      double valEnd = vecs[0].max();
+      double valStart = column.min();
+      double valEnd = column.max();
 
       for (int b = 0; b < MAX_ITERATIONS; b++) {
         // we did an approximation pass above we could reuse it for the first pass here?
@@ -169,12 +165,12 @@ public class QuantilesPage extends Func {
         // cleaned up things so no multipass behavior in qbins..all in finishUp:w
         // so can reuse the qbins from the approx pass above (if done)
         if ( !(multiple_pass==2 && b==0) ) {
-          qbins = new Quantiles.BinTask2(max_qbins, valStart, valEnd).doAll(vecs[0])._qbins;
+          qbins = new Quantiles.BinTask2(max_qbins, valStart, valEnd).doAll(column)._qbins;
         }
         iterations = b + 1;
         if ( qbins == null ) break;
         else {
-          qbins[0].finishUp(vecs[0], quantiles_to_do, interpolation_type, multiPass);
+          qbins[0].finishUp(column, quantiles_to_do, interpolation_type, multiPass);
           Log.debug("\nQ_ multipass iteration: "+iterations+" valStart: "+valStart+" valEnd: "+valEnd);
           double valBinSize = qbins[0]._valBinSize;
           Log.debug("Q_ valBinSize: "+valBinSize);

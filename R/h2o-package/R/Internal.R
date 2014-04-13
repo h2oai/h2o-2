@@ -143,6 +143,25 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
 
+# client -- Connection object returned from h2o.init().
+# page   -- URL to access within the H2O server.
+# parms  -- List of parameters to send to the server.
+.h2o.__remoteSendWithParms <- function(client, page, parms) {
+  cmd = "rv = .h2o.__remoteSend(client, page"
+
+  for (i in 1:length(parms)) {
+    thisparmname = names(parms)[i]
+    cmd = sprintf("%s, %s=parms$%s", cmd, thisparmname, thisparmname)
+  }
+
+  cmd = sprintf("%s)", cmd)
+  cat(sprintf("TOM: cmd is %s\n", cmd))
+
+  eval(parse(text=cmd))
+
+  return(rv)
+}
+
 .h2o.__remoteSend <- function(client, page, ...) {
   .h2o.__checkClientHealth(client)
   ip = client@ip

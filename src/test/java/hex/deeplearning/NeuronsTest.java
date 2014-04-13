@@ -2,6 +2,7 @@ package hex.deeplearning;
 
 import static hex.deeplearning.Neurons.*;
 import hex.deeplearning.Neurons.*;
+import org.junit.Ignore;
 import org.junit.Test;
 import water.PrettyPrint;
 import water.util.Log;
@@ -13,7 +14,7 @@ import java.util.Random;
 public class NeuronsTest {
 
   @Test
-//  @Ignore
+  @Ignore
   public void matrixVecTest() {
     int rows = 2048;
     int cols = 8192;

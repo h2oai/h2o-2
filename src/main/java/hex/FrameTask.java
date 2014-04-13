@@ -330,7 +330,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
-
     OUTER:
     for(int rr = start; rr < end; ++rr){
       final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;

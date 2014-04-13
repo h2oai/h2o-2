@@ -690,6 +690,7 @@ public class Utils {
       return ((IcedInt)o)._val == _val;
     }
     @Override public int hashCode() { return _val; }
+    @Override public String toString() { return Integer.toString(_val); }
   }
   public static class IcedLong extends Iced {
     public final long _val;
@@ -699,6 +700,7 @@ public class Utils {
       return ((IcedLong)o)._val == _val;
     }
     @Override public int hashCode() { return (int)_val; }
+    @Override public String toString() { return Long.toString(_val); }
   }
   public static class IcedDouble extends Iced {
     public final double _val;
@@ -708,6 +710,7 @@ public class Utils {
       return ((IcedDouble)o)._val == _val;
     }
     @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
+    @Override public String toString() { return Double.toString(_val); }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
@@ -1400,4 +1403,36 @@ public class Utils {
       sb.append("   " + String.format("%5.3f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
     }
   }
+
+  /** Divide given size into partitions based on given ratios.
+   * @param len  number to be split into partitions
+   * @param ratio  split ratio of each partition
+   * @return array of sizes based on given ratios, the size of the last segment is len-sum(ratio)*len.
+   */
+  public static final int[] partitione(int len, float[] ratio) {
+    int[] r = new int[ratio.length+1];
+    int sum = 0;
+    int i = 0;
+    for (i=0; i<ratio.length; i++) {
+      r[i] = (int) (ratio[i]*len);
+      sum += r[i];
+    }
+    r[i] = len - sum;
+    return r;
+  }
+
+  /** Generate given numbers of keys by suffixing key by given numbered suffix. */
+  public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
+  public static Key[] generateNumKeys(Key mk, int num, String delim) {
+    Key[] ks = new Key[num];
+    String n = mk!=null ? mk.toString() : "noname";
+    String suffix = "";
+    if (n.endsWith(".hex")) {
+      n = n.substring(0, n.length()-4); // be nice
+      suffix = ".hex";
+    }
+    for (int i=0; i<num; i++) ks[i] = Key.make(n+delim+i+suffix);
+    return ks;
+  }
+
 }

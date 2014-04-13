@@ -114,6 +114,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
     Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
+    Request.addToNavbar(registerRequest(new JProfile()),    "Profile Dump",             "Admin");
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
@@ -131,6 +132,7 @@ public class RequestServer extends NanoHTTPD {
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
+      registerRequest(new FrameSplitPage());
       registerRequest(new GapStatistic());
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
@@ -147,6 +149,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
+      Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic (Beta)", "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");

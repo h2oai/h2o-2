@@ -403,6 +403,7 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
             elif '_distcp_' in k:
                 print "Not deleting _distcp_ key..got a timeout before trying: %s" % k
             else:
+                print "Deleting", k['key'], "at", node
                 node.remove_key(k['key'], timeoutSecs=timeoutSecs)
                 deletedCnt += 1
                 deletedThisTime += 1
