@@ -275,15 +275,15 @@ public abstract class LSMSolver extends Iced{
         return true;
       }
       long t = System.currentTimeMillis();
-      final double ABSTOL = Math.sqrt(N) * 1e-8;
-      final double RELTOL = 1e-4;
+      final double ABSTOL = Math.sqrt(N) * 1e-4;
+      final double RELTOL = 1e-2;
       double[] u = MemoryManager.malloc8d(N);
       double [] xyPrime = xy.clone();
       double kappa = _lambda*_alpha/rho;
       double [] grad = null;
       int i;
-      int k = -1;
-      boolean stopc = true;
+      int k = 10;
+//      boolean stopc = true;
       double gradientErr = Double.POSITIVE_INFINITY;
 
       double gerr = Double.POSITIVE_INFINITY;
@@ -295,41 +295,41 @@ public abstract class LSMSolver extends Iced{
         // updated x
         chol.solve(xyPrime);
         // vars to be used for stopping criteria
-        double x_norm = 0;
-        double z_norm = 0;
-        double u_norm = 0;
-        double r_norm = 0;
-        double s_norm = 0;
-        double eps_pri = 0; // epsilon primal
-        double eps_dual = 0;
+//        double x_norm = 0;
+//        double z_norm = 0;
+//        double u_norm = 0;
+//        double r_norm = 0;
+//        double s_norm = 0;
+//        double eps_pri = 0; // epsilon primal
+//        double eps_dual = 0;
 
         // compute u and z update
         for( int j = 0; j < N-1; ++j ) {
           double x_hat = xyPrime[j];
-          x_norm += x_hat * x_hat;
+//          x_norm += x_hat * x_hat;
           x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
           double zold = z[j];
           z[j] = shrinkage(x_hat + u[j], kappa);
           u[j] += x_hat - z[j];
-          u_norm += u[j] * u[j];
-          if(stopc){
-            z_norm += z[j] * z[j];
-            s_norm += (z[j] - zold) * (z[j] - zold);
-            r_norm += (xyPrime[j] - z[j]) * (xyPrime[j] - z[j]);
-          }
+//          u_norm += u[j] * u[j];
+//          if(stopc){
+//            z_norm += z[j] * z[j];
+//            s_norm += (z[j] - zold) * (z[j] - zold);
+//            r_norm += (xyPrime[j] - z[j]) * (xyPrime[j] - z[j]);
+//          }
         }
         z[N-1] = xyPrime[N-1];
-        if(stopc){
-          // compute variables used for stopping criterium
-          r_norm = Math.sqrt(r_norm);
-          s_norm = rho * Math.sqrt(s_norm);
-          eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
-          eps_dual = ABSTOL + rho * RELTOL * Math.sqrt(u_norm);
-          if(r_norm < eps_pri && s_norm < eps_dual){
-            stopc = false;
-            k = i;
-          }
-        }
+//        if(stopc){
+//          // compute variables used for stopping criterium
+//          r_norm = Math.sqrt(r_norm);
+//          s_norm = rho * Math.sqrt(s_norm);
+//          eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
+//          eps_dual = ABSTOL + rho * RELTOL * Math.sqrt(u_norm);
+//          if(r_norm < eps_pri && s_norm < eps_dual){
+//            stopc = false;
+//            k = i;
+//          }
+//        }
         if(i == k){
           gerr = getGrad(i,gram,z,xy);
           if(gerr < _gradientEps){
@@ -349,6 +349,7 @@ public abstract class LSMSolver extends Iced{
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
+      if(Double.isInfinite(gerr)) gerr = getGrad(i,gram,z,xy);
       Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gerr);
       return _converged;
     }
