@@ -15,7 +15,7 @@ initList = [
 DO_IFELSE = False
 DO_CAN_RETURN_NAN = False
 DO_FAIL1 = False
-DO_TERNARY = True
+DO_TERNARY = False
 
 exprList = [
         'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
@@ -164,9 +164,11 @@ if DO_TERNARY:
         # "(0 ? + : *)(1,2)",
         # "0 ? + : * (1, 2)",
         "1 ? r.hex : (r.hex+1)",
-        "(1 ? r.hex : (r.hex+1))[1,2]",
+        "1 ? (r.hex+1) : r.hex",
 
-        "apply(r.hex,2, function(x){x==-1 ? 1 : x})",
+        # don't do these harder ternary for now
+        #"(1 ? r.hex : (r.hex+1))[1,2]",
+        # "apply(r.hex,2, function(x){x==-1 ? 1 : x})",
         "0 ? 1 : 2",
         "0 ? r.hex+1 : r.hex+2",
         "r.hex>3 ? 99 : r.hex",
