@@ -6,7 +6,10 @@ params = {
     'nbins': 1000, 
     'ntrees': 10, 
     # apparently fails with undecided node assertion if all inputs the same
-    'cols': '0,1,2,3,4,', 
+    # 'cols': '0,1,2,3,4,', 
+    # 'cols': '8,9', 
+    'cols': 'C9,C10', 
+    'response': 'C11', 
     'seed': '19823134', 
 }
 

@@ -1426,6 +1426,7 @@ class H2O(object):
             'single_quotes': None,
             'header_from_file': None,
             'exclude': None,
+            'delete_on_done': None,
             'preview': None,
             }
         check_params_update_kwargs(params_dict, kwargs, 'parse', print_params=True)

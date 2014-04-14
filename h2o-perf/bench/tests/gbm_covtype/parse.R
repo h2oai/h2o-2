@@ -8,9 +8,9 @@ response <<- "C55"
 num_train_rows  <<- 11620240
 num_explan_cols <<- 54
 
-upload.VA("parsed.hex", trainData)
+upload.FV("parsed.hex", trainData)
 
 testData    <<-  trainData
-upload.VA("test.hex", testData)
+upload.FV("test.hex", testData)
 
 source("../../R/h2oPerf/epilogue.R")

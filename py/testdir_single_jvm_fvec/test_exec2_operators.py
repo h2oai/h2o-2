@@ -59,7 +59,8 @@ exprListFull = [
 
     "ddply(r.1,c(3),nrow)",
     # More complex multi-return
-    "ddply(r.1,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
+    # ddply can only return one thing
+    # "ddply(r.1,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
     "ddply(r.1,c(7),nrow)",
 
     "s1=c(1); s2=c(2); s3=c(3); s4=c(4); s5=s1+s2+s3+s4;"
@@ -225,8 +226,6 @@ exprListFull = [
     "ifelse(0,r.1+1,r.1+2)",
     "ifelse(r.1>3,99,r.1)",#  Broadcast selection
     "ifelse(0,+,*)(1,2)",      #  Select functions
-    "(0 ? + : *)(1,2)",        #  Trinary select
-    "(1? r.1 : (r.1+1))[1,2]",#  True (vs false) test
     #  Impute the mean
     # doesn't work
     # "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
@@ -274,6 +273,10 @@ exprListFull = [
     # "a=c(1,2,3); a[a[,1]>10,1]",
     # "z.hex=a=c(1,2,3); a[a[,1]>10,1];",
     ]
+
+    # leave ternary out
+    # "(0 ? + : *)(1,2)",        #  Trinary select
+    # "(1? r.1 : (r.1+1))[1,2]",#  True (vs false) test
 
 # concatenate a lot of random choices to make life harder
 if 1==0:
