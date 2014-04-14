@@ -31,7 +31,9 @@ LIB_JS=\
 	$(LIB)/jquery/dist/jquery.js \
 	$(LIB)/jquery-timeago/jquery.timeago.js \
 	$(LIB)/lodash/dist/lodash.js \
-	$(LIB)/finchjs/finch.js \
+	$(LIB)/js-signals/dist/signals.js \
+	$(LIB)/crossroads/dist/crossroads.js \
+	$(LIB)/hasher/dist/js/hasher.js \
 	$(LIB)/bootstrap/dist/js/bootstrap.js \
 	$(LIB)/d3/d3.js \
 	$(LIB)/knockout/knockout.js
