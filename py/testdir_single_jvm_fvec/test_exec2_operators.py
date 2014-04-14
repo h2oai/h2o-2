@@ -59,7 +59,8 @@ exprListFull = [
 
     "ddply(r.1,c(3),nrow)",
     # More complex multi-return
-    "ddply(r.1,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
+    # ddply can only return one thing
+    # "ddply(r.1,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
     "ddply(r.1,c(7),nrow)",
 
     "s1=c(1); s2=c(2); s3=c(3); s4=c(4); s5=s1+s2+s3+s4;"
