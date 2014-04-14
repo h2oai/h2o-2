@@ -141,4 +141,4 @@ else
 fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
-echo "you might want to check 'apt-get install libatlas-dev libblas-dev' for liblinear also'
+echo "you might want to check 'apt-get install libatlas-dev libblas-dev' for liblinear also"

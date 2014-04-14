@@ -16,6 +16,10 @@ DO_IFELSE = False
 DO_CAN_RETURN_NAN = False
 DO_FAIL1 = False
 DO_TERNARY = False
+DO_APPLY = True
+DO_FUNCTION = False
+
+DO_FORCE_LHS_ON_MULTI = True
 
 exprList = [
         'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
@@ -98,7 +102,6 @@ exprList = [
         "a=1; a=2; function(x){x=a;a=3}",
         "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
 
-        "apply(r.hex,2,sum)",
 
         # doesn't work
         # "cbind(c(1), c(2), c(3))",
@@ -148,12 +151,34 @@ exprList = [
         "factor(r.hex[,5])",
         "r0.hex[,1]==1.0",
         "runif(r4.hex[,1])",
+        "r.hex[,3]=4",
     
         # doesn't work
-        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        # "crnk=function(x){99}",
+        # "crk=function(x){99}",
+        "crunk=function(x){99}",
+        "r.hex[,3]=4",
+        # "crunk=function(x){99}; r.hex[,3]=4",
 
         ]
 
+
+if DO_APPLY:
+    exprList += [
+        "apply(r.hex,1,sum)",
+        "apply(r.hex,2,sum)",
+    ]
+
+if DO_FUNCTION:
+    exprList += [
+        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+        "mean=function(x){99/nrow(x)};mean(r.hex)",
+        "mean=function(x){99/nrow(x)}",
+        "mean2=function(x){99/nrow(x)};mean2(r.hex)",
+        "mean2=function(x){99/nrow(x)}",
+        # what happens if you rename a function in a single string
+    ]
 # FIX! should add ternary here?
 # ifelse does all 3 params
 # ? doesn't do the else if true
@@ -195,10 +220,18 @@ if DO_FAIL1:
 
 # concatenate some random choices to make life harder
 exprBigList = []
-for i in range(100):
-    expr = ""
-    for j in range(3):
-        expr += random.choice(exprList) + ";"
+for i in range(1000):
+    # expr = ""
+    # concatNum = random.randint(1,2)
+    expr = "crunk=function(x){99};"
+    concatNum = random.randint(0,2)
+    for j in range(concatNum):
+        randExpr = random.choice(exprList)
+        if DO_FORCE_LHS_ON_MULTI:
+            expr += "d=" + randExpr + ";"
+        else:
+            expr += randExpr + ";"
+
     exprBigList.append(expr)
         
 
