@@ -74,7 +74,7 @@ From your terminal at the top of your h2o directory:
 Which will open a browser based index page that looks similar to the
 following:
 
-.. image:: localbuildindex.png
+.. image:: buildindex.png
    :width: 100 %  
 
 **STEP 4:**
