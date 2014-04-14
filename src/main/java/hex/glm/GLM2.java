@@ -281,24 +281,22 @@ public class GLM2 extends ModelJob {
       double diff = beta[i] - _lastResult._glmt._beta[i];
       f_hat += grad[i]*diff;
     }
-    System.out.println("LineSearch check( " + step + "): " + objval + " <= " + _lastResult._objval + " + " + f_hat +  " = " + ( _lastResult._objval + f_hat));
     f_hat = _lastResult._objval + 0.5*step*f_hat;
     return objval > f_hat;
   }
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
     @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
-      Log.info("GLM invoking line search");
       double step = 0.5;
       for(int i = 0; i < glmt._objvals.length; ++i){
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
-          Log.info("GLM line search: found admissible step=" + step);
+          Log.info("GLM2 line search: found admissible step=" + step);
           _lastResult = null; // set last result to null so that the Iteration will not attempt to verify whether or not it should do the line search.
           new GLMIterationTask(GLM2.this,_dinfo,_glm,true,true,true,glmt._betas[i],_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
           return;
         }
         step *= 0.5;
       } // no line step worked, forcibly converge
-      Log.info("GLM: line search failed to find feasible step. Forcibly converged.");
+      Log.info("GLM2 line search failed to find feasible step. Forcibly converged.");
       nextLambda(_lastResult._glmt,_lastResult._glmt._beta);
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
@@ -340,7 +338,10 @@ public class GLM2 extends ModelJob {
   }
 
   private class Iteration extends H2OCallback<GLMIterationTask> {
+    final long start;
+    public Iteration(){start = System.currentTimeMillis();}
     @Override public void callback(final GLMIterationTask glmt) {
+      Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - start) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
       if(glmt._validate){
         _model.setAndTestValidation(_lambdaIdx,glmt._val);//.store();
@@ -354,9 +355,8 @@ public class GLM2 extends ModelJob {
         for(double d:grad)
           if(d > err)err = d;
           else if(d < -err) err = -d;
-        System.out.println("glm grad = " + err);
         if(err <= GLM_GRAD_SUCC){
-          Log.info("GLM converged by reaching small enough gradient/subgradient (grad = " + err + ").");
+          Log.info("GLM2 converged with max |subgradient| = " + err);
           nextLambda(glmt, glmt._val);
           return;
         }
@@ -375,7 +375,7 @@ public class GLM2 extends ModelJob {
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
-        Log.info("GLM forcibly converged by getting NaNs and/or Infs in beta");
+        Log.info("GLM2 forcibly converged by getting NaNs and/or Infs in beta");
       } else {
         if(_dinfo._standardize) {
           newBetaDeNorm = newBeta.clone();
@@ -394,7 +394,6 @@ public class GLM2 extends ModelJob {
           nextLambda(glmt,newBeta);
         } else if( beta_diff(glmt._beta,newBeta) < beta_epsilon || _iter == max_iter){
           // Done, we need to verify gradient for non-gaussian, than validate and move to the next lambda
-          Log.info("GLM converged.");
           if(!glmt._validate || !glmt._computeGradient) { // Need 2 compute validation and gradient first
             new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,_glm.family != Family.gaussian,newBeta,_ymu,_reg,new H2OCallback<GLMIterationTask>() {
               @Override public void callback(GLMIterationTask glmt2){
@@ -480,7 +479,7 @@ public class GLM2 extends ModelJob {
                 GLM2.this.complete(); // signal we're done to anyone waiting for the job
               else {
                 ++_iter;
-                Log.info("GLM2: staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
+                Log.info("GLM2 staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
                 new GLMIterationTask(GLM2.this,_dinfo,_glm,true,false,false,null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).asyncExec(_dinfo._adaptedFrame);
               }
             }

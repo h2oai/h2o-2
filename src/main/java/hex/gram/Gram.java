@@ -242,8 +242,7 @@ public final class Gram extends Iced {
     double[][] arr = new double[denseN][];
     for( int i = 0; i < arr.length; ++i )
       arr[i] = Arrays.copyOfRange(fchol._xx[i], sparseN, sparseN + denseN);
-
-    Log.info(id + ": CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis() - start));
+//    Log.info(id + ": CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis() - start));
     start = System.currentTimeMillis();
     // parallelize cholesky
     if (parallelize) {
@@ -251,7 +250,7 @@ public final class Gram extends Iced {
       InPlaceCholesky d = InPlaceCholesky.decompose_2(arr, 10, p);
       fchol.setSPD(d.isSPD());
       arr = d.getL();
-      Log.info (id + ": H2O CHOLESKY DECOMP TAKES: " + (System.currentTimeMillis()-start));
+//      Log.info (id + ": H2O CHOLESKY DECOMP TAKES: " + (System.currentTimeMillis()-start));
     } else {
       // make it symmetric
       for( int i = 0; i < arr.length; ++i )

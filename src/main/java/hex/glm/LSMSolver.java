@@ -261,7 +261,8 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");
+      long decompTIme = (t2-t1);
+
       if(!chol.isSPD()){
         System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
         throw new NonSPDMatrixException(gram);
@@ -285,6 +286,7 @@ public abstract class LSMSolver extends Iced{
       boolean stopc = true;
       double gradientErr = Double.POSITIVE_INFINITY;
 
+      double gerr = Double.POSITIVE_INFINITY;
       for(i = 0; i < 2500; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
@@ -329,20 +331,16 @@ public abstract class LSMSolver extends Iced{
           }
         }
         if(i == k){
-          double gerr = getGrad(i,gram,z,xy);
+          gerr = getGrad(i,gram,z,xy);
           if(gerr < _gradientEps){
-            gram.addDiag(-gram._diagAdded + d);
-            assert gram._diagAdded == d;
-            Log.info("ADMM converged in " + i + " iterations and " + (System.currentTimeMillis() - t) + "ms");
-            return (_converged = true);
+            _converged = true;
+            break;
           }
           // did not converge, check if we can converge in reasonable time
           double diff = gradientErr - gerr;
           if(diff < 0 || (gerr/diff) > 1e3){ // we won't ever converge with this setup (maybe change rho and try again?)
-            gram.addDiag(-gram._diagAdded + d);
-            assert gram._diagAdded == d;
-            Log.info("ADMM failed to converge (err = " + gerr + ") in " + i + " iterations and " + (System.currentTimeMillis() - t) + "ms");
-            return (_converged = false);
+            _converged = gerr < 1e-4;
+            break;
           }
           gradientErr = gerr;
           k = i + 10; // test gradient every 10 iterations
@@ -350,7 +348,8 @@ public abstract class LSMSolver extends Iced{
       }
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
-      Log.info("ADMM " + (_converged ? "converged" : "done (NOT CONVERGED)") + " in " + i + " iterations and " + (System.currentTimeMillis() - t) + "ms");
+      long solveTime = System.currentTimeMillis()-t;
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gerr);
       return _converged;
     }
     @Override
