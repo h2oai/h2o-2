@@ -225,8 +225,6 @@ exprListFull = [
     "ifelse(0,r.1+1,r.1+2)",
     "ifelse(r.1>3,99,r.1)",#  Broadcast selection
     "ifelse(0,+,*)(1,2)",      #  Select functions
-    "(0 ? + : *)(1,2)",        #  Trinary select
-    "(1? r.1 : (r.1+1))[1,2]",#  True (vs false) test
     #  Impute the mean
     # doesn't work
     # "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
@@ -274,6 +272,10 @@ exprListFull = [
     # "a=c(1,2,3); a[a[,1]>10,1]",
     # "z.hex=a=c(1,2,3); a[a[,1]>10,1];",
     ]
+
+    # leave ternary out
+    # "(0 ? + : *)(1,2)",        #  Trinary select
+    # "(1? r.1 : (r.1+1))[1,2]",#  True (vs false) test
 
 # concatenate a lot of random choices to make life harder
 if 1==0:

@@ -383,7 +383,12 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
     deletedCnt = 0
     triedKeys = []
     while True:
-        storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
+
+        # FIX! h2o is getting a bad store_view NPE stack trace if I grabe all the 
+        # keys at the end of a test, prior to removing. Just grab 20 at a time like h2o 
+        # used to do for me. Maybe the keys are changing state, and going slower will eliminate the race
+        # against prior work (but note that R might see the same problem
+        storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, view=20, **kwargs)
         # we get 20 at a time with default storeView
         keys = storeViewResult['keys']
         if not keys:
