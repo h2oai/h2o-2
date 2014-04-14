@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2)
+            h2o.build_cloud(2, java_heap_GB=3)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
             h2o_hosts.build_cloud_with_hosts()
