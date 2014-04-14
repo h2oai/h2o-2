@@ -81,7 +81,7 @@ public class GLM2 extends ModelJob {
   double lambda_max;
 
   @API(help = "regularization strength", filter = Default.class, json=true)
-  public double [] lambda = null;
+  public double [] lambda = new double[]{1e-5};
   @API(help = "beta_eps", filter = Default.class, json=true)
   double beta_epsilon = DEFAULT_BETA_EPS;
 
@@ -346,7 +346,7 @@ public class GLM2 extends ModelJob {
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - start) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
       currentLambdaIter++;
-      if(glmt._validate){
+      if(glmt._val != null){
         if(!(glmt._val.residual_deviance < glmt._val.null_deviance)){ // complete fail, look if we can restart with higher_accuracy on
           if(!highAccuracy()){
             Log.info("GLM2 reached negative explained deviance without line-search, rerunning with high accuracy settings.");
@@ -365,21 +365,21 @@ public class GLM2 extends ModelJob {
         _model.clone().update(self());
       }
 
-      if(glmt._validate && glmt._computeGradient){ // check gradient
+      if(glmt._val != null && glmt._computeGradient){ // check gradient
         final double [] grad = glmt.gradient(l2pen());
         ADMMSolver.subgrad(alpha[0], lambda[_lambdaIdx], glmt._beta, grad);
         double err = 0;
         for(double d:grad)
           if(d > err)err = d;
           else if(d < -err) err = -d;
-        Log.info("GLM2 gradient afetr " + _iter + " iterations = " + err);
+        Log.info("GLM2 gradient after " + _iter + " iterations = " + err);
         if(err <= GLM_GRAD_EPS){
-          Log.info("*GLM2 converged with max |subgradient| = " + err);
+          Log.info("GLM2 converged with max |subgradient| = " + err);
           nextLambda(glmt, glmt._beta, glmt._val);
           return;
         }
       }
-      if(glmt._beta != null && glmt._validate && glmt._computeGradient && _glm.family != Family.tweedie){
+      if(glmt._beta != null && glmt._val!=null && glmt._computeGradient && _glm.family != Family.tweedie){
         double objval = glmt._val.residual_deviance/glmt._n + 0.5*l2pen()*l2norm(glmt._beta) + l1pen()*l1norm(glmt._beta);
         if(_lastResult != null && needLineSearch(glmt._beta,objval,1)){
           if(!highAccuracy()){
@@ -476,7 +476,6 @@ public class GLM2 extends ModelJob {
     if(lambda == null){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
       new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
         @Override public void callback(final YMUTask ymut){
-          System.out.println("LMAX task called after " + (System.currentTimeMillis()-start) + "ms");
           if(ymut._ymin == ymut._ymax){
             String msg = "Attempting to run GLM on column with constant value = " + ymut._ymin;
             GLM2.this.cancel(msg);
