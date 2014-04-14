@@ -197,9 +197,10 @@ public abstract class Neurons {
       bprop_col(col, previous_a, r, m);
     }
     final int rows = _a.size();
-    final int cols = prev_a.size();
+    final float max_w2 = params.max_w2;
     for (int row = 0; row < rows; row++) {
-      if (params.max_w2 != Float.POSITIVE_INFINITY) rescale_weights(row, cols);
+      if (max_w2 != Float.POSITIVE_INFINITY)
+        rescale_weights(_w, row, max_w2);
     }
   }
 
@@ -298,7 +299,8 @@ public abstract class Neurons {
         }
       }
     }
-    if (max_w2 != Float.POSITIVE_INFINITY) rescale_weights(row, cols);
+    if (max_w2 != Float.POSITIVE_INFINITY)
+      rescale_weights(_w, row, max_w2);
     if (have_ada) {
       avg_grad2 /= cols;
       _bias_ada_g.set(row, _bias_ada_g.get(row) * rho);
@@ -313,20 +315,22 @@ public abstract class Neurons {
 
   /**
    * Specialization of backpropagation for DenseColMatrices and SparseVector for previous layer's activation and DenseVector for everything else
-   * @param _w weight matrix
-   * @param _wm weight momentum matrix
+   * @param w
+   * @param wm
    * @param prev_a sparse activation of previous layer
    * @param prev_e error of previous layer
+   * @param b
+   * @param bm
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  private final void bprop_dense_col_sparse(final DenseColMatrix _w, final Matrix _wm, final SparseVector prev_a, final DenseVector prev_e,
-                                           final DenseVector _b, final DenseVector _bm,final int col, final float previous_a, float rate, final float momentum) {
+  private final void bprop_dense_col_sparse(final DenseColMatrix w, final Matrix wm, final SparseVector prev_a, final DenseVector prev_e,
+                                           final DenseVector b, final DenseVector bm,final int col, final float previous_a, float rate, final float momentum) {
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
     final float l2 = (float)params.l2;
-    final boolean have_momenta = _wm != null;
+    final boolean have_momenta = wm != null;
     final boolean have_ada = _ada_dx != null && _ada_g != null;
     final boolean nesterov = params.nesterov_accelerated_gradient;
     final boolean update_prev = prev_e != null;
@@ -335,7 +339,7 @@ public abstract class Neurons {
     final int rows = _a.size();
     for (int row = 0; row < rows; row++) {
       final float partial_grad = _e.get(row) * (1f - _a.get(row) * _a.get(row));
-      final float weight = _w.get(row,col);
+      final float weight = w.get(row,col);
       if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
       assert (previous_a != 0); //only iterate over non-zeros!
 
@@ -359,26 +363,26 @@ public abstract class Neurons {
         final float invRMS_g = Utils.approxInvSqrt(_ada_g.get(row,col) + eps);
         rate = RMS_dx*invRMS_g;
         _ada_dx.set(row,col, rho * _ada_dx.get(row,col) + (1f-rho)*rate*rate*grad2);
-        _w.add(row,col, rate * grad);
+        w.add(row,col, rate * grad);
       } else {
         if (!nesterov) {
           final float delta = rate * grad;
-          _w.add(row, col, delta);
+          w.add(row, col, delta);
 //          Log.info("for row = " + row + ", col = " + col + ", partial_grad = " + partial_grad + ", grad = " + grad);
           if( have_momenta ) {
-            _w.add(row, col, momentum * _wm.get(row, col));
-            _wm.set(row, col, delta);
+            w.add(row, col, momentum * wm.get(row, col));
+            wm.set(row, col, delta);
           }
         } else {
           float tmp = grad;
           if( have_momenta ) {
-            float val = _wm.get(row, col);
+            float val = wm.get(row, col);
             val *= momentum;
             val += tmp;
             tmp = val;
-            _wm.set(row, col, val);
+            wm.set(row, col, val);
           }
-          _w.add(row, col, rate * tmp);
+          w.add(row, col, rate * tmp);
         }
       }
       if (have_ada) {
@@ -389,7 +393,7 @@ public abstract class Neurons {
         rate = RMS_dx*invRMS_g;
         _bias_ada_dx.set(row, rho * _bias_ada_dx.get(row) + (1f-rho)*rate*rate*grad2);
       }
-      update_bias(_b, _bm, row, partial_grad/cols, rate, momentum); //this is called cols times, so we divide the (repeated) contribution by 1/cols
+      update_bias(b, bm, row, partial_grad/cols, rate, momentum); //this is called cols times, so we divide the (repeated) contribution by 1/cols
     }
   }
 
@@ -466,7 +470,8 @@ public abstract class Neurons {
         }
       }
     }
-    if (max_w2 != Float.POSITIVE_INFINITY) rescale_weights(row, cols);
+    if (max_w2 != Float.POSITIVE_INFINITY)
+      rescale_weights(_w, row, max_w2);
     if (have_ada) {
       avg_grad2 /= prev_a.nnz();
       _bias_ada_g.set(row, _bias_ada_g.get(row) * rho);
@@ -484,26 +489,26 @@ public abstract class Neurons {
    * C.f. Improving neural networks by preventing co-adaptation of feature detectors
    * @param row index of the neuron for which to scale the weights
    */
-  final void rescale_weights(final int row, final int cols) {
-    final float max_w2 = params.max_w2;
-    if (_w instanceof DenseRowMatrix) {
+  final void rescale_weights(final Matrix w, final int row, final float max_w2) {
+    final int cols = w.cols();
+    if (w instanceof DenseRowMatrix) {
       final int idx = row * cols;
-      float r2 = Utils.sumSquares(_w.raw(), idx, idx+cols);
+      float r2 = Utils.sumSquares(w.raw(), idx, idx+cols);
       if( r2 > max_w2 * 10) {
         final float scale = Utils.approxSqrt(max_w2 / r2);
-        for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
+        for( int c = 0; c < cols; c++ ) w.raw()[idx + c] *= scale;
       }
     }
-    else if (_w instanceof DenseColMatrix) {
+    else if (w instanceof DenseColMatrix) {
       float r2 = 0;
       for (int col=0; col<cols;++col)
-        r2 += _w.get(row,col)*_w.get(row,col);
+        r2 += w.get(row,col)*w.get(row,col);
       if( r2 > max_w2 * 10) {
         final float scale = Utils.approxSqrt(max_w2 / r2);
-        for( int col=0; col < cols; col++ ) _w.set(row, col, _w.get(row,col) * scale);
+        for( int col=0; col < cols; col++ ) w.set(row, col, w.get(row,col) * scale);
       }
     }
-    else throw new UnsupportedOperationException("rescale weights for " + _w.getClass().getSimpleName() + " not yet implemented.");
+    else throw new UnsupportedOperationException("rescale weights for " + w.getClass().getSimpleName() + " not yet implemented.");
   }
 
   /**
