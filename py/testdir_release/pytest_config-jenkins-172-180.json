@@ -15,7 +15,7 @@
     "use_hdfs": true,
 
     "use_flatfile": true,
-    "base_port": 54355,
+    "base_port": 54472,
     "cloud_name": "jenkins-172-180",
     "delete_keys_at_teardown": true,
 
