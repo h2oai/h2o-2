@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(2)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
             h2o_hosts.build_cloud_with_hosts()
@@ -21,24 +21,20 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_summary_manyfiles_1(self):
+    def test_parse_manyfiles_1(self):
+        h2o.beta_features = True
         # these will be used as directory imports/parse
-        csvDirlist = [
-            ("manyfiles-nflx-gz",   600),
-        ]
+        csvDirname = "manyfiles-nflx-gz"
+        timeoutSecs = 600
         trial = 0
-        for (csvDirname, timeoutSecs) in csvDirlist:
-
+        for delete_on_done in [0, 1]:
             csvPathname = csvDirname + "/file_1.dat.gz"
-            (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=timeoutSecs)
-            print "\nTrying StoreView after the import hdfs"
-            h2o_cmd.runStoreView(timeoutSecs=120)
-
             trialStart = time.time()
             # PARSE****************************************
             hex_key = csvDirname + "_" + str(trial) + ".hex"
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
+                delete_on_done=delete_on_done,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120, doSummary=False)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
@@ -50,10 +46,10 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
-            self.assertEqual(num_cols, 542)
-            self.assertEqual(num_rows, 100000)
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+            self.assertEqual(numCols, 542)
+            self.assertEqual(numRows, 100000)
 
             # gives us some reporting on missing values, constant values, to see if we have x specified well
             # figures out everything from parseResult['destination_key']
@@ -61,14 +57,19 @@ class Basic(unittest.TestCase):
             # assume all the configs have the same y..just check with the firs tone
             goodX = h2o_glm.goodXFromColumnInfo(y=54, key=parseResult['destination_key'], timeoutSecs=300)
 
-            # SUMMARY****************************************
-            # pass numRows, so we know when na cnt means row is all na's
-            summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360, 
-                numCols=num_cols, numRows=num_rows)
-
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"
             h2o_cmd.runStoreView(timeoutSecs=120)
+
+            # convert to binomial
+            execExpr="A.hex=%s" % parseResult['destination_key']
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+
+            execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+
+            aHack = {'destination_key': "A.hex"}
+
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
             trial += 1
