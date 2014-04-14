@@ -316,6 +316,7 @@ public class GLM2 extends ModelJob {
     return err;
   }
   protected void nextLambda(final GLMIterationTask glmt, GLMValidation val){
+    currentLambdaIter = 0;
     boolean improved = _model.setAndTestValidation(_lambdaIdx,val);
     _model.clone().update(self());
     if((improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
@@ -343,6 +344,7 @@ public class GLM2 extends ModelJob {
     @Override public void callback(final GLMIterationTask glmt) {
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - start) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
+      currentLambdaIter++;
       if(glmt._validate){
         _model.setAndTestValidation(_lambdaIdx,glmt._val);//.store();
         _model.clone().update(self());
@@ -361,9 +363,16 @@ public class GLM2 extends ModelJob {
           return;
         }
       }
-      if(glmt._beta != null && higher_accuracy && _glm.family != Family.tweedie){
+      if(glmt._beta != null && glmt._validate && glmt._computeGradient && _glm.family != Family.tweedie){
         double objval = glmt._val.residual_deviance/glmt._n + 0.5*l2pen*l2norm(glmt._beta) + l1pen()*l1norm(glmt._beta);
         if(_lastResult != null && needLineSearch(glmt._beta,objval,1)){
+          if(!highAccuracy()){
+            setHighAccuracy();
+            if(_lastResult._iter < (_iter-2)){ // there is a gap form last result...return to it and start again
+              new GLMIterationTask(GLM2.this,_dinfo,glmt._glm, true, true, true, _lastResult._glmt._beta,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
+              return;
+            }
+          }
           new GLMTask.GLMLineSearchTask(GLM2.this,_dinfo,_glm,_lastResult._glmt._beta,glmt._beta,1e-8,glmt._n,alpha[0],lambda[_lambdaIdx], new LineSearchIteration()).asyncExec(_dinfo._adaptedFrame);
           return;
         }
@@ -408,7 +417,7 @@ public class GLM2 extends ModelJob {
             else nextLambda(glmt,glmt._val);
           }
         } else { // not done yet, launch next iteration
-          final boolean validate = higher_accuracy || (_iter % 5) == 0;
+          final boolean validate = higher_accuracy || (currentLambdaIter % 5) == 0;
           ++_iter;
           new GLMIterationTask(GLM2.this,_dinfo,glmt._glm, true, validate, validate, newBeta,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
         }
@@ -421,6 +430,7 @@ public class GLM2 extends ModelJob {
     }
   }
 
+  private int currentLambdaIter = 0;
   @Override
   public GLM2 fork(){
     start(new H2O.H2OEmptyCompleter());
