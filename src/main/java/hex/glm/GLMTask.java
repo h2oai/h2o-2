@@ -126,8 +126,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     double [][] _betas;
     double []   _objvals;
     double _caseVal = 0;
-    public GLMLineSearchTask(Job job, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double minStep, H2OCountedCompleter cmp){
+    final double _l1pen;
+    final double _l2pen;
+    final double _reg;
+    public GLMLineSearchTask(Job job, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double minStep, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
       super(job,dinfo,glm,cmp);
+      _l2pen = 0.5*(1-alpha)*lambda;
+      _l1pen = alpha*lambda;
+      _reg = 1.0/nobs;
       ArrayList<double[]> betas = new ArrayList<double[]>();
       double step = 0.5;
       while(step >= minStep){
@@ -141,8 +147,18 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _betas = new double[betas.size()][];
       betas.toArray(_betas);
     }
+
     @Override public void chunkInit(){
       _objvals = new double[_betas.length];
+    }
+    @Override public void chunkDone(){
+      for(int i = 0; i < _objvals.length; ++i)
+        _objvals[i] *= _reg;
+    }
+    @Override public void postGlobal(){
+      for(int i = 0; i < _objvals.length; ++i)
+        for(double d:_betas[i])
+          _objvals[i] += d*d*_l2pen + (d>=0?d:-d)*_l1pen;
     }
     @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       for(int i = 0; i < _objvals.length; ++i){
@@ -314,7 +330,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     public double [] gradient(double l2pen){
       if(l2pen == 0)return _grad;
       final double [] res = _grad.clone();
-      for(int i = 0; i < _grad.length; ++i) res[i] += l2pen*_beta[i];
+      for(int i = 0; i < _grad.length-1; ++i) res[i] += l2pen*_beta[i];
       return res;
     }
   }

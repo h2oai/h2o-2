@@ -344,10 +344,8 @@ public final class Gram extends Iced {
      * @param y
      */
     public final void   solve(double[] y) {
-      long t = System.currentTimeMillis();
       if( !isSPD() ) throw new NonSPDMatrixException();
       assert _xx.length + _diag.length == y.length:"" + _xx.length + " + " + _diag.length + " != " + y.length;
-
       // diagonal
       for( int k = 0; k < _diag.length; ++k )
         y[k] /= _diag[k];
@@ -355,9 +353,10 @@ public final class Gram extends Iced {
       final int n = y.length;
       // Solve L*Y = B;
       for( int k = _diag.length; k < n; ++k ) {
+        double d = 0;
         for( int i = 0; i < k; i++ )
-          y[k] -= y[i] * _xx[k - _diag.length][i];
-        y[k] /= _xx[k - _diag.length][k];
+          d += y[i] * _xx[k - _diag.length][i];
+        y[k] = (y[k]-d)/_xx[k - _diag.length][k];
       }
       // Solve L'*X = Y;
       for( int k = n - 1; k >= _diag.length; --k ) {
