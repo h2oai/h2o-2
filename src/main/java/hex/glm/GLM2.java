@@ -406,6 +406,12 @@ public class GLM2 extends ModelJob {
           if(!glmt._validate || !glmt._computeGradient) { // Need 2 compute validation and gradient first
             new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,_glm.family != Family.gaussian,newBeta,_ymu,_reg,new H2OCallback<GLMIterationTask>() {
               @Override public void callback(GLMIterationTask glmt2){
+                if(!highAccuracy() && !(glmt2._val.residual_deviance < glmt2._val.null_deviance)){
+                  Log.info("GLM2 failed completely without high-accuracy mode, re-running in high-accuracy mode");
+                  setHighAccuracy();
+                  _iter = 0;
+                  new GLMIterationTask(GLM2.this,_dinfo,glmt._glm, true, true, true, null,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
+                }
                 checkGradient(newBeta, glmt2.gradient(l2pen()));
                 if(n_folds > 1) nextLambda(glmt,newBeta); // need to call xval first
                 else nextLambda(glmt,glmt._val);
