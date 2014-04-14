@@ -79,7 +79,10 @@ public final class Gram extends Iced {
     if(_diag != null)
       for(double d:_diag) if(d < res)res = d;
     if(_xx != null)
-      for(double [] x:_xx)if(x[x.length-1] < res)res = x[x.length-1];
+      for(int i = 0; i < _xx.length-1; ++i){
+        final double [] x = _xx[i];
+        if(x[x.length-1] < res)res = x[x.length-1];
+      }
     return res;
   }
   @Override

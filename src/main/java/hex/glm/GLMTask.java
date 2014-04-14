@@ -258,7 +258,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         w = 1;
         z = y;
         assert _beta == null || !_computeGram; // don't expect beta here, gaussian is non-iterative
-        mu = 0;
+        mu = _validate?computeEta(ncats,cats,nums,_beta):0;
       } else {
         if( _beta == null ) {
           mu = _glm.mustart(y, _ymu);
@@ -267,31 +267,32 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           eta = computeEta(ncats, cats,nums,_beta);
           mu = _glm.linkInv(eta);
         }
-        if(_validate)
-          _val.add(y, mu);
         var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
         d = _glm.linkDeriv(mu);
         z = eta + (y-mu)*d;
         w = 1.0/(var*d*d);
       }
+      if(_validate)
+        _val.add(y, mu);
       assert w >= 0 : "invalid weight " + w;
       final double wz = w * z;
       _yy += wz * z;
-      final double grad = _computeGradient?w*d*(mu-y):0;
-      for(int i = 0; i < ncats; ++i){
-        final int ii = cats[i];
-        if(_computeGradient)_grad[ii] += grad;
-        _xy[ii] += wz;
+      if(_computeGradient || _computeGram){
+        final double grad = _computeGradient?w*d*(mu-y):0;
+        for(int i = 0; i < ncats; ++i){
+          final int ii = cats[i];
+          if(_computeGradient)_grad[ii] += grad;
+          _xy[ii] += wz;
+        }
+        for(int i = 0; i < nums.length; ++i){
+          _xy[numStart+i] += wz*nums[i];
+          if(_computeGradient)
+            _grad[numStart+i] += grad*nums[i];
+        }
+        if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
+        _xy[numStart + _dinfo._nums] += wz;
+        if(_computeGram)_gram.addRow(nums, ncats, cats, w);
       }
-
-      for(int i = 0; i < nums.length; ++i){
-        _xy[numStart+i] += wz*nums[i];
-        if(_computeGradient)
-          _grad[numStart+i] += grad*nums[i];
-      }
-      if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
-      _xy[numStart + _dinfo._nums] += wz;
-      if(_computeGram)_gram.addRow(nums, ncats, cats, w);
     }
     @Override protected void chunkInit(){
       if(_computeGram)_gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
@@ -302,6 +303,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if(_computeGradient)
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
+
     @Override protected void chunkDone(){
       if(_computeGram)_gram.mul(_reg);
       if(_val != null)_val.regularize(_reg);
@@ -310,7 +312,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if(_grad != null)
         for(int i = 0; i < _grad.length; ++i)
           _grad[i] *= _reg;
-
       _yy *= _reg;
     }
     @Override
