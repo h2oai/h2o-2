@@ -61,14 +61,14 @@ class Basic(unittest.TestCase):
 
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"
-            h2o_cmd.runStoreView(timeoutSecs=120)
+            h2o_cmd.runStoreView(timeoutSecs=30)
 
             # convert to binomial
             execExpr="A.hex=%s" % parseResult['destination_key']
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=20)
 
             execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=20)
 
             aHack = {'destination_key': "A.hex"}
 
