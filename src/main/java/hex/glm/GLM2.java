@@ -411,10 +411,11 @@ public class GLM2 extends ModelJob {
                   setHighAccuracy();
                   _iter = 0;
                   new GLMIterationTask(GLM2.this,_dinfo,glmt._glm, true, true, true, null,_ymu,_reg,new Iteration()).asyncExec(_dinfo._adaptedFrame);
+                  return;
                 }
                 checkGradient(newBeta, glmt2.gradient(l2pen()));
                 if(n_folds > 1) nextLambda(glmt,newBeta); // need to call xval first
-                else nextLambda(glmt,glmt._val);
+                else  nextLambda(glmt,glmt2._val);
               }
             }).asyncExec(_dinfo._adaptedFrame);
           } else { // already got all the info
