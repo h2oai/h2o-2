@@ -24,6 +24,7 @@ import hex.nb.NBModelView;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.rf.RFModel;
+import hex.singlenoderf.*;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
@@ -184,6 +185,8 @@ public class Inspect extends Request {
     if (f instanceof hex.speedrf.RFModel)
       return water.api.SPDRFView.redirect(this, key);
     if (f instanceof GapStatisticModel)
+      return GapStatisticModelView.redirect(this, key);
+    if (f instanceof SpeeDRFModel)
       return GapStatisticModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
