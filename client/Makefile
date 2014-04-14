@@ -182,9 +182,9 @@ $(BUILD)/tests/%.js: src/tests/%.coffee
 	@mkdir -p $(@D)
 	$(BIN)/coffee --output $(@D) --compile $<
 
-$(DEPLOY)/%.html: src/templates/%.jade
+$(DEPLOY)/index.html: src/templates/index.jade
 	@mkdir -p $(@D)
-	$(BIN)/jade --pretty < $< > $@
+	$(BIN)/jade --pretty --out $(@D) $<
 
 $(DEPLOY)/css/%.css: src/styles/%.styl
 	@mkdir -p $(@D)
