@@ -17,7 +17,9 @@ BUILD_DIRS=\
 SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
-	$(BUILD)/scripts/base.js \
+	$(BUILD)/scripts/base.js
+
+BOOT=\
 	$(BUILD)/scripts/steam.js
 
 TESTS=\
@@ -60,10 +62,10 @@ build: \
 	$(DEPLOY)/js/steam.js
 
 unit: \
-	$(DIST)/lib.test.css \
-	$(DIST)/lib.test.js \
-	$(DIST)/tests.html \
-	$(DIST)/steam.test.js
+	$(DEPLOY)/lib.test.css \
+	$(DEPLOY)/lib.test.js \
+	$(DEPLOY)/tests.html \
+	$(DEPLOY)/steam.test.js
 
 node: \
 	$(DIST)/steam.node.js
@@ -190,7 +192,7 @@ $(DEPLOY)/css/%.css: src/styles/%.styl
 	@mkdir -p $(@D)
 	$(BIN)/stylus < $< > $@
 
-$(DEPLOY)/js/steam.js: $(SCRIPTS)
+$(DEPLOY)/js/steam.js: $(SCRIPTS) $(BOOT)
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@
@@ -213,14 +215,14 @@ $(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(SCRIPTS) $(TESTS)
 	cat $^ >> $@
 	@echo '}).call(this);' >> $@
 
-$(DIST)/steam.test.js: $(BUILD)/tests/browser.global.js $(SCRIPTS) $(TESTS)
+$(DEPLOY)/steam.test.js: $(BUILD)/tests/browser.global.js $(SCRIPTS) $(TESTS)
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@
 	cat $^ >> $@
 	@echo '}).call(this);' >> $@
 
-$(DIST)/tests.html: src/util/mocha-html/tests.html
+$(DEPLOY)/tests.html: src/util/mocha-html/tests.html
 	@mkdir -p $(@D)
 	cp $< $@
 
@@ -232,11 +234,11 @@ $(DEPLOY)/js/lib.js: $(LIB_JS)
 	@mkdir -p $(@D)
 	cat $^ > $@
 
-$(DIST)/lib.test.css: $(LIB_TEST_CSS)
+$(DEPLOY)/lib.test.css: $(LIB_TEST_CSS)
 	@mkdir -p $(@D)
 	cat $^ > $@
 
-$(DIST)/lib.test.js: $(LIB_TEST_JS)
+$(DEPLOY)/lib.test.js: $(LIB_TEST_JS)
 	@mkdir -p $(@D)
 	cat $^ > $@
 
