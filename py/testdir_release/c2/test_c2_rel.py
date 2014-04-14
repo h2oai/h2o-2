@@ -116,7 +116,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
-    def test_B_c2_rel_long(self):
+    def notest_B_c2_rel_long(self):
         h2o.beta_features = False
         self.sub_c2_rel_long()
 

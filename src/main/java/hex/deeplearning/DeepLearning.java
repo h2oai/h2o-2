@@ -100,8 +100,8 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "L2 regularization (can add stability and improve generalization, causes many weights to be small", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double l2 = 0.0;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, json = true)
-  public double max_w2 = Double.POSITIVE_INFINITY;
+  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, dmin = 1e-10, json = true)
+  public float max_w2 = Float.POSITIVE_INFINITY;
 
   /*Initialization*/
   @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
@@ -155,7 +155,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
   public boolean diagnostics = true;
 
-  @API(help = "Compute variable importances for input features (Gedeon method)", filter = Default.class, json = true)
+  @API(help = "Compute variable importances for input features (Gedeon method) - can be slow for large networks", filter = Default.class, json = true)
   public boolean variable_importances = true;
 
   @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
@@ -248,6 +248,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "variable_importances",
           "force_load_balance",
           "replicate_training_data",
+          "shuffle_training_data",
           "single_node_mode",
   };
 
