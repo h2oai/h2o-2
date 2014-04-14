@@ -27,11 +27,13 @@ class Basic(unittest.TestCase):
         csvDirname = "manyfiles-nflx-gz"
         timeoutSecs = 600
         trial = 0
-        for delete_on_done in [0, 1]:
-            csvPathname = csvDirname + "/file_1.dat.gz"
+        for delete_on_done in [0, 0]:
+            
+            csvFilename = "file_1.dat.gz"
+            csvPathname = csvDirname + "/" + csvFilename
             trialStart = time.time()
             # PARSE****************************************
-            hex_key = csvDirname + "_" + str(trial) + ".hex"
+            hex_key =  csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
                 delete_on_done=delete_on_done,
