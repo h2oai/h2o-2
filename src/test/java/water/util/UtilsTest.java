@@ -1,11 +1,10 @@
 package water.util;
 
 import static water.util.Utils.*;
-
-import java.util.Random;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Random;
 
 public class UtilsTest {
 
@@ -90,7 +89,7 @@ public class UtilsTest {
   @Test
   public void sumSquareTest() {
     float[] a = new float[993];
-    for (int i=0;i<a.length;++i) a[i] = new Random().nextFloat();
+    for (int i=0;i<a.length;++i) a[i] = new Random(0xDECAF).nextFloat();
     assert(Math.abs(sumSquares(a) - sumSquares(a, 0,443) - sumSquares(a, 443,983) - sumSquares(a, 983,993)) < 1e-5);
   }
 
