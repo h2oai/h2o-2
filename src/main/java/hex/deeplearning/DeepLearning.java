@@ -248,6 +248,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "variable_importances",
           "force_load_balance",
           "replicate_training_data",
+          "shuffle_training_data",
           "single_node_mode",
   };
 
