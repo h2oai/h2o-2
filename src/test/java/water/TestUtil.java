@@ -20,6 +20,9 @@ import water.util.*;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
+  private static Timer _testClassTimer;
+
+  private Timer _testTimer;
 
   protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
@@ -34,6 +37,7 @@ public class TestUtil {
     H2O.main(new String[] {});
     _initial_keycnt = H2O.store_size();
     assert Job.all().length == 0;      // No outstanding jobs
+    _testClassTimer = new Timer();
   }
 
   /** Execute this rule before each test to print test name and test class */
@@ -49,6 +53,7 @@ public class TestUtil {
   };
 
   @AfterClass public static void checkLeakedKeys() {
+    Log.info("## TEST CLASS EXECUTION TIME (sum over all tests): " + _testClassTimer.toString());
     Job[] jobs = Job.all();
     for( Job job : jobs ) {
       assert job.state != JobState.RUNNING : ("UNFINISHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time + ", state=" + job.state );  // No pending job
@@ -71,6 +76,13 @@ public class TestUtil {
     }
     assertTrue("No keys leaked", leaked_keys <= 0);
     _initial_keycnt = H2O.store_size();
+  }
+
+  @Before public void registerTimer() {
+    _testTimer = new Timer();
+  }
+  @After public void logTimer() {
+    Log.info("#### TEST EXECUTION TIME: " + _testTimer.toString());
   }
 
   // Stall test until we see at least X members of the Cloud
