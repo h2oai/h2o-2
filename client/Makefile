@@ -190,9 +190,9 @@ $(DEPLOY)/index.html: src/templates/index.jade
 	@mkdir -p $(@D)
 	$(BIN)/jade --pretty --out $(@D) $<
 
-$(DEPLOY)/css/%.css: src/styles/%.styl
+$(DEPLOY)/css/steam.css: src/styles/steam.styl
 	@mkdir -p $(@D)
-	$(BIN)/stylus < $< > $@
+	$(BIN)/stylus --out $(@D) $<
 
 $(DEPLOY)/js/steam.js: $(SCRIPTS) $(BOOT)
 	@mkdir -p $(@D)
