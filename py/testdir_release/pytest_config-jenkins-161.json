@@ -16,7 +16,7 @@
 
     "use_flatfile": true,
     "base_port": 54377,
-    "cloud_name": "jenkins-161and164",
+    "cloud_name": "jenkins-161",
 
     "ip": [
         "192.168.1.161",

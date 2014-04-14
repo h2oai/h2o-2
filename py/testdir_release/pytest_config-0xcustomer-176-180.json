@@ -14,8 +14,11 @@
     "hdfs_version": "cdh3",
     "use_hdfs": false,
 
-    "base_port": 54355,
+    "base_port": 54576,
     "use_flatfile": true,
+    "cloud_name": "jenkins-172-180",
+    "delete_keys_at_teardown": true,
+
 
     "ip": [
         "192.168.1.176",
