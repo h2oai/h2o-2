@@ -6,10 +6,7 @@ import hex.VarImp;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 import water.*;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.Inspect2;
-import water.api.Predict;
+import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.license.LicenseManager;
@@ -554,20 +551,26 @@ public class DTree extends Iced {
     private final int num_folds;
     private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds) {
+    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds) {
+      this(key, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, num_folds, new Key[0][], new ConfusionMatrix[0], new double[0], null, null, null);
+    }
+    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds,
+                      Key[][] treeKeys, ConfusionMatrix[] cms, double[] errs, TreeStats treeStats, VarImp varimp, AUC validAUC) {
       super(key,dataKey,names,domains);
-      this.N = ntrees; this.errs = new double[0];
-      this.testKey = testKey; this.cms = new ConfusionMatrix[0];
+      this.N = ntrees;
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
-      this.treeKeys = new Key[0][];
-      this.treeStats = null;
-      this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
-      this.varimp = null;
-      this.validAUC = null;
       this.num_folds = num_folds;
+      this.treeKeys = treeKeys;
+      this.treeStats = treeStats;
+      this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
+      this.testKey = testKey;
+      this.cms = cms;
+      this.errs = errs;
+      this.varimp = varimp;
+      this.validAUC = validAUC;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+    protected TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -582,6 +585,10 @@ public class DTree extends Iced {
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
       if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
+      System.err.println("this.ntrees = "  + this.treeKeys.length);
+      System.err.println("prior.ntrees = " + prior.treeKeys.length);
+      System.err.println("this.cms = " +  this.cms.length);
+      System.err.println("prior.cms = " + prior.cms.length);
     }
 
     public TreeModel(TreeModel prior, DTree[] tree, double err, ConfusionMatrix cm, TreeStats tstats) {
@@ -590,7 +597,6 @@ public class DTree extends Iced {
     public TreeModel(TreeModel prior, DTree[] tree, TreeStats tstats) {
       this(prior, append(prior.treeKeys, tree), null, null, tstats, null, null);
     }
-
     public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, validAUC);
     }
@@ -602,6 +608,35 @@ public class DTree extends Iced {
     }
 
     protected TreeModelType getTreeModelType() { return TreeModelType.UNKNOWN; }
+
+    /** Returns Producer if the model is under construction else null.
+     * <p>The implementation looks for writer lock. If it is present, then returns true.</p>
+     *
+     * <p>WARNING: the method is strictly for UI used, does not provide any atomicity!!!</p>*/
+    private final Key getProducer() {
+      return FetchProducer.fetch(_key);
+    }
+    private final boolean isProduced() {
+      return getProducer()!=null;
+    }
+
+    private static final class FetchProducer extends DTask<FetchProducer> {
+      final private Key _key;
+      private Key _producer;
+      public static Key fetch(Key key) {
+        FetchProducer fp = new FetchProducer(key);
+        if (key.home()) fp.compute2();
+        else fp = RPC.call(key.home_node(), fp).get();
+        return fp._producer;
+      }
+      private FetchProducer(Key k) { _key = k; }
+      @Override public void compute2() {
+        Lockable l = UKV.get(_key);
+        _producer = l!=null && l._lockers!=null && l._lockers.length > 0 ? l._lockers[0] : null;
+        tryComplete();
+      }
+      @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
+    }
 
     private static final Key[][] append(Key[][] prior, DTree[] tree ) {
       if (tree==null) return prior;
@@ -618,7 +653,7 @@ public class DTree extends Iced {
     public int ntrees() { return treeKeys.length; }
     // Most recent ConfusionMatrix
     @Override public ConfusionMatrix cm() {
-      ConfusionMatrix[] cms = this.cms; // Avoid racey update; read it once
+      ConfusionMatrix[] cms = this.cms; // Avoid race update; read it once
       if(cms != null && cms.length > 0){
         int n = cms.length-1;
         while(n > 0 && cms[n] == null)--n;
@@ -700,7 +735,11 @@ public class DTree extends Iced {
       sb.append(Predict.link(_key,"Score on dataset")).append(", ");
       if (_dataKey != null)
         sb.append(UIUtils.builderModelLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
-      sb.append("<i class=\"icon-play\"></i>&nbsp;").append("Continue training this model");
+      if (isProduced()) { // looks at locker field and check W-locker guy
+        sb.append("<i class=\"icon-stop\"></i>&nbsp;").append(Cancel.link(getProducer(), "Stop training this model"));
+      } else {
+        sb.append("<i class=\"icon-play\"></i>&nbsp;").append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), this._key, "Continue training this model"));
+      }
       sb.append("</div>");
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
       DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins+", Trees: " + ntrees());
@@ -1149,7 +1188,8 @@ public class DTree extends Iced {
   }
 
   private Key defaultTreeKey() {
-    return Key.makeUserHidden(Key.make("__Tree_"+Key.rand()));
+    //return Key.makeUserHidden(Key.make("__Tree_"+Key.rand()));
+    return Key.make("__Tree_"+Key.rand());
   }
 
   private static final SB TO_JAVA_BENCH_FUNC = new SB().

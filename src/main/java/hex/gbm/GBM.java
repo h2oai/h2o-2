@@ -2,24 +2,23 @@ package hex.gbm;
 
 import static water.util.ModelUtils.getPrediction;
 import static water.util.Utils.div;
-import hex.ConfusionMatrix;
-import hex.VarImp;
+import hex.*;
 import hex.VarImp.VarImpRI;
+import hex.ConfusionMatrix;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.Split;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
+
+import java.util.Arrays;
+
 import water.*;
-import water.api.DocGen;
-import water.api.GBMProgressPage;
-import water.api.ParamImportance;
+import water.api.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-
-import java.util.Arrays;
 
 // Gradient Boosted Trees
 //
@@ -72,26 +71,32 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       this.learn_rate = learn_rate;
       this.family = family;
     }
-    public GBMModel(GBMModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
+    private GBMModel(GBMModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
       super(prior, trees, err, cm, tstats);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
       this.initialPrediction = prior.initialPrediction;
     }
-    public GBMModel(GBMModel prior, DTree[] trees, TreeStats tstats) {
+    private GBMModel(GBMModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
       this.initialPrediction = prior.initialPrediction;
     }
-    public GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    private GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
       this.initialPrediction = prior.initialPrediction;
+    }
+    private GBMModel(GBMModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+      super(prior, treeKeys, errs, cms, tstats, varimp, validAUC);
+      this.parameters = prior.parameters;
+      this.learn_rate = prior.learn_rate;
+      this.family = prior.family;
     }
 
     @Override protected TreeModelType getTreeModelType() { return TreeModelType.GBM; }
@@ -172,6 +177,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return new GBMModel(model, ktrees, tstats);
   }
   public GBM() { description = "Distributed GBM"; importance = true; }
+
+  @Override protected GBMModel updateModel(GBMModel model, GBMModel checkpoint, boolean overwriteCheckpoint) {
+    // Do not forget to clone trees in case that we are not going to overwrite checkpoint
+    Key[][] treeKeys = null;
+    if (!overwriteCheckpoint) throw H2O.unimpl("Cloning of model trees is not implemented yet!");
+    else treeKeys = checkpoint.treeKeys;
+    return new GBMModel(model, treeKeys, checkpoint.errs, checkpoint.cms, checkpoint.treeStats, checkpoint.varimp, checkpoint.validAUC);
+  }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {

@@ -78,6 +78,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
   public float max_after_balance_size = Float.POSITIVE_INFINITY;
 
+  @API(help = "Model checkpoint to start building a new model from", filter = Default.class, json = true, required = false)
+  protected Key checkpoint;
+
+  @API(help = "Overwrite checkpoint", filter = Default.class, json = true, required = false)
+  protected boolean overwrite_checkpoint = true;
+
 //  @API(help = "Active feature columns")
   protected int _ncols;
 
@@ -143,16 +149,21 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       usableColumns++;
     }
     if (usableColumns==0) throw new IllegalArgumentException("There is no usable column to generate model!");
+
+    if (checkpoint!=null && DKV.get(checkpoint)==null) throw new IllegalArgumentException("Checkpoint "+checkpoint.toString() + " does not exists!");
+  }
+
+  @Override protected Key defaultDestKey() {
+    if (checkpoint!=null && overwrite_checkpoint)
+      return checkpoint;
+    else
+      return super.defaultDestKey();
   }
 
   // --------------------------------------------------------------------------
   // Driver for model-building.
   public void buildModel(long seed) {
     final Key outputKey = dest();
-//    String sd = input("source");
-//    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
-//    String sv = input("validation");
-//    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
     final Key dataKey = source != null ? source._key : null;
     final Key testKey = validation != null ? validation._key : dataKey;
 
@@ -213,11 +224,30 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
     // Timer  for model building
     Timer bm_timer =  new Timer();
-    // Create an initial model
-    TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
     long before = System.currentTimeMillis();
+    // Create an initial model based on given parameters
+    TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
+    // Building from existing model
+    if (checkpoint!=null) {
+      assert !(overwrite_checkpoint && checkpoint!=null) || outputKey==checkpoint: "If checkpoint is to be overwritten then outputkey has to equal to checkpoint key";
+      TM checkpointModel = UKV.get(checkpoint);
+      checkpointModel.read_lock(self()); // lock it for read to avoid any other job to start working on it
+      try {
+        // Create a new initial model based on given checkpoint
+        // TODO: check compatibility of parameters !
+        model = updateModel(model, checkpointModel, overwrite_checkpoint);
+      } finally { checkpointModel.unlock(self()); }
+    }
+
+    //XXX: for GBM we need to rebuild structure in memory - for validation==null || validation !=null
+
     // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
-    model.delete_and_lock(self());
+    if (checkpoint!=null && overwrite_checkpoint)
+      model.write_lock(self()); // do not delete previous model since it would trigger delete of stored trees which we need
+    else
+      model.delete_and_lock(self()); // we can safely delete any previous model since this one should be the first one
+    //
+    System.err.println("===: LOCKERS right after locking: " + Arrays.toString(model._lockers));
     // Prepare and cache adapted validation dataset if it is necessary
     prepareValidationWithModel(model);
 
@@ -261,8 +291,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     long sinceLastScore = now-_timeLastScoreStart;
     Score sc = null;
     // If validation is specified we use a model for scoring, so we need to update it!
-    // First we save model with trees and then update it with resulting error
-    // Double update - before scoring
+    // First we save model with trees (i.e., make them available for scoring)
+    // and then update it with resulting error
     model = makeModel(model, ktrees, tstats);
     model.update(self());
     // Now model already contains tid-trees in serialized form
@@ -273,7 +303,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
          (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
-      // Perform scoring
+      // Perform scoring - first get adapted validation response
       Response2CMAdaptor vadaptor = getValidAdaptor();
       sc = new Score().doIt(model, fTrain, vadaptor, oob, build_tree_one_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
@@ -843,6 +873,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
+  protected abstract TM updateModel( TM model, TM checkpoint, boolean overwriteCheckpoint);
 
   protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
     assert _nclass == 2;

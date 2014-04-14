@@ -8,7 +8,7 @@ import water.api.Request.Default;
 import java.util.UUID;
 
 /**
- * Some properties to mix in to Frame, Model and such to make them uniquely identifyable.
+ * Some properties to mix in to Frame, Model and such to make them uniquely identifiable.
  * That is, we want to distinguish between different instances of a Model that have the
  * same key over time.
  */
