@@ -187,7 +187,7 @@ public class Inspect extends Request {
     if (f instanceof GapStatisticModel)
       return GapStatisticModelView.redirect(this, key);
     if (f instanceof SpeeDRFModel)
-      return GapStatisticModelView.redirect(this, key);
+      return SpeeDRFModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
 

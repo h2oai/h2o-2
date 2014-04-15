@@ -2,6 +2,7 @@ package hex.singlenoderf;
 
 //import hex.speedrf.RFModel;
 import hex.FrameTask;
+import hex.deeplearning.DeepLearningModel;
 import hex.singlenoderf.SpeeDRFModel;
 import hex.singlenoderf.Data;
 import jsr166y.CountedCompleter;
@@ -11,6 +12,7 @@ import water.api.Constants;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
+import water.util.MRUtils;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -27,8 +29,8 @@ public class SpeeDRF extends Job.ModelJob {
 
   @API(help = "Number of trees", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE)
   public final int num_trees   = 50;
-  @API(help = "Number of features to randomly select at each split.", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE)
-  public final int mtry = 1;
+  @API(help = "Number of features to randomly select at each split.", filter = Default.class, json = true, lmin = -1, lmax = Integer.MAX_VALUE)
+  public final int mtry = -1;
   @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE)
   public final int max_depth = 20;
 
@@ -38,8 +40,8 @@ public class SpeeDRF extends Job.ModelJob {
 //  protected final EnumArgument<Sampling.Strategy> _samplingStrategy = new EnumArgument<Sampling.Strategy>(SAMPLING_STRATEGY, Sampling.Strategy.RANDOM, true);
 //  protected final H2OCategoryStrata               _strataSamples    = new H2OCategoryStrata(STRATA_SAMPLES, _dataKey, _classCol, 67);
 
-  @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, lmin = 1, lmax = 100)
-  public final int sample = 67;
+  @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1)
+  public final double sample = 0.67;
 
   @API(help = "OOBEE", filter = Default.class, json = true)
   public final boolean oobee = true;
@@ -82,36 +84,78 @@ public class SpeeDRF extends Job.ModelJob {
 
   @Override protected void execImpl() {
     logStart();
-    Frame fr = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, true);
-    fr = new Frame(source._key, fr._names, fr.vecs());
-    double[] weights = new double[(int)(response.max() - response.min() + 1)];
-    float[] samples = new float[(int) (response.max() - response.min() + 1)];
-    for(int i = 0; i < samples.length; ++i) samples[i] = (float)67.0;
-    for(int i = 0; i < weights.length; ++i) weights[i] = 1.0;
-    DRFTask tsk = create(self(), dest(), response, fr, num_trees, max_depth, bin_limit, Tree.StatType.ENTROPY, seed, parallel,weights, mtry, Sampling.Strategy.RANDOM,
-            (float )sample / 100f, samples, 1, _exclusiveSplitLimit, _useNonLocalData);
-    start(tsk);
-    tsk.dfork(fr._key);
+    SpeeDRFModel rf_model = initModel();
+    buildForest(rf_model);
+    cleanup();
+    remove();
   }
 
-  private static DRFTask create(
-          Key job, Key modelKey, Vec response, Frame fr, int ntrees, int depth, int binLimit,
-          Tree.StatType stat, long seed, boolean parallelTrees, double[] classWt, int numSplitFeatures,
-          Sampling.Strategy samplingStrategy, float sample, float[] strataSamples,
-          int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
-    DRFTask drf  = new DRFTask();
-    drf._fr = fr;
-    drf._jobKey = job;
-    drf._job = Job.findJob(job);
-    SpeeDRFModel rf_model =  new SpeeDRFModel(job, modelKey, fr, numSplitFeatures, samplingStrategy, sample, strataSamples, fr.numCols(), ntrees, new Key[0], 0, response, classWt);
-//    rf_model.delete_and_lock(job);
-    drf._rfmodel = rf_model;
-    int numrows = (int)fr.numRows();
-    drf._params = DRFParams.create(fr.find(response), ntrees, depth, numrows, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
-    drf.validateInputData();
-    drf._t_main = new Timer();
-    DKV.write_barrier();
-    return drf;
+  public final void buildForest(SpeeDRFModel model) {
+    try {
+      source.read_lock(self());
+      logStart();
+      if (model == null) model = UKV.get(dest());
+      model.write_lock(self());
+      DRFTask drf = new DRFTask();
+      drf._jobKey = self();
+      drf._job = Job.findJob(self());
+      drf._rfmodel = model;
+      drf._params = DRFParams.create(model.fr.find(model.response), model.total_trees, model.depth, (int)model.fr.numRows(), model.bin_limit,
+              Tree.StatType.ENTROPY, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData);
+      drf.validateInputData();
+      drf._t_main = new Timer();
+      DKV.write_barrier();
+      drf.dfork(model.fr._key);
+    }
+    catch(JobCancelledException ex) {
+      Log.info("Random Forest building was cancelled.");
+    }
+    catch(Exception ex) {
+      ex.printStackTrace();
+      throw new RuntimeException(ex);
+    }
+    finally {
+      if (model != null) model.unlock(self());
+      source.unlock(self());
+      emptyLTrash();
+    }
+  }
+
+  public SpeeDRFModel initModel() {
+    try {
+      source.read_lock(self());
+      double[] weights = new double[(int)(response.max() - response.min() + 1)];
+      float[] samples = new float[(int) (response.max() - response.min() + 1)];
+      for(int i = 0; i < samples.length; ++i) samples[i] = (float)67.0;
+      for(int i = 0; i < weights.length; ++i) weights[i] = 1.0;
+      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, true, true);
+      final Frame tr = new Frame(Key.make(), train._names, train.vecs());
+      final FrameTask.DataInfo dinfo = new FrameTask.DataInfo(tr, 1, true, !classification);
+      final Vec resp = dinfo._adaptedFrame.lastVec();
+      assert(!classification ^ resp.isEnum()); //either regression or enum response
+      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, dinfo, this, Sampling.Strategy.RANDOM, weights, samples, new Key[0], tr);
+      int csize = H2O.CLOUD.size();
+      model.bin_limit = bin_limit;
+      if (mtry == -1) {
+        model.mtry = (int) Math.floor(Math.sqrt(tr.numCols()));
+      }
+      model.features = dinfo._adaptedFrame.numCols();
+      model.sampling_strategy = Sampling.Strategy.RANDOM;
+      model.sample = (float) sample;
+      model.fr = tr;
+      model.response = dinfo._adaptedFrame.lastVec();
+      model.weights = weights;
+      model.time = 0;
+      model.local_forests = new Key[csize][];
+      model.total_trees = num_trees;
+      model.node_split_features = new int[csize];
+      model.strata_samples = samples;
+      model.depth = max_depth;
+      return model;
+    }
+    finally {
+      source.unlock(self());
+    }
   }
 
   /** Build random forest for data stored on this node. */
@@ -183,7 +227,6 @@ public class SpeeDRF extends Job.ModelJob {
     public Job _job;
     /** RF parameters. */
     public DRFParams _params;
-    public Frame _fr;
 
     //-----------------
     // Node-local data
@@ -255,13 +298,13 @@ public class SpeeDRF extends Job.ModelJob {
       Timer t_extract = new Timer();
       // Collect remote keys to load if necessary
 
-      final DataAdapter dapt = DABuilder.create(this).build(_fr);
+      final DataAdapter dapt = DABuilder.create(this).build(_rfmodel.fr);
       Log.debug(Log.Tag.Sys.RANDF,"Data adapter built in " + t_extract );
       // Prepare data and compute missing parameters.
       Data localData        = Data.make(dapt);
       int numSplitFeatures  = howManySplitFeatures(localData);
       int ntrees            = howManyTrees();
-      int[] rowsPerChunks   = howManyRPC(_fr);
+      int[] rowsPerChunks   = howManyRPC(_rfmodel.fr);
       // write number of split features
       updateRFModel(_job.dest(), numSplitFeatures);
 
@@ -278,8 +321,9 @@ public class SpeeDRF extends Job.ModelJob {
       return super.onExceptionalCompletion(ex, caller);
     }
     @Override protected void postGlobal(){
-      SpeeDRFModel rf = UKV.get(_rfmodel._key);
-      rf.unlock(_job.self());
+
+//      SpeeDRFModel rf = UKV.get(_rfmodel._key);
+////      rf.unlock(_job.self());
     }
 
     /** Write number of split features computed on this node to a model */

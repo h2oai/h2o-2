@@ -1,5 +1,7 @@
 package hex.singlenoderf;
 
+import hex.FrameTask;
+import hex.deeplearning.DeepLearning;
 import hex.singlenoderf.Sampling;
 import hex.singlenoderf.Tree;
 import water.*;
@@ -17,46 +19,55 @@ import java.util.Random;
 public class SpeeDRFModel extends Model implements Job.Progress {
 
   @API(help = "Number of features these trees are built for.")
-  final int features;
+  int features;
 
   @API(help = "Sampling strategy used for model")
-  final Sampling.Strategy sampling_strategy;
+  Sampling.Strategy sampling_strategy;
 
   @API(help = " Sampling rate used when building trees.")
-  final float sample;
+  float sample;
 
   @API(help = "Strata sampling rate used for local-node strata-sampling")
-  final float[] strata_samples;
+  float[] strata_samples;
 
   @API(help = "Number of split features defined by user.")
-  final int mtry;
+  int mtry;
 
   @API(help = " Number of computed split features per node.")
-  final int[] node_split_features;
+  int[] node_split_features;
 
   @API(help = "Number of keys the model expects to be built for it.")
-  final int total_trees;
+  int total_trees;
+
+  @API(help = "Max depth to grow trees to")
+  int depth;
 
   @API(help = "All the trees in the model.")
   Key[]     t_keys;
 
   @API(help = "Local forests produced by nodes.")
-  final Key[][]   local_forests;
+  Key[][]   local_forests;
 
   @API(help = "Total time in seconds to produce the model.")
   long time;
 
   @API(help = "Frame being operated on.")
-  final Frame fr;
+  Frame fr;
 
   @API(help = "Response Vector.")
-  final Vec response;
+  Vec response;
 
   @API(help = "Class weights.")
-  final double[] weights;
+  double[] weights;
+
+  @API(help = "bin limit")
+  int bin_limit;
 
   @API(help = "Raw tree data. for faster classification passes.")
   transient byte[][] trees;
+
+  @API(help = "Job key")
+  Key jobKey;
 
 
   public static final String KEY_PREFIX = "__RFModel_";
@@ -75,48 +86,77 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public static final String JSON_CM_ROWS_SKIPPED = "rows_skipped";
   public static final String JSON_CM_CLASSES_ERRORS = "classes_errors";
 
-  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, int mtry, Sampling.Strategy sampling_strategy, float sample_rate, float[] strata_samples,
-                      int features, int total_trees, Key[] t_keys, long time, Vec response, double[] weights) {
-    super(selfKey, dataKey, fr);
+
+  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, FrameTask.DataInfo dinfo, SpeeDRF params, Sampling.Strategy sampling_strategy, double[] weights, float[] samples, Key[] t_keys, Frame fr) {
+    super(selfKey, dataKey, dinfo._adaptedFrame);
     int csize = H2O.CLOUD.size();
-    this.features = features;
+    this.mtry = (int)Math.floor(Math.sqrt(fr.numCols()));
+    this.features = dinfo._adaptedFrame.numCols();
     this.sampling_strategy = sampling_strategy;
-    this.sample = sample_rate;
+    this.sample = (float) params.sample;
     this.fr = fr;
-    this.response = response;
+    this.response = dinfo._adaptedFrame.lastVec();
     this.weights = weights;
-    this.time = time;
+    this.time = 0;
     this.local_forests = new Key[csize][];
     for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
     this.t_keys = t_keys;
-    this.total_trees = total_trees;
+    this.total_trees = params.num_trees;
     this.node_split_features = new int[csize];
-    this.mtry = mtry;
-    this.strata_samples = strata_samples;
+    this.mtry = params.mtry;
+    this.strata_samples = samples;
     for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
+    this.depth = params.max_depth;
+    this.bin_limit = params.bin_limit;
+    this.jobKey = jobKey;
   }
 
-  public SpeeDRFModel(Key selfKey, Frame fr, Key dataKey, Key[] t_keys, int features, float sample, Vec response, double[] weights, float[] strata_samples) {
-    super(selfKey, dataKey, fr._names, fr.domains());
-    this.features       = features;
-    this.sample         = sample;
-    this.mtry  = features;
-    this.total_trees     = t_keys.length;
-    this.t_keys          = t_keys;
-    this.sampling_strategy   = Sampling.Strategy.RANDOM;
-    int csize = H2O.CLOUD.size();
-    this.node_split_features = new int[csize];
-    this.local_forests       = new Key[csize][];
-    for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
-    for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
-    this.time = 0;
-    this.weights = weights;
-    this.strata_samples = strata_samples;
-    this.trees = null;
-    this.fr = fr;
-    this.response = response;
-    assert classes() > 0;
-  }
+//  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, int mtry, Sampling.Strategy sampling_strategy, float sample_rate, float[] strata_samples,
+//                      int features, int total_trees, Key[] t_keys, long time, Vec response, double[] weights) {
+//    super(selfKey, dataKey, fr);
+//    int csize = H2O.CLOUD.size();
+//    this.features = features;
+//    this.sampling_strategy = sampling_strategy;
+//    this.sample = sample_rate;
+//    this.fr = fr;
+//    this.response = response;
+//    this.weights = weights;
+//    this.time = time;
+//    this.local_forests = new Key[csize][];
+//    for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
+//    this.t_keys = t_keys;
+//    this.total_trees = total_trees;
+//    this.node_split_features = new int[csize];
+//    this.mtry = mtry;
+//    this.strata_samples = strata_samples;
+//    for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
+//    this.depth = 30;
+//    this.bin_limit = 1024;
+//  }
+//
+//  public SpeeDRFModel(Key selfKey, Frame fr, Key dataKey, Key[] t_keys, int features, float sample, Vec response, double[] weights, float[] strata_samples) {
+//    super(selfKey, dataKey, fr._names, fr.domains());
+//    this.features       = features;
+//    this.sample         = sample;
+//    this.mtry  = features;
+//    this.total_trees     = t_keys.length;
+//    this.t_keys          = t_keys;
+//    this.sampling_strategy   = Sampling.Strategy.RANDOM;
+//    int csize = H2O.CLOUD.size();
+//    this.node_split_features = new int[csize];
+//    this.local_forests       = new Key[csize][];
+//    for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
+//    for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
+//    this.time = 0;
+//    this.weights = weights;
+//    this.strata_samples = strata_samples;
+//    this.trees = null;
+//    this.fr = fr;
+//    this.response = response;
+//    assert classes() > 0;
+//    this.depth = 30;
+//    this.bin_limit = 1024;
+//  }
 
   public Vec get_response() {
     return response;
@@ -244,7 +284,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override
   protected float[] score0(double[] data, float[] preds) {
-    return new float[0];  //To change body of implemented methods use File | Settings | File Templates.
+    int numClasses = classes();
+    int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
+    for( int i = 0; i < treeCount(); i++ )
+      votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses)]++;
+    return new float[]{(float) (classify(votes, null, null) + get_response().min())};
   }
 
   @Override
