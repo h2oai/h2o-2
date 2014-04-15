@@ -98,7 +98,6 @@ class PerfRunner:
             test = self.tests_not_started.pop(0)
             print "Beginning test " + test.test_name
             try:
-
                 isEC2 = test.aws
                 xmx = test.heap_bytes_per_node
                 ip = test.ip
@@ -117,11 +116,11 @@ class PerfRunner:
 
                 test.test_run = TableRow("test_run", self.perfdb)
                 test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
-                test.do_test()
+                contamination = test.do_test(self)
                 test.test_run.row['start_epoch_ms'] = test.start_ms
                 test.test_run.row['end_epoch_ms'] = test.end_ms
                 test.test_run.row['test_name'] = test.test_name
-                contamination = PerfUtils.run_contaminated(self)
+                #contamination = PerfUtils.run_contaminated(self)
                 print "DEBUG: "
                 print contamination
                 print ""

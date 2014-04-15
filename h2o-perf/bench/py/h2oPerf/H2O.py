@@ -218,7 +218,7 @@ class H2OCloudNode:
         print ""
 
         #20% diff
-        if proc_frac + 20 <= sys_frac:
+        if proc_frac + 5 <= sys_frac:
             self.is_contaminated = True
             return 1
         return 0
