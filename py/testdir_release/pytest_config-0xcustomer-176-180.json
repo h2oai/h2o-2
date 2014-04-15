@@ -16,7 +16,7 @@
 
     "base_port": 54576,
     "use_flatfile": true,
-    "cloud_name": "jenkins-172-180",
+    "cloud_name": "0xcustomer-176-180",
     "delete_keys_at_teardown": true,
 
 
