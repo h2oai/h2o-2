@@ -61,12 +61,28 @@ public final class Gram extends Iced {
       _xx[i][_xx[i].length - 1] += d;
   }
 
+  public double diagAvg(){
+    double res = 0;
+    int n = 0;
+    if(_diag != null){
+      n += _diag.length;
+      for(double d:_diag) res += d;
+    }
+    if(_xx != null){
+      n += _xx.length;
+      for(double [] x:_xx)res += x[x.length-1];
+    }
+    return res/n;
+  }
   public double diagMin(){
     double res = Double.POSITIVE_INFINITY;
     if(_diag != null)
       for(double d:_diag) if(d < res)res = d;
     if(_xx != null)
-      for(double [] x:_xx)if(x[x.length-1] < res)res = x[x.length-1];
+      for(int i = 0; i < _xx.length-1; ++i){
+        final double [] x = _xx[i];
+        if(x[x.length-1] < res)res = x[x.length-1];
+      }
     return res;
   }
   @Override
@@ -229,8 +245,7 @@ public final class Gram extends Iced {
     double[][] arr = new double[denseN][];
     for( int i = 0; i < arr.length; ++i )
       arr[i] = Arrays.copyOfRange(fchol._xx[i], sparseN, sparseN + denseN);
-
-    Log.info(id + ": CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis() - start));
+//    Log.info(id + ": CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis() - start));
     start = System.currentTimeMillis();
     // parallelize cholesky
     if (parallelize) {
@@ -238,7 +253,7 @@ public final class Gram extends Iced {
       InPlaceCholesky d = InPlaceCholesky.decompose_2(arr, 10, p);
       fchol.setSPD(d.isSPD());
       arr = d.getL();
-      Log.info (id + ": H2O CHOLESKY DECOMP TAKES: " + (System.currentTimeMillis()-start));
+//      Log.info (id + ": H2O CHOLESKY DECOMP TAKES: " + (System.currentTimeMillis()-start));
     } else {
       // make it symmetric
       for( int i = 0; i < arr.length; ++i )
@@ -331,10 +346,8 @@ public final class Gram extends Iced {
      * @param y
      */
     public final void   solve(double[] y) {
-      long t = System.currentTimeMillis();
       if( !isSPD() ) throw new NonSPDMatrixException();
       assert _xx.length + _diag.length == y.length:"" + _xx.length + " + " + _diag.length + " != " + y.length;
-
       // diagonal
       for( int k = 0; k < _diag.length; ++k )
         y[k] /= _diag[k];
@@ -342,9 +355,10 @@ public final class Gram extends Iced {
       final int n = y.length;
       // Solve L*Y = B;
       for( int k = _diag.length; k < n; ++k ) {
+        double d = 0;
         for( int i = 0; i < k; i++ )
-          y[k] -= y[i] * _xx[k - _diag.length][i];
-        y[k] /= _xx[k - _diag.length][k];
+          d += y[i] * _xx[k - _diag.length][i];
+        y[k] = (y[k]-d)/_xx[k - _diag.length][k];
       }
       // Solve L'*X = Y;
       for( int k = n - 1; k >= _diag.length; --k ) {

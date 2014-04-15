@@ -258,10 +258,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
     try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
-    // Do any post-writing work (zap rollup fields, etc)
-    _fr.reloadVecs();
-    for( int i=0; i<_fr.numCols(); i++ )
-      _fr.vecs()[i].postWrite();
     return self();
   }
 
@@ -450,8 +446,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       copyOver(_res);           // So copy into self
     }
     closeLocal();
-    if( nlo==0 && nhi == H2O.CLOUD.size() )
+    if( nlo==0 && nhi == H2O.CLOUD.size() ) {
+      // Do any post-writing work (zap rollup fields, etc)
+      _fr.reloadVecs();
+      for( int i=0; i<_fr.numCols(); i++ )
+        _fr.vecs()[i].postWrite();
       postGlobal();
+    }
   }
 
   // Block for RPCs to complete, then reduce global results into self results

@@ -1,11 +1,13 @@
 package hex.glm;
 
 import hex.FrameTask;
+import hex.GLMTest;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
 import water.Job;
 import water.MemoryManager;
 import water.H2O.H2OCountedCompleter;
+import water.api.GLM;
 import water.util.Utils;
 
 import java.util.ArrayList;
@@ -109,6 +111,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         res = Math.max(res, Math.abs(_z[i]));
       return _glm.variance(_ymu) * res / (_nobs*Math.max(_alpha,1e-3));
     }
+    @Override public void postGlobal(){
+      if(_val != null)_val.finalize_AIC_AUC();
+    }
   }
 
   /**
@@ -121,8 +126,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     double [][] _betas;
     double []   _objvals;
     double _caseVal = 0;
-    public GLMLineSearchTask(Job job, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double minStep, H2OCountedCompleter cmp){
+    final double _l1pen;
+    final double _l2pen;
+    final double _reg;
+    public GLMLineSearchTask(Job job, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double minStep, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
       super(job,dinfo,glm,cmp);
+      _l2pen = 0.5*(1-alpha)*lambda;
+      _l1pen = alpha*lambda;
+      _reg = 1.0/nobs;
       ArrayList<double[]> betas = new ArrayList<double[]>();
       double step = 0.5;
       while(step >= minStep){
@@ -136,8 +147,18 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _betas = new double[betas.size()][];
       betas.toArray(_betas);
     }
+
     @Override public void chunkInit(){
       _objvals = new double[_betas.length];
+    }
+    @Override public void chunkDone(){
+      for(int i = 0; i < _objvals.length; ++i)
+        _objvals[i] *= _reg;
+    }
+    @Override public void postGlobal(){
+      for(int i = 0; i < _objvals.length; ++i)
+        for(double d:_betas[i])
+          _objvals[i] += d*d*_l2pen + (d>=0?d:-d)*_l1pen;
     }
     @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       for(int i = 0; i < _objvals.length; ++i){
@@ -149,17 +170,61 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     @Override
     public void reduce(GLMLineSearchTask git){Utils.add(_objvals,git._objvals);}
   }
+
+  public static final class LMIterationTask extends FrameTask<LMIterationTask>{
+    public final int n_folds;
+    public long _n;
+    Gram [] _gram;
+    double [][] _xy;
+    public LMIterationTask(Job job, DataInfo dinfo,int nfolds, H2OCountedCompleter cmp){
+      super(job, dinfo, cmp);
+      n_folds = Math.max(1,nfolds);
+    }
+    @Override public void chunkInit(){
+      _gram = new Gram[n_folds];
+      _xy = new double[n_folds][];
+      for(int i = 0; i < n_folds; ++i){
+        _gram[i] = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
+        _xy[i] = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
+      }
+    }
+    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
+      final int fold = n_folds == 1?0:(int)_n % n_folds;
+      final double y = responses[0];
+      _gram[fold].addRow(nums, ncats, cats, 1);
+      for(int i = 0; i < ncats; ++i){
+        final int ii = cats[i];
+        _xy[fold][ii] += responses[0];
+      }
+      final int numStart = _dinfo.numStart();
+      for(int i = 0; i < nums.length; ++i){
+        _xy[fold][numStart+i] += y*nums[i];
+      }
+      ++_n;
+    }
+
+    @Override public void chunkDone(){
+
+    }
+
+    @Override public void reduce(LMIterationTask lmit){
+      for(int i = 0; i < n_folds; ++i){
+        _gram[i].add(lmit._gram[i]);
+        Utils.add(_xy[i],lmit._xy[i]);
+      }
+    }
+  }
+
   /**
    * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
    *
    * @author tomasnykodym
-   *
    */
-  public static final class GLMIterationTask extends GLMTask<GLMIterationTask> {
+  public static class GLMIterationTask extends GLMTask<GLMIterationTask> {
     final double [] _beta;
     Gram      _gram;
     double [] _xy;
-    double [] _grad;
+    private double [] _grad;
     double    _yy;
     GLMValidation _val; // validation of previous model
     final double _ymu;
@@ -189,15 +254,11 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       final int numStart = _dinfo.numStart();
       double d = 0;
       if( _glm.family == Family.gaussian) {
+        assert !_computeGradient;
         w = 1;
         z = y;
-        assert _beta == null; // don't expect beta here, gaussian is non-iterative
-        if(_computeGradient){
-          for(int i = 0; i < ncats; ++i)
-            _grad[cats[i]] -= y;
-          for(int i = 0; i < nums.length; ++i)_grad[numStart+i] -= y*nums[i];
-        }
-        mu = 0;
+        assert _beta == null || !_computeGram; // don't expect beta here, gaussian is non-iterative
+        mu = _validate?computeEta(ncats,cats,nums,_beta):0;
       } else {
         if( _beta == null ) {
           mu = _glm.mustart(y, _ymu);
@@ -206,34 +267,35 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           eta = computeEta(ncats, cats,nums,_beta);
           mu = _glm.linkInv(eta);
         }
-        if(_validate)
-          _val.add(y, mu);
         var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
         d = _glm.linkDeriv(mu);
         z = eta + (y-mu)*d;
         w = 1.0/(var*d*d);
       }
+      if(_validate)
+        _val.add(y, mu);
       assert w >= 0 : "invalid weight " + w;
       final double wz = w * z;
       _yy += wz * z;
-      final double grad = _computeGradient?w*d*(mu-y):0;
-      for(int i = 0; i < ncats; ++i){
-        final int ii = cats[i];
-        if(_computeGradient)_grad[ii] += grad;
-        _xy[ii] += wz;
+      if(_computeGradient || _computeGram){
+        final double grad = _computeGradient?w*d*(mu-y):0;
+        for(int i = 0; i < ncats; ++i){
+          final int ii = cats[i];
+          if(_computeGradient)_grad[ii] += grad;
+          _xy[ii] += wz;
+        }
+        for(int i = 0; i < nums.length; ++i){
+          _xy[numStart+i] += wz*nums[i];
+          if(_computeGradient)
+            _grad[numStart+i] += grad*nums[i];
+        }
+        if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
+        _xy[numStart + _dinfo._nums] += wz;
+        if(_computeGram)_gram.addRow(nums, ncats, cats, w);
       }
-
-      for(int i = 0; i < nums.length; ++i){
-        _xy[numStart+i] += wz*nums[i];
-        if(_computeGradient)
-          _grad[numStart+i] += grad*nums[i];
-      }
-      if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
-      _xy[numStart + _dinfo._nums] += wz;
-      if(_computeGram)_gram.addRow(nums, ncats, cats, w);
     }
     @Override protected void chunkInit(){
-      _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
+      if(_computeGram)_gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
       _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
@@ -241,22 +303,36 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if(_computeGradient)
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
+
     @Override protected void chunkDone(){
-      _gram.mul(_reg);
+      if(_computeGram)_gram.mul(_reg);
       if(_val != null)_val.regularize(_reg);
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;
+      if(_grad != null)
+        for(int i = 0; i < _grad.length; ++i)
+          _grad[i] *= _reg;
       _yy *= _reg;
     }
     @Override
     public void reduce(GLMIterationTask git){
       Utils.add(_xy, git._xy);
-      _gram.add(git._gram);
+      if(_computeGram)_gram.add(git._gram);
       _yy += git._yy;
       _n += git._n;
       if(_validate) _val.add(git._val);
       if(_computeGradient) Utils.add(_grad,git._grad);
       super.reduce(git);
+    }
+
+    @Override public void postGlobal(){
+      if(_val != null)_val.finalize_AIC_AUC();
+    }
+    public double [] gradient(double l2pen){
+      if(l2pen == 0)return _grad;
+      final double [] res = _grad.clone();
+      for(int i = 0; i < _grad.length-1; ++i) res[i] += l2pen*_beta[i];
+      return res;
     }
   }
 }

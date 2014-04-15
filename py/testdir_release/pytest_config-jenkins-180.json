@@ -15,8 +15,11 @@
     "use_hdfs": true,
 
     "use_flatfile": true,
-    "base_port": 54355,
-    "cloud_name": "jenkins-164",
+    "base_port": 54480,
+    "cloud_name": "jenkins-180",
+    "delete_keys_at_teardown": true,
+
+
 
     "ip": [
         "192.168.1.180"
