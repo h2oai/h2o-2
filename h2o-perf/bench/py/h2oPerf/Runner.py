@@ -40,16 +40,28 @@ class PerfRunner:
         if self.terminated:
             return
 
+        prefix = ""
         for root, dirs, files in os.walk(self.test_root_dir):
             for d in dirs:
-                if test_to_run in d:
-                    self.add_test(d)
+                if "singlenode" in dirs:
+                    for root2, dirs2, files2 in os.walk(os.path.join(root, d)):
+                        d = os.path.basename(root2)
+                        if d == "singlenode": 
+                            prefix = d
+                            continue
+                        if d == "multinode":  
+                            prefix = d
+                            continue
+                        if test_to_run in d:
+                            self.add_test(d, prefix)
+                    continue
+                continue
 
-    def add_test(self, testDir):
+    def add_test(self, testDir, prefix):
         """
         Create a Test object and push it onto the queue.
         """
-        config_file = os.path.abspath(os.path.join(self.test_root_dir,testDir,testDir + ".cfg"))
+        config_file = os.path.abspath(os.path.join(self.test_root_dir,prefix,testDir,testDir + ".cfg"))
         print "USING CONFIGURATION FROM THIS FILE: "
         print config_file
         parse_file = "parse.R" #testDir + "_Parse.R"
