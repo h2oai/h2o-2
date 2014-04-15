@@ -2,6 +2,8 @@ import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
+ITERATIONS = 2
+DELETE_ON_DONE = 1
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -27,7 +29,7 @@ class Basic(unittest.TestCase):
         csvDirname = "manyfiles-nflx-gz"
         timeoutSecs = 600
         trial = 0
-        for delete_on_done in [0, 0]:
+        for iteration in range(ITERATIONS):
             
             csvFilename = "file_1.dat.gz"
             csvPathname = csvDirname + "/" + csvFilename
@@ -36,10 +38,10 @@ class Basic(unittest.TestCase):
             hex_key =  csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
-                delete_on_done=delete_on_done,
+                delete_on_done=DELETE_ON_DONE,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120, doSummary=False)
             elapsed = time.time() - start
-            print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
+            print "parse", trial, "end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             # INSPECT******************************************
@@ -61,7 +63,8 @@ class Basic(unittest.TestCase):
 
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"
-            h2o_cmd.runStoreView(timeoutSecs=30)
+            for node in h2o.nodes:
+                h2o_cmd.runStoreView(node=node, timeoutSecs=30, view=10000)
 
             # convert to binomial
             execExpr="A.hex=%s" % parseResult['destination_key']
