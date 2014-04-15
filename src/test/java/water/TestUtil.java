@@ -22,8 +22,6 @@ public class TestUtil {
   private static int _initial_keycnt = 0;
   private static Timer _testClassTimer;
 
-  private Timer _testTimer;
-
   protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
       Node n = new NodeVM(args);
@@ -52,6 +50,25 @@ public class TestUtil {
     }
   };
 
+  @Rule public TestRule timerRule = new TestRule() {
+    @Override public Statement apply(Statement base, Description description) {
+      return new TimerStatement(base, description.getClassName()+"#"+description.getMethodName());
+    };
+    class TimerStatement extends Statement {
+      private final Statement base;
+      private final String tname;
+      public TimerStatement(Statement base, String tname) { this.base = base; this.tname = tname;}
+      @Override public void evaluate() throws Throwable {
+        Timer t = new Timer();
+        try {
+          base.evaluate();
+        } finally {
+          Log.info("#### TEST "+tname+" EXECUTION TIME: " + t.toString());
+        }
+      }
+    }
+  };
+
   @AfterClass public static void checkLeakedKeys() {
     Log.info("## TEST CLASS EXECUTION TIME (sum over all tests): " + _testClassTimer.toString());
     Job[] jobs = Job.all();
@@ -76,13 +93,6 @@ public class TestUtil {
     }
     assertTrue("No keys leaked", leaked_keys <= 0);
     _initial_keycnt = H2O.store_size();
-  }
-
-  @Before public void registerTimer() {
-    _testTimer = new Timer();
-  }
-  @After public void logTimer() {
-    Log.info("#### TEST EXECUTION TIME: " + _testTimer.toString());
   }
 
   // Stall test until we see at least X members of the Cloud

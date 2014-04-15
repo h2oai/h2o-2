@@ -40,16 +40,28 @@ class PerfRunner:
         if self.terminated:
             return
 
+        prefix = ""
         for root, dirs, files in os.walk(self.test_root_dir):
             for d in dirs:
-                if test_to_run in d:
-                    self.add_test(d)
+                if "singlenode" in dirs:
+                    for root2, dirs2, files2 in os.walk(os.path.join(root, d)):
+                        d = os.path.basename(root2)
+                        if d == "singlenode": 
+                            prefix = d
+                            continue
+                        if d == "multinode":  
+                            prefix = d
+                            continue
+                        if test_to_run in d:
+                            self.add_test(d, prefix)
+                    continue
+                continue
 
-    def add_test(self, testDir):
+    def add_test(self, testDir, prefix):
         """
         Create a Test object and push it onto the queue.
         """
-        config_file = os.path.abspath(os.path.join(self.test_root_dir,testDir,testDir + ".cfg"))
+        config_file = os.path.abspath(os.path.join(self.test_root_dir,prefix,testDir,testDir + ".cfg"))
         print "USING CONFIGURATION FROM THIS FILE: "
         print config_file
         parse_file = "parse.R" #testDir + "_Parse.R"
@@ -85,39 +97,41 @@ class PerfRunner:
         while len(self.tests_not_started) > 0:
             test = self.tests_not_started.pop(0)
             print "Beginning test " + test.test_name
+            try:
+                isEC2 = test.aws
+                xmx = test.heap_bytes_per_node
+                ip = test.ip
+                base_port = test.port
+                nodes_in_cloud = test.total_nodes
+                hosts_in_cloud = test.hosts  #this will be used to support multi-machine / aws
+                #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
 
-            isEC2 = test.aws
-            xmx = test.heap_bytes_per_node
-            ip = test.ip
-            base_port = test.port
-            nodes_in_cloud = test.total_nodes
-            hosts_in_cloud = test.hosts  #this will be used to support multi-machine / aws
-            #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
+                if isEC2:
+                    raise Exception("Unimplemented: AWS support under construction...")
 
-            if isEC2:
-                raise Exception("Unimplemented: AWS support under construction...")
+                cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
+                self.cloud.append(cloud)
+                PerfUtils.start_cloud(self, test.remote_hosts)
+                test.port = self.cloud[0].get_port()
 
-            cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
-            self.cloud.append(cloud)
-            PerfUtils.start_cloud(self, test.remote_hosts)
-            test.port = self.cloud[0].get_port()
-            
-            test.test_run = TableRow("test_run", self.perfdb)
-            test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
-            test.do_test()
-            test.test_run.row['start_epoch_ms'] = test.start_ms
-            test.test_run.row['end_epoch_ms'] = test.end_ms
-            test.test_run.row['test_name'] = test.test_name
-            contamination = PerfUtils.run_contaminated(self)
-            print "DEBUG: "
-            print contamination
-            print ""
-            print ""
-            test.test_run.row["contaminated"] = contamination[0]
-            test.test_run.row["contamination_message"] = contamination[1]
-            test.test_run.update(True)
-            PerfUtils.stop_cloud(self, test.remote_hosts)
-            self.cloud.pop(0)
+                test.test_run = TableRow("test_run", self.perfdb)
+                test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
+                contamination = test.do_test(self)
+                test.test_run.row['start_epoch_ms'] = test.start_ms
+                test.test_run.row['end_epoch_ms'] = test.end_ms
+                test.test_run.row['test_name'] = test.test_name
+                #contamination = PerfUtils.run_contaminated(self)
+                print "DEBUG: "
+                print contamination
+                print ""
+                print ""
+                test.test_run.row["contaminated"] = contamination[0]
+                test.test_run.row["contamination_message"] = contamination[1]
+                test.test_run.update(True)
+                PerfUtils.stop_cloud(self, test.remote_hosts)
+                self.cloud.pop(0)
+            except:
+                print "Could not complete test + " test.test_name
             self.perfdb.this_test_run_id += 1
 
     def __get_instance_type__(self):

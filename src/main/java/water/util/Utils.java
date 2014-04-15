@@ -1379,9 +1379,9 @@ public class Utils {
       long err = acts[a]-correct;
       terr += err;
       if (html) {
-        sb.append(String.format("<th  style='min-width: 60px;'>%.5f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
+        sb.append(String.format("<th  style='min-width: 60px;'>%.05f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
       } else {
-        sb.append("   " + String.format("%.5f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
+        sb.append("   " + String.format("%.05f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
       }
     }
 
@@ -1403,10 +1403,10 @@ public class Utils {
     for (long n : acts) nrows += n;
 
     if (html) {
-      sb.append(String.format("<th style='min-width:60px'>%5.3f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
+      sb.append(String.format("<th style='min-width:60px'>%.05f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
       DocGen.HTML.arrayTail(sb);
     } else {
-      sb.append("   " + String.format("%5.3f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
+      sb.append("   " + String.format("%.05f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
     }
   }
 
