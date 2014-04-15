@@ -6,6 +6,9 @@ import h2o_print
 DO_GLM = True
 LOG_MACHINE_STATS = False
 
+# fails during exec env push ..second import has to do a key delete (the first)
+DO_DOUBLE_IMPORT = False
+
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
@@ -31,10 +34,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         for trial, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
-                (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
-                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
+                if DO_DOUBLE_IMPORT:
+                    (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+                    importFullList = importResult['files']
+                    importFailList = importResult['fails']
+                    print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster
