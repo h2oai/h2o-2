@@ -315,6 +315,10 @@ public final class ParseDataset2 extends Job {
     fr.unlock(job.self());
     // Remove CSV files from H2O memory
     if( delete_on_done ) for( Key k : fkeys ) Lockable.delete(k,job.self());
+    else for( Key k : fkeys ) {
+      Lockable l = UKV.get(k);
+      l.unlock(job.self());
+    }
     job.remove();
   }
 
