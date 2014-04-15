@@ -48,7 +48,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public double epochs = 10;
 
   @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)", filter = Default.class, lmin = -1, json = true)
-  public long train_samples_per_iteration = 10000l;
+  public long train_samples_per_iteration = -1;
   public long actual_train_samples_per_iteration;
 
   @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
@@ -493,13 +493,31 @@ public class DeepLearning extends Job.ValidatedJob {
     if (hidden_dropout_ratios == null) {
       hidden_dropout_ratios = new double[hidden.length];
       if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
+        Log.info("Automatically setting all hidden dropout ratios to 0.5.");
         Arrays.fill(hidden_dropout_ratios, 0.5);
       }
     }
     else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
+    else if (hidden_dropout_ratios != null) {
+      if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
+        Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
+      }
+    }
+
+    if (adaptive_rate) {
+      Log.info("Using automatic learning rate.  Ignoring the following input parameters:");
+      Log.info("  rate, rate_decay, rate_annealing, momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient.");
+    } else {
+      Log.info("Using manual learning rate.  Ignoring the following input parameters:");
+      Log.info("  rho, epsilon");
+    }
+
+    if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
+      Log.info("Ignoring initial_weight_scale for UniformAdaptive weight distribution.");
+    }
 
     if(!classification && loss != Loss.MeanSquare) {
-      Log.warn("Setting loss to MeanSquare for regression.");
+      Log.warn("Automatically setting loss to MeanSquare for regression.");
       loss = Loss.MeanSquare;
     }
     // make default job_key and destination_key in case they are missing
