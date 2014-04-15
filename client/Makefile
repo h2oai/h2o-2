@@ -84,6 +84,9 @@ unit: \
 node: \
 	$(DIST)/steam.node.js
 
+watch:
+	$(BIN)/watchy --watch src -- make build test
+
 help:
 	@echo "Please use \`make <target>' where <target> is one of -"
 	@echo ""
@@ -283,4 +286,4 @@ $(BUILD)/spec/index.html: node
 	@echo Spec generated at $(@D)
 	
 
-.PHONY: all build node unit smoke test debug report spec coverage doc clean setup reset help
+.PHONY: all build node unit smoke test debug report spec coverage doc clean setup reset watch help

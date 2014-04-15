@@ -1,2 +1,0 @@
-fswatch ./src "make build test"
-
