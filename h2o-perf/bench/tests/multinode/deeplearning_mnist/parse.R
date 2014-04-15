@@ -1,9 +1,9 @@
-source("../../R/h2oPerf/prologue.R")
+source("../../../R/h2oPerf/prologue.R")
 
 data_source <<- "smalldata"
 
 #trainData   <<-  "/Users/spencer/master/h2o/smalldata/mnist/train.csv.gz"
-#trainData    <<- "/home/0xdiag/datasets/mnist/mnist_training.csv.gz"  
+#trainData    <<- "/home/0xdiag/datasets/mnist/mnist_training.csv.gz"
 trainData <<- "/home/0xdiag/datasets/mnist/train.csv.gz"
 response <<- "C785"
 
@@ -17,4 +17,4 @@ upload.FV("parsed.hex", trainData)
 testData     <<- "/home/0xdiag/datasets/mnist/test.csv.gz"
 upload.FV("test.hex", testData)
 
-source("../../R/h2oPerf/epilogue.R")
+source("../../../R/h2oPerf/epilogue.R")
