@@ -12,7 +12,12 @@ initList = [
         ('z.hex', 'z.hex=c(0)'),
         ]
 
-exprListFull = [
+DO_IFELSE = False
+DO_CAN_RETURN_NAN = False
+DO_FAIL1 = False
+DO_TERNARY = False
+
+exprList = [
         'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
         'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
         # 'z = if (any(r3.hex == 0) || any(r4.hex == 0)), "zero encountered"',
@@ -81,7 +86,6 @@ exprListFull = [
         "nrow(r.hex)*3",
         "r.hex[nrow(r.hex)-1,ncol(r.hex)-1]",
         "r.hex[nrow(r.hex),]",
-        "a=ncol(r.hex); r.hex[,c(a+1,a+2)]=5",
         "r.hex[,ncol(r.hex)+1]=4",
         "r.hex[,1]=3.3; r.hex",
         "r.hex[,1]=r.hex[,1]+1",
@@ -95,7 +99,6 @@ exprListFull = [
         "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
 
         "apply(r.hex,2,sum)",
-        "apply(r.hex,2,function(x){ifelse(x==-1,1,x)})",
 
         # doesn't work
         # "cbind(c(1), c(2), c(3))",
@@ -107,17 +110,11 @@ exprListFull = [
 
         "r.hex[c(1,3,5),]",
         "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
-        "r.hex[r.hex[,1]>4,]",
+
         # fails?
         # "a=c(1,2,3); a[a[,1]>10,1]",
 
-        "ifelse(0,1,2)",
-        "ifelse(0,r.hex+1,r.hex+2)",
-        "ifelse(r.hex>3,99,r.hex)",
-        "ifelse(0,+,*)(1,2)",
 
-        "(0 ? + : *)(1,2)",
-        "(1 ? r.hex : (r.hex+1))[1,2]",
 
         "sum(1,2)",
         "sum(1,2,3)",
@@ -157,14 +154,52 @@ exprListFull = [
 
         ]
 
+# FIX! should add ternary here?
+# ifelse does all 3 params
+# ? doesn't do the else if true
+# we don't support the split if/else
+if DO_TERNARY:
+    exprList += [
+        # do we really care about this case
+        # "(0 ? + : *)(1,2)",
+        # "0 ? + : * (1, 2)",
+        "1 ? r.hex : (r.hex+1)",
+        "1 ? (r.hex+1) : r.hex",
+
+        # don't do these harder ternary for now
+        #"(1 ? r.hex : (r.hex+1))[1,2]",
+        # "apply(r.hex,2, function(x){x==-1 ? 1 : x})",
+        "0 ? 1 : 2",
+        "0 ? r.hex+1 : r.hex+2",
+        "r.hex>3 ? 99 : r.hex",
+    ]
+
+if DO_IFELSE:
+    exprList += [
+        "apply(r.hex,2,function(x){ifelse(x==-1,1,x)})",
+        "ifelse(0,1,2)",
+        "ifelse(0,r.hex+1,r.hex+2)",
+        "ifelse(r.hex>3,99,r.hex)",
+        "ifelse(0,+,*)(1,2)",
+    ]    
+
+if DO_CAN_RETURN_NAN:
+    exprList += [
+        "r.hex[r.hex[,1]>4,]",
+    ]
+
+if DO_FAIL1:
+    exprList += [
+        "a=ncol(r.hex); r.hex[,c(a+1,a+2)]=5",
+    ]
 
 # concatenate some random choices to make life harder
-exprList = []
+exprBigList = []
 for i in range(100):
     expr = ""
-    for j in range(1):
-        expr += random.choice(exprListFull)
-    exprList.append(expr)
+    for j in range(3):
+        expr += random.choice(exprList) + ";"
+    exprBigList.append(expr)
         
 
 class Basic(unittest.TestCase):
@@ -193,16 +228,16 @@ class Basic(unittest.TestCase):
 
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
+
         start = time.time()
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10, allowEmptyResult=True)
 
         # now run them just concatenating each time. We don't do any template substitutes, so don't need
         # exec_expr_list_rand()
         
         bigExecExpr = ""
-        for execExpr in exprList:
-            bigExecExpr += execExpr + ";"
-            h2e.exec_expr(h2o.nodes[0], bigExecExpr, resultKey=None, timeoutSecs=4)
+        for execExpr in exprBigList:
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4.)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

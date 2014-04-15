@@ -4,7 +4,9 @@ import unittest
 import time,sys
 sys.path.extend(['.','..','py'])
 
-import h2o_cmd, h2o, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o_common
+
 import h2o_browse as h2b
 
 class Basic(unittest.TestCase):
@@ -22,6 +24,34 @@ class Basic(unittest.TestCase):
 
     def test_1(self):
         h2b.browseTheCloud()
+        csvFilename = "airlines_all.csv"
+        csvPathname='airlines/airlines_all.csv'
+        h2o.beta_features = True
+        hex_key = csvFilename + ".hex"
+        start = time.time()
+        timeoutSecs=1200
+        airlines_hex = h2i.import_parse(bucket='/home/0xdiag/datasets', path=csvPathname, schema='local', hex_key=hex_key, 
+                    timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60, doSummary=False)
+        print "fv.parse done in ",(time.time()-start)
+        kwargs = {
+            'ignored_cols':'DepTime,ArrTime,TailNum,ActualElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed',
+            'standardize': 1,
+            'classification': 1,
+            'response': 'IsDepDelayed',
+            'family': 'binomial',
+            'n_folds': 0,
+            'max_iter': 50,
+            'beta_epsilon': 1e-4,
+            'lambda':1e-5
+        }
+        results = []
+        for i in range(5):
+            start = time.time()
+            glm = h2o_cmd.runGLM(parseResult=airlines_hex, timeoutSecs=timeoutSecs, **kwargs)
+            auc = glm['glm_model']['submodels'][0]['validation']['auc']
+            results.append('glm2(%d) done in %d,auc=%f' %(i,(time.time()-start),auc))
+        for s in results:
+            print s
         while 1:
           time.sleep(500000)
           print '.'

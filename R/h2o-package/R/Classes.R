@@ -160,7 +160,9 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("\nTraining mean square error:", model$train_sqr_error)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
-  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+  if(!is.null(model$confusion)) {
+    cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+  }
 })
 
 setMethod("show", "H2ODRFModel", function(object) {

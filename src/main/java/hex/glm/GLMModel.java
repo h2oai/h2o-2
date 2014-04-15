@@ -145,10 +145,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(GLM2 job, Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
     super(selfKey,null,dinfo._adaptedFrame);
     parameters = job;
-    job_key = jobKey;
+    job_key = job.self();
     this.ymu = ymu;
     this.glm = glm;
     threshold = 0.5;

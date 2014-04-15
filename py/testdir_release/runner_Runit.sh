@@ -45,8 +45,9 @@ else
 
         for mr in 161 164 180
         do
-            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
-                'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
+            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr \
+                'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
+
         done
 
         # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)

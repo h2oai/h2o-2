@@ -20,7 +20,7 @@ MAX_QBINS = 1000 # pass
 # MAX_QBINS = 20
 # Exception: h2o quantile multipass is not approx. same as sort algo. h2o_util.assertApproxEqual failed comparing 7.43337413296 and 8.26268245. {'tol': 2e-07}.
 
-MAX_QBINS = 1000
+MAX_QBINS = 27
 
 class Basic(unittest.TestCase):
     def tearDown(self):

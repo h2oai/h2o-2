@@ -12,12 +12,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.*;
 
 import water.*;
-import water.NanoHTTPD.Response;
 import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.*;
-import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
 import com.google.gson.JsonObject;
