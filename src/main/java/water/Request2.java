@@ -550,7 +550,7 @@ public abstract class Request2 extends Request {
     this.response_info = response.extractInfo();
   }
 
-  protected JsonObject toJSON() {
+  public JsonObject toJSON() {
     final String json = new String(writeJSON(new AutoBuffer()).buf());
     if (json.length() == 0) return new JsonObject();
     JsonObject jo = (JsonObject)new JsonParser().parse(json);

@@ -511,7 +511,7 @@ public abstract class Job extends Func {
      * Annotate the number of columns and rows of the training data set in the job parameter JSON
      * @return JsonObject annotated with num_cols and num_rows of the training data set
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (source != null) {
         jo.getAsJsonObject("source").addProperty("num_cols", source.numCols());
@@ -553,7 +553,7 @@ public abstract class Job extends Func {
      * If the number of columns is 0, a "N/A" is reported.
      * @return JsonObject annotated with used/ignored columns
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (!jo.has("source")) return jo;
       HashMap<String, int[]> map = new HashMap<String, int[]>();
@@ -657,7 +657,7 @@ public abstract class Job extends Func {
      * Annotate the name of the response column in the job parameter JSON
      * @return JsonObject annotated with the name of the response column
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       int idx = source.find(response);
       if( idx == -1 ) {

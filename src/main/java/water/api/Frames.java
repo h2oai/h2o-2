@@ -190,7 +190,7 @@ public class Frames extends Request2 {
       frameSummariesMap.put(keyString, summary);
     }
 
-    Map resultsMap = new HashMap();
+    Map resultsMap = new LinkedHashMap();
     resultsMap.put("frames", frameSummariesMap);
 
     // If find_compatible_models then include a map of the model summaries.  Should we put this on a separate switch?
@@ -222,7 +222,7 @@ public class Frames extends Request2 {
     Set<String> all_referenced_models = new TreeSet<String>();
     all_referenced_models.addAll(summary.compatible_models);
 
-    Map resultsMap = new HashMap();
+    Map resultsMap = new LinkedHashMap();
     resultsMap.put("frames", frameSummariesMap);
 
     // If find_compatible_models then include a map of the model summaries.  Should we put this on a separate switch?
@@ -244,8 +244,39 @@ public class Frames extends Request2 {
   private Response scoreOne(Frame frame, Model score_model, boolean adapt) {
     Frame predictions = score_model.score(frame, adapt);
 
+    ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
+    AUC auc = null;
+    HitRatio hr = null;
+    double error = 0.0d;
+
+    if (score_model.isClassifier()) {
+      auc = new AUC();
+//      hr = new HitRatio();
+      error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+                                    true, 20, cm, auc, hr);
+    } else {
+      error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+                                    true, 20, cm, null, null);
+    }
+
     // Now call AUC and ConfusionMatrix and maybe HitRatio
-    JsonObject result = gson.fromJson("{\"not yet\": \"sorry\"}", JsonElement.class).getAsJsonObject();
+    Map metrics = new LinkedHashMap();
+    metrics.put("model", score_model._key.toString());
+    metrics.put("frame", frame._key.toString());
+
+    metrics.put("error", error);
+    metrics.put("cm", cm.toJSON());
+    metrics.put("auc", auc.toJSON());
+    metrics.put("hr", hr);
+
+    Map resultsMap = new LinkedHashMap();
+    resultsMap.put("metrics", metrics);
+
+    // TODO: temporary hack to get things going
+    String json = gson.toJson(resultsMap);
+    // Log.info("Json for results: " + json);
+
+    JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
     return Response.done(result);
   }
 

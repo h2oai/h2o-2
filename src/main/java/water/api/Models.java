@@ -316,7 +316,7 @@ public class Models extends Request2 {
   private Response serveOneOrAll(Map<String, Model> modelsMap) {
     Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(null, modelsMap);
 
-    Map resultsMap = new HashMap();
+    Map resultsMap = new LinkedHashMap();
     resultsMap.put("models", modelSummaries);
 
     // TODO: temporary hack to get things going
