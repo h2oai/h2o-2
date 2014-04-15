@@ -64,7 +64,7 @@ public class DRFTest extends TestUtil {
   }
 
   //  @Ignore
-  @Test public void testClassCars50() throws Throwable {
+  @Test public void testClassCars5() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
@@ -79,7 +79,7 @@ public class DRFTest extends TestUtil {
 
   @Test
   public void testConstantCols() throws Throwable {
-    try { 
+    try {
       basicDRFTestOOBE(
         "./smalldata/poker/poker100","poker.hex",
         new PrepData() { @Override int prep(Frame fr) {
