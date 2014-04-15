@@ -140,7 +140,7 @@ public class DeepLearningProstateTest extends TestUtil {
                             Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
 
                             // check that calcError() is consistent as well (for CM=null, AUC!=null)
-                            Assert.assertEquals(mymodel.calcError(valid, pred, pred, "training", false, null, auc, null), error, 1e-15);
+                            Assert.assertEquals(mymodel.calcError(valid, valid.lastVec(), pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
                           }
 
                           // Compute CM
