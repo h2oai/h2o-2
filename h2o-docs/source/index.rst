@@ -24,9 +24,20 @@ development should also visit the getting started with development section
    tutorial/videos
    newuser/java_help
 
+Deployment and Big Data Management
+++++++++++++++++++++++++++++++++++++
+
+.. toctree::
+   :maxdepth: 1
+
+   deployment/hadoop
+   deployment/multinode
+   
+
 **Helpful Resources**
 +++++++++++++++++++++
-Various information related to the H\ :sub:`2`\ O project and data available in the public domain.
+Various information related to the H\ :sub:`2`\ O project and data
+available in the public domain.
 
 .. toctree::
    :maxdepth: 1
