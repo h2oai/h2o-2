@@ -363,7 +363,6 @@ public class DeepLearningModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (get_params().diagnostics) {
-        computeStats();
         if (!get_params().quiet_mode) {
           Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
           sb.append("Status of Neuron Layers:\n");
@@ -713,9 +712,11 @@ public class DeepLearningModel extends Model {
           err.train_hitratio = new HitRatio();
           err.train_hitratio.set_max_k(hit_k);
         }
+        if (get_params().diagnostics) model_info().computeStats();
         Log.info(model_info().toString());
         final Frame trainPredict = score(ftrain, false);
-        final double trainErr = calcError(ftrain, trainPredict, trainPredict, "training", printme, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
+        final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
+                printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
         if (isClassifier()) err.train_err = trainErr;
         else err.train_mse = trainErr;
 
@@ -751,7 +752,8 @@ public class DeepLearningModel extends Model {
             validPredict.replace(0, CMadapted); //replace label
             validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
           }
-          final double validErr = calcError(ftest, validPredict, hitratio_validPredict, "validation", printme, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
+          final double validErr = calcError(ftest, ftest.lastVec(), validPredict, hitratio_validPredict, "validation",
+                  printme, get_params().max_confusion_matrix_size, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
           if (isClassifier()) err.valid_err = validErr;
           else err.valid_mse = validErr;
           validPredict.delete();
@@ -853,60 +855,6 @@ public class DeepLearningModel extends Model {
       if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
     }
     return preds;
-  }
-
-  /**
-   * Compute the model error for a given test data set
-   * For multi-class classification, this is the classification error based on assigning labels for the highest predicted per-class probability.
-   * For binary classification, this is the classification error based on assigning labels using the optimal threshold for maximizing the F1 score.
-   * For regression, this is the mean squared error (MSE).
-   * @param ftest Frame containing test data
-   * @param fpreds Frame containing ADAPTED predicted data (classification: label + per-class probabilities, regression: target)
-   * @param hitratio_fpreds Frame containing predicted data (classification: label + per-class probabilities, regression: target)
-   * @param label Name for the scored data set
-   * @param printCM Whether to print the confusion matrix to stdout
-   * @param cm Confusion Matrix object to populate for multi-class classification (also used for regression)
-   * @param auc AUC object to populate for binary classification
-   * @return model error, see description above
-   */
-  public double calcError(Frame ftest, Frame fpreds, Frame hitratio_fpreds, String label, boolean printCM, ConfusionMatrix cm, AUC auc, HitRatio hr) {
-    StringBuilder sb = new StringBuilder();
-    double error;
-
-    // populate AUC
-    if (auc != null) {
-      auc.actual = ftest;
-      auc.vactual = ftest.lastVec();
-      auc.predict = fpreds;
-      auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
-      auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
-      auc.invoke();
-      auc.toASCII(sb);
-      error = auc.err(); //using optimal threshold for F1
-    }
-    // populate CM
-    else {
-      if (cm == null) cm = new ConfusionMatrix();
-      cm.actual = ftest;
-      cm.vactual = ftest.lastVec(); //original vector or adapted response (label) if CM adaptation was done
-      cm.predict = fpreds;
-      cm.vpredict = fpreds.vecs()[0]; //ditto
-      cm.invoke();
-      cm.toASCII(sb);
-      error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
-    }
-    if (hr != null) {
-      hr.actual = ftest;
-      hr.vactual = ftest.lastVec();
-      hr.predict = hitratio_fpreds;
-      hr.serve();
-      hr.toASCII(sb);
-    }
-    if (printCM && (auc != null || cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
-      Log.info("Scoring on " + label + " data:");
-      for (String s : sb.toString().split("\n")) Log.info(s);
-    }
-    return error;
   }
 
   public boolean generateHTML(String title, StringBuilder sb) {
