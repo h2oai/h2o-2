@@ -869,7 +869,7 @@ public class DeepLearningModel extends Model {
    * @param label Name for the scored data set to be printed
    * @param printMe Whether to print the scoring results to Log.info
    * @param max_conf_mat_size Largest size of Confusion Matrix (#classes) for it to be printed to Log.info
-   * @param cm Confusion Matrix object to populate for multi-class classification (also used for regression). If null, then a CM will be created unless auc != null
+   * @param cm Confusion Matrix object to populate for multi-class classification (also used for regression)
    * @param auc AUC object to populate for binary classification
    * @param hr HitRatio object to populate for classification
    * @return model error, see description above
@@ -900,17 +900,29 @@ public class DeepLearningModel extends Model {
     }
     // populate CM
     if (cm != null) {
-      if (auc != null) {
-        cm.cm = auc.cm(); //re-use CM from AUC (for best F1)
+      cm.actual = ftest;
+      cm.vactual = vactual;
+      cm.predict = fpreds;
+      cm.vpredict = fpreds.vecs()[0]; // prediction (either label or regression target)
+      cm.invoke();
+      if (isClassifier()) {
+        if (auc != null) {
+          //override the CM with the one computed by AUC (using optimal threshold)
+          //Note: must still call invoke above to set the domains etc.
+          cm.cm = new long[3][3]; // 1 extra layer for NaNs (not populated here, since AUC skips them)
+          cm.cm[0][0] = auc.cm()[0][0];
+          cm.cm[1][0] = auc.cm()[1][0];
+          cm.cm[0][1] = auc.cm()[0][1];
+          cm.cm[1][1] = auc.cm()[1][1];
+          assert(new hex.ConfusionMatrix(cm.cm).err() == auc.err()); //check consistency with AUC-computed error
+        } else {
+          error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
+        }
+        if (cm.cm.length <= max_conf_mat_size) cm.toASCII(sb);
       } else {
-        cm.actual = ftest;
-        cm.vactual = vactual;
-        cm.predict = fpreds;
-        cm.vpredict = fpreds.vecs()[0]; // prediction (either label or regression target)
-        cm.invoke();
-        if (cm.cm == null || cm.cm.length <= max_conf_mat_size)
-          cm.toASCII(sb);
-        error = isClassifier() ? new hex.ConfusionMatrix(cm.cm).err() : cm.mse;
+        assert(auc == null);
+        error = cm.mse;
+        cm.toASCII(sb);
       }
     }
     // populate HitRatio
