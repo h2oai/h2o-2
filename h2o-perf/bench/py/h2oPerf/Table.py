@@ -15,8 +15,8 @@ class PerfDB:
         db_host = '192.168.1.171'
         self.host = db_host
 #        self.host = "localhost"
-        if( socket.gethostbyname_ex(socket.gethostname())[2][0] == db_host):
-            self.host = "localhost"
+        #if( socket.gethostbyname_ex(socket.gethostname())[2][0] == db_host):
+        #    self.host = "localhost"
         self.db = MySQLdb.connect(host = self.host,
                                  user = "spencer",
                                  passwd = "spencer",

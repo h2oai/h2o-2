@@ -1,15 +1,9 @@
-import unittest, random, sys, time
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
 initList = [
-        ('r0.hex', 'r0.hex=c(1.3,0,1,2,3,4,5)'),
-        ('r1.hex', 'r1.hex=c(2.3,0,1,2,3,4,5)'),
-        ('r2.hex', 'r2.hex=c(3.3,0,1,2,3,4,5)'),
-        ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
-        ('r4.hex', 'r4.hex=c(5.3,0,1,2,3,4,5)'),
         ('r.hex', 'r.hex=i.hex'),
-        ('z.hex', 'z.hex=c(0)'),
         ]
 
 DO_IFELSE = False
@@ -149,8 +143,8 @@ exprList = [
         # "max(1,r.hex,3)",
 
         "factor(r.hex[,5])",
-        "r0.hex[,1]==1.0",
-        "runif(r4.hex[,1])",
+        "r.hex[,1]==1.0",
+        "runif(r.hex[,1])",
         "r.hex[,3]=4",
     
         # doesn't work
@@ -228,7 +222,11 @@ for i in range(1000):
     for j in range(concatNum):
         randExpr = random.choice(exprList)
         if DO_FORCE_LHS_ON_MULTI:
-            expr += "d=" + randExpr + ";"
+            # lhs =? 
+            if re.search("=(?!=)", randExpr):
+                expr += randExpr + ";"
+            else:
+                expr += "d=" + randExpr + ";"
         else:
             expr += randExpr + ";"
 
