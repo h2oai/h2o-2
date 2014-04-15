@@ -1,4 +1,4 @@
-source("../../R/h2oPerf/prologue.R")
+source("../../../R/h2oPerf/prologue.R")
 
 data_source <<- "home-0xdiag-datasets"
 
@@ -11,4 +11,4 @@ import.FV("parsed.hex", trainData)
 testData    <<-  "/home/0xdiag/datasets/mnist/mnist8m/mnist8m-test-1.csv"
 import.FV("test.hex", testData)
 
-source("../../R/h2oPerf/epilogue.R")
+source("../../../R/h2oPerf/epilogue.R")
