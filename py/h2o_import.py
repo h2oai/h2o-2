@@ -335,7 +335,7 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, 
-    importParentDir=False, **kwargs):
+    importParentDir=True, **kwargs):
 
     ## if h2o.beta_features:
     ##     print "HACK: temporarily disabling Summary always in v2 import_parse"
