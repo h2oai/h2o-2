@@ -1,9 +1,14 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_import
 
 ITERATIONS = 2
 DELETE_ON_DONE = 1
+IMPORT_PARENT_DIR = True
+SCHEMA = "local"
+DO_EXEC = True
+DO_DELETE_MYSELF = False
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -37,8 +42,8 @@ class Basic(unittest.TestCase):
             # PARSE****************************************
             hex_key =  csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
-                delete_on_done=DELETE_ON_DONE,
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema=SCHEMA, hex_key=hex_key,
+                delete_on_done=DELETE_ON_DONE, importParentDir=IMPORT_PARENT_DIR,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120, doSummary=False)
             elapsed = time.time() - start
             print "parse", trial, "end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
@@ -59,7 +64,7 @@ class Basic(unittest.TestCase):
             # figures out everything from parseResult['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
-            goodX = h2o_glm.goodXFromColumnInfo(y=54, key=parseResult['destination_key'], timeoutSecs=300)
+            # goodX = h2o_glm.goodXFromColumnInfo(y=54, key=parseResult['destination_key'], timeoutSecs=300)
 
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"
@@ -67,14 +72,15 @@ class Basic(unittest.TestCase):
                 h2o_cmd.runStoreView(node=node, timeoutSecs=30, view=10000)
 
             # convert to binomial
-            execExpr="A.hex=%s" % parseResult['destination_key']
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=20)
+            if DO_EXEC:
+                execExpr="A.hex=%s" % parseResult['destination_key']
+                h2e.exec_expr(execExpr=execExpr, timeoutSecs=20)
 
-            execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=20)
+                # execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
+                # h2e.exec_expr(execExpr=execExpr, timeoutSecs=20)
 
-            aHack = {'destination_key': "A.hex"}
-
+            if DO_DELETE_MYSELF:
+                h2o_import.delete_keys_at_all_nodes()
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
             trial += 1
