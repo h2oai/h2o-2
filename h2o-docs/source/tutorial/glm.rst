@@ -1,5 +1,5 @@
 GLM Tutorial
-------------
+==============
 
 The purpose of this tutorial is to walk the new user through 
 a GLM analysis beginning to end. The objective is to  learn how to

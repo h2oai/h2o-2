@@ -1,4 +1,4 @@
-source("../../R/h2oPerf/prologue.R")
+source("../../../R/h2oPerf/prologue.R")
 
 data_source <<- "home-0xdiag-datasets"
 
@@ -13,4 +13,4 @@ upload.FV("parsed.hex", trainData)
 testData    <<-  trainData
 upload.FV("test.hex", testData)
 
-source("../../R/h2oPerf/epilogue.R")
+source("../../../R/h2oPerf/epilogue.R")
