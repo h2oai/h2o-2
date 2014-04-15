@@ -1,6 +1,6 @@
 package water;
 
-import org.junit.BeforeClass;
+import org.junit.*;
 
 import water.util.Log;
 
@@ -43,5 +43,9 @@ public class CoreTest extends TestUtil {
       CPULoad cpu = (CPULoad)drt;
       _sum += cpu._sum;
     }
+  }
+
+  @Test @Ignore public void dummy_test() {
+    /* this is just a dummy test to avoid JUnit complains about missing test */
   }
 }

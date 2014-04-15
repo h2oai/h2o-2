@@ -4,6 +4,8 @@ import java.io.InputStreamReader;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import water.Key;
 import water.TestUtil;
@@ -63,5 +65,9 @@ public class HttpTest extends TestUtil {
     String destination_key;
     String end_time;
     String exception;
+  }
+
+  @Test @Ignore public void dummy_test() {
+    /* this is just a dummy test to avoid JUnit complains about missing test */
   }
 }
