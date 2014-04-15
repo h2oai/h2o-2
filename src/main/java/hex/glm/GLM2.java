@@ -250,12 +250,7 @@ public class GLM2 extends ModelJob {
       res = Math.max(res, Math.abs(b1[i] - b2[i]));
     return res;
   }
-  @Override public float progress(){
-    if(DKV.get(dest()) == null)return 0;
-    GLMModel m = DKV.get(dest()).get();
-    float progress =  (float)m.iteration()/(float)max_iter; // TODO, do something smarter here
-    return progress;
-  }
+  @Override public float progress(){ return (float)_iter/max_iter;}
 
   protected double l2norm(double[] beta){
     double l2 = 0;
@@ -402,6 +397,8 @@ public class GLM2 extends ModelJob {
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
         Log.info("GLM2 forcibly converged by getting NaNs and/or Infs in beta");
+        nextLambda(glmt,glmt._beta);
+        return;
       } else {
         if(_dinfo._standardize) {
           newBetaDeNorm = newBeta.clone();
