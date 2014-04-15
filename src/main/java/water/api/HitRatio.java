@@ -1,15 +1,18 @@
 package water.api;
 
 import static water.util.ModelUtils.getPredictions;
+import water.Func;
+import water.MRTask2;
+import water.UKV;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
 
-import water.*;
-import water.fvec.*;
-import water.util.Utils;
-
-public class HitRatio extends Request2 {
+public class HitRatio extends Func {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
   public static final String DOC_GET = "Hit Ratio";
@@ -40,8 +43,8 @@ public class HitRatio extends Request2 {
 
   public HitRatio() {}
 
-  @Override public Response serve() {
-    Vec va = null, vp;
+
+  @Override protected void init() throws IllegalArgumentException {
     // Input handling
     if( actual==null || predict==null )
       throw new IllegalArgumentException("Missing actual or predict!");
@@ -51,7 +54,10 @@ public class HitRatio extends Request2 {
       throw new IllegalArgumentException("Both arguments must have the same length!");
     if (!vactual.isInt())
       throw new IllegalArgumentException("Actual column must be integer class labels!");
+  }
 
+  @Override protected void execImpl() {
+    Vec va = null;
     try {
       va = vactual.toEnum(); // always returns TransfVec
       actual_domain = va._domain;
@@ -61,9 +67,6 @@ public class HitRatio extends Request2 {
       final Frame actual_predict = new Frame(predict.names().clone(), predict.vecs().clone());
       actual_predict.replace(0, va); // place actual labels in first column
       hit_ratios = new HitRatioTask(max_k, seed).doAll(actual_predict).hit_ratios();
-      return Response.done(this);
-    } catch( Throwable t ) {
-      return Response.error(t);
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
     }

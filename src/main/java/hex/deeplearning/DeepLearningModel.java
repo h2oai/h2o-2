@@ -899,7 +899,7 @@ public class DeepLearningModel extends Model {
       hr.actual = ftest;
       hr.vactual = ftest.lastVec();
       hr.predict = hitratio_fpreds;
-      hr.serve();
+      hr.invoke();
       hr.toASCII(sb);
     }
     if (printCM && (auc != null || cm.cm==null /*regression*/ || cm.cm.length <= model_info().get_params().max_confusion_matrix_size)) {
