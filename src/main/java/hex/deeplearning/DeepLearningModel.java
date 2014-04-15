@@ -363,7 +363,6 @@ public class DeepLearningModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (get_params().diagnostics) {
-        computeStats();
         if (!get_params().quiet_mode) {
           Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
           sb.append("Status of Neuron Layers:\n");
@@ -713,6 +712,7 @@ public class DeepLearningModel extends Model {
           err.train_hitratio = new HitRatio();
           err.train_hitratio.set_max_k(hit_k);
         }
+        if (get_params().diagnostics) model_info().computeStats();
         Log.info(model_info().toString());
         final Frame trainPredict = score(ftrain, false);
         final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
