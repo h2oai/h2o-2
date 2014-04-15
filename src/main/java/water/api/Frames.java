@@ -42,6 +42,12 @@ public class Frames extends Request2 {
   @API(help="Find Models that are compatible with the Frame.", required=false, filter=Default.class)
   boolean find_compatible_models = false;
 
+  @API(help="An existing H2O Model key to score with the Frame which is specified by the key parameter.", required=false, filter=Default.class)
+  Model score_model = null;
+
+  @API(help="Should we adapt() the Frame to the Model?", required=false, filter=Default.class)
+  boolean adapt = true;
+
 
   /////////////////
   // The Code (tm):
@@ -234,13 +240,29 @@ public class Frames extends Request2 {
 
   }
 
+
+  private Response scoreOne(Frame frame, Model score_model, boolean adapt) {
+    Frame predictions = score_model.score(frame, adapt);
+
+    // Now call AUC and ConfusionMatrix and maybe HitRatio
+    JsonObject result = gson.fromJson("{\"not yet\": \"sorry\"}", JsonElement.class).getAsJsonObject();
+    return Response.done(result);
+  }
+
+
   @Override
   protected Response serve() {
 
     if (null == this.key) {
       return serveAll();
     } else {
-      return serveOne(this.key);
+      if (null == this.score_model) {
+        // just serve it
+        return serveOne(this.key);
+      } else {
+        // score it
+        return scoreOne(this.key, this.score_model, this.adapt);
+      }
     }
 
   } // serve()
