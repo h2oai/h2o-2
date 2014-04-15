@@ -718,31 +718,33 @@ public class DeepLearning extends Job.ValidatedJob {
     if (hidden_dropout_ratios == null) {
       hidden_dropout_ratios = new double[hidden.length];
       if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
-        Log.info("Automatically setting all hidden dropout ratios to 0.5.");
+        if (!quiet_mode) Log.info("Automatically setting all hidden dropout ratios to 0.5.");
         Arrays.fill(hidden_dropout_ratios, 0.5);
       }
     }
     else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
     else if (hidden_dropout_ratios != null) {
       if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
-        Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
+        if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
       }
     }
 
-    if (adaptive_rate) {
-      Log.info("Using automatic learning rate.  Ignoring the following input parameters:");
-      Log.info("  rate, rate_decay, rate_annealing, momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient.");
-    } else {
-      Log.info("Using manual learning rate.  Ignoring the following input parameters:");
-      Log.info("  rho, epsilon");
-    }
+    if (!quiet_mode) {
+      if (adaptive_rate) {
+        Log.info("Using automatic learning rate.  Ignoring the following input parameters:");
+        Log.info("  rate, rate_decay, rate_annealing, momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient.");
+      } else {
+        Log.info("Using manual learning rate.  Ignoring the following input parameters:");
+        Log.info("  rho, epsilon");
+      }
 
-    if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
-      Log.info("Ignoring initial_weight_scale for UniformAdaptive weight distribution.");
+      if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
+        Log.info("Ignoring initial_weight_scale for UniformAdaptive weight distribution.");
+      }
     }
 
     if(!classification && loss != Loss.MeanSquare) {
-      Log.warn("Automatically setting loss to MeanSquare for regression.");
+      if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
       loss = Loss.MeanSquare;
     }
     // make default job_key and destination_key in case they are missing
@@ -816,7 +818,7 @@ public class DeepLearning extends Job.ValidatedJob {
     Frame train, trainScoreFrame;
     try {
       lock_data();
-      if (checkpoint == null) logStart(); //if checkpoint is given, some Job's params might be uninitialized (but the restarted model's parameters are correct)
+      if (checkpoint == null && !quiet_mode) logStart(); //if checkpoint is given, some Job's params might be uninitialized (but the restarted model's parameters are correct)
       if (model == null) {
         model = UKV.get(dest());
       }
@@ -825,7 +827,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
       prepareValidationWithModel(model);
       final long model_size = model.model_info().size();
-      Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
+      if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
 //      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
       if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
@@ -841,7 +843,7 @@ public class DeepLearning extends Job.ValidatedJob {
       trainScoreFrame = sampleFrame(train, mp.score_training_samples, mp.seed); //training scoring dataset is always sampled uniformly from the training dataset
       if (train != trainScoreFrame) ltrash(trainScoreFrame);
 
-      Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
+      if (!quiet_mode) Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
         Frame adaptedValid = getValidation();
         if (getValidAdaptor().needsAdaptation2CM()) {
@@ -855,7 +857,7 @@ public class DeepLearning extends Job.ValidatedJob {
           validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
         if (mp.force_load_balance) validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
-        Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
+        if (!quiet_mode) Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
