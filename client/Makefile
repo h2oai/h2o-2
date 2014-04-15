@@ -58,6 +58,18 @@ build: \
 	$(DEPLOY)/fonts/glyphicons-halflings-regular.svg \
 	$(DEPLOY)/fonts/glyphicons-halflings-regular.ttf \
 	$(DEPLOY)/fonts/glyphicons-halflings-regular.woff \
+	$(DEPLOY)/fonts/Roboto-Bold-webfont.eot \
+	$(DEPLOY)/fonts/Roboto-Bold-webfont.svg \
+	$(DEPLOY)/fonts/Roboto-Bold-webfont.ttf \
+	$(DEPLOY)/fonts/Roboto-Bold-webfont.woff \
+	$(DEPLOY)/fonts/Roboto-Light-webfont.eot \
+	$(DEPLOY)/fonts/Roboto-Light-webfont.svg \
+	$(DEPLOY)/fonts/Roboto-Light-webfont.ttf \
+	$(DEPLOY)/fonts/Roboto-Light-webfont.woff \
+	$(DEPLOY)/fonts/Roboto-Regular-webfont.eot \
+	$(DEPLOY)/fonts/Roboto-Regular-webfont.svg \
+	$(DEPLOY)/fonts/Roboto-Regular-webfont.ttf \
+	$(DEPLOY)/fonts/Roboto-Regular-webfont.woff \
 	$(DEPLOY)/css/lib.css \
 	$(DEPLOY)/css/steam.css \
 	$(DEPLOY)/js/lib.js \
@@ -201,12 +213,29 @@ $(DEPLOY)/js/steam.js: $(SCRIPTS) $(BOOT)
 	cat $^ >> $@
 	@echo '}).call(this);' >> $@
 
-$(DEPLOY)/fonts/glyphicons-halflings-regular.eot: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.eot
-$(DEPLOY)/fonts/glyphicons-halflings-regular.svg: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.svg
-$(DEPLOY)/fonts/glyphicons-halflings-regular.ttf: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.ttf
-$(DEPLOY)/fonts/glyphicons-halflings-regular.woff: $(LIB)/bootstrap/dist/fonts/glyphicons-halflings-regular.woff
 
-$(DEPLOY)/fonts/%: 
+$(DEPLOY)/fonts/%.eot: src/fonts/%.eot
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.svg: src/fonts/%.svg
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.ttf: src/fonts/%.ttf
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.woff: src/fonts/%.woff
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.eot: $(LIB)/bootstrap/dist/fonts/%.eot
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.svg: $(LIB)/bootstrap/dist/fonts/%.svg
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.ttf: $(LIB)/bootstrap/dist/fonts/%.ttf
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.woff: $(LIB)/bootstrap/dist/fonts/%.woff
 	@mkdir -p $(@D)
 	cp $< $@
 
