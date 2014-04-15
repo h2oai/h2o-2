@@ -362,34 +362,32 @@ public class DeepLearningModel extends Model {
 
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
-      if (get_params().diagnostics) {
-        if (!get_params().quiet_mode) {
-          Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
-          sb.append("Status of Neuron Layers:\n");
-          sb.append("#  Units         Type      Dropout    L1       L2    " + (get_params().adaptive_rate ? "  Rate (Mean,RMS)   " : "  Rate      Momentum") + "   Weight (Mean, RMS)      Bias (Mean,RMS)\n");
-          final String format = "%7g";
-          for (int i=0; i<neurons.length; ++i) {
-            sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
-                    + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
-            if (i == 0) {
-              sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + " \n");
-              continue;
-            }
-            else if (i < neurons.length-1) {
-              sb.append("  " + formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
-            } else {
-              sb.append("          ");
-            }
-            sb.append(
-                    " " + String.format("%5f", neurons[i].params.l1)
-                            + " " + String.format("%5f", neurons[i].params.l2)
-                            + " " + (get_params().adaptive_rate ? (" (" + String.format(format, mean_rate[i]) + ", " + String.format(format, rms_rate[i]) + ")" )
-                                    : (String.format("%10g", neurons[i].rate(get_processed_total())) + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))))
-                            + " (" + String.format(format, mean_weight[i])
-                            + ", " + String.format(format, rms_weight[i]) + ")"
-                            + " (" + String.format(format, mean_bias[i])
-                            + ", " + String.format(format, rms_bias[i]) + ")\n");
+      if (get_params().diagnostics && !get_params().quiet_mode) {
+        Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
+        sb.append("Status of Neuron Layers:\n");
+        sb.append("#  Units         Type      Dropout    L1       L2    " + (get_params().adaptive_rate ? "  Rate (Mean,RMS)   " : "  Rate      Momentum") + "   Weight (Mean, RMS)      Bias (Mean,RMS)\n");
+        final String format = "%7g";
+        for (int i=0; i<neurons.length; ++i) {
+          sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
+                  + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
+          if (i == 0) {
+            sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + " \n");
+            continue;
           }
+          else if (i < neurons.length-1) {
+            sb.append("  " + formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
+          } else {
+            sb.append("          ");
+          }
+          sb.append(
+                  " " + String.format("%5f", neurons[i].params.l1)
+                          + " " + String.format("%5f", neurons[i].params.l2)
+                          + " " + (get_params().adaptive_rate ? (" (" + String.format(format, mean_rate[i]) + ", " + String.format(format, rms_rate[i]) + ")" )
+                          : (String.format("%10g", neurons[i].rate(get_processed_total())) + " " + String.format("%5f", neurons[i].momentum(get_processed_total()))))
+                          + " (" + String.format(format, mean_weight[i])
+                          + ", " + String.format(format, rms_weight[i]) + ")"
+                          + " (" + String.format(format, mean_bias[i])
+                          + ", " + String.format(format, rms_bias[i]) + ")\n");
         }
       }
       return sb.toString();
@@ -712,7 +710,8 @@ public class DeepLearningModel extends Model {
           err.train_hitratio.set_max_k(hit_k);
         }
         if (get_params().diagnostics) model_info().computeStats();
-        Log.info(model_info().toString());
+        final String m = model_info().toString();
+        if (m.length() > 0) Log.info(m);
         final Frame trainPredict = score(ftrain, false);
         final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
                 printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
