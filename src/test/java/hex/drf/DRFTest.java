@@ -63,23 +63,22 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
-  //  @Ignore
-  @Test public void testClassCars50() throws Throwable {
+  @Test public void testClassCars5() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
-        50,
-        a( a(0,   4, 0,  0,   0),
-           a(0, 207, 0,  0,   0),
+        5,
+        a( a(1,   3, 0,  1,   0),
+           a(2, 173, 2,  3,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   4, 0, 80,   0),
-           a(0,   0, 1,  3, 104)),
+           a(0,   6, 0, 61,   1),
+           a(0,   0, 0,  1,  92)),
         s("3", "4", "5", "6", "8"));
   }
 
   @Test
   public void testConstantCols() throws Throwable {
-    try { 
+    try {
       basicDRFTestOOBE(
         "./smalldata/poker/poker100","poker.hex",
         new PrepData() { @Override int prep(Frame fr) {

@@ -370,12 +370,13 @@ public class GLM2 extends ModelJob {
         ADMMSolver.subgrad(alpha[0], lambda[_lambdaIdx], glmt._beta, grad);
         double err = 0;
         for(double d:grad)
-          if(d > err)err = d;
+          if(d > err) err = d;
           else if(d < -err) err = -d;
         Log.info("GLM2 gradient after " + _iter + " iterations = " + err);
         if(err <= GLM_GRAD_EPS){
           Log.info("GLM2 converged with max |subgradient| = " + err);
-          nextLambda(glmt, glmt._beta, glmt._val);
+          if(n_folds > 1) nextLambda(glmt, glmt._beta);
+          else nextLambda(glmt, glmt._beta,glmt._val);
           return;
         }
       }
@@ -457,8 +458,7 @@ public class GLM2 extends ModelJob {
   @Override
   public GLM2 fork(){
     start(new H2O.H2OEmptyCompleter());
-
-    run();
+    run(true);
     return this;
   }
   // start inside of parent job
@@ -469,8 +469,9 @@ public class GLM2 extends ModelJob {
   }
   public long start = 0;
 
-  public void run(){
-    logStart();
+  public void run(){run(false);}
+  public void run(final boolean doLog){
+    if(doLog)logStart();
     assert alpha.length == 1;
     start = System.currentTimeMillis();
     if(lambda == null){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max

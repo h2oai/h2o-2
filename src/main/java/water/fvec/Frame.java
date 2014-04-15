@@ -273,7 +273,7 @@ public class Frame extends Lockable<Frame> {
 
     Vec[] vec = Arrays.copyOfRange(vecs(),startIdx,endIdx);
     _names = names;
-    _vecs = vec;
+    _vecs = vecs;
     _keys = keys;
     _col0 = null;
     return vec;
