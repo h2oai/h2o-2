@@ -162,7 +162,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
 def import_only(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, 
-    importParentDir=False, **kwargs):
+    importParentDir=True, **kwargs):
 
     if src_key and schema!='put':
         raise Exception("can only specify a 'src_key' param for schema='put'. You have %s %s" % (schema, src_key))
