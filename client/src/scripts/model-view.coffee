@@ -1,9 +1,16 @@
 Steam.ModelView = (_, key, model) ->
 
+  stringify = (value) ->
+    if isArray value
+      join value, ', '
+    else
+      value
   createDefinitionList = (data) ->
     [ dl, li, dt, dd ] = geyser.generate '.y-summary .y-summary-item .y-summary-key .y-summary-value'
+
     #BUG this should work with scalars
-    dl mapWithKey data, (value, key) -> li [ (dt key), (dd value) ]
+    dl mapWithKey data, (value, key) ->
+      li [ (dt key), (dd stringify value) ]
 
   # Summary section
   createSummarySection = (model) ->
