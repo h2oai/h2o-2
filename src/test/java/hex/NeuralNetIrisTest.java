@@ -7,7 +7,6 @@ import hex.Layer.VecsInput;
 import hex.NeuralNet.Loss;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
@@ -42,7 +41,8 @@ public class NeuralNetIrisTest extends TestUtil {
     else Assert.failNotEquals("Not equal: ", new Double(a), new Double(b));
   }
 
-  @Test public void compare() throws Exception {
+//  @Test
+  public void compare() throws Exception {
 
     // Testing different things
     // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
