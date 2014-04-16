@@ -61,6 +61,12 @@ public class GLM2 extends ModelJob {
   @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
   boolean higher_accuracy;
 
+  @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class)
+  boolean use_all_factor_levels;
+
+  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
+  boolean lambda_search;
+  
   // API input parameters END ------------------------------------------------------------
 
   // API output parameters BEGIN ------------------------------------------------------------
@@ -101,9 +107,7 @@ public class GLM2 extends ModelJob {
   public GLMParams _glm;
 
   private double ADMM_GRAD_EPS = 1e-4; // default addm gradietn eps
-
-  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
-  boolean lambda_search;
+  private static final double MIN_ADMM_GRAD_EPS = 1e-6; // min admm gradient eps
 
   int _lambdaIdx = 0;
 
@@ -237,7 +241,7 @@ public class GLM2 extends ModelJob {
     if(lambda_search && lambda.length > 1)
       throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda, representing the lambda min (smallest lambda in the lambda search).");
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
-    _dinfo = new DataInfo(fr, 1, standardize);
+    _dinfo = new DataInfo(fr, 1, use_all_factor_levels, standardize,false);
     if(higher_accuracy)setHighAccuracy();
   }
   @Override protected Response serve() {
