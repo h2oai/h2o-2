@@ -8,8 +8,12 @@ import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
+import org.apache.commons.math3.util.Pair;
 import water.*;
+import water.fvec.Frame;
 import water.util.Log;
+
+import water.api.Frames.FrameSummary;
 
 public class Models extends Request2 {
 
@@ -34,6 +38,15 @@ public class Models extends Request2 {
   @API(help="An existing H2O Model key.", required=false, filter=Default.class)
   Model key = null;
 
+  @API(help="Find Frames that are compatible with the Model.", required=false, filter=Default.class)
+  boolean find_compatible_frames = false;
+
+  @API(help="An existing H2O Frame key to score with the Model which is specified by the key parameter.", required=false, filter=Default.class)
+  Frame score_frame = null;
+
+  @API(help="Should we adapt() the Frame to the Model?", required=false, filter=Default.class)
+  boolean adapt = true;
+
 
   /////////////////
   // The Code (tm):
@@ -47,6 +60,7 @@ public class Models extends Request2 {
     public List<String> input_column_names = new ArrayList<String>();
     public String response_column_name = "unknown";
     public Map parameters = new HashMap<String, Object>();
+    public Set<String> compatible_frames = new HashSet<String>();
   }
 
   private static Map whitelistJsonObject(JsonObject unfiltered, Set<String> whitelist) {
@@ -65,7 +79,56 @@ public class Models extends Request2 {
   }
 
 
-  public static Map<String, ModelSummary> generateModelSummaries(Set<String>keys, Map<String, Model> models) {
+  /**
+   * Fetch all the Frames so we can see if they are compatible with our Model(s).
+   */
+  private Pair<Map<String, Frame>, Map<String, Set<String>>> fetchFrames() {
+    Map<String, Frame> all_frames = null;
+    Map<String, Set<String>> all_frames_cols = null;
+
+    if (this.find_compatible_frames) {
+      // caches for this request
+      all_frames = Frames.fetchAll();
+      all_frames_cols = new TreeMap<String, Set<String>>();
+
+      for (Map.Entry<String, Frame> entry : all_frames.entrySet()) {
+        all_frames_cols.put(entry.getKey(), new TreeSet<String>(Arrays.asList(entry.getValue()._names)));
+      }
+    }
+    return new Pair<Map<String, Frame>, Map<String, Set<String>>>(all_frames, all_frames_cols);
+  }
+
+
+  private static Map<String, Frame> findCompatibleFrames(Model model, Map<String, Frame> all_frames, Map<String, Set<String>> all_frames_cols) {
+    Map<String, Frame> compatible_frames = new TreeMap<String, Frame>();
+
+    Set<String> model_column_names = new HashSet(Arrays.asList(model._names));
+
+    for (Map.Entry<String, Set<String>> entry : all_frames_cols.entrySet()) {
+      Set<String> frame_cols = entry.getValue();
+
+      if (frame_cols.containsAll(model_column_names)) {
+        /// See if adapt throws an exception or not.
+        try {
+          Frame frame = all_frames.get(entry.getKey());
+          Frame[] outputs = model.adapt(frame, false); // TODO: this does too much work; write canAdapt()
+          // TODO: we have to free the vecTrash vectors?
+          // Model vecTrash = inputs[1];
+
+          // A-Ok
+          compatible_frames.put(entry.getKey(), frame);
+        }
+        catch (Exception e) {
+          // skip
+        }
+      }
+    }
+
+    return compatible_frames;
+  }
+
+
+  public static Map<String, ModelSummary> generateModelSummaries(Set<String>keys, Map<String, Model> models, boolean find_compatible_frames, Map<String, Frame> all_frames, Map<String, Set<String>> all_frames_cols) {
       Map<String, ModelSummary> modelSummaries = new TreeMap<String, ModelSummary>();
 
       if (null == keys) {
@@ -74,7 +137,7 @@ public class Models extends Request2 {
 
       for (String key : keys) {
         ModelSummary summary = new ModelSummary();
-        Models.summarizeAndEnhanceModel(summary, models.get(key));
+        Models.summarizeAndEnhanceModel(summary, models.get(key), find_compatible_frames, all_frames, all_frames_cols);
         modelSummaries.put(key, summary);
       }
 
@@ -85,7 +148,7 @@ public class Models extends Request2 {
   /**
    * Summarize subclasses of water.Model.
    */
-  protected static void summarizeAndEnhanceModel(ModelSummary summary, Model model) {
+  protected static void summarizeAndEnhanceModel(ModelSummary summary, Model model, boolean find_compatible_frames, Map<String, Frame> all_frames, Map<String, Set<String>> all_frames_cols) {
     if (model instanceof hex.glm.GLMModel) {
       summarizeGLMModel(summary, (hex.glm.GLMModel) model);
     } else if (model instanceof hex.drf.DRF.DRFModel) {
@@ -97,6 +160,11 @@ public class Models extends Request2 {
     } else {
       // catch-all
       summarizeModelCommonFields(summary, (Model) model);
+    }
+
+    if (find_compatible_frames) {
+      Map<String, Frame> compatible_frames = findCompatibleFrames(model, all_frames, all_frames_cols);
+      summary.compatible_frames = compatible_frames.keySet();
     }
   }
 
@@ -311,13 +379,39 @@ public class Models extends Request2 {
 
 
   /**
+   * Score a frame with the given model.
+   */
+  protected static Response scoreOne(Frame frame, Model score_model, boolean adapt) {
+    return Frames.scoreOne(frame, score_model, adapt);
+  }
+
+
+  /**
    * Fetch all the Models from the KV store, sumamrize and enhance them, and return a map of them.
    */
   private Response serveOneOrAll(Map<String, Model> modelsMap) {
-    Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(null, modelsMap);
+    // returns empty sets if !this.find_compatible_frames
+    Pair<Map<String, Frame>, Map<String, Set<String>>> frames_info = fetchFrames();
+    Map<String, Frame> all_frames = frames_info.getFirst();
+    Map<String, Set<String>> all_frames_cols = frames_info.getSecond();
+
+    Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(null, modelsMap, find_compatible_frames, all_frames, all_frames_cols);
 
     Map resultsMap = new LinkedHashMap();
     resultsMap.put("models", modelSummaries);
+
+    // If find_compatible_frames then include a map of the Frame summaries.  Should we put this on a separate switch?
+    if (this.find_compatible_frames) {
+      Set<String> all_referenced_frames = new TreeSet<String>();
+
+      for (Map.Entry<String, ModelSummary> entry: modelSummaries.entrySet()) {
+        ModelSummary summary = entry.getValue();
+        all_referenced_frames.addAll(summary.compatible_frames);
+      }
+
+      Map<String, FrameSummary> frameSummaries = Frames.generateFrameSummaries(all_referenced_frames, all_frames, false, null, null);
+      resultsMap.put("frames", frameSummaries);
+    }
 
     // TODO: temporary hack to get things going
     String json = gson.toJson(resultsMap);
@@ -333,12 +427,15 @@ public class Models extends Request2 {
     if (null == this.key) {
       return serveOneOrAll(fetchAll());
     } else {
-      Model model = this.key;
-      Map<String, Model> modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
-      modelsMap.put(model._key.toString(), model);
-      return serveOneOrAll(modelsMap);
+      if (null == this.score_frame) {
+        Model model = this.key;
+        Map<String, Model> modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+        modelsMap.put(model._key.toString(), model);
+        return serveOneOrAll(modelsMap);
+      } else {
+        return scoreOne(this.score_frame, this.key, this.adapt);
+      }
     }
-
   } // serve()
 
 }

@@ -77,6 +77,9 @@ public class Frames extends Request2 {
 
 
 
+  /**
+   * Fetch all the Models so we can see if they are compatible with our Frame(s).
+   */
   private Pair<Map<String, Model>, Map<String, Set<String>>> fetchModels() {
     Map<String, Model> all_models = null;
     Map<String, Set<String>> all_models_cols = null;
@@ -123,6 +126,21 @@ public class Frames extends Request2 {
   }
 
 
+  public static Map<String, FrameSummary> generateFrameSummaries(Set<String>keys, Map<String, Frame> frames, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
+      Map<String, FrameSummary> frameSummaries = new TreeMap<String, FrameSummary>();
+
+      if (null == keys) {
+        keys = frames.keySet();
+      }
+
+      for (String key : keys) {
+        FrameSummary summary = new FrameSummary();
+        Frames.summarizeAndEnhanceFrame(summary, frames.get(key), find_compatible_models, all_models, all_models_cols);
+        frameSummaries.put(key, summary);
+      }
+
+      return frameSummaries;
+  }
 
 
   /**
@@ -141,7 +159,7 @@ public class Frames extends Request2 {
   /**
    * Fetch all Frames from the KV store.
    */
-  protected Map<String, Frame>fetchAll() {
+  protected static Map<String, Frame>fetchAll() {
     // Get all the fvec frame keys.
     //
     // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
@@ -175,32 +193,27 @@ public class Frames extends Request2 {
   /**
    * Fetch all the Frames from the KV store, sumamrize and enhance them, and return a map of them.
    */
-  private Response serveAll() {
-    Map<String, FrameSummary> frameSummariesMap = new TreeMap<String, FrameSummary>(); // Sort for pretty display and reliable ordering.
-    Map<String, Frame> framesMap = fetchAll();
-
+  private Response serveOneOrAll(Map<String, Frame> framesMap) {
     // returns empty sets if !this.find_compatible_models
     Pair<Map<String, Model>, Map<String, Set<String>>> models_info = fetchModels();
     Map<String, Model> all_models = models_info.getFirst();
     Map<String, Set<String>> all_models_cols = models_info.getSecond();
 
-    Set<String> all_referenced_models = new TreeSet<String>();
-    for (Map.Entry<String, Frame> entry : framesMap.entrySet()) {
-      String keyString = entry.getKey();
-      FrameSummary summary = new FrameSummary();
-      Frame frame = entry.getValue();
-
-      summarizeAndEnhanceFrame(summary, frame, this.find_compatible_models, all_models, all_models_cols);
-      all_referenced_models.addAll(summary.compatible_models);
-      frameSummariesMap.put(keyString, summary);
-    }
+    Map<String, FrameSummary> frameSummaries = Frames.generateFrameSummaries(null, framesMap, find_compatible_models, all_models, all_models_cols);
 
     Map resultsMap = new LinkedHashMap();
-    resultsMap.put("frames", frameSummariesMap);
+    resultsMap.put("frames", frameSummaries);
 
-    // If find_compatible_models then include a map of the model summaries.  Should we put this on a separate switch?
+    // If find_compatible_models then include a map of the Model summaries.  Should we put this on a separate switch?
     if (this.find_compatible_models) {
-      Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(all_referenced_models, all_models);
+      Set<String> all_referenced_models = new TreeSet<String>();
+
+      for (Map.Entry<String, FrameSummary> entry: frameSummaries.entrySet()) {
+        FrameSummary summary = entry.getValue();
+        all_referenced_models.addAll(summary.compatible_models);
+      }
+
+      Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(all_referenced_models, all_models, false, null, null);
       resultsMap.put("models", modelSummaries);
     }
 
@@ -212,41 +225,10 @@ public class Frames extends Request2 {
   }
 
 
-  private Response serveOne(Frame frame) {
-    Map frameSummariesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
-    FrameSummary summary = new FrameSummary();
-
-    // returns empty sets if !this.find_compatible_models
-    Pair<Map<String, Model>, Map<String, Set<String>>> models_info = fetchModels();
-    Map<String, Model> all_models = models_info.getFirst();
-    Map<String, Set<String>> all_models_cols = models_info.getSecond();
-
-    summarizeAndEnhanceFrame(summary, frame, this.find_compatible_models, all_models, all_models_cols);
-    frameSummariesMap.put(frame._key.toString(), summary);
-
-    Set<String> all_referenced_models = new TreeSet<String>();
-    all_referenced_models.addAll(summary.compatible_models);
-
-    Map resultsMap = new LinkedHashMap();
-    resultsMap.put("frames", frameSummariesMap);
-
-    // If find_compatible_models then include a map of the model summaries.  Should we put this on a separate switch?
-    if (this.find_compatible_models) {
-      Map<String, ModelSummary> modelSummaries = Models.generateModelSummaries(all_referenced_models, all_models);
-      resultsMap.put("models", modelSummaries);
-    }
-
-    // TODO: temporary hack to get things going
-    String json = gson.toJson(resultsMap);
-    // Log.info("Json for results: " + json);
-
-    JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
-    return Response.done(result);
-
-  }
-
-
-  private Response scoreOne(Frame frame, Model score_model, boolean adapt) {
+  /**
+   * Score a frame with the given model.
+   */
+  protected static Response scoreOne(Frame frame, Model score_model, boolean adapt) {
     Frame input = frame;
 
     if (adapt) {
@@ -268,10 +250,10 @@ public class Frames extends Request2 {
     if (score_model.isClassifier()) {
       auc = new AUC();
 //      hr = new HitRatio();
-      error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+      error = score_model.calcError(input, input.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
                                     true, 20, cm, auc, hr);
     } else {
-      error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+      error = score_model.calcError(input, input.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
                                     true, 20, cm, null, null);
     }
 
@@ -303,11 +285,14 @@ public class Frames extends Request2 {
   protected Response serve() {
 
     if (null == this.key) {
-      return serveAll();
+      return serveOneOrAll(fetchAll());
     } else {
       if (null == this.score_model) {
         // just serve it
-        return serveOne(this.key);
+        Frame frame = this.key;
+        Map<String, Frame> framesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
+        framesMap.put(frame._key.toString(), frame);
+        return serveOneOrAll(framesMap);
       } else {
         // score it
         return scoreOne(this.key, this.score_model, this.adapt);
