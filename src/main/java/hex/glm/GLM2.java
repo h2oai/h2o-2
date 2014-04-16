@@ -90,6 +90,9 @@ public class GLM2 extends ModelJob {
   @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
   boolean higher_accuracy;
 
+  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
+  boolean lambda_search;
+
   int _lambdaIdx = 0;
 
   private transient double _addedL2;
@@ -144,9 +147,9 @@ public class GLM2 extends ModelJob {
     this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,null);
   }
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob){
-    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,0);
+    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,false,0);
   }
-  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, double proximalPenalty) {
+  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, boolean highAccuracy, double proximalPenalty) {
     assert beta == null || beta.length == (dinfo.fullN()+1):"unexpected size of beta, got length " + beta.length + ", expected " + dinfo.fullN();
     job_key = jobKey;
     description = desc;
@@ -164,13 +167,13 @@ public class GLM2 extends ModelJob {
     source = dinfo._adaptedFrame;
     response = dinfo._adaptedFrame.lastVec();
     _jobName = dest.toString() + ((nfolds > 1)?("[" + dinfo._foldId + "]"):"");
+    higher_accuracy = highAccuracy;
   }
 
   static String arrayToString (double[] arr) {
     if (arr == null) {
       return "(null)";
     }
-
     StringBuffer sb = new StringBuffer();
     for (int i = 0; i < arr.length; i++) {
       if (i > 0) {
@@ -222,6 +225,8 @@ public class GLM2 extends ModelJob {
 
   @Override public void init(){
     super.init();
+    if(lambda_search && lambda.length > 1)
+      throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda, representing the lambda min (smallest lambda in the lambda search).");
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
     _dinfo = new DataInfo(fr, 1, standardize);
     if(higher_accuracy)setHighAccuracy();
@@ -471,7 +476,8 @@ public class GLM2 extends ModelJob {
     if(doLog)logStart();
     assert alpha.length == 1;
     start = System.currentTimeMillis();
-    if(lambda == null){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
+    final double lambda_min = lambda[lambda.length-1];
+    if(lambda_search){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
       new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
         @Override public void callback(final YMUTask ymut){
           if(ymut._ymin == ymut._ymax){
