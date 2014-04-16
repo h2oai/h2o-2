@@ -28,15 +28,16 @@ class Basic(unittest.TestCase):
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
-            "3G_poker_shuffle",
+            # "3G_poker_shuffle"
             "airlines_all.csv",
             "and-testing.data",
             "arcene2_train.both",
             "arcene_train.both",
             "bestbuy_test.csv",
-            # "covtype.169x.data",
+            "covtype.169x.data",
+            "covtype.data",
             "covtype4x.shuffle.data",
-            "four_billion_rows.csv",
+            # "four_billion_rows.csv",
             "hhp.unbalanced.012.data.gz",
             "hhp.unbalanced.data.gz",
             "leads.csv",
