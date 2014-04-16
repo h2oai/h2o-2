@@ -4,6 +4,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h
 
 ITERATIONS = 20
 DELETE_ON_DONE = 1
+DO_EXEC = True
+DO_UNCOMPRESSED = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -31,7 +33,10 @@ class Basic(unittest.TestCase):
         trial = 0
         for iteration in range(ITERATIONS):
             
-            csvFilename = "file_1.dat.gz"
+            if DO_UNCOMPRESSED:
+                csvFilename = "a_1.dat"
+            else:
+                csvFilename = "file_1.dat.gz"
             csvPathname = csvDirname + "/" + csvFilename
             trialStart = time.time()
             # import***************************************** 
@@ -49,6 +54,19 @@ class Basic(unittest.TestCase):
             print "\nTrying StoreView after the import"
             for node in h2o.nodes:
                 h2o_cmd.runStoreView(node=node, timeoutSecs=30, view=10000)
+
+            # exec does read lock on all existing keys
+            if DO_EXEC:
+                # fails
+                execExpr="A.hex=c(0,1)"
+                # execExpr="A.hex=0;"
+                h2e.exec_expr(execExpr=execExpr, timeoutSecs=20)
+                h2o_cmd.runInspect(key='A.hex')
+
+            print "\nTrying StoreView after the exec "
+            h2o_cmd.runStoreView(timeoutSecs=30, view=10000)
+            # for node in h2o.nodes:
+            #    h2o_cmd.runStoreView(node=node, timeoutSecs=30, view=10000)
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
             trial += 1

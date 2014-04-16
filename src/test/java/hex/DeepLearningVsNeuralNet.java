@@ -8,7 +8,6 @@ import hex.deeplearning.DeepLearningTask;
 import hex.deeplearning.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
@@ -46,7 +45,8 @@ public class DeepLearningVsNeuralNet extends TestUtil {
     }
   }
 
-  @Test public void compare() throws Exception {
+//  @Test
+  public void compare() throws Exception {
     final long seed = 0xc0ffee;
     Random rng = new Random(seed);
 

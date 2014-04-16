@@ -43,7 +43,8 @@ class Basic(unittest.TestCase):
             hex_key =  csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema=SCHEMA, hex_key=hex_key,
-                delete_on_done=DELETE_ON_DONE, importParentDir=IMPORT_PARENT_DIR,
+                delete_on_done=DELETE_ON_DONE, 
+                # importParentDir=IMPORT_PARENT_DIR,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120, doSummary=False)
             elapsed = time.time() - start
             print "parse", trial, "end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\

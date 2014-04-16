@@ -50,7 +50,8 @@ public abstract class Neurons {
   /**
    * Parameters (deep-cloned() from the user input, can be modified here, e.g. learning rate decay)
    */
-  protected DeepLearning params;
+  protected transient DeepLearning params;
+  protected transient int _index; //which hidden layer it is
 
   /**
    * Layer state (one per neuron): activity, error
@@ -143,6 +144,7 @@ public abstract class Neurons {
    * @param training Whether training is done or just testing (no need for dropout)
    */
   public final void init(Neurons[] neurons, int index, DeepLearning p, final DeepLearningModel.DeepLearningModelInfo minfo, boolean training) {
+    _index = index-1;
     params = (DeepLearning)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new DenseVector(units);
@@ -684,7 +686,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.div(_a.raw(), 2.f);
+        Utils.div(_a.raw(), (float)(1./params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -766,7 +768,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.div(_a.raw(), 2.f);
+        Utils.div(_a.raw(), (float)(1./params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -815,7 +817,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.div(_a.raw(), 2.f);
+        Utils.div(_a.raw(), (float)(1./params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -941,7 +943,7 @@ public abstract class Neurons {
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  static void gemv_row_optimized(float[] res, float[] a, float[] x, final float[] y, byte[] row_bits) {
+  static void gemv_row_optimized(final float[] res, final float[] a, final float[] x, final float[] y, final byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
