@@ -1,10 +1,7 @@
 package hex.singlenoderf;
 
-//import hex.speedrf.RFModel;
+
 import hex.FrameTask;
-import hex.deeplearning.DeepLearningModel;
-import hex.singlenoderf.SpeeDRFModel;
-import hex.singlenoderf.Data;
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinTask;
 import water.*;
@@ -12,7 +9,6 @@ import water.api.Constants;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
-import water.util.MRUtils;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -28,11 +24,11 @@ public class SpeeDRF extends Job.ModelJob {
 //  public final Key _classCol = response._key;
 
   @API(help = "Number of trees", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE)
-  public final int num_trees   = 50;
+  public int num_trees   = 50;
   @API(help = "Number of features to randomly select at each split.", filter = Default.class, json = true, lmin = -1, lmax = Integer.MAX_VALUE)
-  public final int mtry = -1;
+  public int mtry = -1;
   @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE)
-  public final int max_depth = 20;
+  public int max_depth = 20;
 
 //  protected final EnumArgument<StatType> _statType = new EnumArgument<Tree.StatType>(STAT_TYPE, StatType.ENTROPY);
 //  protected final HexColumnSelect   _ignore     = new RFColumnSelect(IGNORE, _dataKey, _classCol);
@@ -41,31 +37,31 @@ public class SpeeDRF extends Job.ModelJob {
 //  protected final H2OCategoryStrata               _strataSamples    = new H2OCategoryStrata(STRATA_SAMPLES, _dataKey, _classCol, 67);
 
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1)
-  public final double sample = 0.67;
+  public double sample = 0.67;
 
   @API(help = "OOBEE", filter = Default.class, json = true)
-  public final boolean oobee = true;
+  public boolean oobee = true;
 
-  public final Key _modelKey = dest();
+  public Key _modelKey = dest();
 
   /* Advanced settings */
   @API(help = "bin limit", filter = Default.class, json = true, lmin = 0, lmax = 65534)
-  public final int bin_limit = 1024;
+  public int bin_limit = 1024;
 
   @API(help = "seed", filter = Default.class, json = true)
-  public final long seed = (long) 1728318273;
+  public long seed = (long) 1728318273;
 
   @API(help = "Build trees in parallel", filter = Default.class, json = true)
-  public final boolean  parallel  = true;
+  public boolean  parallel  = true;
 
   @API(help = "split limit")
-  public final int _exclusiveSplitLimit = 0;
+  public int _exclusiveSplitLimit = 0;
 
   @API(help = "iterative cm")
-  public final boolean  _iterativeCM = true;
+  public  boolean  _iterativeCM = true;
 
   @API(help = "use non local data")
-  public final boolean _useNonLocalData = true;
+  public boolean _useNonLocalData = true;
 
   /** Return the query link to this page */
 //  public static String link(Key k, String content) {
