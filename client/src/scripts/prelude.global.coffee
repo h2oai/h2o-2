@@ -290,3 +290,24 @@ repeat = (count, value) ->
     array.push value
   array
 
+# Object ops
+
+mapWithKey = (obj, map) ->
+  result = []
+  for key, value of obj
+    result.push map value, key
+  result
+
+# Utilities
+
+#TODO test
+describeCount = (count, singular, plural) ->
+  plural = singular + 's' unless plural
+  switch count
+    when 0
+      "No #{plural}"
+    when 1
+      "1 #{singular}"
+    else
+      "#{count} #{plural}"
+

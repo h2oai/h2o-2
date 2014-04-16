@@ -135,6 +135,7 @@ describe 'Prelude', ->
         remove
         clear
         repeat
+        mapWithKey
       ]
       for func in funcs
         ok typeof func is 'function'
@@ -307,3 +308,11 @@ describe 'Prelude', ->
       deepEqual (repeat 3, 5), [ 5, 5, 5 ]
       deepEqual (repeat 3, 'a'), [ 'a', 'a', 'a' ]
 
+  describe 'Object ops', ->
+    it 'mapWithKey', ->
+      obj =
+        foo: 10
+        bar: 20
+        baz: 30
+      mapper = (v, k) -> k + '=' + v
+      strictEqual (mapWithKey obj, mapper).join(','), 'foo=10,bar=20,baz=30'
