@@ -159,6 +159,19 @@ Steam.Hypergraph = do ->
     link source, (value) -> target value if predicate value
     target
 
+  switchNodes = (defaultValue, count) ->
+    choices = []
+    for i in [0 ... count]
+      choices.push node$ defaultValue, (a, b) -> a is b
+
+    forEach choices, (source) ->
+      link source, (value) ->
+        if value isnt defaultValue
+          for target, i in choices when source isnt target
+            target defaultValue
+        return
+    choices
+
   debounceNode = (source, wait, options) ->
     target = createNode undefined
     link source, debounce target, wait, options
@@ -182,6 +195,7 @@ Steam.Hypergraph = do ->
   zipNodes: zipNodes
   liftNodes: liftNodes
   filterNode: filterNode
+  switchNodes: switchNodes
   debounceNode: debounceNode
   throttleNode: throttleNode
 
@@ -190,7 +204,7 @@ Steam.Hypergraph = do ->
 # Destructure into application scope with shorter names.
 #
 
-{ createEdge: edge$, createPolyedge: edges$, createNode: node$, createPolynode: nodes$, createBundle: bundle$, link: link$, unlink: unlink$, callOnChange: call$, applyOnChange: apply$, joinNodes: join$, zipNodes: zip$, liftNodes: lift$, filterNode: filter$, debounceNode: debounce$, throttleNode: throttle$ } = Steam.Hypergraph
+{ createEdge: edge$, createHyperedge: edges$, createNode: node$, createPolynode: nodes$, createContext: context$, link: link$, unlink: unlink$, callOnChange: call$, applyOnChange: apply$, joinNodes: join$, zipNodes: zip$, liftNodes: lift$, filterNode: filter$, switchNodes: switch$, debounceNode: debounce$, throttleNode: throttle$ } = Steam.Hypergraph
 
 
 #

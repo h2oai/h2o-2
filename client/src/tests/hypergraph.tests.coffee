@@ -14,6 +14,7 @@ describe 'Hypergraph', ->
         zip$
         lift$
         filter$
+        switch$
         if$
         and$
         or$
@@ -344,6 +345,30 @@ describe 'Hypergraph', ->
       strictEqual evens(), 10
       integers 8
       strictEqual evens(), 8
+
+    it 'switch$', ->
+      defaultValue = {}
+      someValue = {}
+      [choice1, choice2, choice3] = switch$ defaultValue, 3
+      
+      strictEqual choice1(), defaultValue
+      strictEqual choice2(), defaultValue
+      strictEqual choice3(), defaultValue
+
+      choice1 someValue
+      strictEqual choice1(), someValue
+      strictEqual choice2(), defaultValue
+      strictEqual choice3(), defaultValue
+
+      choice2 someValue
+      strictEqual choice1(), defaultValue
+      strictEqual choice2(), someValue
+      strictEqual choice3(), defaultValue
+
+      choice3 someValue
+      strictEqual choice1(), defaultValue
+      strictEqual choice2(), defaultValue
+      strictEqual choice3(), someValue
 
     it 'if$', ->
       english = node$ 'thank you'
