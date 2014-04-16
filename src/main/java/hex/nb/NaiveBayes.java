@@ -31,7 +31,7 @@ public class NaiveBayes extends ModelJob {
 
   @Override protected void execImpl() {
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false, drop_na_cols);
-    DataInfo dinfo = new DataInfo(fr, 1, false, false);
+    DataInfo dinfo = new DataInfo(fr, 1, false, false, false);
     NBTask tsk = new NBTask(this, dinfo).doAll(dinfo._adaptedFrame);
     NBModel myModel = buildModel(dinfo, tsk, laplace);
     myModel.delete_and_lock(self());
