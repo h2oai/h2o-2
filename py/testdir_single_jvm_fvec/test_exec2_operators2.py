@@ -150,7 +150,7 @@ exprList = [
         # doesn't work
         # "crnk=function(x){99}",
         # "crk=function(x){99}",
-        "crunk=function(x){99}",
+        "crunk=function(x){x+99}",
         "r.hex[,3]=4",
         # "crunk=function(x){99}; r.hex[,3]=4",
 
@@ -217,7 +217,7 @@ exprBigList = []
 for i in range(1000):
     # expr = ""
     # concatNum = random.randint(1,2)
-    expr = "crunk=function(x){99};"
+    expr = "crunk=function(x){x+98};"
     concatNum = random.randint(0,2)
     for j in range(concatNum):
         randExpr = random.choice(exprList)
