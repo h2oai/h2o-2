@@ -66,7 +66,7 @@ public class GLM2 extends ModelJob {
 
   @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
   boolean lambda_search;
-  
+
   // API input parameters END ------------------------------------------------------------
 
   // API output parameters BEGIN ------------------------------------------------------------
@@ -558,27 +558,18 @@ public class GLM2 extends ModelJob {
 
   private void xvalidate(final GLMModel model, int lambdaIxd,final H2OCountedCompleter cmp){
     final Key [] keys = new Key[n_folds];
-    H2OCallback callback = new H2OCallback() {
-      @Override public void callback(H2OCountedCompleter t) {
-        try{
-          GLMModel [] models = new GLMModel[keys.length];
-          // we got the xval models, now compute their validations...
-          for(int i = 0; i < models.length; ++i)models[i] = DKV.get(keys[i]).get();
-          new GLMXValidationTask(model,_lambdaIdx,models, cmp).asyncExec(_dinfo._adaptedFrame);
-        }catch(Throwable ex){cmp.completeExceptionally(ex);}
-      }
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-        cmp.completeExceptionally(ex);
-        return true;
-      }
-    };
-    callback.addToPendingCount(n_folds-1);
-    double proximal_penalty = 0;
+    GLM2 [] glms = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy, proximal_penalty).
-      run(callback);
+      glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy,0);
+    H2O.submitTask(new ParallelGLMs(glms,H2O.CLOUD.size(),new H2OCallback(GLM2.this) {
+      @Override public void callback(H2OCountedCompleter t) {
+        GLMModel [] models = new GLMModel[keys.length];
+        // we got the xval models, now compute their validations...
+        for(int i = 0; i < models.length; ++i)models[i] = DKV.get(keys[i]).get();
+        new GLMXValidationTask(model,_lambdaIdx,models, cmp).asyncExec(_dinfo._adaptedFrame);
+      }
+    }));
   }
-
   // Expand grid search related argument sets
   @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
     return superServeGrid(server, parms, type);
@@ -674,4 +665,46 @@ public class GLM2 extends ModelJob {
     }
   }
   public boolean isDone(){return DKV.get(self()) == null;}
+
+  // class to execute multiple GLM runs in parllell
+  // (with  user-given limit on how many to run in in parallel)
+  public class ParallelGLMs extends DTask {
+    transient final private GLM2 [] _glms;
+    transient final public int _maxP;
+    transient private AtomicInteger _remCnt;
+    transient private AtomicInteger _doneCnt;
+    public ParallelGLMs(GLM2 [] glms){this(glms,H2O.CLOUD.size());}
+    public ParallelGLMs(GLM2 [] glms, int maxP){ _glms = glms; _maxP = maxP;}
+    public ParallelGLMs(GLM2 [] glms, int maxP, H2OCountedCompleter cmp){super(cmp); _glms = glms; _maxP = maxP;}
+
+    private void forkDTask(int i){
+      int nodeId = i%H2O.CLOUD.size();
+      final GLM2 glm = _glms[i];
+      new RPC(H2O.CLOUD._memary[nodeId],new DTask() {
+        @Override
+        public void compute2() {
+          glm.run(this);
+        }
+      }).addCompleter(new Callback()).call();
+    }
+    class Callback extends H2OCallback<H2OCountedCompleter> {
+      public Callback(){super(GLM2.this);}
+      @Override public void callback(H2OCountedCompleter cc){
+        int i;
+        if((i = _remCnt.getAndDecrement()) > 0) // not done yet
+          forkDTask(_glms.length - i);
+        else if(_doneCnt.getAndDecrement() == 0) // am I the last guy to finish? if so complete parent.
+          ParallelGLMs.this.tryComplete();
+        // else just done myself (no more work) but others stillin progress -> just return
+      }
+    }
+    @Override public void compute2(){
+      final int n = Math.min(_maxP, _glms.length);
+      _remCnt = new AtomicInteger(_glms.length-n);
+      _doneCnt = new AtomicInteger(n-1);
+      for(int i = 0; i < n; ++i)
+        forkDTask(i);
+    }
+  }
+
 }
