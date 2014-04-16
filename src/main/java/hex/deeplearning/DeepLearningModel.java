@@ -266,7 +266,7 @@ public class DeepLearningModel extends Model {
     public DeepLearningModelInfo(final DeepLearning params, final DataInfo dinfo) {
       data_info = dinfo;
       final int num_input = dinfo.fullN();
-      final int num_output = params.classification ? dinfo._adaptedFrame.lastVec().domain().length : 1;
+      final int num_output = params.classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
       assert(num_input > 0);
       assert(num_output > 0);
       parameters = params;
