@@ -1,4 +1,7 @@
 geyser = do ->
+  
+  _cache = {}
+
   parse = (spec) ->
     dotIndex = spec.indexOf '.'
     switch dotIndex
@@ -12,11 +15,17 @@ geyser = do ->
         tag: tokens.shift()
         classes: tokens
 
+  getElement = (spec) ->
+    if el = _cache[spec]
+      el
+    else
+      _cache[spec] = parse spec
+
   generate = (arg) ->
     console.assert (isString arg) or (isArray arg)
     specs = if isString arg then words arg else arg
     map specs, (spec) ->
-      el = parse spec
+      el = getElement spec
       (content) ->
         el: el
         content: content
