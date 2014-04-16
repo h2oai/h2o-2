@@ -70,8 +70,8 @@ class PerfRunner:
         if os.path.exists(os.path.join(self.test_root_dir, testDir, "predict.R")):
             predict_file = "predict.R" 
 
-        test_dir = os.path.join(self.test_root_dir, testDir)
-        test_short_dir = testDir
+        test_dir = os.path.join(self.test_root_dir, prefix, testDir)
+        test_short_dir = os.path.join(prefix, testDir)
 
         test = Test(config_file, test_dir, test_short_dir, 
                     self.output_dir, parse_file, model_file, predict_file, self.perfdb)
