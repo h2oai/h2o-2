@@ -112,15 +112,21 @@ Steam.Hypergraph = do ->
 
     context
 
-  link = (node, func) -> node.subscribe func
+  link = (node, func) ->
+    console.assert isFunction node, '[node] is not a function'
+    console.assert isFunction node.subscribe, '[node] does not have a [dispose] method'
+    console.assert isFunction func, '[func] is not a function'
+
+    node.subscribe func
 
   unlink = (arrows) ->
     if isArray arrows
       for arrow in arrows
+        console.assert isFunction arrow.dispose, '[arrow] does not have a [dispose] method'
         arrow.dispose()
     else
+      console.assert isFunction arrows.dispose, '[arrow] does not have a [dispose] method'
       arrows.dispose()
-
 
   #
   # Combinators
@@ -140,6 +146,7 @@ Steam.Hypergraph = do ->
       link source, -> _apply sources, func
 
   joinNodes = (sources..., target, func) ->
+    console.assert isFunction target, '[target] is not a function'
     target _apply sources, func
     map sources, (source) ->
       link source, -> target _apply sources, func
