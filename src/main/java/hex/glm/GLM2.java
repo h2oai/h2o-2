@@ -66,7 +66,7 @@ public class GLM2 extends ModelJob {
 
   @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
   boolean lambda_search;
-  
+
   // API input parameters END ------------------------------------------------------------
 
   // API output parameters BEGIN ------------------------------------------------------------
@@ -490,7 +490,7 @@ public class GLM2 extends ModelJob {
     assert alpha.length == 1;
     start = System.currentTimeMillis();
     final double lambda_min = lambda[lambda.length-1];
-    if(lambda_search){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
+    if(lambda_search){ // run as GLMNet - regularization path over several lambdas staring at lambda-max
       new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
         @Override public void callback(final YMUTask ymut){
           if(ymut._ymin == ymut._ymax){
