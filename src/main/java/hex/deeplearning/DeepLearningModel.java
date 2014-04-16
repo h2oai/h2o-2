@@ -178,6 +178,9 @@ public class DeepLearningModel extends Model {
     final private DataInfo data_info;
     public DataInfo data_info() { return data_info; }
 
+    /*cached version of data_info.coefNames() in case data_info.adaptedFrame is not available (e.g., after a checkpoint restart)*/
+    public String [] _featureNames;
+
     // model is described by parameters and the following 2 arrays
     private Neurons.DenseRowMatrix[] dense_row_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseColMatrix[] dense_col_weights; //one 2D weight matrix per layer (stored as a 1D array each)
@@ -400,6 +403,7 @@ public class DeepLearningModel extends Model {
     }
 
     void initializeMembers() {
+      if (get_params().variable_importances) _featureNames = data_info().coefNames();
       randomizeWeights();
       //TODO: determine good/optimal/best initialization scheme for biases
       // hidden layers
@@ -740,7 +744,7 @@ public class DeepLearningModel extends Model {
         if (get_params().variable_importances) {
           if (!get_params().quiet_mode) Log.info("Computing variable importances.");
           final float [] vi = model_info().computeVariableImportances();
-          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
+          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info()._featureNames, 0, vi.length));
         }
 
         // keep output JSON small
