@@ -490,7 +490,7 @@ public class GLM2 extends ModelJob {
     assert alpha.length == 1;
     start = System.currentTimeMillis();
     final double lambda_min = lambda[lambda.length-1];
-    if(lambda_search){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
+    if(lambda_search){ // run as GLMNet - regularization path over several lambdas staring at lambda-max
       new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
         @Override public void callback(final YMUTask ymut){
           if(ymut._ymin == ymut._ymax){

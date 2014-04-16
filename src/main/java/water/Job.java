@@ -639,7 +639,7 @@ public abstract class Job extends Func {
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
     @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
-    public boolean classification = true;
+    public boolean classification = true; // we need 3-state boolean: unspecified, true/false BUT we solve that by checking UI layer to see if the classification parameter was passed
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
     @Override protected void registered(API_VERSION ver) {
@@ -672,7 +672,7 @@ public abstract class Job extends Func {
       super.init();
       // Check if it make sense to build a model
       if (source.numRows()==0)
-        throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+        throw new H2OIllegalArgumentException(find("source"), "Cannot build a model on empty dataset!");
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
@@ -684,7 +684,17 @@ public abstract class Job extends Func {
       final boolean has_constant_response = response.isEnum() ?
               response.domain().length <= 1 : response.min() == response.max();
       if (has_constant_response)
-        throw new IllegalArgumentException("Constant response column!");
+        throw new H2OIllegalArgumentException(find("response"), "Constant response column!");
+      // Reject request if classification is required and response column column is float
+      Argument a4class = find("classification");
+      final boolean classificationFieldSpecified = a4class!=null ? a4class.specified() : /* we are not in UI so expect that parameter is specified correctly */ true;
+      if (!classificationFieldSpecified) { // can happen if a client sends a request which does not specify classification parameter
+        classification = response.isInt() || response.isEnum();
+        Log.warn("Classification field is not specified - deriving according to response! The classification field set to " + classification);
+      } else {
+        if ( classification && response.isFloat()) throw new H2OIllegalArgumentException(find("classification"), "Requested classification on float column!");
+        if (!classification && response.isEnum() ) throw new H2OIllegalArgumentException(find("classification"), "Requested regression on enum column!");
+      }
     }
   }
 

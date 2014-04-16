@@ -426,6 +426,8 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
                 print "Not deleting a tree key from DRF: %s" % k
             elif 'DRF_' in k['key']:
                 print "Not deleting DRF key..they may be problematic in flight: %s" % k
+            elif '__RFModel__' in k['key']:
+                print "Not deleting __RFModel__ key..seeing NPE's if I try to delete them: %s" % k
             else:
                 print "Deleting", k['key'], "at", node
                 node.remove_key(k['key'], timeoutSecs=timeoutSecs)
