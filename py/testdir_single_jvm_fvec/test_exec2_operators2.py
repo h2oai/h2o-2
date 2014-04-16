@@ -1,21 +1,19 @@
-import unittest, random, sys, time
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
 initList = [
-        ('r0.hex', 'r0.hex=c(1.3,0,1,2,3,4,5)'),
-        ('r1.hex', 'r1.hex=c(2.3,0,1,2,3,4,5)'),
-        ('r2.hex', 'r2.hex=c(3.3,0,1,2,3,4,5)'),
-        ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
-        ('r4.hex', 'r4.hex=c(5.3,0,1,2,3,4,5)'),
         ('r.hex', 'r.hex=i.hex'),
-        ('z.hex', 'z.hex=c(0)'),
         ]
 
 DO_IFELSE = False
 DO_CAN_RETURN_NAN = False
 DO_FAIL1 = False
 DO_TERNARY = False
+DO_APPLY = True
+DO_FUNCTION = False
+
+DO_FORCE_LHS_ON_MULTI = True
 
 exprList = [
         'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
@@ -98,7 +96,6 @@ exprList = [
         "a=1; a=2; function(x){x=a;a=3}",
         "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
 
-        "apply(r.hex,2,sum)",
 
         # doesn't work
         # "cbind(c(1), c(2), c(3))",
@@ -146,14 +143,36 @@ exprList = [
         # "max(1,r.hex,3)",
 
         "factor(r.hex[,5])",
-        "r0.hex[,1]==1.0",
-        "runif(r4.hex[,1])",
+        "r.hex[,1]==1.0",
+        "runif(r.hex[,1])",
+        "r.hex[,3]=4",
     
         # doesn't work
-        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        # "crnk=function(x){99}",
+        # "crk=function(x){99}",
+        "crunk=function(x){99}",
+        "r.hex[,3]=4",
+        # "crunk=function(x){99}; r.hex[,3]=4",
 
         ]
 
+
+if DO_APPLY:
+    exprList += [
+        "apply(r.hex,1,sum)",
+        "apply(r.hex,2,sum)",
+    ]
+
+if DO_FUNCTION:
+    exprList += [
+        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+        "mean=function(x){99/nrow(x)};mean(r.hex)",
+        "mean=function(x){99/nrow(x)}",
+        "mean2=function(x){99/nrow(x)};mean2(r.hex)",
+        "mean2=function(x){99/nrow(x)}",
+        # what happens if you rename a function in a single string
+    ]
 # FIX! should add ternary here?
 # ifelse does all 3 params
 # ? doesn't do the else if true
@@ -195,10 +214,22 @@ if DO_FAIL1:
 
 # concatenate some random choices to make life harder
 exprBigList = []
-for i in range(100):
-    expr = ""
-    for j in range(3):
-        expr += random.choice(exprList) + ";"
+for i in range(1000):
+    # expr = ""
+    # concatNum = random.randint(1,2)
+    expr = "crunk=function(x){99};"
+    concatNum = random.randint(0,2)
+    for j in range(concatNum):
+        randExpr = random.choice(exprList)
+        if DO_FORCE_LHS_ON_MULTI:
+            # lhs =? 
+            if re.search("=(?!=)", randExpr):
+                expr += randExpr + ";"
+            else:
+                expr += "d=" + randExpr + ";"
+        else:
+            expr += randExpr + ";"
+
     exprBigList.append(expr)
         
 

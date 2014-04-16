@@ -4,7 +4,7 @@ H\ :sub:`2`\ O installation in R Studio
 ------------------------------------------
 
 
-These instructions assume you are using R  2.14.0 or later.  
+These instructions assume you are using R 2.14.0 or later.  
 
 **STEP 1**
 

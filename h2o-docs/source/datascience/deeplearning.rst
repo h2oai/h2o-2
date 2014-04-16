@@ -130,10 +130,10 @@ greatly.
 
 **learning rate**
 
-    The implemented (ADADELTA) adaptive learning rate algorithm automatically
+    The implemented adaptive learning rate algorithm (ADADELTA) automatically
     combines the benefits of learning rate annealing and momentum
     training to avoid slow convergence. Specification of only two
-    parameters (rho and epsilon)  simplifies hyper parameter search. 
+    parameters (rho and epsilon) simplifies hyper parameter search.
 
     In some cases, manually controlled (non-adaptive) learning rate and
     momentum specifications can lead to better results, but require the
@@ -153,14 +153,14 @@ greatly.
 
     When adaptive learning rate is disabled, the magnitude of the weight
     updates are determined by the user specified learning rate
-    (potentially annealed), and are a function  of the difference
+    (potentially annealed), and are a function of the difference
     between the predicted value and the target value. That difference,
     generally called delta, is only available at the output layer. To
     correct the output at each hidden layer, back propagation is
     used. Momentum modifies back propagation by allowing prior
     iterations to influence the current update. Using the momentum
     parameter can aid in avoiding local minima and the associated
-    instability. Too much momentum can lead to inst, that's
+    instability. Too much momentum can lead to instabilities, that's
     why the momentum is best ramped up slowly.
        
     *Momentum start:* Initial momentum at the start of model building.
@@ -181,6 +181,11 @@ greatly.
 
     A fraction of the features for each training row to be omitted from training in order
     to improve generalization (dimension sampling).
+
+**hidden dropout ratios**
+
+    A fraction of the inputs for each hidden layer to be omitted from training in order
+    to improve generalization. Defaults to 0.5 for each hidden layer if omitted.
 
 **L1 regularization** 
 
@@ -208,6 +213,12 @@ greatly.
     The "uniform" option uses a uniform distribution with a mean of 0 and a given
     interval. The "normal" option draws weights from the standard normal
     distribution with a mean of 0 and given standard deviation.
+
+**initial weight scale**
+
+    The scale of the distribution function for Uniform or Normal distributions.
+    For Uniform, the values are drawn uniformly from -initial_weight_scale...initial_weight_scale.
+    For Normal, the values are drawn from a Normal distribution with a standard deviation of initial_weight_scale.
 
 **loss function** 
 
@@ -240,6 +251,10 @@ greatly.
     validation sampling" is set to stratify). Use 0 for selecting the entire
     training dataset.
 
+**score duty cycle**
+    Maximum fraction of wall clock time spent on model scoring on training and validation samples,
+    and on diagnostics such as computation of feature importances (i.e., not on training).
+
 **classification stop**
 
     The stopping criteria in terms of classification error (1-accuracy) on the
@@ -250,7 +265,11 @@ greatly.
 
     The stopping criteria in terms of regression error (MSE) on the training
     data scoring dataset. When the error is at or below this threshold, training
-    stops. 
+    stops.
+
+**quiet mode**
+
+    Enable quiet mode for less output to standard output.
 
 **max confusion matrix** 
 
@@ -281,9 +300,11 @@ greatly.
     Gather diagnostics for hidden layers, such as mean and RMS values of learning
     rate, momentum, weights and biases.
 
-**variable importance** 
+**variable importance**
 
-    Report variable importances in the model output. 
+    Whether to compute variable importances for input features.
+    The implemented method (by Gedeon) considers the weights connecting the
+    input features to the first two hidden layers.
 
 **fast mode**
     

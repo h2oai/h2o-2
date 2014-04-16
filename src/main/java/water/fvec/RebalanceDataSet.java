@@ -61,9 +61,9 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
   @Override public void onCompletion(CountedCompleter caller){
     assert _out.numRows() == _in.numRows();
     assert _out.anyVec()._espc.length == (_nchunks+1);
-    _in.unlock(null);
-    _out.update(null);
-    _out.unlock(null);
+    _in.unlock(_jobKey);
+    _out.update(_jobKey);
+    _out.unlock(_jobKey);
   }
   @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter caller){
     _in.unlock(_jobKey);

@@ -124,7 +124,7 @@ public class Frame extends Lockable<Frame> {
           @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
           @Override public void compute2() {
             Value v = DKV.get(k);
-            if( v==null ) System.err.println("Missing vector during Frame fetch: "+k);
+            if( v==null ) Log.err("Missing vector during Frame fetch: "+k);
             vecs[ii] = v.get();
             tryComplete();
           }
@@ -273,7 +273,7 @@ public class Frame extends Lockable<Frame> {
 
     Vec[] vec = Arrays.copyOfRange(vecs(),startIdx,endIdx);
     _names = names;
-    _vecs = vec;
+    _vecs = vecs;
     _keys = keys;
     _col0 = null;
     return vec;

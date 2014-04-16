@@ -731,7 +731,7 @@ public abstract class Neurons {
             max = Math.max(_a.get(row), max);
           }
         }
-        if( max > 1 ) Utils.div(_a.raw(), max);
+        if( max > 1f ) Utils.div(_a.raw(), max);
       }
     }
     @Override protected void bprop() {
@@ -792,7 +792,7 @@ public abstract class Neurons {
       if (_w instanceof DenseRowMatrix) {
         for (int row = 0; row < rows; row++) {
           //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-          final float g = _a.get(row) > 0f ? _e.get(row) : 0;
+          final float g = _a.get(row) > 0f ? _e.get(row) : 0f;
           bprop(row, g, r, m);
         }
       }
@@ -840,7 +840,7 @@ public abstract class Neurons {
     @Override protected void fprop() {
       gemv((DenseVector) _a, (DenseRowMatrix) _w, (DenseVector) _previous._a, _b, null);
       final float max = Utils.maxValue(_a.raw());
-      float scale = 0;
+      float scale = 0f;
       final float rows = _a.size();
       for( int row = 0; row < rows; row++ ) {
         _a.set(row, (float)Math.exp(_a.get(row) - max));
@@ -867,7 +867,7 @@ public abstract class Neurons {
       float g; //partial derivative dE/dy * dy/dnet
       final float rows = _a.size();
       for( int row = 0; row < rows; row++ ) {
-        final float t = (row == target ? 1 : 0);
+        final float t = (row == target ? 1f : 0f);
         final float y = _a.get(row);
         //dy/dnet = derivative of softmax = (1-y)*y
         if (params.loss == Loss.CrossEntropy) {
@@ -877,7 +877,7 @@ public abstract class Neurons {
         } else {
           assert(params.loss == Loss.MeanSquare);
           //-dMSE/dy = target-y
-          g = (t - y) * (1 - y) * y;
+          g = (t - y) * (1f - y) * y;
         }
         // this call expects dE/dnet
         bprop(row, g, r, m);
@@ -906,7 +906,7 @@ public abstract class Neurons {
       final float g = target - _a.get(row); //for MSE -dMSE/dy = target-y
       final long processed = _minfo.get_processed_total();
       float m = momentum(processed);
-      float r = rate(processed) * (1 - m);
+      float r = rate(processed) * (1f - m);
       bprop(row, g, r, m);
     }
   }

@@ -2,13 +2,14 @@ package water.parser;
 
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import water.*;
 
 public class ParseFolderTestBig extends TestUtil {
 
-  @Test public void  testCovtype(){
+  @Test @Ignore("dataset directory is not usually available") public void  testCovtype(){
     Key k1 = null,k2 = null;
     try {
       k2 = loadAndParseFolder("multipart.hex","datasets/parse_folder_test" );
