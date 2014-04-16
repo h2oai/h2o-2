@@ -10,8 +10,7 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 /**
  * The Deep Learning model
@@ -49,17 +48,6 @@ public class DeepLearningModel extends Model {
 
   public final DeepLearning get_params() { return model_info.get_params(); }
   public final Request2 job() { return get_params(); }
-
-  // delete anything from the K-V store that's no longer needed after model building is over
-  @Override public void delete() {
-    super.delete();
-    model_info.delete();
-  }
-
-  // helper to add a key to be deleted when the model is deleted
-  public void toDelete(Key k) {
-    model_info._toDelete = k;
-  }
 
   public static class Errors extends Iced {
     static final int API_WEAVER = 1;
@@ -349,14 +337,6 @@ public class DeepLearningModel extends Model {
           biases_ada_dx[i] = new Neurons.DenseVector(units[i+1]);
           biases_ada_g[i] = new Neurons.DenseVector(units[i+1]);
         }
-      }
-    }
-
-    Key _toDelete = null;
-    public void delete() {
-      if (_toDelete!=null) {
-        assert(_toDelete == data_info._adaptedFrame.lastVec()._key);
-        UKV.remove(_toDelete);
       }
     }
 

@@ -778,7 +778,7 @@ public class DeepLearning extends Job.ValidatedJob {
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
-      if (del_enum_resp) model.toDelete(resp._key);
+      if (del_enum_resp) ltrash(resp);
       return model;
     }
     finally {
@@ -890,7 +890,6 @@ public class DeepLearning extends Job.ValidatedJob {
     finally {
       if (model != null) model.unlock(self());
       unlock_data();
-      emptyLTrash();
     }
   }
 
