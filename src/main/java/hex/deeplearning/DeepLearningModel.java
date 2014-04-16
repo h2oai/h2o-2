@@ -363,7 +363,6 @@ public class DeepLearningModel extends Model {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       if (get_params().diagnostics) {
-        computeStats();
         if (!get_params().quiet_mode) {
           Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
           sb.append("Status of Neuron Layers:\n");
@@ -522,7 +521,6 @@ public class DeepLearningModel extends Model {
      * @return variable importances for input features
      */
     public float[] computeVariableImportances() {
-      Log.info("Computing variable importances.");
       float[] vi = new float[units[0]];
       Arrays.fill(vi, 0f);
 
@@ -680,11 +678,11 @@ public class DeepLearningModel extends Model {
       epoch_counter = (float)model_info().get_processed_total()/train.numRows();
       run_time += now-_timeLastScoreEnter;
       _timeLastScoreEnter = now;
-      boolean keep_running = (epoch_counter < model_info().get_params().epochs);
+      boolean keep_running = (epoch_counter < get_params().epochs);
       final long sinceLastScore = now -_timeLastScoreStart;
       final long sinceLastPrint = now -_timeLastPrintStart;
       final long samples = model_info().get_processed_total();
-      if (!keep_running || sinceLastPrint > model_info().get_params().score_interval*1000) {
+      if (!keep_running || sinceLastPrint > get_params().score_interval*1000) {
         _timeLastPrintStart = now;
         Log.info("Training time: " + PrettyPrint.msecs(run_time, true)
                 + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
@@ -692,27 +690,28 @@ public class DeepLearningModel extends Model {
       }
       // this is potentially slow - only do every so often
       if( !keep_running ||
-              (sinceLastScore > model_info().get_params().score_interval*1000 //don't score too often
-                      &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < model_info().get_params().score_duty_cycle) ) { //duty cycle
-        final boolean printme = !model_info().get_params().quiet_mode;
+              (sinceLastScore > get_params().score_interval*1000 //don't score too often
+                      &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < get_params().score_duty_cycle) ) { //duty cycle
+        final boolean printme = !get_params().quiet_mode;
         if (printme) Log.info("Scoring the model.");
         _timeLastScoreStart = now;
         // compute errors
         Errors err = new Errors();
         err.classification = isClassifier();
-        assert(err.classification == model_info().get_params().classification);
+        assert(err.classification == get_params().classification);
         err.training_time_ms = run_time;
         err.epoch_counter = epoch_counter;
         err.validation = ftest != null;
         err.training_samples = model_info().get_processed_total();
         err.score_training_samples = ftrain.numRows();
         err.train_confusion_matrix = new ConfusionMatrix();
-        final int hit_k = Math.min(nclasses(), model_info().get_params().max_hit_ratio_k);
+        final int hit_k = Math.min(nclasses(), get_params().max_hit_ratio_k);
         if (err.classification && nclasses()==2) err.trainAUC = new AUC();
         if (err.classification && nclasses() > 2 && hit_k > 0) {
           err.train_hitratio = new HitRatio();
           err.train_hitratio.set_max_k(hit_k);
         }
+        if (get_params().diagnostics) model_info().computeStats();
         Log.info(model_info().toString());
         final Frame trainPredict = score(ftrain, false);
         final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
@@ -759,7 +758,8 @@ public class DeepLearningModel extends Model {
           validPredict.delete();
         }
 
-        if (model_info().get_params().variable_importances) {
+        if (get_params().variable_importances) {
+          if (!get_params().quiet_mode) Log.info("Computing variable importances.");
           final float [] vi = model_info().computeVariableImportances();
           err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
         }
@@ -773,7 +773,7 @@ public class DeepLearningModel extends Model {
 
         // only keep confusion matrices for the last step if there are fewer than specified number of output classes
         if (err.train_confusion_matrix.cm != null
-                && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
+                && err.train_confusion_matrix.cm.length >= get_params().max_confusion_matrix_size) {
           err.train_confusion_matrix = null;
           err.valid_confusion_matrix = null;
         }
@@ -797,8 +797,8 @@ public class DeepLearningModel extends Model {
         Log.err("Canceling job since the model is unstable (exponential growth observed).");
         Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
         keep_running = false;
-      } else if ( (isClassifier() && last_scored().train_err <= model_info().get_params().classification_stop)
-              || (!isClassifier() && last_scored().train_mse <= model_info().get_params().regression_stop) ) {
+      } else if ( (isClassifier() && last_scored().train_err <= get_params().classification_stop)
+              || (!isClassifier() && last_scored().train_mse <= get_params().regression_stop) ) {
         Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
         keep_running = false;
       }
@@ -996,11 +996,11 @@ public class DeepLearningModel extends Model {
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
     final boolean fulltrain = score_train==0 || score_train == training_rows;
-    final boolean fullvalid = score_valid==0 || score_valid == model_info().get_params().validation.numRows();
+    final boolean fullvalid = score_valid==0 || score_valid == get_params().validation.numRows();
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
-            + ") is greater than the specified limit of " + model_info().get_params().max_confusion_matrix_size + ".";
-    boolean smallenough = model_info.units[model_info.units.length-1] <= model_info().get_params().max_confusion_matrix_size;
+            + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";
+    boolean smallenough = model_info.units[model_info.units.length-1] <= get_params().max_confusion_matrix_size;
 
     if (isClassifier()) {
       // print AUC
@@ -1013,7 +1013,7 @@ public class DeepLearningModel extends Model {
       else {
         if (error.validation) {
           RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          v_rs.replace("key", model_info().get_params().validation._key);
+          v_rs.replace("key", get_params().validation._key);
           String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
@@ -1023,7 +1023,7 @@ public class DeepLearningModel extends Model {
           else sb.append(toolarge + "</h5>");
         } else {
           RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          t_rs.replace("key", model_info().get_params().source._key);
+          t_rs.replace("key", get_params().source._key);
           String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.train_confusion_matrix != null && smallenough) {
@@ -1060,9 +1060,9 @@ public class DeepLearningModel extends Model {
       }
       // validation
       if (error.validation) {
-        final long ptsv = fullvalid ? model_info().get_params().validation.numRows() : score_valid;
+        final long ptsv = fullvalid ? get_params().validation.numRows() : score_valid;
         String validation = "Number of validation data samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
-        if (ptsv < 1000 && model_info().get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (ptsv < 1000 && get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
         if (ptsv > 100000 && errors[errors.length-1].scoring_time > 10000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         DocGen.HTML.paragraph(sb, validation);
       }
