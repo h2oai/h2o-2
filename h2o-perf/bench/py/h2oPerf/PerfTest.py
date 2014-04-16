@@ -93,7 +93,7 @@ class Test:
         self.parse_process.start(self.ip, self.port)
         self.parse_process.block()
         res = self.parse_process.scrape_phase()
-        self.test_run.row.update(res)   #this piece doesn't make sense to me.
+        self.test_run.row.update(res)
 
         self.model_process.start(self.ip, self.port)
         self.model_process.block()

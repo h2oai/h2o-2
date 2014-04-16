@@ -41,32 +41,31 @@ public class DeepLearningIrisTest extends TestUtil {
     else Assert.failNotEquals("Not equal: ", a, b);
   }
 
-  @Test public void compare() throws Exception {
-
+  void runFraction(float fraction) {
     long seed0 = 0xDECAF;
-    for (int repeat = 0; repeat < 1; ++repeat) {
+    int num_runs = 0;
+    for (int repeat = 0; repeat < 5; ++repeat) {
       // Testing different things
       // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
       // Note: Initial weight distributions are copied, but what is tested is the stability behavior.
 
-      DeepLearning.Activation[] activations = { DeepLearning.Activation.Tanh, DeepLearning.Activation.Rectifier };
-      DeepLearning.Loss[] losses = { DeepLearning.Loss.MeanSquare, DeepLearning.Loss.CrossEntropy };
+      DeepLearning.Activation[] activations = {DeepLearning.Activation.Tanh, DeepLearning.Activation.Rectifier};
+      DeepLearning.Loss[] losses = {DeepLearning.Loss.MeanSquare, DeepLearning.Loss.CrossEntropy};
       DeepLearning.InitialWeightDistribution[] dists = {
-//              DeepLearning.InitialWeightDistribution.Normal,
-//              DeepLearning.InitialWeightDistribution.Uniform,
+              DeepLearning.InitialWeightDistribution.Normal,
+              DeepLearning.InitialWeightDistribution.Uniform,
               DeepLearning.InitialWeightDistribution.UniformAdaptive
       };
       final long seed = seed0 + repeat;
       Random rng = new Random(seed);
 
-      double[] initial_weight_scales = { 1e-4 + rng.nextDouble() };
-      double[] holdout_ratios = { 0.1 + rng.nextDouble() * 0.8 };
-      double[] momenta = { rng.nextDouble() * 0.99 };
-      int[] hiddens = { 1, 2 + rng.nextInt(50) };
-      int[] epochs = { 1, 2 + rng.nextInt(50) };
-      double[] rates = { 0.01, 1e-5 + rng.nextDouble() * .1 };
+      double[] initial_weight_scales = {1e-4 + rng.nextDouble()};
+      double[] holdout_ratios = {0.1 + rng.nextDouble() * 0.8};
+      double[] momenta = {rng.nextDouble() * 0.99};
+      int[] hiddens = {1, 2 + rng.nextInt(50)};
+      int[] epochs = {1, 2 + rng.nextInt(50)};
+      double[] rates = {0.01, 1e-5 + rng.nextDouble() * .1};
 
-      int num_runs = 0;
       for (DeepLearning.Activation activation : activations) {
         for (DeepLearning.Loss loss : losses) {
           for (DeepLearning.InitialWeightDistribution dist : dists) {
@@ -76,6 +75,8 @@ public class DeepLearningIrisTest extends TestUtil {
                   for (int hidden : hiddens) {
                     for (int epoch : epochs) {
                       for (double rate : rates) {
+                        num_runs++;
+                        if (fraction < rng.nextFloat()) continue;
                         Log.info("");
                         Log.info("STARTING.");
                         Log.info("Running with " + activation.name() + " activation function and " + loss.name() + " loss function.");
@@ -84,7 +85,7 @@ public class DeepLearningIrisTest extends TestUtil {
                         Log.info("Using seed " + seed);
 
                         Key file = NFSFileVec.make(find_test_file(PATH));
-                        Frame frame = ParseDataset2.parse(Key.make("iris_nn2"), new Key[] { file });
+                        Frame frame = ParseDataset2.parse(Key.make("iris_nn2"), new Key[]{file});
 
                         Frame fr = null;
                         DeepLearning p;
@@ -102,13 +103,13 @@ public class DeepLearningIrisTest extends TestUtil {
 
                           double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
                           String[] names = new String[frame.numCols()];
-                          for( int c = 0; c < frame.numCols(); c++ ) {
+                          for (int c = 0; c < frame.numCols(); c++) {
                             names[c] = "ColumnName" + c;
-                            for( int r = 0; r < frame.numRows(); r++ )
+                            for (int r = 0; r < frame.numRows(); r++)
                               rows[r][c] = frame.vecs()[c].at(r);
                           }
 
-                          for( int i = rows.length - 1; i >= 0; i-- ) {
+                          for (int i = rows.length - 1; i >= 0; i--) {
                             int shuffle = rand.nextInt(i + 1);
                             double[] row = rows[shuffle];
                             rows[shuffle] = rows[i];
@@ -125,7 +126,7 @@ public class DeepLearningIrisTest extends TestUtil {
                           p.ignored_cols = null;
                           p.ignore_const_cols = true;
                           fr = FrameTask.DataInfo.prepareFrame(p.source, p.response, p.ignored_cols, true, p.ignore_const_cols);
-                          dinfo = new FrameTask.DataInfo(fr, 1, true);
+                          dinfo = new FrameTask.DataInfo(fr, 1, false, true);
                         }
                         // must have all output classes in training data (since that's what the reference implementation has hardcoded)
                         while (dinfo._adaptedFrame.lastVec().domain().length < 3);
@@ -174,26 +175,26 @@ public class DeepLearningIrisTest extends TestUtil {
 
                         // use the same random weights for the reference implementation
                         Neurons l = neurons[1];
-                        for( int o = 0; o < l._a.size(); o++ ) {
-                          for( int i = 0; i < l._previous._a.size(); i++ ) {
+                        for (int o = 0; o < l._a.size(); o++) {
+                          for (int i = 0; i < l._previous._a.size(); i++) {
 //                          System.out.println("initial weight[" + o + "]=" + l._w[o * l._previous._a.length + i]);
-                            ref._nn.ihWeights[i][o] = l._w.get(o,i);
+                            ref._nn.ihWeights[i][o] = l._w.get(o, i);
                           }
                           ref._nn.hBiases[o] = l._b.get(o);
 //                        System.out.println("initial bias[" + o + "]=" + l._b[o]);
                         }
                         l = neurons[2];
-                        for( int o = 0; o < l._a.size(); o++ ) {
-                          for( int i = 0; i < l._previous._a.size(); i++ ) {
+                        for (int o = 0; o < l._a.size(); o++) {
+                          for (int i = 0; i < l._previous._a.size(); i++) {
 //                          System.out.println("initial weight[" + o + "]=" + l._w[o * l._previous._a.length + i]);
-                            ref._nn.hoWeights[i][o] = l._w.get(o,i);
+                            ref._nn.hoWeights[i][o] = l._w.get(o, i);
                           }
                           ref._nn.oBiases[o] = l._b.get(o);
 //                        System.out.println("initial bias[" + o + "]=" + l._b[o]);
                         }
 
                         // Train the Reference
-                        ref.train((int)p.epochs, rate, p.momentum_stable, loss);
+                        ref.train((int) p.epochs, rate, p.momentum_stable, loss);
 
                         // Train H2O
                         mymodel = p.trainModel(mymodel);
@@ -209,10 +210,10 @@ public class DeepLearningIrisTest extends TestUtil {
                          */
                         neurons = DeepLearningTask.makeNeuronsForTesting(mymodel.model_info()); //link the weights to the neurons, for easy access
                         l = neurons[1];
-                        for( int o = 0; o < l._a.size(); o++ ) {
-                          for( int i = 0; i < l._previous._a.size(); i++ ) {
+                        for (int o = 0; o < l._a.size(); o++) {
+                          for (int i = 0; i < l._previous._a.size(); i++) {
                             double a = ref._nn.ihWeights[i][o];
-                            double b = l._w.get(o,i);
+                            double b = l._w.get(o, i);
                             compareVal(a, b, abseps, releps);
 //                          System.out.println("weight[" + o + "]=" + b);
                           }
@@ -226,10 +227,10 @@ public class DeepLearningIrisTest extends TestUtil {
                          * Compare weights and biases for output layer
                          */
                         l = neurons[2];
-                        for( int o = 0; o < l._a.size(); o++ ) {
-                          for( int i = 0; i < l._previous._a.size(); i++ ) {
+                        for (int o = 0; o < l._a.size(); o++) {
+                          for (int i = 0; i < l._previous._a.size(); i++) {
                             double a = ref._nn.hoWeights[i][o];
-                            double b = l._w.get(o,i);
+                            double b = l._w.get(o, i);
                             compareVal(a, b, abseps, releps);
                           }
                           double ba = ref._nn.oBiases[o];
@@ -246,7 +247,7 @@ public class DeepLearningIrisTest extends TestUtil {
                         // H2O predictions
                         Frame fpreds = mymodel.score(_test); //[0] is label, [1]...[4] are the probabilities
 
-                        for (int i=0; i<_test.numRows(); ++i) {
+                        for (int i = 0; i < _test.numRows(); ++i) {
                           // Reference predictions
                           double[] xValues = new double[neurons[0]._a.size()];
                           System.arraycopy(ref._testData[i], 0, xValues, 0, xValues.length);
@@ -254,8 +255,8 @@ public class DeepLearningIrisTest extends TestUtil {
 
                           // find the label
                           // do the same as H2O here (compare float values and break ties based on row number)
-                          float[] preds = new float[ref_preds.length+1];
-                          for (int j=0; j<ref_preds.length; ++j) preds[j+1] = (float)ref_preds[j];
+                          float[] preds = new float[ref_preds.length + 1];
+                          for (int j = 0; j < ref_preds.length; ++j) preds[j + 1] = (float) ref_preds[j];
                           preds[0] = getPrediction(preds, i);
 
                           // compare predicted label
@@ -279,10 +280,10 @@ public class DeepLearningIrisTest extends TestUtil {
                         final Frame testPredict = mymodel.score(_test, false);
                         final double myTestErr = mymodel.calcError(_test, _test.lastVec(), testPredict, testPredict, "Final testing error:",
                                 true, p.max_confusion_matrix_size, new water.api.ConfusionMatrix(), null, null);
-                        Log.info("H2O  training error : " + myTrainErr*100 + "%, test error: " + myTestErr*100 + "%");
-                        Log.info("REF  training error : " + trainErr*100 + "%, test error: " + testErr*100 + "%");
+                        Log.info("H2O  training error : " + myTrainErr * 100 + "%, test error: " + myTestErr * 100 + "%");
+                        Log.info("REF  training error : " + trainErr * 100 + "%, test error: " + testErr * 100 + "%");
                         compareVal(trainErr, myTrainErr, abseps, releps);
-                        compareVal(testErr,  myTestErr,  abseps, releps);
+                        compareVal(testErr, myTestErr, abseps, releps);
                         Log.info("Scoring: PASS");
 
                         // cleanup
@@ -294,8 +295,6 @@ public class DeepLearningIrisTest extends TestUtil {
                         p.delete();
                         trainPredict.delete();
                         testPredict.delete();
-
-                        num_runs++;
                         Log.info("Parameters combination " + num_runs + ": PASS");
                       }
                     }
@@ -308,4 +307,13 @@ public class DeepLearningIrisTest extends TestUtil {
       }
     }
   }
+
+  public static class Long extends DeepLearningIrisTest {
+    @Test public void run() throws Exception { runFraction(1.0f); }
+  }
+
+  public static class Short extends DeepLearningIrisTest {
+    @Test public void run() throws Exception { runFraction(0.05f); }
+  }
 }
+

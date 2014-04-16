@@ -6,6 +6,7 @@ import water.*;
 import water.fvec.*;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
+import water.util.Log;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -276,7 +277,7 @@ public class Env extends Iced {
     if( !(op instanceof ASTFunc) ) return null;
     ASTFunc fcn = (ASTFunc)op;
     if( fcn._env != null ) fcn._env.subRef(this);
-    else System.out.println("Popping fcn object, never executed no environ capture");
+    else Log.info("Popping fcn object, never executed no environ capture");
     return null;
   }
 
@@ -299,7 +300,7 @@ public class Env extends Iced {
     if( !(op instanceof ASTFunc) ) return op;
     ASTFunc fcn = (ASTFunc)op;
     if( fcn._env != null ) fcn._env.addRef(this);
-    else System.out.println("Pushing fcn object, never executed no environ capture");
+    else Log.info("Pushing fcn object, never executed no environ capture");
     return op;
   }
   private void addRef(Env global) {
@@ -378,7 +379,7 @@ public class Env extends Iced {
     int cnt0 = I==null ? 0 : I._val;
     int cnt1 = compute_refcnt(vec);
     if( cnt0==cnt1 ) return true;
-    System.out.println("Refcnt is "+cnt0+" but computed as "+cnt1);
+    Log.err("Refcnt is "+cnt0+" but computed as "+cnt1);
     return false;
   }
 

@@ -31,10 +31,12 @@ public class GLM2 extends ModelJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "GLM2";
   public final String _jobName;
-//  private transient GLM2 [] _subjobs;
-//  private Key _parentjob;
+
+  // API input parameters BEGIN ------------------------------------------------------------
+
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true)
   int max_iter = 100;
+
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true)
   boolean standardize = true;
 
@@ -44,65 +46,79 @@ public class GLM2 extends ModelJob {
   @API(help = "Family.", filter = Default.class, json=true)
   Family family = Family.gaussian;
 
+  @API(help = "Tweedie variance power", filter = Default.class, json=true)
+  double tweedie_variance_power;
+
+  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true)
+  double [] alpha = new double[]{0.5};
+
+  @API(help = "regularization strength", filter = Default.class, json=true)
+  public double [] lambda = new double[]{1e-5};
+
+  @API(help = "beta_eps", filter = Default.class, json=true)
+  double beta_epsilon = DEFAULT_BETA_EPS;
+
+  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
+  boolean higher_accuracy;
+
+  @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class)
+  boolean use_all_factor_levels;
+
+  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
+  boolean lambda_search;
+  
+  // API input parameters END ------------------------------------------------------------
+
+  // API output parameters BEGIN ------------------------------------------------------------
+
+  @API(help = "", json=true)
+  private double [] _wgiven;
+
+  @API(help = "", json=true)
+  private double _proximalPenalty;
+
+  @API(help = "", json=true)
+  private double [] _beta;
+
+  @API(help = "", json=true)
+  private boolean _runAllLambdas = true;
+
+  @API(help = "", json=true)
+  Link link = Link.identity;
+
+  @API(help = "Tweedie link power", json=true)
+  double tweedie_link_power;
+
+  @API(help = "lambda max", json=true)
+  double lambda_max;
+
+  // API output parameters END ------------------------------------------------------------
+
+
   private static double GLM_GRAD_EPS = 1e-4; // done (converged) if subgrad < this value.
 
   private boolean highAccuracy(){return higher_accuracy;}
   private void setHighAccuracy(){
     higher_accuracy = true;
     ADMM_GRAD_EPS = 1e-6;
-//    GLM_GRAD_EPS = 1e-6;
   }
 
   private DataInfo _dinfo;
   public GLMParams _glm;
-  @API(help = "", json=true)
-  private double [] _wgiven;
-  @API(help = "", json=true)
-  private double _proximalPenalty;
-  @API(help = "", json=true)
-  private double [] _beta;
-
-  @API(help = "", json=true)
-  private boolean _runAllLambdas = true;
-  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
-
-//  @API(help = "Link.", filter = Default.class)
-  @API(help = "", json=true)
-  Link link = Link.identity;
-
-  @API(help = "Tweedie variance power", filter = Default.class, json=true)
-  double tweedie_variance_power;
-  @API(help = "Tweedie link power", json=true)
-  double tweedie_link_power;
-  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true)
-  double [] alpha = new double[]{0.5};
-//  @API(help = "lambda", filter = RSeq2.class)
-  @API(help = "lambda max", json=true)
-  double lambda_max;
-
-  @API(help = "regularization strength", filter = Default.class, json=true)
-  public double [] lambda = new double[]{1e-5};
-  @API(help = "beta_eps", filter = Default.class, json=true)
-  double beta_epsilon = DEFAULT_BETA_EPS;
 
   private double ADMM_GRAD_EPS = 1e-4; // default addm gradietn eps
   private static final double MIN_ADMM_GRAD_EPS = 1e-6; // min admm gradient eps
-  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
-  boolean higher_accuracy;
 
   int _lambdaIdx = 0;
 
   private transient double _addedL2;
-
 
   public static final double DEFAULT_BETA_EPS = 1e-4;
 
   private transient double _ymu;
   private transient double _reg;
   private transient int    _iter;
-  private transient double _rho;
   private transient GLMModel _model;
-
 
   private static class IterationInfo {
     final int _iter;
@@ -144,9 +160,9 @@ public class GLM2 extends ModelJob {
     this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,null);
   }
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob){
-    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,0);
+    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,false,0);
   }
-  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, double proximalPenalty) {
+  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, boolean highAccuracy, double proximalPenalty) {
     assert beta == null || beta.length == (dinfo.fullN()+1):"unexpected size of beta, got length " + beta.length + ", expected " + dinfo.fullN();
     job_key = jobKey;
     description = desc;
@@ -164,13 +180,13 @@ public class GLM2 extends ModelJob {
     source = dinfo._adaptedFrame;
     response = dinfo._adaptedFrame.lastVec();
     _jobName = dest.toString() + ((nfolds > 1)?("[" + dinfo._foldId + "]"):"");
+    higher_accuracy = highAccuracy;
   }
 
   static String arrayToString (double[] arr) {
     if (arr == null) {
       return "(null)";
     }
-
     StringBuffer sb = new StringBuffer();
     for (int i = 0; i < arr.length; i++) {
       if (i > 0) {
@@ -222,8 +238,10 @@ public class GLM2 extends ModelJob {
 
   @Override public void init(){
     super.init();
+    if(lambda_search && lambda.length > 1)
+      throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda, representing the lambda min (smallest lambda in the lambda search).");
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
-    _dinfo = new DataInfo(fr, 1, standardize);
+    _dinfo = new DataInfo(fr, 1, use_all_factor_levels, standardize,false);
     if(higher_accuracy)setHighAccuracy();
   }
   @Override protected Response serve() {
@@ -250,12 +268,7 @@ public class GLM2 extends ModelJob {
       res = Math.max(res, Math.abs(b1[i] - b2[i]));
     return res;
   }
-  @Override public float progress(){
-    if(DKV.get(dest()) == null)return 0;
-    GLMModel m = DKV.get(dest()).get();
-    float progress =  (float)m.iteration()/(float)max_iter; // TODO, do something smarter here
-    return progress;
-  }
+  @Override public float progress(){ return (float)_iter/max_iter;}
 
   protected double l2norm(double[] beta){
     double l2 = 0;
@@ -402,6 +415,8 @@ public class GLM2 extends ModelJob {
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
         Log.info("GLM2 forcibly converged by getting NaNs and/or Infs in beta");
+        nextLambda(glmt,glmt._beta);
+        return;
       } else {
         if(_dinfo._standardize) {
           newBetaDeNorm = newBeta.clone();
@@ -474,7 +489,8 @@ public class GLM2 extends ModelJob {
     if(doLog)logStart();
     assert alpha.length == 1;
     start = System.currentTimeMillis();
-    if(lambda == null){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
+    final double lambda_min = lambda[lambda.length-1];
+    if(lambda_search){ // run as GLMNet - regularization path over several lmabdas staring at lambda-max
       new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
         @Override public void callback(final YMUTask ymut){
           if(ymut._ymin == ymut._ymax){
@@ -559,7 +575,7 @@ public class GLM2 extends ModelJob {
     callback.addToPendingCount(n_folds-1);
     double proximal_penalty = 0;
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),proximal_penalty).
+      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy, proximal_penalty).
       run(callback);
   }
 

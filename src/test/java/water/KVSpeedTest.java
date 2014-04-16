@@ -49,4 +49,8 @@ public class KVSpeedTest extends TestUtil {
     //  Assert.assertNull(v3);
     //}
   }
+
+  @Test @Ignore public void dummy_test() {
+    /* this is just a dummy test to avoid JUnit complains about missing test */
+  }
 }
