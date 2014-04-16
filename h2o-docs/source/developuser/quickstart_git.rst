@@ -11,8 +11,14 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
   
   git clone https://github.com/0xdata/h2o.git
 
+2. Install necessary dependencies.
 
-2. Build H\ :sub:`2`\ O from source.  You must have Java JDK 1.6 or higher.
+ ::
+ 
+  pip install -r requirements.txt [--user]
+
+                                                                             
+3. Build H\ :sub:`2`\ O from source.  You must have Java JDK 1.6 or higher, Sbt 0.13.1 or higher. If pdflatex is installed on your system, you must have inconsolata latex package and ptmr8t font for latex. R packages ‘RCurl’, ‘rjson’ and ‘statmod.’
    After the build finishes, some JUnit tests will run automatically.
 
  ::
@@ -149,7 +155,7 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
 
 
 
-3.  The build produces target/h2o.jar.  Now run h2o.jar from the
+4.  The build produces target/h2o.jar.  Now run h2o.jar from the
     command line.  Note that Xmx is the amount of memory given to
     H2O. If your data set is large, increase the number immediately
     following Xmx from the default of 2. As a rule, the amount of
@@ -185,7 +191,7 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
   04:57:16.031 main      INFO WATER: Cloud of size 1 formed [/192.168.1.28:54321]
   04:57:16.032 main      INFO WATER: Log dir: '/tmp/h2ologs'
 
-4. Point your web browser to the HTTP URL (``http://your-ip-address:54321``); H2O will run from there.  
+5. Point your web browser to the HTTP URL (``http://your-ip-address:54321``); H2O will run from there.  
 
 
 Updating H\ :sub:`2`\ O from Github

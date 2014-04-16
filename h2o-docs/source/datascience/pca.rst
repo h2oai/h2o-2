@@ -12,6 +12,11 @@ collaboration.
 Defining a PCA Model
 """"""""""""""""""""
 
+
+**Source:**
+
+  The .hex key associated with the parsed data to be used in the model.
+
  **Ignored Columns:**
 
    The set of columns in the specified data set that should me omitted

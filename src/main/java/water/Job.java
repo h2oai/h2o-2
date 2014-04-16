@@ -745,6 +745,11 @@ public abstract class Job extends Func {
       for( int i = 0; i < cols.length; i++ )
         _names[i] = source._names[cols[i]];
 
+      // Reject request if classification is required and response column column is float
+      if (classification && !response.isEnum() && !response.isInt()) {
+        Log.warn("Classification specified but response has float type. Hence disabling classification!");
+        classification = false;
+      }
       // Compute source response domain
       if (classification) _sourceResponseDomain = getVectorDomain(response);
       // Is validation specified?

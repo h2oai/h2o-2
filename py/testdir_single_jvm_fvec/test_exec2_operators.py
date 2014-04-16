@@ -6,6 +6,7 @@ import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 # src[ src$age<17 && src$zip=95120 && ... , ]
 # can specify values for enums ..values are 0 thru n-1 for n enums
 print "FIX!: need to test the && and || reduction operators"
+DO_FUNCTION = False
 initList = [
         # ('r.1', 'r.1=c(1.3,0,1,2,3,4,5)'),
         # ('r2.hex', 'r2.hex=c(2.3,0,1,2,3,4,5)'),
@@ -171,26 +172,6 @@ exprListFull = [
     # double semi doesn't work
     # "r.1[2,3]<-4;",
     "c(1,3,5)",
-    # what is this?
-    ### "function(=){x+1}(2)",
-    # doesn't work?
-    # "function(x,=){x+1}(2)",
-    # doesn't work
-    # "function(x,<-){x+1}(2)",
-    # doesn't work
-    # "function(x,x){x+1}(2)",
-    "function(x,y,z){x[]}(r.1,1,2)",
-    # doesn't work?
-    # "function(x){x[]}(2)",
-    "function(x){x+1}(2)",
-    # doesn't work
-    ## "function(x){y=x+y}(2)",
-    # doesn't work
-    ## "function(x,y){y=x+y}(2)",
-    # doesn't work
-    # "function(x){}(2)",
-    "function(x){y=x*2; y+1}(2)",
-    "function(x){y=1+2}(2)",
     # doesn't work
     # "function(x){y=1+2;y=c(1,2)}",#  Not allowed to change types in inner scopes
     "sum(1,2,3)",
@@ -203,12 +184,6 @@ exprListFull = [
     "r.1[c(1,3,5),]",
     "r.1[,c(1,3,5)]",
     "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
-    # doesn't work
-    # "function(a){a[];a=1}",
-    "a=1;a=2;function(x){x=a;a=3}",
-    "a=r.1;function(x){x=a;a=3;nrow(x)*a}(a)",
-    #  Higher-order function typing: fun is typed in the body of function(x)
-    "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
     #  Filter/selection
     "r.1[r.1[,1]>4,]",
     "apply(r.1,2,sum)",
@@ -277,6 +252,36 @@ exprListFull = [
     # leave ternary out
     # "(0 ? + : *)(1,2)",        #  Trinary select
     # "(1? r.1 : (r.1+1))[1,2]",#  True (vs false) test
+
+if DO_FUNCTION:
+exprListFull += [
+    # what is this?
+    ### "function(=){x+1}(2)",
+    # doesn't work?
+    # "function(x,=){x+1}(2)",
+    # doesn't work
+    # "function(x,<-){x+1}(2)",
+    # doesn't work
+    # "function(x,x){x+1}(2)",
+    "function(x,y,z){x[]}(r.1,1,2)",
+    # doesn't work?
+    # "function(x){x[]}(2)",
+    "function(x){x+1}(2)",
+    # doesn't work
+    ## "function(x){y=x+y}(2)",
+    # doesn't work
+    ## "function(x,y){y=x+y}(2)",
+    # doesn't work
+    # "function(x){}(2)",
+    "function(x){y=x*2; y+1}(2)",
+    "function(x){y=1+2}(2)",
+    # doesn't work
+    # "function(a){a[];a=1}",
+    "a=1;a=2;function(x){x=a;a=3}",
+    "a=r.1;function(x){x=a;a=3;nrow(x)*a}(a)",
+    #  Higher-order function typing: fun is typed in the body of function(x)
+    "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
+]
 
 # concatenate a lot of random choices to make life harder
 if 1==0:

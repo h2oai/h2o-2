@@ -37,7 +37,7 @@ auc               <<- "None"
 .binomial         <<- "None"
 cm.json           <<- "None"
 confusion_matrix  <<- "None"
-correct_pass      <<- "None"
+correct_pass      <<- 1 #1 unless otherwise over written by Predict.R
 data_center       <<- "None"
 data_name         <<- "None"    
 data_source       <<- "None" 

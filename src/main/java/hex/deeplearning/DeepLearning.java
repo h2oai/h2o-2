@@ -772,7 +772,7 @@ public class DeepLearning extends Job.ValidatedJob {
       checkParams();
       final boolean del_enum_resp = (classification && !response.isEnum());
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-      final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
+      final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
       final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
       assert(!classification ^ resp.isEnum()); //either regression or enum response
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
