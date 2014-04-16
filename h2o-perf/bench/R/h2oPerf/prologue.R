@@ -25,10 +25,10 @@ options(echo=F)
 #source("../../../R/h2o-package/R/Classes.R")
 #source("../../../R/h2o-package/R/ParseImport.R")
 
-source("../../../../R/h2o-package/R/Internal.R")
-source("../../../../R/h2o-package/R/Algorithms.R")
-source("../../../../R/h2o-package/R/Classes.R")
-source("../../../../R/h2o-package/R/ParseImport.R")
+source("../../../../../R/h2o-package/R/Internal.R")
+source("../../../../../R/h2o-package/R/Algorithms.R")
+source("../../../../../R/h2o-package/R/Classes.R")
+source("../../../../../R/h2o-package/R/ParseImport.R")
 
 
 #GLOBALS
