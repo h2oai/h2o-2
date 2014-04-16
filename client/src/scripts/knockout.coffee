@@ -19,7 +19,8 @@ ko.bindingHandlers.json =
 
 ko.bindingHandlers.geyser =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
-    $(element).html geyser.render ko.unwrap valueAccessor()
+    if data = ko.unwrap valueAccessor()
+      $(element).html geyser.render data
 
 
 
