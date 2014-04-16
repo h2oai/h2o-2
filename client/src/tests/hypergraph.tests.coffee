@@ -216,8 +216,8 @@ describe 'Hypergraph', ->
       event yes
       strictEqual propagated, yes
 
-  describe 'Bundle', ->
-    it 'should bundle deeply nested subgraphs correctly', ->
+  describe 'Context', ->
+    it 'should enclose deeply nested subgraphs correctly', ->
       foo1 = ->
       bar1 = ->
       baz1 = ->
@@ -228,9 +228,9 @@ describe 'Hypergraph', ->
       bar3 = ->
       baz3 = ->
 
-      grandparent = bundle$ foo1: foo1, bar1: bar1, baz1: baz1
-      parent = bundle$ { foo2: foo2, bar2: bar2, baz2: baz2 }, grandparent
-      child = bundle$ { foo3: foo3, bar3: bar3, baz3: baz3 }, parent
+      grandparent = context$ foo1: foo1, bar1: bar1, baz1: baz1
+      parent = context$ { foo2: foo2, bar2: bar2, baz2: baz2 }, grandparent
+      child = context$ { foo3: foo3, bar3: bar3, baz3: baz3 }, parent
 
       strictEqual grandparent.root, grandparent
       strictEqual grandparent.parent, grandparent

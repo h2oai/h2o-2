@@ -27,7 +27,7 @@ Steam.Hypergraph = do ->
 
     self
 
-  createPolyedge = ->
+  createHyperedge = ->
     arrows = []
 
     self = (args...) ->
@@ -92,24 +92,25 @@ Steam.Hypergraph = do ->
 
   createPolynode = (array) -> createObservableArray array or []
 
-  createBundle = (edges, parent=null) ->
-    bundle = root: null, parent: null
+  createContext = (edges, parent=null) ->
+    context = root: null, parent: null
 
     if parent
-      bundle.root = parent.root
-      bundle.parent = parent
+      console.assert isDefined parent.root
+      context.root = parent.root
+      context.parent = parent
     else
       # This is the root
-      bundle.root = bundle.parent = bundle
+      context.root = context.parent = context
 
     for name, edge of edges
       console.assert isFunction edge
-      console.assert not(name of bundle)
+      console.assert not(name of context)
 
       #TODO Policy injection for debugging
-      bundle[name] = edge
+      context[name] = edge
 
-    bundle
+    context
 
   link = (node, func) -> node.subscribe func
 
@@ -169,10 +170,10 @@ Steam.Hypergraph = do ->
     target
  
   createEdge: createEdge
-  createPolyedge: createPolyedge
+  createHyperedge: createHyperedge
   createNode: createNode
   createPolynode: createPolynode
-  createBundle: createBundle
+  createContext: createContext
   link: link
   unlink: unlink
   callOnChange: callOnChange
