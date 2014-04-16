@@ -309,22 +309,10 @@ public class Vec extends Iced {
    *  alternative way, such as file-backed Vecs. */
   public int nChunks() { return _espc.length-1; }
 
-  /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
-   *  are are also "isInt()" but not vice-versa. */
-  public final boolean isEnum(){return _domain != null;}
-
   /** Whether or not this column parsed as a time, and if so what pattern was used. */
   public final boolean isTime(){ return _time>=0; }
   public final int timeMode(){ return _time; }
   public final String timeParse(){ return ParseTime.TIME_PARSE[_time]; }
-
-  /** Is the column constant.
-   * <p>Returns true if the column contains only constant values and it is not full of NAs.</p> */
-  public final boolean isConst() { return min() == max(); }
-  /** Is the column bad.
-   * <p>Returns true if the column is full of NAs.</p>
-   */
-  public final boolean isBad() { return naCnt() == length(); }
 
   /** Map the integer value for a enum/factor/categorical to it's String.
    *  Error if it is not an ENUM.  */
@@ -373,6 +361,18 @@ public class Vec extends Iced {
   public boolean isInt(){return rollupStats()._isInt; }
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
+  /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
+   *  are are also "isInt()" but not vice-versa. */
+  public final boolean isEnum(){return _domain != null;}
+  /** Is the column constant.
+   * <p>Returns true if the column contains only constant values and it is not full of NAs.</p> */
+  public final boolean isConst() { return min() == max(); }
+  /** Is the column bad.
+   * <p>Returns true if the column is full of NAs.</p>
+   */
+  public final boolean isBad() { return naCnt() == length(); }
+  /** Is the column contains float values. */
+  public final boolean isFloat() { return !isEnum() && !isInt(); }
 
   Vec setRollupStats( RollupStats rs ) {
     _min  = rs._min; _max = rs._max; _mean = rs._mean;
