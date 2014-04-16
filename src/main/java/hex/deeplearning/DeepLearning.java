@@ -829,7 +829,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final long model_size = model.model_info().size();
       if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
       train = model.model_info().data_info()._adaptedFrame;
-      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
+      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, Key.make(source._key.toString() + ".rebalanced"), mp.replicate_training_data /*rebalance into only 4*cores per node*/));
       float[] trainSamplingFactors;
       if (mp.classification && mp.balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
@@ -854,7 +854,7 @@ public class DeepLearning extends Job.ValidatedJob {
         } else {
           validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
-        if (mp.force_load_balance) validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
+        if (mp.force_load_balance) validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, Key.make(validation._key.toString() + ".rebalanced"), false /*always split up globally since scoring should be distributed*/));
         if (!quiet_mode) Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
@@ -924,7 +924,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param local whether to only create enough chunks to max out all cores on one node only
    * @return Frame that has potentially more chunks
    */
-  private Frame reBalance(final Frame fr, boolean local) {
+  private Frame reBalance(final Frame fr, Key newKey, boolean local) {
     final int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
     if (fr.anyVec().nChunks() > chunks) {
       Log.info("Dataset already contains " + fr.anyVec().nChunks() + " chunks. No need to rebalance.");
@@ -932,7 +932,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     if (!quiet_mode) Log.info("ReBalancing dataset into (at least) " + chunks + " chunks.");
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
-    Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
     RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
     H2O.submitTask(rb);
     rb.join();
