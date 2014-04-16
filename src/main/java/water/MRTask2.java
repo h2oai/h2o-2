@@ -316,6 +316,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     int node = addShift(nlo);
     assert node != H2O.SELF.index();
     T rpc = clone();
+    rpc.setCompleter(null);
     rpc._nhi = (short)nhi;
     addToPendingCount(1);       // Not complete until the RPC returns
     // Set self up as needing completion by this RPC: when the ACK comes back

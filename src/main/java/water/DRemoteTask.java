@@ -174,6 +174,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   private final RPC<T> remote_compute( ArrayList<Key> keys ) {
     if( keys.size() == 0 ) return null;
     DRemoteTask rpc = clone();
+    rpc.setCompleter(null);
     rpc._keys = keys.toArray(new Key[keys.size()]);
     addToPendingCount(1);       // Block until the RPC returns
     // Set self up as needing completion by this RPC: when the ACK comes back
