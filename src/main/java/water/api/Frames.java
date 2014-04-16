@@ -103,9 +103,14 @@ public class Frames extends Request2 {
       Set<String> model_cols = entry.getValue();
 
       if (frame_column_names.containsAll(model_cols)) {
+        /// See if adapt throws an exception or not.
         try {
           Model model = all_models.get(entry.getKey());
-          model.adapt(frame, false); // TODO: this does too much work; write canAdapt()
+          Frame[] outputs = model.adapt(frame, false); // TODO: this does too much work; write canAdapt()
+          // TODO: we have to free the vecTrash vectors?
+          // Frame vecTrash = inputs[1];
+
+          // A-Ok
           compatible_models.put(entry.getKey(), model);
         }
         catch (Exception e) {
@@ -242,7 +247,18 @@ public class Frames extends Request2 {
 
 
   private Response scoreOne(Frame frame, Model score_model, boolean adapt) {
-    Frame predictions = score_model.score(frame, adapt);
+    Frame input = frame;
+
+    if (adapt) {
+      Frame[] inputs = score_model.adapt(frame, false);
+      input = inputs[0];
+      // TODO: we have to free the vecTrash vectors?
+      Frame vecTrash = inputs[1];
+    }
+
+    long before = System.currentTimeMillis();
+    Frame predictions = score_model.score(frame, false);
+    long after = System.currentTimeMillis();
 
     ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
     AUC auc = null;
@@ -263,6 +279,8 @@ public class Frames extends Request2 {
     Map metrics = new LinkedHashMap();
     metrics.put("model", score_model._key.toString());
     metrics.put("frame", frame._key.toString());
+
+    metrics.put("duration_in_ms", after - before);
 
     metrics.put("error", error);
     metrics.put("cm", cm.toJSON());
