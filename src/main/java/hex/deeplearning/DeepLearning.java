@@ -773,7 +773,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final boolean del_enum_resp = (classification && !response.isEnum());
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
-      final Vec resp = dinfo._adaptedFrame.lastVec();
+      final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
       assert(!classification ^ resp.isEnum()); //either regression or enum response
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
@@ -828,10 +828,8 @@ public class DeepLearning extends Job.ValidatedJob {
       prepareValidationWithModel(model);
       final long model_size = model.model_info().size();
       if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
-//      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
       if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
-//      train = updateFrame(train, reBalance(train, mp.seed, mp.replicate_training_data, mp.force_load_balance, mp.shuffle_training_data));
       float[] trainSamplingFactors;
       if (mp.classification && mp.balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
