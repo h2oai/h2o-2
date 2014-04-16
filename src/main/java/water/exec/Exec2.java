@@ -82,10 +82,10 @@ public class Exec2 {
       // Before was adding all frames with read-shared lock here.
       // Should be illegal to add any keys locked by "null' to exec? (is it only unparsed keys?)
       // undoing. this doesn't always work (gets stack trace)
-      // if( val.isFrame() && !val.isRawData() ) {
       if( val.isFrame() ) {
         val = DKV.get(k);       // Fetch the whole thing
         if( val == null ) continue; // Racing delete got it?
+        if( val.isRawData() ) continue; // don't add unparsed stuff
         Frame fr = val.get();
         String kstr = k.toString();
         try {
