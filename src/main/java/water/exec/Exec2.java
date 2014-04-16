@@ -3,6 +3,7 @@ package water.exec;
 import java.util.*;
 import water.*;
 import water.fvec.*;
+import water.util.Log;
 
 /** Parse and execute a generic R-like string, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -77,7 +78,10 @@ public class Exec2 {
         fr2.delete_and_lock(null).unlock(null);
         val = DKV.get(k);       // Pull it locally again; val is now a Frame
       }
-      if( val.isFrame() ) {
+      // Bad if it's already locked by 'null', because lock by 'null' is removed when you leave Exec. 
+      // Before was adding all frames with read-shared lock here.
+      // Should be illegal to add any keys locked by "null' to exec? (is it only unparsed keys?)
+      if( val.isFrame() && !val.isRawData() ) {
         val = DKV.get(k);       // Fetch the whole thing
         if( val == null ) continue; // Racing delete got it?
         Frame fr = val.get();
@@ -88,7 +92,7 @@ public class Exec2 {
           fr.read_lock(null);
           locked.add(fr._key);
         } catch( Exception e ) {
-          System.err.println("Exception while adding frame "+k+" to Exec env");
+          Log.err("Exception while adding frame "+k+" to Exec env");
         }
       }
     }
