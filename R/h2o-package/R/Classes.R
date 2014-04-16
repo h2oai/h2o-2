@@ -168,7 +168,8 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("Distributed Random Forest Model Key:", object@key)
 
   model = object@model
-  cat("\n\nNumber of trees:", model$params$ntree)
+  cat("\n\nClasification:", model$params$classification)
+  cat("\nNumber of trees:", model$params$ntree)
   cat("\nTree statistics:\n"); print(model$forest)
   
   if(model$params$classification) {
