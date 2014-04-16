@@ -124,27 +124,24 @@ public class SpeeDRF extends Job.ModelJob {
       float[] samples = new float[(int) (response.max() - response.min() + 1)];
       for(int i = 0; i < samples.length; ++i) samples[i] = (float)67.0;
       for(int i = 0; i < weights.length; ++i) weights[i] = 1.0;
-      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, true, true);
-      final Frame tr = new Frame(Key.make(), train._names, train.vecs());
-      final FrameTask.DataInfo dinfo = new FrameTask.DataInfo(tr, 1, true, !classification);
-      final Vec resp = dinfo._adaptedFrame.lastVec();
-      assert(!classification ^ resp.isEnum()); //either regression or enum response
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, dinfo, this, Sampling.Strategy.RANDOM, weights, samples, new Key[0], tr);
+
+//      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, true, true);
+//      final Frame tr = new Frame(Key.make(), train._names, train.vecs());
+//      final FrameTask.DataInfo dinfo = new FrameTask.DataInfo(tr, 1, true, !classification);
+//      final Vec resp = dinfo._adaptedFrame.lastVec();
+//      assert(!classification ^ resp.isEnum()); //either regression or enum response
+      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, source, response, new Key[0]);
       int csize = H2O.CLOUD.size();
       model.bin_limit = bin_limit;
       if (mtry == -1) {
-        model.mtry = (int) Math.floor(Math.sqrt(tr.numCols()));
+        model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
       }
-      model.features = dinfo._adaptedFrame.numCols();
+      model.features = source.numCols();
       model.sampling_strategy = Sampling.Strategy.RANDOM;
       model.sample = (float) sample;
-      model.fr = tr;
-      model.response = dinfo._adaptedFrame.lastVec();
       model.weights = weights;
       model.time = 0;
-      model.local_forests = new Key[csize][];
       model.total_trees = num_trees;
-      model.node_split_features = new int[csize];
       model.strata_samples = samples;
       model.depth = max_depth;
       return model;

@@ -87,27 +87,17 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public static final String JSON_CM_CLASSES_ERRORS = "classes_errors";
 
 
-  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, FrameTask.DataInfo dinfo, SpeeDRF params, Sampling.Strategy sampling_strategy, double[] weights, float[] samples, Key[] t_keys, Frame fr) {
-    super(selfKey, dataKey, dinfo._adaptedFrame);
+  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, Frame fr, Vec response, Key[] t_keys) {
+    super(selfKey, dataKey, fr);
     int csize = H2O.CLOUD.size();
-    this.mtry = (int)Math.floor(Math.sqrt(fr.numCols()));
-    this.features = dinfo._adaptedFrame.numCols();
-    this.sampling_strategy = sampling_strategy;
-    this.sample = (float) params.sample;
     this.fr = fr;
-    this.response = dinfo._adaptedFrame.lastVec();
-    this.weights = weights;
+    this.response = response;
     this.time = 0;
     this.local_forests = new Key[csize][];
     for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
     this.t_keys = t_keys;
-    this.total_trees = params.num_trees;
     this.node_split_features = new int[csize];
-    this.mtry = params.mtry;
-    this.strata_samples = samples;
     for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
-    this.depth = params.max_depth;
-    this.bin_limit = params.bin_limit;
     this.jobKey = jobKey;
   }
 
