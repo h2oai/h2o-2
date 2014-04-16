@@ -187,8 +187,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
       return prepareFrame(source, response, ignored_cols, toEnum, dropConstantCols, false);
     }
-    public DataInfo(Frame fr, int nResponses, boolean standardize) {
-      this(fr, nResponses, standardize, false,false);
+    public DataInfo(Frame fr, int nResponses, boolean useAllFactors, boolean standardize) {
+      this(fr, nResponses, useAllFactors, standardize, false);
     }
 
     public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, boolean standardize, boolean standardize_response){
