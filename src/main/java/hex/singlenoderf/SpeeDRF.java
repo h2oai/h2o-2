@@ -85,6 +85,11 @@ public class SpeeDRF extends Job.ModelJob {
     remove();
   }
 
+
+  @Override protected Response redirect() {
+    return SpeeDRFProgressPage.redirect(this, self(), dest());
+  }
+
   public final void buildForest(SpeeDRFModel model) {
     try {
       source.read_lock(self());

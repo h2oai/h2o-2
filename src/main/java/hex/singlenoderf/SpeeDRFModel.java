@@ -1,5 +1,9 @@
 package hex.singlenoderf;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import hex.FrameTask;
 import hex.deeplearning.DeepLearning;
 import hex.singlenoderf.Sampling;
@@ -7,6 +11,7 @@ import hex.singlenoderf.Tree;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.api.RequestBuilders;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -68,6 +73,15 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @API(help = "Job key")
   Key jobKey;
+
+  @API(help = "No CM")
+  boolean _noCM;
+
+  @API(help = "Iterative CM")
+  boolean iterative_cm;
+
+  @API(help = "Out of bag error estimate.")
+  boolean oobee;
 
 
   public static final String KEY_PREFIX = "__RFModel_";
@@ -286,133 +300,138 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return (float) t_keys.length / (float) total_trees;
   }
 
+  static String[] cfDomain(final ConfusionTask.CMFinal cm, int maxClasses) {
+    String[] dom = cm.domain();
+    if (dom.length > maxClasses)
+      throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
+    return dom;
+  }
+
+
   public void generateHTML(String title, StringBuilder sb) {
+    int tasks        = 0;
+    int finished     = 0;
+    double[] weights = this.weights;
+    // Finish refresh after rf model is done and confusion matrix for all trees is computed
+    boolean done = false;
+    int classCol = this.fr.find(this.response);
+
+    tasks    = this.total_trees;
+    finished = this.size();
+
+
     if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
 
     DocGen.HTML.section(sb, "SpeeDRF Output:");
 
-    //Log Pooled Variances...
-//    DocGen.HTML.section(sb, "Log of the Pooled Cluster Within Sum of Squares per value of k");
-//    sb.append("<span style='display: inline-block;'>");
-//    sb.append("<table class='table table-striped table-bordered'>");
-//
-//    double[] log_wks = wks();
-//
-//    sb.append("<tr>");
-//    for (int i = 0; i <log_wks.length; ++i) {
-//      if (log_wks[i] == 0) continue;
-//      sb.append("<th>").append(i).append("</th>");
-//    }
-//    sb.append("</tr>");
-//
-//    sb.append("<tr>");
-//    for (int i = 0; i < log_wks.length; ++i) {
-//      if (log_wks[i] == 0) continue;
-//      sb.append("<td>").append(log_wks[i]).append("</td>");
-//    }
-//    sb.append("</tr>");
-//    sb.append("</table></span>");
-//
-//
-//    //Monte Carlo Bootstrap averages
-//    DocGen.HTML.section(sb, "Monte Carlo Bootstrap Replicate Averages of the Log of the Pooled Cluster Within SS per value of k");
-//    sb.append("<span style='display: inline-block;'>");
-//    sb.append("<table class='table table-striped table-bordered'>");
-//
-//    double[] log_wkbs = wkbs();
-//
-//    sb.append("<tr>");
-//    for (int i = 0; i <log_wkbs.length; ++i) {
-//      if (log_wkbs[i] == 0) continue;
-//      sb.append("<th>").append(i).append("</th>");
-//    }
-//    sb.append("</tr>");
-//
-//    sb.append("<tr>");
-//    for (int i = 0; i < log_wkbs.length; ++i) {
-//      if (log_wkbs[i] == 0) continue;
-//      sb.append("<td>").append(log_wkbs[i]).append("</td>");
-//    }
-//    sb.append("</tr>");
-//    sb.append("</table></span>");
-//
-//    //standard errors
-//    DocGen.HTML.section(sb, "Standard Error for the Monte Carlo Bootstrap Replicate Averages of the Log of the Pooled Cluster Within SS per value of k");
-//    sb.append("<span style='display: inline-block;'>");
-//    sb.append("<table class='table table-striped table-bordered'>");
-//
-//    double[] sks = sk();
-//
-//    sb.append("<tr>");
-//    for (int i = 0; i <sks.length; ++i) {
-//      if (sks[i] == 0) continue;
-//      sb.append("<th>").append(i).append("</th>");
-//    }
-//    sb.append("</tr>");
-//
-//    sb.append("<tr>");
-//    for (int i = 0; i < sks.length; ++i) {
-//      if (sks[i] == 0) continue;
-//      sb.append("<td>").append(sks[i]).append("</td>");
-//    }
-//    sb.append("</tr>");
-//    sb.append("</table></span>");
-//
-//    //Gap computation
-//    DocGen.HTML.section(sb, "Gap Statistic per value of k");
-//    sb.append("<span style='display: inline-block;'>");
-//    sb.append("<table class='table table-striped table-bordered'>");
-//
-//    double[] gap_stats = gaps();
-//
-//    sb.append("<tr>");
-//    for (int i = 0; i < log_wkbs.length; ++i) {
-//      if (log_wkbs[i] == 0) continue;
-//      sb.append("<th>").append(i).append("</th>");
-//    }
-//    sb.append("</tr>");
-//
-//    sb.append("<tr>");
-////    double prev_val = Double.NEGATIVE_INFINITY;
-//
-//    for (int i = 0; i < log_wkbs.length; ++i) {
-//      if (log_wkbs[i] == 0) continue;
-//
-//      sb.append("<td>").append(gap_stats[i]).append("</td>");
-//    }
-//    sb.append("</tr>");
-//    sb.append("</table></span>");
-//
-//
-//    //compute k optimal: smallest k such that GAP_(k) >= (GAP_(k+1) - s_(k+1)
-//    int kmin = -1;
-//    for(int i = 0; i < gap_stats.length; ++i) {
-//      int cur_k = i + 1;
-//      if( i == gap_stats.length - 1) {
-//        kmin = cur_k;
-//        break;
-//      }
-//      if (gap_stats[i] >= (gap_stats[i+1] - sks[i+1])) {
-//        kmin = cur_k;
-//        break; // every other k is larger...
-//      }
-//    }
-//
-//    if (log_wks[log_wks.length -1] != 0) {
-//      DocGen.HTML.section(sb, "Best k:");
-//      if (kmin < 0) {
-//        sb.append("k = " + "No k computed!");
-//      } else {
-//        sb.append("k = " + kmin);
-//      }
-//    } else {
-//      DocGen.HTML.section(sb, "Best k so far:");
-//      if (kmin < 0) {
-//        sb.append("k = " + "No k computed yet...");
-//      } else {
-//        sb.append("k = " + kmin);
-//      }
-//    }
+    int modelSize = tasks * 25/100;
+    modelSize = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
+
+    // Get the computing the matrix - if no job is computing, then start a new job
+    Job cmJob       = ConfusionTask.make(this, modelSize, this.fr._key, classCol, weights,this.oobee);
+    // Here the the job is running - it saved a CM which can be already finished or in invalid state.
+    ConfusionTask.CMFinal confusion = UKV.get(cmJob.dest());
+    if (confusion!=null && confusion.valid() && modelSize > 0) {
+      //finished += 1;
+      JsonObject cm       = new JsonObject();
+      JsonArray  cmHeader = new JsonArray();
+      JsonArray  matrix   = new JsonArray();
+      cm.addProperty(JSON_CM_TYPE, oobee ? "OOB error estimate" : "full scoring");
+      cm.addProperty(JSON_CM_CLASS_ERR, confusion.classError());
+      cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
+      cm.addProperty(JSON_CM_ROWS, confusion.rows());
+      // create the header
+      for (String s : cfDomain(confusion, 1024))
+        cmHeader.add(new JsonPrimitive(s));
+      cm.add(JSON_CM_HEADER,cmHeader);
+      // add the matrix
+      final int nclasses = confusion.dimension();
+      JsonArray classErrors = new JsonArray();
+      for (int crow = 0; crow < nclasses; ++crow) {
+        JsonArray row  = new JsonArray();
+        int classHitScore = 0;
+        for (int ccol = 0; ccol < nclasses; ++ccol) {
+          row.add(new JsonPrimitive(confusion.matrix(crow,ccol)));
+          if (crow!=ccol) classHitScore += confusion.matrix(crow,ccol);
+        }
+        // produce infinity members in case of 0.f/0
+        classErrors.add(new JsonPrimitive((float)classHitScore / (classHitScore + confusion.matrix(crow,crow))));
+        matrix.add(row);
+      }
+      cm.add(JSON_CM_CLASSES_ERRORS, classErrors);
+      cm.add(JSON_CM_MATRIX,matrix);
+      cm.addProperty(JSON_CM_TREES,modelSize);
+      // Signal end only and only if all trees were generated and confusion matrix is valid
+
+
+
+    DocGen.HTML.section(sb, "Confusion Matrix:");
+
+    if (cm.has(JSON_CM_MATRIX)) {
+      sb.append("<h3>Confusion matrix - ").append(cm.get(JSON_CM_TYPE).getAsString()).append("</h3>");
+      sb.append("<dl class='dl-horizontal'>");
+      sb.append("<dt>classification error</dt><dd>").append(String.format("%5.3f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
+      long rows = cm.get(JSON_CM_ROWS).getAsLong();
+      long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
+      sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
+      sb.append("<dt>trees used</dt><dd>"+cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
+      sb.append("</dl>");
+      sb.append("<table class='table table-striped table-bordered table-condensed'>");
+      sb.append("<tr><th>Actual \\ Predicted</th>");
+      JsonArray header = (JsonArray) cm.get(JSON_CM_HEADER);
+      for (JsonElement e: header)
+        sb.append("<th>"+e.getAsString()+"</th>");
+      sb.append("<th>Error</th></tr>");
+      int classes = header.size();
+      long[] totals = new long[classes];
+      JsonArray matrix2 = (JsonArray) cm.get(JSON_CM_MATRIX);
+      long sumTotal = 0;
+      long sumError = 0;
+      for (int crow = 0; crow < classes; ++crow) {
+        JsonArray row = (JsonArray) matrix2.get(crow);
+        long total = 0;
+        long error = 0;
+        sb.append("<tr><th>"+header.get(crow).getAsString()+"</th>");
+        for (int ccol = 0; ccol < classes; ++ccol) {
+          long num = row.get(ccol).getAsLong();
+          total += num;
+          totals[ccol] += num;
+          if (ccol == crow) {
+            sb.append("<td style='background-color:LightGreen'>");
+          } else {
+            sb.append("<td>");
+            error += num;
+          }
+          sb.append(num);
+          sb.append("</td>");
+        }
+        sb.append("<td>");
+        sb.append(String.format("%5.3f = %d / %d", (double)error/total, error, total));
+        sb.append("</td></tr>");
+        sumTotal += total;
+        sumError += error;
+      }
+      sb.append("<tr><th>Totals</th>");
+      for (int i = 0; i < totals.length; ++i)
+        sb.append("<td>"+totals[i]+"</td>");
+      sb.append("<td><b>");
+      sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
+      sb.append("</b></td></tr>");
+      sb.append("</table>");
+    } else {
+      sb.append("<div class='alert alert-info'>");
+      sb.append("Confusion matrix is being computed into the key:</br>");
+      sb.append(cm.get(JSON_CONFUSION_KEY).getAsString());
+      sb.append("</div>");
+    }
+    }
+
+
+
+
+
+
+
   }
 }
