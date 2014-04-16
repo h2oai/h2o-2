@@ -10,6 +10,6 @@ For R Console and R Studio Users
    :maxdepth: 1
 
    R_studio
-   R_install
+   Rinstall
    Rinstallgit
    Rpackage

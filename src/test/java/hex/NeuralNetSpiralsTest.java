@@ -19,7 +19,8 @@ public class NeuralNetSpiralsTest extends TestUtil {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
-  @Test public void run() throws Exception {
+  @Test
+  public void run() throws Exception {
     Key file = NFSFileVec.make(find_test_file("smalldata/neural/two_spiral.data"));
     Key parse = Key.make();
     Frame frame = ParseDataset2.parse(parse, new Key[]{file});

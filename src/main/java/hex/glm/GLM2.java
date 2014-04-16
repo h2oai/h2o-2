@@ -31,10 +31,12 @@ public class GLM2 extends ModelJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "GLM2";
   public final String _jobName;
-//  private transient GLM2 [] _subjobs;
-//  private Key _parentjob;
+
+  // API input parameters BEGIN ------------------------------------------------------------
+
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true)
   int max_iter = 100;
+
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true)
   boolean standardize = true;
 
@@ -44,70 +46,79 @@ public class GLM2 extends ModelJob {
   @API(help = "Family.", filter = Default.class, json=true)
   Family family = Family.gaussian;
 
+  @API(help = "Tweedie variance power", filter = Default.class, json=true)
+  double tweedie_variance_power;
+
+  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true)
+  double [] alpha = new double[]{0.5};
+
+  @API(help = "regularization strength", filter = Default.class, json=true)
+  public double [] lambda = new double[]{1e-5};
+
+  @API(help = "beta_eps", filter = Default.class, json=true)
+  double beta_epsilon = DEFAULT_BETA_EPS;
+
+  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
+  boolean higher_accuracy;
+
+  @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class)
+  boolean use_all_factor_levels;
+
+  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
+  boolean lambda_search;
+  
+  // API input parameters END ------------------------------------------------------------
+
+  // API output parameters BEGIN ------------------------------------------------------------
+
+  @API(help = "", json=true)
+  private double [] _wgiven;
+
+  @API(help = "", json=true)
+  private double _proximalPenalty;
+
+  @API(help = "", json=true)
+  private double [] _beta;
+
+  @API(help = "", json=true)
+  private boolean _runAllLambdas = true;
+
+  @API(help = "", json=true)
+  Link link = Link.identity;
+
+  @API(help = "Tweedie link power", json=true)
+  double tweedie_link_power;
+
+  @API(help = "lambda max", json=true)
+  double lambda_max;
+
+  // API output parameters END ------------------------------------------------------------
+
+
   private static double GLM_GRAD_EPS = 1e-4; // done (converged) if subgrad < this value.
 
   private boolean highAccuracy(){return higher_accuracy;}
   private void setHighAccuracy(){
     higher_accuracy = true;
     ADMM_GRAD_EPS = 1e-6;
-//    GLM_GRAD_EPS = 1e-6;
   }
 
   private DataInfo _dinfo;
   public GLMParams _glm;
-  @API(help = "", json=true)
-  private double [] _wgiven;
-  @API(help = "", json=true)
-  private double _proximalPenalty;
-  @API(help = "", json=true)
-  private double [] _beta;
-
-  @API(help = "", json=true)
-  private boolean _runAllLambdas = true;
-  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
-
-//  @API(help = "Link.", filter = Default.class)
-  @API(help = "", json=true)
-  Link link = Link.identity;
-
-  @API(help = "Tweedie variance power", filter = Default.class, json=true)
-  double tweedie_variance_power;
-  @API(help = "Tweedie link power", json=true)
-  double tweedie_link_power;
-  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true)
-  double [] alpha = new double[]{0.5};
-//  @API(help = "lambda", filter = RSeq2.class)
-  @API(help = "lambda max", json=true)
-  double lambda_max;
-
-  @API(help = "regularization strength", filter = Default.class, json=true)
-  public double [] lambda = new double[]{1e-5};
-  @API(help = "beta_eps", filter = Default.class, json=true)
-  double beta_epsilon = DEFAULT_BETA_EPS;
 
   private double ADMM_GRAD_EPS = 1e-4; // default addm gradietn eps
   private static final double MIN_ADMM_GRAD_EPS = 1e-6; // min admm gradient eps
-  @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class)
-  boolean use_all_factor_levels;
-  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
-  boolean higher_accuracy;
-
-  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
-  boolean lambda_search;
 
   int _lambdaIdx = 0;
 
   private transient double _addedL2;
-
 
   public static final double DEFAULT_BETA_EPS = 1e-4;
 
   private transient double _ymu;
   private transient double _reg;
   private transient int    _iter;
-  private transient double _rho;
   private transient GLMModel _model;
-
 
   private static class IterationInfo {
     final int _iter;
