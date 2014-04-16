@@ -33,6 +33,7 @@
     "chai": "~1.9.1",
     "tv4": "~1.0.15",
     "hasher": "~1.2.0",
-    "crossroads": "~0.12.0"
+    "crossroads": "~0.12.0",
+    "fontawesome": "~4.0.3"
   }
 }
