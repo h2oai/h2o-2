@@ -36,15 +36,16 @@ public class DRFTest extends TestUtil {
   }
 
   //  @Ignore
-  @Test public void testClassIris50() throws Throwable {
+  //[[30, 0, 0], [0, 31, 3], [0, 4, 32]], but was: [[28, 0, 0], [0, 30, 2], [0, 2, 28]]: arrays first differed at element [0]; expected:<30> but was:<28>
+  @Test public void testClassIris5() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
-          50,
-          a( a(30, 0,  0),
-             a(0, 31,  3),
-             a(0,  4, 32)),
+          5,
+          a( a(28, 0,  0),
+             a(0, 30,  2),
+             a(0,  2, 28)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 

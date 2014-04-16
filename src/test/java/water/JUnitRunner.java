@@ -133,7 +133,7 @@ public class JUnitRunner {
     return tests;
   }
 
-  private static boolean isTest(Class c) {
+  public static boolean isTest(Class c) {
     for( Annotation a : c.getAnnotations() )
       if( a instanceof Ignore )
         return false;
