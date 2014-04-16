@@ -1,0 +1,7 @@
+.y-frame-list-view
+  // ko foreach:items
+  .y-frame(data-bind='click:display, css:{"y-active":isActive}')
+    .y-frame-title(data-bind='text:title')
+    .y-frame-caption(data-bind='text:caption')
+    .y-frame-cutline(data-bind='text:cutline')
+  // /ko

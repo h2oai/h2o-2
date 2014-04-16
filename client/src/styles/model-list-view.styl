@@ -1,0 +1,24 @@
+.y-model-list-view
+  dock()
+  .y-model
+    cursor pointer
+    padding 10px
+    border-left 3px solid transparent
+    border-bottom 1px solid #ddd
+    &:hover
+      background #f7f7f7
+    &.y-active
+      background #eee
+      border-left-color y-color-yellow-dk
+      border-left-color y-color-grey-md
+  .y-model-title
+    font-size 18px
+    font-weight 300
+  .y-model-caption
+    font-size 11px
+    text-transform uppercase
+    color #999
+  .y-model-cutline
+    font-size 12px
+    color #999
+    overflow ellipsis

@@ -1,0 +1,53 @@
+// ko with:view
+.y-main
+  .y-navigation-bar
+    .y-logo-area
+    .y-navigation-area
+  .y-desktop
+    .y-topic-lane
+      .y-lane-header
+        button.y-topic-button.btn(data-bind='click:toggleTopics') M
+        .y-topic-title(data-bind='text:topicTitle')
+        button.y-upload-button.btn R
+
+      .y-lane-body
+
+        // ko with:frameListView
+        include frame-list-view
+        // /ko
+
+        // ko with:modelListView
+        include model-list-view
+        // /ko
+
+        // ko if:isDisplayingTopics
+        // ko with:topicListView
+        include topic-list-view
+        // /ko
+        // /ko
+
+    .y-workspace-lane
+      .y-lane-header
+      .y-lane-body
+
+        // ko with:emptyView
+        include empty-view
+        // /ko
+
+        // ko with:frameView
+        include frame-view
+        // /ko
+
+        // ko with:modelView
+        include model-view
+        // /ko
+
+      // ko if:isDisplayingTopics
+      .y-lane-mask
+      // /ko
+        
+    .y-help-lane
+      .y-lane-header
+      .y-lane-body
+  .y-status-bar
+// /ko

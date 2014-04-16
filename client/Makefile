@@ -17,10 +17,46 @@ BUILD_DIRS=\
 SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
-	$(BUILD)/scripts/base.js
+	$(BUILD)/scripts/main.js
 
-BOOT=\
+BROWSER_SCRIPTS=\
+	$(BUILD)/scripts/dom.global.js \
+	$(BUILD)/scripts/geyser.global.js \
+	$(BUILD)/scripts/knockout.js \
+	$(BUILD)/scripts/application.js \
+	$(BUILD)/scripts/application-context.js \
+	$(BUILD)/scripts/router.js \
+	$(BUILD)/scripts/routes.js \
+	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/xhr.js \
+	$(BUILD)/scripts/frame-list-view.js \
+	$(BUILD)/scripts/frame-view.js \
+	$(BUILD)/scripts/model-list-view.js \
+	$(BUILD)/scripts/model-view.js \
+	$(BUILD)/scripts/topic-list-view.js \
+	$(BUILD)/scripts/main-view.js \
 	$(BUILD)/scripts/steam.js
+
+TEMPLATES=\
+	src/templates/main-view.jade \
+	src/templates/frame-list-view.jade \
+	src/templates/model-list-view.jade \
+	src/templates/empty-view.jade \
+	src/templates/frame-view.jade \
+	src/templates/model-view.jade
+
+STYLES=\
+	src/styles/variables.styl \
+	src/styles/mixins.styl \
+	src/styles/fonts.styl \
+	src/styles/bootstrap.styl \
+	src/styles/main-view.styl \
+	src/styles/topic-list-view.styl \
+	src/styles/frame-list-view.styl \
+	src/styles/model-list-view.styl \
+	src/styles/empty-view.styl \
+	src/styles/frame-view.styl \
+	src/styles/model-view.styl
 
 TESTS=\
 	$(BUILD)/tests/prelude.tests.js \
@@ -42,6 +78,7 @@ LIB_CSS=\
 	$(LIB)/bootstrap/dist/css/bootstrap.css
 
 LIB_TEST_JS=\
+	$(LIB)/jquery/dist/jquery.js \
 	$(LIB)/lodash/dist/lodash.js \
 	$(LIB)/knockout/knockout.js \
 	$(LIB)/chai/chai.js \
@@ -201,15 +238,15 @@ $(BUILD)/tests/%.js: src/tests/%.coffee
 	@mkdir -p $(@D)
 	$(BIN)/coffee --output $(@D) --compile $<
 
-$(DEPLOY)/index.html: src/templates/index.jade
+$(DEPLOY)/index.html: src/templates/index.jade $(TEMPLATES)
 	@mkdir -p $(@D)
 	$(BIN)/jade --pretty --out $(@D) $<
 
-$(DEPLOY)/css/steam.css: src/styles/steam.styl
+$(DEPLOY)/css/steam.css: src/styles/steam.styl $(STYLES)
 	@mkdir -p $(@D)
-	$(BIN)/stylus --out $(@D) $<
+	$(BIN)/stylus --use nib --out $(@D) $<
 
-$(DEPLOY)/js/steam.js: $(SCRIPTS) $(BOOT)
+$(DEPLOY)/js/steam.js: $(SCRIPTS) $(BROWSER_SCRIPTS)
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@

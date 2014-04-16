@@ -8,6 +8,7 @@ html(lang='en')
     meta(name='description', content='H2O Web Client')
     link(rel='stylesheet', href='css/lib.css')
     link(rel='stylesheet', href='css/steam.css')
+    link(href='http://fonts.googleapis.com/css?family=Open+Sans:400,700,300', rel='stylesheet', type='text/css')
 
     //- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries
     //- WARNING: Respond.js doesn't work if you view the page via file://
@@ -22,18 +23,18 @@ html(lang='en')
       | Please <a href="http://browsehappy.com/">upgrade your browser</a>
       | to improve your experience.
     <![endif]-->
-
-    p Foo world! This is HTML5 Boilerplate.
+    
+    //- Recursively include other .jade files
+    include main-view
 
     script(src='js/lib.js')
     script(src='js/steam.js')
 
-    //-
-      script
-        (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
-        function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
-        e=o.createElement(i);r=o.getElementsByTagName(i)[0];
-        e.src='//www.google-analytics.com/analytics.js';
-        r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
-        ga('create','UA-29263631-3');ga('send','pageview', { 'title': 'h2o-steam' });
+    script.
+      (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
+      function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
+      e=o.createElement(i);r=o.getElementsByTagName(i)[0];
+      e.src='//www.google-analytics.com/analytics.js';
+      r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
+      ga('create','UA-29263631-3');ga('send','pageview', { 'title': 'h2o-steam' });
 

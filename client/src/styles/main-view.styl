@@ -1,0 +1,72 @@
+.y-main
+  dock()
+
+.y-navigation-bar
+  dock-top(y-navigation-bar-height)
+  background-color y-color-yellow
+
+.y-logo-area
+  dock-left(y-topic-lane-width)
+  background-color y-color-yellow-dk
+
+.y-navigation-area
+  dock(left:y-topic-lane-width)
+
+.y-desktop
+  dock(top:y-navigation-bar-height, bottom:y-status-bar-height)
+
+.y-lane-header
+  dock-top(y-desktop-header-height)
+
+.y-lane-body
+  dock(top:y-desktop-header-height)
+  overflow auto
+
+.y-topic-lane
+  dock-left(y-topic-lane-width)
+  border-right: 1px solid #ddd
+  .y-lane-header
+    border-bottom: 1px solid #ddd
+
+.y-workspace-lane
+  dock(left:y-topic-lane-width, right:y-help-lane-width)
+
+.y-help-lane
+  dock-right(y-help-lane-width)
+
+.y-topic-button
+  dock-left(48px, 6px, 6px, 6px)
+
+.y-topic-title
+  text-block(y-desktop-header-height, 6px + 48px + 6px, 6px + 48px + 6px)
+  font-family 'robotolight'
+  font-size 18px
+  text-align center
+
+.y-upload-button
+  dock-right(48px, 6px, 6px, 6px)
+
+.y-lane-mask
+  dock()
+  background white
+  opacity 0.75
+
+.y-status-bar
+  dock-bottom(y-status-bar-height)
+
+// Adding a .y-main-no-topic class on .y-main hides the help area
+//    and docks .y-workspace-lane to the left
+.y-main-no-topic
+  .y-topic-lane
+    display none
+  .y-workspace-lane
+    left 0
+
+// Adding a .y-main-no-help class on .y-main hides the help area
+//    and docks .y-workspace-lane to the right
+.y-main-no-help
+  .y-help-lane
+    display none
+  .y-workspace-lane
+    right 0
+    
