@@ -131,7 +131,15 @@ class PerfRunner:
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
             except:
-                print "Could not complete test + " test.test_name
+                print
+                print
+                print "Could not complete test " + test.test_name
+                print
+                print
+                print "Unexpected error:", sys.exc_info()[0]
+                print
+                PerfUtils.stop_cloud(self, test.remote_hosts)
+                self.cloud.pop(0)
             self.perfdb.this_test_run_id += 1
 
     def __get_instance_type__(self):
