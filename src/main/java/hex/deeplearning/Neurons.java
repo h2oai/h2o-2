@@ -941,7 +941,7 @@ public abstract class Neurons {
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  static void gemv_row_optimized(float[] res, float[] a, float[] x, final float[] y, byte[] row_bits) {
+  static void gemv_row_optimized(final float[] res, final float[] a, final float[] x, final float[] y, final byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);

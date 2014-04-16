@@ -3,11 +3,11 @@
  */
 package water;
 
-import java.util.HashSet;
-
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
+
+import java.util.HashSet;
 
 /**
  * Short-time computation which is not a job.
@@ -67,7 +67,7 @@ public abstract class Func extends Request2 {
     // Clean-up global list of temporary vectors
     Futures fs = new Futures();
     cleanupTrash(_gVecTrash, fs);
-    if (!_lVecTrash.isEmpty()) cleanupTrash(_lVecTrash, fs);
+    cleanupTrash(_lVecTrash, fs);
     fs.blockForPending();
   }
   /** User call which empty local trash of vectors. */
@@ -77,20 +77,20 @@ public abstract class Func extends Request2 {
     cleanupTrash(_lVecTrash, fs);
     fs.blockForPending();
   }
-  /** Append all vectors from  given frame to a global clean up list.
+  /** Append all vectors from given frame to a global clean up list.
+   * If the Frame itself is in the K-V store, then trash that too.
    * @see #cleanup()
    * @see #_gVecTrash */
-  protected final void gtrash(Frame fr) { gtrash(fr.vecs());  }
+  protected final void gtrash(Frame fr) { gtrash(fr.vecs()); if (fr._key != null && UKV.get(fr._key) != null) _gVecTrash.add(fr._key); }
   /** Append given vector to clean up list.
    * @see #cleanup()*/
   protected final void gtrash(Vec ...vec)  { appendToTrash(_gVecTrash, vec); }
   /** Put given frame vectors into local trash which can be emptied by a user calling the {@link #emptyLTrash()} method.
    * @see #emptyLTrash() */
-  protected final void ltrash(Frame fr) {  ltrash(fr.vecs()); }
+  protected final void ltrash(Frame fr) { ltrash(fr.vecs()); if (fr._key != null && UKV.get(fr._key) != null) _lVecTrash.add(fr._key); }
   /** Put given vectors into local trash.
    * * @see #emptyLTrash() */
   protected final void ltrash(Vec ...vec) { appendToTrash(_lVecTrash, vec); }
-
   /** Put given vectors into a given trash. */
   private void appendToTrash(HashSet<Key> t, Vec[] vec) {
     for (Vec v : vec) t.add(v._key);

@@ -773,12 +773,12 @@ public class DeepLearning extends Job.ValidatedJob {
       final boolean del_enum_resp = (classification && !response.isEnum());
       final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
       final DataInfo dinfo = new FrameTask.DataInfo(train, 1, true, !classification);
-      final Vec resp = dinfo._adaptedFrame.lastVec();
+      final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
       assert(!classification ^ resp.isEnum()); //either regression or enum response
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
-      if (del_enum_resp) model.toDelete(resp._key);
+      if (del_enum_resp) ltrash(resp);
       return model;
     }
     finally {
@@ -828,10 +828,8 @@ public class DeepLearning extends Job.ValidatedJob {
       prepareValidationWithModel(model);
       final long model_size = model.model_info().size();
       if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
-//      Log.info("Memory usage of the model: " + String.format("%.2f", (double)model_size*Float.SIZE / (1<<23)) + " MB.");
       train = model.model_info().data_info()._adaptedFrame;
       if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
-//      train = updateFrame(train, reBalance(train, mp.seed, mp.replicate_training_data, mp.force_load_balance, mp.shuffle_training_data));
       float[] trainSamplingFactors;
       if (mp.classification && mp.balance_classes) {
         trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
@@ -861,13 +859,13 @@ public class DeepLearning extends Job.ValidatedJob {
       }
 
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
-      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode);
+      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode, mp.quiet_mode);
       // Determine whether shuffling is enforced
       if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
         mp.shuffle_training_data = true;
       }
-      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
+      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data, mp.quiet_mode);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
       Log.info("Starting to train the Deep Learning model.");
@@ -887,14 +885,9 @@ public class DeepLearning extends Job.ValidatedJob {
       model = UKV.get(dest());
       return model;
     }
-    catch(Exception ex) {
-      ex.printStackTrace();
-      throw new RuntimeException(ex);
-    }
     finally {
       if (model != null) model.unlock(self());
       unlock_data();
-      emptyLTrash();
     }
   }
 
@@ -937,14 +930,13 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Dataset already contains " + fr.anyVec().nChunks() + " chunks. No need to rebalance.");
       return fr;
     }
-    Log.info("Starting load balancing into (at least) " + chunks + " chunks.");
+    if (!quiet_mode) Log.info("ReBalancing dataset into (at least) " + chunks + " chunks.");
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
     Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
     RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
     H2O.submitTask(rb);
     rb.join();
     Frame rebalanced = UKV.get(newKey);
-    Log.info("Load balancing done.");
     return rebalanced;
   }
 
@@ -956,13 +948,17 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param single_node_mode whether or not the single node mode is enabled
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode) {
+  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode, final boolean quiet_mode) {
     long tspi = train_samples_per_iteration;
     assert(tspi == 0 || tspi == -1 || tspi >= 1);
-    if (tspi == 0 || (!replicate_training_data && (tspi == -1 || tspi > numRows)) || (replicate_training_data && single_node_mode))
-      Log.info("Setting train_samples_per_iteration (" + tspi + ") to one epoch: #rows (" + (tspi=numRows) + ").");
-    else if (tspi == -1 || tspi > H2O.CLOUD.size()*numRows)
-      Log.info("Setting train_samples_per_iteration (" + tspi + ") to the largest possible number: #nodes x #rows (" + (tspi=H2O.CLOUD.size()*numRows) + ").");
+    if (tspi == 0 || (!replicate_training_data && (tspi == -1 || tspi > numRows)) || (replicate_training_data && single_node_mode)) {
+      tspi = numRows;
+      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to one epoch: #rows (" + tspi + ").");
+    }
+    else if (tspi == -1 || tspi > H2O.CLOUD.size()*numRows) {
+      tspi = H2O.CLOUD.size() * numRows;
+      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to the largest possible number: #nodes x #rows (" + tspi + ").");
+    }
     assert(tspi != 0 && tspi != -1 && tspi >= 1);
     return tspi;
   }
@@ -974,7 +970,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param replicate_training_data whether of not the training data is replicated on each node
    * @return fraction of rows to be used for training during one iteration
    */
-  private static float computeRowUsageFraction(final long numRows, long train_samples_per_iteration, boolean replicate_training_data) {
+  private static float computeRowUsageFraction(final long numRows, final long train_samples_per_iteration, final boolean replicate_training_data, final boolean quiet_mode) {
     float rowUsageFraction = (float)train_samples_per_iteration / numRows;
     if (replicate_training_data) rowUsageFraction /= H2O.CLOUD.size();
     assert(rowUsageFraction > 0 && rowUsageFraction <= 1.);

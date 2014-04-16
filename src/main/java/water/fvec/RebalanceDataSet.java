@@ -78,7 +78,6 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     @Override public boolean logVerbose() { return false; }
 
     private void rebalanceChunk(Vec srcVec, Chunk chk){
-      final int dstrows = chk._len;
       NewChunk dst = new NewChunk(chk);
       dst._len = dst._len2 = 0;
       int rem = chk._len;
