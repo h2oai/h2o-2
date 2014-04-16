@@ -18,7 +18,7 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
   pip install -r requirements.txt [--user]
 
                                                                              
-3. Build H\ :sub:`2`\ O from source.  You must have Java JDK 1.6 or higher, Scala 2.10 or higher. If pdflatex is installed on your system, you must have inconsolata latex package and ptmr8t font for latex. R packages ‘RCurl’, ‘rjson’ and ‘statmod.’
+3. Build H\ :sub:`2`\ O from source.  You must have Java JDK 1.6 or higher, Sbt 0.13.1 or higher. If pdflatex is installed on your system, you must have inconsolata latex package and ptmr8t font for latex. R packages ‘RCurl’, ‘rjson’ and ‘statmod.’
    After the build finishes, some JUnit tests will run automatically.
 
  ::
