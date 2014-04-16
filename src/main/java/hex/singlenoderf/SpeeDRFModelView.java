@@ -13,9 +13,9 @@ public class SpeeDRFModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @Request.API(help="SpeeDRF Model Key", required = true, filter = GSKeyFilter.class)
+  @Request.API(help="SpeeDRF Model Key", required = true, filter = SpeeDRFKeyFilter.class)
   Key _modelKey;
-  class GSKeyFilter extends RequestArguments.H2OKey { public GSKeyFilter() { super("",true); } }
+  class SpeeDRFKeyFilter extends RequestArguments.H2OKey { public SpeeDRFKeyFilter() { super("",true); } }
 
   @Request.API(help="SpeeDRF Model")
   SpeeDRFModel speedrf_model;

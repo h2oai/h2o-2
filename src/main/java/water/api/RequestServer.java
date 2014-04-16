@@ -390,7 +390,6 @@ public class RequestServer extends NanoHTTPD {
       // Some requests create an instance per call
       request = request.create(parms);
       // call the request
-      System.out.println("<<<<<<DEBUG>>>>>>>:" + parms + "    " + type);
       return request.serve(this,parms,type);
     } catch( Exception e ) {
       if(!(e instanceof ExpectedExceptionForDebug))

@@ -1,8 +1,6 @@
 package hex.singlenoderf;
 
-import hex.singlenoderf.SpeeDRF;
-import hex.singlenoderf.DataAdapter;
-import hex.singlenoderf.SpeeDRFModel;
+
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.Key;
@@ -13,37 +11,32 @@ import water.util.Log;
 
 import java.util.ArrayList;
 
-/**
- * Created with IntelliJ IDEA.
- * User: spencer
- * Date: 4/14/14
- * Time: 2:15 AM
- * To change this template use File | Settings | File Templates.
- */
-public class DABuilder {
-    protected final SpeeDRF.DRFTask _drf;
 
-    static DABuilder create(final SpeeDRF.DRFTask drf) {
-      switch( drf._params._samplingStrategy ) {
+public class DABuilder {
+    protected final SpeeDRF _drf;
+    protected final SpeeDRFModel _rfmodel;
+
+    static DABuilder create(final SpeeDRF drf, final SpeeDRFModel rf_model) {
+      switch( drf.drfParams._samplingStrategy ) {
         case RANDOM                :
         case STRATIFIED_LOCAL      :
-        default                    : return new DABuilder(drf);
+        default                    : return new DABuilder(drf, rf_model);
       }
     }
 
-    @SuppressWarnings("unused") private DABuilder() { this(null); };
+    @SuppressWarnings("unused") private DABuilder() { this(null, null);}
 
-    DABuilder(final SpeeDRF.DRFTask drf) { _drf = drf;  }
+    DABuilder(final SpeeDRF drf, final SpeeDRFModel rf_model) { _drf = drf; _rfmodel = rf_model; }
 
-    final DataAdapter build(Frame fr) { return inhaleData(_drf._rfmodel.fr); }
+    final DataAdapter build(Frame fr) { return inhaleData(fr); }
 
     /** Check that we have proper number of valid columns vs. features selected, if not cap*/
     private final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
-      int validCols = _drf._rfmodel.fr.numCols()-1; // for classIdx column
-      if (validCols < _drf._params._numSplitFeatures) {
-        Log.warn(Log.Tag.Sys.RANDF, "Limiting features from " + _drf._params._numSplitFeatures +
+      int validCols = _drf.source.numCols()-1; // for classIdx column
+      if (validCols < _drf.drfParams._numSplitFeatures) {
+        Log.warn(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams._numSplitFeatures +
                 " to " + validCols + " because there are no more valid columns in the dataset");
-        _drf._params._numSplitFeatures= validCols;
+        _drf.drfParams._numSplitFeatures= validCols;
       }
     }
 
@@ -82,7 +75,7 @@ public class DABuilder {
     /** Build data adapter for given frame */
     protected DataAdapter inhaleData(Frame fr) {
       Timer t_inhale = new Timer();
-      SpeeDRFModel rfmodel = _drf._rfmodel;
+      SpeeDRFModel rfmodel = _rfmodel;
 
 
       // The model columns are dense packed - but there will be columns in the
@@ -93,9 +86,9 @@ public class DABuilder {
       final DataAdapter dapt = new DataAdapter( fr, rfmodel, modelDataMap,
               totalRows,
               getChunkId(fr),
-              _drf._params._seed,
-              _drf._params._binLimit,
-              _drf._params._classWt);
+              _drf.drfParams._seed,
+              _drf.drfParams._binLimit,
+              _drf.drfParams._classWt);
       // Check that we have proper number of valid columns vs. features selected, if not cap.
       checkAndLimitFeatureUsedPerSplit(dapt);
       // Now load the DataAdapter with all the rows on this node.

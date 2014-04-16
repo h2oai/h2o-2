@@ -289,8 +289,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public void generateHTML(String title, StringBuilder sb) {
     if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
-//    sb.append("<div class='alert'>Actions: " + Predict.link(_key, "Predict on dataset") + ", "
-//            + NaiveBayes.link(_dataKey, "Compute new model") + "</div>");
 
     DocGen.HTML.section(sb, "SpeeDRF Output:");
 
