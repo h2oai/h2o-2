@@ -1,5 +1,10 @@
 .y-model-view
   .y-tag Model
   h1.y-title(data-bind='text:title')
-  pre(data-bind='steamStringify:data')
+  .y-section(data-bind='geyser:summary')
+  h2.y-subtitle Parameters
+  .y-parameters(data-bind='geyser:parameters')
+  h2.y-subtitle Input Column Names
+  .y-input-column(data-bind='geyser:inputColumns')
+  pre(data-bind='json:data')
 
