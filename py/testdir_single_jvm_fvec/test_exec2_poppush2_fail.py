@@ -7,10 +7,8 @@ initList = [
 ]
 
 phrases = [
-    "r.hex-r.hex;",
-    "mean2=function(x){apply(x,1,sum)/nrow(x)};",
-    "mean2(r.hex);",
-    "r.hex[,ncol(r.hex)+1]=4;",
+    "crunk=function(x){x+98};",
+    "r.hex[,3]=4;"
 ]
 
 class Basic(unittest.TestCase):
@@ -31,7 +29,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec2_poppush_fail(self):
+    def test_exec2_poppush2_fail(self):
         bucket = 'smalldata'
         csvPathname = 'iris/iris2.csv'
         hexKey = 'i.hex'
@@ -45,13 +43,9 @@ class Basic(unittest.TestCase):
             for e in exprs:
                 if 'function' in e:
                     functionFound = True
-                if 'mean2' in e and not functionFound:
-                    # add the function definition first
-                    exprs = ["mean2=function(x){apply(x,1,sum)/nrow(x)};"] + exprs
             exprList.append("".join(exprs))
 
         # add this one for good measure (known fail)
-        exprList += "r.hex-r.hex; mean2=function(x){apply(x,1,sum)/nrow(x)}; mean2(r.hex); r.hex[,ncol(r.hex)+1]=4;"
         exprList += "crunk=function(x){x+98};r.hex[,3]=4;"
 
         for resultKey, execExpr in initList:
