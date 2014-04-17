@@ -29,16 +29,18 @@ Steam.H2OProxy = (_) ->
     if opts
       #TODO typecheck opts
       push parameters, "key=#{opts.key}" if opts.key
+      push parameters, 'find_compatible_frames=true' if opts.find_compatible_frames
     request '/2/Models.json', parameters, go
 
-  link$ _.requestAllFrames, (go) -> requestFrames go
-  link$ _.requestFrame, (key, go) -> requestFrames go, key: key
+  link$ _.requestFrames, (go) -> requestFrames go
   link$ _.requestFramesAndCompatibleModels, (go) -> requestFrames go, find_compatible_models: yes
+  link$ _.requestFrame, (key, go) -> requestFrames go, key: key
   link$ _.requestFrameAndCompatibleModels, (key, go) -> requestFrames go, key: key, find_compatible_models: yes
   link$ _.requestScoringOnFrame, (frameKey, modelKey, go) -> requestFrames go, key: frameKey, score_model: modelKey
-  link$ _.requestAllModels, (go) -> requestModels go
+  link$ _.requestModels, (go) -> requestModels go
+  link$ _.requestModelsAndCompatibleFrames, (key, go) -> requestModels go, find_compatible_models: yes
   link$ _.requestModel, (key, go) -> requestModels go, key: key
-  #TODO _.requestModelAndCompatibleFrames, (key, go) -> 
+  link$ _.requestModelAndCompatibleFrames, (key, go) -> requestModels go, key: key, find_compatible_models: yes
 
 
 

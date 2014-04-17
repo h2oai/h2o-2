@@ -33,7 +33,7 @@ Steam.ModelListView = (_) ->
     activate head items unless isEmpty items
 
   displayModels_ = link$ _.displayModels, (data) ->
-    _.requestAllModels (error, data) ->
+    _.requestModels (error, data) ->
       if error
         #TODO handle errors
       else

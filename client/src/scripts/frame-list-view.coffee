@@ -29,7 +29,7 @@ Steam.FrameListView = (_) ->
     activate head items unless isEmpty items
 
   displayFrames_ = link$ _.displayFrames, ->
-    _.requestAllFrames (error, data) ->
+    _.requestFrames (error, data) ->
       if error
         #TODO handle errors
       else

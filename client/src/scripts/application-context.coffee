@@ -9,13 +9,15 @@ Steam.ApplicationContext = ->
 
     requestJSON: do edge$
 
-    requestAllFrames: do edge$
-    requestFrame: do edge$
+    requestFrames: do edge$
     requestFramesAndCompatibleModels: do edge$
+    requestFrame: do edge$
     requestFrameAndCompatibleModels: do edge$
     requestScoringOnFrame: do edge$
-    requestAllModels: do edge$
+    requestModels: do edge$
+    requestModelsAndCompatibleFrames: do edge$
     requestModel: do edge$
+    requestModelAndCompatibleFrames: do edge$
 
     switchTopic: do edge$
     displayFrames: do edge$
