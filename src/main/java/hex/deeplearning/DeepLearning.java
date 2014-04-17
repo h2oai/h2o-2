@@ -50,7 +50,6 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /*Neural Net Topology*/
   /**
-   *
    * The activation function (non-linearity) to be used the neurons in the hidden layers.
    * Tanh: Hyperbolic tangent function (same as scaled and shifted sigmoid).
    * Rectifier: Chooses the maximum of (0, x) where x is the input value.
