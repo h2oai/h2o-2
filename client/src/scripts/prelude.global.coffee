@@ -228,6 +228,8 @@ isTruthy = (value) -> if value then yes else no
 
 isFalsy = (value) -> if value then no else yes
 
+isError = (value) -> value instanceof Error 
+
 negate = (value) -> not value
 
 always = -> yes

@@ -117,6 +117,7 @@ describe 'Prelude', ->
         isDefined
         isTruthy
         isFalsy
+        isError
         negate
         always
         never
@@ -167,6 +168,11 @@ describe 'Prelude', ->
       for arg in truthy
         strictEqual (isFalsy arg), if arg then no else yes
 
+      return
+
+    it 'isError', ->
+      strictEqual (isError new Error()), yes
+      strictEqual (isError {}), no
       return
     
   describe 'String ops', ->
