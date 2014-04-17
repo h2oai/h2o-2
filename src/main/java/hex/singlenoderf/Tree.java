@@ -17,6 +17,7 @@ import water.util.Utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 public class Tree extends H2OCountedCompleter {
@@ -46,11 +47,12 @@ public class Tree extends H2OCountedCompleter {
   int            _exclusiveSplitLimit;
   int            _verbose;
   final byte     _producerId;   // Id of node producing this tree
+  SpeeDRFModel   _model;
 
   /**
    * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Job job, final hex.singlenoderf.Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final hex.singlenoderf.Sampling sampler, int verbose) {
+  public Tree(final Job job, final hex.singlenoderf.Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final hex.singlenoderf.Sampling sampler, int verbose, SpeeDRFModel model) {
     _job              = job;
     _data             = data;
     _type             = stat;
@@ -62,6 +64,7 @@ public class Tree extends H2OCountedCompleter {
     _exclusiveSplitLimit = exclusiveSplitLimit;
     _verbose          = verbose;
     _producerId       = producerId;
+    _model            = model;
   }
 
   // Oops, uncaught exception
@@ -127,6 +130,17 @@ public class Tree extends H2OCountedCompleter {
 
       // Atomically improve the Model as well
       appendKey(_job.dest(),toKey());
+      Key[] tmp = Arrays.copyOf(_model.t_keys, _model.t_keys.length + 1);
+      tmp[tmp.length - 1] = toKey();
+      _model.t_keys = tmp;
+      Key[] local_tmp = Arrays.copyOf(_model.local_forests[H2O.SELF.index()],_model.local_forests[H2O.SELF.index()].length+1);
+      local_tmp[_model.local_forests[H2O.SELF.index()].length-1] = toKey();
+
+      _model.local_forests[H2O.SELF.index()] = local_tmp;
+
+//      m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
+//      m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
+
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.debug(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());

@@ -119,13 +119,13 @@ public class SpeeDRF extends Job.ModelJob {
       for (int i = 0; i < ntrees; ++i) {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
         trees[i] = new Tree(Job.findJob(self()), localData, producerId, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
-                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose);
+                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, model);
         if (!drfParams._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
       }
 
       if(drfParams._parallel) DRemoteTask.invokeAll(trees);
       Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
-      model.update(self());
+//      model.update(self());
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
@@ -168,33 +168,33 @@ public class SpeeDRF extends Job.ModelJob {
     }
   }
 
-  /** Build random forest for data stored on this node. */
-  public static void build(
-          final Job job,
-          final DRFParams drfParams,
-          final Data data,
-          int ntrees,
-          int numSplitFeatures,
-          int[] rowsPerChunks) {  ///TODO
-    Timer  t_alltrees = new Timer();
-    Tree[] trees      = new Tree[ntrees];
-    Log.debug(Log.Tag.Sys.RANDF,"Building "+ntrees+" trees");
-    Log.debug(Log.Tag.Sys.RANDF,"Number of split features: "+ numSplitFeatures);
-    Log.debug(Log.Tag.Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
-
-    Random rnd = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
-    Sampling sampler = createSampler(drfParams, rowsPerChunks); ///TODO
-    byte producerId = (byte) H2O.SELF.index();
-    for (int i = 0; i < ntrees; ++i) {
-      long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
-      trees[i] = new Tree(job, data, producerId, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
-              i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose);
-      if (!drfParams._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
-    }
-
-    if(drfParams._parallel) DRemoteTask.invokeAll(trees);
-    Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
-  }
+//  /** Build random forest for data stored on this node. */
+//  public static void build(
+//          final Job job,
+//          final DRFParams drfParams,
+//          final Data data,
+//          int ntrees,
+//          int numSplitFeatures,
+//          int[] rowsPerChunks) {  ///TODO
+//    Timer  t_alltrees = new Timer();
+//    Tree[] trees      = new Tree[ntrees];
+//    Log.debug(Log.Tag.Sys.RANDF,"Building "+ntrees+" trees");
+//    Log.debug(Log.Tag.Sys.RANDF,"Number of split features: "+ numSplitFeatures);
+//    Log.debug(Log.Tag.Sys.RANDF,"Starting RF computation with "+ data.rows()+" rows ");
+//
+//    Random rnd = Utils.getRNG(data.seed() + ROOT_SEED_ADD);
+//    Sampling sampler = createSampler(drfParams, rowsPerChunks); ///TODO
+//    byte producerId = (byte) H2O.SELF.index();
+//    for (int i = 0; i < ntrees; ++i) {
+//      long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
+//      trees[i] = new Tree(job, data, producerId, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
+//              i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose);
+//      if (!drfParams._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
+//    }
+//
+//    if(drfParams._parallel) DRemoteTask.invokeAll(trees);
+//    Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
+//  }
 
   static Sampling createSampler(final DRFParams params, int[] rowsPerChunks) {
     switch(params._samplingStrategy) {
