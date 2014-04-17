@@ -24,15 +24,16 @@
 
 .y-topic-lane
   dock-left(y-topic-lane-width)
-  border-right: 1px solid #ddd
+  border-right 1px solid #ddd
   .y-lane-header
-    border-bottom: 1px solid #ddd
+    border-bottom 1px solid #ddd
 
 .y-workspace-lane
   dock(left:y-topic-lane-width, right:y-help-lane-width)
 
 .y-help-lane
   dock-right(y-help-lane-width)
+  border-left 1px solid #ddd
 
 .y-topic-button
   dock-left(48px, 6px, 6px, 6px)
@@ -53,6 +54,7 @@
 
 .y-status-bar
   dock-bottom(y-status-bar-height)
+  border-top 1px solid #ddd
 
 // Adding a .y-main-no-topic class on .y-main hides the help area
 //    and docks .y-workspace-lane to the left
