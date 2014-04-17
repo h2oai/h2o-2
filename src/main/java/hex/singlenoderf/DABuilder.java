@@ -119,15 +119,15 @@ public class DABuilder {
               boolean rowIsValid = false;
               for(int c = 0; c < chks.length; ++c) {
                 //final int col = modelDataMap[c];
-                if(chks[c].isNA(j)) {
+                if(chks[c].isNA(rowNum)) {
                   if (c == ncolumns - 1) rowIsValid = false;
                   dapt.addBad(rowNum, c); continue;
                 }
                 if (DataAdapter.isByteCol(fr.vecs()[c], totalRows, c == ncolumns - 1)) {
-                  int val = (int)chks[c].at8(j);
+                  int val = (int)chks[c].at8(rowNum);
                   dapt.add1(val, rowNum, c);
                 } else {
-                  float f = (float)chks[c].at(j);
+                  float f = (float)chks[c].at(rowNum);
                   if(!dapt.isValid(c, f)) { dapt.addBad(rowNum, c); continue; }
                   dapt.add(f, rowNum, c);
                 }

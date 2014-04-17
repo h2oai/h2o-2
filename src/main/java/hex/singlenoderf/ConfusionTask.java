@@ -49,24 +49,24 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
 
   // Computed local data
   /** @LOCAL: Model used for construction of the confusion matrix. */
-  transient private SpeeDRFModel _model;
+  private SpeeDRFModel _model;
   /** @LOCAL: Mapping from model columns to data columns */
-  transient private int[] _modelDataMap;
+  private int[] _modelDataMap;
   /** @LOCAL: The dataset to validate */
-  transient public Frame _data;
+  public Frame _data;
   /** @LOCAL: Number of response classes = Max(responses in model, responses in test data)*/
-  transient public int  _N;
+  public int  _N;
   /** @LOCAL: Number of response classes in model */
-  transient public int _MODEL_N;
+  public int _MODEL_N;
   /** @LOCAL: Number of response classes in data */
-  transient public int _DATA_N;
+  public int _DATA_N;
   /** For reproducibility we can control the randomness in the computation of the
       confusion matrix. The default seed when deserializing is 42. */
   transient private Random    _rand;
   /** @LOCAL: Data to replay the sampling algorithm */
-  transient private int[]     _chunk_row_mapping;
+  private int[]     _chunk_row_mapping;
   /** @LOCAL: Number of rows at each node */
-  transient private int[]     _rowsPerNode;
+  private int[]     _rowsPerNode;
   /** @LOCAL: Computed mapping of model prediction classes to confusion matrix classes */
   transient private int[]     _model_classes_mapping;
   /** @LOCAL: Computed mapping of data prediction classes to confusion matrix classes */
@@ -87,7 +87,7 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
     _job        = job;
     _modelKey   = model._key;
     _datakey    = model._dataKey;
-    _classcol   = model.fr.find(model.response);
+    _classcol   = model.classcol;
     _classWt    = classWt != null && classWt.length > 0 ? classWt : null;
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
@@ -205,9 +205,10 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
     _chunk_row_mapping = new int[total_home];
 
     int off=0;
+    int c_idx = 0;
     for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
       if (_data.anyVec().chunkKey(i).home()) {
-        _chunk_row_mapping[i] = off;
+        _chunk_row_mapping[c_idx++] = off;
         off += _data.anyVec().chunkLen(i);
       }
     }
@@ -224,23 +225,25 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
    * matrix on a chunk of data.
    * */
   @Override public void map(Chunk[] chks) {
+    Frame fr = UKV.get(_datakey);
+    SpeeDRFModel model = UKV.get(_modelKey);
 //    AutoBuffer cdata      = _data.getChunk(chunkKey);
 //    final int nchk       = (int) ValueArray.getChunkIndex(chunkKey);
 
     final int rows = chks[0]._len;
-    final int cmin       = (int) _data.vecs()[_classcol].min();
-    short     numClasses = (short)_model.classes();
+    final int cmin       = (int) fr.vecs()[model.classcol].min();
+    short     numClasses = (short)model.classes();
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
-    int[][] votes = new int[rows][_N];
-    int[][] localVotes = _computeOOB ? new int[rows][_N] : null;
+    int[][] votes = new int[rows][(int)numClasses];
+    int[][] localVotes = _computeOOB ? new int[rows][(int)numClasses] : null;
     // Errors per tree
-    _errorsPerTree = new long[_model.treeCount()];
+    _errorsPerTree = new long[model.treeCount()];
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
-    for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
-      long    treeSeed    = _model.seed(ntree);
-      byte    producerId  = _model.producerId(ntree);
+    for( int ntree = 0; ntree < model.treeCount(); ntree++ ) {
+      long    treeSeed    = model.seed(ntree);
+      byte    producerId  = model.producerId(ntree);
       int     init_row    = (int)chks[0]._start;
       boolean isLocalTree = _computeOOB && isLocalTree(ntree, producerId); // tree is local
       boolean isRemote;
@@ -257,20 +260,21 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
       ROWS: for( int row = 0; row < rows; row++ ) {
+        int rowNum = (int)chks[0]._start + row;
         // ------ THIS CODE is crucial and serve to replay the same sequence
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
         float sampledItem = rand.nextFloat();
         // Bail out of broken rows with NA in class column.
         // Do not skip yet the rows with NAs in the rest of columns
-        if( chks[chks.length - 1].isNA(row)) continue ROWS;
+        if( chks[chks.length - 1].isNA(rowNum)) continue ROWS;
 
         if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) { // if OOBEE is computed then we need to take into account utilized sampling strategy
-          switch( _model.sampling_strategy ) {
-          case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
+          switch( model.sampling_strategy ) {
+          case RANDOM          : if (sampledItem < model.sample ) continue ROWS; break;
           case STRATIFIED_LOCAL:
-            int clazz = (int) chks[chks.length - 1].at8(row) - cmin;
-            if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
+            int clazz = (int) chks[chks.length - 1].at8(rowNum) - cmin;
+            if (sampledItem < model.strata_samples[clazz] ) continue ROWS;
             break;
           default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
           }
@@ -278,21 +282,21 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
         // --- END OF CRUCIAL CODE ---
 
         // Predict with this tree - produce 0-based class index
-        int prediction = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
+        int prediction = model.classify0(ntree, fr, chks, row, _modelDataMap, numClasses );
         if( prediction >= numClasses ) continue ROWS; // Junk row cannot be predicted
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
-        int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
+        int alignedData       = alignDataIdx((int) fr.vecs()[_classcol].at8(row) - cmin);
         if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
         votes[row][alignedPrediction]++; // Vote the row
         if (isLocalTree) localVotes[row][alignedPrediction]++; // Vote
       }
     }
     // Assemble the votes-per-class into predictions & score each row
-    _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
+    _matrix = computeCM(votes, chks, cmin); // Make a confusion matrix for this chunk
     if (localVotes!=null) {
       _localMatrices = new CM[H2O.CLOUD.size()];
-      _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
+      _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks, cmin);
     }
   }
 
@@ -577,24 +581,26 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
   }
 
   /** Produce confusion matrix from given votes. */
-  final CM computeCM(int[][] votes, Chunk[] chks) {
+  final CM computeCM(int[][] votes, Chunk[] chks, int min) {
     CM cm = new CM();
     int rows = votes.length;
     int validation_rows = 0;
-    int cmin = (int) _data.vecs()[_classcol].min();
+    int cmin = min;
+    int num_classes = _model.classes();
     // Assemble the votes-per-class into predictions & score each row
-    cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
-    float preds[] = new float[_N+1];
+    cm._matrix = new long[num_classes][num_classes];          // Make an empty confusion matrix for this chunk
+    float preds[] = new float[num_classes+1];
     for( int row = 0; row < rows; row++ ) { // Iterate over rows
+      int rowNum = (int)chks[0]._start + row;
       int[] vi = votes[row];                // Votes for i-th row
-      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
+      for( int v=0; v<num_classes; v++ ) preds[v+1] = vi[v];
       if(_classWt != null )                 // Apply class weights
-        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
+        for( int v = 0; v<num_classes; v++) preds[v+1] *= _classWt[v];
       int result = ModelUtils.getPrediction(preds, row); // Share logic to get a prediction for classifiers (solve ties)
       if( vi[result]==0 ) { cm._skippedRows++; continue; }// Ignore rows with zero votes
 
-      int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
-      assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
+      int cclass = alignDataIdx((int) chks[_classcol].at8(rowNum) - cmin);
+      assert 0 <= cclass && cclass < num_classes : ("cclass " + cclass + " < " + num_classes);
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;
       validation_rows++;

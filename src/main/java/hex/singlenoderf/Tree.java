@@ -130,16 +130,15 @@ public class Tree extends H2OCountedCompleter {
 
       // Atomically improve the Model as well
       appendKey(_job.dest(),toKey());
-      Key[] tmp = Arrays.copyOf(_model.t_keys, _model.t_keys.length + 1);
-      tmp[tmp.length - 1] = toKey();
-      _model.t_keys = tmp;
-      Key[] local_tmp = Arrays.copyOf(_model.local_forests[H2O.SELF.index()],_model.local_forests[H2O.SELF.index()].length+1);
-      local_tmp[_model.local_forests[H2O.SELF.index()].length-1] = toKey();
+//      Key[] tmp = Arrays.copyOf(_model.t_keys, _model.t_keys.length + 1);
+//      tmp[tmp.length - 1] = toKey();
+//      _model.t_keys = tmp;
+//      Key[] local_tmp = Arrays.copyOf(_model.local_forests[H2O.SELF.index()],_model.local_forests[H2O.SELF.index()].length+1);
+//      local_tmp[_model.local_forests[H2O.SELF.index()].length-1] = toKey();
+//
+//      _model.local_forests[H2O.SELF.index()] = local_tmp;
 
-      _model.local_forests[H2O.SELF.index()] = local_tmp;
 
-//      m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
-//      m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
 
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
@@ -403,12 +402,13 @@ public class Tree extends H2OCountedCompleter {
     ts.get1();    // Skip producer id
     byte b;
 
+    int rowNum = (int)chks[0]._start + row;
     while( (b = (byte) ts.get1()) != '[' ) { // While not a leaf indicator
       assert b == '(' || b == 'S' || b == 'E';
       int col = modelDataMap[ts.get2()]; // Column number in model-space mapped to data-space
       float fcmp = ts.get4f();  // Float to compare against
-      if( chks[col].isNA(row) ) return badData;
-      float fdat = (float)chks[col].at(row);
+      if( chks[col].isNA(rowNum) ) return badData;
+      float fdat = (float)chks[col].at(rowNum);
       int skip = (ts.get1()&0xFF);
       if( skip == 0 ) skip = ts.get3();
       if (b == 'E') {

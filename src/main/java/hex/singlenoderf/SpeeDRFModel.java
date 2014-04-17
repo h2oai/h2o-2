@@ -83,6 +83,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Out of bag error estimate.")
   boolean oobee;
 
+  @API(help = "Class column idx.")
+  int classcol;
+
+  @API(help = "Data Key")
+  Key dataKey;
 
   public static final String KEY_PREFIX = "__RFModel_";
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
@@ -113,6 +118,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.node_split_features = new int[csize];
     for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
     this.jobKey = jobKey;
+    this.classcol = fr.find(response);
+    this.dataKey = dataKey;
   }
 
 //  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, int mtry, Sampling.Strategy sampling_strategy, float sample_rate, float[] strata_samples,
@@ -314,7 +321,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     double[] weights = this.weights;
     // Finish refresh after rf model is done and confusion matrix for all trees is computed
     boolean done = false;
-    int classCol = this.fr.find(this.response);
+    int classCol = this.classcol;
 
     tasks    = this.total_trees;
     finished = this.size();
@@ -329,7 +336,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     modelSize = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
     // Get the computing the matrix - if no job is computing, then start a new job
-    Job cmJob       = ConfusionTask.make(this, modelSize, this.fr._key, classCol, weights,this.oobee);
+    Job cmJob       = ConfusionTask.make(this, modelSize, this.dataKey, classCol, weights,this.oobee);
     // Here the the job is running - it saved a CM which can be already finished or in invalid state.
     ConfusionTask.CMFinal confusion = UKV.get(cmJob.dest());
     if (confusion!=null && confusion.valid() && modelSize > 0) {
@@ -426,12 +433,5 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       sb.append("</div>");
     }
     }
-
-
-
-
-
-
-
   }
 }

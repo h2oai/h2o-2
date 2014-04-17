@@ -85,7 +85,6 @@ public class SpeeDRF extends Job.ModelJob {
     remove();
   }
 
-
   @Override protected Response redirect() {
     return SpeeDRFProgressPage.redirect(this, self(), dest());
   }
@@ -99,33 +98,12 @@ public class SpeeDRF extends Job.ModelJob {
       drfParams = DRFParams.create(model.fr.find(model.response), model.total_trees, model.depth, (int)model.fr.numRows(), model.bin_limit,
               Tree.StatType.ENTROPY, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData);
       validateInputData();
-      final DataAdapter dapt = DABuilder.create(this, model).build(source);
-      Data localData        = Data.make(dapt);
-      int numSplitFeatures  = howManySplitFeatures(localData);
-      int ntrees            = howManyTrees();
-      int[] rowsPerChunks   = howManyRPC(source);
-      model.mtry = numSplitFeatures;
-      model.update(self());
-
-      Timer  t_alltrees = new Timer();
-      Tree[] trees      = new Tree[ntrees];
-      Log.debug(Log.Tag.Sys.RANDF,"Building "+ntrees+" trees");
-      Log.debug(Log.Tag.Sys.RANDF,"Number of split features: "+ numSplitFeatures);
-      Log.debug(Log.Tag.Sys.RANDF,"Starting RF computation with "+ localData.rows()+" rows ");
-
-      Random rnd = Utils.getRNG(localData.seed() + ROOT_SEED_ADD);
-      Sampling sampler = createSampler(drfParams, rowsPerChunks); ///TODO
-      byte producerId = (byte) H2O.SELF.index();
-      for (int i = 0; i < ntrees; ++i) {
-        long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
-        trees[i] = new Tree(Job.findJob(self()), localData, producerId, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
-                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, model);
-        if (!drfParams._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
-      }
-
-      if(drfParams._parallel) DRemoteTask.invokeAll(trees);
-      Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
-//      model.update(self());
+      DRFTask tsk = new DRFTask();
+      tsk._job = Job.findJob(self());
+      tsk._params = drfParams;
+      tsk._rfmodel = model;
+      tsk._drf = this;
+      tsk.invokeOnAllNodes();
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
@@ -135,7 +113,10 @@ public class SpeeDRF extends Job.ModelJob {
       throw new RuntimeException(ex);
     }
     finally {
-      if (model != null) model.unlock(self());
+      if (model != null) {
+        model = UKV.get(dest());
+        model.unlock(self());
+      }
       source.unlock(self());
       emptyLTrash();
     }
@@ -167,6 +148,106 @@ public class SpeeDRF extends Job.ModelJob {
       source.unlock(self());
     }
   }
+
+  public final static class DRFTask extends water.DRemoteTask {
+    /** The RF Model.  Contains the dataset being worked on, the classification
+     *  column, and the training columns.  */
+    public SpeeDRFModel _rfmodel;
+    /** Job representing this DRF execution. */
+    public Job _job;
+    /** RF parameters. */
+    public DRFParams _params;
+    public SpeeDRF _drf;
+
+    /**Inhale the data, build a DataAdapter and kick-off the computation.
+     * */
+    @Override public final void lcompute() {
+      final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_rfmodel.fr);
+      Data localData        = Data.make(dapt);
+      int numSplitFeatures  = howManySplitFeatures(localData);
+      int ntrees            = howManyTrees();
+      int[] rowsPerChunks   = howManyRPC(_rfmodel.fr);
+      updateRFModel(_rfmodel._key, numSplitFeatures);
+
+      Timer  t_alltrees = new Timer();
+      Tree[] trees      = new Tree[ntrees];
+      Log.debug(Log.Tag.Sys.RANDF,"Building "+ntrees+" trees");
+      Log.debug(Log.Tag.Sys.RANDF,"Number of split features: "+ numSplitFeatures);
+      Log.debug(Log.Tag.Sys.RANDF,"Starting RF computation with "+ localData.rows()+" rows ");
+
+      Random rnd = Utils.getRNG(localData.seed() + ROOT_SEED_ADD);
+      Sampling sampler = createSampler(_params, rowsPerChunks); ///TODO
+      byte producerId = (byte) H2O.SELF.index();
+      for (int i = 0; i < ntrees; ++i) {
+        long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
+        trees[i] = new Tree(_job, localData, producerId, _params._depth, _params._stat, numSplitFeatures, treeSeed,
+                i, _params._exclusiveSplitLimit, sampler, _params._verbose, _rfmodel);
+        if (!_params._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
+      }
+
+      if(_params._parallel) DRemoteTask.invokeAll(trees);
+      Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
+      tryComplete();
+    }
+
+    static void updateRFModel(Key modelKey, final int numSplitFeatures) {
+      final int idx = H2O.SELF.index();
+      new TAtomic<SpeeDRFModel>() {
+        @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
+          if(old == null) return null;
+          SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
+          newModel.node_split_features[idx] = numSplitFeatures;
+          return newModel;
+        }
+      }.invoke(modelKey);
+    }
+
+    /** Unless otherwise specified each split looks at sqrt(#features). */
+    private int howManySplitFeatures(Data t) {
+      // FIXME should be run over the right data!
+      if (_params._numSplitFeatures!=-1) return _params._numSplitFeatures;
+      return (int)Math.sqrt(_rfmodel.fr.numCols()-1/*we don't used the class column*/);
+    }
+
+    /** Figure the number of trees to make locally, so the total hits ntrees.
+     *  Divide equally amongst all the nodes that actually have data.  First:
+     *  compute how many nodes have data.  Give each Node ntrees/#nodes worth of
+     *  trees.  Round down for later nodes, and round up for earlier nodes.
+     */
+    private int howManyTrees() {
+      Frame fr = _rfmodel.fr;
+      final long num_chunks = fr.anyVec().nChunks();
+      final int  num_nodes  = H2O.CLOUD.size();
+      HashSet<H2ONode> nodes = new HashSet();
+      for( int i=0; i<num_chunks; i++ ) {
+        nodes.add(fr.anyVec().chunkKey(i).home_node());
+        if( nodes.size() == num_nodes ) // All of nodes covered?
+          break;                        // That means we are done.
+      }
+
+      H2ONode[] array = nodes.toArray(new H2ONode[nodes.size()]);
+      Arrays.sort(array);
+      // Give each H2ONode ntrees/#nodes worth of trees.  Round down for later nodes,
+      // and round up for earlier nodes
+      int ntrees = _params._ntrees/nodes.size();
+      if( Arrays.binarySearch(array, H2O.SELF) < _params._ntrees - ntrees*nodes.size() )
+        ++ntrees;
+
+      return ntrees;
+    }
+
+    private int[] howManyRPC(Frame fr) {
+      int[] result = new int[fr.anyVec().nChunks()];
+      for(int i = 0; i < result.length; ++i) {
+        result[i] = fr.anyVec().chunkLen(i);
+      }
+      return result;
+    }
+
+    @Override
+    public void reduce(DRemoteTask drt) { }
+  }
+
 
 //  /** Build random forest for data stored on this node. */
 //  public static void build(
@@ -264,47 +345,7 @@ public class SpeeDRF extends Job.ModelJob {
 
   static final float OVERHEAD_MAGIC = 3/8.f; // memory overhead magic
 
-  /** Unless otherwise specified each split looks at sqrt(#features). */
-  private int howManySplitFeatures(Data t) {
-    // FIXME should be run over the right data!
-    if (drfParams._numSplitFeatures!=-1) return drfParams._numSplitFeatures;
-    return (int)Math.sqrt(source.numCols()-1/*we don't used the class column*/);
-  }
 
-  /** Figure the number of trees to make locally, so the total hits ntrees.
-   *  Divide equally amongst all the nodes that actually have data.  First:
-   *  compute how many nodes have data.  Give each Node ntrees/#nodes worth of
-   *  trees.  Round down for later nodes, and round up for earlier nodes.
-   */
-  private int howManyTrees() {
-    Frame fr = source;
-    final long num_chunks = fr.anyVec().nChunks();
-    final int  num_nodes  = H2O.CLOUD.size();
-    HashSet<H2ONode> nodes = new HashSet();
-    for( int i=0; i<num_chunks; i++ ) {
-      nodes.add(fr.anyVec().chunkKey(i).home_node());
-      if( nodes.size() == num_nodes ) // All of nodes covered?
-        break;                        // That means we are done.
-    }
-
-    H2ONode[] array = nodes.toArray(new H2ONode[nodes.size()]);
-    Arrays.sort(array);
-    // Give each H2ONode ntrees/#nodes worth of trees.  Round down for later nodes,
-    // and round up for earlier nodes
-    int ntrees = drfParams._ntrees/nodes.size();
-    if( Arrays.binarySearch(array, H2O.SELF) < drfParams._ntrees - ntrees*nodes.size() )
-      ++ntrees;
-
-    return ntrees;
-  }
-
-  private int[] howManyRPC(Frame fr) {
-    int[] result = new int[fr.anyVec().nChunks()];
-    for(int i = 0; i < result.length; ++i) {
-      result[i] = fr.anyVec().chunkLen(i);
-    }
-    return result;
-  }
 
   /** RF execution parameters. */
   public final static class DRFParams extends Iced {
@@ -369,3 +410,9 @@ public class SpeeDRF extends Job.ModelJob {
     }
   }
 }
+
+
+
+
+
+
