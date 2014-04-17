@@ -448,6 +448,12 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
+  @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true)
+  public boolean sparse = false;
+
+  @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true)
+  public boolean col_major = false;
+
   public enum ClassSamplingMethod {
     Uniform, Stratified
   }
@@ -501,6 +507,8 @@ public class DeepLearning extends Job.ValidatedJob {
           "max_hit_ratio_k",
           "hidden_dropout_ratios",
           "single_node_mode",
+          "sparse",
+          "col_major",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -522,6 +530,8 @@ public class DeepLearning extends Job.ValidatedJob {
           "replicate_training_data",
           "shuffle_training_data",
           "single_node_mode",
+          "sparse",
+          "col_major",
   };
 
   /**
@@ -808,6 +818,10 @@ public class DeepLearning extends Job.ValidatedJob {
       state      = JobState.RUNNING;
       UKV.put(self(), this);
       _fakejob = true;
+    }
+    if (!sparse && col_major) {
+      if (!quiet_mode) Log.info("Automatically setting col_major to false for non-sparse data.");
+      col_major = false;
     }
   }
 

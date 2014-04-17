@@ -283,8 +283,7 @@ public class DeepLearningModel extends Model {
       dense_col_weights = new Neurons.DenseColMatrix[layers+1];
 
       // decide format of weight matrices row-major or col-major
-      boolean input_col_major = false; //FIXME: should be automatically tuned for whichever is faster
-      if (input_col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+      if (params.col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
       for (int i=1; i<=layers; ++i)
         dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i+1] /*rows*/, units[i] /*cols*/);
@@ -757,7 +756,7 @@ public class DeepLearningModel extends Model {
 
         // only keep confusion matrices for the last step if there are fewer than specified number of output classes
         if (err.train_confusion_matrix.cm != null
-                && err.train_confusion_matrix.cm.length >= get_params().max_confusion_matrix_size) {
+                && err.train_confusion_matrix.cm.length-1 >= get_params().max_confusion_matrix_size) {
           err.train_confusion_matrix = null;
           err.valid_confusion_matrix = null;
         }
