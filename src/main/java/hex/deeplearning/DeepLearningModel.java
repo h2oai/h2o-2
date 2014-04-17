@@ -10,7 +10,8 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Random;
 
 /**
  * The Deep Learning model
@@ -175,11 +176,8 @@ public class DeepLearningModel extends Model {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
     @API(help="Input data info")
-    final private DataInfo data_info;
+    private DataInfo data_info;
     public DataInfo data_info() { return data_info; }
-
-    /*cached version of data_info.coefNames() in case data_info.adaptedFrame is not available (e.g., after a checkpoint restart)*/
-    public String [] _featureNames;
 
     // model is described by parameters and the following 2 arrays
     private Neurons.DenseRowMatrix[] dense_row_weights; //one 2D weight matrix per layer (stored as a 1D array each)
@@ -403,7 +401,6 @@ public class DeepLearningModel extends Model {
     }
 
     void initializeMembers() {
-      if (get_params().variable_importances) _featureNames = data_info().coefNames();
       randomizeWeights();
       //TODO: determine good/optimal/best initialization scheme for biases
       // hidden layers
@@ -610,14 +607,17 @@ public class DeepLearningModel extends Model {
   /**
    * Constructor to restart from a checkpointed model
    * @param cp Checkpoint to restart from
-   * @param selfKey New destination key for the model
+   * @param destKey New destination key for the model
    * @param jobKey New job key (job which updates the model)
    */
-  public DeepLearningModel(DeepLearningModel cp, Key selfKey, Key jobKey) {
-    super(selfKey, cp._dataKey, cp.model_info().data_info()._adaptedFrame, cp._priorClassDist);
+  public DeepLearningModel(final DeepLearningModel cp, final Key destKey, final Key jobKey, final DataInfo dataInfo) {
+    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist);
     this.jobKey = jobKey;
-    model_info = (DeepLearningModelInfo)cp.model_info.clone();
-    get_params().destination_key = selfKey;
+    model_info = (DeepLearningModelInfo)cp.model_info.clone(); //this clones the parameters too
+    model_info.data_info = dataInfo; //replace previous data_info with updated version that's passed in (contains enum for classification)
+    assert(cp.get_params().classification == get_params().classification);
+    get_params().checkpoint = cp._key;
+    get_params().destination_key = destKey;
     get_params().job_key = jobKey;
     start_time = cp.start_time;
     run_time = cp.run_time;
@@ -628,9 +628,10 @@ public class DeepLearningModel extends Model {
     _timeLastScoreStart = 0;
     _timeLastScoreEnd = 0;
     _timeLastPrintStart = 0;
+    model_info().get_params().state = Job.JobState.RUNNING;
   }
 
-  public DeepLearningModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, DeepLearning params, float[] priorDist) {
+  public DeepLearningModel(final Key selfKey, final Key jobKey, final Key dataKey, final DataInfo dinfo, final DeepLearning params, final float[] priorDist) {
     super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
     run_time = 0;
@@ -744,7 +745,7 @@ public class DeepLearningModel extends Model {
         if (get_params().variable_importances) {
           if (!get_params().quiet_mode) Log.info("Computing variable importances.");
           final float [] vi = model_info().computeVariableImportances();
-          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info()._featureNames, 0, vi.length));
+          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
         }
 
         // keep output JSON small

@@ -50,7 +50,6 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /*Neural Net Topology*/
   /**
-   *
    * The activation function (non-linearity) to be used the neurons in the hidden layers.
    * Tanh: Hyperbolic tangent function (same as scaled and shifted sigmoid).
    * Rectifier: Chooses the maximum of (0, x) where x is the input value.
@@ -75,6 +74,9 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /**
    * The number of passes over the training dataset to be carried out.
+   * It is recommended to start with lower values for initial grid searches.
+   * This value can be modified during checkpoint restarts and allows continuation
+   * of selected models.
    */
   @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
   public double epochs = 10;
@@ -110,6 +112,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
+  /*Adaptive Learning Rate*/
   /**
    * The implemented adaptive learning rate algorithm (ADADELTA) automatically
    * combines the benefits of learning rate annealing and momentum
@@ -129,13 +132,25 @@ public class DeepLearning extends Job.ValidatedJob {
    * surface with small learning rates, the model can converge far
    * slower than necessary.
    */
-  /*Adaptive Learning Rate*/
   @API(help = "Adaptive learning rate (ADADELTA)", filter = Default.class, json = true)
   public boolean adaptive_rate = true;
 
+  /**
+   * The first of two hyper parameters for adaptive learning rate (ADADELTA).
+   * It is similar to momentum and relates to the memory to prior weight updates.
+   * Typical values are between 0.9 and 0.999.
+   * This parameter is only active if adaptive learning rate is enabled.
+   */
   @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
   public double rho = 0.95;
 
+  /**
+   * The second of two hyper parameters for adaptive learning rate (ADADELTA).
+   * It is similar to learning rate annealing during initial training
+   * and momentum at later stages where it allows forward progress.
+   * Typical values are between 1e-10 and 1e-4.
+   * This parameter is only active if adaptive learning rate is enabled.
+   */
   @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-15, dmax = 1, json = true)
   public double epsilon = 1e-6;
 
@@ -152,23 +167,54 @@ public class DeepLearning extends Job.ValidatedJob {
    * parameter can aid in avoiding local minima and the associated
    * instability. Too much momentum can lead to instabilities, that's
    * why the momentum is best ramped up slowly.
+   * This parameter is only active if adaptive learning rate is disabled.
    */
   @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double rate = .005;
 
+  /**
+   * Learning rate annealing reduces the learning rate to "freeze" into
+   * local minima in the optimization landscape.  The annealing rate is the
+   * inverse of the number of training samples it takes to cut the learning rate in half
+   * (e.g., 1e-6 means that it takes 1e6 training samples to halve the learning rate).
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double rate_annealing = 1e-6;
 
+  /**
+   * The learning rate decay parameter controls the change of learning rate across layers.
+   * For example, assume the rate parameter is set to 0.01, and the rate_decay parameter is set to 0.5.
+   * Then the learning rate for the weights connecting the input and first hidden layer will be 0.01,
+   * the learning rate for the weights connecting the first and the second hidden layer will be 0.005,
+   * and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
   public double rate_decay = 1.0;
 
   /*Momentum*/
+  /**
+   * The momentum_start parameter controls the amount of momentum at the beginning of training.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Initial momentum at the beginning of training (try 0.5)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_start = 0;
 
-  @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 1, json = true)
-  public long momentum_ramp = 1000000;
+  /**
+   * The momentum_ramp parameter controls the amount of learning for which momentum increases
+   * (assuming momentum_stable is larger than momentum_start). The ramp is measured in the number
+   * of training samples.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
+  @API(help = "Number of training samples for which momentum increases", filter = Default.class, dmin = 1, json = true)
+  public double momentum_ramp = 1e6;
 
+  /**
+   * The momentum_stable parameter controls the final momentum value reached after momentum_ramp training samples.
+   * The momentum used for training will remain the same for training beyond reaching that point.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Final momentum after the ramp is over (try 0.99)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_stable = 0;
 
@@ -177,6 +223,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * traditional gradient descent for convex functions. The method relies on
    * gradient information at various points to build a polynomial approximation that
    * minimizes the residuals in fewer iterations of the descent.
+   * This parameter is only active if adaptive learning rate is disabled.
    */
   @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
@@ -636,35 +683,37 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   @Override
   public final void execImpl() {
-    DeepLearningModel cp;
+    DeepLearningModel cp = null;
     if (checkpoint == null) cp = initModel();
     else {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
+      Log.info("Resuming from checkpoint.");
+      if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
+        throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
+      }
+      if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+        throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
+      }
+      if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
+              || Utils.difference(previous.model_info().get_params().ignored_cols, ignored_cols).length != 0) {
+        ignored_cols = previous.model_info().get_params().ignored_cols;
+        Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
+      }
+      if ((validation!=null) != (previous.model_info().get_params().validation != null)
+              || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
+        throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
+      }
+      if (classification != previous.model_info().get_params().classification) {
+        Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
+      }
       epochs += previous.epoch_counter; //add new epochs to existing model
       Log.info("Adding " + String.format("%.3f", previous.epoch_counter) + " epochs from the checkpointed model.");
-      cp = new DeepLearningModel(previous, destination_key, job_key);
-      cp.model_info().get_params().state = JobState.RUNNING;
       try {
-        Log.info("Resuming from checkpoint.");
+        final DataInfo dataInfo = prepareDataInfo();
+        cp = new DeepLearningModel(previous, destination_key, job_key, dataInfo);
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
-        if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
-          throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
-        }
-        if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
-          throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
-        }
-        if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0) {
-          throw new IllegalArgumentException("ignored_cols must be the same as for the checkpointed model.");
-        }
-        if ((validation!=null) != (previous.model_info().get_params().validation != null)
-                || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
-          throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
-        }
-        if (classification != previous.model_info().get_params().classification) {
-          Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
-        }
         final DeepLearning mp = cp.model_info().get_params();
         Object A = mp, B = this;
         for (Field fA : A.getClass().getDeclaredFields()) {
@@ -686,7 +735,7 @@ public class DeepLearning extends Job.ValidatedJob {
         }
         cp.update(self());
       } finally {
-        cp.unlock(self());
+        if (cp != null) cp.unlock(self());
       }
     }
     trainModel(cp);
@@ -763,6 +812,20 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   /**
+   * Helper to create a DataInfo object from the source and response
+   * @return DataInfo object
+   */
+  private final DataInfo prepareDataInfo() {
+    final boolean del_enum_resp = (classification && !response.isEnum());
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
+    final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
+    assert(!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
+    if (del_enum_resp) ltrash(resp);
+    return dinfo;
+  }
+
+  /**
    * Create an initial Deep Learning model, typically to be trained by trainModel(model)
    * @return Randomly initialized model
    */
@@ -770,15 +833,11 @@ public class DeepLearning extends Job.ValidatedJob {
     try {
       lock_data();
       checkParams();
-      final boolean del_enum_resp = (classification && !response.isEnum());
-      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-      final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
+      final DataInfo dinfo = prepareDataInfo();
       final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
-      assert(!classification ^ resp.isEnum()); //either regression or enum response
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
-      if (del_enum_resp) ltrash(resp);
       return model;
     }
     finally {

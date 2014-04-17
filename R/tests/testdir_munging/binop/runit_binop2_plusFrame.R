@@ -11,6 +11,17 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
+
+colCheckEquals<-
+function(fr1, fr2) {
+    expect_that(dim(fr1), equals(dim(fr2)))
+    expect_that(fr1[,1], equals(fr2[,1]))
+    for ( i in dim(fr1)[2]) {
+      expect_that(fr1[,i], equals(fr2[,i]))
+    }
+}
+
+
 #setupRandomSeed(2078846715)
 
 doSelect<-
@@ -98,8 +109,11 @@ test.plus.onFrame <- function(conn) {
   print(head(hexPlusHex))
   hdPlushd <- hd + hd
   print(head(hdPlushd))
-  expect_that(hd + hd, equals(as.data.frame(hexPlusHex)))
-
+  if (sum(is.na(hd)) > 0) {
+    colCheckEquals(hdPlushd, as.data.frame(hexPlusHex))
+  } else {
+    expect_that(hdPlushd, equals(as.data.frame(hexPlusHex)))
+  }
   testEnd()
 }
 

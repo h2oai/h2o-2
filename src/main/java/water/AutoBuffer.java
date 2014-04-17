@@ -676,6 +676,16 @@ public final class AutoBuffer {
     return this;
   }
 
+  public AutoBuffer putA(Freezable[] fs) {
+    _arys++;
+    long xy = putZA(fs);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) put(fs[i]);
+    return this;
+  }
+
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
     if( id == TypeMap.NULL ) return null;

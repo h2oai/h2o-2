@@ -214,7 +214,8 @@ exprBigList = []
 for i in range(1000):
     # expr = ""
     # concatNum = random.randint(1,2)
-    expr = "crunk=function(x){x+98};"
+    # expr = "crunk=function(x){x+98};"
+    expr = ""
     # expr = "function(x){x+98};"
     concatNum = random.randint(1,3)
     for j in range(concatNum):
