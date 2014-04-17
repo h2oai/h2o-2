@@ -2,17 +2,19 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
-initList = [
-    ('r.hex', 'r.hex=i.hex'),
-]
 
 DO_COMPOUND = False
 
 phrasesCompound = [
-    "a=1; a=2; function(x){x=a;a=3}",
-    "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
-    "function(x){y=x*2; y+1}(2)",
-    "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+
+    # use a dialetc with restricted grammar
+    # 1. all functions are on their own line
+    # 2. all functions only use data thru their params, or created in the function
+
+    # "a=1; a=2; function(x){x=a;a=3}",
+    # "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
+    # "function(x){y=x*2; y+1}(2)",
+    # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
 ]
 
 badPhrases = [
@@ -41,11 +43,12 @@ badPhrases = [
     "factor",
 ]
 phrases = [
-    # "function(x) { cbind( mean(x[,1]), mean(x[,2]) ) }",
-    "function(x) { mean( x[,2]) }", 
-    "function(x) { sd( x[,2]) }", 
-    "function(x) { quantile(x[,2] , c(0.9) ) }",
-
+    "func1",
+    "func2",
+    "func3",
+    "func4",
+    "func5",
+    # "func6",
     "nrow",
     "ncol",
     "length",
@@ -73,7 +76,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2, java_heap_GB=6)
+            h2o.build_cloud(1, java_heap_GB=12)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -90,16 +93,24 @@ class Basic(unittest.TestCase):
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=hexKey)
 
-        for resultKey, execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)
 
-        for p in phrases:
-            execExpr = "ddply(r.hex, c(2), " + p + ")" 
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+        for col in range(1,10):
+            initList = [
+                ('r.hex', 'r.hex=i.hex'),
+                (None, "func1=function(x){max(x[,%s])}" % col),
+                (None, "func2=function(x){a=3;nrow(x[,%s])*a}" % col),
+                (None, "func3=function(x){apply(x[,%s],2,sum)/nrow(x[,%s])}" % (col, col) ),
+                # (None, "function(x) { cbind( mean(x[,1]), mean(x[,%s]) ) }" % col),
+                (None, "func4=function(x) { mean( x[,%s]) }" % col), 
+                (None, "func5=function(x) { sd( x[,%s]) }" % col), 
+                # (None, "func6=function(x) { quantile(x[,%s] , c(0.9) ) }" % col),
+            ]
+            for resultKey, execExpr in initList:
+                h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)
 
-        
-
-        
+            for p in phrases:
+                execExpr = "ddply(r.hex, c(2), " + p + ")" 
+                h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
 
 if __name__ == '__main__':
     h2o.unit_main()
