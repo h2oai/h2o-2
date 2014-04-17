@@ -100,7 +100,10 @@ greatly.
 
 **epochs** 
 
-    The number of passes over the training dataset to be carried out. 
+    The number of passes over the training dataset to be carried out.
+    It is recommended to start with lower values for initial grid searches.
+    This value can be modified during checkpoint restarts and allows continuation
+    of selected models.
 
 **train samples per iteration**
 
@@ -128,7 +131,7 @@ greatly.
     results. Note that deterministic sampling and initialization might
     still lead to some weak sense of determinism in the model.
 
-**learning rate**
+**adaptive rate**
 
     The implemented adaptive learning rate algorithm (ADADELTA) automatically
     combines the benefits of learning rate annealing and momentum
@@ -149,7 +152,22 @@ greatly.
     surface with small learning rates, the model can converge far
     slower than necessary.
 
-**momentum**
+**rho**
+
+    The first of two hyper parameters for adaptive learning rate (ADADELTA).
+    It is similar to momentum and relates to the memory to prior weight updates.
+    Typical values are between 0.9 and 0.999.
+    This parameter is only active if adaptive learning rate is enabled.
+
+**epsilon**
+
+    The second of two hyper parameters for adaptive learning rate (ADADELTA).
+    It is similar to learning rate annealing during initial training
+    and momentum at later stages where it allows forward progress.
+    Typical values are between 1e-10 and 1e-4.
+    This parameter is only active if adaptive learning rate is enabled.
+
+**rate**
 
     When adaptive learning rate is disabled, the magnitude of the weight
     updates are determined by the user specified learning rate
@@ -162,13 +180,42 @@ greatly.
     parameter can aid in avoiding local minima and the associated
     instability. Too much momentum can lead to instabilities, that's
     why the momentum is best ramped up slowly.
-       
-    *Momentum start:* Initial momentum at the start of model building.
-       
-    *Momentum ramp:* The number of data samples for which the momentum
-    rises from its starting value to its final value (momentum stable).
+    This parameter is only active if adaptive learning rate is disabled.
 
-    *Momentum stable:* The final momentum value after the ramp is over.
+**rate annealing**
+
+    Learning rate annealing reduces the learning rate to "freeze" into
+    local minima in the optimization landscape.  The annealing rate is the
+    inverse of the number of training samples it takes to cut the learning rate in half
+    (e.g., 1e-6 means that it takes 1e6 training samples to halve the learning rate).
+    This parameter is only active if adaptive learning rate is disabled.
+
+**rate decay**
+
+    The learning rate decay parameter controls the change of learning rate across layers.
+    For example, assume the rate parameter is set to 0.01, and the rate_decay parameter is set to 0.5.
+    Then the learning rate for the weights connecting the input and first hidden layer will be 0.01,
+    the learning rate for the weights connecting the first and the second hidden layer will be 0.005,
+    and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
+    This parameter is only active if adaptive learning rate is disabled.
+
+**momentum start**
+
+    The momentum_start parameter controls the amount of momentum at the beginning of training.
+    This parameter is only active if adaptive learning rate is disabled.
+
+**momentum ramp**
+
+    The momentum_ramp parameter controls the amount of learning for which momentum increases
+    (assuming momentum_stable is larger than momentum_start). The ramp is measured in the number
+    of training samples.
+    This parameter is only active if adaptive learning rate is disabled.
+
+*momentum stable**
+
+    The momentum_stable parameter controls the final momentum value reached after momentum_ramp training samples.
+    The momentum used for training will remain the same for training beyond reaching that point.
+    This parameter is only active if adaptive learning rate is disabled.
 
 **Nesterov accelerated Gaadient** 
 
@@ -176,6 +223,7 @@ greatly.
     traditional gradient descent for convex functions. The method relies on
     gradient information at various points to build a polynomial approximation that
     minimizes the residuals in fewer iterations of the descent. 
+    This parameter is only active if adaptive learning rate is disabled.
 
 **input dropout ratio**
 
