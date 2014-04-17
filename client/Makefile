@@ -75,6 +75,7 @@ LIB_JS=\
 	$(LIB)/knockout/knockout.js
 
 LIB_CSS=\
+	$(LIB)/fontawesome/css/font-awesome.css \
 	$(LIB)/bootstrap/dist/css/bootstrap.css
 
 LIB_TEST_JS=\
@@ -107,6 +108,10 @@ build: \
 	$(DEPLOY)/fonts/Roboto-Regular-webfont.svg \
 	$(DEPLOY)/fonts/Roboto-Regular-webfont.ttf \
 	$(DEPLOY)/fonts/Roboto-Regular-webfont.woff \
+	$(DEPLOY)/fonts/fontawesome-webfont.eot \
+	$(DEPLOY)/fonts/fontawesome-webfont.svg \
+	$(DEPLOY)/fonts/fontawesome-webfont.ttf \
+	$(DEPLOY)/fonts/fontawesome-webfont.woff \
 	$(DEPLOY)/css/lib.css \
 	$(DEPLOY)/css/steam.css \
 	$(DEPLOY)/js/lib.js \
@@ -276,6 +281,18 @@ $(DEPLOY)/fonts/%.ttf: $(LIB)/bootstrap/dist/fonts/%.ttf
 	@mkdir -p $(@D)
 	cp $< $@
 $(DEPLOY)/fonts/%.woff: $(LIB)/bootstrap/dist/fonts/%.woff
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.eot: $(LIB)/fontawesome/fonts/%.eot
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.svg: $(LIB)/fontawesome/fonts/%.svg
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.ttf: $(LIB)/fontawesome/fonts/%.ttf
+	@mkdir -p $(@D)
+	cp $< $@
+$(DEPLOY)/fonts/%.woff: $(LIB)/fontawesome/fonts/%.woff
 	@mkdir -p $(@D)
 	cp $< $@
 
