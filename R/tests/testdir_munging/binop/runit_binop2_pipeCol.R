@@ -40,9 +40,11 @@ test.binop2.pipe <- function(conn) {
   if(any(dd$TYPES == "enum")) anyEnum <- TRUE
 
   Log.info("Selecting a column")
-  col <- sample(colnames[colTypes != "enum"], 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col))
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col+1, sep = "", collapse = ""))
+  #col <- sample(colnames[colTypes != "enum"], 1)
+  #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col))
+  #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col+1, sep = "", collapse = ""))
+  df <- head(hex)
+  col <- sample(colnames(df[!sapply(df, is.factor)]), 1)
 
   if(length(colnames(hex)) == 1) {
     Log.info(paste("Using column: ", colnames(hex)))
