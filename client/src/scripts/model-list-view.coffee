@@ -24,7 +24,7 @@ Steam.ModelListView = (_) ->
       key: key
       title: model.model_algorithm
       caption: model.model_category
-      cutline: key
+      cutline: 'Response Column: ' + model.response_column_name
       display: -> activate self
       isActive: node$ no
 
