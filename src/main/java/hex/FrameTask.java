@@ -136,6 +136,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame fr = new Frame(source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
+
       // put response to the end (if not already)
       for(int i = 0; i < vecs.length-1; ++i) {
         if(vecs[i] == response){
@@ -184,9 +185,50 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       }
       return fr;
     }
+
+    public static Frame prepareFrame(Frame source, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
+      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      if (ignored_cols != null) fr.remove(ignored_cols);
+      final Vec[] vecs =  fr.vecs();
+
+      ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+      {
+        ArrayList<Integer> constantCols = new ArrayList<Integer>();
+        ArrayList<Integer> NACols = new ArrayList<Integer>();
+        for(int i = 0; i < vecs.length; ++i) {
+          // remove constant cols and cols with too many NAs
+          final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
+          final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*0.2;
+          if(dropconstant) {
+            constantCols.add(i);
+          } else if (droptoomanyNAs) {
+            NACols.add(i);
+          }
+        }
+        constantOrNAs.addAll(constantCols);
+        constantOrNAs.addAll(NACols);
+
+        // Report what is dropped
+        String msg = "";
+        if (constantCols.size() > 0) msg += "Dropping constant column(s): ";
+        for (int i : constantCols) msg += fr._names[i] + " ";
+        if (NACols.size() > 0) msg += "Dropping column(s) with too many missing values: ";
+        for (int i : NACols) msg += fr._names[i] + " (" + String.format("%.2f", vecs[i].naCnt() * 100. / vecs[i].length()) + "%) ";
+        for (String s : msg.split("\n")) Log.info(s);
+      }
+      if(!constantOrNAs.isEmpty()){
+        int [] cols = new int[constantOrNAs.size()];
+        for(int i = 0; i < cols.length; ++i)
+          cols[i] = constantOrNAs.get(i);
+        fr.remove(cols);
+      }
+      return fr;
+    }
+
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
       return prepareFrame(source, response, ignored_cols, toEnum, dropConstantCols, false);
     }
+
     public DataInfo(Frame fr, int nResponses, boolean useAllFactors, boolean standardize) {
       this(fr, nResponses, useAllFactors, standardize, false);
     }

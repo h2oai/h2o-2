@@ -417,11 +417,14 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 }
 
 # ------------------------------ K-Means Clustering --------------------------------- #
-h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, version = 2) {
-  if(version == 1)
+h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, dropNACols, version = 2) {
+  if(version == 1) {
+    if(!missing(dropNACols)) stop("dropNACols not supported under ValueArray")
     h2o.kmeans.VA(data, centers, cols, iter.max, normalize, init, seed)
-  else if(version == 2)
-    h2o.kmeans.FV(data, centers, cols, iter.max, normalize, init, seed)
+  } else if(version == 2) {
+    if(missing(dropNACols)) dropNACols = FALSE
+    h2o.kmeans.FV(data, centers, cols, iter.max, normalize, init, seed, dropNACols)
+  }
   else
     stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
@@ -486,7 +489,7 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0) {
+h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, dropNACols = FALSE) {
   if( missing(data) ) stop('Must specify data')
   # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
@@ -501,6 +504,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if(length(init) > 1 || !init %in% c("none", "plusplus", "furthest"))
     stop("init must be one of 'none', 'plusplus', or 'furthest'")
   if(!is.numeric(seed)) stop("seed must be numeric")
+  if(!is.logical(dropNACols)) stop("dropNACols must be logical")
 
   if(length(cols) == 1 && cols == '') cols = colnames(data)
   cc <- colnames(data)
@@ -515,7 +519,7 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
   myIgnore <- ifelse(cols == '' || length(temp) == 0, '', paste(temp, sep=','))
   myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
 
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization=myInit, seed=seed)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization=myInit, seed=seed, drop_na_cols=as.numeric(dropNACols))
   params = list(cols=ifelse(cols == "", cc, cols), centers=centers, iter.max=iter.max, normalize=normalize, init=myInit, seed=seed)
 
   if(length(centers) == 1 && length(iter.max) == 1) {
