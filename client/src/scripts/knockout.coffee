@@ -40,6 +40,8 @@ ko.bindingHandlers.geyser =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     if data = ko.unwrap valueAccessor()
       $(element).html geyser.render data
+    else
+      $(element).text 'Loading. Please wait..'
 
 
 ko.bindingHandlers.collapse =
