@@ -70,5 +70,7 @@ ko.bindingHandlers.collapse =
     $disclosureEl.css 'margin-left', '10px'
     $el.click toggle
     toggle()
+    ko.utils.domNodeDisposal.addDisposeCallback element, ->
+      $el.off 'click'
     return
 
