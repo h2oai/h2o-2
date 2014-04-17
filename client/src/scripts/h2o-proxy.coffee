@@ -40,7 +40,7 @@ Steam.H2OProxy = (_) ->
   link$ _.requestModels, (go) -> requestModels go
   link$ _.requestModelsAndCompatibleFrames, (key, go) -> requestModels go, find_compatible_models: yes
   link$ _.requestModel, (key, go) -> requestModels go, key: key
-  link$ _.requestModelAndCompatibleFrames, (key, go) -> requestModels go, key: key, find_compatible_models: yes
+  link$ _.requestModelAndCompatibleFrames, (key, go) -> requestModels go, key: key, find_compatible_frames: yes
 
 
 

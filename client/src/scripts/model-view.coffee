@@ -1,4 +1,5 @@
 Steam.ModelView = (_, key, model) ->
+  _compatibleFrames = node$ ''
 
   stringify = (value) ->
     if isArray value
@@ -8,7 +9,6 @@ Steam.ModelView = (_, key, model) ->
   createDefinitionList = (data) ->
     [ dl, li, dt, dd ] = geyser.generate '.y-summary .y-summary-item .y-summary-key .y-summary-value'
 
-    #BUG this should work with scalars
     dl mapWithKey data, (value, key) ->
       li [ (dt key), (dd stringify value) ]
 
@@ -26,10 +26,47 @@ Steam.ModelView = (_, key, model) ->
   # Input columns section
   createInputColumnsSection = (model) ->
     rows = map model.input_column_names, (columnName) -> [ columnName ]
+
+    #TODO duplicates logic in FrameView. Refactor.
     [ table, tbody, tr, td ] = geyser.generate 'table.table.table-condensed.table-hover tbody tr td'
-    trs = map rows, (row) -> tr map row, td
-    #BUG this should work with scalars
-    table [tbody trs]
+    table [
+      tbody map rows, (row) ->
+        tr map row, td
+    ]
+
+
+  createCompatibleFramesSection = (model, frames) ->
+    headers = [
+      'Dataset'
+      'Columns'
+    ]
+
+    rows = map model.compatible_frames, (key) ->
+      frame = frames[key]
+      [
+        key
+        join frame.column_names, ', '
+      ]
+
+    #TODO duplicates logic in FrameView. Refactor.
+    [ table, thead, tbody, tr, th, td ] = geyser.generate 'table.table.table-condensed.table-hover thead tbody tr th td'
+
+    table [
+      thead [
+        tr map headers, (header) ->
+          th header
+      ]
+      tbody map rows, (row) ->
+        tr map row, td
+    ]
+
+  _.requestModelAndCompatibleFrames key, (error, data) ->
+    if error
+      #TODO handle errors
+    else
+      #TODO typecheck
+      _compatibleFrames createCompatibleFramesSection data.models[key], data.frames
+
   
   data: model
   title: model.model_algorithm
@@ -37,5 +74,6 @@ Steam.ModelView = (_, key, model) ->
   summary: createSummarySection model
   parameters: createParametersSection model
   inputColumns: createInputColumnsSection model
+  compatibleFrames: _compatibleFrames
   dispose: ->
 

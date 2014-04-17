@@ -2,7 +2,7 @@ Steam.FrameView = (_, key, frame) ->
   _compatibleModels = node$ ''
 
   # Columns section
-  createInputColumnsSection = (frame) ->
+  createColumnsSection = (frame) ->
     rows = map frame.column_names, (columnName) -> [ columnName ]
     [ table, tbody, tr, td ] = geyser.generate 'table.table.table-condensed.table-hover tbody tr td'
     table [
@@ -49,7 +49,7 @@ Steam.FrameView = (_, key, frame) ->
   data: frame
   title: key
   key: key
-  columns: createInputColumnsSection frame
+  columns: createColumnsSection frame
   compatibleModels: _compatibleModels
   dispose: ->
 
