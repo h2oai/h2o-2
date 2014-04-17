@@ -1,14 +1,21 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','py']) 
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
 initList = [
+    ('crunk', "crunk=function(x){x+98};"),
     ('r.hex', 'r.hex=i.hex'),
 ]
 
+# maybe can't have unused functions
 phrases = [
     "crunk=function(x){x+98};",
-    "r.hex[,3]=4;"
+    # "crunk=function(x){x+98};",
+    # fail
+    # "r.hex[,3]=4;"
+    # fail
+    "r.hex[,3]=crunk(2);",
+    "r.hex[,3]=crunk(2);",
 ]
 
 class Basic(unittest.TestCase):
@@ -40,13 +47,21 @@ class Basic(unittest.TestCase):
             exprs = [random.choice(phrases) for j in range(random.randint(1,2))]
             # check if we have mean2() before function defn
             functionFound = False
-            for e in exprs:
+            for i, e in enumerate(exprs):
                 if 'function' in e:
                     functionFound = True
-            exprList.append("".join(exprs))
+                    # h2o has problems with assigns after functions
+                
+            if functionFound and len(exprs)> 1:
+                # pass
+                exprList.append("".join(exprs))
+            else:
+                exprList.append("".join(exprs))
+
 
         # add this one for good measure (known fail)
-        exprList += "crunk=function(x){x+98};r.hex[,3]=4;"
+        # exprList += "crunk=function(x){x+98};r.hex[,3]=4;"
+        exprList += ["function(x){x+98};r.hex[,3]=4;"]
 
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)

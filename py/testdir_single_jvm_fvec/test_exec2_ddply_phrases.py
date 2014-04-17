@@ -41,7 +41,7 @@ badPhrases = [
     "factor",
 ]
 phrases = [
-    "function(x) { cbind( mean(x[,1]), mean(x[,2]) ) }",
+    # "function(x) { cbind( mean(x[,1]), mean(x[,2]) ) }",
     "function(x) { mean( x[,2]) }", 
     "function(x) { sd( x[,2]) }", 
     "function(x) { quantile(x[,2] , c(0.9) ) }",
@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3)
+            h2o.build_cloud(2, java_heap_GB=6)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)
 
         for p in phrases:
-            execExpr = "ddply(r.hex, c(2,3), " + p + ")" 
+            execExpr = "ddply(r.hex, c(2), " + p + ")" 
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
 
         
