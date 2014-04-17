@@ -16,6 +16,7 @@ BUILD_DIRS=\
 
 SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
+	$(BUILD)/scripts/typecheck.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
 	$(BUILD)/scripts/main.js
 
@@ -39,6 +40,7 @@ BROWSER_SCRIPTS=\
 
 TEMPLATES=\
 	src/templates/main-view.jade \
+	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \
 	src/templates/empty-view.jade \
@@ -60,6 +62,7 @@ STYLES=\
 
 TESTS=\
 	$(BUILD)/tests/prelude.tests.js \
+	$(BUILD)/tests/typecheck.tests.js \
 	$(BUILD)/tests/hypergraph.tests.js \
 	$(BUILD)/tests/base.tests.js
 
