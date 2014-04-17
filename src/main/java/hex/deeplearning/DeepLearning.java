@@ -636,35 +636,37 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   @Override
   public final void execImpl() {
-    DeepLearningModel cp;
+    DeepLearningModel cp = null;
     if (checkpoint == null) cp = initModel();
     else {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
+      Log.info("Resuming from checkpoint.");
+      if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
+        throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
+      }
+      if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+        throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
+      }
+      if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
+              || Utils.difference(previous.model_info().get_params().ignored_cols, ignored_cols).length != 0) {
+        ignored_cols = previous.model_info().get_params().ignored_cols;
+        Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
+      }
+      if ((validation!=null) != (previous.model_info().get_params().validation != null)
+              || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
+        throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
+      }
+      if (classification != previous.model_info().get_params().classification) {
+        Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
+      }
       epochs += previous.epoch_counter; //add new epochs to existing model
       Log.info("Adding " + String.format("%.3f", previous.epoch_counter) + " epochs from the checkpointed model.");
-      cp = new DeepLearningModel(previous, destination_key, job_key);
-      cp.model_info().get_params().state = JobState.RUNNING;
       try {
-        Log.info("Resuming from checkpoint.");
+        final DataInfo dataInfo = prepareDataInfo();
+        cp = new DeepLearningModel(previous, destination_key, job_key, dataInfo);
         cp.write_lock(self());
         assert(state==JobState.RUNNING);
-        if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
-          throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
-        }
-        if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
-          throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
-        }
-        if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0) {
-          throw new IllegalArgumentException("ignored_cols must be the same as for the checkpointed model.");
-        }
-        if ((validation!=null) != (previous.model_info().get_params().validation != null)
-                || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
-          throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
-        }
-        if (classification != previous.model_info().get_params().classification) {
-          Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
-        }
         final DeepLearning mp = cp.model_info().get_params();
         Object A = mp, B = this;
         for (Field fA : A.getClass().getDeclaredFields()) {
@@ -686,7 +688,7 @@ public class DeepLearning extends Job.ValidatedJob {
         }
         cp.update(self());
       } finally {
-        cp.unlock(self());
+        if (cp != null) cp.unlock(self());
       }
     }
     trainModel(cp);
@@ -763,6 +765,20 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   /**
+   * Helper to create a DataInfo object from the source and response
+   * @return DataInfo object
+   */
+  private final DataInfo prepareDataInfo() {
+    final boolean del_enum_resp = (classification && !response.isEnum());
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
+    final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
+    assert(!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
+    if (del_enum_resp) ltrash(resp);
+    return dinfo;
+  }
+
+  /**
    * Create an initial Deep Learning model, typically to be trained by trainModel(model)
    * @return Randomly initialized model
    */
@@ -770,15 +786,11 @@ public class DeepLearning extends Job.ValidatedJob {
     try {
       lock_data();
       checkParams();
-      final boolean del_enum_resp = (classification && !response.isEnum());
-      final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-      final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
+      final DataInfo dinfo = prepareDataInfo();
       final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
-      assert(!classification ^ resp.isEnum()); //either regression or enum response
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
       final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
       model.model_info().initializeMembers();
-      if (del_enum_resp) ltrash(resp);
       return model;
     }
     finally {

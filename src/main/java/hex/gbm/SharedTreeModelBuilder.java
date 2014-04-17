@@ -113,8 +113,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       throw new IllegalArgumentException("Too many levels in response column!");
 
     int usableColumns = 0;
+    assert _ncols == _train.length : "Number of selected train columns does not correspond to a number of columns!";
     for (int i = 0; i < _ncols; i++) {
-      Vec v = source.vec(i);
+      Vec v = _train[i];
       if (v.isBad() || v.isConst()) continue;
       usableColumns++;
     }

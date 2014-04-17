@@ -440,6 +440,7 @@ public class AUC extends Func {
     sb.append(", Recall: " + String.format("%.5f", recall()));
     sb.append(", Specificity: " + String.format("%.5f", specificity()));
     sb.append(", Threshold for " + threshold_criterion.toString().replace("_", " ") + ": " + String.format("%g", threshold()));
+    sb.append("\n");
   }
 
   void plotROC(StringBuilder sb) {
