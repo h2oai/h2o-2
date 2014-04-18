@@ -47,12 +47,11 @@ public class Tree extends H2OCountedCompleter {
   int            _exclusiveSplitLimit;
   int            _verbose;
   final byte     _producerId;   // Id of node producing this tree
-  SpeeDRFModel   _model;
 
   /**
    * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Job job, final hex.singlenoderf.Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final hex.singlenoderf.Sampling sampler, int verbose, SpeeDRFModel model) {
+  public Tree(final Job job, final hex.singlenoderf.Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final hex.singlenoderf.Sampling sampler, int verbose) {
     _job              = job;
     _data             = data;
     _type             = stat;
@@ -62,9 +61,8 @@ public class Tree extends H2OCountedCompleter {
     _seed             = seed;
     _sampler          = sampler;
     _exclusiveSplitLimit = exclusiveSplitLimit;
-    _verbose          = verbose;
+    _verbose          = 10; //verbose;
     _producerId       = producerId;
-    _model            = model;
   }
 
   // Oops, uncaught exception
@@ -397,12 +395,12 @@ public class Tree extends H2OCountedCompleter {
    Use row 'row' in the dataset 'ary' (with pre-fetched bits 'databits')
    Returns classes from 0 to N-1*/
   public static short classify( AutoBuffer ts, Frame fr, Chunk[] chks, int row, int modelDataMap[], short badData ) {
-    ts.get4();    // Skip tree-id
-    ts.get8();    // Skip seed
-    ts.get1();    // Skip producer id
+    int tree_id = ts.get4();    // Skip tree-id
+    long seed = ts.get8();    // Skip seed
+    int producer_id = ts.get1();    // Skip producer id
     byte b;
 
-    int rowNum = (int)chks[0]._start + row;
+    int rowNum = row;
     while( (b = (byte) ts.get1()) != '[' ) { // While not a leaf indicator
       assert b == '(' || b == 'S' || b == 'E';
       int col = modelDataMap[ts.get2()]; // Column number in model-space mapped to data-space
