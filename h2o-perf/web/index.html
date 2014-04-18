@@ -56,7 +56,8 @@
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -65,6 +66,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -92,7 +94,8 @@ ORDER BY tr.start_epoch_ms;
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -101,6 +104,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -137,7 +141,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -146,6 +151,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -173,7 +179,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 650px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -182,6 +189,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -219,7 +227,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -228,6 +237,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -255,7 +265,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 600px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -264,6 +275,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -302,7 +314,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 650px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -311,6 +324,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -338,7 +352,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 600px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -347,6 +362,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -385,7 +401,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -394,6 +411,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -421,7 +439,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 600px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -430,6 +449,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -468,7 +488,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -477,6 +498,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -504,6 +526,7 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
+    tr.test_run_id,
     FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (p.end_epoch_ms - p.start_epoch_ms) / 1000 time_s,
@@ -514,6 +537,7 @@ SELECT
     tr.num_explan_cols,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -552,7 +576,8 @@ ORDER BY tr.test_name, tr.test_run_id;
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -561,6 +586,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -597,7 +623,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 650px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -606,6 +633,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -644,7 +672,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 650px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -653,6 +682,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
