@@ -74,7 +74,7 @@ class PerfRunner:
         test_short_dir = os.path.join(prefix, testDir)
 
         test = Test(config_file, test_dir, test_short_dir, 
-                    self.output_dir, parse_file, model_file, predict_file, self.perfdb)
+                    self.output_dir, parse_file, model_file, predict_file, self.perfdb, prefix)
 
         self.tests.append(test)
         self.tests_not_started.append(test)
