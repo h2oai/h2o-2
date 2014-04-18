@@ -794,7 +794,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.info("  rate, rate_decay, rate_annealing, momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient.");
       } else {
         Log.info("Using manual learning rate.  Ignoring the following input parameters:");
-        Log.info("  rho, epsilon");
+        Log.info("  rho, epsilon.");
       }
 
       if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
@@ -935,7 +935,7 @@ public class DeepLearning extends Job.ValidatedJob {
       mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode, mp.quiet_mode);
       // Determine whether shuffling is enforced
       if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
-        Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
+        Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data, mp.quiet_mode);
