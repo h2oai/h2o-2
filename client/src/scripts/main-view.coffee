@@ -42,9 +42,11 @@ Steam.MainView = (_) ->
 
   frameListView = Steam.FrameListView _
   modelListView = Steam.ModelListView _
+  modelSelectionView = Steam.ModelSelectionView _
 
-  [_frameListView, _modelListView] = _allTopicViews = times 3, -> node$ null
+  [ _frameListView, _modelListView ] = _allTopicViews = times 3, -> node$ null
   [ _emptyView, _frameView, _modelView ] = _allDetailViews = times 3, -> node$ null
+  [ _modelSelectionView ] = _allSelectionViews = times 1, -> node$ null
 
   switchView = (sourceNodes, targetNode, view, dispose=yes) ->
     for sourceNode in sourceNodes when oldView = sourceNode()
@@ -53,15 +55,19 @@ Steam.MainView = (_) ->
     targetNode view
     return
 
-  link$ _.displayFrame, (key, frame) ->
-    switchView _allDetailViews, _frameView, Steam.FrameView _, key, frame
+  link$ _.displayFrame, (frame) ->
+    switchView _allDetailViews, _frameView, Steam.FrameView _, frame
 
-  link$ _.displayModel, (key, model) ->
-    switchView _allDetailViews, _modelView, Steam.ModelView _, key, model
+  link$ _.displayModel, (model) ->
+    switchView _allDetailViews, _modelView, Steam.ModelView _, model
 
   link$ _.switchToFrames, switchToFrames
 
   link$ _.switchToModels, switchToModels
+
+  link$ _.modelsSelected, -> _modelSelectionView modelSelectionView
+
+  link$ _.modelsDeselected, -> _modelSelectionView null
 
   #TODO do this through hash uris
   switchToFrames type: 'all'
@@ -73,6 +79,7 @@ Steam.MainView = (_) ->
   
   frameListView: _frameListView
   modelListView: _modelListView
+  modelSelectionView: _modelSelectionView
   
   emptyView: _emptyView
   frameView: _frameView

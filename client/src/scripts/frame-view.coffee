@@ -1,4 +1,4 @@
-Steam.FrameView = (_, _key, _frame) ->
+Steam.FrameView = (_, _frame) ->
   _compatibleModels = node$ ''
 
   # Columns section
@@ -10,7 +10,7 @@ Steam.FrameView = (_, _key, _frame) ->
         tr map row, td
     ]
 
-  createCompatibleModelsSection = (frame, modelTable) ->
+  createCompatibleModelsSection = (frame) ->
       headers = [
         'Algorithm'
         'Category'
@@ -18,8 +18,7 @@ Steam.FrameView = (_, _key, _frame) ->
         'State'
       ]
 
-      rows = map frame.compatible_models, (key) ->
-        model = modelTable[key]
+      rows = map frame.compatible_models, (model) ->
         [
           model.model_algorithm
           model.model_category
@@ -39,19 +38,19 @@ Steam.FrameView = (_, _key, _frame) ->
       ]
 
   loadCompatibleModels = ->
-    _.switchToModels type: 'compatibleWithFrame', frameKey: _key
+    _.switchToModels type: 'compatibleWithFrame', frameKey: _frame.key
 
-  _.requestFrameAndCompatibleModels _key, (error, data) ->
+  _.requestFrameAndCompatibleModels _frame.key, (error, data) ->
     if error
       #TODO handle errors
     else
       #TODO typecheck
-      _compatibleModels createCompatibleModelsSection data.frames[_key], data.models
+      _compatibleModels createCompatibleModelsSection head data.frames
       return
 
   data: _frame
-  title: _key
-  key: _key
+  key: _frame.key
+  title: _frame.key
   columns: createColumnsSection _frame
   compatibleModels: _compatibleModels
   loadCompatibleModels: loadCompatibleModels

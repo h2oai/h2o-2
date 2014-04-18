@@ -1,36 +1,57 @@
 Steam.H2OProxy = (_) ->
 
-  composeUri = (uri, parameters) ->
-    if isEmpty parameters
-      uri
+  composeUri = (uri, opts) ->
+    if opts
+      params = mapWithKey opts, (v, k) -> "#{k}=#{v}"
+      uri + '?' + join params, '&'
     else
-      uri + '?' + join parameters, '&'
+      uri
 
-  request = (uri, parameters, go) ->
-    _.requestJSON (composeUri uri, parameters), (error, response) ->
+  request = (uri, opts, go) ->
+    _.requestJSON (composeUri uri, opts), (error, result) ->
       if error
         #TODO error logging / retries, etc.
         console.error error
-        console.error response
-        go error, response
+        console.error result
+        go error, result
       else
-        go error, response.data
+        go error, result.data
 
   requestFrames = (go, opts) ->
-    parameters = []
-    if opts
-      #TODO typecheck opts
-      push parameters, "key=#{opts.key}" if opts.key
-      push parameters, 'find_compatible_models=true' if opts.find_compatible_models
-    request '/2/Frames.json', parameters, go
+    request '/2/Frames.json', opts, (error, result) ->
+      if error
+        go error, result
+      else
+        # Flatten response so that keys are attributes on the objects, 
+        # and linked objects are direct refs instead of keys.
+        { frames, models, response } = result
+        for modelKey, model of models
+          model.key = modelKey
+
+        for frameKey, frame of frames
+          frame.key = frameKey
+          frame.compatible_models = map frame.compatible_models, (modelKey) ->
+            models[modelKey]
+
+        go error, response: response, frames: values frames
 
   requestModels = (go, opts) ->
-    parameters = []
-    if opts
-      #TODO typecheck opts
-      push parameters, "key=#{opts.key}" if opts.key
-      push parameters, 'find_compatible_frames=true' if opts.find_compatible_frames
-    request '/2/Models.json', parameters, go
+    request '/2/Models.json', opts, (error, result) ->
+      if error
+        go error, result
+      else
+        # Flatten response so that keys are attributes on the objects, 
+        # and linked objects are direct refs instead of keys.
+        { frames, models, response } = result
+        for frameKey, frame of frames
+          frame.key = frameKey
+
+        for modelKey, model of models
+          model.key = modelKey
+          model.compatible_frames = map model.compatible_frames, (frameKey) ->
+            frames[frameKey]
+
+        go error, response: response, models: values models
 
   link$ _.requestFrames, (go) -> requestFrames go
   link$ _.requestFramesAndCompatibleModels, (go) -> requestFrames go, find_compatible_models: yes

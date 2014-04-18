@@ -45,8 +45,13 @@
         include model-view
         // /ko
 
+
       // ko if:isDisplayingTopics
       .y-lane-mask
+      // /ko
+
+      // ko with:modelSelectionView
+      include model-selection-view
       // /ko
         
     .y-help-lane

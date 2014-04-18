@@ -1,6 +1,9 @@
 Steam.ModelListView = (_) ->
   _items = do nodes$
 
+  #TODO ugly
+  _isLive = node$ yes
+
   activateItem = (item) ->
     for other in _items()
       if other is item
@@ -8,11 +11,9 @@ Steam.ModelListView = (_) ->
       else
         other.isActive no
 
-    _.displayModel item.key, item.data
+    _.displayModel item.data
 
-  selectItem = (item) ->
-
-  createItem = (model, key) ->
+  createItem = (model) ->
     #TODO replace with type checking
     console.assert isArray model.input_column_names
     console.assert has model, 'model_algorithm'
@@ -23,26 +24,26 @@ Steam.ModelListView = (_) ->
 
     self =
       data: model
-      key: key
       title: model.model_algorithm
       caption: model.model_category
       cutline: 'Response Column: ' + model.response_column_name
       display: -> activateItem self
       isActive: node$ no
-      isChecked: node$ no
+      isSelected: node$ no
 
-    apply$ self.isChecked, (isChecked) ->
-      console.log self.key, if isChecked then 'checked' else 'unchecked'
-
+    apply$ _isLive, self.isSelected, (isLive, isSelected) ->
+      _.modelSelectionChanged isSelected, _predicate, model if isLive
     self
 
-  displayModels = (modelTable) ->
-    _items items = mapWithKey modelTable, createItem
+  displayModels = (models) ->
+    _items items = map models, createItem
     activateItem head items unless isEmpty items
 
-  loadModels = (opts) ->
-    console.assert isDefined opts
-    switch opts.type
+  _predicate = null
+  loadModels = (predicate) ->
+    console.assert isDefined predicate
+    _predicate = predicate
+    switch predicate.type
       when 'all'
         _.requestModels (error, data) ->
           if error
@@ -51,15 +52,21 @@ Steam.ModelListView = (_) ->
             displayModels data.models
 
       when 'compatibleWithFrame'
-        _.requestFrameAndCompatibleModels opts.frameKey, (error, data) ->
+        _.requestFrameAndCompatibleModels predicate.frameKey, (error, data) ->
           if error
             #TODO handle errors
           else
-            # data.frames[opts.frameKey], data.models
-            displayModels data.models
+            # data.frames[predicate.frameKey], data.models
+            displayModels (head data.frames).compatible_models
     return
 
   link$ _.loadModels, loadModels
+  link$ _.deselectAllModels, ->
+    #TODO ugly
+    _isLive no
+    for item in _items()
+      item.isSelected no
+    _isLive yes
 
   items: _items
   dispose: ->

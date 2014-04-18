@@ -1,4 +1,4 @@
-Steam.ModelView = (_, _key, _model) ->
+Steam.ModelView = (_, _model) ->
   _compatibleFrames = node$ ''
 
   stringify = (value) ->
@@ -35,16 +35,15 @@ Steam.ModelView = (_, _key, _model) ->
     ]
 
 
-  createCompatibleFramesSection = (model, frames) ->
+  createCompatibleFramesSection = (frames) ->
     headers = [
       'Dataset'
       'Columns'
     ]
 
-    rows = map model.compatible_frames, (key) ->
-      frame = frames[key]
+    rows = map frames, (frame) ->
       [
-        key
+        frame.key
         join frame.column_names, ', '
       ]
 
@@ -61,19 +60,19 @@ Steam.ModelView = (_, _key, _model) ->
     ]
 
   loadCompatibleFrames = ->
-    _.switchToFrames type: 'compatibleWithModel', modelKey: _key
+    _.switchToFrames type: 'compatibleWithModel', modelKey: _model.key
 
-  _.requestModelAndCompatibleFrames _key, (error, data) ->
+  _.requestModelAndCompatibleFrames _model.key, (error, data) ->
     if error
       #TODO handle errors
     else
       #TODO typecheck
-      _compatibleFrames createCompatibleFramesSection data.models[_key], data.frames
+      _compatibleFrames createCompatibleFramesSection (head data.models).compatible_frames
 
   
   data: _model
+  key: _model.key
   title: _model.model_algorithm
-  key: _key
   summary: createSummarySection _model
   parameters: createParametersSection _model
   inputColumns: createInputColumnsSection _model

@@ -1,0 +1,23 @@
+.y-model-selection-view
+  .y-tag Operations
+  h1.y-title(data-bind="text:caption")
+  table.table.table-condensed.table-hover
+    thead
+      tr
+        th Algorithm
+        th Category
+        th Response Column
+        th State
+        th Time
+    tbody
+      // ko foreach:selections
+      tr
+        td(data-bind='text:algorithm')
+        td(data-bind='text:category')
+        td(data-bind='text:responseColumn')
+        td(data-bind='text:status')
+        td(data-bind='text:time')
+      // /ko
+  div
+    button.btn.btn-primary(data-bind="click:scoreModels, enable:canScore") Score Models
+    button.btn(data-bind="click:clearSelected") Clear Selected

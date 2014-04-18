@@ -69,6 +69,7 @@ ko.bindingHandlers.collapse =
       isCollapsed = not isCollapsed
 
     $el.css 'cursor', 'pointer'
+    $el.attr 'title', 'Click to expand/collapse'
     $disclosureEl.css 'margin-left', '10px'
     $el.click toggle
     toggle()

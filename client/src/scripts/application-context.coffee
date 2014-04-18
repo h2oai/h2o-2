@@ -25,4 +25,9 @@ Steam.ApplicationContext = ->
     displayFrame: do edge$
     loadModels: do edge$
     displayModel: do edge$
+    modelSelectionChanged: do edge$
+    modelsSelected: do edge$
+    modelsDeselected: do edge$
+    deselectAllModels: do edge$
+    clearModelSelection: do edge$
 

@@ -8,24 +8,23 @@ Steam.FrameListView = (_) ->
       else
         other.isActive no
 
-    _.displayFrame item.key, item.data
+    _.displayFrame item.data
 
     return
 
-  createItem = (frame, key) ->
+  createItem = (frame) ->
     #TODO replace with type checking
     console.assert isArray frame.column_names
     self =
       data: frame
-      key: key
-      title: key
+      title: frame.key
       caption: describeCount frame.column_names.length, 'column'
       cutline: join frame.column_names, ', '
       display: -> activate self
       isActive: node$ no
   
-  displayFrames = (frameTable) ->
-    _items items = mapWithKey frameTable, createItem
+  displayFrames = (frames) ->
+    _items items = map frames, createItem
     activate head items unless isEmpty items
 
   loadFrames = (opts) ->
@@ -42,7 +41,7 @@ Steam.FrameListView = (_) ->
           if error
             #TODO handle errors
           else
-            displayFrames data.frames
+            displayFrames (head data.models).compatible_frames
     return
 
   link$ _.loadFrames, loadFrames

@@ -7,5 +7,5 @@ Steam.Xhr = (_) ->
       .done (data, status, xhr) ->
         go null, createResponse status, data, xhr
       .fail (xhr, status, error) ->
-        go createResponse status, error, xhr
+        go createResponse status, xhr.responseJSON, xhr
 
