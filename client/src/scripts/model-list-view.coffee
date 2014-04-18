@@ -1,7 +1,7 @@
 Steam.ModelListView = (_) ->
   _items = do nodes$
 
-  activate = (item) ->
+  activateItem = (item) ->
     for other in _items()
       if other is item
         other.isActive yes
@@ -9,6 +9,8 @@ Steam.ModelListView = (_) ->
         other.isActive no
 
     _.displayModel item.key, item.data
+
+  selectItem = (item) ->
 
   createItem = (model, key) ->
     #TODO replace with type checking
@@ -25,20 +27,40 @@ Steam.ModelListView = (_) ->
       title: model.model_algorithm
       caption: model.model_category
       cutline: 'Response Column: ' + model.response_column_name
-      display: -> activate self
+      display: -> activateItem self
       isActive: node$ no
+      isChecked: node$ no
+
+    apply$ self.isChecked, (isChecked) ->
+      console.log self.key, if isChecked then 'checked' else 'unchecked'
+
+    self
 
   displayModels = (modelTable) ->
     _items items = mapWithKey modelTable, createItem
-    activate head items unless isEmpty items
+    activateItem head items unless isEmpty items
 
-  displayModels_ = link$ _.displayModels, (data) ->
-    _.requestModels (error, data) ->
-      if error
-        #TODO handle errors
-      else
-        displayModels data.models
+  loadModels = (opts) ->
+    console.assert isDefined opts
+    switch opts.type
+      when 'all'
+        _.requestModels (error, data) ->
+          if error
+            #TODO handle errors
+          else
+            displayModels data.models
+
+      when 'compatibleWithFrame'
+        _.requestFrameAndCompatibleModels opts.frameKey, (error, data) ->
+          if error
+            #TODO handle errors
+          else
+            # data.frames[opts.frameKey], data.models
+            displayModels data.models
+    return
+
+  link$ _.loadModels, loadModels
 
   items: _items
-  dispose: -> unlink$ displayModels_
+  dispose: ->
 

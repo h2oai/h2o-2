@@ -19,9 +19,10 @@ Steam.ApplicationContext = ->
     requestModel: do edge$
     requestModelAndCompatibleFrames: do edge$
 
-    switchTopic: do edge$
-    displayFrames: do edge$
+    switchToFrames: do edge$
+    switchToModels: do edge$
+    loadFrames: do edge$
     displayFrame: do edge$
-    displayModels: do edge$
+    loadModels: do edge$
     displayModel: do edge$
 

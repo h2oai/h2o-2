@@ -28,14 +28,25 @@ Steam.FrameListView = (_) ->
     _items items = mapWithKey frameTable, createItem
     activate head items unless isEmpty items
 
-  displayFrames_ = link$ _.displayFrames, ->
-    _.requestFrames (error, data) ->
-      if error
-        #TODO handle errors
-      else
-        displayFrames data.frames
+  loadFrames = (opts) ->
+    console.assert isDefined opts
+    switch opts.type
+      when 'all'
+        _.requestFrames (error, data) ->
+          if error
+            #TODO handle errors
+          else
+            displayFrames data.frames
+      when 'compatibleWithModel'
+        _.requestModelAndCompatibleFrames opts.modelKey, (error, data) ->
+          if error
+            #TODO handle errors
+          else
+            displayFrames data.frames
+    return
+
+  link$ _.loadFrames, loadFrames
 
   items: _items
   dispose: ->
-    unlink$ displayFrames_
 

@@ -1,8 +1,10 @@
 .y-model-list-view
   // ko foreach:items
-  .y-model(data-bind='click:display, css:{"y-active":isActive}')
-    .y-model-title(data-bind='text:title')
-    .y-model-caption(data-bind='text:caption')
-    .y-model-cutline(data-bind='text:cutline')
+  .y-model(data-bind='css:{"y-active":isActive}')
+    input(type='checkbox' data-bind='checked:isChecked')
+    .y-model-details(data-bind='click:display')
+      .y-model-title(data-bind='text:title')
+      .y-model-caption(data-bind='text:caption')
+      .y-model-cutline(data-bind='text:cutline')
   // /ko
 

@@ -6,9 +6,11 @@
   .y-desktop
     .y-topic-lane
       .y-lane-header
-        button.y-topic-button.btn(data-bind='click:toggleTopics') M
+        button.y-topic-button.btn.fa-btn(data-bind='click:toggleTopics')
+          span.fa.fa-bars
         .y-topic-title(data-bind='text:topicTitle')
-        button.y-upload-button.btn R
+        button.y-upload-button.btn.fa-btn
+          span.fa.fa-refresh
 
       .y-lane-body
 
@@ -21,9 +23,10 @@
         // /ko
 
         // ko if:isDisplayingTopics
-        // ko with:topicListView
-        include topic-list-view
-        // /ko
+        .y-topic-list-view
+          // ko foreach:topics
+          .y-topic(data-bind='click:display, text:title, css:{"y-disabled":isDisabled}')
+          // /ko
         // /ko
 
     .y-workspace-lane
