@@ -1,17 +1,14 @@
 package hex.glm;
 
 import hex.FrameTask;
-import hex.GLMTest;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
-import water.Job;
-import water.MemoryManager;
-import water.H2O.H2OCountedCompleter;
-import water.api.GLM;
-import water.util.Utils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+
+import water.H2O.H2OCountedCompleter;
+import water.*;
+import water.util.Utils;
 
 /**
  * Contains all GLM related tasks.

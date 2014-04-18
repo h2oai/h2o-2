@@ -227,7 +227,10 @@ public abstract class Neurons {
   }
 
   final void bprop_col(final int col, final float previous_a, final float rate, final float momentum) {
-    bprop_dense_col_sparse((DenseColMatrix)_w, _wm, (SparseVector)_previous._a, _previous._e, _b, _bm, col, previous_a, rate, momentum);
+    if (_w instanceof DenseColMatrix && _previous._a instanceof SparseVector)
+      bprop_dense_col_sparse((DenseColMatrix)_w, _wm, (SparseVector)_previous._a, _previous._e, _b, _bm, col, previous_a, rate, momentum);
+    else
+      throw new UnsupportedOperationException("bprop_col for types not yet implemented.");
   }
 
   /**
@@ -633,11 +636,10 @@ public abstract class Neurons {
       seed += params.seed + 0x1337B4BE;
       _dropout.randomlySparsifyActivation(_a, seed);
 
-// FIXME: HACK TO ALWAYS BE SPARSE
-//      _svec = new SparseVector(_dvec);
-//      assert(_svec instanceof SparseVector);
-//      _a = _svec;
-//      assert(_a instanceof SparseVector);
+      if (params.sparse) {
+        _svec = new SparseVector(_dvec);
+        _a = _svec;
+      }
     }
 
   }

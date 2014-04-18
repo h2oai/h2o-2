@@ -26,7 +26,7 @@ def define_params():
         'initial_weight_scale'         : [None, 0, 1],
         'loss'                         : [None, 'MeanSquare', 'CrossEntropy'],
         'rate_decay'                   : [None, 0, 1],
-        'epochs'                       : [None, 0, 1],
+        'epochs'                       : [None, 0.001, 2],
         'score_training_samples'       : [None, 0, 1],
         'score_validation_samples'     : [None, 0, 1],
         'score_interval'               : [None, 0, 1],
