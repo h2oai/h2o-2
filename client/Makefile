@@ -34,13 +34,11 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/frame-view.js \
 	$(BUILD)/scripts/model-list-view.js \
 	$(BUILD)/scripts/model-view.js \
-	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/main-view.js \
 	$(BUILD)/scripts/steam.js
 
 TEMPLATES=\
 	src/templates/main-view.jade \
-	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \
 	src/templates/empty-view.jade \
@@ -53,7 +51,6 @@ STYLES=\
 	src/styles/fonts.styl \
 	src/styles/bootstrap.styl \
 	src/styles/main-view.styl \
-	src/styles/topic-list-view.styl \
 	src/styles/frame-list-view.styl \
 	src/styles/model-list-view.styl \
 	src/styles/empty-view.styl \
