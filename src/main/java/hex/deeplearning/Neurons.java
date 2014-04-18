@@ -278,12 +278,12 @@ public abstract class Neurons {
         assert(!have_momenta);
         final float grad2 = grad*grad;
         avg_grad2 += grad2;
-        _ada_g.set(row,col, _ada_g.get(row,col) * rho);
-        _ada_g.add(row,col, (1f-rho)*grad2);
-        final float RMS_dx = Utils.approxSqrt(_ada_dx.get(row,col) + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_ada_g.get(row,col) + eps);
+        _ada_g.raw()[w] = _ada_g.raw()[w] * rho;
+        _ada_g.raw()[w] += (1f-rho)*grad2;
+        final float RMS_dx = Utils.approxSqrt(_ada_dx.raw()[w] + eps);
+        final float invRMS_g = Utils.approxInvSqrt(_ada_g.raw()[w] + eps);
         rate = RMS_dx*invRMS_g;
-        _ada_dx.set(row,col, rho * _ada_dx.get(row,col) + (1f-rho)*rate*rate*grad2);
+        _ada_dx.raw()[w] = rho * _ada_dx.raw()[w] + (1f-rho)*rate*rate*grad2;
         _w.raw()[w] += rate * grad;
       } else {
         if (!nesterov) {
