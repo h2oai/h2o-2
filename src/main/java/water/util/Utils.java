@@ -170,6 +170,22 @@ public class Utils {
   public static float sumSquares(final float[] a) {
     return sumSquares(a, 0, a.length);
   }
+
+  /**
+   * Approximate sumSquares
+   * @param a Array with numbers
+   * @param from starting index (inclusive)
+   * @param to ending index (exclusive)
+   * @return approximate sum of squares based on a sample somewhere in the middle of the array (pos determined by bits of a[0])
+   */
+  public static float approxSumSquares(final float[] a, int from, int to) {
+    final int len = to-from;
+    final int samples = Math.max(len / 16, 1);
+    final int offset = from + Math.abs(Float.floatToIntBits(a[0])) % (len-samples);
+    assert(offset+samples <= to);
+    return sumSquares(a, offset, offset + samples) * (float)len / (float)samples;
+  }
+
   public static float sumSquares(final float[] a, int from, int to) {
     float result = 0;
     final int cols = to-from;
