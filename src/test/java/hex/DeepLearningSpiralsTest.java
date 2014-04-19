@@ -34,7 +34,7 @@ public class DeepLearningSpiralsTest extends TestUtil {
       p.epochs = 5000;
       p.hidden = new int[]{100};
       p.activation = DeepLearning.Activation.Tanh;
-      p.max_w2 = Float.MAX_VALUE;
+      p.max_w2 = Float.POSITIVE_INFINITY;
       p.l1 = 0;
       p.l2 = 0;
       p.momentum_start = 0;
