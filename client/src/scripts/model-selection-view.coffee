@@ -31,19 +31,31 @@ Steam.ModelSelectionView = (_) ->
 
     _predicate predicate unless _predicate() is predicate
 
+  runScoringJobs = (jobs) ->
+    queue = copy jobs
+    runNext = ->
+      job = shift queue
+      if job
+        console.log "Queue size #{queue.length}/#{jobs.length}"
+        job.run -> defer runNext
+    defer runNext
+
   scoreModels = ->
     frameKey = _predicate().frameKey
-    forEach _selections(), (selection) ->
+    runScoringJobs map _selections(), (selection) ->
       modelKey = selection.data.key
-      selection.status 'running'
-      _.requestScoringOnFrame frameKey, modelKey, (error, result) ->
-        data = if error then error.data else result
-        selection.status data.response.status
-        selection.time data.response.time
-        selection.result error or result
+      selection.status 'waiting'
+      run: (go) ->
+        selection.status 'running'
+        _.requestScoringOnFrame frameKey, modelKey, (error, result) ->
+          data = if error then error.data else result
+          selection.status data.response.status
+          selection.time data.response.time
+          selection.result error or result
+          do go
 
   clearSelected = ->
-    _selections []
+    _selections.removeAll()
     _.deselectAllModels()
 
 
