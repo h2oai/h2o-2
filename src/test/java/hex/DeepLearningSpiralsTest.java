@@ -29,17 +29,12 @@ public class DeepLearningSpiralsTest extends TestUtil {
     {
       DeepLearning p = new DeepLearning();
       p.seed = 0xbabe;
-      p.rate = 0.007;
-      p.rate_annealing = 0;
       p.epochs = 5000;
       p.hidden = new int[]{100};
       p.activation = DeepLearning.Activation.Tanh;
       p.max_w2 = Float.POSITIVE_INFINITY;
       p.l1 = 0;
       p.l2 = 0;
-      p.momentum_start = 0;
-      p.momentum_ramp = 0;
-      p.momentum_stable = 0;
       p.initial_weight_distribution = DeepLearning.InitialWeightDistribution.Normal;
       p.initial_weight_scale = 2.5;
       p.loss = DeepLearning.Loss.CrossEntropy;
