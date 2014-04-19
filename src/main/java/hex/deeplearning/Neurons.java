@@ -219,16 +219,22 @@ public abstract class Neurons {
     if (_shortcut && partial_grad == 0f) return;
 
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
-      bprop_dense_row_dense((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
+      bprop_dense_row_dense(
+              (DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseRowMatrix)_ada_dx, (DenseRowMatrix)_ada_g,
+              (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
     else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
-      bprop_dense_row_sparse((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
+      bprop_dense_row_sparse(
+              (DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseRowMatrix)_ada_dx, (DenseRowMatrix)_ada_g,
+              (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
     else
       throw new UnsupportedOperationException("bprop for types not yet implemented.");
   }
 
   final void bprop_col(final int col, final float previous_a, final float rate, final float momentum) {
     if (_w instanceof DenseColMatrix && _previous._a instanceof SparseVector)
-      bprop_dense_col_sparse((DenseColMatrix)_w, _wm, (SparseVector)_previous._a, _previous._e, _b, _bm, col, previous_a, rate, momentum);
+      bprop_dense_col_sparse(
+              (DenseColMatrix)_w, (DenseColMatrix)_wm, (DenseColMatrix)_ada_dx, (DenseColMatrix)_ada_g,
+              (SparseVector)_previous._a, _previous._e, _b, _bm, col, previous_a, rate, momentum);
     else
       throw new UnsupportedOperationException("bprop_col for types not yet implemented.");
   }
@@ -246,8 +252,11 @@ public abstract class Neurons {
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  private final void bprop_dense_row_dense(final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseVector prev_a, final DenseVector prev_e,
-                                           final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
+  private final void bprop_dense_row_dense(
+          final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseRowMatrix adax, final DenseRowMatrix adag,
+          final DenseVector prev_a, final DenseVector prev_e, final DenseVector _b, final DenseVector _bm,
+          final int row, final float partial_grad, float rate, final float momentum)
+  {
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
@@ -272,19 +281,12 @@ public abstract class Neurons {
       final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
       final int w = idx + col;
 
-      // adaptive learning rate r from ADADELTA
-      // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (have_ada) {
         assert(!have_momenta);
         final float grad2 = grad*grad;
         avg_grad2 += grad2;
-        _ada_g.raw()[w] = _ada_g.raw()[w] * rho;
-        _ada_g.raw()[w] += (1f-rho)*grad2;
-        final float RMS_dx = Utils.approxSqrt(_ada_dx.raw()[w] + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_ada_g.raw()[w] + eps);
-        rate = RMS_dx*invRMS_g;
-        _ada_dx.raw()[w] = rho * _ada_dx.raw()[w] + (1f-rho)*rate*rate*grad2;
-        _w.raw()[w] += rate * grad;
+        float brate = computeAdaDeltaRateForWeight(grad, w, adax, adag, rho, eps);
+        _w.raw()[w] += brate * grad;
       } else {
         if (!nesterov) {
           final float delta = rate * grad;
@@ -306,16 +308,8 @@ public abstract class Neurons {
     }
     if (max_w2 != Float.POSITIVE_INFINITY)
       rescale_weights(_w, row, max_w2);
-    if (have_ada) {
-      avg_grad2 /= cols;
-      _bias_ada_g.set(row, _bias_ada_g.get(row) * rho);
-      _bias_ada_g.add(row, (1f-rho)*avg_grad2);
-      final float RMS_dx = Utils.approxSqrt(_bias_ada_dx.get(row) + eps);
-      final float invRMS_g = Utils.approxInvSqrt(_bias_ada_g.get(row) + eps);
-      rate = RMS_dx*invRMS_g;
-      _bias_ada_dx.set(row, rho * _bias_ada_dx.get(row) + (1f - rho) * rate * rate * avg_grad2);
-    }
-    update_bias(_b, _bm, row, partial_grad, rate, momentum);
+    if (have_ada) avg_grad2 /= cols;
+    update_bias(_b, _bm, row, partial_grad, avg_grad2, rate, momentum);
   }
 
   /**
@@ -329,13 +323,16 @@ public abstract class Neurons {
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  private final void bprop_dense_col_sparse(final DenseColMatrix w, final Matrix wm, final SparseVector prev_a, final DenseVector prev_e,
-                                           final DenseVector b, final DenseVector bm,final int col, final float previous_a, float rate, final float momentum) {
+  private final void bprop_dense_col_sparse(
+          final DenseColMatrix w, final DenseColMatrix wm, final DenseColMatrix adax, final DenseColMatrix adag,
+          final SparseVector prev_a, final DenseVector prev_e, final DenseVector b, final DenseVector bm,
+          final int col, final float previous_a, float rate, final float momentum)
+  {
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
     final float l2 = (float)params.l2;
-    final boolean have_momenta = wm != null;
+    final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _ada_dx != null && _ada_g != null;
     final boolean nesterov = params.nesterov_accelerated_gradient;
     final boolean update_prev = prev_e != null;
@@ -348,27 +345,14 @@ public abstract class Neurons {
       if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
       assert (previous_a != 0); //only iterate over non-zeros!
 
-      // only correct weights if the gradient is large enough
-      if (params.fast_mode || (
-              // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
-              !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
-        if (partial_grad == 0f) continue;
-      }
+      if (_shortcut && partial_grad == 0f) continue;
+
       //this is the actual gradient dE/dw
       final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
-      float grad2 = 0;
-      // adaptive learning rate r from ADADELTA
-      // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (have_ada) {
         assert(!have_momenta);
-        grad2 = grad*grad;
-        _ada_g.set(row,col, _ada_g.get(row,col) * rho);
-        _ada_g.add(row,col, (1f-rho)*grad2);
-        final float RMS_dx = Utils.approxSqrt(_ada_dx.get(row,col) + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_ada_g.get(row,col) + eps);
-        rate = RMS_dx*invRMS_g;
-        _ada_dx.set(row,col, rho * _ada_dx.get(row,col) + (1f-rho)*rate*rate*grad2);
-        w.add(row,col, rate * grad);
+        float brate = computeAdaDeltaRateForWeight(grad, row, col, adax, adag, rho, eps);
+        w.add(row,col, brate * grad);
       } else {
         if (!nesterov) {
           final float delta = rate * grad;
@@ -390,15 +374,8 @@ public abstract class Neurons {
           w.add(row, col, rate * tmp);
         }
       }
-      if (have_ada) {
-        _bias_ada_g.set(row, _bias_ada_g.get(row) * rho);
-        _bias_ada_g.add(row, (1f-rho)*grad2);
-        final float RMS_dx = Utils.approxSqrt(_bias_ada_dx.get(row) + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_bias_ada_g.get(row) + eps);
-        rate = RMS_dx*invRMS_g;
-        _bias_ada_dx.set(row, rho * _bias_ada_dx.get(row) + (1f-rho)*rate*rate*grad2);
-      }
-      update_bias(b, bm, row, partial_grad/cols, rate, momentum); //this is called cols times, so we divide the (repeated) contribution by 1/cols
+      //this is called cols times, so we divide the (repeated) contribution by 1/cols
+      update_bias(b, bm, row, partial_grad/cols, grad/cols, rate, momentum);
     }
   }
 
@@ -415,8 +392,11 @@ public abstract class Neurons {
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  private final void bprop_dense_row_sparse(final DenseRowMatrix _w, final DenseRowMatrix _wm, final SparseVector prev_a, final DenseVector prev_e,
-                                           final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
+  private final void bprop_dense_row_sparse(
+          final DenseRowMatrix _w, final DenseRowMatrix _wm, final DenseRowMatrix adax, final DenseRowMatrix adag,
+          final SparseVector prev_a, final DenseVector prev_e, final DenseVector _b, final DenseVector _bm,
+          final int row, final float partial_grad, float rate, final float momentum)
+  {
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
@@ -443,18 +423,11 @@ public abstract class Neurons {
       final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
       final int w = idx + col;
 
-      // adaptive learning rate r from ADADELTA
-      // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
       if (have_ada) {
         assert(!have_momenta);
         final float grad2 = grad*grad;
         avg_grad2 += grad2;
-        _ada_g.set(row,col, _ada_g.get(row,col) * rho);
-        _ada_g.add(row,col, (1f-rho)*grad2);
-        final float RMS_dx = Utils.approxSqrt(_ada_dx.get(row,col) + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_ada_g.get(row,col) + eps);
-        float brate = RMS_dx*invRMS_g;
-        _ada_dx.set(row,col, rho * _ada_dx.get(row,col) + (1f-rho)*brate*brate*grad2);
+        float brate = computeAdaDeltaRateForWeight(grad, w, adax, adag, rho, eps);
         _w.raw()[w] += brate * grad;
       } else {
         if (!nesterov) {
@@ -477,16 +450,8 @@ public abstract class Neurons {
     }
     if (max_w2 != Float.POSITIVE_INFINITY)
       rescale_weights(_w, row, max_w2);
-    if (have_ada) {
-      avg_grad2 /= prev_a.nnz();
-      _bias_ada_g.set(row, _bias_ada_g.get(row) * rho);
-      _bias_ada_g.add(row, (1f-rho)*avg_grad2);
-      final float RMS_dx = Utils.approxSqrt(_bias_ada_dx.get(row) + eps);
-      final float invRMS_g = Utils.approxInvSqrt(_bias_ada_g.get(row) + eps);
-      rate = RMS_dx*invRMS_g;
-      _bias_ada_dx.set(row, rho * _bias_ada_dx.get(row) + (1f-rho)*rate*rate*avg_grad2);
-    }
-    update_bias(_b, _bm, row, partial_grad, rate, momentum);
+    if (have_ada) avg_grad2 /= prev_a.nnz();
+    update_bias(_b, _bm, row, partial_grad, avg_grad2, rate, momentum);
   }
 
   /**
@@ -494,26 +459,72 @@ public abstract class Neurons {
    * C.f. Improving neural networks by preventing co-adaptation of feature detectors
    * @param row index of the neuron for which to scale the weights
    */
-  final void rescale_weights(final Matrix w, final int row, final float max_w2) {
+  final private static void rescale_weights(final Matrix w, final int row, final float max_w2) {
     final int cols = w.cols();
     if (w instanceof DenseRowMatrix) {
-      final int idx = row * cols;
-      float r2 = Utils.sumSquares(w.raw(), idx, idx+cols);
-      if( r2 > max_w2 * 10) {
-        final float scale = Utils.approxSqrt(max_w2 / r2);
-        for( int c = 0; c < cols; c++ ) w.raw()[idx + c] *= scale;
-      }
-    }
-    else if (w instanceof DenseColMatrix) {
+      rescale_weights((DenseRowMatrix)w, row, max_w2);
+    } else if (w instanceof DenseColMatrix) {
       float r2 = 0;
       for (int col=0; col<cols;++col)
         r2 += w.get(row,col)*w.get(row,col);
-      if( r2 > max_w2 * 10) {
+      if( r2 > max_w2) {
         final float scale = Utils.approxSqrt(max_w2 / r2);
         for( int col=0; col < cols; col++ ) w.set(row, col, w.get(row,col) * scale);
       }
     }
     else throw new UnsupportedOperationException("rescale weights for " + w.getClass().getSimpleName() + " not yet implemented.");
+  }
+
+  // Specialization for DenseRowMatrix
+  final private static void rescale_weights(final DenseRowMatrix w, final int row, final float max_w2) {
+    final int cols = w.cols();
+    final int idx = row * cols;
+//    float r2 = Utils.sumSquares(w.raw(), idx, idx+cols);
+    float r2 = Utils.approxSumSquares(w.raw(), idx, idx+cols);
+    if( r2 > max_w2) {
+      final float scale = Utils.approxSqrt(max_w2 / r2);
+      for( int c = 0; c < cols; c++ ) w.raw()[idx + c] *= scale;
+    }
+  }
+
+  /**
+   * Compute learning rate with AdaDelta
+   * http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
+   * @param grad gradient
+   * @param row which neuron is to be updated
+   * @param col weight from which incoming neuron
+   * @return learning rate
+   */
+  final static float computeAdaDeltaRateForWeight(final float grad, final int row, final int col,
+                                                  final Matrix ada_dx, final Matrix ada_g,
+                                                  final float rho, final float eps) {
+    final float grad2 = grad*grad;
+    ada_g.set(row, col, ada_g.get(row, col) * rho);
+    ada_g.add(row, col, (1f - rho) * grad2);
+    final float RMS_dx = Utils.approxSqrt(ada_dx.get(row, col) + eps);
+    final float invRMS_g = Utils.approxInvSqrt(ada_g.get(row, col) + eps);
+    float rate = RMS_dx * invRMS_g;
+    ada_dx.set(row, col, rho * ada_dx.get(row, col) + (1f - rho) * rate * rate * grad2);
+    return rate;
+  }
+
+  /**
+   * Compute learning rate with AdaDelta, specialized for DenseRowMatrix
+   * @param grad gradient
+   * @param w neuron index
+   * @return learning rate
+   */
+  final static float computeAdaDeltaRateForWeight(final float grad, final int w,
+                                                  final DenseRowMatrix ada_dx, final DenseRowMatrix ada_g,
+                                                  final float rho, final float eps) {
+    final float grad2 = grad*grad;
+    ada_g.raw()[w] = ada_g.raw()[w] * rho;
+    ada_g.raw()[w] += (1f - rho) * grad2;
+    final float RMS_dx = Utils.approxSqrt(ada_dx.raw()[w] + eps);
+    final float invRMS_g = Utils.approxInvSqrt(ada_g.raw()[w] + eps);
+    float rate = RMS_dx * invRMS_g;
+    ada_dx.raw()[w] = rho * ada_dx.raw()[w] + (1f - rho) * rate * rate * grad2;
+    return rate;
   }
 
   /**
@@ -522,21 +533,35 @@ public abstract class Neurons {
    * @param _bm bias momentum vector
    * @param row index of the neuron for which we back-propagate
    * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param avg_grad2 average squared gradient for this neuron's incoming weights (only for ADADELTA)
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, final float rate, final float momentum) {
+  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
+                         final float partial_grad, final float avg_grad2, float rate, final float momentum) {
     final boolean have_momenta = _wm != null;
+    final boolean have_ada = _ada_dx != null && _ada_g != null;
+
+    if (have_ada) {
+      final float rho = (float)params.rho;
+      final float eps = (float)params.epsilon;
+      _bias_ada_g.set(row, _bias_ada_g.get(row) * rho);
+      _bias_ada_g.add(row, (1f-rho)*avg_grad2);
+      final float RMS_dx = Utils.approxSqrt(_bias_ada_dx.get(row) + eps);
+      final float invRMS_g = Utils.approxInvSqrt(_bias_ada_g.get(row) + eps);
+      rate = RMS_dx*invRMS_g;
+      _bias_ada_dx.set(row, rho * _bias_ada_dx.get(row) + (1f - rho) * rate * rate * avg_grad2);
+    }
     if (!params.nesterov_accelerated_gradient) {
       final float delta = rate * partial_grad;
       _b.add(row, delta);
-      if( have_momenta ) {
+      if (have_momenta) {
         _b.add(row, momentum * _bm.get(row));
         _bm.set(row, delta);
       }
     } else {
       float d = partial_grad;
-      if( have_momenta ) {
+      if (have_momenta) {
         _bm.set(row, _bm.get(row) * momentum);
         _bm.add(row, d);
         d = _bm.get(row);
