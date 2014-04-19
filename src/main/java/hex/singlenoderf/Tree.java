@@ -1,9 +1,6 @@
 package hex.singlenoderf;
 
-import hex.singlenoderf.*;
-import hex.singlenoderf.Data;
 import hex.singlenoderf.Data.Row;
-import hex.singlenoderf.Statistic;
 import hex.singlenoderf.Tree.SplitNode.SplitInfo;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
@@ -17,7 +14,6 @@ import water.util.Utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 public class Tree extends H2OCountedCompleter {
@@ -61,7 +57,7 @@ public class Tree extends H2OCountedCompleter {
     _seed             = seed;
     _sampler          = sampler;
     _exclusiveSplitLimit = exclusiveSplitLimit;
-    _verbose          = 10; //verbose;
+    _verbose          = verbose;
     _producerId       = producerId;
   }
 
@@ -128,16 +124,6 @@ public class Tree extends H2OCountedCompleter {
 
       // Atomically improve the Model as well
       appendKey(_job.dest(),toKey());
-//      Key[] tmp = Arrays.copyOf(_model.t_keys, _model.t_keys.length + 1);
-//      tmp[tmp.length - 1] = toKey();
-//      _model.t_keys = tmp;
-//      Key[] local_tmp = Arrays.copyOf(_model.local_forests[H2O.SELF.index()],_model.local_forests[H2O.SELF.index()].length+1);
-//      local_tmp[_model.local_forests[H2O.SELF.index()].length-1] = toKey();
-//
-//      _model.local_forests[H2O.SELF.index()] = local_tmp;
-
-
-
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.debug(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
@@ -395,9 +381,9 @@ public class Tree extends H2OCountedCompleter {
    Use row 'row' in the dataset 'ary' (with pre-fetched bits 'databits')
    Returns classes from 0 to N-1*/
   public static short classify( AutoBuffer ts, Frame fr, Chunk[] chks, int row, int modelDataMap[], short badData ) {
-    int tree_id = ts.get4();    // Skip tree-id
-    long seed = ts.get8();    // Skip seed
-    int producer_id = ts.get1();    // Skip producer id
+    ts.get4();    // Skip tree-id
+    ts.get8();    // Skip seed
+    ts.get1();    // Skip producer id
     byte b;
 
     int rowNum = row;

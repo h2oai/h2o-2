@@ -125,7 +125,8 @@ public class SpeeDRF extends Job.ModelJob {
       float[] samples = new float[(int) (response.max() - response.min() + 1)];
       for(int i = 0; i < samples.length; ++i) samples[i] = (float)67.0;
       for(int i = 0; i < weights.length; ++i) weights[i] = 1.0;
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, source, response, new Key[0]);
+      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
+      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0]);
       model.bin_limit = bin_limit;
       if (mtry == -1) {
         model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
@@ -221,19 +222,6 @@ public class SpeeDRF extends Job.ModelJob {
       }
       return result;
     }
-
-//    static Sampling createSampler(final DRFParams params, int[] rowsPerChunks) {
-//      switch(params._samplingStrategy) {
-//        case RANDOM: return new Sampling.Random(params._sample, rowsPerChunks);
-//        case STRATIFIED_LOCAL:
-//          float[] ss = new float[params._strataSamples.length];
-//          for (int i=0;i<ss.length;i++) ss[i] = params._strataSamples[i] / 100.f;
-//          return new Sampling.StratifiedLocal(ss, params._numrows);
-//        default:
-//          assert false : "Unsupported sampling strategy";
-//          return null;
-//      }
-//    }
 
     private void validateInputData(){
       Vec[] vecs = _rfmodel.fr.vecs();

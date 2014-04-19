@@ -49,32 +49,32 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
 
   // Computed local data
   /** @LOCAL: Model used for construction of the confusion matrix. */
-  transient private SpeeDRFModel _model;
+  private SpeeDRFModel _model;
   /** @LOCAL: Mapping from model columns to data columns */
-  transient private int[] _modelDataMap;
+  private int[] _modelDataMap;
   /** @LOCAL: The dataset to validate */
-  transient public Frame _data;
+  public Frame _data;
   /** @LOCAL: Number of response classes = Max(responses in model, responses in test data)*/
-  transient public int  _N;
+  public int  _N;
   /** @LOCAL: Number of response classes in model */
-  transient public int _MODEL_N;
+  public int _MODEL_N;
   /** @LOCAL: Number of response classes in data */
-  transient public int _DATA_N;
+  public int _DATA_N;
   /** For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
   transient private Random    _rand;
   /** @LOCAL: Data to replay the sampling algorithm */
-  transient private int[]     _chunk_row_mapping;
+  private int[]     _chunk_row_mapping;
   /** @LOCAL: Number of rows at each node */
-  transient private int[]     _rowsPerNode;
+  private int[]     _rowsPerNode;
   /** @LOCAL: Computed mapping of model prediction classes to confusion matrix classes */
-  transient private int[]     _model_classes_mapping;
+  private int[]     _model_classes_mapping;
   /** @LOCAL: Computed mapping of data prediction classes to confusion matrix classes */
-  transient private int[]     _data_classes_mapping;
+  private int[]     _data_classes_mapping;
   /** @LOCAL: Difference between model cmin and CM cmin */
-  transient private int       _cmin_model_mapping;
+  private int       _cmin_model_mapping;
   /** @LOCAL: Difference between data cmin and CM cmin */
-  transient private int       _cmin_data_mapping;
+  private int       _cmin_data_mapping;
 
   /**   Constructor for use by the serializers */
   public ConfusionTask() { }
@@ -87,7 +87,7 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
     _job        = job;
     _modelKey   = model._key;
     _datakey    = model._dataKey;
-    _classcol   = model.fr.find(model.response);
+    _classcol   = model.fr.find(model.responseName());
     _classWt    = classWt != null && classWt.length > 0 ? classWt : null;
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
@@ -205,9 +205,10 @@ public class ConfusionTask extends MRTask2<ConfusionTask> {
     _chunk_row_mapping = new int[total_home];
 
     int off=0;
+    int cidx=0;
     for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
       if (_data.anyVec().chunkKey(i).home()) {
-        _chunk_row_mapping[i] = off;
+        _chunk_row_mapping[cidx++] = off;
         off += _data.anyVec().chunkLen(i);
       }
     }
