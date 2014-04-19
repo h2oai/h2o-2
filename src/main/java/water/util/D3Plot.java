@@ -36,8 +36,12 @@ public class D3Plot {
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
     sb.append("<span style='display: inline-block;'>");
     //sb.append("<div class=\"pull-left\">");
-    sb.append("<a href=\"#\" onclick=\'$(\"#" + "plot" + plot
-            + "\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>" + link + "</a></div>");
+//    sb.append("<a href=\"\" onclick=\'$(\"#" + "plot" + plot
+//            + "\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>" + link + "</a>");
+    sb.append("<script>\n");
+    sb.append("$(document).on(\"click\", \"#pl" + plot + "\", function() { $(\"#plot" + plot + "\").toggleClass(\"hide\");});\n");
+    sb.append("</script>\n");
+    sb.append("<button class = 'btn btn-inverse btn-mini' id = \"pl" + plot +"\">" + link + "</button>\n");
     sb.append("<div class=\"hide\" id=\"" + "plot" + plot + "\">");
     sb.append("<style type=\"text/css\">");
     sb.append(".axis path," +
