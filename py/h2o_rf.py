@@ -52,9 +52,8 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
             print "cms[-1]['_arr']:", cms[-1]['_arr']
             print "cms[-1]['_predErr']:", cms[-1]['_predErr']
             print "cms[-1]['_classErr']:", cms[-1]['_classErr']
+            # print "cms[-1]:", h2o.dump_json(cms[-1])
             cm = cms[-1]['_arr'] # take the last one
-            # print "cms[-1]:", cms[-1]
-            # cm = cms[-1] # take the last one
         scoresList = cm
 
         if not checkScoringOnly:

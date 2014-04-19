@@ -1631,6 +1631,17 @@ class H2O(object):
     
         return a
 
+    def frame_split(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'ratios': None,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+        check_params_update_kwargs(params_dict, kwargs, 'frame_split', print_params=True)
+        a = self.__do_json_request('2/FrameSplitPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nframe_split result:", dump_json(a))
+        return a
+
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, 
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
@@ -2343,7 +2354,8 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
         a = self.__do_json_request('2/SummaryPage2.json' if (beta_features and not useVA) else 'SummaryPage.json', 
             timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nsummary_page result:", dump_json(a))
+        # Too much stuff now!
+        # verboseprint("\nsummary_page result:", dump_json(a))
         
         # FIX!..not there yet for 2
         # if not beta_features:
