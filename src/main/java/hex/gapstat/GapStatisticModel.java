@@ -226,5 +226,16 @@ public class GapStatisticModel extends Model implements Job.Progress {
     D3Plot plt = new D3Plot(K, wks_y, "k (Number of clusters)", " log( W_k ) ", "Elbow Plot");
     plt.generate(sb);
 
+    float[] gs = new float[ks];
+    String[] names = new String[ks];
+    for (int i = 0; i < gs.length; ++i) {
+      names[i] = "k = " + (i+1);
+      gs[i] = (float)gap_stats[i];
+    }
+    DocGen.HTML.section(sb, "Gap Statistics");
+    DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
+            DocGen.HTML.toJSArray(new StringBuilder(), names, null, gap_stats.length),
+            DocGen.HTML.toJSArray(new StringBuilder(), gs , null, gap_stats.length)
+    );
   }
 }
