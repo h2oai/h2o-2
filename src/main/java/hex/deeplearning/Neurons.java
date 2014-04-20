@@ -367,7 +367,7 @@ public abstract class Neurons {
         }
       }
       //this is called cols times, so we divide the (repeated) contribution by 1/cols
-      update_bias(b, bm, row, partial_grad/cols, grad/cols, rate, momentum);
+      update_bias(b, bm, row, partial_grad/cols, grad*grad/cols, rate, momentum);
     }
   }
 
@@ -485,18 +485,17 @@ public abstract class Neurons {
    * @param grad gradient
    * @param row which neuron is to be updated
    * @param col weight from which incoming neuron
+   * @param ada_dx_g Matrix holding helper values (2 floats per weight)
+   * @param rho hyper-parameter #1
+   * @param eps hyper-parameter #2
    * @return learning rate
    */
   final static float computeAdaDeltaRateForWeight(final float grad, final int row, final int col,
-                                                  final DenseColMatrix adaxg,
+                                                  final DenseColMatrix ada_dx_g,
                                                   final float rho, final float eps) {
-    final float grad2 = grad*grad;
-    adaxg.set(2*row+1, col, adaxg.get(2*row+1, col) * rho);
-    adaxg.add(2*row+1, col, (1f - rho) * grad2);
-    final float RMS_dx = Utils.approxSqrt(adaxg.get(2*row, col) + eps);
-    final float invRMS_g = Utils.approxInvSqrt(adaxg.get(2*row+1, col) + eps);
-    float rate = RMS_dx * invRMS_g;
-    adaxg.set(2*row, col, rho * adaxg.get(2*row, col) + (1f - rho) * rate * rate * grad2);
+    ada_dx_g.set(2*row+1, col, rho * ada_dx_g.get(2*row+1, col) + (1f - rho) * grad * grad);
+    final float rate = Utils.approxSqrt((ada_dx_g.get(2*row, col) + eps)/(ada_dx_g.get(2*row+1, col) + eps));
+    ada_dx_g.set(2*row,   col, rho * ada_dx_g.get(2*row, col)   + (1f - rho) * rate * rate * grad * grad);
     return rate;
   }
 
@@ -504,18 +503,17 @@ public abstract class Neurons {
    * Compute learning rate with AdaDelta, specialized for DenseRowMatrix
    * @param grad gradient
    * @param w neuron index
+   * @param ada_dx_g Matrix holding helper values (2 floats per weight)
+   * @param rho hyper-parameter #1
+   * @param eps hyper-parameter #2
    * @return learning rate
    */
   final static float computeAdaDeltaRateForWeight(final float grad, final int w,
                                                   final DenseRowMatrix ada_dx_g,
                                                   final float rho, final float eps) {
-    final float grad2 = grad*grad;
-    ada_dx_g.raw()[2*w+1] = ada_dx_g.raw()[2*w+1] * rho;
-    ada_dx_g.raw()[2*w+1] += (1f - rho) * grad2;
-    final float RMS_dx = Utils.approxSqrt(ada_dx_g.raw()[2*w] + eps);
-    final float invRMS_g = Utils.approxInvSqrt(ada_dx_g.raw()[2*w+1] + eps);
-    final float rate = RMS_dx * invRMS_g;
-    ada_dx_g.raw()[2*w] = rho * ada_dx_g.raw()[2*w] + (1f - rho) * rate * rate * grad2;
+    ada_dx_g.raw()[2*w+1] = rho * ada_dx_g.raw()[2*w+1] + (1f - rho) * grad * grad;
+    final float rate = Utils.approxSqrt((ada_dx_g.raw()[2*w] + eps)/(ada_dx_g.raw()[2*w+1] + eps));
+    ada_dx_g.raw()[2*w]   = rho * ada_dx_g.raw()[2*w]   + (1f - rho) * rate * rate * grad * grad;
     return rate;
   }
 
