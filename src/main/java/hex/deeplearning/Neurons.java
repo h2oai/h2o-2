@@ -471,8 +471,8 @@ public abstract class Neurons {
   final private static void rescale_weights(final DenseRowMatrix w, final int row, final float max_w2) {
     final int cols = w.cols();
     final int idx = row * cols;
-//    float r2 = Utils.sumSquares(w.raw(), idx, idx+cols);
-    float r2 = Utils.approxSumSquares(w.raw(), idx, idx + cols);
+    float r2 = Utils.sumSquares(w.raw(), idx, idx+cols);
+//    float r2 = Utils.approxSumSquares(w.raw(), idx, idx + cols);
     if( r2 > max_w2) {
       final float scale = Utils.approxSqrt(max_w2 / r2);
       for( int c = 0; c < cols; c++ ) w.raw()[idx + c] *= scale;
