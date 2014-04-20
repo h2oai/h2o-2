@@ -1,19 +1,13 @@
 package hex.gapstat;
 
-import hex.FrameTask.DataInfo;
 import hex.KMeans;
 import hex.KMeans2;
-import hex.rng.H2ORandomRNG;
 import water.*;
 import water.Job;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.Log;
-import water.util.RString;
-import water.util.Utils;
-
 import java.util.Random;
-
 import static water.util.Utils.getDeterRNG;
 
 
@@ -50,7 +44,6 @@ public class GapStatistic extends Job.ColumnsJob {
     cleanup();
     remove();
   }
-
 
   private GapStatisticModel initModel() {
     try {
@@ -162,13 +155,4 @@ public class GapStatistic extends Job.ColumnsJob {
   @Override protected Response redirect() {
     return GapStatisticProgressPage.redirect(this, self(), dest());
   }
-
-//  public static String link(Key src_key, String content) {
-//    RString rs = new RString("<a href='/2/GapStatstic.query?%key_param=%$key'>%content</a>");
-//    rs.replace("key_param", "source");
-//    rs.replace("key", src_key.toString());
-//    rs.replace("content", content);
-//    return rs.toString();
-//  }
-
 }
