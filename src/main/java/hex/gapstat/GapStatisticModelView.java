@@ -1,6 +1,5 @@
 package hex.gapstat;
 
-import hex.gapstat.GapStatisticModel;
 import water.DKV;
 import water.Key;
 import water.Request2;

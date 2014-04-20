@@ -700,10 +700,10 @@ public abstract class Job extends Func {
     @Override protected void init() {
       super.init();
       // Reject request if classification is required and response column is float
-      Argument a4class = find("classification"); // get UI control
-      String p4class = input("classification");  // get value from HTTP requests
+      //Argument a4class = find("classification"); // get UI control
+      //String p4class = input("classification");  // get value from HTTP requests
       // if there is UI control and classification field was passed
-      final boolean classificationFieldSpecified = a4class!=null ? p4class!=null : /* we are not in UI so expect that parameter is specified correctly */ true;
+      final boolean classificationFieldSpecified = true; // ROLLBACK: a4class!=null ? p4class!=null : /* we are not in UI so expect that parameter is specified correctly */ true;
       if (!classificationFieldSpecified) { // can happen if a client sends a request which does not specify classification parameter
         classification =  response.isEnum();
         Log.warn("Classification field is not specified - deriving according to response! The classification field set to " + classification);

@@ -172,6 +172,12 @@
   <!-- Configure build -->
   <build>
     <defaultGoal>package</defaultGoal>
+    <resources>
+      <resource>
+        <directory>lib/resources/</directory>
+        <targetPath>resources/</targetPath>
+      </resource>
+    </resources>
     <!-- Setup plugins for this POM and all kids POMs. -->
     <pluginManagement>
     <plugins>

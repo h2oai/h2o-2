@@ -12,10 +12,10 @@ phrases = [
     "crunk=function(x){x+98};",
     # "crunk=function(x){x+98};",
     # fail
-    # "r.hex[,3]=4;"
+    "r.hex[,3]=4;"
     # fail
-    "r.hex[,3]=crunk(2);",
-    "r.hex[,3]=crunk(2);",
+    # "r.hex[,3]=crunk(2);",
+    #"r.hex[,3]=crunk(2);",
 ]
 
 class Basic(unittest.TestCase):

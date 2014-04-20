@@ -178,7 +178,12 @@ class Basic(unittest.TestCase):
         #*****************************************************************************
 
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
-        kwargs = {'destination_key': 'rf_model', 'response': response, 'ntrees': trees}
+        kwargs = {
+            'destination_key': 'rf_model', 
+            'response': response, 
+            'ntrees': trees,
+            'classification': 1,
+        }
 
         rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
