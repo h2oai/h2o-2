@@ -935,7 +935,7 @@ public class Utils {
    * @param x
    * @return sqrt(x) with up to 5% relative error
    */
-  public static double approxSqrt(double x) {
+  final public static double approxSqrt(double x) {
     return Double.longBitsToDouble(((Double.doubleToLongBits(x) >> 32) + 1072632448) << 31);
   }
   /**
@@ -943,7 +943,7 @@ public class Utils {
    * @param x
    * @return sqrt(x) with up to 5% relative error
    */
-  public static float approxSqrt(float x) {
+  final public static float approxSqrt(float x) {
     return Float.intBitsToFloat(532483686 + (Float.floatToRawIntBits(x) >> 1));
   }
   /**
@@ -951,7 +951,7 @@ public class Utils {
    * @param x
    * @return 1./sqrt(x) with up to 2% relative error
    */
-  public static double approxInvSqrt(double x) {
+  final public static double approxInvSqrt(double x) {
     double xhalf = 0.5d*x; x = Double.longBitsToDouble(0x5fe6ec85e7de30daL - (Double.doubleToLongBits(x)>>1)); return x*(1.5d - xhalf*x*x);
   }
   /**
@@ -959,7 +959,7 @@ public class Utils {
    * @param x
    * @return 1./sqrt(x) with up to 2% relative error
    */
-  public static float approxInvSqrt(float x) {
+  final public static float approxInvSqrt(float x) {
     float xhalf = 0.5f*x; x = Float.intBitsToFloat(0x5f3759df - (Float.floatToIntBits(x)>>1)); return x*(1.5f - xhalf*x*x);
   }
   /**
@@ -967,7 +967,7 @@ public class Utils {
    * @param x
    * @return exp(x) with up to 5% relative error
    */
-  public static double approxExp(double x) {
+  final public static double approxExp(double x) {
     return Double.longBitsToDouble(((long)(1512775 * x + 1072632447)) << 32);
   }
   /**
@@ -975,7 +975,7 @@ public class Utils {
    * @param x
    * @return log(x) with up to 0.1% relative error
    */
-  public static double approxLog(double x){
+  final public static double approxLog(double x){
     if (x > 1) return ((Double.doubleToLongBits(x) >> 32) - 1072632447d) / 1512775d;
     else return Math.log(x);
   }

@@ -514,7 +514,7 @@ public abstract class Neurons {
     ada_dx_g.raw()[2*w+1] += (1f - rho) * grad2;
     final float RMS_dx = Utils.approxSqrt(ada_dx_g.raw()[2*w] + eps);
     final float invRMS_g = Utils.approxInvSqrt(ada_dx_g.raw()[2*w+1] + eps);
-    float rate = RMS_dx * invRMS_g;
+    final float rate = RMS_dx * invRMS_g;
     ada_dx_g.raw()[2*w] = rho * ada_dx_g.raw()[2*w] + (1f - rho) * rate * rate * grad2;
     return rate;
   }
@@ -941,7 +941,7 @@ public abstract class Neurons {
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  static void gemv_naive(final float[] res, final float[] a, final float[] x, final float[] y, byte[] row_bits) {
+  final static void gemv_naive(final float[] res, final float[] a, final float[] x, final float[] y, byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
@@ -963,7 +963,7 @@ public abstract class Neurons {
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-  static void gemv_row_optimized(final float[] res, final float[] a, final float[] x, final float[] y, final byte[] row_bits) {
+  final static void gemv_row_optimized(final float[] res, final float[] a, final float[] x, final float[] y, final byte[] row_bits) {
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
@@ -1003,7 +1003,7 @@ public abstract class Neurons {
    * @param y Dense vector to add to result
    * @param row_bits Bit mask for which rows to use
    */
-  static void gemv(final DenseVector res, final Matrix a, final Vector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv(final DenseVector res, final Matrix a, final Vector x, final DenseVector y, byte[] row_bits) {
     if (a instanceof DenseRowMatrix && x instanceof DenseVector)
       gemv(res, (DenseRowMatrix)a, (DenseVector)x, y, row_bits); //default
     else if (a instanceof DenseColMatrix && x instanceof SparseVector)
@@ -1015,16 +1015,16 @@ public abstract class Neurons {
     else throw new UnsupportedOperationException("gemv for matrix " + a.getClass().getSimpleName() + " and vector + " + x.getClass().getSimpleName() + " not yet implemented.");
   }
 
-  static void gemv(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
     gemv_row_optimized(res.raw(), a.raw(), x.raw(), y.raw(), row_bits);
   }
 
-  static void gemv_naive(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv_naive(final DenseVector res, final DenseRowMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
     gemv_naive(res.raw(), a.raw(), x.raw(), y.raw(), row_bits);
   }
 
   //TODO: make optimized version for col matrix
-  static void gemv(final DenseVector res, final DenseColMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv(final DenseVector res, final DenseColMatrix a, final DenseVector x, final DenseVector y, byte[] row_bits) {
     final int cols = x.size();
     final int rows = y.size();
     assert(res.size() == rows);
@@ -1044,7 +1044,7 @@ public abstract class Neurons {
     }
   }
 
-  static void gemv(final DenseVector res, final DenseRowMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv(final DenseVector res, final DenseRowMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
     final int rows = y.size();
     assert(res.size() == rows);
     for(int r = 0; r<rows; r++) {
@@ -1059,7 +1059,7 @@ public abstract class Neurons {
     }
   }
 
-  static void gemv(final DenseVector res, final DenseColMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv(final DenseVector res, final DenseColMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
     final int rows = y.size();
     assert(res.size() == rows);
     for(int r = 0; r<rows; r++) {
@@ -1081,7 +1081,7 @@ public abstract class Neurons {
     }
   }
 
-  static void gemv(final DenseVector res, final SparseRowMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv(final DenseVector res, final SparseRowMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
     final int rows = y.size();
     assert(res.size() == rows);
     for(int r = 0; r<rows; r++) {
@@ -1099,7 +1099,7 @@ public abstract class Neurons {
     }
   }
 
-  static void gemv(final DenseVector res, final SparseColMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
+  final static void gemv(final DenseVector res, final SparseColMatrix a, final SparseVector x, final DenseVector y, byte[] row_bits) {
     final int rows = y.size();
     assert(res.size() == rows);
     for(int r = 0; r<rows; r++) {
@@ -1290,7 +1290,7 @@ public abstract class Neurons {
   /**
    * Sparse row matrix implementation
    */
-  public static class SparseRowMatrix implements Matrix {
+  public final static class SparseRowMatrix implements Matrix {
     private TreeMap<Integer, Float>[] _rows;
     private int _cols;
     SparseRowMatrix(int rows, int cols) { this(null, rows, cols); }
@@ -1317,7 +1317,7 @@ public abstract class Neurons {
   /**
    * Sparse column matrix implementation
    */
-  static class SparseColMatrix implements Matrix {
+  static final class SparseColMatrix implements Matrix {
     private TreeMap<Integer, Float>[] _cols;
     private int _rows;
     SparseColMatrix(int rows, int cols) { this(null, rows, cols); }
