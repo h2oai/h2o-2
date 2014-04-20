@@ -1659,7 +1659,7 @@ class H2O(object):
                 'response': None,
                 'cols': None,
                 'ignored_cols_by_name': None,
-                'classification': None,
+                'classification': 1,
                 'validation': None,
                 'importance': 1, # enable variable importance by default
                 'ntrees': trees,
