@@ -192,12 +192,9 @@ public class DeepLearningModel extends Model {
     private Neurons.DenseVector[] biases_momenta;
 
     // helpers for AdaDelta
-    private Neurons.DenseRowMatrix[] dense_row_ada_dx;
-    private Neurons.DenseRowMatrix[] dense_row_ada_g;
-    private Neurons.DenseColMatrix[] dense_col_ada_dx;
-    private Neurons.DenseColMatrix[] dense_col_ada_g;
-    private Neurons.DenseVector[] biases_ada_dx;
-    private Neurons.DenseVector[] biases_ada_g;
+    private Neurons.DenseRowMatrix[] dense_row_ada_dx_g;
+    private Neurons.DenseColMatrix[] dense_col_ada_dx_g;
+    private Neurons.DenseVector[] biases_ada_dx_g;
 
     // compute model size (number of model parameters required for making predictions)
     // momenta are not counted here, but they are needed for model building
@@ -216,10 +213,8 @@ public class DeepLearningModel extends Model {
     public final Neurons.DenseVector get_biases(int i) { return biases[i]; }
     public final Neurons.Matrix get_weights_momenta(int i) { return dense_row_weights_momenta[i] == null ? dense_col_weights_momenta[i] : dense_row_weights_momenta[i]; }
     public final Neurons.DenseVector get_biases_momenta(int i) { return biases_momenta[i]; }
-    public final Neurons.Matrix get_ada_dx(int i) { return dense_row_ada_dx[i] == null ? dense_col_ada_dx[i] : dense_row_ada_dx[i]; }
-    public final Neurons.Matrix get_ada_g(int i) { return dense_row_ada_g[i] == null ? dense_col_ada_g[i] : dense_row_ada_g[i]; }
-    public final Neurons.DenseVector get_biases_ada_g(int i) { return biases_ada_g[i]; }
-    public final Neurons.DenseVector get_biases_ada_dx(int i) { return biases_ada_dx[i]; }
+    public final Neurons.Matrix get_ada_dx_g(int i) { return dense_row_ada_dx_g[i] == null ? dense_col_ada_dx_g[i] : dense_row_ada_dx_g[i]; }
+    public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
     final private DeepLearning parameters;
@@ -315,27 +310,20 @@ public class DeepLearningModel extends Model {
         for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new Neurons.DenseVector(units[i+1]);
       }
       else if (adaDelta()) {
-        dense_row_ada_dx = new Neurons.DenseRowMatrix[dense_row_weights.length];
-        dense_row_ada_g = new Neurons.DenseRowMatrix[dense_row_weights.length];
-        dense_col_ada_dx = new Neurons.DenseColMatrix[dense_col_weights.length];
-        dense_col_ada_g = new Neurons.DenseColMatrix[dense_col_weights.length];
+        dense_row_ada_dx_g = new Neurons.DenseRowMatrix[dense_row_weights.length];
+        dense_col_ada_dx_g = new Neurons.DenseColMatrix[dense_col_weights.length];
         //AdaGrad
         if (dense_row_weights[0] != null) {
-          dense_row_ada_dx[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
-          dense_row_ada_g[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
+          dense_row_ada_dx_g[0] = new Neurons.DenseRowMatrix(units[1], 2*units[0]);
         } else {
-          dense_col_ada_dx[0] = new Neurons.DenseColMatrix(units[1], units[0]);
-          dense_col_ada_g[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+          dense_col_ada_dx_g[0] = new Neurons.DenseColMatrix(2*units[1], units[0]);
         }
-        for (int i=1; i<dense_row_ada_dx.length; ++i) {
-          dense_row_ada_dx[i] = new Neurons.DenseRowMatrix(units[i+1], units[i]);
-          dense_row_ada_g[i] = new Neurons.DenseRowMatrix(units[i+1], units[i]);
+        for (int i=1; i<dense_row_ada_dx_g.length; ++i) {
+          dense_row_ada_dx_g[i] = new Neurons.DenseRowMatrix(units[i+1], 2*units[i]);
         }
-        biases_ada_dx = new Neurons.DenseVector[biases.length];
-        biases_ada_g = new Neurons.DenseVector[biases.length];
-        for (int i=0; i<biases_ada_dx.length; ++i) {
-          biases_ada_dx[i] = new Neurons.DenseVector(units[i+1]);
-          biases_ada_g[i] = new Neurons.DenseVector(units[i+1]);
+        biases_ada_dx_g = new Neurons.DenseVector[biases.length];
+        for (int i=0; i<biases_ada_dx_g.length; ++i) {
+          biases_ada_dx_g[i] = new Neurons.DenseVector(2*units[i+1]);
         }
       }
     }
@@ -431,9 +419,8 @@ public class DeepLearningModel extends Model {
       }
       if (adaDelta()) {
         assert(other.adaDelta());
-        for (int i=0;i<dense_row_ada_dx.length;++i) {
-          Utils.add(get_ada_dx(i).raw(), other.get_ada_dx(i).raw());
-          Utils.add(get_ada_g(i).raw(), other.get_ada_g(i).raw());
+        for (int i=0;i<dense_row_ada_dx_g.length;++i) {
+          Utils.add(get_ada_dx_g(i).raw(), other.get_ada_dx_g(i).raw());
         }
       }
       add_processed_local(other.get_processed_local());
@@ -448,9 +435,8 @@ public class DeepLearningModel extends Model {
         for (Neurons.Vector bias_momenta : biases_momenta) Utils.div(bias_momenta.raw(), N);
       }
       if (adaDelta()) {
-        for (int i=0;i<dense_row_ada_dx.length;++i) {
-          Utils.div(get_ada_dx(i).raw(), N);
-          Utils.div(get_ada_g(i).raw(), N);
+        for (int i=0;i<dense_row_ada_dx_g.length;++i) {
+          Utils.div(get_ada_dx_g(i).raw(), N);
         }
       }
     }
@@ -563,8 +549,8 @@ public class DeepLearningModel extends Model {
           if (rate != null) {
 //            final float RMS_dx = (float)Math.sqrt(ada[y-1][2*u]+(float)get_params().epsilon);
 //            final float invRMS_g = (float)(1/Math.sqrt(ada[y-1][2*u+1]+(float)get_params().epsilon));
-            final float RMS_dx = Utils.approxSqrt(get_ada_dx(y-1).raw()[u]+(float)get_params().epsilon);
-            final float invRMS_g = Utils.approxInvSqrt(get_ada_g(y-1).raw()[u]+(float)get_params().epsilon);
+            final float RMS_dx = Utils.approxSqrt(get_ada_dx_g(y-1).raw()[2*u]+(float)get_params().epsilon);
+            final float invRMS_g = Utils.approxInvSqrt(get_ada_dx_g(y-1).raw()[2*u+1]+(float)get_params().epsilon);
             rate[y-1][u] = RMS_dx*invRMS_g; //not exactly right, RMS_dx should be from the previous time step -> but close enough for diagnostics.
             mean_rate[y] += rate[y-1][u];
           }
