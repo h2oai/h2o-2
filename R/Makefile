@@ -1,6 +1,6 @@
 
 PROJECT_VERSION ?= 99.70
-R_VERSION = 3.0
+R_VERSION = 3.1
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
 REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
 TMP_BUILD_DIR = tmp_build
@@ -82,7 +82,8 @@ ifneq ($(OS),Windows_NT)
 	mv $(H2O_R_PKG_FILE) ../target/R/$(REPO_PATH_MAC)/$(H2O_R_MAC_FILE)
 	cp -p PACKAGES PACKAGES.gz ../target/R/$(REPO_PATH_MAC)
 
-	rm -rf ../target/R/bin/macosx/contrib/2.15 ../target/R/bin/macosx/contrib/2.14 ../target/R/bin/macosx/contrib/2.13
+	rm -rf ../target/R/bin/macosx/contrib/3.0 ../target/R/bin/macosx/contrib/2.15 ../target/R/bin/macosx/contrib/2.14 ../target/R/bin/macosx/contrib/2.13
+	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/contrib/3.0
 	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/contrib/2.15
 	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/contrib/2.14 
 	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/contrib/2.13
@@ -93,7 +94,8 @@ endif
 	mv $(H2O_R_WINDOWS_FILE) ../target/R/$(REPO_PATH_WIN)
 	mv PACKAGES PACKAGES.gz ../target/R/$(REPO_PATH_WIN)
 
-	rm -rf ../target/R/bin/windows/contrib/2.15 ../target/R/bin/windows/contrib/2.14 ../target/R/bin/windows/contrib/2.13
+	rm -rf ../target/R/bin/windows/contrib/3.0 ../target/R/bin/windows/contrib/2.15 ../target/R/bin/windows/contrib/2.14 ../target/R/bin/windows/contrib/2.13
+	cp -r ../target/R/$(REPO_PATH_WIN) ../target/R/bin/windows/contrib/3.0
 	cp -r ../target/R/$(REPO_PATH_WIN) ../target/R/bin/windows/contrib/2.15
 	cp -r ../target/R/$(REPO_PATH_WIN) ../target/R/bin/windows/contrib/2.14 
 	cp -r ../target/R/$(REPO_PATH_WIN) ../target/R/bin/windows/contrib/2.13

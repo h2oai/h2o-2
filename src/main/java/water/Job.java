@@ -626,21 +626,17 @@ public abstract class Job extends Func {
   }
 
   /**
-   * A job producing a model.
+   * A columns job that requires a response.
    *
    * INPUT response column from source
    */
-  public static abstract class ModelJob extends ColumnsJob {
+  public static abstract class ColumnsResJob extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help="Column to use as class", required=true, filter=responseFilter.class, json = true)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
-
-    @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
-    public boolean classification = true; // we need 3-state boolean: unspecified, true/false BUT we solve that by checking UI layer to see if the classification parameter was passed
-    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
     @Override protected void registered(API_VERSION ver) {
       super.registered(ver);
@@ -685,11 +681,31 @@ public abstract class Job extends Func {
               response.domain().length <= 1 : response.min() == response.max();
       if (has_constant_response)
         throw new H2OIllegalArgumentException(find("response"), "Constant response column!");
-      // Reject request if classification is required and response column column is float
-      Argument a4class = find("classification");
-      final boolean classificationFieldSpecified = a4class!=null ? a4class.specified() : /* we are not in UI so expect that parameter is specified correctly */ true;
+    }
+  }
+
+  /**
+   * A job producing a model.
+   *
+   * INPUT response column from source
+   */
+  public static abstract class ModelJob extends ColumnsResJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help="Do classification or regression", filter=myClassFilter.class, json = true)
+    public boolean classification = true; // we need 3-state boolean: unspecified, true/false BUT we solve that by checking UI layer to see if the classification parameter was passed
+    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
+
+    @Override protected void init() {
+      super.init();
+      // Reject request if classification is required and response column is float
+      //Argument a4class = find("classification"); // get UI control
+      //String p4class = input("classification");  // get value from HTTP requests
+      // if there is UI control and classification field was passed
+      final boolean classificationFieldSpecified = true; // ROLLBACK: a4class!=null ? p4class!=null : /* we are not in UI so expect that parameter is specified correctly */ true;
       if (!classificationFieldSpecified) { // can happen if a client sends a request which does not specify classification parameter
-        classification = response.isInt() || response.isEnum();
+        classification =  response.isEnum();
         Log.warn("Classification field is not specified - deriving according to response! The classification field set to " + classification);
       } else {
         if ( classification && response.isFloat()) throw new H2OIllegalArgumentException(find("classification"), "Requested classification on float column!");
@@ -697,6 +713,7 @@ public abstract class Job extends Func {
       }
     }
   }
+
 
   /**
    * Job which produces model and validate it on a given dataset.

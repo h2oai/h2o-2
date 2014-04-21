@@ -255,7 +255,7 @@ class Basic(unittest.TestCase):
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
         start = time.time()
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30, allowEmptyResult=True)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

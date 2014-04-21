@@ -2,7 +2,7 @@ package hex.nb;
 
 import hex.FrameTask.DataInfo;
 import water.*;
-import water.Job.ModelJob;
+import water.Job.ColumnsResJob;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.RString;
@@ -18,7 +18,7 @@ import water.util.Utils;
  * @author anqi_fu
  *
  */
-public class NaiveBayes extends ModelJob {
+public class NaiveBayes extends ColumnsResJob {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "naive bayes";

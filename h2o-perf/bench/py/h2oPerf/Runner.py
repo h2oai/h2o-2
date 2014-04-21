@@ -4,6 +4,7 @@ from Table import *
 from PerfTest import *
 import PerfUtils
 
+import traceback
 import re
 import os
 import time
@@ -74,7 +75,7 @@ class PerfRunner:
         test_short_dir = os.path.join(prefix, testDir)
 
         test = Test(config_file, test_dir, test_short_dir, 
-                    self.output_dir, parse_file, model_file, predict_file, self.perfdb)
+                    self.output_dir, parse_file, model_file, predict_file, self.perfdb, prefix)
 
         self.tests.append(test)
         self.tests_not_started.append(test)
@@ -110,36 +111,44 @@ class PerfRunner:
 
             cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
             self.cloud.append(cloud)
-            PerfUtils.start_cloud(self, test.remote_hosts)
-            test.port = self.cloud[0].get_port()
+            try:
+                PerfUtils.start_cloud(self, test.remote_hosts)
+                test.port = self.cloud[0].get_port()
 
-            test.test_run = TableRow("test_run", self.perfdb)
-            test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
-            contamination = test.do_test(self)
-            test.test_run.row['start_epoch_ms'] = test.start_ms
-            test.test_run.row['end_epoch_ms'] = test.end_ms
-            test.test_run.row['test_name'] = test.test_name
-            #contamination = PerfUtils.run_contaminated(self)
-            print "DEBUG: "
-            print contamination
-            print ""
-            print ""
-            test.test_run.row["contaminated"] = contamination[0]
-            test.test_run.row["contamination_message"] = contamination[1]
-            test.test_run.update(True)
-            PerfUtils.stop_cloud(self, test.remote_hosts)
-            self.cloud.pop(0)
-            #except:
-            #    print
-            #    print
-            #    print "Could not complete test " + test.test_name
-            #    print
-            #    print
-            #    print "Unexpected error:", sys.exc_info()[0]
-            #    print
-            #    PerfUtils.stop_cloud(self, test.remote_hosts)
-            #    self.cloud.pop(0)
-            self.perfdb.this_test_run_id += 1
+                test.test_run = TableRow("test_run", self.perfdb)
+                test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
+                contamination = test.do_test(self)
+                test.test_run.row['start_epoch_ms'] = test.start_ms
+                test.test_run.row['end_epoch_ms'] = test.end_ms
+                test.test_run.row['test_name'] = test.test_name
+                #contamination = PerfUtils.run_contaminated(self)
+                print "DEBUG: "
+                print contamination
+                print ""
+                print ""
+                test.test_run.row["contaminated"] = contamination[0]
+                test.test_run.row["contamination_message"] = contamination[1]
+                test.test_run.update(True)
+                PerfUtils.stop_cloud(self, test.remote_hosts)
+                self.cloud.pop(0)
+                #except:
+                #    print
+                #    print
+                #    print "Could not complete test " + test.test_name
+                #    print
+                #    print
+                #    print "Unexpected error:", sys.exc_info()[0]
+                #    print
+                #    PerfUtils.stop_cloud(self, test.remote_hosts)
+                #    self.cloud.pop(0)
+                self.perfdb.this_test_run_id += 1
+            except:
+                print "Exception caught:"
+                print '-'*60
+                traceback.print_exc(file=sys.stdout)
+                print '-'*60
+                PerfUtils.stop_cloud(self, test.remote_hosts)
+                self.cloud.pop(0)
 
     def __get_instance_type__(self):
         return "localhost"

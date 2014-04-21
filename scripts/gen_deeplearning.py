@@ -17,6 +17,12 @@ import getpass
 import re
 import subprocess
 
+
+class Blob:
+    def __init__(self, n, help):
+        self.n = n
+        self.help = help
+
 def read_deeplearning_file(deeplearning_file):
     """
     Read deep learning file and generate R parameter stub stuff.
@@ -27,6 +33,7 @@ def read_deeplearning_file(deeplearning_file):
     try:
         nlist = []
         in_api = False
+        help = None
 
         f = open(deeplearning_file, "r")
         s = f.readline()
@@ -43,11 +50,11 @@ def read_deeplearning_file(deeplearning_file):
                     assert(False)
                 in_api = True
 
-                # match_groups = re.search("help\s*=\s*\"([^\"]*)\"", stripped)
-                # if (match_groups == None):
-                #     print("Missing help")
-                #     sys.exit(1)
-                # help = match_groups.group(1)
+                match_groups = re.search("help\s*=\s*\"([^\"]*)\"", stripped)
+                if (match_groups == None):
+                    print("Missing help")
+                    sys.exit(1)
+                help = match_groups.group(1)
                 # print(help)
                 s = f.readline()
                 continue
@@ -77,7 +84,7 @@ def read_deeplearning_file(deeplearning_file):
                     n = match_groups.group(1)
                     v = match_groups.group(2)
                     print("  parms = .addBooleanParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n, v)
                     in_api = False
                     s = f.readline()
@@ -89,7 +96,7 @@ def read_deeplearning_file(deeplearning_file):
                     n = match_groups.group(1)
                     v = match_groups.group(2)
                     print("  parms = .addStringParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n, v)
                     in_api = False
                     s = f.readline()
@@ -100,7 +107,7 @@ def read_deeplearning_file(deeplearning_file):
                     t = "int array"
                     n = match_groups.group(1)
                     print("  parms = .addIntArrayParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n)
                     in_api = False
                     s = f.readline()
@@ -111,7 +118,7 @@ def read_deeplearning_file(deeplearning_file):
                     t = "int"
                     n = match_groups.group(1)
                     print("  parms = .addIntParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n)
                     in_api = False
                     s = f.readline()
@@ -123,7 +130,7 @@ def read_deeplearning_file(deeplearning_file):
                     n = match_groups.group(1)
                     v = match_groups.group(2)
                     print("  parms = .addDoubleParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n, v)
                     in_api = False
                     s = f.readline()
@@ -135,7 +142,7 @@ def read_deeplearning_file(deeplearning_file):
                     n = match_groups.group(1)
                     v = match_groups.group(2)
                     print("  parms = .addFloatParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n, v)
                     in_api = False
                     s = f.readline()
@@ -146,7 +153,7 @@ def read_deeplearning_file(deeplearning_file):
                     t = "double array"
                     n = match_groups.group(1)
                     print("  parms = .addDoubleArrayParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n)
                     in_api = False
                     s = f.readline()
@@ -158,7 +165,7 @@ def read_deeplearning_file(deeplearning_file):
                     n = match_groups.group(1)
                     v = -1
                     print("  parms = .addLongParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n, v)
                     in_api = False
                     s = f.readline()
@@ -170,7 +177,7 @@ def read_deeplearning_file(deeplearning_file):
                     n = match_groups.group(1)
                     v = match_groups.group(2)
                     print("  parms = .addLongParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, n, v)
                     in_api = False
                     s = f.readline()
@@ -180,7 +187,7 @@ def read_deeplearning_file(deeplearning_file):
                     t = "string"
                     n = "initial_weight_distribution"
                     print("  parms = .addStringParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, "initial_weight_distribution", "UniformAdaptive")
                     in_api = False
                     s = f.readline()
@@ -190,7 +197,7 @@ def read_deeplearning_file(deeplearning_file):
                     t = "string"
                     n = "loss"
                     print("  parms = .addStringParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, "loss", "CrossEntropy")
                     in_api = False
                     s = f.readline()
@@ -200,7 +207,7 @@ def read_deeplearning_file(deeplearning_file):
                     t = "string"
                     n = "score_validation_sampling"
                     print("  parms = .addStringParm(parms, k=\"{}\", v={})".format(n,n))
-                    nlist.append(n)
+                    nlist.append(Blob(n, help))
                     # print(t, "score_validation_sampling", "Uniform")
                     in_api = False
                     s = f.readline()
@@ -212,8 +219,17 @@ def read_deeplearning_file(deeplearning_file):
             s = f.readline()
         f.close()
 
-        for n in nlist:
-            print("  {},".format(n))
+        print("")
+        print("")
+
+        for blob in nlist:
+            print("  {},".format(blob.n))
+
+        print("")
+        print("")
+
+        for blob in nlist:
+            print("        \item{\code{" + blob.n + "}: " + blob.help + "}")
 
     except IOError as e:
         print("")

@@ -561,7 +561,7 @@ public class GLM2 extends ModelJob {
     GLM2 [] glms = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
       glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy,0);
-    H2O.submitTask(new ParallelGLMs(glms,H2O.CLOUD.size(),new H2OCallback(GLM2.this) {
+    H2O.submitTask(new ParallelGLMs(GLM2.this,glms,H2O.CLOUD.size(),new H2OCallback(GLM2.this) {
       @Override public void callback(H2OCountedCompleter t) {
         GLMModel [] models = new GLMModel[keys.length];
         // we got the xval models, now compute their validations...
@@ -644,18 +644,8 @@ public class GLM2 extends ModelJob {
       DKV.put(destination_key, new GLMGrid(self(),_jobs));
       assert _maxParallelism >= 1;
       final H2OCountedCompleter fjt = new H2O.H2OEmptyCompleter();
-      fjt.setPendingCount(_jobs.length-1);
       start(fjt);
-      for(int i = 0; i < Math.min(_jobs.length,_maxParallelism); ++i){
-        _jobs[i].run(new H2OCallback(GLMGridSearch.this,fjt) {
-          @Override public void callback(H2OCountedCompleter t) {
-            int nextJob = _idx.getAndIncrement();
-            if(nextJob <  _jobs.length){
-              _jobs[nextJob].run(clone());
-            }
-          }
-        });
-      }
+      H2O.submitTask(new ParallelGLMs(this,_jobs,H2O.CLOUD.size(),fjt));
       return this;
     }
 
@@ -668,14 +658,15 @@ public class GLM2 extends ModelJob {
 
   // class to execute multiple GLM runs in parllell
   // (with  user-given limit on how many to run in in parallel)
-  public class ParallelGLMs extends DTask {
+  public static class ParallelGLMs extends DTask {
     transient final private GLM2 [] _glms;
+    transient final Job _job;
     transient final public int _maxP;
     transient private AtomicInteger _remCnt;
     transient private AtomicInteger _doneCnt;
-    public ParallelGLMs(GLM2 [] glms){this(glms,H2O.CLOUD.size());}
-    public ParallelGLMs(GLM2 [] glms, int maxP){ _glms = glms; _maxP = maxP;}
-    public ParallelGLMs(GLM2 [] glms, int maxP, H2OCountedCompleter cmp){super(cmp); _glms = glms; _maxP = maxP;}
+    public ParallelGLMs(Job j, GLM2 [] glms){this(j,glms,H2O.CLOUD.size());}
+    public ParallelGLMs(Job j, GLM2 [] glms, int maxP){_job = j;  _glms = glms; _maxP = maxP;}
+    public ParallelGLMs(Job j, GLM2 [] glms, int maxP, H2OCountedCompleter cmp){super(cmp); _job = j; _glms = glms; _maxP = maxP;}
 
     private void forkDTask(int i){
       int nodeId = i%H2O.CLOUD.size();
@@ -688,7 +679,7 @@ public class GLM2 extends ModelJob {
       }).addCompleter(new Callback()).call();
     }
     class Callback extends H2OCallback<H2OCountedCompleter> {
-      public Callback(){super(GLM2.this);}
+      public Callback(){super(_job);}
       @Override public void callback(H2OCountedCompleter cc){
         int i;
         if((i = _remCnt.getAndDecrement()) > 0) // not done yet

@@ -45,9 +45,11 @@ test.slice.div <- function(conn) {
   if(any(dd$TYPES == "enum")) anyEnum <- TRUE
 
   Log.info("Try /ing a scalar to a numeric column: 5 / hex[,col]")
-  col <- sample(colnames[colTypes != "enum"], 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", sep = "", collapse = ""))
+  #col <- sample(colnames[colTypes != "enum"], 1)
+  #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
+  #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", sep = "", collapse = ""))
+  df <- head(hex)
+  col <- sample(colnames(df[!sapply(df, is.factor)]), 1)
   Log.info(paste("Using column: ", col))
  
   sliced <- hex[,col]

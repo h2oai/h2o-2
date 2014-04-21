@@ -11,6 +11,7 @@ import water.parser.CustomParser.ParserType;
 import water.parser.CustomParser.StreamDataOut;
 import water.parser.Enum;
 import water.parser.ParseDataset.Compression;
+import water.util.Log;
 import water.util.Utils;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
@@ -274,6 +275,67 @@ public final class ParseDataset2 extends Job {
     return res;
   }
 
+  // Log information about the dataset we just parsed.
+  private static void logParseResults(ParseDataset2 job, Frame fr) {
+    try {
+      long numRows = fr.anyVec().length();
+      Log.info("Parse result for " + job.dest() + " (" + Long.toString(numRows) + " rows):");
+
+      Vec[] vecArr = fr.vecs();
+      for (int i = 0; i < vecArr.length; i++) {
+        Vec v = vecArr[i];
+        boolean isCategorical = v.isEnum();
+        boolean isConstant = (v.min() == v.max());
+        String CStr = String.format("C%d:", i+1);
+        String typeStr = String.format("%s", (isCategorical ? "categorical" : "numeric"));
+        String minStr = String.format("min(%f)", v.min());
+        String maxStr = String.format("max(%f)", v.max());
+        long numNAs = v.naCnt();
+        String naStr = (numNAs > 0) ? String.format("na(%d)", numNAs) : "";
+        String isConstantStr = isConstant ? "constant" : "";
+        String numLevelsStr = isCategorical ? String.format("numLevels(%d)", v.domain().length) : "";
+
+        boolean printLogSeparatorToStdout = false;
+        boolean printColumnToStdout = false;
+        {
+          // Print information to stdout for this many leading columns.
+          final int MAX_HEAD_TO_PRINT_ON_STDOUT = 10;
+
+          // Print information to stdout for this many trailing columns.
+          final int MAX_TAIL_TO_PRINT_ON_STDOUT = 10;
+
+          if (vecArr.length <= (MAX_HEAD_TO_PRINT_ON_STDOUT + MAX_TAIL_TO_PRINT_ON_STDOUT)) {
+            // For small numbers of columns, print them all.
+            printColumnToStdout = true;
+          } else if (i < MAX_HEAD_TO_PRINT_ON_STDOUT) {
+            printColumnToStdout = true;
+          } else if (i == MAX_HEAD_TO_PRINT_ON_STDOUT) {
+            printLogSeparatorToStdout = true;
+            printColumnToStdout = false;
+          } else if ((i + MAX_TAIL_TO_PRINT_ON_STDOUT) < vecArr.length) {
+            printColumnToStdout = false;
+          } else {
+            printColumnToStdout = true;
+          }
+        }
+
+        if (printLogSeparatorToStdout) {
+          System.out.println("Additional column information only sent to log file...");
+        }
+
+        if (printColumnToStdout) {
+          // Log to both stdout and log file.
+          Log.info(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
+        }
+        else {
+          // Log only to log file.
+          Log.info_no_stdout(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
+        }
+      }
+    }
+    catch (Exception xe) {}   // Don't fail due to logging issues.  Just ignore them.
+  }
+
   // --------------------------------------------------------------------------
   // Top-level parser driver
   private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup, boolean delete_on_done) {
@@ -311,6 +373,9 @@ public final class ParseDataset2 extends Job {
       for(int i = 0; i < evecs.length; ++i)evecs[i] = fr.vecs()[ecols[i]];
       eut.doAll(evecs);
     }
+
+    logParseResults(job, fr);
+
     // Release the frame for overwriting
     fr.unlock(job.self());
     // Remove CSV files from H2O memory

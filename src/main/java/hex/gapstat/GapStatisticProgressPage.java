@@ -6,8 +6,6 @@ import water.Key;
 import water.Value;
 import water.api.Progress2;
 import water.api.Request;
-import water.fvec.NewChunk;
-
 
 public class GapStatisticProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
