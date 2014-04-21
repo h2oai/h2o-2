@@ -117,7 +117,6 @@ of the GLM results page in red.
 
 
 
-
 .. image:: GLMoutput.png
    :width: 100%
 
