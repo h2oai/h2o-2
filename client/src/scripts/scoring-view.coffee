@@ -182,6 +182,7 @@ Steam.ScoringView = (_, _scoring) ->
         'Max per class Error'
         'ROC Curve'
       ]
+      format8f = d3.format '.8f' # precision = 8
       rows = map scores, (score) ->
         model = score.model
         metrics = score.result.metrics
@@ -192,16 +193,16 @@ Steam.ScoringView = (_, _scoring) ->
           model.model_category
           model.response_column_name
           model.parameters
-          metrics.error
-          auc.AUC
+          format8f metrics.error
+          format8f auc.AUC
           head auc.threshold_criteria
           head auc.threshold_for_criteria
-          head auc.F1_for_criteria
-          head auc.accuracy_for_criteria
-          head auc.precision_for_criteria
-          head auc.recall_for_criteria
-          head auc.specificity_for_criteria
-          head auc.max_per_class_error_for_criteria
+          format8f head auc.F1_for_criteria
+          format8f head auc.accuracy_for_criteria
+          format8f head auc.precision_for_criteria
+          format8f head auc.recall_for_criteria
+          format8f head auc.specificity_for_criteria
+          format8f head auc.max_per_class_error_for_criteria
           createROC auc.confusion_matrices
         ]
 
