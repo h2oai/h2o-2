@@ -75,9 +75,9 @@ Steam.ScoringView = (_, _scoring) ->
       ]
 
     createROCChart = (data) ->
-      margin = top: 20, right: 20, bottom: 30, left: 40
-      width = 200
-      height = 200
+      margin = top: 20, right: 20, bottom: 20, left: 30
+      width = 175
+      height = 175
 
       x = d3.scale.linear()
         .domain [ 0, 1 ]
@@ -90,10 +90,12 @@ Steam.ScoringView = (_, _scoring) ->
       axisX = d3.svg.axis()
         .scale x
         .orient 'bottom'
+        .ticks 5
 
       axisY = d3.svg.axis()
         .scale y
         .orient 'left'
+        .ticks 5
 
       line = d3.svg.line()
         .x (d) -> x d.fpr
