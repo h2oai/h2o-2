@@ -71,4 +71,40 @@ Where the maximum likelihood estimates are:
 :math:`\phi(y)= \frac{(y^{i} = 1)}{m}`
 
 
+Once all parameters :math:`\: \phi_{j|y}` are fit, the model can be
+used to predict new examples with features :math:`X_{(i^*)}`. 
 
+This is carried out by calculating 
+
+:math:`p(y=1|x)=\frac{\Pi p(x_i|y=1) p(y=1)}{\Pi p(x_i|y=1)p(y=1) \: +
+\: \Pi p(x_i|y=0)p(y=0)}`
+
+
+:math:`p(y=0|x)=\frac{\Pi p(x_i|y=0) p(y=0)}{\Pi p(x_i|y=1)p(y=1) \: +
+\: \Pi p(x_i|y=0)p(y=0)}`
+
+and predicting the class with the highest probability. 
+
+
+It is possible that predictions sets contain features not origninally
+seen in the training set. When this occurs the maximum likelihood
+estimates for these features will predict a probability of 0 for all
+cases of y. 
+
+Laplace smoothing allows a model to predict on out of training data
+features by adjusting the maximim likelihood estimates to be: 
+
+
+:math:`\phi_{j|y=1}= \frac{\Sigma_{i}^m 1(x_{j}^{(i)}=1 \ \bigcap y^{i} = 1) \: + \: 1}{\Sigma_{i=1}^{m}(y^{(i)}=1 \: + \: 2}`
+
+:math:`\phi_{j|y=0}= \frac{\Sigma_{i}^m 1(x_{j}^{(i)}=1 \ \bigcap y^{i} = 0) \: + \: 1}{\Sigma_{i=1}^{m}(y^{(i)}=0 \: + \: 2}`
+
+Note that in the general case where y takes on k values, there are k+1
+modified parameter estimates, and the added in the denominator is k
+(rather than 2, as shown in the 2 level classifier shown here.)
+
+Laplace smoothing should be used with care; it is generally intended
+to allow for predictions in rare events. As prediction data becomes
+increasingly distinct from training data, new models should be
+trained when possible to account for the broader set of possible X
+values. 
