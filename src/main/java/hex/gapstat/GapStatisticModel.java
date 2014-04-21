@@ -223,7 +223,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
     }
 
     sb.append("<br />");
-    D3Plot plt = new D3Plot(K, wks_y, "k (Number of clusters)", " log( W_k ) ", "Elbow Plot");
+    D3Plot plt = new D3Plot(K, wks_y, "k (Number of clusters)", " log( W_k ) ", "Elbow Plot", true, false);
     plt.generate(sb);
 
     float[] gs = new float[ks];
