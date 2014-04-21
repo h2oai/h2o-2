@@ -299,7 +299,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * output classes, not just for the actual class).
    */
   @API(help = "Loss function", filter = Default.class, json = true)
-  public Loss loss = Loss.CrossEntropy;
+  public Loss loss = Loss.Automatic;
 
   /*Scoring*/
   /**
@@ -474,7 +474,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * CrossEntropy is recommended
    */
   public enum Loss {
-    MeanSquare, CrossEntropy
+    Automatic, MeanSquare, CrossEntropy
   }
 
   // the following parameters can only be specified in expert mode
@@ -802,10 +802,17 @@ public class DeepLearning extends Job.ValidatedJob {
       }
     }
 
-    if(!classification && loss != Loss.MeanSquare) {
-      if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
-      loss = Loss.MeanSquare;
+    if(loss == Loss.Automatic) {
+      if (!classification) {
+        if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
+        loss = Loss.MeanSquare;
+      } else {
+        if (!quiet_mode) Log.info("Automatically setting loss to Cross-Entropy for classification.");
+        loss = Loss.CrossEntropy;
+      }
     }
+    if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
+
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
       destination_key = Key.make();
@@ -820,8 +827,7 @@ public class DeepLearning extends Job.ValidatedJob {
       _fakejob = true;
     }
     if (!sparse && col_major) {
-      if (!quiet_mode) Log.info("Automatically setting col_major to false for non-sparse data.");
-      col_major = false;
+      if (!quiet_mode) throw new IllegalArgumentException("Cannot use column major storage for non-sparse data handling.");
     }
   }
 

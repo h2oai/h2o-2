@@ -48,7 +48,7 @@ public class D3Plot {
   public void generate(StringBuilder sb) {
     final String plot = title.replaceAll(" ", "");
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
-    sb.append("<span style='display: inline-block;'>");
+    sb.append("<div>");
     sb.append("<script>\n");
     sb.append("$(document).on(\"click\", \"#pl" + plot + "\", function() { $(\"#plot" + plot + "\").toggleClass(\"hide\");});\n");
     sb.append("</script>\n");
@@ -218,6 +218,6 @@ public class D3Plot {
             "          stroke-width: 1.5px;\n" +
             "        }");
     sb.append("</style>");
-    //sb.append("</div>");
+    sb.append("</div>");
   }
 }
