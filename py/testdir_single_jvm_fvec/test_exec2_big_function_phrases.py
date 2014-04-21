@@ -13,7 +13,7 @@ DO_IRIS = False
 phrasesCompound = [
         "aa=!0; xx=!0",
         "ab=0; xy=0",
-        "aa=c(11,22,33,44,55,66); aa[c(2,6,1),]",
+        "aaa=c(11,22,33,44,55,66); aaa[c(2,6,1),]",
         "rhex[1,-1]; rhex[1,-1]; rhex[1,-1]",
         # can't assign to rhex param?
         # "rhex[,1]=3.3; rhex",
