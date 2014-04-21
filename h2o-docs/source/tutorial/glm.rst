@@ -51,7 +51,7 @@ Before modeling, parse data into H\ :sub:`2`\ O:
    header. All other settings can be left in default. Press Submit. 
 
 
-#. Parsing data into H\ :sub:`2`\ O generates a .hex key ofthe form  "data name.hex"
+#. Parsing data into H\ :sub:`2`\ O generates a .hex key of the form  "data name.hex"
  
 
 .. image:: GLMparse.png
@@ -76,9 +76,9 @@ Building a Model
 #. In the **Ignored Columns** field select the columns associated with  (all other columns). 
 
 #. Leave **Classification** and **Max Iter** in default. Classification is
-   used when the dependent variable is a binomial classifer. Max iter
-   is used to define the maximum number of interations to be carried
-   out by the algorithym in the event that it fails to converge. 
+   used when the dependent variable is a binomial classifier. Max iter
+   is used to define the maximum number of iterations to be carried
+   out by the algorithm in the event that it fails to converge. 
 
 #. Leave the **Standardize** option unchecked (off). 
 
@@ -87,7 +87,7 @@ Building a Model
    than 0, the GLM model will return N number of cross validation
    models. 
 
-#. Specify **Family** to be *gaussian*. 
+#. Specify **Family** to be *Gaussian*. 
 
 #. Leave **Tweedie Variance Power** at zero; this option is only used
    for the Tweedie family of GLM models (like zero-inflated Poisson). 
@@ -96,7 +96,7 @@ Building a Model
    parameter for L1 and L2 penalty.
 
 
-#. Set **Lambda** euql to .002
+#. Set **Lambda** equal to .002
 
 #. Leave all other options in default, and press the **Submit**
    button. 

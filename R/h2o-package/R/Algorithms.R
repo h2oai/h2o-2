@@ -445,23 +445,11 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if(length(init) > 1 || !init %in% c("none", "plusplus", "furthest"))
     stop("init must be one of 'none', 'plusplus', or 'furthest'")
   if(!is.numeric(seed)) stop("seed must be numeric")
-
-  cc <- colnames(data)
-  if(length(cols) == 1 && cols == '')
-    cols_ind = 1:ncol(data)
-  else {
-    if(is.character(cols)) {
-      if(any(!(cols %in% cc))) stop(paste(paste(cols[!(cols %in% cc)], collapse=','), 'is not a valid column name'))
-      cols_ind <- match(cols, cc)
-    } else {
-      if(any( cols < 1 | cols > length(cc))) stop(paste('Out of range explanatory variable', paste(cols[cols < 1 | cols > length(cc)], collapse=',')))
-      cols_ind <- cols
-    }
-  }
-  cols_ind <- cols_ind - 1
+  
+  args <- .verify_datacols(data, cols)
   myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
 
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = cols_ind, initialization = myInit, seed = seed)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS, source_key = data@key, k = centers, max_iter = iter.max, normalize = as.numeric(normalize), cols = args$cols_ind - 1, initialization = myInit, seed = seed)
   job_key = res$response$redirect_request_args$job
   destKey = res$destination_key
 
@@ -471,11 +459,10 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
 
   # Organize results in a pretty format
   result = list()
-  feat = cc[cols_ind + 1]
-  if(length(res2$clusters[[1]]) < length(feat))
+  if(length(res2$clusters[[1]]) < length(args$cols))
     stop("Cannot run k-means on non-numeric columns!")
 
-  result$params = list(cols=feat, centers=centers, iter.max=iter.max, normalize=normalize, init=myInit, seed=seed)
+  result$params = list(cols=args$cols, centers=centers, iter.max=iter.max, normalize=normalize, init=myInit, seed=seed)
   result$centers = matrix(unlist(res2$clusters), ncol = length(feat), byrow = TRUE)
   dimnames(result$centers) = list(seq(1, centers), feat)
   result$tot.withinss = res2$error
@@ -490,14 +477,10 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
 
 # -------------------------- FluidVecs -------------------------- #
 h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, dropNACols = FALSE) {
-  if( missing(data) ) stop('Must specify data')
-  # if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
-  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
-
+  args <- .verify_datacols(data, cols)
   if( missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be a positive integer')
   if( any(centers < 1) ) stop("centers must be an integer greater than 0")
-  if(!is.character(cols) && !is.numeric(cols)) stop("cols must be of class character or numeric")
   if(!is.numeric(iter.max)) stop('iter.max must be numeric')
   if( any(iter.max < 1)) stop('iter.max must be >= 1')
   if(!is.logical(normalize)) stop("normalize must be logical")
@@ -506,21 +489,11 @@ h2o.kmeans.FV <- function(data, centers, cols = '', iter.max = 10, normalize = F
   if(!is.numeric(seed)) stop("seed must be numeric")
   if(!is.logical(dropNACols)) stop("dropNACols must be logical")
 
-  if(length(cols) == 1 && cols == '') cols = colnames(data)
-  cc <- colnames(data)
-  if(is.numeric(cols)) {
-    if( any( cols < 1 | cols > length(cc) ) ) stop( paste(cols[ cols < 1 | cols > length(cc)], sep=','), 'is out of range of the columns' )
-    cols <- cc[ cols ]
-  }
-  if( any(!cols %in% cc) ) stop("Invalid column names: ", paste(cols[which(!cols %in% cc)], collapse=", "))
-  if(h2o.anyFactor(data[,cols])) stop("Unimplemented: K-means can only model on numeric data")
-
-  temp = setdiff(cc, cols)
-  myIgnore <- ifelse(cols == '' || length(temp) == 0, '', paste(temp, sep=','))
+  if(h2o.anyFactor(data[,args$cols_ind])) stop("Unimplemented: K-means can only model on numeric data")
   myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
 
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization=myInit, seed=seed, drop_na_cols=as.numeric(dropNACols))
-  params = list(cols=ifelse(cols == "", cc, cols), centers=centers, iter.max=iter.max, normalize=normalize, init=myInit, seed=seed)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=args$cols_ignore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization=myInit, seed=seed, drop_na_cols=as.numeric(dropNACols))
+  params = list(cols=args$cols, centers=centers, iter.max=iter.max, normalize=normalize, init=myInit, seed=seed)
 
   if(length(centers) == 1 && length(iter.max) == 1) {
     .h2o.__waitOnJob(data@h2o, res$job_key)
@@ -858,28 +831,14 @@ h2o.naiveBayes <- function(x, y, data, laplace = 0, dropNACols = FALSE) {
 }
 
 # ----------------------- Principal Components Analysis ----------------------------- #
-h2o.prcomp <- function(data, tol=0, ignored_cols = "", standardize=TRUE, retx=FALSE) {
-  if(missing(data)) stop('Must specify data')
-  # if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
-  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+h2o.prcomp <- function(data, tol=0, cols = "", standardize=TRUE, retx=FALSE) {
+  args <- .verify_datacols(data, cols)
   if(!is.numeric(tol)) stop('tol must be numeric')
-  if(!is.character(ignored_cols) && !is.numeric(ignored_cols))
-    stop("ignored_cols must be either a character or numeric vector")
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
 
   destKey = .h2o.__uniqID("PCAModel")
-  cc <- colnames(data)
-  if(is.character(ignored_cols)) {
-    if(ignored_cols[1] != "" && any(!(ignored_cols %in% cc)))
-      stop(paste(paste(ignored_cols[!(ignored_cols %in% cc)], collapse=','), 'is not a valid column name'))
-  } else {
-    if(any(ignored_cols < 1 | ignored_cols > length(cc)))
-      stop(paste('Out of range explanatory variable', paste(ignored_cols[ignored_cols < 1 | ignored_cols > length(cc)], collapse=',')))
-    ignored_cols <- cc[ignored_cols]
-  }
-
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_cols = ignored_cols, tolerance=tol, standardize=as.numeric(standardize))
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_cols = args$cols_ignore, tolerance=tol, standardize=as.numeric(standardize))
   .h2o.__waitOnJob(data@h2o, res$job_key)
   # while(!.h2o.__isDone(data@h2o, "PCA", res)) { Sys.sleep(1) }
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
@@ -1124,7 +1083,7 @@ h2o.predict <- function(object, newdata) {
   } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel", "H2ONBModel", "H2ODeepLearningModel")) {
     # Set randomized prediction key
     key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
-                                       "H2ODRFModel" = "DRFPredict", "GLM2Predict", "H2ONBModel" = "NBPredict",
+                                       "H2ODRFModel" = "DRFPredict", "H2OGLMModel" = "GLM2Predict", "H2ONBModel" = "NBPredict",
                                        "H2ODeepLearningModel" = "DeepLearningPredict")
     rand_pred_key = .h2o.__uniqID(key_prefix)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
@@ -1158,12 +1117,30 @@ h2o.hitRatio <- function(prediction, reference, k = 10, seed = 0) {
   if(!class(prediction) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("prediction must be an H2O parsed dataset")
   if(!class(reference) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("reference must be an H2O parsed dataset")
   if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
-  if(!is.numeric(k) || k < 1) stop("max_k must be an integer greater than 0")
+  if(!is.numeric(k) || k < 1) stop("k must be an integer greater than 0")
   if(!is.numeric(seed)) stop("seed must be numeric")
 
   res = .h2o.__remoteSend(prediction@h2o, .h2o.__PAGE_HITRATIO, actual = reference@key, vactual = 0, predict = prediction@key, max_k = k, seed = seed)
   temp = res$hit_ratios; names(temp) = make.names(res$actual_domain)
   return(temp)
+}
+
+h2o.gapStatistic <- function(data, cols = "", B = 100, k = 10, seed = 0) {
+  args <- .verify_datacols(data, cols)
+  if(!is.numeric(B) || B < 1) stop("brep must be an integer greater than 0")
+  if(!is.numeric(k) || k < 2) stop("k must be an integer greater than 1")
+  if(!is.numeric(seed)) stop("seed must be numeric")
+  
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTAT, source = data@key, b_max = B, k_max = k, seed = seed)
+  .h2o.__waitOnJob(data@h2o, res$job_key)
+  res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTATVIEW, '_modelKey' = res$destination_key)
+  
+  result = list()
+  result$log_within_ss = res2$gap_model$wks
+  result$boot_within_ss = res2$gap_model$wkbs
+  result$se_boot_within_ss = res2$gap_model$sk
+  result$gap_stats = res2$gap_model$gap_stats
+  return(result)
 }
 
 h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
@@ -1257,6 +1234,30 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   x_ignore <- setdiff(setdiff( cc, x ), y)
   if( length(x_ignore) == 0 ) x_ignore <- ''
   list(x=x, y=y, x_i=x_i, x_ignore=x_ignore, y_i=y_i)
+}
+
+.verify_datacols <- function(data, cols) {
+  if( missing(data) ) stop('Must specify data')
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop('data must be an H2O parsed dataset')
+  
+  if( missing(cols) ) stop('Must specify cols')
+  if(!( class(cols) %in% c('numeric', 'character', 'integer') )) stop('cols must be column names or indices')
+
+  cc <- colnames(data)
+  if(length(cols) == 1 && cols == '') cols = cc
+  if(is.character(cols)) {
+    # if(any(!(cols %in% cc))) stop(paste(paste(cols[!(cols %in% cc)], collapse=','), 'is not a valid column name'))
+    if( any(!cols %in% cc) ) stop("Invalid column names: ", paste(cols[which(!cols %in% cc)], collapse=", "))
+    cols_ind <- match(cols, cc)
+  } else {
+    if(any( cols < 1 | cols > length(cc))) stop(paste('Out of range explanatory variable', paste(cols[cols < 1 | cols > length(cc)], collapse=',')))
+    cols_ind <- cols
+    cols <- cc[cols_ind]
+  }
+  
+  cols_ignore <- setdiff(cc, cols)
+  if( length(cols_ignore) == 0 ) cols_ignore <- ''
+  list(cols=cols, cols_ind=cols_ind, cols_ignore=cols_ignore)
 }
 
 # .h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {

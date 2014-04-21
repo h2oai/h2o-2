@@ -689,7 +689,7 @@ public abstract class Job extends Func {
    *
    * INPUT response column from source
    */
-  public static abstract class ModelJob extends ColumnsResJob {
+  public static abstract class ModelJob extends ModelJobWithoutClassificationField {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
@@ -714,6 +714,15 @@ public abstract class Job extends Func {
     }
   }
 
+  /**
+   * A job producing a model that has no notion of Classification or Regression.
+   *
+   * INPUT response column from source
+   */
+  public static abstract class ModelJobWithoutClassificationField extends ColumnsResJob {
+    // This exists to support GLM2, which determines classification/regression using the
+    // family field, not a second separate field.
+  }
 
   /**
    * Job which produces model and validate it on a given dataset.
