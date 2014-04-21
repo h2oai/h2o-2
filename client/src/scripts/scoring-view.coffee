@@ -78,15 +78,19 @@ Steam.ScoringView = (_, _scoring) ->
       margin = top: 20, right: 20, bottom: 30, left: 40
       width = 200
       height = 200
+
       x = d3.scale.linear()
         .domain [ 0, 1 ]
         .range [ 0, width ]
+
       y = d3.scale.linear()
         .domain [ 0, 1 ]
         .range [ height, 0 ]
+
       axisX = d3.svg.axis()
         .scale x
         .orient 'bottom'
+
       axisY = d3.svg.axis()
         .scale y
         .orient 'left'
@@ -96,6 +100,7 @@ Steam.ScoringView = (_, _scoring) ->
         .y (d) -> y d.tpr
 
       el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
+
       svg = (d3.select el)
         .attr 'class', 'y-roc-curve'
         .attr 'width', width + margin.left + margin.right
@@ -123,22 +128,28 @@ Steam.ScoringView = (_, _scoring) ->
         .style 'text-anchor', 'end'
         .text 'TPR'
 
-      svg.selectAll '.dot'
-        .data data
-        .enter()
-        .append 'circle'
-        .attr 'class', 'dot'
-        .attr 'r', 2
-        .attr 'cx', (d) -> x d.fpr
-        .attr 'cy', (d) -> y d.tpr
-
       svg.append 'line'
         .attr 'class', 'guide'
+        .attr 'stroke-dasharray', '3,3'
         .attr
           x1: x 0
           y1: y 0
           x2: x 1
           y2: y 1
+
+      svg.selectAll '.dot'
+        .data data
+        .enter()
+        .append 'circle'
+        .attr 'class', 'dot'
+        .attr 'r', 1
+        .attr 'cx', (d) -> x d.fpr
+        .attr 'cy', (d) -> y d.tpr
+
+      svg.append 'path'
+        .datum data
+        .attr 'class', 'line'
+        .attr 'd', line
 
       el
 
