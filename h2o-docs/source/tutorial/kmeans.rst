@@ -1,8 +1,8 @@
 K Means Tutorial
------------------
+==================
 
 The purpose of this tutorial is to walk through a K-Means analysis
-beginning to end. By the end of this tutorialthe user should know how
+beginning to end. By the end of this tutorial the user should know how
 to specify, run, and interpret a K-means model in  H\ :sub:`2`\ O.
 
 Those who have never used H\ :sub:`2`\ O before should see the quick start guide

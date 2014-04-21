@@ -2,7 +2,7 @@
 
 
 Naive Bayes
-------------------------------
+===============
 
 Naive Bayes (NB) is a classification algorithm that relies on strong
 assumptions of the independence of covariates in applying Bayes

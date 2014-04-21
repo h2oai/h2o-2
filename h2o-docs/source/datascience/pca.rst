@@ -66,7 +66,7 @@ transformations to yield a new set of variables. The new set of
 variables have useful practical application, as well as many desirable
 behaviors for further modeling. 
 
- **Std dev**
+ **Std Dev**
 
    *Standard deviation.* This is the standard deviation of the component
    defined in that column. In the example shown below the standard

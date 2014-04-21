@@ -28,20 +28,20 @@ The application of grid search and successive continuation of winning models
 via checkpoint restart is highly recommended as model performance can vary
 greatly.
 
-**destination key**
+**Destination Key**
 
     Name of the model to be trained. Will be auto-generated if omitted.
 
-**source**
+**Source**
 
    A hex key associated with the parsed training data.
  
-**response**
+**Response**
 
     The dependent or target variable of interest.  Can be numerical or
     a factor (categorical).
 	
-**ignored columns** 
+**Ignored Columns** 
      
     This field will auto populate a list of the columns from the data
     set in use. The user-selected set of columns are the features
@@ -50,31 +50,31 @@ greatly.
     selecting expert settings and checking the tic box indicating
     **Ignore const cols**.
 
-**classification** 
+**Classification** 
      
     Check box indicating whether the dependent variable is to be
     treated as a factor or a continuous variable. 
 
-**validation** 
+**Validation** 
 
     A unique data set with the same shape and features as the
     training data to be used in model validation (i.e., production of
     error rates on data not used in model building). 
 
-**checkpoint**
+**Checkpoint**
       
     A model key associated with a previously trained Deep Learning
     model. This option allows users to build a new model as a
     continuation of a previously generated model (e.g., by a grid search).
 
-**expert mode** 
+**Expert Mode** 
 
     Unlock expert mode parameters than can affect model building speed,
     predictive accuracy and scoring. Leaving expert mode parameters at default
     values is fine for many problems, but best results on complex datasets are often
     only attainable via expert mode options.
     
-**activation**
+**Activation**
 
     The activation function (non-linearity) to be used the neurons in the
     hidden layers.
@@ -90,7 +90,7 @@ greatly.
     training row. This effectively trains exponentially many models at
     once, and can improve generalization. 
 
-**hidden**
+**Hidden**
 
     The number and size of each hidden layer in the model. 
     For example, if a user specifies "100,200,100" a model with 3 hidden
@@ -98,14 +98,14 @@ greatly.
     neurons.To specify a grid search, add parentheses around each
     model's specification: "(100,100), (50,50,50), (20,20,20,20)".  
 
-**epochs** 
+**Epochs** 
 
     The number of passes over the training dataset to be carried out.
     It is recommended to start with lower values for initial grid searches.
     This value can be modified during checkpoint restarts and allows continuation
     of selected models.
 
-**train samples per iteration**
+**Train Samples per Iteration**
 
     The number of training data rows to be processed per iteration. Note that
     independent of this parameter, each row is used immediately to update the model
@@ -120,7 +120,7 @@ greatly.
     per iteration. If **replicate training data** is enabled, N epochs
     will be trained per iteration on N nodes, otherwise one epoch.
 
-**seed**
+**Seed**
 
     The random seed controls sampling and initialization. Reproducible
     results are only expected with single-threaded operation (i.e.,
@@ -131,7 +131,7 @@ greatly.
     results. Note that deterministic sampling and initialization might
     still lead to some weak sense of determinism in the model.
 
-**adaptive rate**
+**Adaptive Rate**
 
     The implemented adaptive learning rate algorithm (ADADELTA) automatically
     combines the benefits of learning rate annealing and momentum
@@ -152,14 +152,14 @@ greatly.
     surface with small learning rates, the model can converge far
     slower than necessary.
 
-**rho**
+**Rho**
 
     The first of two hyper parameters for adaptive learning rate (ADADELTA).
     It is similar to momentum and relates to the memory to prior weight updates.
     Typical values are between 0.9 and 0.999.
     This parameter is only active if adaptive learning rate is enabled.
 
-**epsilon**
+**Epsilon**
 
     The second of two hyper parameters for adaptive learning rate (ADADELTA).
     It is similar to learning rate annealing during initial training
@@ -167,7 +167,7 @@ greatly.
     Typical values are between 1e-10 and 1e-4.
     This parameter is only active if adaptive learning rate is enabled.
 
-**rate**
+**Rate**
 
     When adaptive learning rate is disabled, the magnitude of the weight
     updates are determined by the user specified learning rate
@@ -182,7 +182,7 @@ greatly.
     why the momentum is best ramped up slowly.
     This parameter is only active if adaptive learning rate is disabled.
 
-**rate annealing**
+**Rate Annealing**
 
     Learning rate annealing reduces the learning rate to "freeze" into
     local minima in the optimization landscape.  The annealing rate is the
@@ -190,7 +190,7 @@ greatly.
     (e.g., 1e-6 means that it takes 1e6 training samples to halve the learning rate).
     This parameter is only active if adaptive learning rate is disabled.
 
-**rate decay**
+**Rate Decay**
 
     The learning rate decay parameter controls the change of learning rate across layers.
     For example, assume the rate parameter is set to 0.01, and the rate_decay parameter is set to 0.5.
@@ -199,12 +199,12 @@ greatly.
     and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
     This parameter is only active if adaptive learning rate is disabled.
 
-**momentum start**
+**Momentum Start**
 
     The momentum_start parameter controls the amount of momentum at the beginning of training.
     This parameter is only active if adaptive learning rate is disabled.
 
-**momentum ramp**
+**Momentum Ramp**
 
     The momentum_ramp parameter controls the amount of learning for which momentum increases
     (assuming momentum_stable is larger than momentum_start). The ramp is measured in the number
@@ -217,7 +217,7 @@ greatly.
     The momentum used for training will remain the same for training beyond reaching that point.
     This parameter is only active if adaptive learning rate is disabled.
 
-**Nesterov accelerated Gradient** 
+**Nesterov Accelerated Gradient** 
 
     The Nesterov accelerated gradient descent method is a modification to
     traditional gradient descent for convex functions. The method relies on
@@ -225,36 +225,36 @@ greatly.
     minimizes the residuals in fewer iterations of the descent. 
     This parameter is only active if adaptive learning rate is disabled.
 
-**input dropout ratio**
+**Input Dropout Ratio**
 
     A fraction of the features for each training row to be omitted from training in order
     to improve generalization (dimension sampling).
 
-**hidden dropout ratios**
+**Hidden Dropout Ratios**
 
     A fraction of the inputs for each hidden layer to be omitted from training in order
     to improve generalization. Defaults to 0.5 for each hidden layer if omitted.
 
-**L1 regularization** 
+**L1 Regularization** 
 
     A regularization method that constrains the absolute value of the weights and
     has the net effect of dropping some weights (setting them to zero) from a model
     to reduce complexity and avoid overfitting. 
 
-**L2 regularization** 
+**L2 Regularization** 
 
     A regularization method that constrains the sum of the squared
     weights. This method introduces bias into parameter estimates, but
     frequently produces substantial gains in modeling as estimate variance is
     reduced. 
 
-**max w2**
+**Max w2**
 
     A maximum on the sum of the squared incoming weights into
     any one neuron. This tuning parameter is especially useful for unbound
     activation functions such as Maxout or Rectifier.
 
-**initial weight distribution**
+**Initial Weight Distribution**
 
     The distribution from which initial weights are to be drawn. The default
     option is an optimized initialization that considers the size of the network.
@@ -262,13 +262,13 @@ greatly.
     interval. The "normal" option draws weights from the standard normal
     distribution with a mean of 0 and given standard deviation.
 
-**initial weight scale**
+**Initial Weight Scale**
 
     The scale of the distribution function for Uniform or Normal distributions.
     For Uniform, the values are drawn uniformly from -initial_weight_scale...initial_weight_scale.
     For Normal, the values are drawn from a Normal distribution with a standard deviation of initial_weight_scale.
 
-**loss function** 
+**Loss Function** 
 
     The loss (error) function to be optimized by the model. 
 
@@ -282,40 +282,40 @@ greatly.
     be used for classification as well (where it emphasizes the error on all
     output classes, not just for the actual class).
 
-**score interval**
+**Score Interval**
 
     The minimum time (in seconds) to elapse between model scoring. The actual
     interval is determined by the number of training samples per iteration and the scoring duty cycle.
 
-**score training samples**
+**Score Training Samples**
 
     The number of training dataset points to be used for scoring. Will be
     randomly sampled. Use 0 for selecting the entire training dataset.
 
-**score validation samples** 
+**Score Validation Samples** 
 
     The number of validation dataset points to be used for scoring. Can be
     randomly sampled or stratified (if "balance classes" is set and "score
     validation sampling" is set to stratify). Use 0 for selecting the entire
     training dataset.
 
-**score duty cycle**
+**Score Duty Cycle**
     Maximum fraction of wall clock time spent on model scoring on training and validation samples,
     and on diagnostics such as computation of feature importances (i.e., not on training).
 
-**classification stop**
+**Classification Stop**
 
     The stopping criteria in terms of classification error (1-accuracy) on the
     training data scoring dataset. When the error is at or below this threshold,
     training stops. 
 
-**regression stop**
+**Regression Stop**
 
     The stopping criteria in terms of regression error (MSE) on the training
     data scoring dataset. When the error is at or below this threshold, training
     stops.
 
-**quiet mode**
+**Quiet Mode**
 
     Enable quiet mode for less output to standard output.
 
@@ -325,59 +325,59 @@ greatly.
     confusion matrix for it to be printed. This option is meant to avoid printing
     extremely large confusion matrices.
 
-**max hit ratio K** 
+**Max Hit Ratio K** 
 
     The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)
 
-**balance classes** 
+**Balance Classes** 
 
     For imbalanced data, balance training data class counts via
     over/under-sampling. This can result in improved predictive accuracy.
 
-**max after balance size** 
+**Max After Balance Size** 
 
     When classes are balanced, limit the resulting dataset size to the
     specified multiple of the original dataset size.
 
-**score validation sampling**
+**Score Validation Sampling**
 
     Method used to sample the validation dataset for scoring, see Score Validation Samples above.
 
-**diagnostics**
+**Diagnostics**
 
     Gather diagnostics for hidden layers, such as mean and RMS values of learning
     rate, momentum, weights and biases.
 
-**variable importance**
+**Variable Importance**
 
     Whether to compute variable importances for input features.
     The implemented method (by Gedeon) considers the weights connecting the
     input features to the first two hidden layers.
 
-**fast mode**
+**Fast Mode**
     
     Enable fast mode (minor approximation in back-propagation), should not affect results significantly.
 
-**ignore const cols**
+**Ignore Const Cols**
 
     Ignore constant training columns (no information can be gained anyway).
 
-**force load balance** 
+**Force Load Balance** 
 
     Increase training speed on small datasets by splitting it into many chunks
     to allow utilization of all cores.
 
-**replicate training data**
+**Replicate Training Data**
 
     Replicate the entire training dataset onto every node for faster training on small datasets.
 
-**single node mode**
+**Single Node Mode**
 
     Run on a single node for fine-tuning of model parameters. Can be useful for
     checkpoint resumes after training on multiple nodes for fast initial
     convergence.
 
-**shuffle training data** 
+**Shuffle Training Data** 
 
     Enable shuffling of training data (on each node). This option is
     recommended if training data is replicated on N nodes, and the number of training samples per iteration
@@ -390,7 +390,7 @@ Interpreting the Model
 
 The model view page displays information about the Deep Learning model being trained.
 
-**Diagnostics table**
+**Diagnostics Table**
     If diagnostics is enabled, information for each layer is displayed.
 
     *Units* The number of units (or artificial neurons) in the layer
@@ -415,13 +415,13 @@ The model view page displays information about the Deep Learning model being tra
     the validation set (or a sample thereof). Otherwise, scoring is performed on
     the training dataset (or a sample thereof).
 
-**Confusion matrix**
+**Confusion Matrix**
 
     For classification models, a table showing the number of actual
     observations in a particular class relative to the number of predicted
     observations in a class.
 
-**Hit ratio table**
+**Hit Ratio Table**
 
     A table displaying the percentage of instances where the actual
     class label assigned to an observation is in the top K classes predicted by the
