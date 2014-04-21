@@ -155,7 +155,7 @@ Steam.ScoringView = (_, _scoring) ->
 
     createComparisonGrid = (scores) ->
       header = [
-        'Algorithm'
+        'Method'
         'Category'
         'Response Column'
         'Input Parameters'

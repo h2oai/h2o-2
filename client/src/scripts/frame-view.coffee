@@ -21,7 +21,7 @@ Steam.FrameView = (_, _frame) ->
 
   createCompatibleModelsSection = (frame) ->
       headers = [
-        'Algorithm'
+        'Method'
         'Category'
         'Response Column'
         'State'
