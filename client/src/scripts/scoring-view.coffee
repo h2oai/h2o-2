@@ -182,18 +182,23 @@ Steam.ScoringView = (_, _scoring) ->
         'Max per class Error'
         'ROC Curve'
       ]
+
       format8f = d3.format '.8f' # precision = 8
+
+      scoreWithLowestError = min scores, (score) -> score.result.metrics.error
+
       rows = map scores, (score) ->
         model = score.model
         metrics = score.result.metrics
         auc = metrics.auc.members
         cm = metrics.cm.members
+        errorBadge = if scores.length > 1 and score is scoreWithLowestError then ' (Lowest)' else ''
         [
           model.model_algorithm
           model.model_category
           model.response_column_name
           model.parameters
-          format8f metrics.error
+          (format8f metrics.error) + errorBadge #TODO change to bootstrap badge
           format8f auc.AUC
           head auc.threshold_criteria
           head auc.threshold_for_criteria
