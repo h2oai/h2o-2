@@ -1,7 +1,7 @@
 .. _KMmath:
 
 K-Means
--------
+===========
 
 K-Means falls in the general category of clustering algorithms. 
 
@@ -27,7 +27,7 @@ Defining a K-Means model
   
   The .hex key associated with the data set for use in clustering.
 
-**Ignored columns:**
+**Ignored Columns:**
 
   The set of columns to be omitted from modeling. 
   
@@ -62,7 +62,7 @@ Defining a K-Means model
   often based on heuristics. 
 
 
-**Max iter** 
+**Max Iter** 
 
   The maximum number of iterations the algorithm is to go
   through if no stopping point is reached before then.

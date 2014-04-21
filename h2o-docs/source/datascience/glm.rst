@@ -2,7 +2,8 @@
 
 
 Generalized Linear Model (GLM)
-------------------------------
+==================================
+
 Generalized Linear Modeling (GLM) estimates regression models for
 outcomes following exponential distributions in general. In addition
 to the Gaussian distribution, these include Poisson, binomial, gamma
@@ -100,7 +101,7 @@ Defining a GLM Model
      variance. Variables and coefficients are now expressed in terms
      of their relative position to 0, and in standard units. 
 
-**N folds:** 
+**N Folds:** 
 
      N folds specifies the number of cross validation models to be
      generated simultaneously to training a model on the full data

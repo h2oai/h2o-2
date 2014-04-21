@@ -1,7 +1,8 @@
 .. _GBMmath:
 
 Gradient Boosted Regression and Classification
-----------------------------------------------
+================================================
+
 Gradient boosted regression and gradient boosted classification are
 forward learning ensemble methods. The guiding principal is that good
 predictive results can be obtained through increasingly refined approximations. 
