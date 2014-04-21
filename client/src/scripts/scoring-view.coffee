@@ -183,7 +183,7 @@ Steam.ScoringView = (_, _scoring) ->
         'ROC Curve'
       ]
 
-      format8f = d3.format '.8f' # precision = 8
+      format8f = d3.format '.4f' # precision = 4
 
       scoreWithLowestError = min scores, (score) -> score.result.metrics.error
 
