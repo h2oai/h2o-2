@@ -1,5 +1,7 @@
 Steam.Application = (_) ->
 
+  Steam.Cache _
+  Steam.LocalStorage _
   Steam.Xhr _
   Steam.H2OProxy _
 

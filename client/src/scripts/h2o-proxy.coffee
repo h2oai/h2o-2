@@ -24,7 +24,7 @@ Steam.H2OProxy = (_) ->
       else
         # Flatten response so that keys are attributes on the objects, 
         # and linked objects are direct refs instead of keys.
-        { frames, models, response } = result
+        { frames, models, metrics, response } = result
         for modelKey, model of models
           model.key = modelKey
 
@@ -33,7 +33,10 @@ Steam.H2OProxy = (_) ->
           frame.compatible_models = map frame.compatible_models, (modelKey) ->
             models[modelKey]
 
-        go error, response: response, frames: values frames
+        go error,
+          response: response
+          frames: values frames
+          metrics: metrics
 
   requestModels = (go, opts) ->
     request '/2/Models.json', opts, (error, result) ->

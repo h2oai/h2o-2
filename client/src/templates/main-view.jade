@@ -3,6 +3,7 @@
   .y-navigation-bar
     .y-logo-area
     .y-navigation-area
+
   .y-desktop
     .y-topic-lane
       .y-lane-header
@@ -12,50 +13,32 @@
         button.y-upload-button.btn.fa-btn
           span.fa.fa-refresh
 
-      .y-lane-body
+      // ko if:isModal
+      .y-mask
+      // /ko
 
-        // ko with:frameListView
-        include frame-list-view
-        // /ko
+      .y-lane-body(data-bind="template:{name:template, foreach:listViews}")
 
-        // ko with:modelListView
-        include model-list-view
-        // /ko
-
-        // ko if:isDisplayingTopics
-        .y-topic-list-view
-          // ko foreach:topics
-          .y-topic(data-bind='click:display, text:title, css:{"y-disabled":isDisabled}')
-          // /ko
-        // /ko
+      // ko if:isListMasked
+      .y-mask
+      // /ko
 
     .y-workspace-lane
       .y-lane-header
+
       .y-lane-body
-
-        // ko with:emptyView
-        include empty-view
+        .y-page-views(data-bind="template:{name:template, foreach:pageViews}")
+        // ko if:isModal
+        .y-modal-views(data-bind="template:{name:template, foreach:modalViews}")
         // /ko
 
-        // ko with:frameView
-        include frame-view
-        // /ko
-
-        // ko with:modelView
-        include model-view
-        // /ko
-
-
-      // ko if:isDisplayingTopics
-      .y-lane-mask
-      // /ko
-
-      // ko with:modelSelectionView
-      include model-selection-view
+      // ko if:isPageMasked
+      .y-mask
       // /ko
         
     .y-help-lane
       .y-lane-header
       .y-lane-body
+
   .y-status-bar
 // /ko

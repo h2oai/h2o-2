@@ -1,11 +1,20 @@
 Steam.ModelView = (_, _model) ->
   _compatibleFrames = node$ ''
 
+  initialize = (model) ->
+    _.requestModelAndCompatibleFrames model.key, (error, data) ->
+      if error
+        #TODO handle errors
+      else
+        #TODO typecheck
+        _compatibleFrames createCompatibleFramesSection (head data.models).compatible_frames
+
   stringify = (value) ->
     if isArray value
       join value, ', '
     else
       value
+
   createDefinitionList = (data) ->
     [ dl, li, dt, dd ] = geyser.generate '.y-summary .y-summary-item .y-summary-key .y-summary-value'
 
@@ -62,13 +71,7 @@ Steam.ModelView = (_, _model) ->
   loadCompatibleFrames = ->
     _.switchToFrames type: 'compatibleWithModel', modelKey: _model.key
 
-  _.requestModelAndCompatibleFrames _model.key, (error, data) ->
-    if error
-      #TODO handle errors
-    else
-      #TODO typecheck
-      _compatibleFrames createCompatibleFramesSection (head data.models).compatible_frames
-
+  initialize _model
   
   data: _model
   key: _model.key
@@ -79,4 +82,5 @@ Steam.ModelView = (_, _model) ->
   compatibleFrames: _compatibleFrames
   loadCompatibleFrames: loadCompatibleFrames
   dispose: ->
+  template: 'model-view'
 

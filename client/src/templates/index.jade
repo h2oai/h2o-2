@@ -27,6 +27,25 @@ html(lang='en')
     //- Recursively include other .jade files
     include main-view
 
+    script(type="text/html" id="topic-list-view")
+      include topic-list-view
+    script(type="text/html" id="frame-list-view")
+      include frame-list-view
+    script(type="text/html" id="model-list-view")
+      include model-list-view
+    script(type="text/html" id="scoring-list-view")
+      include scoring-list-view
+    script(type="text/html" id="frame-view")
+      include frame-view
+    script(type="text/html" id="model-view")
+      include model-view
+    script(type="text/html" id="model-selection-view")
+      include model-selection-view
+    script(type="text/html" id="scoring-view")
+      include scoring-view
+    script(type="text/html" id="scoring-selection-view")
+      include scoring-selection-view
+
     script(src='js/lib.js')
     script(src='js/steam.js')
 

@@ -1,21 +1,26 @@
-.y-model-selection-view
+.y-scoring-view
   .clearfix
-    .y-tag Operations
-    .y-tagline(data-bind='text:frameKey')
+    .y-tag Scoring
+    .y-tagline(data-bind='text:timestamp')
   h1.y-title(data-bind="text:caption")
+  h2.y-subtitle(data-bind='collapse:false') Models
   table.table.table-condensed.table-hover
     thead
       tr
         th Algorithm
         th Category
         th Response Column
+        th Status
+        th Time
     tbody
       // ko foreach:selections
       tr
         td(data-bind='text:algorithm')
         td(data-bind='text:category')
         td(data-bind='text:responseColumn')
+        td(data-bind='text:status')
+        td(data-bind='text:time')
       // /ko
-  div
-    button.btn.btn-primary(data-bind="click:scoreModels, enable:canScore") Score Models
-    button.btn(data-bind="click:cancel") Cancel
+
+  h2.y-subtitle(data-bind='collapse:false') Scoring Comparison
+  div(data-bind='geyser:comparisonTable')

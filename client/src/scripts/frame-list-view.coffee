@@ -47,5 +47,5 @@ Steam.FrameListView = (_) ->
   link$ _.loadFrames, loadFrames
 
   items: _items
-  dispose: ->
+  template: 'frame-list-view'
 

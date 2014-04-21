@@ -30,6 +30,13 @@
 .y-workspace-lane
   dock(left:y-topic-lane-width, right:y-help-lane-width)
 
+.y-page-views
+.y-modal-views
+  dock()
+  > div
+    dock()
+    overflow auto
+
 .y-help-lane
   dock-right(y-help-lane-width)
   border-left 1px solid #ddd
@@ -43,28 +50,10 @@
   font-size 18px
   text-align center
 
-.y-topic-list-view
-  dock()
-  background white
-
-.y-topic
-  cursor pointer
-  height 50px
-  border-bottom 1px solid #ddd
-  font-size 22px
-  font-weight 300
-  banner(50px)
-  text-align center
-  &:hover
-    background #f7f7f7
-  &.y-disabled
-    color #ccc
-    cursor default
-
 .y-upload-button
   dock-right(48px, 6px, 6px, 6px)
 
-.y-lane-mask
+.y-mask
   dock()
   background white
   opacity 0.75
@@ -72,6 +61,7 @@
 .y-status-bar
   dock-bottom(y-status-bar-height)
   border-top 1px solid #ddd
+
 
 // Adding a .y-main-no-topic class on .y-main hides the help area
 //    and docks .y-workspace-lane to the left

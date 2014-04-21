@@ -1,6 +1,15 @@
 Steam.FrameView = (_, _frame) ->
   _compatibleModels = node$ ''
 
+  initialize = (frame) ->
+    _.requestFrameAndCompatibleModels frame.key, (error, data) ->
+      if error
+        #TODO handle errors
+      else
+        #TODO typecheck
+        _compatibleModels createCompatibleModelsSection head data.frames
+        return
+
   # Columns section
   createColumnsSection = (frame) ->
     rows = map frame.column_names, (columnName) -> [ columnName ]
@@ -40,13 +49,7 @@ Steam.FrameView = (_, _frame) ->
   loadCompatibleModels = ->
     _.switchToModels type: 'compatibleWithFrame', frameKey: _frame.key
 
-  _.requestFrameAndCompatibleModels _frame.key, (error, data) ->
-    if error
-      #TODO handle errors
-    else
-      #TODO typecheck
-      _compatibleModels createCompatibleModelsSection head data.frames
-      return
+  initialize _frame
 
   data: _frame
   key: _frame.key
@@ -55,4 +58,5 @@ Steam.FrameView = (_, _frame) ->
   compatibleModels: _compatibleModels
   loadCompatibleModels: loadCompatibleModels
   dispose: ->
+  template: 'frame-view'
 

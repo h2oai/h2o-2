@@ -28,24 +28,34 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/application-context.js \
 	$(BUILD)/scripts/router.js \
 	$(BUILD)/scripts/routes.js \
+	$(BUILD)/scripts/cache.js \
+	$(BUILD)/scripts/localStorage.js \
 	$(BUILD)/scripts/h2o-proxy.js \
 	$(BUILD)/scripts/xhr.js \
+	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
-	$(BUILD)/scripts/frame-view.js \
 	$(BUILD)/scripts/model-list-view.js \
-	$(BUILD)/scripts/model-selection-view.js \
+	$(BUILD)/scripts/scoring-list-view.js \
+	$(BUILD)/scripts/frame-view.js \
 	$(BUILD)/scripts/model-view.js \
+	$(BUILD)/scripts/model-selection-view.js \
+	$(BUILD)/scripts/scoring-view.js \
+	$(BUILD)/scripts/scoring-selection-view.js \
 	$(BUILD)/scripts/main-view.js \
 	$(BUILD)/scripts/steam.js
 
 TEMPLATES=\
 	src/templates/main-view.jade \
+	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \
-	src/templates/model-selection-view.jade \
+	src/templates/scoring-list-view.jade \
 	src/templates/empty-view.jade \
 	src/templates/frame-view.jade \
-	src/templates/model-view.jade
+	src/templates/model-view.jade \
+	src/templates/model-selection-view.jade \
+	src/templates/scoring-view.jade \
+	src/templates/scoring-selection-view.jade
 
 STYLES=\
 	src/styles/variables.styl \
@@ -53,12 +63,16 @@ STYLES=\
 	src/styles/fonts.styl \
 	src/styles/bootstrap.styl \
 	src/styles/main-view.styl \
+	src/styles/topic-list-view.styl \
 	src/styles/frame-list-view.styl \
 	src/styles/model-list-view.styl \
-	src/styles/model-selection-view.styl \
+	src/styles/scoring-list-view.styl \
 	src/styles/empty-view.styl \
 	src/styles/frame-view.styl \
-	src/styles/model-view.styl
+	src/styles/model-view.styl \
+	src/styles/model-selection-view.styl \
+	src/styles/scoring-view.styl \
+	src/styles/scoring-selection-view.styl
 
 TESTS=\
 	$(BUILD)/tests/prelude.tests.js \

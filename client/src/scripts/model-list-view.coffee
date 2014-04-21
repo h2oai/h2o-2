@@ -69,5 +69,5 @@ Steam.ModelListView = (_) ->
     _isLive yes
 
   items: _items
-  dispose: ->
+  template: 'model-list-view'
 

@@ -1,4 +1,11 @@
 Steam.MainView = (_) ->
+  _listViews = nodes$ []
+  _pageViews = nodes$ []
+  _modalViews = nodes$ []
+  _isModal = lift$ _modalViews, (modalViews) -> modalViews.length > 0
+  _isListMasked = node$ no
+  _isPageMasked = node$ no
+
   createTopic = (title, handle, isEnabled) ->
     self =
       title: title
@@ -6,14 +13,19 @@ Steam.MainView = (_) ->
       display: -> handle() if handle
 
   switchTopic = (topic) ->
-    _topic topic
     switch topic
       when _frameTopic
-        unless _frameListView()
-          switchView _allTopicViews, _frameListView, frameListView, no
+        unless _topic() is topic
+          _topic topic
+          switchList frameListView
       when _modelTopic
-        unless _modelListView()
-          switchView _allTopicViews, _modelListView, modelListView, no
+        unless _topic() is topic
+          _topic topic
+          switchList modelListView
+      when _scoringTopic
+        unless _topic() is topic
+          _topic topic
+          switchList scoringListView
     _isDisplayingTopics no
     return
   
@@ -25,14 +37,14 @@ Steam.MainView = (_) ->
     switchTopic _modelTopic
     _.loadModels if opts then opts else type: 'all'
 
-  _topic = node$ null
-  _isDisplayingTopics = node$ no
-  _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
-    if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
-  toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
+  switchToScoring = (opts) ->
+    switchTopic _scoringTopic
+    _.loadScorings if opts then opts else type: 'all'
+
   _topics = node$ [
     _frameTopic = createTopic 'Datasets', switchToFrames, yes
     _modelTopic = createTopic 'Models', switchToModels, yes
+    _scoringTopic = createTopic 'Scoring', switchToScoring, yes
     _timelineTopic = createTopic 'Timeline', null, no
     _notificationsTopic = createTopic 'Notifications', null, no
     _jobsTopic = createTopic 'Jobs', null, no
@@ -40,48 +52,65 @@ Steam.MainView = (_) ->
     _administrationTopic = createTopic 'Administration', null, no
   ]
 
+  _topic = node$ null
+  _isDisplayingTopics = node$ no
+  _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
+    if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
+  toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
+  apply$ _isDisplayingTopics, (isDisplayingTopics) ->
+    if isDisplayingTopics
+      _listViews.push topicListView
+    else
+      _listViews.remove topicListView
+
+  topicListView = Steam.TopicListView _, _topics
   frameListView = Steam.FrameListView _
   modelListView = Steam.ModelListView _
+  scoringListView = Steam.ScoringListView _
   modelSelectionView = Steam.ModelSelectionView _
 
-  [ _frameListView, _modelListView ] = _allTopicViews = times 3, -> node$ null
-  [ _emptyView, _frameView, _modelView ] = _allDetailViews = times 3, -> node$ null
-  [ _modelSelectionView ] = _allSelectionViews = times 1, -> node$ null
+  switchView = (views, view) ->
+    for oldView in views()
+      oldView.dispose() if isFunction oldView.dispose
+    if view
+      views [ view ]
+    else
+      views.removeAll()
 
-  switchView = (sourceNodes, targetNode, view, dispose=yes) ->
-    for sourceNode in sourceNodes when oldView = sourceNode()
-      oldView.dispose() if dispose
-      sourceNode null
-    targetNode view
-    return
+  switchList = (view) -> switchView _listViews, view
+  switchPage = (view) -> switchView _pageViews, view
+  switchModal = (view) -> switchView _modalViews, view
+ 
+  _template = (view) -> view.template
 
   link$ _.displayFrame, (frame) ->
-    switchView _allDetailViews, _frameView, Steam.FrameView _, frame
+    switchPage Steam.FrameView _, frame
 
   link$ _.displayModel, (model) ->
-    switchView _allDetailViews, _modelView, Steam.ModelView _, model
+    switchPage Steam.ModelView _, model
+
+  link$ _.displayScoring, (scoring) ->
+    switchPage Steam.ScoringView _, scoring
 
   link$ _.switchToFrames, switchToFrames
 
   link$ _.switchToModels, switchToModels
 
-  link$ _.modelsSelected, -> _modelSelectionView modelSelectionView
+  link$ _.switchToScoring, switchToScoring
 
-  link$ _.modelsDeselected, -> _modelSelectionView null
+  link$ _.modelsSelected, -> switchModal modelSelectionView
+
+  link$ _.modelsDeselected, -> _modalViews.remove modelSelectionView
 
   #TODO do this through hash uris
   switchToFrames type: 'all'
 
-  isDisplayingTopics: _isDisplayingTopics
   topicTitle: _topicTitle
   toggleTopics: toggleTopics
-  topics: _topics
-  
-  frameListView: _frameListView
-  modelListView: _modelListView
-  modelSelectionView: _modelSelectionView
-  
-  emptyView: _emptyView
-  frameView: _frameView
-  modelView: _modelView
-
+  listViews: _listViews
+  pageViews: _pageViews
+  modalViews: _modalViews
+  isListMasked: _isListMasked
+  isPageMasked: _isPageMasked
+  isModal: _isModal
+  template: _template

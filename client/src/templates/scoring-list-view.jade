@@ -1,0 +1,11 @@
+.y-scoring-list-view
+  // ko foreach:items
+  .y-scoring(data-bind='css:{"y-active":isActive}')
+    input(type='checkbox' data-bind='checked:isSelected')
+    .y-scoring-details(data-bind='click:display')
+      .y-scoring-title(data-bind='text:title')
+      .y-scoring-caption(data-bind='text:caption')
+      .y-scoring-cutline(data-bind='text:cutline')
+  // /ko
+
+

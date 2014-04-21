@@ -313,3 +313,11 @@ describeCount = (count, singular, plural) ->
     else
       "#{count} #{plural}"
 
+# http://stackoverflow.com/a/8809472
+luid = ->
+  d = new Date().getTime()
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace /[xy]/g, (c) ->
+    r = (d + Math.random() * 16) % 16 | 0
+    d = Math.floor d / 16
+    (if c is 'x' then r else (r & 0x7 | 0x8)).toString(16)
+
