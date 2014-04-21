@@ -29,8 +29,8 @@ Defining a Naive Bayes Model
 **Laplace:**
 
   Laplace smoothing is used to circumvent the modeling issues that can
-  arise when conditional probabilites are 0. In particular this can
-  occurr when a rare event appears in holdout or prediction data, but
+  arise when conditional probabilities are 0. In particular this can
+  occur when a rare event appears in holdout or prediction data, but
   did not appear in the training data. Smoothing modifies the maximum
   likelihood estimates used to generate classification probabilities
   even when unknown cases are encountered. 
@@ -38,7 +38,7 @@ Defining a Naive Bayes Model
 Naive Bayes Algorithm and Implementation
 """"""""""""""""""""""""""""""""""""""""""
 The algorithm is presented for the simplified binomial case without
-loss of genearlity.
+loss of generality.
 
 Under the Naive Bayes assumption of independence, given a training set
 for a set of discrete valued features X 
@@ -86,13 +86,13 @@ This is carried out by calculating
 and predicting the class with the highest probability. 
 
 
-It is possible that predictions sets contain features not origninally
+It is possible that predictions sets contain features not originally
 seen in the training set. When this occurs the maximum likelihood
 estimates for these features will predict a probability of 0 for all
 cases of y. 
 
 Laplace smoothing allows a model to predict on out of training data
-features by adjusting the maximim likelihood estimates to be: 
+features by adjusting the maximum likelihood estimates to be: 
 
 
 :math:`\phi_{j|y=1}= \frac{\Sigma_{i}^m 1(x_{j}^{(i)}=1 \ \bigcap y^{i} = 1) \: + \: 1}{\Sigma_{i=1}^{m}(y^{(i)}=1 \: + \: 2}`

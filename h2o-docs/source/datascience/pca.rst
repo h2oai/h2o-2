@@ -53,7 +53,7 @@ Defining a PCA Model
 
    Allows users to specify whether data should be transformed so that
    each column has a mean of 0 and a standard deviation of 1 prior to
-   carrying out PCA. Standardizing is strongly reccomended. 
+   carrying out PCA. Standardizing is strongly recommended. 
 
 
 Interpreting Results

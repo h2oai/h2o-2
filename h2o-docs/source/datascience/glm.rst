@@ -53,7 +53,7 @@ Defining a GLM Model
   counts for all non-zero observations. 
     
   	
-**Ignored Comumns:** 
+**Ignored Columns:** 
      
      This field will auto populate a list of the columns from the data
      set in use. The user selected set of columns will be omitted from
@@ -77,8 +77,8 @@ Defining a GLM Model
      users predict on data outside of the range on which the model was
      originally specified. For example, H\ :sub:`2`\ O allows a model
      to be  trained on data with X between (-1, 10), and then applied
-     to precicting  on data where the range of X is (-10, 10) without
-     warning. This is also true in the analgous case for predicting and
+     to predicting  on data where the range of X is (-10, 10) without
+     warning. This is also true in the analogous case for predicting and
      training on factors. It is the user's responsibility to ensure
      that out of data prediction is undertaken with caution, as the
      veracity of the original results are often constrained to the
@@ -104,7 +104,7 @@ Defining a GLM Model
 
      N folds specifies the number of cross validation models to be
      generated simultaneously to training a model on the full data
-     set. If N folds is sent to 10, addtional models will be generated
+     set. If N folds is sent to 10, additional models will be generated
      with 1/10 of the data used to train each. The purpose of N folds
      is to evaluate the stability of the parameter estimates produced.
      
@@ -122,7 +122,7 @@ Defining a GLM Model
      
      Y are quantitative, continuous (or discrete
      predicted values can be meaningfully interpreted as approximately
-     continuios).  
+     continuos).  
 
   *Binomial (logit):* 
 
@@ -189,7 +189,7 @@ Defining a GLM Model
 **Higher Accuracy:**
 
      The higher accuracy option implements line search
-     optimization. Line search is an optimization approah that
+     optimization. Line search is an optimization approach that
      calculates an adaptive step size at each iteration of the
      gradient descent. Because line search is a direct search
      algorithm it can improve model convergence without specification
@@ -200,7 +200,7 @@ Defining a GLM Model
 
      The lambda search option allows users to start at 0.90*Lambda
      max, where lambda max is the value for lambda at which the model
-     returned estimates all coefficints as zero. An additional 50 values of
+     returned estimates all coefficients as zero. An additional 50 values of
      lambda are estimated. These values are successively smaller, and
      are log scaled. Models for each are returned, along with the
      ratio of the explained deviance to nonzero parameter estimates. 
