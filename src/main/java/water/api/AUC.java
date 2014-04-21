@@ -332,6 +332,7 @@ public class AUC extends Func {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     // make local copies to avoid getting clear()'ed out in the middle of printing
+    if (actual_domain == null) actual_domain = new String[]{"false","true"};
     String [] my_actual_domain = actual_domain.clone();
     String[] my_threshold_criteria = threshold_criteria.clone();
     float[] my_threshold_for_criteria = threshold_for_criteria.clone();
@@ -342,7 +343,6 @@ public class AUC extends Func {
     if (my_threshold_criteria == null) return false;
     if (my_cms == null) return false;
     if (idxCriter == null) return false;
-    if (my_actual_domain == null) my_actual_domain = new String[]{"false","true"};
 
     sb.append("<div>");
     DocGen.HTML.section(sb, "Scoring for Binary Classification");
