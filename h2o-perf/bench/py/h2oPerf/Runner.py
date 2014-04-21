@@ -4,6 +4,7 @@ from Table import *
 from PerfTest import *
 import PerfUtils
 
+import traceback
 import re
 import os
 import time
