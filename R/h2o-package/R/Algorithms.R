@@ -838,7 +838,7 @@ h2o.prcomp <- function(data, tol=0, cols = "", standardize=TRUE, retx=FALSE) {
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
 
   destKey = .h2o.__uniqID("PCAModel")
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_colscols = args$cols_ignore, tolerance=tol, standardize=as.numeric(standardize))
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_cols = args$cols_ignore, tolerance=tol, standardize=as.numeric(standardize))
   .h2o.__waitOnJob(data@h2o, res$job_key)
   # while(!.h2o.__isDone(data@h2o, "PCA", res)) { Sys.sleep(1) }
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
