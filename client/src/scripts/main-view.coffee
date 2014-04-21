@@ -3,8 +3,18 @@ Steam.MainView = (_) ->
   _pageViews = nodes$ []
   _modalViews = nodes$ []
   _isModal = lift$ _modalViews, (modalViews) -> modalViews.length > 0
+  _topic = node$ null
+  _isDisplayingTopics = node$ no
   _isListMasked = node$ no
-  _isPageMasked = node$ no
+  _isPageMasked = lift$ _isDisplayingTopics, identity
+  _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
+    if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
+  toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
+  apply$ _isDisplayingTopics, (isDisplayingTopics) ->
+    if isDisplayingTopics
+      _listViews.push topicListView
+    else
+      _listViews.remove topicListView
 
   createTopic = (title, handle, isEnabled) ->
     self =
@@ -51,17 +61,6 @@ Steam.MainView = (_) ->
     _clusterTopic = createTopic 'Cluster', null, no
     _administrationTopic = createTopic 'Administration', null, no
   ]
-
-  _topic = node$ null
-  _isDisplayingTopics = node$ no
-  _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
-    if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
-  toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
-  apply$ _isDisplayingTopics, (isDisplayingTopics) ->
-    if isDisplayingTopics
-      _listViews.push topicListView
-    else
-      _listViews.remove topicListView
 
   topicListView = Steam.TopicListView _, _topics
   frameListView = Steam.FrameListView _
