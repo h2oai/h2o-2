@@ -2,7 +2,7 @@
 
 
 Deep Learning
-------------------------------
+================
 
 H2O Deep Learning is based on a multi-layer feed-forward artificial neural
 network that is trained with stochastic gradient descent using
@@ -34,7 +34,7 @@ greatly.
 
 **source**
 
-   A hex key associated with the parsed traing data.
+   A hex key associated with the parsed training data.
  
 **response**
 
@@ -217,7 +217,7 @@ greatly.
     The momentum used for training will remain the same for training beyond reaching that point.
     This parameter is only active if adaptive learning rate is disabled.
 
-**Nesterov accelerated Gaadient** 
+**Nesterov accelerated Gradient** 
 
     The Nesterov accelerated gradient descent method is a modification to
     traditional gradient descent for convex functions. The method relies on
@@ -243,7 +243,7 @@ greatly.
 
 **L2 regularization** 
 
-    A regularization method that constrdains the sum of the squared
+    A regularization method that constrains the sum of the squared
     weights. This method introduces bias into parameter estimates, but
     frequently produces substantial gains in modeling as estimate variance is
     reduced. 

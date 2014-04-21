@@ -299,7 +299,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * output classes, not just for the actual class).
    */
   @API(help = "Loss function", filter = Default.class, json = true)
-  public Loss loss = Loss.CrossEntropy;
+  public Loss loss = Loss.Automatic;
 
   /*Scoring*/
   /**
@@ -474,7 +474,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * CrossEntropy is recommended
    */
   public enum Loss {
-    MeanSquare, CrossEntropy
+    Automatic, MeanSquare, CrossEntropy
   }
 
   // the following parameters can only be specified in expert mode
@@ -794,7 +794,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.info("  rate, rate_decay, rate_annealing, momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient.");
       } else {
         Log.info("Using manual learning rate.  Ignoring the following input parameters:");
-        Log.info("  rho, epsilon");
+        Log.info("  rho, epsilon.");
       }
 
       if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
@@ -802,10 +802,17 @@ public class DeepLearning extends Job.ValidatedJob {
       }
     }
 
-    if(!classification && loss != Loss.MeanSquare) {
-      if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
-      loss = Loss.MeanSquare;
+    if(loss == Loss.Automatic) {
+      if (!classification) {
+        if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
+        loss = Loss.MeanSquare;
+      } else {
+        if (!quiet_mode) Log.info("Automatically setting loss to Cross-Entropy for classification.");
+        loss = Loss.CrossEntropy;
+      }
     }
+    if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
+
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
       destination_key = Key.make();
@@ -820,8 +827,7 @@ public class DeepLearning extends Job.ValidatedJob {
       _fakejob = true;
     }
     if (!sparse && col_major) {
-      if (!quiet_mode) Log.info("Automatically setting col_major to false for non-sparse data.");
-      col_major = false;
+      if (!quiet_mode) throw new IllegalArgumentException("Cannot use column major storage for non-sparse data handling.");
     }
   }
 
@@ -935,7 +941,7 @@ public class DeepLearning extends Job.ValidatedJob {
       mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode, mp.quiet_mode);
       // Determine whether shuffling is enforced
       if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
-        Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
+        Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data, mp.quiet_mode);
