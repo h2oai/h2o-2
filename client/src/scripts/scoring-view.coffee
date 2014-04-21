@@ -169,6 +169,7 @@ Steam.ScoringView = (_, _scoring) ->
     createComparisonGrid = (scores) ->
       header = [
         'Method'
+        'Name'
         'Category'
         'Response Column'
         'Input Parameters'
@@ -197,6 +198,7 @@ Steam.ScoringView = (_, _scoring) ->
         errorBadge = if scores.length > 1 and score is scoreWithLowestError then ' (Lowest)' else ''
         [
           model.model_algorithm
+          model.key
           model.model_category
           model.response_column_name
           model.parameters
