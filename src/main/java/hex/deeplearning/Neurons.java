@@ -235,6 +235,7 @@ public abstract class Neurons {
    * Specialization of backpropagation for DenseRowMatrices and DenseVectors
    * @param _w weight matrix
    * @param _wm weight momentum matrix
+   * @param adaxg ADADELTA matrix (2 floats per weight)
    * @param prev_a activation of previous layer
    * @param prev_e error of previous layer
    * @param _b bias vector
@@ -306,8 +307,9 @@ public abstract class Neurons {
 
   /**
    * Specialization of backpropagation for DenseColMatrices and SparseVector for previous layer's activation and DenseVector for everything else
-   * @param w
-   * @param wm
+   * @param w Weight matrix
+   * @param wm Momentum matrix
+   * @param adaxg ADADELTA matrix (2 floats per weight)
    * @param prev_a sparse activation of previous layer
    * @param prev_e error of previous layer
    * @param b
@@ -375,6 +377,7 @@ public abstract class Neurons {
    * Specialization of backpropagation for DenseRowMatrices and SparseVector for previous layer's activation and DenseVector for everything else
    * @param _w weight matrix
    * @param _wm weight momentum matrix
+   * @param adaxg ADADELTA matrix (2 floats per weight)
    * @param prev_a sparse activation of previous layer
    * @param prev_e error of previous layer
    * @param _b bias vector
@@ -490,7 +493,7 @@ public abstract class Neurons {
    * @param eps hyper-parameter #2
    * @return learning rate
    */
-  final static float computeAdaDeltaRateForWeight(final float grad, final int row, final int col,
+  final private static float computeAdaDeltaRateForWeight(final float grad, final int row, final int col,
                                                   final DenseColMatrix ada_dx_g,
                                                   final float rho, final float eps) {
     ada_dx_g.set(2*row+1, col, rho * ada_dx_g.get(2*row+1, col) + (1f - rho) * grad * grad);
@@ -508,7 +511,7 @@ public abstract class Neurons {
    * @param eps hyper-parameter #2
    * @return learning rate
    */
-  final static float computeAdaDeltaRateForWeight(final float grad, final int w,
+  final private static float computeAdaDeltaRateForWeight(final float grad, final int w,
                                                   final DenseRowMatrix ada_dx_g,
                                                   final float rho, final float eps) {
     ada_dx_g.raw()[2*w+1] = rho * ada_dx_g.raw()[2*w+1] + (1f - rho) * grad * grad;
@@ -527,7 +530,7 @@ public abstract class Neurons {
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  final void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
+  final private void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
                          final float partial_grad, final float avg_grad2, float rate, final float momentum) {
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
