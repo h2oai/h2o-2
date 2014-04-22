@@ -328,6 +328,7 @@ class Basic(unittest.TestCase):
         compatible_models = frames['frames']['airlines_test.hex']['compatible_models']
 
         for model_key in compatible_models:
+            print "Scoring: /2/Frames?key=airlines_test.hex&score_model=" + model_key
             scoring_result = node.frames(key='airlines_test.hex', score_model=model_key)
             self.assertKeysExist(scoring_result, '', ['metrics'])
             self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error', 'cm', 'auc']) # TODO: HitRatio
@@ -342,6 +343,7 @@ class Basic(unittest.TestCase):
         compatible_models = frames['frames']['prostate.hex']['compatible_models']
 
         for model_key in compatible_models:
+            print "Scoring: /2/Frames?key=prostate.hex&score_model=" + model_key
             scoring_result = node.frames(key='prostate.hex', score_model=model_key)
             self.assertKeysExist(scoring_result, '', ['metrics'])
             self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error', 'cm', 'auc']) # TODO: HitRatio
