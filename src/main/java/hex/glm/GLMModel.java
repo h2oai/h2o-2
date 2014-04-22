@@ -35,7 +35,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="warnings")
   String []  warnings;
   @API(help="Decision threshold.")
-  final double     threshold;
+  double     threshold;
   @API(help="glm params")
   final GLMParams  glm;
   @API(help="beta epsilon - stop iterating when beta diff is below this threshold.")
@@ -318,9 +318,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public boolean setAndTestValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
-    if(lambdaIdx == 0 || rank(lambdaIdx) == 1)return true;
+    if(lambdaIdx == 0 || rank(lambdaIdx) == 1){
+      threshold = val.best_threshold;
+      return true;
+    }
     double diff = (submodels[lambdaIdx-1].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
-    if(diff >= 0.01)best_lambda_idx = lambdaIdx;
+    if(diff >= 0.01) {
+      best_lambda_idx = lambdaIdx;
+      threshold = val.best_threshold;
+      System.out.println("setting threshold to " + threshold);
+    }
     return  true;
   }
 
