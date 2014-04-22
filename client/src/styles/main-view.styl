@@ -41,18 +41,53 @@
 .y-help-lane
   dock-right(y-help-lane-width)
   border-left 1px solid #ddd
+  .y-lane-header
+    border-bottom 1px solid #ddd
+  .y-lane-body
+    overflow auto
 
 .y-topic-button
   dock-left(48px, 6px, 6px, 6px)
 
 .y-topic-title
   text-block(y-desktop-header-height, 6px + 48px + 6px, 6px + 48px + 6px)
-  font-family 'robotolight'
   font-size 18px
+  font-weight 300
   text-align center
 
 .y-upload-button
   dock-right(48px, 6px, 6px, 6px)
+
+
+.y-help-home-button
+  dock-left(48px, 6px, 6px, 6px)
+
+.y-help-title
+  text-block(y-desktop-header-height, 4 * 6px +  2 * 48px, 6px + 48px + 6px)
+  font-size 18px
+  font-weight 300
+  text-align center
+
+.y-help-back-button
+  dock-right(48px, 6px, 2 * 6px + 48px, 6px)
+
+.y-help-forward-button
+  dock-right(48px, 6px, 6px, 6px)
+
+.y-help
+  padding 10px
+  font-size 90%
+  h1
+    margin-top 20px
+    font-size 90%
+    text-transform uppercase
+    border-bottom 1px solid #ddd
+  ul
+    padding 0
+  li
+    list-style-type none
+    color y-color-hyperlink
+    cursor pointer
 
 .y-status-bar
   dock-bottom(y-status-bar-height)
