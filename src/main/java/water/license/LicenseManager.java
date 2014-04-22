@@ -66,7 +66,7 @@ public class LicenseManager {
       return false;
     }
 
-    Pattern p = Pattern.compile("^feature:\\s*(\\S*)$");
+    Pattern p = Pattern.compile("^feature:\\s*(\\S*)\\s*$");
     Scanner scanner = new Scanner(_license);
     while (scanner.hasNextLine()) {
       String line = scanner.nextLine();
