@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
         self.assertIsNotNone(Basic.airlines_test_hex)
 
         node = h2o.nodes[0]
-        timeoutSecs = 20
+        timeoutSecs = 200
         retryDelaySecs = 2
 
         print "##############################################################"

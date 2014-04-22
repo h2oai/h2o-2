@@ -46,7 +46,7 @@ public class Frames extends Request2 {
   Model score_model = null;
 
   @API(help="Should we adapt() the Frame to the Model?", required=false, filter=Default.class)
-  boolean adapt = true;
+  boolean adapt = false; // TODO: revisit; calling adapt outside score is causing the numCols() to be off
 
 
   /////////////////
@@ -231,7 +231,7 @@ public class Frames extends Request2 {
   protected static Response scoreOne(Frame frame, Model score_model, boolean adapt) {
     Frame input = frame;
 
-    if (adapt) {
+    if (false && adapt) { // TODO: for now we're always calling adapt inside score
       Frame[] inputs = score_model.adapt(frame, false);
       input = inputs[0];
       // TODO: we have to free the vecTrash vectors?
@@ -239,7 +239,7 @@ public class Frames extends Request2 {
     }
 
     long before = System.currentTimeMillis();
-    Frame predictions = score_model.score(frame, false);
+    Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
     long after = System.currentTimeMillis();
 
     ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
