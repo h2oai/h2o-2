@@ -261,13 +261,17 @@ public class Frames extends Request2 {
     Map metrics = new LinkedHashMap();
     metrics.put("model", score_model._key.toString());
     metrics.put("frame", frame._key.toString());
+    metrics.put("model_category", score_model.getModelCategory());
 
     metrics.put("duration_in_ms", after - before);
 
     metrics.put("error", error);
-    metrics.put("cm", cm.toJSON());
-    metrics.put("auc", auc.toJSON());
-    metrics.put("hr", hr);
+
+    if (score_model.isClassifier()) {
+      metrics.put("cm", cm.toJSON());
+      metrics.put("auc", auc.toJSON());
+      metrics.put("hr", hr); // TODO: binary only?
+    }
 
     Map resultsMap = new LinkedHashMap();
     resultsMap.put("metrics", metrics);
