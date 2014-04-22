@@ -25,6 +25,8 @@
           input(type='checkbox' data-bind='checked:isSelected, enable:canSelect')
       // /ko
 
+  // ko if:hasExecuted
+
   h2.y-subtitle(data-bind='collapse:false') Scoring Comparison
   // ko if:hasComparisonTable
   div(data-bind='geyser:comparisonTable')
@@ -32,4 +34,6 @@
 
   // ko ifnot:hasComparisonTable
   div Nothing to compare. Please select one or more models from the above table.
+  // /ko
+
   // /ko

@@ -1,14 +1,12 @@
 Steam.ScoringView = (_, _scoring) ->
   _items = nodes$ []
+  _hasExecuted = node$ no
   _comparisonTable = node$ null
   _hasComparisonTable = lift$ _comparisonTable, (table) -> not isNull table
 
   createItem = (score) ->
-
     status = node$ if isNull score.status then '-' else score.status
     isSelected = lift$ status, (status) -> status is 'done'
-
-    apply$ isSelected, (isSelected) -> displayComparisonTable()
 
     data: score
     algorithm: score.model.model_algorithm
@@ -23,22 +21,25 @@ Steam.ScoringView = (_, _scoring) ->
   initialize = (scoring) ->
     _items items = map scoring.scores, createItem
     if (every scoring.scores, (score) -> score.status is null)
-      scoreModels scoring, items
+      scoreModels scoring, items, ->
+        forEach items, (item) ->
+          apply$ item.isSelected, -> displayComparisonTable() unless _hasExecuted()
+        _hasExecuted yes
+        displayComparisonTable()
     else
+      _hasExecuted yes
       displayComparisonTable()
 
   runScoringJobs = (jobs, go) ->
     queue = copy jobs
     runNext = ->
-      job = shift queue
-      if job
-        console.log "Queue size #{queue.length}/#{jobs.length}"
+      if job = shift queue
         job.run -> defer runNext
       else
         go()
     defer runNext
 
-  scoreModels = (scoring, items) ->
+  scoreModels = (scoring, items, go) ->
     frameKey = scoring.frameKey
     jobs = map items, (item) ->
       modelKey = item.data.model.key
@@ -59,7 +60,7 @@ Steam.ScoringView = (_, _scoring) ->
         score.time = item.time()
         score.result = item.result()
 
-      displayComparisonTable()
+      go()
 
   displayComparisonTable = () ->
     selectedItems = filter _items(), (item) -> item.canSelect() and item.isSelected()
@@ -249,6 +250,7 @@ Steam.ScoringView = (_, _scoring) ->
   initialize _scoring
 
   items: _items
+  hasExecuted: _hasExecuted
   comparisonTable: _comparisonTable
   hasComparisonTable: _hasComparisonTable
   caption: "Scoring on #{_scoring.frameKey}"
