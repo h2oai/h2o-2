@@ -330,6 +330,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         int y = 0;
         for(int x = 0; x < catLvls.length; ++x)
           if(catLvls[x] != null) c[y++] = catLvls[x];
+        assert y == c.length;
         catLvls = c;
       }
       // now numerics
@@ -345,6 +346,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         ignoredCols[ignoredCnt++] = k+_cats;
       Frame f = new Frame(_adaptedFrame.names().clone(),_adaptedFrame.vecs().clone());
       if(ignoredCnt > 0) f.remove(Arrays.copyOf(ignoredCols,ignoredCnt));
+      assert catLvls.length < f.numCols():"cats = " + catLvls.length + " numcols = " + f.numCols();
       return new DataInfo(f,catLvls, _responses, _standardize, _standardize_response, _nfolds, _foldId);
     }
     public String toString(){

@@ -126,7 +126,7 @@ public class GLM2 extends ModelJob {
   private static class IterationInfo {
     final int _iter;
     final double _objval;
-    final GLMIterationTask _glmt;
+    private final GLMIterationTask _glmt;
     final int [] _activeCols;
 
     public IterationInfo(int i, double obj, GLMIterationTask glmt, final int [] activeCols){
@@ -134,6 +134,26 @@ public class GLM2 extends ModelJob {
       _objval = obj;
       _glmt = glmt;
       _activeCols = activeCols;
+    }
+
+    public final double [] beta(int [] activeCols){
+      final double [] full = fullN(activeCols[activeCols.length - 1]);
+      final double [] res = MemoryManager.malloc8d(activeCols.length+1);
+      int i = 0;
+      for(int c:activeCols)
+        res[i++] = full[c];
+      assert i == res.length-1;
+      res[i] = full[full.length-1];
+      return res;
+    }
+    public final double [] fullN(int fullN){
+      double [] res = MemoryManager.malloc8d(fullN+1);
+      int i = 0;
+      for(int c:_activeCols)
+        res[c] = _glmt._beta[i++];
+      assert i == _glmt._beta.length-1;
+      res[res.length-1] = _glmt._beta[i];
+      return res;
     }
   }
 
@@ -294,8 +314,23 @@ public class GLM2 extends ModelJob {
     int i = 0;
     for(int c:activeCols)
       res[c] = beta[i++];
+    res[res.length-1] = beta[beta.length-1];
+    return res;
+  }
+  private final double [] expandVec(double [] beta, final int [] activeCols, final int [] oldActiveCols){
+    if(activeCols == null)return beta;
+    double [] full = MemoryManager.malloc8d(_dinfo.fullN()+1);
+    int i = 0;
+    for(int c:oldActiveCols)
+      full[c] = beta[i++];
     assert i == beta.length-1;
-    res[res.length-1] = beta[i];
+    full[full.length-1] = beta[i];
+    double [] res = MemoryManager.malloc8d(activeCols.length+1);
+    i = 0;
+    for(int c:_activeCols)
+      res[i++] = full[c];
+    assert i == res.length-1;
+    res[i] = full[full.length-1];
     return res;
   }
   protected boolean needLineSearch(double [] beta,double objval, double step){
@@ -326,7 +361,7 @@ public class GLM2 extends ModelJob {
         step *= 0.5;
       } // no line step worked, forcibly converge
       Log.info("GLM2 line search failed to find feasible step. Forcibly converged.");
-      nextLambda(_lastResult._glmt,_lastResult._glmt._beta);
+      nextLambda(_lastResult._glmt,_lastResult.beta(_activeCols));
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       GLM2.this.cancel(ex);
@@ -383,6 +418,7 @@ public class GLM2 extends ModelJob {
         // check the gradient
         ADMMSolver.subgrad(alpha[0], lambda[_lambdaIdx], fullBeta, grad);
         double err = 0;
+
         if(_activeCols != null){
           for(int c:_activeCols)
             if(grad[c] > err) err = grad[c];
@@ -400,12 +436,13 @@ public class GLM2 extends ModelJob {
           if(fcnt > 0){
             Log.info("GLM2: " + fcnt + " variables failed KKT conditions check! Adding them to the model and continuing computation...");
             final int n = _activeCols.length;
+            final int [] oldActiveCols = _activeCols;
             _activeCols = Arrays.copyOf(_activeCols,_activeCols.length+fcnt);
             for(int i = 0; i < fcnt; ++i)
               _activeCols[n+i] = failedCols[i];
             Arrays.sort(_activeCols);
             _activeData = _dinfo.filterExpandedColumns(_activeCols);
-            new GLMIterationTask(GLM2.this, _activeData,_glm,true,true,true,glmt._beta,glmt._ymu,glmt._reg,new Iteration()).asyncExec(_activeData._adaptedFrame);
+            new GLMIterationTask(GLM2.this, _activeData,_glm,true,true,true,expandVec(glmt._beta,_activeCols,oldActiveCols),glmt._ymu,glmt._reg,new Iteration()).asyncExec(_activeData._adaptedFrame);
             return;
           }
         } else {
@@ -478,6 +515,9 @@ public class GLM2 extends ModelJob {
     public Iteration(){start = System.currentTimeMillis();}
     @Override public void callback(final GLMIterationTask glmt) {
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - start) + "ms");
+      if(_iter == 6){
+        System.out.println("haha");
+      }
       if( !isRunning(self()) )  throw new JobCancelledException();
       if(glmt._gram != null && _activeData.fullN() < 100){
         System.out.println("GRAM");
@@ -529,7 +569,9 @@ public class GLM2 extends ModelJob {
               return;
             }
           }
-          new GLMTask.GLMLineSearchTask(GLM2.this,_dinfo,_glm,_lastResult._glmt._beta,glmt._beta,1e-8,glmt._n,alpha[0],lambda[_lambdaIdx], new LineSearchIteration()).asyncExec(_activeFrame);
+          final double [] b = expandVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols);
+          assert (b.length == glmt._beta.length):b.length + " != " + glmt._beta.length + ", activeCols = " + _activeCols.length;
+          new GLMTask.GLMLineSearchTask(GLM2.this,_activeData,_glm,expandVec(_lastResult._glmt._beta,_activeCols,_lastResult._activeCols),glmt._beta,1e-8,glmt._n,alpha[0],lambda[_lambdaIdx], new LineSearchIteration()).asyncExec(_activeFrame);
           return;
         }
         _lastResult = new IterationInfo(GLM2.this._iter-1, objval, glmt,_activeCols);
@@ -598,7 +640,12 @@ public class GLM2 extends ModelJob {
               final double lmax = lambda_max = t.lmax();
               String [] warns = null;
               if(lambda == null || lambda_search){
-                lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
+                lambda = new double [100];
+                double l = lmax;
+                for(int i = 0; i < lambda.length; ++i){
+                  lambda[i] = l;
+                  l *= 0.9;
+                }
                 _runAllLambdas = false;
               } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)
                 int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
