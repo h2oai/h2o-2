@@ -186,7 +186,7 @@ Steam.ScoringView = (_, _scoring) ->
         'ROC Curve'
       ]
 
-      format8f = d3.format '.4f' # precision = 4
+      format4f = d3.format '.4f' # precision = 4
 
       scoreWithLowestError = min scores, (score) -> score.result.metrics.error
 
@@ -202,20 +202,20 @@ Steam.ScoringView = (_, _scoring) ->
           model.model_category
           model.response_column_name
           model.parameters
-          (format8f metrics.error) + errorBadge #TODO change to bootstrap badge
-          format8f auc.AUC
+          (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
+          format4f auc.AUC
           head auc.threshold_criteria
           head auc.threshold_for_criteria
-          format8f head auc.F1_for_criteria
-          format8f head auc.accuracy_for_criteria
-          format8f head auc.precision_for_criteria
-          format8f head auc.recall_for_criteria
-          format8f head auc.specificity_for_criteria
-          format8f head auc.max_per_class_error_for_criteria
+          format4f head auc.F1_for_criteria
+          format4f head auc.accuracy_for_criteria
+          format4f head auc.precision_for_criteria
+          format4f head auc.recall_for_criteria
+          format4f head auc.specificity_for_criteria
+          format4f head auc.max_per_class_error_for_criteria
           createROC auc.confusion_matrices
         ]
 
-      rows.unshift header
+      unshift rows, header
       rows
 
     renderTable = (grid) ->
