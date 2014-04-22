@@ -18,6 +18,8 @@ public class KMeansModel extends OldModel implements Progress {
   public static final String NAME = KMeansModel.class.getSimpleName();
   public double[][] _clusters; // The cluster centers, normalized according to _va
   public double _error; // Sum of min square distances
+  public double _between_cluster_SS;   // Sum of squared error between clusters
+  public double _total_SS;  // Total sum of squared error
   public int _iteration;
   public Initialization _initialization;
   public int _maxIter;
@@ -43,6 +45,8 @@ public class KMeansModel extends OldModel implements Progress {
     res.addProperty(Constants.VERSION, H2O.VERSION);
     res.addProperty(Constants.TYPE, KMeansModel.class.getName());
     res.addProperty(Constants.ERROR, _error);
+    res.addProperty("between_cluster_SS", _between_cluster_SS);
+    res.addProperty("total_SS", _total_SS);
     JsonArray ary = new JsonArray();
     for( double[] dd : clusters() ) {
       JsonArray ary2 = new JsonArray();
