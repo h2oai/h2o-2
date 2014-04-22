@@ -81,6 +81,18 @@ class H2OUseCloud:
         node = self.nodes[0]
         return node.get_port()
 
+    def all_ips(self):
+        res = []
+        for node in self.nodes:
+            res += [node.get_ip()]
+        return ','.join(res)
+
+    def all_pids(self):
+        res = []
+        for node in self.nodes:
+            res += [node.request_pid()]
+        return','.join(res)
+
 class H2OCloudNode:
     """
     A class representing one node in an H2O cloud.
@@ -578,6 +590,18 @@ class H2OCloud:
         """
         for node in self.nodes:
             node.stop_local()
+
+    def all_ips(self):
+        res = []
+        for node in self.nodes:
+            res += [node.get_ip()]
+        return ','.join(res)
+
+    def all_pids(self):
+        res = []
+        for node in self.nodes:
+            res += [node.request_pid()]
+        return','.join(res)
 
     def terminate_remote(self):
         """  
