@@ -37,6 +37,8 @@ Steam.ScoringListView = (_) ->
     else
       activateItem head items
 
+
+  apply$ _predicate, (predicate) ->
     pastScorings = (_.getFromCache 'scoring') or _.putIntoCache 'scoring', []
     if predicate.type is 'scoring'
       pastScorings.unshift predicate.scoring
