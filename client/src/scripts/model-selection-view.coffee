@@ -10,9 +10,10 @@ Steam.ModelSelectionView = (_) ->
     if predicate isnt null
       if predicate.type is 'compatibleWithFrame'
         if selections.length > 0
-          responseColumn = (head selections).responseColumn
-          if (every selections, ((selection) -> selection.responseColumn is responseColumn))
-            return yes
+          { category, responseColumn } = head selections
+          comparable = every selections, (selection) ->
+            selection.responseColumn is responseColumn and selection.category is category
+          return comparable
     no
 
 
