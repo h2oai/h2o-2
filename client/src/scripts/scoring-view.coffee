@@ -1,22 +1,31 @@
 Steam.ScoringView = (_, _scoring) ->
-  _selections = nodes$ []
-  _comparisonTable = node$ ''
+  _items = nodes$ []
+  _comparisonTable = node$ null
+  _hasComparisonTable = lift$ _comparisonTable, (table) -> not isNull table
 
-  createSelection = (score) ->
+  createItem = (score) ->
+
+    status = node$ if isNull score.status then '-' else score.status
+    isSelected = lift$ status, (status) -> status is 'done'
+
+    apply$ isSelected, (isSelected) -> displayComparisonTable()
+
     data: score
     algorithm: score.model.model_algorithm
     category: score.model.model_category
     responseColumn: score.model.response_column_name
-    status: node$ if isNull score.status then '-' else score.status
+    status: status
     time: node$ if isNull score.time then '-' else score.time
+    canSelect: lift$ status, (status) -> status is 'done'
+    isSelected: isSelected
     result: node$ score.result
 
   initialize = (scoring) ->
-    _selections selections = map scoring.scores, createSelection
+    _items items = map scoring.scores, createItem
     if (every scoring.scores, (score) -> score.status is null)
-      scoreModels scoring, selections
+      scoreModels scoring, items
     else
-      displayComparisonTable scoring
+      displayComparisonTable()
 
   runScoringJobs = (jobs, go) ->
     queue = copy jobs
@@ -29,30 +38,34 @@ Steam.ScoringView = (_, _scoring) ->
         go()
     defer runNext
 
-  scoreModels = (scoring, selections) ->
+  scoreModels = (scoring, items) ->
     frameKey = scoring.frameKey
-    jobs = map selections, (selection) ->
-      modelKey = selection.data.model.key
-      selection.status 'waiting'
+    jobs = map items, (item) ->
+      modelKey = item.data.model.key
+      item.status 'waiting'
       run: (go) ->
-        selection.status 'running'
+        item.status 'running'
         _.requestScoringOnFrame frameKey, modelKey, (error, result) ->
           data = if error then error.data else result
-          selection.status data.response.status
-          selection.time data.response.time
-          selection.result error or result
+          item.status data.response.status
+          item.time data.response.time
+          item.result error or result
           do go
 
     runScoringJobs jobs, ->
-      forEach selections, (selection) ->
-        score = selection.data
-        score.status = selection.status()
-        score.time = selection.time()
-        score.result = selection.result()
+      forEach items, (item) ->
+        score = item.data
+        score.status = item.status()
+        score.time = item.time()
+        score.result = item.result()
 
-      displayComparisonTable scoring
+      displayComparisonTable()
 
-  displayComparisonTable = (scoring) ->
+  displayComparisonTable = () ->
+    selectedItems = filter _items(), (item) -> item.canSelect() and item.isSelected()
+    renderComparisonTable map selectedItems, (item) -> item.data
+
+  renderComparisonTable = (scores) ->
     [ table, kvtable, thead, tbody, tr, th, td ] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr th td'
 
     transposeGrid = (grid) ->
@@ -229,13 +242,15 @@ Steam.ScoringView = (_, _scoring) ->
             else
               td cell
 
-    _comparisonTable renderTable transposeGrid createComparisonGrid filter scoring.scores, (score) -> score.status is 'done'
+
+    _comparisonTable if scores.length > 0 then renderTable transposeGrid createComparisonGrid scores else null
 
 
   initialize _scoring
 
-  selections: _selections
+  items: _items
   comparisonTable: _comparisonTable
+  hasComparisonTable: _hasComparisonTable
   caption: "Scoring on #{_scoring.frameKey}"
   timestamp: new Date(_scoring.timestamp).toString()
   template: 'scoring-view'

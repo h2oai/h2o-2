@@ -12,15 +12,24 @@
         th Response Column
         th Status
         th Time
+        th Compare
     tbody
-      // ko foreach:selections
+      // ko foreach:items
       tr
         td(data-bind='text:algorithm')
         td(data-bind='text:category')
         td(data-bind='text:responseColumn')
         td(data-bind='text:status')
         td(data-bind='text:time')
+        td
+          input(type='checkbox' data-bind='checked:isSelected, enable:canSelect')
       // /ko
 
   h2.y-subtitle(data-bind='collapse:false') Scoring Comparison
+  // ko if:hasComparisonTable
   div(data-bind='geyser:comparisonTable')
+  // /ko
+
+  // ko ifnot:hasComparisonTable
+  div Nothing to compare. Please select one or more models from the above table.
+  // /ko
