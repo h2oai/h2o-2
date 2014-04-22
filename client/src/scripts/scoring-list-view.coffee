@@ -1,5 +1,6 @@
 Steam.ScoringListView = (_) ->
   _items = do nodes$
+  _hasItems = lift$ _items, (items) -> items.length > 0
 
   #TODO ugly
   _isLive = node$ yes
@@ -30,7 +31,10 @@ Steam.ScoringListView = (_) ->
 
   displayScorings = (scorings) ->
     _items items = map scorings, createItem
-    activateItem head items unless isEmpty items
+    if isEmpty items
+      _.displayEmpty()
+    else
+      activateItem head items
 
   _predicate = null
   loadScorings = (predicate) ->
@@ -54,5 +58,6 @@ Steam.ScoringListView = (_) ->
     _isLive yes
 
   items: _items
+  hasItems: _hasItems
   template: 'scoring-list-view'
 
