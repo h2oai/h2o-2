@@ -62,6 +62,7 @@ STYLES=\
 	src/styles/mixins.styl \
 	src/styles/fonts.styl \
 	src/styles/bootstrap.styl \
+	src/styles/global.styl \
 	src/styles/main-view.styl \
 	src/styles/topic-list-view.styl \
 	src/styles/frame-list-view.styl \
