@@ -7,9 +7,9 @@ Steam.FrameListView = (_) ->
   _predicateCaption = lift$ _predicate, (predicate) ->
     switch predicate.type
       when 'all'
-        'Showing\nall frames'
+        'Showing\nall datasets'
       when 'compatibleWithModel'
-        "Showing frames compatible with\n#{predicate.modelKey}"
+        "Showing datasets compatible with\n#{predicate.modelKey}"
       else
         ''
 
