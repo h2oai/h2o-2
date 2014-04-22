@@ -676,6 +676,16 @@ public final class AutoBuffer {
     return this;
   }
 
+  public AutoBuffer putA(Freezable[] fs) {
+    _arys++;
+    long xy = putZA(fs);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) put(fs[i]);
+    return this;
+  }
+
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
     if( id == TypeMap.NULL ) return null;
@@ -688,7 +698,7 @@ public final class AutoBuffer {
     assert id > 0 : "Bad type id "+id;
     return TypeMap.newInstance(id).read(this);
   }
-  public <T extends Iced> T[] getA(Class<T> tc) {
+  public <T extends Freezable> T[] getA(Class<T> tc) {
     _arys++;
     long xy = getZA();
     if( xy == -1 ) return null;
@@ -696,7 +706,7 @@ public final class AutoBuffer {
     int y=(int)xy;               // Middle non-zeros
     int z = y==0 ? 0 : getInt(); // Trailing nulls
     T[] ts = (T[]) Array.newInstance(tc, x+y+z);
-    for( int i = x; i < x+y; ++i ) ts[i] = get();
+    for( int i = x; i < x+y; ++i ) ts[i] = get(tc);
     return ts;
   }
   public <T extends Iced> T[][] getAA(Class<T> tc) {

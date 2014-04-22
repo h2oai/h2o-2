@@ -7,8 +7,7 @@ import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
 import java.io.InputStream;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.*;
 import java.util.*;
 
 import water.*;
@@ -22,6 +21,7 @@ import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
+  @Documented
   public @interface API {
     String help();
     /** Must be specified. */

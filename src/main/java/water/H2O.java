@@ -16,7 +16,6 @@ import water.util.Log.Tag.Sys;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
-import com.google.common.io.Closeables;
 
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
@@ -1132,7 +1131,7 @@ public final class H2O {
         break;
       } catch (IOException e) {
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
-        Closeables.closeQuietly(_udpSocket);
+        Utils.close(_udpSocket);
         _apiSocket = null;
         _udpSocket = null;
         if( OPT_ARGS.port != 0 )
@@ -1356,7 +1355,7 @@ public final class H2O {
         list.add(entry);
       }
     } catch( Exception e ) { Log.die(e.toString()); }
-    finally { Closeables.closeQuietly(br); }
+    finally { Utils.close(br); }
     return list;
   }
 

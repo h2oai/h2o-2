@@ -8,21 +8,22 @@ initList = [
 
 DO_COMPOUND = False
 
+# disallow lhs assigns in clauses
 phrasesCompound = [
-        "a=!0; x=!0",
-        "a=0; x=0",
-        "a=1; a=2; function(x){x=a;a=3}",
-        "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
-        "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
-        "function(x){y=x*2; y+1}(2)",
-        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        # "a=!0; x=!0",
+        # "a=0; x=0",
+        # "a=1; a=2; function(x){x=a;a=3}",
+        # "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
+        # "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
+        # "function(x){y=x*2; y+1}(2)",
+        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
         "r.hex[1,-1]; r.hex[1,-1]; r.hex[1,-1]",
-        "r.hex[,1]=3.3; r.hex",
-        "x=!0; x+!2",
-        "x=!0; !x+2",
-        "x= 3; r.hex[,(x > 0) & (x < 4)]",
-        "x= 3; r.hex[(x > 0) & (x < 4),]",
-        "x=0; x+2",
+        # "r.hex[,1]=3.3; r.hex",
+        # "x=!0; x+!2",
+        # "x=!0; !x+2",
+        # "x= 3; r.hex[,(x > 0) & (x < 4)]",
+        # "x= 3; r.hex[(x > 0) & (x < 4),]",
+        # "x=0; x+2",
 ]
 
 phrases = [
@@ -47,10 +48,10 @@ phrases = [
         "c(1,3,5)",
         "cbind(c(1,2,3,4), c(5,6,7,8))",
         "factor(r.hex[,5])",
-        "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
-        "function(x){x+1}(2)",
-        "function(x){y=1+2}(2)",
-        "function(x,y,z){x[]}(r.hex,1,2)",
+        # "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
+        #"function(x){x+1}(2)",
+        #"function(x){y=1+2}(2)",
+        #"function(x,y,z){x[]}(r.hex,1,2)",
         "is.na(r.hex)",
         "max(1,23)",
         "min(1,2)",
@@ -76,10 +77,10 @@ phrases = [
         "sum(1,r.hex,3)",
         "sum(4,c(1,3,5),2,6)",
         "sum(c(1,3,5))",
-        "x<-!1",
-        "x<-1",
-        "x=!1",
-        "x=1",
+        #"x<-!1",
+        #"x<-1",
+        #"x=!1",
+        #"x=1",
 ]
 
 if DO_COMPOUND:

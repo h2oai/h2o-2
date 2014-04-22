@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
-import hex.GLMTest2;
 import hex.glm.GLM2;
 import hex.glm.GLMParams;
 import water.*;

@@ -1,11 +1,14 @@
 package hex;
 
+import hex.FrameTask.DataInfo;
 import hex.KMeans.Initialization;
 import water.*;
 import water.Job.ColumnsJob;
 import water.api.DocGen;
 import water.api.Progress2;
 import water.api.Request;
+import water.api.Request.API;
+import water.api.Request.Default;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -42,6 +45,9 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Seed for the random number generator", filter = Default.class, json=true)
   public long seed = new Random().nextLong();
 
+  @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
+  public boolean drop_na_cols = true;
+
   public KMeans2() {
     description = "K-means";
   }
@@ -53,10 +59,14 @@ public class KMeans2 extends ColumnsJob {
     Key sourceKey = null;
     if( sourceArg != null )
       sourceKey = Key.make(sourceArg);
-    String[] names = new String[cols.length];
-    for( int i = 0; i < cols.length; i++ )
-      names[i] = source._names[cols[i]];
-    Vec[] vecs = selectVecs(source);
+
+    // Drop ignored cols and, if users asks for it, cols with too many NAs
+    Frame fr = DataInfo.prepareFrame(source, ignored_cols, false, false, drop_na_cols);
+    String[] names = fr.names();
+    Vec[] vecs = fr.vecs();
+    if(vecs == null || vecs.length == 0)
+      throw new IllegalArgumentException("No columns selected. Check that selected columns have not been dropped due to too many NAs.");
+
     // Fill-in response based on K99
     String[] domain = new String[k];
     for( int i = 0; i < domain.length; i++ )

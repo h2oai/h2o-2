@@ -22,7 +22,7 @@ import water.util.Utils;
  * <ul>
  * <li>number of demanding split parts is reasonable number, i.e., &lt;10. The task is not designed to split into many small parts.</li>
  * <li>the worker preserves distribution of new chunks over the cloud according to source dataset chunks.</li>
- * <li>rows inside one chunk are not shuffled, they are extracted deterministically in the same order based on output part index.</p>
+ * <li>rows inside one chunk are not shuffled, they are extracted deterministically in the same order based on output part index.</li>
  * </ul>
  */
 public class FrameSplitter extends H2OCountedCompleter {

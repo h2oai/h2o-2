@@ -50,7 +50,6 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /*Neural Net Topology*/
   /**
-   *
    * The activation function (non-linearity) to be used the neurons in the hidden layers.
    * Tanh: Hyperbolic tangent function (same as scaled and shifted sigmoid).
    * Rectifier: Chooses the maximum of (0, x) where x is the input value.
@@ -75,6 +74,9 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /**
    * The number of passes over the training dataset to be carried out.
+   * It is recommended to start with lower values for initial grid searches.
+   * This value can be modified during checkpoint restarts and allows continuation
+   * of selected models.
    */
   @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
   public double epochs = 10;
@@ -110,6 +112,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
+  /*Adaptive Learning Rate*/
   /**
    * The implemented adaptive learning rate algorithm (ADADELTA) automatically
    * combines the benefits of learning rate annealing and momentum
@@ -129,13 +132,25 @@ public class DeepLearning extends Job.ValidatedJob {
    * surface with small learning rates, the model can converge far
    * slower than necessary.
    */
-  /*Adaptive Learning Rate*/
   @API(help = "Adaptive learning rate (ADADELTA)", filter = Default.class, json = true)
   public boolean adaptive_rate = true;
 
+  /**
+   * The first of two hyper parameters for adaptive learning rate (ADADELTA).
+   * It is similar to momentum and relates to the memory to prior weight updates.
+   * Typical values are between 0.9 and 0.999.
+   * This parameter is only active if adaptive learning rate is enabled.
+   */
   @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
   public double rho = 0.95;
 
+  /**
+   * The second of two hyper parameters for adaptive learning rate (ADADELTA).
+   * It is similar to learning rate annealing during initial training
+   * and momentum at later stages where it allows forward progress.
+   * Typical values are between 1e-10 and 1e-4.
+   * This parameter is only active if adaptive learning rate is enabled.
+   */
   @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-15, dmax = 1, json = true)
   public double epsilon = 1e-6;
 
@@ -152,23 +167,54 @@ public class DeepLearning extends Job.ValidatedJob {
    * parameter can aid in avoiding local minima and the associated
    * instability. Too much momentum can lead to instabilities, that's
    * why the momentum is best ramped up slowly.
+   * This parameter is only active if adaptive learning rate is disabled.
    */
   @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
   public double rate = .005;
 
+  /**
+   * Learning rate annealing reduces the learning rate to "freeze" into
+   * local minima in the optimization landscape.  The annealing rate is the
+   * inverse of the number of training samples it takes to cut the learning rate in half
+   * (e.g., 1e-6 means that it takes 1e6 training samples to halve the learning rate).
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
   public double rate_annealing = 1e-6;
 
+  /**
+   * The learning rate decay parameter controls the change of learning rate across layers.
+   * For example, assume the rate parameter is set to 0.01, and the rate_decay parameter is set to 0.5.
+   * Then the learning rate for the weights connecting the input and first hidden layer will be 0.01,
+   * the learning rate for the weights connecting the first and the second hidden layer will be 0.005,
+   * and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
   public double rate_decay = 1.0;
 
   /*Momentum*/
+  /**
+   * The momentum_start parameter controls the amount of momentum at the beginning of training.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Initial momentum at the beginning of training (try 0.5)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_start = 0;
 
-  @API(help = "Number of training samples for which momentum increases", filter = Default.class, lmin = 1, json = true)
-  public long momentum_ramp = 1000000;
+  /**
+   * The momentum_ramp parameter controls the amount of learning for which momentum increases
+   * (assuming momentum_stable is larger than momentum_start). The ramp is measured in the number
+   * of training samples.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
+  @API(help = "Number of training samples for which momentum increases", filter = Default.class, dmin = 1, json = true)
+  public double momentum_ramp = 1e6;
 
+  /**
+   * The momentum_stable parameter controls the final momentum value reached after momentum_ramp training samples.
+   * The momentum used for training will remain the same for training beyond reaching that point.
+   * This parameter is only active if adaptive learning rate is disabled.
+   */
   @API(help = "Final momentum after the ramp is over (try 0.99)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
   public double momentum_stable = 0;
 
@@ -177,6 +223,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * traditional gradient descent for convex functions. The method relies on
    * gradient information at various points to build a polynomial approximation that
    * minimizes the residuals in fewer iterations of the descent.
+   * This parameter is only active if adaptive learning rate is disabled.
    */
   @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
   public boolean nesterov_accelerated_gradient = true;
@@ -252,7 +299,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * output classes, not just for the actual class).
    */
   @API(help = "Loss function", filter = Default.class, json = true)
-  public Loss loss = Loss.CrossEntropy;
+  public Loss loss = Loss.Automatic;
 
   /*Scoring*/
   /**
@@ -401,6 +448,12 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true)
   public boolean shuffle_training_data = false;
 
+  @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true)
+  public boolean sparse = false;
+
+  @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true)
+  public boolean col_major = false;
+
   public enum ClassSamplingMethod {
     Uniform, Stratified
   }
@@ -421,7 +474,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * CrossEntropy is recommended
    */
   public enum Loss {
-    MeanSquare, CrossEntropy
+    Automatic, MeanSquare, CrossEntropy
   }
 
   // the following parameters can only be specified in expert mode
@@ -454,6 +507,8 @@ public class DeepLearning extends Job.ValidatedJob {
           "max_hit_ratio_k",
           "hidden_dropout_ratios",
           "single_node_mode",
+          "sparse",
+          "col_major",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -475,6 +530,8 @@ public class DeepLearning extends Job.ValidatedJob {
           "replicate_training_data",
           "shuffle_training_data",
           "single_node_mode",
+          "sparse",
+          "col_major",
   };
 
   /**
@@ -737,7 +794,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.info("  rate, rate_decay, rate_annealing, momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient.");
       } else {
         Log.info("Using manual learning rate.  Ignoring the following input parameters:");
-        Log.info("  rho, epsilon");
+        Log.info("  rho, epsilon.");
       }
 
       if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
@@ -745,10 +802,17 @@ public class DeepLearning extends Job.ValidatedJob {
       }
     }
 
-    if(!classification && loss != Loss.MeanSquare) {
-      if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
-      loss = Loss.MeanSquare;
+    if(loss == Loss.Automatic) {
+      if (!classification) {
+        if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
+        loss = Loss.MeanSquare;
+      } else {
+        if (!quiet_mode) Log.info("Automatically setting loss to Cross-Entropy for classification.");
+        loss = Loss.CrossEntropy;
+      }
     }
+    if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
+
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
       destination_key = Key.make();
@@ -761,6 +825,9 @@ public class DeepLearning extends Job.ValidatedJob {
       state      = JobState.RUNNING;
       UKV.put(self(), this);
       _fakejob = true;
+    }
+    if (!sparse && col_major) {
+      if (!quiet_mode) throw new IllegalArgumentException("Cannot use column major storage for non-sparse data handling.");
     }
   }
 
@@ -874,7 +941,7 @@ public class DeepLearning extends Job.ValidatedJob {
       mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode, mp.quiet_mode);
       // Determine whether shuffling is enforced
       if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
-        Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data)");
+        Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data, mp.quiet_mode);

@@ -2,12 +2,12 @@ package hex.pca;
 
 import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
-import water.*;
-import water.api.*;
+import water.Key;
+import water.MemoryManager;
+import water.Model;
+import water.api.DocGen;
 import water.api.Request.API;
 import water.api.RequestBuilders.ElementBuilder;
-import water.fvec.Frame;
-import water.fvec.Vec;
 
 public class PCAModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -118,8 +118,7 @@ public class PCAModel extends Model {
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
 
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
-    sb.append("<div class='alert'>Actions: " + PCAScore.link(_key, "Score on dataset") + ", "
-        + PCA.link(_dataKey, "Compute new model") + "</div>");
+    sb.append("<div class='alert'>Actions: " + PCAScore.link(_key, "Score on dataset") + (_dataKey != null ? (", " + PCA.link(_dataKey, "Compute new model")):"") + "</div>");
     screevarString(sb);
     sb.append("<span style='display: inline-block;'>");
     sb.append("<table class='table table-striped table-bordered'>");

@@ -4,6 +4,7 @@ from Table import *
 from PerfTest import *
 import PerfUtils
 
+import traceback
 import re
 import os
 import time
@@ -53,6 +54,7 @@ class PerfRunner:
                             prefix = d
                             continue
                         if test_to_run in d:
+                            if "multi" in prefix: continue
                             self.add_test(d, prefix)
                     continue
                 continue
@@ -61,6 +63,7 @@ class PerfRunner:
         """
         Create a Test object and push it onto the queue.
         """
+        self.pre = "192.168"
         config_file = os.path.abspath(os.path.join(self.test_root_dir,prefix,testDir,testDir + ".cfg"))
         print "USING CONFIGURATION FROM THIS FILE: "
         print config_file
@@ -73,10 +76,12 @@ class PerfRunner:
         test_dir = os.path.join(self.test_root_dir, prefix, testDir)
         test_short_dir = os.path.join(prefix, testDir)
 
+        self.m = "171"
         test = Test(config_file, test_dir, test_short_dir, 
-                    self.output_dir, parse_file, model_file, predict_file, self.perfdb)
+                    self.output_dir, parse_file, model_file, predict_file, self.perfdb, prefix)
 
         self.tests.append(test)
+        self.q = "0xperf"
         self.tests_not_started.append(test)
 
     def run_tests(self):
@@ -96,7 +101,9 @@ class PerfRunner:
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
             test = self.tests_not_started.pop(0)
+            print
             print "Beginning test " + test.test_name
+            print
             isEC2 = test.aws
             xmx = test.heap_bytes_per_node
             ip = test.ip
@@ -106,40 +113,63 @@ class PerfRunner:
             #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
 
             if isEC2:
-                raise Exception("Unimplemented: AWS support under construction...")
+                raise Exception("Unimplemented: AWS support coming soon.")
 
             cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
             self.cloud.append(cloud)
-            PerfUtils.start_cloud(self, test.remote_hosts)
-            test.port = self.cloud[0].get_port()
+            try:
+                PerfUtils.start_cloud(self, test.remote_hosts)
+                test.port = self.cloud[0].get_port()
+                test.test_run = TableRow("test_run", self.perfdb)
+                test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
+                ssh_ch = self.begin_sys_profiling(test.test_name)
+                contamination = test.do_test(self)
+                test.test_run.row['start_epoch_ms'] = test.start_ms
+                test.test_run.row['end_epoch_ms'] = test.end_ms
+                test.test_run.row['test_name'] = test.test_name
+                #contamination = PerfUtils.run_contaminated(self)
+                print "DEBUG: "
+                print contamination
+                print ""
+                print ""
+                test.test_run.row["contaminated"] = contamination[0]
+                test.test_run.row["contamination_message"] = contamination[1]
+                test.test_run.update(True)
+                self.stop_sys_profiling(ssh_ch)
+                PerfUtils.stop_cloud(self, test.remote_hosts)
+                self.cloud.pop(0)
+                self.perfdb.this_test_run_id += 1
+            except:
+                print "Exception caught:"
+                print '-'*60
+                traceback.print_exc(file=sys.stdout)
+                print '-'*60
+                PerfUtils.stop_cloud(self, test.remote_hosts)
+                self.cloud.pop(0)
 
-            test.test_run = TableRow("test_run", self.perfdb)
-            test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
-            contamination = test.do_test(self)
-            test.test_run.row['start_epoch_ms'] = test.start_ms
-            test.test_run.row['end_epoch_ms'] = test.end_ms
-            test.test_run.row['test_name'] = test.test_name
-            #contamination = PerfUtils.run_contaminated(self)
-            print "DEBUG: "
-            print contamination
-            print ""
-            print ""
-            test.test_run.row["contaminated"] = contamination[0]
-            test.test_run.row["contamination_message"] = contamination[1]
-            test.test_run.update(True)
-            PerfUtils.stop_cloud(self, test.remote_hosts)
-            self.cloud.pop(0)
-            #except:
-            #    print
-            #    print
-            #    print "Could not complete test " + test.test_name
-            #    print
-            #    print
-            #    print "Unexpected error:", sys.exc_info()[0]
-            #    print
-            #    PerfUtils.stop_cloud(self, test.remote_hosts)
-            #    self.cloud.pop(0)
-            self.perfdb.this_test_run_id += 1
+    def begin_sys_profiling(self, test_name):
+        addr = self.pre + ".1." + str(self.m)
+        print
+        print
+        ssh = paramiko.SSHClient()
+        policy = paramiko.AutoAddPolicy()
+        ssh.set_missing_host_key_policy(policy)
+        ssh.load_system_host_keys()
+        ssh.connect(addr, username="0xperf", password="0xperf")
+        ssh.get_transport().set_keepalive(300)
+        #ch = ssh.get_transport().open_session()
+        #ch.get_pty()
+        cmd = ["python", "/home/0xperf/HOUND/unleash_the_hounds.py", str(self.perfdb.this_test_run_id), self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
+        print
+        print "Unleashing the hounds!"
+        print ' '.join(cmd)
+        print
+        ssh.exec_command(' '.join(cmd))
+        return ssh
+
+    def stop_sys_profiling(self, ssh):
+        #ch.exec_command('exit')
+        ssh.close()
 
     def __get_instance_type__(self):
         return "localhost"

@@ -15,14 +15,14 @@ import java.util.Random;
 public class DeepLearningMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = DeepLearningMnist.class;
-    samples.launchers.CloudLocal.launch(job, 1);
+//    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.161", "192.168.1.163", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.162", "192.168.1.164");
-//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
+    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.164");
 //    samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
@@ -44,23 +44,29 @@ public class DeepLearningMnist extends Job {
     p.activation = DeepLearning.Activation.RectifierWithDropout;
     p.loss = DeepLearning.Loss.CrossEntropy;
     p.input_dropout_ratio = 0.2;
-    p.max_w2 = 15;
     p.epochs = 10000;
     p.l1 = 1e-5;
     p.l2 = 0;
 
-    // automatic learning rate
-    p.adaptive_rate = true;
-    p.rho = 0.99;
-    p.epsilon = 1e-8;
+    if (true) {
+      // automatic learning rate
+      p.adaptive_rate = true;
+      p.rho = 0.99;
+      p.epsilon = 1e-8;
+//      p.max_w2 = 15;
+      p.max_w2 = Float.POSITIVE_INFINITY;
+    } else {
+      // manual learning rate
+      p.adaptive_rate = false;
+      p.rate = 0.01;
+      p.rate_annealing = 1e-6;
+      p.momentum_start = 0.5;
+      p.momentum_ramp = 1800000;
+      p.momentum_stable = 0.99;
+//      p.max_w2 = 15;
+      p.max_w2 = Float.POSITIVE_INFINITY;
+    }
 
-    // manual learning rate
-//    p.adaptive_rate = false;
-//    p.rate = 0.01;
-//    p.rate_annealing = 1e-6;
-//    p.momentum_start = 0.5;
-//    p.momentum_ramp = 1800000;
-//    p.momentum_stable = 0.99;
 
     p.initial_weight_distribution = DeepLearning.InitialWeightDistribution.UniformAdaptive;
 //    p.initial_weight_scale = 0.01

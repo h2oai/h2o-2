@@ -3,6 +3,7 @@ package water;
 import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
+import hex.deeplearning.DeepLearningModel;
 import javassist.*;
 import water.api.AUC;
 import water.api.DocGen;
@@ -282,8 +283,9 @@ public abstract class Model extends Lockable<Model> {
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    // FIXME: Replacing in non-existant columns with 0s only makes sense for sparse data (SVMLight), otherwise we should either throw an exception or use NaNs...
-    Frame  [] subVfr = vfr.subframe(names, 0); // select only supported columns, if column is missing replace it with zeroes
+    Frame  [] subVfr;
+    // replace missing columns with NaNs (or 0s for DeepLearning with sparse data)
+    subVfr = vfr.subframe(names, (this instanceof DeepLearningModel && ((DeepLearningModel)this).get_params().sparse) ? 0 : Double.NaN);
     vfr = subVfr[0]; // extract only subframe but keep the rest for delete later
     Vec[] frvecs = vfr.vecs();
     boolean[] toEnum = new boolean[frvecs.length];
