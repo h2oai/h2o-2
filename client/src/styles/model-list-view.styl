@@ -1,6 +1,12 @@
 .y-model-list-view
   dock()
-  overflow auto
+
+  .y-no-models
+    dock()
+
+  .y-models
+    dock(top:y-desktop-header-height)
+    overflow auto
 
   .y-model
     padding 10px

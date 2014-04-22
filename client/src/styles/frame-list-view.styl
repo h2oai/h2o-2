@@ -1,5 +1,13 @@
 .y-frame-list-view
   dock()
+
+  .y-no-frames
+    dock()
+
+  .y-frames
+    dock(top:y-desktop-header-height)
+    overflow auto
+
   .y-frame
     cursor pointer
     padding 10px
