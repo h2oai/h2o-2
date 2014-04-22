@@ -95,7 +95,7 @@ public class GLM2 extends ModelJob {
   // API output parameters END ------------------------------------------------------------
 
 
-  private static double GLM_GRAD_EPS = 1e-4; // done (converged) if subgrad < this value.
+  private static double GLM_GRAD_EPS = 1e-8; // done (converged) if subgrad < this value.
 
   private boolean highAccuracy(){return higher_accuracy;}
   private void setHighAccuracy(){
@@ -338,14 +338,13 @@ public class GLM2 extends ModelJob {
     if((improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
       ++_lambdaIdx;
       glmt._val = null;
-      if(_activeCols != null){
+      if(glmt._gram == null){ // assume we had lambda search with strong rules
         // we use strong rules so we can't really used this gram for the next lambda computation (different sets of coefficients)
         // I expect that:
         //  1) beta has been expanded to match current set of active cols
         //  2) it is new GLMIteration ready to be launched
         // caller (nextLambda(glmt,beta)) is expected to ensure this...
-        assert glmt._beta.length == _activeCols.length+1;
-        assert glmt._gram == null;
+        assert _activeCols == null || (glmt._beta.length == _activeCols.length+1);
         assert !glmt.isDone();
         glmt.asyncExec(_activeFrame);
       } else
@@ -403,22 +402,20 @@ public class GLM2 extends ModelJob {
         Log.info("GLM converged with max |subgradient| = " + err);
         final GLMIterationTask glmt3;
         // now filter out the cols for the next lambda...
-        if(lambda.length > 1 && _lambdaIdx < lambda.length-1){
-          int [] oldCols = _activeCols;
+        if(lambda.length > 1 && _lambdaIdx < lambda.length-1 && _activeCols != null){
           activeCols(lambda[_lambdaIdx+1],lambda[_lambdaIdx],glmt2.gradient(l2pen()));
           // epxand the beta
-          final double [] fullBeta = MemoryManager.malloc8d(_dinfo.fullN()+1);
-          int j = 0;
-          for(int c:oldCols)
-            fullBeta[c] = glmt._beta[j++];
-          assert j == glmt._beta.length-1;
-          fullBeta[fullBeta.length-1] = glmt._beta[j];
-          double [] newBeta = MemoryManager.malloc8d(_activeCols.length+1);
-          newBeta[newBeta.length-1] = fullBeta[fullBeta.length-1];
-          j = 0;
-          for(int c:_activeCols)
-            newBeta[j++] = fullBeta[c];
-          assert j == newBeta.length-1;
+          final double [] fullBeta = glmt2._beta;
+          final double [] newBeta;
+          if(_activeCols != null){
+            newBeta = MemoryManager.malloc8d(_activeCols.length+1);
+            newBeta[newBeta.length-1] = fullBeta[fullBeta.length-1];
+            int j = 0;
+            for(int c:_activeCols)
+              newBeta[j++] = fullBeta[c];
+            assert j == newBeta.length-1;
+          } else
+            newBeta = fullBeta;
           // public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
           glmt3 = new GLMIterationTask(GLM2.this,_activeData,glmt._glm,true,glmt._validate,glmt._computeGradient,newBeta,glmt._ymu,glmt._reg,new Iteration());
         } else glmt3 = glmt;
@@ -458,7 +455,7 @@ public class GLM2 extends ModelJob {
       newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
     } else
       newBetaDeNorm = null;
-    _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?fullBeta:newBetaDeNorm, newBetaDeNorm==null?null:fullBeta, (_iter+1));
+    _model.setLambdaSubmodel(_lambdaIdx, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1));
     _model.clone().update(self());
     return fullBeta;
   }
@@ -651,10 +648,16 @@ public class GLM2 extends ModelJob {
     int selected = 0;
     for(int i = 0; i < _dinfo.fullN(); ++i)
       if(grad[i] > rhs || grad[i] < -rhs)cols[selected++] = i;
-    _activeCols = Arrays.copyOf(cols,selected);
+    if(selected == _dinfo.fullN()){
+      _activeCols = null;
+      _activeFrame = _dinfo._adaptedFrame;
+      _activeData = _dinfo;
+    } else {
+      _activeCols = Arrays.copyOf(cols,selected);
+      _activeData = _dinfo.filterExpandedColumns(_activeCols);
+      _activeFrame = _activeData._adaptedFrame;
+    }
     Log.info("GLM2 strong rule at lambda=" + l1 + ", got " + selected + " active cols out of " + _dinfo.fullN() + " total.");
-    _activeData = _dinfo.filterExpandedColumns(_activeCols);
-    _activeFrame = _activeData._adaptedFrame;
     return _activeCols;
   }
 
