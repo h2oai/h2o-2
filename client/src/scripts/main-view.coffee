@@ -41,15 +41,15 @@ Steam.MainView = (_) ->
   
   switchToFrames = (opts) ->
     switchTopic _frameTopic
-    _.loadFrames if opts then opts else type: 'all'
+    _.loadFrames opts
 
   switchToModels = (opts) ->
     switchTopic _modelTopic
-    _.loadModels if opts then opts else type: 'all'
+    _.loadModels opts
 
   switchToScoring = (opts) ->
     switchTopic _scoringTopic
-    _.loadScorings if opts then opts else type: 'all'
+    _.loadScorings opts
 
   _topics = node$ [
     _frameTopic = createTopic 'Datasets', switchToFrames, yes

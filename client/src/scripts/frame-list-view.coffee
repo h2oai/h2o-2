@@ -62,7 +62,7 @@ Steam.FrameListView = (_) ->
 
   clearPredicate = -> _predicate type: 'all'
 
-  link$ _.loadFrames, _predicate
+  link$ _.loadFrames, (predicate) -> _predicate predicate if predicate
 
   items: _items
   predicateCaption: _predicateCaption

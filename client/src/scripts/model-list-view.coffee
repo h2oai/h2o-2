@@ -75,7 +75,8 @@ Steam.ModelListView = (_) ->
 
   clearPredicate = -> _predicate type: 'all'
 
-  link$ _.loadModels, _predicate
+  link$ _.loadModels, (predicate) -> _predicate predicate if predicate
+
   link$ _.deselectAllModels, ->
     #TODO ugly
     _isLive no

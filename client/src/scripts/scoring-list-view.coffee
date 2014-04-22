@@ -1,4 +1,5 @@
 Steam.ScoringListView = (_) ->
+  _predicate = node$ type: 'all'
   _items = do nodes$
   _hasItems = lift$ _items, (items) -> items.length > 0
 
@@ -26,7 +27,7 @@ Steam.ScoringListView = (_) ->
       isSelected: node$ no
 
     apply$ _isLive, self.isSelected, (isLive, isSelected) ->
-      _.scoringSelectionChanged isSelected, _predicate, scoring if isLive
+      _.scoringSelectionChanged isSelected, _predicate(), scoring if isLive
     self
 
   displayScorings = (scorings) ->
@@ -36,11 +37,6 @@ Steam.ScoringListView = (_) ->
     else
       activateItem head items
 
-  _predicate = null
-  loadScorings = (predicate) ->
-    console.assert isDefined predicate
-    _predicate = predicate
-    
     pastScorings = (_.getFromCache 'scoring') or _.putIntoCache 'scoring', []
     if predicate.type is 'scoring'
       pastScorings.unshift predicate.scoring
@@ -49,7 +45,7 @@ Steam.ScoringListView = (_) ->
 
     return
 
-  link$ _.loadScorings, loadScorings
+  link$ _.loadScorings, (predicate) -> _predicate predicate if predicate
   link$ _.deselectAllScorings, ->
     #TODO ugly
     _isLive no
