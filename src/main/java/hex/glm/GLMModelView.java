@@ -115,7 +115,6 @@ public class GLMModelView extends Request2 {
     sb.append("<tr><th>Null Deviance</th><td>" + val.null_deviance + "</td></tr>");
     sb.append("<tr><th>Residual Deviance</th><td>" + val.residual_deviance + "</td></tr>");
     sb.append("<tr><th>AIC</th><td>" + val.aic() + "</td></tr>");
-    sb.append("<tr><th>Training Error Rate Avg</th><td>" + val.avg_err + "</td></tr>");
     if(glm_model.glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + DFORMAT.format(val.auc()) + "</td></tr>");
     sb.append("</table>");
     if(glm_model.glm.family == Family.binomial)new AUC(val._cms,val.thresholds).toHTML(sb);

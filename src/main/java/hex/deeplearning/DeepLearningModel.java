@@ -772,6 +772,7 @@ public class DeepLearningModel extends Model {
         keep_running = false;
       }
       update(job_key);
+
 //    System.out.println(this);
       return keep_running;
     }
@@ -843,12 +844,12 @@ public class DeepLearningModel extends Model {
     job().toHTML(sb);
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
-            + (Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
+            + (UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key) + ", "
-            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + (UKV.get(jobKey) != null && Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
@@ -953,7 +954,7 @@ public class DeepLearningModel extends Model {
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
     DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node_mode ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
     DocGen.HTML.paragraph(sb, "Training samples per iteration: " + String.format("%,d", get_params().actual_train_samples_per_iteration));
-    final boolean isEnded = Job.isEnded(get_params().self());
+    final boolean isEnded = UKV.get(get_params().self()) != null && Job.isEnded(get_params().self());
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
       DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");

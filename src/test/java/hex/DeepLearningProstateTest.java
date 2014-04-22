@@ -117,6 +117,11 @@ public class DeepLearningProstateTest extends TestUtil {
 
                         // score and check result (on full data)
                         final DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+                        // test HTML
+                        {
+                          StringBuilder sb = new StringBuilder();
+                          mymodel.generateHTML("test", sb);
+                        }
                         if (valid == null ) valid = frame;
                         if (mymodel.isClassifier()) {
                           Frame pred = mymodel.score(valid);

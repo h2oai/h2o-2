@@ -110,25 +110,25 @@ class Basic(unittest.TestCase):
     def test_fp_many_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        if not H2O_SUPPORTS_OVER_50K_COLS:
-            print "Restricting number of columns tested to 50,000"
+        if H2O_SUPPORTS_OVER_50K_COLS:
             tryList = [
                 (100, 200000, 'cG', 120, 120),
                 (100, 300000, 'cH', 120, 120),
                 (100, 400000, 'cI', 120, 120),
                 (100, 500000, 'cJ', 120, 120),
-            ]
-        else:
-            tryList = [
-                (100, 200000, 'cG', 120, 120),
-                (100, 300000, 'cH', 120, 120),
-                (100, 400000, 'cI', 120, 120),
-                (100, 500000, 'cJ', 120, 120),
-                (100, 1200000, 'cK', 120, 120),
                 (100, 700000, 'cL', 120, 120),
                 (100, 800000, 'cM', 120, 120),
                 (100, 900000, 'cN', 120, 120),
                 (100, 1000000, 'cO', 120, 120),
+                (100, 1200000, 'cK', 120, 120),
+            ]
+        else:
+            print "Restricting number of columns tested to 50,000"
+            tryList = [
+                (100, 200000, 'cG', 200, 200),
+                (100, 300000, 'cH', 200, 200),
+                (100, 400000, 'cI', 200, 200),
+                (100, 500000, 'cJ', 200, 200),
             ]
 
 

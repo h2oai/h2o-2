@@ -2,10 +2,8 @@
 
 H\ :sub:`2`\ O installation in R Console From Download Table
 -------------------------------------------------------------
-
-
-
 These instructions assume you are using R  2.14.0 or later.  
+Regardless of whether installation is carried out in R Studio or R Console, the instructions are the same. 
 
 **STEP 1**
 
@@ -15,7 +13,7 @@ obtained by visiting H\ :sub:`2`\ O available downloads at
 
 Choose the version of  H\ :sub:`2`\ O best for you, and unzip the
 downloaded H\ :sub:`2`\ O zip file. The most recent promoted build is
-reccomended. 
+recommended. 
 
 **STEP 2**
 
@@ -40,7 +38,7 @@ instructions in the picture below:
 
 
 Note: users may get warnings of the type "Error in
-detatch("package:h2o", unload = TRUE): invalid 'name' argument. 
+detach("package:h2o", unload = TRUE): invalid 'name' argument. 
 This tells users that there is no  H\ :sub:`2`\ O package to uninstall. These
 warnings can safely be ignored.  
   
