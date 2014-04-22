@@ -19,7 +19,7 @@ def compare_csv_at_one_col(csvPathname, msg, colIndex=-1, translate=None, skipHe
                 if translate:
                     output = translate[output]
                 # only print first 10 for seeing
-                if rowNum<10: print msg, "raw output col:", row[-1], "translated:", output
+                if rowNum<10: print msg, "raw output col:", row[colIndex], "translated:", output
                 predictOutput.append(output)
             rowNum += 1
     return (rowNum, predictOutput)
@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
         predictCsv = 'predict_0.csv'
         actualCsv = 'actual_0.csv'
 
-        if 1==0:
+        if 1==1:
             y = 4 # last col
             response = 'response'
             skipSrcOutputHeader = 1
@@ -62,6 +62,7 @@ class Basic(unittest.TestCase):
             # translate = {'setosa': 0.0, 'versicolor': 1.0, 'virginica': 2.0}
             # No translate because we're using an Exec to get the data out?, and that loses the encoding?
             translate = None
+            expectedPctWrong = 0.0
             
         elif 1==0:
             y = 54 # last col
@@ -74,7 +75,8 @@ class Basic(unittest.TestCase):
             csvPathname = 'standard/covtype.shuffled.10pct.data'
             hexKey = 'covtype.shuffled.10pct.data.hex'
             translate = {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7}
-        elif 1==1:
+            expectedPctWrong = 0.7
+        elif 1==0:
             y = 54 # last col
             response = 'C54'
             skipSrcOutputHeader = 1
@@ -86,6 +88,7 @@ class Basic(unittest.TestCase):
             hexKey = 'covtype.shuffled.10pct.data.hex'
             # translate = {1: 0.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0}
             translate = {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7}
+            expectedPctWrong = 0.7
         elif 1==0:
             y = 54 # last col
             response = 'C54'
@@ -96,6 +99,7 @@ class Basic(unittest.TestCase):
             csvPathname = 'standard/covtype.data'
             hexKey = 'covtype.data.hex'
             translate = {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7}
+            expectedPctWrong = 0.7
         else:
             y = 0 # first col
             response = 'C1'
@@ -108,6 +112,7 @@ class Basic(unittest.TestCase):
             translate = { \
                 '0': 0, '1': 1, '2': 2, '3': 3, '4': 4,\
                 '5': 5, '6': 6, '7': 7, '8': 8, '9': 9 }
+            expectedPctWrong = 0.7
 
         csvPredictPathname = SYNDATASETS_DIR + "/" + predictCsv
         csvSrcOutputPathname = SYNDATASETS_DIR + "/" + actualCsv
@@ -198,7 +203,7 @@ class Basic(unittest.TestCase):
         # we are predicting using training data...so error is really low
         # self.assertAlmostEqual(pctWrong, classification_error, delta = 0.2, 
         #     msg="predicted pctWrong: %s should be close to training classification error %s" % (pctWrong, classification_error))
-        self.assertAlmostEqual(pctWrong, 0.7, delta = 0.2, 
+        self.assertAlmostEqual(pctWrong, expectedPctWrong, delta = 0.2, 
             msg="predicted pctWrong: %s should be small because we're predicting with training data" % pctWrong)
 
 

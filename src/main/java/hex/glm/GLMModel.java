@@ -35,7 +35,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="warnings")
   String []  warnings;
   @API(help="Decision threshold.")
-  final double     threshold;
+  double     threshold;
   @API(help="glm params")
   final GLMParams  glm;
   @API(help="beta epsilon - stop iterating when beta diff is below this threshold.")
@@ -240,7 +240,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         double response = chunks[chunks.length-1].at0(i);
         _res.add(response, _model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
-      _res.avg_err /= _res.nobs;
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
@@ -277,8 +276,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         double response = chunks[chunks.length-1].at80(i);
         val.add(response, model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
-      for(GLMValidation val:_xvals)
-        if(val.nobs > 0)val.avg_err = val.avg_err/val.nobs;
     }
     @Override public void reduce(GLMXValidationTask gval){
       _nobs += gval._nobs;
@@ -318,9 +315,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public boolean setAndTestValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
-    if(lambdaIdx == 0 || rank(lambdaIdx) == 1)return true;
+    if(lambdaIdx == 0 || rank(lambdaIdx) == 1){
+      threshold = val.best_threshold;
+      return true;
+    }
     double diff = (submodels[lambdaIdx-1].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
-    if(diff >= 0.01)best_lambda_idx = lambdaIdx;
+    if(diff >= 0.01) {
+      best_lambda_idx = lambdaIdx;
+      threshold = val.best_threshold;
+      System.out.println("setting threshold to " + threshold);
+    }
     return  true;
   }
 

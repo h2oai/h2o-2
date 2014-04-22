@@ -463,9 +463,11 @@ h2o.kmeans.VA <- function(data, centers, cols = '', iter.max = 10, normalize = F
     stop("Cannot run k-means on non-numeric columns!")
 
   result$params = list(cols=args$cols, centers=centers, iter.max=iter.max, normalize=normalize, init=myInit, seed=seed)
-  result$centers = matrix(unlist(res2$clusters), ncol = length(feat), byrow = TRUE)
-  dimnames(result$centers) = list(seq(1, centers), feat)
+  result$centers = matrix(unlist(res2$clusters), ncol = length(args$cols), byrow = TRUE)
+  dimnames(result$centers) = list(seq(1, centers), args$cols)
   result$tot.withinss = res2$error
+  result$betweenss = res2$between_cluster_SS
+  result$totss <- res2$total_SS
   result$cluster = h2o.predict(new("H2OKMeansModelVA", key=destKey, data=data, model=list()))
 
   res3 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMSCORE, model_key=destKey, key=data@key)
