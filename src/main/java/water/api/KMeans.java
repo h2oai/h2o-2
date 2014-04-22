@@ -105,7 +105,7 @@ public class KMeans extends Request {
       sb.append("<div class='alert'>Actions: " + KMeansScore.link(m._key, "Score on dataset") + ", "
           + KMeansApply.link(m._key, "Apply to dataset") + ", " + KMeans.link(m._dataKey, "Compute new model")
           + "</div>");
-      DocGen.HTML.section(sb, "Error: " + _m._error);
+      DocGen.HTML.section(sb, "Cluster Centers:");
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       sb.append("<tr>");
@@ -124,6 +124,24 @@ public class KMeans extends Request {
         sb.append("</tr>");
       }
       sb.append("</table></span>");
+
+      DocGen.HTML.section(sb, "Overall Totals: ");
+      double[] row = new double[]{m._total_SS, m._error, m._between_cluster_SS};
+      rowHTML(sb, new String[]{"Total Sum of Squares", "Total Within Cluster Sum of Squares", "Between Cluster Sum of Squares"}, row);
     }
+  }
+
+  private static void rowHTML(StringBuilder sb, String[] header, double[] ro) {
+    sb.append("<span style='display: inline-block; '>");
+    sb.append("<table class='table table-striped table-bordered'>");
+    sb.append("<tr>");
+    for (String aHeader : header) sb.append("<th>").append(aHeader).append("</th>");
+    sb.append("</tr>");
+    sb.append("<tr>");
+    for (double row : ro) {
+        sb.append("<td>").append(ElementBuilder.format(row)).append("</td>");
+    }
+    sb.append("</tr>");
+    sb.append("</table></span>");
   }
 }
