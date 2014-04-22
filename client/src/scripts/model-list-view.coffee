@@ -1,5 +1,17 @@
 Steam.ModelListView = (_) ->
+  _predicate = node$ type: 'all'
   _items = do nodes$
+  _hasItems = lift$ _items, (items) -> items.length > 0
+
+  _canClearPredicate = lift$ _predicate, (predicate) -> predicate.type isnt 'all'
+  _predicateCaption = lift$ _predicate, (predicate) ->
+    switch predicate.type
+      when 'all'
+        'Showing\nall models'
+      when 'compatibleWithFrame'
+        "Showing models compatible with\n#{predicate.frameKey}"
+      else
+        ''
 
   #TODO ugly
   _isLive = node$ yes
@@ -32,17 +44,18 @@ Steam.ModelListView = (_) ->
       isSelected: node$ no
 
     apply$ _isLive, self.isSelected, (isLive, isSelected) ->
-      _.modelSelectionChanged isSelected, _predicate, model if isLive
+      _.modelSelectionChanged isSelected, _predicate(), model if isLive
     self
 
   displayModels = (models) ->
     _items items = map models, createItem
-    activateItem head items unless isEmpty items
+    if isEmpty items
+      _.displayEmpty()
+    else
+      activateItem head items
 
-  _predicate = null
-  loadModels = (predicate) ->
+  apply$ _predicate, (predicate) ->
     console.assert isDefined predicate
-    _predicate = predicate
     switch predicate.type
       when 'all'
         _.requestModels (error, data) ->
@@ -60,7 +73,9 @@ Steam.ModelListView = (_) ->
             displayModels (head data.frames).compatible_models
     return
 
-  link$ _.loadModels, loadModels
+  clearPredicate = -> _predicate type: 'all'
+
+  link$ _.loadModels, _predicate
   link$ _.deselectAllModels, ->
     #TODO ugly
     _isLive no
@@ -69,5 +84,9 @@ Steam.ModelListView = (_) ->
     _isLive yes
 
   items: _items
+  hasItems: _hasItems
+  predicateCaption: _predicateCaption
+  clearPredicate: clearPredicate
+  canClearPredicate: _canClearPredicate
   template: 'model-list-view'
 
