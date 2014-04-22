@@ -7,8 +7,8 @@ Steam.ScoringView = (_, _scoring) ->
     algorithm: score.model.model_algorithm
     category: score.model.model_category
     responseColumn: score.model.response_column_name
-    status: node$ score.status or '-'
-    time: node$ score.time or '-'
+    status: node$ if isNull score.status then '-' else score.status
+    time: node$ if isNull score.time then '-' else score.time
     result: node$ score.result
 
   initialize = (scoring) ->
