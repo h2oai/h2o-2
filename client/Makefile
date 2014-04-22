@@ -130,6 +130,7 @@ build: \
 	$(DEPLOY)/fonts/fontawesome-webfont.svg \
 	$(DEPLOY)/fonts/fontawesome-webfont.ttf \
 	$(DEPLOY)/fonts/fontawesome-webfont.woff \
+	$(DEPLOY)/img/h2o.png \
 	$(DEPLOY)/css/lib.css \
 	$(DEPLOY)/css/steam.css \
 	$(DEPLOY)/js/lib.js \
@@ -276,6 +277,9 @@ $(DEPLOY)/js/steam.js: $(SCRIPTS) $(BROWSER_SCRIPTS)
 	cat $^ >> $@
 	@echo '}).call(this);' >> $@
 
+$(DEPLOY)/img/%.png: src/images/%.png
+	@mkdir -p $(@D)
+	cp $< $@
 
 $(DEPLOY)/fonts/%.eot: src/fonts/%.eot
 	@mkdir -p $(@D)
