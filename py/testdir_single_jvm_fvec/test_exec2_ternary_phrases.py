@@ -26,6 +26,16 @@ phrasesCompound = [
         # "x=0; x+2",
 ]
 
+
+
+# these have to be in their own str=. Not used for now
+functionPhrases = [
+    "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
+    "function(x){x+1}(2)",
+    "function(x){y=1+2}(2)",
+    "function(x,y,z){x[]}(r.hex,1,2)",
+]
+
 phrases = [
         # does ifelse() have a problem?
         # "ifelse(1,0,2)",
@@ -51,10 +61,6 @@ phrases = [
         "c(1,3,5)",
         "cbind(c(1,2,3,4), c(5,6,7,8))",
         "factor(r.hex[,5])",
-        "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
-        "function(x){x+1}(2)",
-        "function(x){y=1+2}(2)",
-        "function(x,y,z){x[]}(r.hex,1,2)",
         "is.na(r.hex)",
         "max(1,23)",
         "min(1,2)",

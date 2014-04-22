@@ -238,14 +238,28 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     if family=="binomial":
         print "%15s %s" % ("auc:\t", validations['auc'])
         if h2o.beta_features:
-            print "%15s %s" % ("best_threshold:\t", validations['best_threshold'])
-            # show the middle one? 
-            print "We're just going to print the middle '_cms' ..that must be threshold 0.5?. this isn't above best_threshold"
+            best_threshold = validations['best_threshold']
+            thresholds = validations['thresholds']
+            print "%15s %s" % ("best_threshold:\t", best_threshold)
+
+            # have to look up the index for the cm, from the thresholds list
+            best_index = None
+            for i,t in enumerate(thresholds):
+                if t == best_threshold:
+                    best_index = i
+                    break
+                
+            assert best_index!=None, "%s %s" % (best_threshold, thresholds)
+            print "Now printing the right 'best_threshold' %s from '_cms" % best_threshold
+
             # cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
-            cms = glm['glm_model']['submodels'][0]['validation']['_cms']
-            # rounds to int
-            mid = len(cms)/2
-            cm = cms[mid]
+            submodels = glm['glm_model']['submodels']
+            cms = submodels[0]['validation']['_cms']
+            assert best_index<len(cms), "%s %s" % (best_index, len(cms))
+            # if we want 0.5..rounds to int
+            # mid = len(cms)/2
+            # cm = cms[mid]
+            cm = cms[best_index]
 
             print "cm:", h2o.dump_json(cm['_arr'])
             predErr = cm['_predErr']
