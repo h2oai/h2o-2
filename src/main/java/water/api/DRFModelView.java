@@ -12,7 +12,7 @@ public class DRFModelView extends Request2 {
   class DRFModelKeyFilter extends H2OKey { public DRFModelKeyFilter() { super("model_key",true); } }
 
   @API(help="DRF Model")
-  DRFModel drf_model;
+  public DRFModel drf_model;
 
   public static String link(String txt, Key model) {
     return "<a href='DRFModelView.html?_modelKey=" + model + "'>" + txt + "</a>";

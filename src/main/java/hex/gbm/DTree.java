@@ -1,19 +1,21 @@
 package hex.gbm;
 
+import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 import water.*;
-import water.api.*;
+import water.api.AUC;
+import water.api.DocGen;
+import water.api.Inspect2;
+import water.api.Predict;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
-
-import static hex.gbm.SharedTreeModelBuilder.createRNG;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -669,9 +671,11 @@ public class DTree extends Iced {
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       sb.append("<div class=\"alert\">").append("Actions: ");
-      sb.append(Inspect2.link("Inspect training data ("+_dataKey.toString()+")", _dataKey)).append(", ");
+      if (_dataKey != null)
+        sb.append(Inspect2.link("Inspect training data ("+_dataKey.toString()+")", _dataKey)).append(", ");
       sb.append(Predict.link(_key,"Score on dataset")).append(", ");
-      sb.append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
+      if (_dataKey != null)
+        sb.append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
       sb.append("<i class=\"icon-play\"></i>&nbsp;").append("Continue training this model");
       sb.append("</div>");
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
