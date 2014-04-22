@@ -62,9 +62,8 @@ final class DataAdapter  {
   }
 
   static boolean isByteCol( Vec C, int rows, boolean isClass ) {
-    return (C.isEnum() || C.isInt()) && !isClass && C.min() >= 0 && C.length()==rows &&
-            (C.max()<255 ||
-                    C.max() <256 && C.length()==rows);
+    return (C.isInt() || C.isEnum()) && !isClass && C.min() >= 0 && C.length()==rows &&
+            (C.max()<255 || C.max() <256 && C.length()==rows);
   }
 
   /** Given a value in enum format, returns:  the value in the original format if no

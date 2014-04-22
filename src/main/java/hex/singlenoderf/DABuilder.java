@@ -7,6 +7,7 @@ import water.Key;
 import water.Timer;
 import water.fvec.Chunk;
 import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Log;
 
 import java.util.ArrayList;
@@ -76,8 +77,10 @@ public class DABuilder {
     protected DataAdapter inhaleData(Frame fr) {
       Timer t_inhale = new Timer();
       SpeeDRFModel rfmodel = _rfmodel;
-
-
+      boolean[] _isByteCol = new boolean[fr.numCols()];
+      for (int i = 0; i < _isByteCol.length; ++i) {
+        _isByteCol[i] = DataAdapter.isByteCol(fr.vecs()[i], (int)fr.numRows(), i == _isByteCol.length - 1);
+      }
       // The model columns are dense packed - but there will be columns in the
       // data being ignored.  This is a map from the model's columns to the
       // building dataset's columns.
@@ -92,12 +95,12 @@ public class DABuilder {
       // Check that we have proper number of valid columns vs. features selected, if not cap.
       checkAndLimitFeatureUsedPerSplit(dapt);
       // Now load the DataAdapter with all the rows on this node.
-      final int ncolumns = fr.numCols();
+//      final int ncolumns = fr.numCols();
 
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
-        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, modelDataMap, totalRows));
+        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, modelDataMap, totalRows,_isByteCol));
       }
       ForkJoinTask.invokeAll(dataInhaleJobs);
 
@@ -107,7 +110,7 @@ public class DABuilder {
       return dapt;
     }
 
-    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final int[] modelDataMap, final int totalRows) {
+    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final int[] modelDataMap, final int totalRows, final boolean[] isByteCol) {
       return new RecursiveAction() {
         @Override protected void compute() {
           try {
@@ -119,11 +122,11 @@ public class DABuilder {
               boolean rowIsValid = false;
               for(int c = 0; c < chks.length; ++c) {
                 //final int col = modelDataMap[c];
-                if(chks[c].isNA(rowNum)) {
+                if(chks[c].isNA0(j)) {
                   if (c == ncolumns - 1) rowIsValid = false;
                   dapt.addBad(rowNum, c); continue;
                 }
-                if (DataAdapter.isByteCol(fr.vecs()[c], totalRows, c == ncolumns - 1)) {
+                if (isByteCol[c]) {
                   int val = (int)chks[c].at8(rowNum);
                   dapt.add1(val, rowNum, c);
                 } else {
