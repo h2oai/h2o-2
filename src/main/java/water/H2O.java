@@ -13,6 +13,7 @@ import water.nbhm.NonBlockingHashMap;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.license.LicenseManager;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
@@ -26,6 +27,7 @@ import com.google.common.base.Objects;
 public final class H2O {
   public static volatile AbstractEmbeddedH2OConfig embeddedH2OConfig;
   public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
+  public static volatile LicenseManager licenseManager;
 
   public static String VERSION = "(unknown)";
   public static long START_TIME_MILLIS = -1;
@@ -777,6 +779,7 @@ public final class H2O {
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
     public int    nthreads=4*NUMCPUS; // Max number of F/J threads in each low-priority batch queue
+    public String license; // License file
     public String h = null;
     public String help = null;
     public String version = null;
@@ -825,6 +828,9 @@ public final class H2O {
     "    -nthreads <#threads>\n" +
     "          Maximum number of threads in the low priority batch-work queue.\n" +
     "          (The default is 4*numcpus.)\n" +
+    "\n" +
+    "    -license <licenseFilePath>\n" +
+    "          Path to license file on local filesystem.\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
@@ -960,7 +966,9 @@ public final class H2O {
 
     // Load up from disk and initialize the persistence layer
     initializePersistence();
-    Log.POST(340,"");
+    Log.POST(340, "");
+    initializeLicenseManager();
+    Log.POST(345, "");
     // Start network services, including heartbeats & Paxos
     startNetworkServices();   // start server services
     Log.POST(350,"");
@@ -1369,6 +1377,18 @@ public final class H2O {
     Persist.initialize();
   }
 
+  static void initializeLicenseManager() {
+    licenseManager = new LicenseManager();
+    if (OPT_ARGS.license != null) {
+      LicenseManager.Result r = licenseManager.readLicenseFile(OPT_ARGS.license);
+      if (r == LicenseManager.Result.OK) {
+        Log.info("Successfully read license file ("+ OPT_ARGS.license + ")");
+      }
+      else {
+        Log.err("readLicenseFile failed (" + r + ")");
+      }
+    }
+  }
 
   // Cleaner ---------------------------------------------------------------
 
