@@ -29,7 +29,7 @@ public abstract class Chunk extends Iced implements Cloneable {
     * JIT'd code (similar issue to using iterator objects).
     * <p>
     * Slightly slower than 'at0' since it range checks within a chunk. */
-  public final long  at8( long i ) { 
+  public final long  at8( long i ) {
     long x = i-_start;
     if( 0 <= x && x < _len ) return at80((int)x);
     throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
@@ -43,7 +43,7 @@ public abstract class Chunk extends Iced implements Cloneable {
    * JIT'd code (similar issue to using iterator objects).
    * <p>
    * Slightly slower than 'at80' since it range checks within a chunk. */
-  public final double at( long i ) { 
+  public final double at( long i ) {
     long x = i-_start;
     if( 0 <= x && x < _len ) return at0((int)x);
     throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
@@ -67,9 +67,9 @@ public abstract class Chunk extends Iced implements Cloneable {
 
 
   /** Slightly slower than 'at0' inside a chunk; goes (very) slow outside the
-   *  chunk instead of throwing.  First outside-chunk fetches & caches whole
-   *  chunk; maybe takes multiple msecs.  2nd & later touches in the same
-   *  outside-chunk probably run 100x slower than inside-chunk accesses.  */ 
+   *  chunk instead of throwing.  First outside-chunk fetches and caches whole
+   *  chunk; maybe takes multiple msecs.  2nd and later touches in the same
+   *  outside-chunk probably run 100x slower than inside-chunk accesses.  */
   public final double    at_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ?   at0((int)x) :  _vec. at(i); }
   public final long     at8_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ?  at80((int)x) :  _vec.at8(i); }
   public final boolean isNA_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ? isNA0((int)x) : _vec.isNA(i); }
@@ -88,7 +88,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   public final float  set( long i, float  f) { long x = i-_start; return (0 <= x && x < _len) ? set0((int)x,f) : _vec.set(i,f); }
   /** Set the element as missing the slow way.  */
   public final boolean setNA( long i )       { long x = i-_start; return (0 <= x && x < _len) ? setNA0((int)x) : _vec.setNA(i); }
-  
+
   private void setWrite() {
     if( _chk2 != null ) return; // Already setWrite
     assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
@@ -149,11 +149,11 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   public int cidx() { return _vec.elem2ChunkIdx(_start); }
 
-  /** Chunk-specific readers.  */ 
+  /** Chunk-specific readers.  */
   abstract protected double   atd_impl(int idx);
   abstract protected long     at8_impl(int idx);
   abstract protected boolean isNA_impl(int idx);
-  
+
   /** Chunk-specific writer.  Returns false if the value does not fit in the
    *  current compression scheme.  */
   abstract boolean set_impl  (int idx, long l );
@@ -192,23 +192,23 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   /** Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
    *  chunk and written value is out-of-range for an update-in-place operation.
-   *  Bulk copy from the compressed form into the nc._ls array.   */ 
+   *  Bulk copy from the compressed form into the nc._ls array.   */
   abstract NewChunk inflate_impl(NewChunk nc);
   abstract boolean hasFloat();
-  /** Chunk-specific implementations of read & write  */ 
+  /** Chunk-specific implementations of read and write  */
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
 
   // Support for fixed-width format printing
   public String pformat () { return pformat0(); }
   public int pformat_len() { return pformat_len0(); }
-  protected String pformat0() { 
+  protected String pformat0() {
     assert !hasFloat() : "need impl:"+getClass(); // Floats handled in subclasses
     long min = (long)_vec.min();
     if( min < 0 ) return "% "+pformat_len0()+"d";
     return "%"+pformat_len0()+"d";
   }
-  protected int pformat_len0() { 
+  protected int pformat_len0() {
     assert !hasFloat();         // Floats handled in subclasses
     int len=0;
     long min = (long)_vec.min();

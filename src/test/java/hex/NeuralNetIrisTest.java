@@ -42,7 +42,8 @@ public class NeuralNetIrisTest extends TestUtil {
     else Assert.failNotEquals("Not equal: ", new Double(a), new Double(b));
   }
 
-  @Test public void compare() throws Exception {
+  @Test
+  public void compare() throws Exception {
 
     // Testing different things
     // Note: Microsoft reference implementation is only for Tanh + MSE, rectifier and MCE are implemented by 0xdata (trivial).
@@ -60,10 +61,13 @@ public class NeuralNetIrisTest extends TestUtil {
 
     NeuralNet.ExecutionMode[] trainers = {
             NeuralNet.ExecutionMode.SingleThread,
-            NeuralNet.ExecutionMode.SingleNode,
+//            NeuralNet.ExecutionMode.SingleNode,
 //            NeuralNet.ExecutionMode.MapReduce
     };
 
+    final long seed0 = 0xDECAF;
+
+    int count = 0;
     int hogwild_runs = 0;
     int hogwild_errors = 0;
     for (NeuralNet.ExecutionMode trainer : trainers) {
@@ -81,7 +85,7 @@ public class NeuralNetIrisTest extends TestUtil {
 
                     NeuralNetMLPReference ref = new NeuralNetMLPReference();
 
-                    final long seed = new Random().nextLong(); //Actually change the seed every time!
+                    final long seed = seed0 + count;
                     Log.info("Using seed " + seed);
                     ref.init(activation, water.util.Utils.getDeterRNG(seed), holdout_ratio);
 
@@ -247,6 +251,7 @@ public class NeuralNetIrisTest extends TestUtil {
                     if (trainer != NeuralNet.ExecutionMode.SingleThread) {
                       hogwild_runs++;
                     }
+                    count++;
                   }
                 }
               }

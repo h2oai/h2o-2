@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.gbm.DTree.TreeModel.CompressedTree;
@@ -7,14 +8,14 @@ import hex.gbm.DTree.TreeModel.TreeVisitor;
 import water.*;
 import water.api.AUC;
 import water.api.DocGen;
+import water.api.Inspect2;
+import water.api.Predict;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.util.*;
 
 import java.util.Arrays;
 import java.util.Random;
-
-import static hex.gbm.SharedTreeModelBuilder.createRNG;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -128,10 +129,12 @@ public class DTree extends Iced {
     public final long  rowsRight() { return _n1; }
     /** Returns empirical improvement in mean-squared error.
      *
-     *  Formula for node splittin space into two subregions R1,R2 with predictions y1, y2:
-     *    i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2
+     *  <p>Formula for node splitting space into two subregions R1,R2 with predictions y1, y2:</p>
+     *  <code>i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2</code>
      *
-     * @see (35), (45) in J. Friedman - Greedy Function Approximation: A Gradient boosting machine */
+     *
+     *  <p>For more information see (35), (45) in the paper
+     *  <a href="www-stat.stanford.edu/~jhf/ftp/trebst.pdf"><i>J. Friedman - Greedy Function Approximation: A Gradient boosting machine</i></a></p> */
     public final float improvement() {
       double d = (_p0-_p1);
       return (float) ( d*d*_n0*_n1 / (_n0+_n1) );
@@ -667,11 +670,19 @@ public class DTree extends Iced {
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
+      sb.append("<div class=\"alert\">").append("Actions: ");
+      if (_dataKey != null)
+        sb.append(Inspect2.link("Inspect training data ("+_dataKey.toString()+")", _dataKey)).append(", ");
+      sb.append(Predict.link(_key,"Score on dataset")).append(", ");
+      if (_dataKey != null)
+        sb.append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
+      sb.append("<i class=\"icon-play\"></i>&nbsp;").append("Continue training this model");
+      sb.append("</div>");
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
-      DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
-      DocGen.HTML.paragraph(sb,"Trees: " + ntrees());
+      DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins+", Trees: " + ntrees());
       generateModelDescription(sb);
-      DocGen.HTML.paragraph(sb,water.api.Predict.link(_key,"Predict!"));
+      sb.append("</pre>");
+
       String[] domain = cmDomain; // Domain of response col
 
       // Generate a display using the last scored Model.  Not all models are

@@ -12,16 +12,15 @@
 
     "create_json": true,
 
-    "hdfs_name_node": "ch-0:8020",
-
-    "hdfs_version": "cdh4",
-    "use_hdfs": false,
+    "hdfs_name_node": "ch-0",
+    "hdfs_version": "cdh5",
+    "use_hdfs": true,
 
     "use_flatfile": true,
     "base_port": 54355,
 
     "ip": [
-    "10.71.0.100",
-    "10.71.0.101"
+    "10.71.0.101",
+    "10.71.0.102"
     ]
 }

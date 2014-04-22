@@ -8,8 +8,8 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 * Keys
 *
 * This class defines:
-* - A Key's bytes (name) & hash
-* - Known Disk & memory replicas.
+* - A Key's bytes (name) and hash
+* - Known Disk and memory replicas.
 * - A cache of somewhat expensive to compute stuff related to the current
 * Cloud, plus a byte of the desired replication factor.
 *
@@ -45,6 +45,8 @@ public final class Key extends Iced implements Comparable {
   public static final byte VGROUP = 6; // vector group
 
   public static final byte DFJ_INTERNAL_USER = 7;
+
+  public static final byte HIDDEN_USER_KEY = 31;
 
   public static final byte USER_KEY = 32;
 
@@ -230,6 +232,14 @@ public final class Key extends Iced implements Comparable {
     ab.put4(-1);
     ab.putA1(kb,kb.length);
     return make(Arrays.copyOf(ab.buf(),ab.position()),rf);
+  }
+
+  // Hide a user key by turning it into a system key of type HIDDEN_USER_KEY
+  final public static Key makeUserHidden(final Key orig) {
+    if (!orig.user_allowed()) return orig; //already hidden
+    byte[] kb = orig._kb.clone();
+    kb[0] = Key.HIDDEN_USER_KEY;
+    return Key.make(kb);
   }
 
   // Custom Serialization Reader: Keys must be interned on construction.

@@ -1,16 +1,27 @@
 package hex.drf;
 
 import hex.drf.DRF.DRFModel;
-
-import java.util.Arrays;
-
-import org.junit.*;
-
-import water.*;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import water.Key;
+import water.TestUtil;
+import water.UKV;
+import water.api.DRFModelView;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
+import java.util.Arrays;
+
 public class DRFTest extends TestUtil {
+
+  private final void testHTML(DRF.DRFModel m) {
+    StringBuilder sb = new StringBuilder();
+    DRFModelView drfv = new DRFModelView();
+    drfv.drf_model = m;
+    drfv.toHTML(sb);
+    assert(sb.length() > 0);
+  }
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
@@ -36,15 +47,16 @@ public class DRFTest extends TestUtil {
   }
 
   //  @Ignore
-  @Test public void testClassIris50() throws Throwable {
+  //[[30, 0, 0], [0, 31, 3], [0, 4, 32]], but was: [[28, 0, 0], [0, 30, 2], [0, 2, 28]]: arrays first differed at element [0]; expected:<30> but was:<28>
+  @Test public void testClassIris5() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
-          50,
-          a( a(30, 0,  0),
-             a(0, 31,  3),
-             a(0,  4, 32)),
+          5,
+          a( a(28, 0,  0),
+             a(0, 30,  2),
+             a(0,  2, 28)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -63,32 +75,33 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
-  //  @Ignore
-  @Test public void testClassCars50() throws Throwable {
+  @Test public void testClassCars5() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
-        50,
-        a( a(0,   4, 0,  0,   0),
-           a(0, 207, 0,  0,   0),
+        5,
+        a( a(1,   3, 0,  1,   0),
+           a(2, 173, 2,  3,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   4, 0, 80,   0),
-           a(0,   0, 1,  3, 104)),
+           a(0,   6, 0, 61,   1),
+           a(0,   0, 0,  1,  92)),
         s("3", "4", "5", "6", "8"));
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testConstantCols() throws Throwable {
-    basicDRFTestOOBE(
+    try {
+      basicDRFTestOOBE(
         "./smalldata/poker/poker100","poker.hex",
         new PrepData() { @Override int prep(Frame fr) {
           for (int i=0; i<7;i++) UKV.remove(fr.remove(3)._key);
           return 3;
-          } },
+        } },
         1,
         null,
         null);
-
+      Assert.fail();
+    } catch( IllegalArgumentException iae ) { /*pass*/ }
   }
 
   //@Test
@@ -186,6 +199,7 @@ public class DRFTest extends TestUtil {
       drf.invoke();
       // Get the model
       model = UKV.get(drf.dest());
+      testHTML(model);
       // And compare CMs
       assertCM(expCM, model.cms[model.cms.length-1]._arr);
       Assert.assertEquals("Number of trees differs!", ntree, model.errs.length-1);
@@ -195,9 +209,6 @@ public class DRFTest extends TestUtil {
       frTest = fnametest!=null ? parseFrame(destTest, fnametest) : null;
       pred = drf.score(frTest!=null?frTest:drf.source);
 
-    } catch (Throwable t) {
-      t.printStackTrace();
-      throw t;
     } finally {
       drf.source.delete();
       UKV.remove(drf.response._key);

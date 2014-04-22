@@ -1,5 +1,5 @@
 PCA Tutorial
-------------
+===============
 
 The purpose of this tutorial is to walk the new user through 
 a PCA analysis beginning to end in H\ :sub:`2`\ O. 

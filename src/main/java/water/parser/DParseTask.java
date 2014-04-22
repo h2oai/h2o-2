@@ -306,8 +306,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   /** Creates a phase one dparse task.
    *
    * @param dataset Dataset to parse.
-   * @param resultKey VA to store results to.
-   * @param parserType Parser type to use.
    * @return Phase one DRemoteTask object.
    */
   public DParseTask createPassOne(Value dataset, ParseDataset job, CustomParser parser) {
@@ -333,8 +331,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
    *
    * For XLS and XLSX parsers that do not work in distrubuted way parses the
    * whole datasets.
-   *
-   * @throws Exception
    */
   public void passOne() {
     if((_sourceDataset.isArray())) {
@@ -475,7 +471,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         String numLevelsStr = isCategorical ? String.format("numLevels(%d)", _colDomains[i].length) : "";
         Log.info(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
       }
-      catch (Exception _) {}
+      catch (Exception xe) {}
 
       off += Math.abs(cols[i]._size);
     }

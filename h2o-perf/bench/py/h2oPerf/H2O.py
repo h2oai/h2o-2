@@ -81,6 +81,18 @@ class H2OUseCloud:
         node = self.nodes[0]
         return node.get_port()
 
+    def all_ips(self):
+        res = []
+        for node in self.nodes:
+            res += [node.get_ip()]
+        return ','.join(res)
+
+    def all_pids(self):
+        res = []
+        for node in self.nodes:
+            res += [node.request_pid()]
+        return','.join(res)
+
 class H2OCloudNode:
     """
     A class representing one node in an H2O cloud.
@@ -165,6 +177,33 @@ class H2OCloudNode:
         """
         Get process_total_ticks, system_total_ticks, sys_idle_ticks.
         """
+        #poll on url until get a valid http response
+        max_retries = 30
+        m = 0
+        got_url_sys = False
+        got_url_proc = False
+        while m < max_retries:
+            url_sys  = "http://{}:{}/stat".format(self.ip, 8000)
+            url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
+            r_sys    = requests.get(url_sys).text.split('\n')[0]
+            r_proc   = requests.get(url_proc).text.strip().split()
+            if not got_url_sys:
+                if not ("404" and "not" and "found") in r_sys:
+                    got_url_sys = True
+
+            if not got_url_proc:
+                if not ("404" and "not" and "found") in r_proc:
+                     got_url_proc = True
+
+            if got_url_proc and got_url_sys:
+                break
+
+            m += 1
+            time.sleep(1)
+
+        if not (got_url_proc and got_url_sys):
+            raise Exception("Max retries on /proc scrape exceeded! Did the JVM properly start?")
+    
         url_sys  = "http://{}:{}/stat".format(self.ip, 8000)
         url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
         r_sys    = requests.get(url_sys).text.split('\n')[0]
@@ -176,9 +215,25 @@ class H2OCloudNode:
         sys_idle = int(r_sys.split()[4])
         sys_total_ticks = sys_user + sys_nice + sys_syst + sys_idle
 
-        proc_utime = int(r_proc[13])
-        proc_stime = int(r_proc[14])
-        process_total_ticks = proc_utime + proc_stime
+        try:
+            print "DEBUGGING /proc scraped values served up: "
+            print r_proc
+            print " End of try 1."
+  
+            proc_utime = int(r_proc[13])
+            proc_stime = int(r_proc[14])
+            process_total_ticks = proc_utime + proc_stime
+
+        except:
+            print "DEBUGGING /proc/<pid>/"
+            print "This is try 2... Try 1 failed!"
+            print "Did H2O shutdown first before this scrape occured?"
+            print r_proc
+            print "End of try 2...."
+            r_proc   = requests.get(url_proc).text.strip().split()
+            proc_utime = int(r_proc[13])
+            proc_stime = int(r_proc[14])
+            process_total_ticks = proc_utime + proc_stime
 
         return {"process_total_ticks": process_total_ticks, "system_total_ticks": sys_total_ticks, "system_idle_ticks": sys_idle}
 
@@ -202,7 +257,7 @@ class H2OCloudNode:
         print ""
 
         #20% diff
-        if proc_frac + 20 <= sys_frac:
+        if proc_frac + 5 <= sys_frac:
             self.is_contaminated = True
             return 1
         return 0
@@ -308,7 +363,7 @@ class H2OCloudNode:
                         print("H2O Cloud {} Node {} started with output file {}".format(self.cloud_num,
                                                                                         self.node_num,
                                                                                         self.output_file_name))
-
+                        time.sleep(1)
                         self.first_ticks = self.get_ticks()
                         return
 
@@ -535,6 +590,18 @@ class H2OCloud:
         """
         for node in self.nodes:
             node.stop_local()
+
+    def all_ips(self):
+        res = []
+        for node in self.nodes:
+            res += [node.get_ip()]
+        return ','.join(res)
+
+    def all_pids(self):
+        res = []
+        for node in self.nodes:
+            res += [node.request_pid()]
+        return','.join(res)
 
     def terminate_remote(self):
         """  

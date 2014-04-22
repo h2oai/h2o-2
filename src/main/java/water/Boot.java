@@ -246,7 +246,7 @@ public class Boot extends ClassLoader {
               pid = m.group(1);
             }
           }
-          catch (Exception _) {}
+          catch (Exception xe) {}
         }
 
         tmproottmpdir = tmproot + File.separator + "h2o-temp-" + now + "-" + randomChars + "-" + pid;
@@ -382,8 +382,8 @@ public class Boot extends ClassLoader {
         }
         return new FileInputStream(new File(resources, uri));
       } catch (FileNotFoundException e) {
-        Log.err(e);
-        return null;
+        Log.err("Trying system loader because : ", e);
+        return _systemLoader.getResourceAsStream("resources"+uri);
       }
     }
   }

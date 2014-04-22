@@ -36,7 +36,7 @@ public class GiniStatistic extends Statistic {
     return result;
   }
 
-  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random _) {
+  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random ignored) {
     int[] leftDist = new int[d.classes()];
     int[] riteDist = dist.clone();
     int lW = 0;
@@ -71,7 +71,7 @@ public class GiniStatistic extends Statistic {
       : Split.split(col, bestSplit, bestFitness);
   }
 
-  @Override protected Split eqSplit(int colIndex, Data d, int[] dist, int distWeight, Random _) {
+  @Override protected Split eqSplit(int colIndex, Data d, int[] dist, int distWeight, Random ignored) {
     int[] inclDist = new int[d.classes()];
     int[] exclDist = dist.clone();
     // we are not a single class, calculate the best split for the column

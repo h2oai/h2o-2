@@ -12,30 +12,25 @@ H\ :sub:`2`\ O brings better algorithms to big data. This documentation is here 
 Getting Started with H\ :sub:`2`\ O
 ===================================
 
-This section is for new users, and provides information about how to install and run H\ :sub:`2`\ O.
+This section is for new users, and provides information about how to install and run H\ :sub:`2`\ O. New Users interested in development should also visit the getting started with development section.
 
 .. toctree::
     :maxdepth: 2
 
-    newuser/quickstart_jar
-    deployment/hadoop
-    deployment/multinode
-    Ruser/Rinstall
-    Ruser/R_studio
-    Ruser/Rinstallgit
-    newuser/ec2
-    developuser/ScalaGen/README
-
-.. toctree::
-    :maxdepth: 2
-
+    newuser/top
+    Ruser/top
     tutorial/top
-
-.. toctree::
-    :maxdepth: 2
-
     tutorial/videos
     newuser/java_help
+
+Deployment and Big Data Management
+==================================
+
+.. toctree::
+    :maxdepth: 2
+
+    deployment/hadoop
+    deployment/multinode
 
 Helpful Resources
 =================

@@ -13,14 +13,13 @@
 
     "create_json": true,
 
-    "hdfs_name_node": "ch-0:8020",
-    "hdfs_version": "cdh4",
-    "use_hdfs": false,
+    "hdfs_name_node": "ch-0",
+    "hdfs_version": "cdh5",
+    "use_hdfs": true,
 
     "use_flatfile": true,
 
     "ip": [
-    "10.71.0.100",
     "10.71.0.101",
     "10.71.0.102",
     "10.71.0.103",
@@ -51,6 +50,7 @@
     "10.71.0.128",
     "10.71.0.129",
     "10.71.0.130",
-    "10.71.0.131"
+    "10.71.0.131",
+    "10.71.0.132"
     ]
 }

@@ -4,19 +4,23 @@ import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.rng.MersenneTwisterRNG;
-
-import java.util.Arrays;
-import java.util.Random;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.AUC;
 import water.api.DocGen;
-import water.fvec.*;
-import water.util.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.MRUtils;
+import water.util.ModelUtils;
+import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.Random;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
@@ -109,8 +113,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       throw new IllegalArgumentException("Too many levels in response column!");
 
     int usableColumns = 0;
+    assert _ncols == _train.length : "Number of selected train columns does not correspond to a number of columns!";
     for (int i = 0; i < _ncols; i++) {
-      Vec v = source.vec(i);
+      Vec v = _train[i];
       if (v.isBad() || v.isConst()) continue;
       usableColumns++;
     }
@@ -622,7 +627,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    // public double   auc()   { return _auc; }
 
     /**
-     * Compute CM & MSE on either the training or testing dataset.
+     * Compute CM and MSE on either the training or testing dataset.
      *
      * It expect already adapted validation dataset which is adapted to a model
      * and contains a response which is adapted to confusion matrix domain. Uff :)

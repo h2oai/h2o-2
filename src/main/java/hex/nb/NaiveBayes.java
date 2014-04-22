@@ -2,7 +2,7 @@ package hex.nb;
 
 import hex.FrameTask.DataInfo;
 import water.*;
-import water.Job.ModelJob;
+import water.Job.ColumnsResJob;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.RString;
@@ -18,7 +18,7 @@ import water.util.Utils;
  * @author anqi_fu
  *
  */
-public class NaiveBayes extends ModelJob {
+public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "naive bayes";
@@ -31,7 +31,7 @@ public class NaiveBayes extends ModelJob {
 
   @Override protected void execImpl() {
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false, drop_na_cols);
-    DataInfo dinfo = new DataInfo(fr, 1, false, false);
+    DataInfo dinfo = new DataInfo(fr, 1, false, false, false);
     NBTask tsk = new NBTask(this, dinfo).doAll(dinfo._adaptedFrame);
     NBModel myModel = buildModel(dinfo, tsk, laplace);
     myModel.delete_and_lock(self());
@@ -73,8 +73,9 @@ public class NaiveBayes extends ModelJob {
 
     // Probability of categorical predictor x_j conditional on response y
     for(int col = 0; col < dinfo._cats; col++) {
-      for(int i = 0; i < pcond[0].length; i++) {
-        for(int j = 0; j < pcond[0][0].length; j++)
+      assert pcond[col].length == tsk._nres;
+      for(int i = 0; i < pcond[col].length; i++) {
+        for(int j = 0; j < pcond[col][i].length; j++)
           pcond[col][i][j] = (pcond[col][i][j] + laplace)/(tsk._rescnt[i] + domains[col].length*laplace);
       }
     }

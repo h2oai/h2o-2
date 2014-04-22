@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-/** Builders & response object.
+/** Builders and response object.
  *
  * It just has a stuff of simple builders that walk through the JSON response
  * and format the stuff into basic html. Understands simplest form of tables,
@@ -225,7 +225,7 @@ public class RequestBuilders extends RequestQueries {
    */
   public static final Builder ARRAY_ROW_ELEMENT_BUILDER = new ArrayRowElementBuilder();
 
-  /** Basic builder for elements in array rows single col. (tr & td)
+  /** Basic builder for elements in array rows single col. (tr and td)
    */
   public static final Builder ARRAY_ROW_SINGLECOL_BUILDER = new ArrayRowSingleColBuilder();
 
@@ -250,14 +250,14 @@ public class RequestBuilders extends RequestQueries {
    *
    * JSON response structure:
    *
-   * response -> status = (done,error,redirect, ...)
+   * response :  status = (done,error,redirect, ...)
    *             h2o = name of the cloud
    *             node = answering node
    *             time = time in MS it took to process the request serve()
    *             other fields as per the response type
    * other fields that should go to the user
    * if error:
-   * error -> error reported
+   * error :  error reported
    */
   public static final class Response {
 
@@ -416,7 +416,7 @@ public class RequestBuilders extends RequestQueries {
 
     /** Returns new done empty done response.
      * Should be called only in cases which does not need json response.
-     * @See {@link HTMLOnlyRequest}
+     * see HTMLOnlyRequest
      */
     public static Response doneEmpty() {
       return EMPTY_RESPONSE;
@@ -945,7 +945,7 @@ public class RequestBuilders extends RequestQueries {
 
   /** A row in the array table.
    *
-   * Is an object builder with no caption and header & footer being the
+   * Is an object builder with no caption and header and footer being the
    * table row tags. Default builder is array row element (td).
    */
   public static class ArrayRowBuilder extends ObjectBuilder {
@@ -1118,7 +1118,7 @@ public class RequestBuilders extends RequestQueries {
       try {
         String key = URLEncoder.encode(str,"UTF-8");
         String delete = "<a href='RemoveAck.html?"+KEY+"="+key+"'><button class='btn btn-danger btn-mini'>X</button></a>";
-        return delete + "&nbsp;&nbsp;<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
+        return delete + "&nbsp;&nbsp;" + Inspect2.link(str, key);
       } catch( UnsupportedEncodingException e ) {
         throw  Log.errRTExcept(e);
       }

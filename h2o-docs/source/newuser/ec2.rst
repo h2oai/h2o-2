@@ -1,11 +1,11 @@
 H\ :sub:`2`\ O on EC2
 =====================
 
-The H\ :sub:`2`\ O platform is regression tested nightly in EC2
+The H\ :sub:`2`\ O platform is tested nightly in EC2
 for both single-node and multi-node configurations.
 
-For people that want to quickly give it a try, we provide an AMI that
-you can start from.
+For people who want to quickly give H\ :sub: `2`\ O a try, we provide
+an Amazon Machine Image to serve as an easy starting point.
 
 The README.txt file embedded below describes scripts that can be found
 in the EC2 directory of the downloadable zip file, or in the EC2

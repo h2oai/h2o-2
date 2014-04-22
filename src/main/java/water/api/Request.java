@@ -7,23 +7,21 @@ import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
 import java.io.InputStream;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.*;
 import java.util.*;
 
 import water.*;
-import water.NanoHTTPD.Response;
 import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.*;
-import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
 import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
+  @Documented
   public @interface API {
     String help();
     /** Must be specified. */
@@ -332,7 +330,7 @@ public abstract class Request extends RequestBuilders {
   }
 
   /**
-   * Example of passing & failing request. Will be prepended with
+   * Example of passing and failing request. Will be prepended with
    * "curl -s localhost:54321/Request.json". Return param/value pairs that will be used to build up
    * a URL, and the result from serving the URL will show up as an example.
    */

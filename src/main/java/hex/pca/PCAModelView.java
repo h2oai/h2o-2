@@ -1,9 +1,10 @@
 package hex.pca;
 
-import water.*;
+import water.DKV;
+import water.Key;
+import water.Request2;
 import water.api.DocGen;
 import water.api.Request;
-import water.api.RequestBuilders.Response;
 
 public class PCAModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -14,7 +15,7 @@ public class PCAModelView extends Request2 {
   class PCAModelKeyFilter extends H2OKey { public PCAModelKeyFilter() { super("",true); } }
 
   @API(help="PCA Model")
-  PCAModel pca_model;
+  public PCAModel pca_model;
 
   public static String link(String txt, Key model) {
     return "<a href='/2/PCAModelView.html?_modelKey=" + model + "'>" + txt + "</a>";

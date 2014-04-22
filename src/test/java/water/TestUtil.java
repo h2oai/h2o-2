@@ -2,29 +2,25 @@ package water;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import com.google.common.io.Closeables;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import org.junit.*;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+
 import water.Job.JobState;
-import water.deploy.Node;
-import water.deploy.NodeVM;
-import water.deploy.VM;
+import water.deploy.*;
 import water.fvec.*;
 import water.parser.ParseDataset;
 import water.util.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-
 public class TestUtil {
   private static int _initial_keycnt = 0;
+  private static Timer _testClassTimer;
 
   protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
@@ -39,6 +35,7 @@ public class TestUtil {
     H2O.main(new String[] {});
     _initial_keycnt = H2O.store_size();
     assert Job.all().length == 0;      // No outstanding jobs
+    _testClassTimer = new Timer();
   }
 
   /** Execute this rule before each test to print test name and test class */
@@ -53,7 +50,27 @@ public class TestUtil {
     }
   };
 
+  @Rule public TestRule timerRule = new TestRule() {
+    @Override public Statement apply(Statement base, Description description) {
+      return new TimerStatement(base, description.getClassName()+"#"+description.getMethodName());
+    };
+    class TimerStatement extends Statement {
+      private final Statement base;
+      private final String tname;
+      public TimerStatement(Statement base, String tname) { this.base = base; this.tname = tname;}
+      @Override public void evaluate() throws Throwable {
+        Timer t = new Timer();
+        try {
+          base.evaluate();
+        } finally {
+          Log.info("#### TEST "+tname+" EXECUTION TIME: " + t.toString());
+        }
+      }
+    }
+  };
+
   @AfterClass public static void checkLeakedKeys() {
+    Log.info("## TEST CLASS EXECUTION TIME (sum over all tests): " + _testClassTimer.toString());
     Job[] jobs = Job.all();
     for( Job job : jobs ) {
       assert job.state != JobState.RUNNING : ("UNFINISHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time + ", state=" + job.state );  // No pending job
@@ -337,24 +354,19 @@ public class TestUtil {
 
   public static Frame parseFromH2OFolder(String path) {
     File file = new File(VM.h2oFolder(), path);
-    return parseFrame(null, file);
+    return FrameUtils.parseFrame(null, file);
   }
 
   public static Frame parseFrame(File file) {
-    return parseFrame(null, file);
+    return FrameUtils.parseFrame(null, file);
   }
 
   public static Frame parseFrame(Key okey, String path) {
-    return parseFrame(okey, find_test_file(path));
+    return FrameUtils.parseFrame(okey, find_test_file(path));
   }
 
-  public static Frame parseFrame(Key okey, File file) {
-    if( !file.exists() )
-      throw new RuntimeException("File not found " + file);
-    if(okey == null)
-      okey = Key.make(file.getName());
-    Key fkey = NFSFileVec.make(file);
-    return ParseDataset2.parse(okey, new Key[] { fkey });
+  public static Frame parseFrame(Key okey, File f) {
+    return FrameUtils.parseFrame(okey, f);
   }
 
   public static Vec vec(int...rows) { return vec(null, null, rows); }
@@ -386,9 +398,18 @@ public class TestUtil {
     System.err.println("----------------------");
   }
 
-  public static String[] ar (String ...a) { return a; }
-  public static long  [] ar (long   ...a) { return a; }
-  public static long[][] ar (long[] ...a) { return a; }
-  public static int   [] ari(int    ...a) { return a; }
-  public static int [][] ar (int[]  ...a) { return a; }
+  public static String[]   ar (String ...a)   { return a; }
+  public static long  []   ar (long   ...a)   { return a; }
+  public static long[][]   ar (long[] ...a)   { return a; }
+  public static int   []   ari(int    ...a)   { return a; }
+  public static int [][]   ar (int[]  ...a)   { return a; }
+  public static float []   arf(float  ...a)   { return a; }
+  public static double[]   ard(double ...a)   { return a; }
+  public static double[][] ard(double[] ...a) { return a; }
+  // Expanded array
+  public static double[][] ear (double ...a)   {
+    double[][] r = new double[a.length][1];
+    for (int i=0; i<a.length;i++) r[i][0] = a[i];
+    return r;
+  }
 }

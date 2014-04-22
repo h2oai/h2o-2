@@ -1426,6 +1426,7 @@ class H2O(object):
             'single_quotes': None,
             'header_from_file': None,
             'exclude': None,
+            'delete_on_done': None,
             'preview': None,
             }
         check_params_update_kwargs(params_dict, kwargs, 'parse', print_params=True)
@@ -1528,10 +1529,18 @@ class H2O(object):
             timeout=timeoutSecs)
         return a
 
-    def rebalance(self, before=None, after=None, seed=None, timeoutSecs=180):
+    def rebalance(self, timeoutSecs=180, **kwargs):
+        params_dict = {
+            # now we should default to a big number, so we see everything
+            'before': None,
+            'after': None,
+            'chunks': None,
+            'seed': None,
+            }
+        params_dict.update(kwargs)
         a = self.__do_json_request('2/ReBalance.json',
-            timeout=timeoutSecs,
-            params={"path": before, "after": after, "seed": seed}
+            params=params_dict,
+            timeout=timeoutSecs
         )
         verboseprint("\n rebalance result:", dump_json(a))
         return a
@@ -1622,6 +1631,17 @@ class H2O(object):
     
         return a
 
+    def frame_split(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'ratios': None,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+        check_params_update_kwargs(params_dict, kwargs, 'frame_split', print_params=True)
+        a = self.__do_json_request('2/FrameSplitPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nframe_split result:", dump_json(a))
+        return a
+
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, 
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
@@ -1639,7 +1659,7 @@ class H2O(object):
                 'response': None,
                 'cols': None,
                 'ignored_cols_by_name': None,
-                'classification': None,
+                'classification': 1,
                 'validation': None,
                 'importance': 1, # enable variable importance by default
                 'ntrees': trees,
@@ -2258,6 +2278,7 @@ class H2O(object):
             'momentum_stable'              : None,
             'nesterov_accelerated_gradient': None,
             'input_dropout_ratio'          : None,
+            'hidden_dropout_ratios'        : None,
             'l1'                           : None,
             'l2'                           : None,
             'max_w2'                       : None,
@@ -2272,13 +2293,17 @@ class H2O(object):
             'regression_stop'              : None,
             'quiet_mode'                   : None,
             'max_confusion_matrix_size'    : None,
+            'max_hit_ratio_k'              : None,
             'balance_classes'              : None,
             'max_after_balance_size'       : None,
             'score_validation_sampling'    : None,
             'diagnostics'                  : None,
+            'variable_importances'         : None,
             'fast_mode'                    : None,
             'ignore_const_cols'            : None,
             'force_load_balance'           : None,
+            'replicate_training_data'      : None,
+            'single_node_mode'             : None,
             'shuffle_training_data'        : None,
         }
         # only lets these params thru
@@ -2329,7 +2354,8 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
         a = self.__do_json_request('2/SummaryPage2.json' if (beta_features and not useVA) else 'SummaryPage.json', 
             timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nsummary_page result:", dump_json(a))
+        # Too much stuff now!
+        # verboseprint("\nsummary_page result:", dump_json(a))
         
         # FIX!..not there yet for 2
         # if not beta_features:

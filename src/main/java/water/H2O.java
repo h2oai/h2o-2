@@ -16,7 +16,6 @@ import water.util.Log.Tag.Sys;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
-import com.google.common.io.Closeables;
 
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
@@ -730,8 +729,10 @@ public final class H2O {
 
 
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
-    public H2OCallback(){this(null);}
-    public H2OCallback(H2OCountedCompleter cc){super(cc);}
+    final Job _job;
+    public H2OCallback(){this(null,null);}
+    public H2OCallback(Job j){this(j,null);}
+    public H2OCallback(Job j, H2OCountedCompleter cc){super(cc); _job = j;}
     @Override public void compute2(){throw new UnsupportedOperationException();}
     @Override public void onCompletion(CountedCompleter caller){
       try {
@@ -740,6 +741,11 @@ public final class H2O {
         ex.printStackTrace();
         completeExceptionally(ex);
       }
+    }
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      if(_job != null) _job.cancel(ex);
+      else ex.printStackTrace();
+      return true;
     }
     public abstract void callback(T t);
   }
@@ -1125,7 +1131,7 @@ public final class H2O {
         break;
       } catch (IOException e) {
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
-        Closeables.closeQuietly(_udpSocket);
+        Utils.close(_udpSocket);
         _apiSocket = null;
         _udpSocket = null;
         if( OPT_ARGS.port != 0 )
@@ -1181,7 +1187,7 @@ public final class H2O {
   // disabled).
   static void multicast( ByteBuffer bb ) {
     try { multicast2(bb); }
-    catch (Exception _) {}
+    catch (Exception xe) {}
   }
 
   static private void multicast2( ByteBuffer bb ) {
@@ -1349,7 +1355,7 @@ public final class H2O {
         list.add(entry);
       }
     } catch( Exception e ) { Log.die(e.toString()); }
-    finally { Closeables.closeQuietly(br); }
+    finally { Utils.close(br); }
     return list;
   }
 
@@ -1689,7 +1695,7 @@ public final class H2O {
       try {
         Thread.sleep (sleepMillis);
       }
-      catch (Exception _)
+      catch (Exception xe)
         {}
     }
 
@@ -1758,7 +1764,7 @@ public final class H2O {
           fail();
         }
         testForFailureShutdown();
-        try { s.close(); } catch (Exception _) {}
+        try { s.close(); } catch (Exception xe) {}
       }
     }
 

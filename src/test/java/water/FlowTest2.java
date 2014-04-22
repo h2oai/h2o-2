@@ -1,5 +1,8 @@
 package water;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 import water.fvec.Frame;
 import water.exec.Flow;
 import water.util.Utils.*;
@@ -17,13 +20,13 @@ public class FlowTest2 {
       final int year_idx = fr.find("year");
       //final int cyl_idx = fr.find("C54"); // Works great for finding covtype - average elevation by class
       //final int year_idx = fr.find("C0");
-    
+
       SumCol sumcols = fr.
         with(new SumCol(year_idx)).
         doit();
       System.out.println(sumcols._sum+"/"+sumcols._n+" = "+(sumcols._sum/sumcols._n));
       System.out.println();
-      
+
       SumCol sumcols1 = fr.
         with(new Flow.Filter() { public boolean filter(double ds[]) { return ds[cyl_idx]!=5; } }).
         with(new SumCol(year_idx)).
@@ -36,7 +39,7 @@ public class FlowTest2 {
       for( int i=0; i<fr.numCols(); i++ )
         fr.vecs()[i].rollupStats(fs);
       fs.blockForPending();
-      
+
       IcedHashMap<IcedLong,SumCol> sumcols2 = fr.
         with(new Flow.GroupBy() { public long groupId(double ds[]) { return (long)ds[cyl_idx];} }).
         with(new SumCol(year_idx)).
@@ -46,7 +49,7 @@ public class FlowTest2 {
         System.out.println("Cyl="+gid._val+", "+sumcol._sum+"/"+sumcol._n+" = "+(sumcol._sum/sumcol._n));
       }
       System.out.println();
-      
+
       IcedHashMap<IcedLong,SumCol> sumcols3 = fr.
         with(new Flow.Filter () { public boolean filter(double ds[]) { return ds[cyl_idx]!=5; } }).
         with(new Flow.GroupBy() { public long groupId ( double ds[]) { return (long)ds[cyl_idx];} }).
@@ -57,7 +60,7 @@ public class FlowTest2 {
         System.out.println("Cyl="+gid._val+", "+sumcol._sum+"/"+sumcol._n+" = "+(sumcol._sum/sumcol._n));
       }
       System.out.println();
-      
+
       IcedHashMap<IcedLong,SumCol> sumcols4 = fr.
         with(new Flow.GroupBy() { public long groupId(double ds[]) { return (long)ds[cyl_idx];} }).
         with(new Flow.Filter() { public boolean filter(double ds[]) { return ds[cyl_idx]!=5; } }).
@@ -76,7 +79,7 @@ public class FlowTest2 {
       spr.finishUp();
       System.out.println(spr);
       System.out.println();
-      
+
       // Percentiles per-Group
       IcedHashMap<IcedLong,SummaryPerRow> sprs = fr.
         with(new Flow.GroupBy() { public long groupId(double ds[]) { return (long)ds[cyl_idx];} }).
@@ -91,7 +94,7 @@ public class FlowTest2 {
       }
       System.out.println();
 
-      
+
     } finally {
       Lockable.delete(k);
     }
@@ -104,5 +107,9 @@ public class FlowTest2 {
     @Override public void mapreduce( double ds[] ) { _sum += ds[_col_idx]; _n++; }
     @Override public void reduce( SumCol that ) { _sum += that._sum; _n += that._n; }
     @Override public SumCol make() { return new SumCol(_col_idx); }
+  }
+
+  @Test @Ignore public void dummy_test() {
+    /* this is just a dummy test to avoid JUnit complains about missing test */
   }
 }

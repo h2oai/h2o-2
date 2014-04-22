@@ -1,12 +1,13 @@
 package hex;
 
+import static hex.NeuralNet.*;
+import static water.util.MRUtils.sampleFrame;
 import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import hex.deeplearning.DeepLearningTask;
 import hex.deeplearning.Neurons;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
@@ -19,9 +20,6 @@ import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
-
-import static hex.NeuralNet.*;
-import static water.util.MRUtils.sampleFrame;
 
 public class DeepLearningVsNeuralNet extends TestUtil {
   Frame _train, _test;
@@ -47,7 +45,8 @@ public class DeepLearningVsNeuralNet extends TestUtil {
     }
   }
 
-  @Test public void compare() throws Exception {
+//  @Test
+  public void compare() throws Exception {
     final long seed = 0xc0ffee;
     Random rng = new Random(seed);
 
@@ -96,7 +95,7 @@ public class DeepLearningVsNeuralNet extends TestUtil {
     double p1 = 0.5 + 0.49 * rng.nextFloat();
     double l1 = 1e-5 * rng.nextFloat();
     double l2 = 1e-5 * rng.nextFloat();
-    double max_w2 = Double.POSITIVE_INFINITY; // rng.nextInt(50);
+    float max_w2 = Float.POSITIVE_INFINITY; // rng.nextInt(50);
     double rate_annealing = 1e-7 + rng.nextFloat() * 1e-6;
 
 

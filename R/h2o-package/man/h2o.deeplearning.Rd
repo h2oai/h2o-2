@@ -7,61 +7,77 @@ H2O: Deep Learning Neural Networks
 Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
-h2o.deeplearning(x, y, data, classification = TRUE, activation = "Tanh", dropout = as.numeric(NA), 
-  layers = 500, rate = 0.01, annealing_rate = 1e-6, l1_reg = 1e-4, l2_reg = 0.0010, 
-  mom_start = 0.0, mom_ramp = 1e6, mom_stable = 0.0, epochs = 100, validation)
+h2o.deeplearning(x, y, data, classification = TRUE, validation, activation,
+    hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
+    rho, epsilon, rate, rate_annealing, rate_decay, momentum_start,
+    momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
+    input_dropout_ratio, hidden_dropout_ratios, l1, l2, max_w2,
+    initial_weight_distribution, initial_weight_scale, loss,
+    score_interval, score_training_samples, score_validation_samples,
+    score_duty_cycle, classification_stop, regression_stop, quiet_mode,
+    max_confusion_matrix_size, max_hit_ratio_k, balance_classes,
+    max_after_balance_size, score_validation_sampling, diagnostics,
+    variable_importances, fast_mode, ignore_const_cols, force_load_balance,
+    replicate_training_data, single_node_mode, shuffle_training_data,
+    sparse, col_major)
 }
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{x}{
-A vector containing the names of the predictors in the model.
-}
-  \item{y}{
-The name of the response variable in the model.
-}
-  \item{data}{
-An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
-}
-  \item{classification}{
-(Optional) A logical value indicating whether the algorithm should conduct classification.
-}
-  \item{activation}{
-(Optional) A string indicating the activation function to use. Must be either "Tanh", 'TanhDropout", "Rectifier", "RectifierDropout", "Maxout" or "MaxoutDropout".
-}
-  \item{dropout}{
-(Optional) Input layer dropout ratio.
+        \item{x}{ A vector containing the names of the predictors in the model. }
+        \item{y}{ The name of the response variable in the model. }
+        \item{data}{ An \code{\linkS4class{H2OParsedData}} object containing the variables in the model. }
+        \item{classification}{ (Optional) A logical value indicating whether the algorithm should conduct classification. }
+        \item{validation}{(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
+        \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhDropout", "Rectifier", "RectifierDropout", "Maxout" or "MaxoutDropout".}
+        \item{hidden}{ Hidden layer sizes (e.g. c(100,100)}
+
+        %- BEGIN AUTO-GENERATED CODE
+        \item{epochs}{ How many times the dataset should be iterated (streamed), can be fractional}
+        \item{train_samples_per_iteration}{ Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)}
+        \item{seed}{ Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded}
+        \item{adaptive_rate}{ Adaptive learning rate (ADADELTA)}
+        \item{rho}{ Adaptive learning rate time decay factor (similarity to prior updates)}
+        \item{epsilon}{ Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)}
+        \item{rate}{ Learning rate (higher => less stable, lower => slower convergence)}
+        \item{rate_annealing}{ Learning rate annealing: rate / (1 + rate_annealing * samples)}
+        \item{rate_decay}{ Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))}
+        \item{momentum_start}{ Initial momentum at the beginning of training (try 0.5)}
+        \item{momentum_ramp}{ Number of training samples for which momentum increases}
+        \item{momentum_stable}{ Final momentum after the ramp is over (try 0.99)}
+        \item{nesterov_accelerated_gradient}{ Use Nesterov accelerated gradient (recommended)}
+        \item{input_dropout_ratio}{ Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)}
+        \item{hidden_dropout_ratios}{ Hidden layer dropout ratios (can improve generalization), specify one value per hidden layer, defaults to 0.5}
+        \item{l1}{ L1 regularization (can add stability and improve generalization, causes many weights to become 0)}
+        \item{l2}{ L2 regularization (can add stability and improve generalization, causes many weights to be small}
+        \item{max_w2}{ Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)}
+        \item{initial_weight_distribution}{ Initial Weight Distribution}
+        \item{initial_weight_scale}{ Uniform: -value...value, Normal: stddev}
+        \item{loss}{ Loss function}
+        \item{score_interval}{ Shortest time interval (in secs) between model scoring}
+        \item{score_training_samples}{ Number of training set samples for scoring (0 for all)}
+        \item{score_validation_samples}{ Number of validation set samples for scoring (0 for all)}
+        \item{score_duty_cycle}{ Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).}
+        \item{classification_stop}{ Stopping criterion for classification error fraction on training data (-1 to disable)}
+        \item{regression_stop}{ Stopping criterion for regression error (MSE) on training data (-1 to disable)}
+        \item{quiet_mode}{ Enable quiet mode for less output to standard output}
+        \item{max_confusion_matrix_size}{ Max. size (number of classes) for confusion matrices to be shown}
+        \item{max_hit_ratio_k}{ Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)}
+        \item{balance_classes}{ Balance training data class counts via over/under-sampling (for imbalanced data)}
+        \item{max_after_balance_size}{ Maximum relative size of the training data after balancing class counts (can be less than 1.0)}
+        \item{score_validation_sampling}{ Method used to sample validation dataset for scoring}
+        \item{diagnostics}{ Enable diagnostics for hidden layers}
+        \item{variable_importances}{ Compute variable importances for input features (Gedeon method) - can be slow for large networks}
+        \item{fast_mode}{ Enable fast mode (minor approximation in back-propagation)}
+        \item{ignore_const_cols}{ Ignore constant training columns (no information can be gained anyway)}
+        \item{force_load_balance}{ Force extra load balancing to increase training speed for small datasets (to keep all cores busy)}
+        \item{replicate_training_data}{ Replicate the entire training dataset onto every node for faster training on small datasets}
+        \item{single_node_mode}{ Run on a single node for fine-tuning of model parameters}
+        \item{shuffle_training_data}{ Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)}
+        \item{sparse}{ Sparse data handling (Experimental).}
+        \item{col_major}{ Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).}
+        %- END AUTO-GENERATED CODE
   }
-  \item{layers}{
-(Optional) Size of the hidden layers.
-}
-  \item{rate}{
-(Optional) The learning rate. A higher learning rate will cause the algorithm to be less stable, while a lower learning rate will result in slower convergence.
-}
-  \item{annealing_rate}{
-(Optional) The learning annealing rate is equal to \deqn{rate / (1 + annealing_rate * samples)}.
-  }
-  \item{l1_reg}{
-(Optional) L1 regularization parameter.
-  }
-  \item{l2_reg}{
-(Optional) L2 regularization parameter.
-  }
-  \item{mom_start}{
-(Optional) Initial momentum at the beginning of training.
-  }
-    \item{mom_ramp}{
-(Optional) Number of training samples for which momentum increases.
-  }
-    \item{mom_stable}{
-(Optional) Final momentum after the ramp is over.
-  }
-  \item{epochs}{
-(Optional) Number of times the dataset should be iterated. (Can be less than 1.0).
-  }
-  \item{validation}{
-(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
-}
 
 \value{
 An object of class \code{\linkS4class{H2ONNModel}} with slots key, data, and model, where the last is a list of the following components:
@@ -77,6 +93,6 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
-h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", rate = 0.05)
+h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", hidden = c(50, 50, 50), epochs = 500)
 h2o.shutdown(localH2O)
 }

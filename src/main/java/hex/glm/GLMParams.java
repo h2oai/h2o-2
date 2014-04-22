@@ -6,7 +6,7 @@ import water.Iced;
 import water.api.DocGen;
 import water.api.Request.API;
 
-public class GLMParams extends Iced {
+public final class GLMParams extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -190,8 +190,9 @@ public class GLMParams extends Iced {
 
   // helper function
   static final double y_log_y(double y, double mu) {
-    mu = Math.max(Double.MIN_NORMAL, mu);
-    return (y != 0) ? (y * Math.log(y / mu)) : 0;
+    if(y == 0)return 0;
+    if(mu < Double.MIN_NORMAL) mu = Double.MIN_NORMAL;
+    return y * Math.log(y / mu);
   }
 
 }

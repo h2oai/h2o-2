@@ -12,6 +12,11 @@ collaboration.
 Defining a PCA Model
 """"""""""""""""""""
 
+
+**Source:**
+
+  The .hex key associated with the parsed data to be used in the model.
+
  **Ignored Columns:**
 
    The set of columns in the specified data set that should me omitted
@@ -48,7 +53,7 @@ Defining a PCA Model
 
    Allows users to specify whether data should be transformed so that
    each column has a mean of 0 and a standard deviation of 1 prior to
-   carrying out PCA. Standardizing is strongly reccomended. 
+   carrying out PCA. Standardizing is strongly recommended. 
 
 
 Interpreting Results
@@ -61,7 +66,7 @@ transformations to yield a new set of variables. The new set of
 variables have useful practical application, as well as many desirable
 behaviors for further modeling. 
 
- **Std dev**
+ **Std Dev**
 
    *Standard deviation.* This is the standard deviation of the component
    defined in that column. In the example shown below the standard

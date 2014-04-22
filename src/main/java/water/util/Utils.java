@@ -167,22 +167,44 @@ public class Utils {
     for (double d: from) result += d;
     return result;
   }
-  public static double sumSquares(final float[] a) {
+  public static float sumSquares(final float[] a) {
     return sumSquares(a, 0, a.length);
   }
-  public static double sumSquares(final float[] a, int from, int to) {
-    double result = 0;
+
+  /**
+   * Approximate sumSquares
+   * @param a Array with numbers
+   * @param from starting index (inclusive)
+   * @param to ending index (exclusive)
+   * @return approximate sum of squares based on a sample somewhere in the middle of the array (pos determined by bits of a[0])
+   */
+  public static float approxSumSquares(final float[] a, int from, int to) {
+    final int len = to-from;
+    final int samples = Math.max(len / 16, 1);
+    final int offset = from + Math.abs(Float.floatToIntBits(a[0])) % (len-samples);
+    assert(offset+samples <= to);
+    return sumSquares(a, offset, offset + samples) * (float)len / (float)samples;
+  }
+
+  public static float sumSquares(final float[] a, int from, int to) {
+    float result = 0;
     final int cols = to-from;
     final int extra=cols-cols%8;
     final int multiple = (cols/8)*8-1;
-    double psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0;
+    float psum1 = 0, psum2 = 0, psum3 = 0, psum4 = 0;
+    float psum5 = 0, psum6 = 0, psum7 = 0, psum8 = 0;
     for (int c = from; c < from + multiple; c += 8) {
-      psum1 += a[c+0]*a[c+0] + a[c+1]*a[c+1];
-      psum2 += a[c+2]*a[c+2] + a[c+3]*a[c+3];
-      psum3 += a[c+4]*a[c+4] + a[c+5]*a[c+5];
-      psum4 += a[c+6]*a[c+6] + a[c+7]*a[c+7];
+      psum1 += a[c+0]*a[c+0];
+      psum2 += a[c+1]*a[c+1];
+      psum3 += a[c+2]*a[c+2];
+      psum4 += a[c+3]*a[c+3];
+      psum5 += a[c+4]*a[c+4];
+      psum6 += a[c+5]*a[c+5];
+      psum7 += a[c+6]*a[c+6];
+      psum8 += a[c+7]*a[c+7];
     }
     result += psum1 + psum2 + psum3 + psum4;
+    result += psum5 + psum6 + psum7 + psum8;
     for (int c = from + extra; c < to; ++c) {
       result += a[c]*a[c];
     }
@@ -341,11 +363,11 @@ public class Utils {
 
   public static void close(Closeable...closeable) {
     for(Closeable c : closeable)
-      try { if( c != null ) c.close(); } catch( IOException _ ) { }
+      try { if( c != null ) c.close(); } catch( IOException xe ) { }
   }
 
   public static void close(Socket s) {
-    try { if( s != null ) s.close(); } catch( IOException _ ) { }
+    try { if( s != null ) s.close(); } catch( IOException xe ) { }
   }
 
   public static String readConsole() {
@@ -690,6 +712,7 @@ public class Utils {
       return ((IcedInt)o)._val == _val;
     }
     @Override public int hashCode() { return _val; }
+    @Override public String toString() { return Integer.toString(_val); }
   }
   public static class IcedLong extends Iced {
     public final long _val;
@@ -699,6 +722,7 @@ public class Utils {
       return ((IcedLong)o)._val == _val;
     }
     @Override public int hashCode() { return (int)_val; }
+    @Override public String toString() { return Long.toString(_val); }
   }
   public static class IcedDouble extends Iced {
     public final double _val;
@@ -708,6 +732,7 @@ public class Utils {
       return ((IcedDouble)o)._val == _val;
     }
     @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
+    @Override public String toString() { return Double.toString(_val); }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
@@ -752,7 +777,7 @@ public class Utils {
 
   /** Returns a mapping of given domain to values (0, ... max(dom)).
    * Unused domain items has mapping to -1.
-   * @precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
+   * precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
   public static int[] mapping(int[] dom) {
     if (dom.length == 0) return new int[] {};
     assert dom[0] <= dom[dom.length-1] : "Domain is not sorted";
@@ -857,7 +882,7 @@ public class Utils {
     }
     return Arrays.copyOf(r, cnt);
   }
-  /** Generates sequence <start, stop) of integers: (start, start+1, ...., stop-1) */
+  /** Generates sequence (start, stop) of integers: (start, start+1, ...., stop-1) */
   static public int[] seq(int start, int stop) {
     assert start<stop;
     int len = stop-start;
@@ -910,7 +935,7 @@ public class Utils {
    * @param x
    * @return sqrt(x) with up to 5% relative error
    */
-  public static double approxSqrt(double x) {
+  final public static double approxSqrt(double x) {
     return Double.longBitsToDouble(((Double.doubleToLongBits(x) >> 32) + 1072632448) << 31);
   }
   /**
@@ -918,7 +943,7 @@ public class Utils {
    * @param x
    * @return sqrt(x) with up to 5% relative error
    */
-  public static float approxSqrt(float x) {
+  final public static float approxSqrt(float x) {
     return Float.intBitsToFloat(532483686 + (Float.floatToRawIntBits(x) >> 1));
   }
   /**
@@ -926,7 +951,7 @@ public class Utils {
    * @param x
    * @return 1./sqrt(x) with up to 2% relative error
    */
-  public static double approxInvSqrt(double x) {
+  final public static double approxInvSqrt(double x) {
     double xhalf = 0.5d*x; x = Double.longBitsToDouble(0x5fe6ec85e7de30daL - (Double.doubleToLongBits(x)>>1)); return x*(1.5d - xhalf*x*x);
   }
   /**
@@ -934,7 +959,7 @@ public class Utils {
    * @param x
    * @return 1./sqrt(x) with up to 2% relative error
    */
-  public static float approxInvSqrt(float x) {
+  final public static float approxInvSqrt(float x) {
     float xhalf = 0.5f*x; x = Float.intBitsToFloat(0x5f3759df - (Float.floatToIntBits(x)>>1)); return x*(1.5f - xhalf*x*x);
   }
   /**
@@ -942,15 +967,15 @@ public class Utils {
    * @param x
    * @return exp(x) with up to 5% relative error
    */
-  public static double approxExp(double x) {
+  final public static double approxExp(double x) {
     return Double.longBitsToDouble(((long)(1512775 * x + 1072632447)) << 32);
   }
   /**
-   * Fast approximate log for values > 1, otherwise exact
+   * Fast approximate log for values greater than 1, otherwise exact
    * @param x
    * @return log(x) with up to 0.1% relative error
    */
-  public static double approxLog(double x){
+  final public static double approxLog(double x){
     if (x > 1) return ((Double.doubleToLongBits(x) >> 32) - 1072632447d) / 1512775d;
     else return Math.log(x);
   }
@@ -1097,7 +1122,7 @@ public class Utils {
    * For mixed domains it always expects lexicographical ordering since such a domain were produce
    * by a parser which sort string with Array.sort().
    *
-   * @PRECONDITION - string domain was sorted by Array.sort(String[]), integer domain by Array.sort(int[]) and switched to Strings !!!
+   * PRECONDITION - string domain was sorted by Array.sort(String[]), integer domain by Array.sort(int[]) and switched to Strings !!!
    *
    * @param a a set of strings
    * @param b a set of strings
@@ -1129,8 +1154,8 @@ public class Utils {
    * @param lexo - true if domains are sorted in lexicographical order or false for numeric domains
    * @return union of values in given arrays.
    *
-   * @precondition lexo ? a,b are lexicographically sorted : a,b are sorted numerically
-   * @precondition a!=null && b!=null
+   * precondition lexo ? a,b are lexicographically sorted : a,b are sorted numerically
+   * precondition a!=null &amp;&amp; b!=null
    */
   public static String[] union(String[] a, String[] b, boolean lexo) {
     assert a!=null && b!=null : "Union expect non-null input!";
@@ -1370,9 +1395,9 @@ public class Utils {
       long err = acts[a]-correct;
       terr += err;
       if (html) {
-        sb.append(String.format("<th  style='min-width: 60px;'>%5.3f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
+        sb.append(String.format("<th  style='min-width: 60px;'>%.05f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
       } else {
-        sb.append("   " + String.format("%5.3f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
+        sb.append("   " + String.format("%.05f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
       }
     }
 
@@ -1394,10 +1419,42 @@ public class Utils {
     for (long n : acts) nrows += n;
 
     if (html) {
-      sb.append(String.format("<th style='min-width:60px'>%5.3f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
+      sb.append(String.format("<th style='min-width:60px'>%.05f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
       DocGen.HTML.arrayTail(sb);
     } else {
-      sb.append("   " + String.format("%5.3f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
+      sb.append("   " + String.format("%.05f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
     }
   }
+
+  /** Divide given size into partitions based on given ratios.
+   * @param len  number to be split into partitions
+   * @param ratio  split ratio of each partition
+   * @return array of sizes based on given ratios, the size of the last segment is len-sum(ratio)*len.
+   */
+  public static final int[] partitione(int len, float[] ratio) {
+    int[] r = new int[ratio.length+1];
+    int sum = 0;
+    int i = 0;
+    for (i=0; i<ratio.length; i++) {
+      r[i] = (int) (ratio[i]*len);
+      sum += r[i];
+    }
+    r[i] = len - sum;
+    return r;
+  }
+
+  /** Generate given numbers of keys by suffixing key by given numbered suffix. */
+  public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
+  public static Key[] generateNumKeys(Key mk, int num, String delim) {
+    Key[] ks = new Key[num];
+    String n = mk!=null ? mk.toString() : "noname";
+    String suffix = "";
+    if (n.endsWith(".hex")) {
+      n = n.substring(0, n.length()-4); // be nice
+      suffix = ".hex";
+    }
+    for (int i=0; i<num; i++) ks[i] = Key.make(n+delim+i+suffix);
+    return ks;
+  }
+
 }

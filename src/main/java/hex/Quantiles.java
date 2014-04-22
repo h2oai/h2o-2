@@ -10,6 +10,12 @@ import water.util.Log;
 /**
  * Quantile of a column.
  */
+
+// R doesn't like NAs in a column
+// Error in quantile.default(nah[, 1], c(1)) : 
+// missing values and NaN's not allowed if 'na.rm' is FALSE
+// suppose we have to tolerate empty columns and all NA cols, and single value col
+
 public class Quantiles extends Iced {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -305,6 +311,21 @@ public class Quantiles extends Iced {
   }
 
   private boolean exactQuantilesMultiPass(double[] qtiles, double[] quantiles_to_do, int interpolation_type) {
+
+    // looked at outside this method. setup for all NA or empty case
+    // done could be the return value, really should make these 3 available differently
+    // qtiles is an array just in case we support iterating on quantiles_to_do
+    // but that would only work for approx, since we won't redo bins here.
+    boolean done = false;
+    boolean interpolated = false;
+    qtiles[0] =  Double.NaN;
+
+    if( hcnt2.length < 2 ) return false;
+    assert !_isEnum;
+
+    if ( _totalRows==0 ) return false;
+    assert _totalRows >=0 : _totalRows;
+
     double newValStart = Double.NaN; 
     double newValEnd = Double.NaN;
     double newValRange = Double.NaN;
@@ -316,9 +337,6 @@ public class Quantiles extends Iced {
     long maxBinCnt = _valMaxBinCnt;
     assert maxBinCnt>1;
     long desiredBinCnt = maxBinCnt - 1;
-
-    assert !_isEnum;
-    if( hcnt2.length < 2 ) return false;
 
     double threshold = quantiles_to_do[0];
 
@@ -372,9 +390,7 @@ public class Quantiles extends Iced {
     //    dDiff = pctDiff * (valb - vala)
     //    result = vala + dDiff
 
-    boolean done = false;
     double guess = Double.NaN;
-    boolean interpolated = false;
     double pctDiff, dDiff;
     // -1 is for single pass approximation
     assert (interpolation_type==2) || (interpolation_type==7) || (interpolation_type==-1): "Unsupported type "+interpolation_type;

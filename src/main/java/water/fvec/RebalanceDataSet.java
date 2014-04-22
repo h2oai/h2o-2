@@ -53,7 +53,7 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     }
     assert espc[espc.length-1] == _in.numRows():"unexpected number of rows, expected " + _in.numRows() + ", got " + espc[espc.length-1];
     final Vec [] srcVecs = _in.vecs();
-    _out = new Frame(_okey,_in.names(), new Vec(Vec.newKey(),espc).makeZeros(srcVecs.length));
+    _out = new Frame(_okey,_in.names(), new Vec(Vec.newKey(),espc).makeZeros(srcVecs.length,_in.domains()));
     _out.delete_and_lock(_jobKey);
     new RebalanceTask(this,srcVecs).asyncExec(_out);
   }
@@ -61,9 +61,9 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
   @Override public void onCompletion(CountedCompleter caller){
     assert _out.numRows() == _in.numRows();
     assert _out.anyVec()._espc.length == (_nchunks+1);
-    _in.unlock(null);
-    _out.update(null);
-    _out.unlock(null);
+    _in.unlock(_jobKey);
+    _out.update(_jobKey);
+    _out.unlock(_jobKey);
   }
   @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter caller){
     _in.unlock(_jobKey);
@@ -78,7 +78,6 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     @Override public boolean logVerbose() { return false; }
 
     private void rebalanceChunk(Vec srcVec, Chunk chk){
-      final int dstrows = chk._len;
       NewChunk dst = new NewChunk(chk);
       dst._len = dst._len2 = 0;
       int rem = chk._len;

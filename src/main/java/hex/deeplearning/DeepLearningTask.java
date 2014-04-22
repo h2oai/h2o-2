@@ -21,7 +21,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   public DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction){this(input,fraction,null);}
   private DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, H2OCountedCompleter cmp){
-    super(input.job(),input.data_info(),cmp);
+    super(input.get_params(),input.data_info(),cmp);
     _training=true;
     _input=input;
     _useFraction=fraction;
@@ -130,7 +130,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     }
     // output
     if(params.classification)
-      neurons[neurons.length - 1] = new Neurons.Softmax(dinfo._adaptedFrame.lastVec().domain().length);
+      neurons[neurons.length - 1] = new Neurons.Softmax(minfo.units[minfo.units.length-1]);
     else
       neurons[neurons.length - 1] = new Neurons.Linear(1);
 
@@ -180,7 +180,9 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
       }
     }
     catch(RuntimeException ex) {
+      Log.warn(ex.getMessage());
       minfo.set_unstable();
+      throw new Job.JobCancelledException("Canceling job due to numerical instability.");
     }
   }
 

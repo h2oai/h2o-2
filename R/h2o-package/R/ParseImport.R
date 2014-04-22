@@ -22,7 +22,23 @@ h2o.clusterInfo <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
   if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
-  res = fromJSON(postForm(myURL, style = "POST"))
+
+  res = NULL
+  {
+    res = fromJSON(postForm(myURL, style = "POST"))
+
+    nodeInfo = res$nodes
+    numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
+
+    if (numCPU == 0) {
+      # If the cloud hasn't been up for a few seconds yet, then query again.
+      # Sometimes the heartbeat info with cores and memory hasn't had a chance
+      # to post it's information yet.
+      threeSeconds = 3
+      Sys.sleep(threeSeconds)
+      res = fromJSON(postForm(myURL, style = "POST"))
+    }
+  }
   
   nodeInfo = res$nodes
   maxMem = sum(sapply(nodeInfo,function(x) as.numeric(x['max_mem_bytes']))) / (1024 * 1024 * 1024)
@@ -89,7 +105,7 @@ h2o.assign <- function(data, key) {
 # ----------------------------------- File Import Operations --------------------------------- #
 # WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 # ----------------------------------- Import Folder --------------------------------- #
-h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 2) {
   if(version == 1)
     h2o.importFolder.VA(object, path, pattern, key, parse, header, sep, col.names)
   else if(version == 2)
@@ -164,7 +180,7 @@ h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TR
 }
 
 # ----------------------------------- Import File --------------------------------- #
-h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 2) {
   if(version == 1)
     h2o.importFile.VA(object, path, key, parse, header, sep, col.names)
   else if(version == 2)
@@ -186,7 +202,7 @@ h2o.importFile.FV <- function(object, path, key = "", parse = TRUE, header, sep 
 }
 
 # ----------------------------------- Import URL --------------------------------- #
-h2o.importURL <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+h2o.importURL <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, version = 2) {
   if(version == 1)
     h2o.importURL.VA(object, path, key, parse, header, sep, col.names)
   else if(version == 2)
@@ -216,7 +232,7 @@ h2o.importURL.FV <- function(object, path, key = "", parse = TRUE, header, sep =
 }
 
 # ----------------------------------- Import HDFS --------------------------------- #
-h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 1) {
+h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, version = 2) {
   if(version == 1)
     h2o.importHDFS.VA(object, path, pattern, key, parse, header, sep, col.names)
   else if(version == 2)
@@ -262,7 +278,7 @@ h2o.importHDFS.FV <- function(object, path, pattern = "", key = "", parse = TRUE
 }
 
 # ----------------------------------- Upload File --------------------------------- #
-h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE, version = 1) {
+h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE, version = 2) {
   if(version == 1)
     h2o.uploadFile.VA(object, path, key, parse, header, sep, col.names, silent)
   else if(version == 2)
@@ -314,7 +330,7 @@ h2o.uploadFile.FV <- function(object, path, key = "", parse = TRUE, header, sep 
 }
 
 # ----------------------------------- File Parse Operations --------------------------------- #
-h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, version = 1) {
+h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, version = 2) {
   if(version == 1)
     h2o.parseRaw.VA(data, key, header, sep, col.names)
   else if(version == 2)

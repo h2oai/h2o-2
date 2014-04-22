@@ -23,8 +23,7 @@ OTHER_Q_SUMM_INDEX = 3
 # has to point to one of the summmary2 choices
 OTHER_Q = thresholds[OTHER_Q_SUMM_INDEX]
 
-MAX_QBINS = 1000
-MAX_QBINS = 1000
+MAX_QBINS = 49
 
 class Basic(unittest.TestCase):
     def tearDown(self):

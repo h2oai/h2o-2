@@ -1,10 +1,11 @@
 package water.fvec;
 
-import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import org.junit.*;
+
 import water.*;
 import water.nbhm.NonBlockingHashMap;
 
@@ -173,5 +174,9 @@ public class WordCountTest extends TestUtil {
        hash = 31 * hash + _cs[_off+i];
      return hash;
     }
+  }
+
+  @Test @Ignore public void dummy_test() {
+    /* this is just a dummy test to avoid JUnit complains about missing test */
   }
 }

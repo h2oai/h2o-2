@@ -371,7 +371,7 @@ public abstract class Job extends Func {
         return;
       }
 
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception _) {}
+      try { Thread.sleep (pollingIntervalMillis); } catch (Exception xe) {}
     }
   }
 
@@ -498,7 +498,7 @@ public abstract class Job extends Func {
   /**
    * A job which operates with a frame.
    *
-   * @INPUT frame
+   * INPUT frame
    */
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
@@ -525,7 +525,7 @@ public abstract class Job extends Func {
    * A job which has an input represented by a frame and frame column filter.
    * The filter can be specified by ignored columns or by used columns.
    *
-   * @INPUT list ignored columns by idx XOR list of ignored columns by name XOR list of used columns
+   * INPUT list ignored columns by idx XOR list of ignored columns by name XOR list of used columns
    *
    * @see FrameJob
    */
@@ -626,21 +626,17 @@ public abstract class Job extends Func {
   }
 
   /**
-   * A job producing a model.
+   * A columns job that requires a response.
    *
-   * @INPUT response column from source
+   * INPUT response column from source
    */
-  public static abstract class ModelJob extends ColumnsJob {
+  public static abstract class ColumnsResJob extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help="Column to use as class", required=true, filter=responseFilter.class, json = true)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
-
-    @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
-    public boolean classification = true;
-    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
     @Override protected void registered(API_VERSION ver) {
       super.registered(ver);
@@ -672,7 +668,7 @@ public abstract class Job extends Func {
       super.init();
       // Check if it make sense to build a model
       if (source.numRows()==0)
-        throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+        throw new H2OIllegalArgumentException(find("source"), "Cannot build a model on empty dataset!");
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
@@ -684,13 +680,53 @@ public abstract class Job extends Func {
       final boolean has_constant_response = response.isEnum() ?
               response.domain().length <= 1 : response.min() == response.max();
       if (has_constant_response)
-        throw new IllegalArgumentException("Constant response column!");
+        throw new H2OIllegalArgumentException(find("response"), "Constant response column!");
     }
   }
 
   /**
+   * A job producing a model.
+   *
+   * INPUT response column from source
+   */
+  public static abstract class ModelJob extends ModelJobWithoutClassificationField {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help="Do classification or regression", filter=myClassFilter.class, json = true)
+    public boolean classification = true; // we need 3-state boolean: unspecified, true/false BUT we solve that by checking UI layer to see if the classification parameter was passed
+    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
+
+    @Override protected void init() {
+      super.init();
+      // Reject request if classification is required and response column is float
+      //Argument a4class = find("classification"); // get UI control
+      //String p4class = input("classification");  // get value from HTTP requests
+      // if there is UI control and classification field was passed
+      final boolean classificationFieldSpecified = true; // ROLLBACK: a4class!=null ? p4class!=null : /* we are not in UI so expect that parameter is specified correctly */ true;
+      if (!classificationFieldSpecified) { // can happen if a client sends a request which does not specify classification parameter
+        classification =  response.isEnum();
+        Log.warn("Classification field is not specified - deriving according to response! The classification field set to " + classification);
+      } else {
+        if ( classification && response.isFloat()) throw new H2OIllegalArgumentException(find("classification"), "Requested classification on float column!");
+        if (!classification && response.isEnum() ) throw new H2OIllegalArgumentException(find("classification"), "Requested regression on enum column!");
+      }
+    }
+  }
+
+  /**
+   * A job producing a model that has no notion of Classification or Regression.
+   *
+   * INPUT response column from source
+   */
+  public static abstract class ModelJobWithoutClassificationField extends ColumnsResJob {
+    // This exists to support GLM2, which determines classification/regression using the
+    // family field, not a second separate field.
+  }
+
+  /**
    * Job which produces model and validate it on a given dataset.
-   * @INPUT validation frame
+   * INPUT validation frame
    */
   public static abstract class ValidatedJob extends ModelJob {
     static final int API_WEAVER = 1;

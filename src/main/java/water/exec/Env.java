@@ -6,6 +6,7 @@ import water.*;
 import water.fvec.*;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
+import water.util.Log;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -189,6 +190,21 @@ public class Env extends Iced {
   public ASTOp  peekFcn() { assert isFcn(); ASTOp op = _fcn[_sp-1]; return op; }
   public String peekKey() { return _key[_sp-1]; }
   public String key()     { return _key[_sp]; }
+  // Pop frame from stack; lower refcnts... allowing to fall to zero without deletion.
+  // Assumption is that this Frame will get pushed again shortly.
+  public Frame  popXAry()  { 
+    Frame fr = popAry();
+    for( Vec vec : fr.vecs() ) {
+      popVec(vec);
+      if ( vec.masterVec() != null ) popVec(vec.masterVec());
+    }
+    return fr; 
+  }
+  public void popVec(Vec vec)  {
+    int cnt = _refcnt.get(vec)._val-1;
+    if( cnt > 0 ) _refcnt.put(vec,new IcedInt(cnt));
+    else _refcnt.remove(vec);
+  }
 
   // Replace a function invocation with it's result
   public void poppush( int n, Frame ary, String key) {
@@ -233,7 +249,6 @@ public class Env extends Iced {
   }
 
   public Futures subRef( Vec vec, Futures fs ) {
-
     if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)._val-1;
     //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
@@ -262,7 +277,7 @@ public class Env extends Iced {
     if( !(op instanceof ASTFunc) ) return null;
     ASTFunc fcn = (ASTFunc)op;
     if( fcn._env != null ) fcn._env.subRef(this);
-    else System.out.println("Popping fcn object, never executed no environ capture");
+    else Log.info("Popping fcn object, never executed no environ capture");
     return null;
   }
 
@@ -285,7 +300,7 @@ public class Env extends Iced {
     if( !(op instanceof ASTFunc) ) return op;
     ASTFunc fcn = (ASTFunc)op;
     if( fcn._env != null ) fcn._env.addRef(this);
-    else System.out.println("Pushing fcn object, never executed no environ capture");
+    else Log.info("Pushing fcn object, never executed no environ capture");
     return op;
   }
   private void addRef(Env global) {
@@ -364,7 +379,7 @@ public class Env extends Iced {
     int cnt0 = I==null ? 0 : I._val;
     int cnt1 = compute_refcnt(vec);
     if( cnt0==cnt1 ) return true;
-    System.out.println("Refcnt is "+cnt0+" but computed as "+cnt1);
+    Log.err("Refcnt is "+cnt0+" but computed as "+cnt1);
     return false;
   }
 

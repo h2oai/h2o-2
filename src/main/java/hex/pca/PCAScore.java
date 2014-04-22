@@ -37,7 +37,7 @@ public class PCAScore extends FrameJob {
     new Frame(destination_key, new String[0], new Vec[0]).delete_and_lock(self());
     Frame fr = model.adapt(source, true)[0];
     int nfeat = model._names.length;
-    DataInfo dinfo = new DataInfo(fr,0, model.normSub,model.normMul);
+    DataInfo dinfo = new DataInfo(fr,0, false,model.normSub,model.normMul);
     PCAScoreTask tsk = new PCAScoreTask(this, dinfo, nfeat, num_pc, model.eigVec);
     tsk.doAll(num_pc, dinfo._adaptedFrame);
     String[] names = new String[num_pc];

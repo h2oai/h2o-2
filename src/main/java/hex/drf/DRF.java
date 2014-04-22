@@ -1,24 +1,22 @@
 package hex.drf;
 
+import static hex.drf.TreeMeasuresCollector.asSSE;
+import static hex.drf.TreeMeasuresCollector.asVotes;
 import static water.util.Utils.div;
 import static water.util.Utils.sum;
-import static hex.drf.TreeMeasuresCollector.asVotes;
-import static hex.drf.TreeMeasuresCollector.asSSE;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.drf.TreeMeasuresCollector.TreeMeasures;
-import hex.drf.TreeMeasuresCollector.TreeVotes;
 import hex.drf.TreeMeasuresCollector.TreeSSE;
-import hex.gbm.*;
+import hex.drf.TreeMeasuresCollector.TreeVotes;
+import hex.gbm.DHistogram;
+import hex.gbm.DTree;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-import java.util.Random;
-
+import hex.gbm.SharedTreeModelBuilder;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
@@ -27,6 +25,9 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+
+import java.util.Arrays;
+import java.util.Random;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
@@ -69,8 +70,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    @API(help = "Model parameters")
-    public final DRF parameters;    // This is used purely for printing values out.
+    @API(help = "Model parameters", json = true)
+    private final DRF parameters;    // This is used purely for printing values out.
+    public final DRF get_params() { return parameters; }
+    public final Request2 job() { return get_params(); }
 
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
@@ -82,17 +85,17 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = sample_rate;
       this.seed = seed;
     }
-    private DRFModel(DRF params, DRFModel prior, DTree[] trees, TreeStats tstats) {
+    private DRFModel(DRFModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
-      this.parameters = params;
+      this.parameters = prior.parameters;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
 
-    private DRFModel(DRF params, DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    private DRFModel(DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
-      this.parameters = params;
+      this.parameters = prior.parameters;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
@@ -112,7 +115,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
       if (testKey==null && sample_rate==1f) {
-        sb.append("<div class=\"alert\">There are now OOB data to report out-of-bag error, since sampling rate is 100%!</div>");
+        sb.append("<div class=\"alert alert-danger\">There are now OOB data to report out-of-bag error, since sampling rate is 100%!</div>");
       }
     }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
@@ -131,10 +134,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
 
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
-    return new DRFModel(this, model, err, cm, varimp, validAUC);
+    return new DRFModel(model, err, cm, varimp, validAUC);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
-    return new DRFModel(this, model, ktrees, tstats);
+    return new DRFModel(model, ktrees, tstats);
   }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 20; min_rows = 1; }
 

@@ -1,21 +1,29 @@
 package hex.gbm;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import hex.gbm.GBM.GBMModel;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
 import water.api.ConfusionMatrix;
+import water.api.GBMModelView;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 public class GBMTest extends TestUtil {
+
+  private final void testHTML(GBMModel m) {
+    StringBuilder sb = new StringBuilder();
+    GBMModelView gbmv = new GBMModelView();
+    gbmv.gbm_model = m;
+    gbmv.toHTML(sb);
+    assert(sb.length() > 0);
+  }
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
@@ -97,6 +105,7 @@ public class GBMTest extends TestUtil {
       gbm.score_each_iteration=true;
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
+      testHTML(gbmmodel);
       //System.out.println(gbmmodel.toJava());
 
       Frame preds = gbm.score(gbm.source);
@@ -136,6 +145,7 @@ public class GBMTest extends TestUtil {
       gbm.nbins = 100;
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
+      testHTML(gbmmodel);
 
       // Test on the train data
       ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
@@ -184,6 +194,7 @@ public class GBMTest extends TestUtil {
       gbm.nbins = 50;
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
+      testHTML(gbmmodel);
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
@@ -215,12 +226,12 @@ public class GBMTest extends TestUtil {
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.learn_rate = .2f;
       gbm.fork();
-      try { Thread.sleep(100); } catch( Exception _ ) { }
+      try { Thread.sleep(100); } catch( Exception xe ) { }
 
       try {
         fr.delete();            // Attempted delete while model-build is active
         H2O.fail();             // Should toss IAE instead of reaching here
-      } catch( IllegalArgumentException _ ) {
+      } catch( IllegalArgumentException xe ) {
       } catch( DException.DistributedException de ) {
         assertTrue( de.getMessage().indexOf("java.lang.IllegalArgumentException") != -1 );
       }

@@ -164,12 +164,14 @@ public class MRUtils {
    * Stratified sampling for classifiers
    * @param fr Input frame
    * @param label Label vector (must be enum)
-   * @param maxrows Maximum number of rows in the returned frame, must be > minrows
-   * @param seed RNG seed for sampling
    * @param sampling_ratios Optional: array containing the requested sampling ratios per class (in order of domains), will be overwritten if it contains all 0s
+   * @param maxrows Maximum number of rows in the returned frame
+   * @param seed RNG seed for sampling
+   * @param allowOversampling Allow oversampling of minority classes
+   * @param verbose Whether to print verbose info
    * @return Sampled frame, with approximately the same number of samples from each class (or given by the requested sampling ratios)
    */
-  public static Frame sampleFrameStratified(final Frame fr, Vec label, float[] sampling_ratios, long maxrows, final long seed, final boolean allowOversampling, final boolean debug) {
+  public static Frame sampleFrameStratified(final Frame fr, Vec label, float[] sampling_ratios, long maxrows, final long seed, final boolean allowOversampling, final boolean verbose) {
     if (fr == null) return null;
     assert(label.isEnum());
     assert(maxrows >= label.domain().length);
@@ -177,7 +179,7 @@ public class MRUtils {
     long[] dist = new ClassDist(label).doAll(label).dist();
     assert(dist.length > 0);
     Log.info("Doing stratified sampling for data set containing " + fr.numRows() + " rows from " + dist.length + " classes. Oversampling: " + (allowOversampling ? "on" : "off"));
-    if (debug) {
+    if (verbose) {
       for (int i=0; i<dist.length;++i) {
         Log.info("Class " + label.domain(i) + ": count: " + dist[i] + " prior: " + (float)dist[i]/fr.numRows());
       }
@@ -215,7 +217,7 @@ public class MRUtils {
 
     if (actualnumrows != numrows) {
       Utils.mult(sampling_ratios, (float)actualnumrows/numrows); //adjust the sampling_ratios by the global rescaling factor
-      if (debug)
+      if (verbose)
         Log.info("Downsampling majority class by " + (float)actualnumrows/numrows
                 + " to limit number of rows to " + String.format("%,d", maxrows));
     }
@@ -224,7 +226,7 @@ public class MRUtils {
     Log.info("Minority class (" + label.domain()[Utils.maxIndex(sampling_ratios)].toString()
             + ") sampling ratio: " + Utils.maxValue(sampling_ratios));
 
-    return sampleFrameStratified(fr, label, sampling_ratios, seed, debug);
+    return sampleFrameStratified(fr, label, sampling_ratios, seed, verbose);
   }
 
   /**

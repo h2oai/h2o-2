@@ -1,11 +1,11 @@
 GLM Tutorial
-------------
+==============
 
 The purpose of this tutorial is to walk the new user through 
-a GLM analysis beginning to end. The objective is to  learn how to
-specify, run, and interpret a GLM model using  H\ :sub:`2`\ O.  
-
-Those who have never used H\ :sub:`2`\ O before should see see :ref:`GettingStartedFromaZipFile` for additional instructions on how to run H\ :sub:`2`\ O.
+Generalized Linear Analysis (GLM)  using   H\ :sub:`2`\ O.  
+Users who have never used H\ :sub:`2`\ O before should see
+:ref:`GettingStartedFromaZipFile` for additional instructions on how
+to run H\ :sub:`2`\ O.
 
 
 When to Use GLM
@@ -25,8 +25,6 @@ Here are some examples:
   "How many customers will contact help support in a given time
   frame?"
 
-  "Given a set of conditions, which units will fail?"
-
   
 
 Getting Started
@@ -35,16 +33,16 @@ This tutorial uses a publicly available data set that can be found at:
 
 http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/ 
 
-The original data are the Abalone data set made available by UCI
-Machine Learning Repository. They are composed of 4177 observations of
-9 attributes. All attributes are real valued continuous,
+The original data are the Abalone data, available from UCI
+Machine Learning Repository. They are composed of 4177 observations on
+9 attributes. All attributes are real valued, and continuous,
 except for Sex and Rings, found in columns 0 and 8 respectively. 
 Sex is categorical with 3 levels (male, female, and infant), and Rings
-is integer valued. 
+is an integer valued count. 
 
-Before modeling, parse data into H\ :sub:`2`\ O as follows:
+Before modeling, parse data into H\ :sub:`2`\ O: 
 
-#. Under the drop down menu **Data** select Upload, and use the helper to
+#. Under the drop down menu **Data** select *Upload*, and use the helper to
    upload data.  
 
 
@@ -53,64 +51,59 @@ Before modeling, parse data into H\ :sub:`2`\ O as follows:
    header. All other settings can be left in default. Press Submit. 
 
 
-#. Parsing data into H\ :sub:`2`\ O generates a .hex key ("data name.hex")
+#. Parsing data into H\ :sub:`2`\ O generates a .hex key of the form  "data name.hex"
  
 
 .. image:: GLMparse.png
-   :width: 80%
+   :width: 100%
 
 
 
 Building a Model
 """"""""""""""""
 
-#. Once  data are parsed, a horizontal menu will appear at the top
-   of the screen reading "Build model using ... ". Select 
-   GLM here, or go to the drop down menu **Model** and
-   select GLM. 
+#. Once data are parsed, go to the drop down menu **Model** and
+   select *GLM*. 
 
 
-#. In the Key field enter the .hex key for the data set. 
+#. In the **Source** field enter the .hex key for the data set. 
 
 
-#. In the Y field select the column associated with the Whole Weight
+#. In the **Response** field select the column associated with the Whole Weight
    variable (column 5). 
 
 
-#. In the X field select the columns associated with Sex, Length,
-   Diameter, Height, and Rings (all other columns). 
+#. In the **Ignored Columns** field select the columns associated with  (all other columns). 
+
+#. Leave **Classification** and **Max Iter** in default. Classification is
+   used when the dependent variable is a binomial classifier. Max iter
+   is used to define the maximum number of iterations to be carried
+   out by the algorithm in the event that it fails to converge. 
+
+#. Leave the **Standardize** option unchecked (off). 
 
 
-#. Specify the distribution family to be Gaussian. This automatically sets the link
-   field to identity. 
+#. Set **Nfolds** equal to 0. When Nfolds is specified to be greater
+   than 0, the GLM model will return N number of cross validation
+   models. 
+
+#. Specify **Family** to be *Gaussian*. 
+
+#. Leave **Tweedie Variance Power** at zero; this option is only used
+   for the Tweedie family of GLM models (like zero-inflated Poisson). 
+
+#. Set **Alpha** equal to .3. The alpha parameter is the mixing
+   parameter for L1 and L2 penalty.
 
 
-#. Set lambda and alpha to 0. These parameters determine
-   regularization of GLM models. To find detailed information on the
-   specification of tuning parameters see :ref:`GLMmath`.
+#. Set **Lambda** equal to .002
 
-
-#. Leave n-folds at 10. This will produce 10 cross-validation models.
-
-
-#. Under the options box marked expert settings, notice that
-   standardization is ON by default. This option returns two sets of
-   coefficients, the non-standardized coefficients, and standardized
-   coefficients.  
+#. Leave all other options in default, and press the **Submit**
+   button. 
 
 
 .. image:: GLMrequest.png
-   :width: 90%
-
-
-
-Additional specification detail
-
-
-
-.. image:: GLMrequest2.png
-   :width: 90%
-
+   :width: 100%
 
 
 
@@ -122,13 +115,10 @@ standardization is requested). Also reported are AIC and
 error rate. An equation of the specified model is printed across the top
 of the GLM results page in red. 
 
-Users should note that if they wish to replicate results between H\ :sub:`2`\ O
-and R, it is recommended that standardization and cross validation
-either be turned off in H\ :sub:`2`\ O. 
 
 
 .. image:: GLMoutput.png
-   :width: 90%
+   :width: 100%
 
 
 

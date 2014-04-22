@@ -1,8 +1,6 @@
 package water;
 
-import hex.DeepLearningVsNeuralNet;
-import hex.NeuralNetIrisTest;
-import hex.NeuralNetSpiralsTest;
+import hex.*;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -37,9 +35,9 @@ public class JUnitRunner {
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
-    tests.remove(DeepLearningVsNeuralNet.class);
-    tests.remove(NeuralNetIrisTest.class); //old NeuralNet
-    tests.remove(NeuralNetSpiralsTest.class); //old NeuralNet
+    tests.remove(DeepLearningIrisTest.Long.class);
+    tests.remove(DeepLearningProstateTest.Long.class);
+
     // Pure JUnit test
 //    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);
@@ -123,7 +121,7 @@ public class JUnitRunner {
         Class c = Class.forName(name);
         if( isTest(c) )
           tests.add(c);
-      } catch( Throwable _ ) {
+      } catch( Throwable xe ) {
       }
     }
     if( tests.size() == 0 )
@@ -132,7 +130,7 @@ public class JUnitRunner {
     return tests;
   }
 
-  private static boolean isTest(Class c) {
+  public static boolean isTest(Class c) {
     for( Annotation a : c.getAnnotations() )
       if( a instanceof Ignore )
         return false;

@@ -1,10 +1,9 @@
 package hex.drf;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
+
 import water.TestUtil;
 import water.fvec.Frame;
-import water.UKV;
 
 public class DRFTest2 extends TestUtil {
 
@@ -19,17 +18,17 @@ public class DRFTest2 extends TestUtil {
     for( int i=0; i<10; i++ ) {
       new DRFTest().basicDRF(
         //
-        //"../demo/c5/row10000.csv.gz", "c5.hex", null, null, 
+        //"../demo/c5/row10000.csv.gz", "c5.hex", null, null,
 
         "../datasets/UCI/UCI-large/covtype/covtype.data", "covtype.hex", null, null,
         new DRFTest.PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
         10/*ntree*/,
-        a( a( 199019,   7697,    15,    0,  180,    45,   546), 
-           a(   8012, 267788,   514,    7,  586,   329,   181), 
-           a(     16,    707, 33424,  162,   53,   639,     0), 
-           a(      1,      5,   353, 2211,    0,    99,     0), 
-           a(    181,   1456,   134,    0, 7455,    43,     4), 
-           a(     30,    540,  1171,   96,   33, 15109,     0), 
+        a( a( 199019,   7697,    15,    0,  180,    45,   546),
+           a(   8012, 267788,   514,    7,  586,   329,   181),
+           a(     16,    707, 33424,  162,   53,   639,     0),
+           a(      1,      5,   353, 2211,    0,    99,     0),
+           a(    181,   1456,   134,    0, 7455,    43,     4),
+           a(     30,    540,  1171,   96,   33, 15109,     0),
            a(    865,    167,     0,    0,    9,     0, 19075)),
         s("1", "2", "3", "4", "5", "6", "7"),
 
@@ -55,5 +54,8 @@ public class DRFTest2 extends TestUtil {
         20/*nbins*/,
         0 /*optflag*/  );
     }
+  }
+  @Test @Ignore public void dummy_test() {
+    /* this is just a dummy test to avoid JUnit complains about missing test */
   }
 }

@@ -18,7 +18,7 @@ class Test:
     Each file represents a phase of the test.
     In addition to these R files, there is a config file.
     """
-    def __init__(self, cfg, test_dir, test_short_dir, output_dir, parse_file, model_file, predict_file, perfdb):
+    def __init__(self, cfg, test_dir, test_short_dir, output_dir, parse_file, model_file, predict_file, perfdb, prefix):
         self.ip = ""
         self.port = -1
         self.aws = False
@@ -39,7 +39,7 @@ class Test:
         self.model_file = model_file
         self.predict_file = predict_file
         self.test_run = ""
-        self.test_name = os.path.basename(test_dir)
+        self.test_name = prefix + "_" + os.path.basename(test_dir)
 
         self.test_is_complete = False
         self.test_cancelled = False
@@ -79,7 +79,7 @@ class Test:
                 h["isEC2"] = self.aws
                 self.hosts.append(h)
 
-    def do_test(self):
+    def do_test(self, object):
         """
         This call is blocking.
 
@@ -93,11 +93,12 @@ class Test:
         self.parse_process.start(self.ip, self.port)
         self.parse_process.block()
         res = self.parse_process.scrape_phase()
-        self.test_run.row.update(res)   #this piece doesn't make sense to me.
+        self.test_run.row.update(res)
 
         self.model_process.start(self.ip, self.port)
         self.model_process.block()
         self.model_process.scrape_phase()
+        contamination = PerfUtils.run_contaminated(object)
 
         if self.predict_process:
             self.predict_process.start(self.ip, self.port)
@@ -116,6 +117,7 @@ class Test:
         self.test_run.row['instance_type'] = self.instance_type
 
         self.test_is_complete = True
+        return contamination
 
     def contamination_message(self):
         message = "Contamination in phase {}. "

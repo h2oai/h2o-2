@@ -160,7 +160,9 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("\nTraining mean square error:", model$train_sqr_error)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
-  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+  if(!is.null(model$confusion)) {
+    cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+  }
 })
 
 setMethod("show", "H2ODRFModel", function(object) {
@@ -168,7 +170,8 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("Distributed Random Forest Model Key:", object@key)
 
   model = object@model
-  cat("\n\nNumber of trees:", model$params$ntree)
+  cat("\n\nClasification:", model$params$classification)
+  cat("\nNumber of trees:", model$params$ntree)
   cat("\nTree statistics:\n"); print(model$forest)
   
   if(model$params$classification) {
@@ -841,7 +844,7 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   }
   
   # Substitute NAs for blank cells rather than skipping.
-  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
+  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, ...)
   
 #   if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
 #     stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
@@ -853,12 +856,8 @@ as.data.frame.H2OParsedData <- function(x, ...) {
 #     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
 #   else
 #     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
-#   for(i in 1:df.ncol) {
-#     if(!is.null(res$levels[[i]]))
-#       df[,i] <- factor(df[,i], levels = res$levels[[i]])
-#     else if(!is.numeric(df[,i]))
-#       df[,i] <- as.numeric(df[,i])
-#   }
+#   colClasses = sapply(res$levels, function(x) { ifelse(is.null(x), "numeric", "factor") })
+#   df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, colClasses = colClasses, ...)
   return(df)
 }
 

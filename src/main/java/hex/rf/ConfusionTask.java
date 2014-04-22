@@ -20,56 +20,55 @@ import com.google.common.primitives.Ints;
  * matrix. Cheap if all trees already computed.
  */
 public class ConfusionTask extends MRTask {
-
-  /** @IN: Class weights */
+  /** IN: Class weights */
   double[] _classWt;
-  /** @IN: Compute oobee or not */
+  /** IN: Compute oobee or not */
   boolean  _computeOOB;
-  /** @IN: Number of used trees in CM computation */
+  /** IN: Number of used trees in CM computation */
   int      _treesUsed;
-  /** @IN: Key for the model used for construction of the confusion matrix. */
+  /** IN: Key for the model used for construction of the confusion matrix. */
   Key      _modelKey;
-  /** @IN: Dataset we are building the matrix on.  The column count must match the Trees.*/
+  /** IN: Dataset we are building the matrix on.  The column count must match the Trees.*/
   Key      _datakey;
-  /** @IN: Column holding the class, defaults to last column */
+  /** IN: Column holding the class, defaults to last column */
   int     _classcol;
-  /** @IN: Job */
+  /** IN: Job */
   CMJob   _job;
 
-  /** @OUT: Confusion matrix */
+  /** OUT: Confusion matrix */
   CM   _matrix;
-  /** @OUT: Local confusion matrixes if oobee is enabled. */
+  /** OUT: Local confusion matrixes if oobee is enabled. */
   CM[] _localMatrices;
-  /** @OUT: Error rate per tree */
+  /** OUT: Error rate per tree */
   private long[] _errorsPerTree;
 
   // Computed local data
-  /** @LOCAL: Model used for construction of the confusion matrix. */
+  /** LOCAL: Model used for construction of the confusion matrix. */
   transient private RFModel _model;
-  /** @LOCAL: Mapping from model columns to data columns */
+  /** LOCAL: Mapping from model columns to data columns */
   transient private int[] _modelDataMap;
-  /** @LOCAL: The dataset to validate */
+  /** LOCAL: The dataset to validate */
   transient public ValueArray _data;
-  /** @LOCAL: Number of response classes = Max(responses in model, responses in test data)*/
+  /** LOCAL: Number of response classes = Max(responses in model, responses in test data)*/
   transient public int  _N;
-  /** @LOCAL: Number of response classes in model */
+  /** LOCAL: Number of response classes in model */
   transient public int _MODEL_N;
-  /** @LOCAL: Number of response classes in data */
+  /** LOCAL: Number of response classes in data */
   transient public int _DATA_N;
   /** For reproducibility we can control the randomness in the computation of the
       confusion matrix. The default seed when deserializing is 42. */
   transient private Random    _rand;
-  /** @LOCAL: Data to replay the sampling algorithm */
+  /** LOCAL: Data to replay the sampling algorithm */
   transient private int[]     _chunk_row_mapping;
-  /** @LOCAL: Number of rows at each node */
+  /** LOCAL: Number of rows at each node */
   transient private int[]     _rowsPerNode;
-  /** @LOCAL: Computed mapping of model prediction classes to confusion matrix classes */
+  /** LOCAL: Computed mapping of model prediction classes to confusion matrix classes */
   transient private int[]     _model_classes_mapping;
-  /** @LOCAL: Computed mapping of data prediction classes to confusion matrix classes */
+  /** LOCAL: Computed mapping of data prediction classes to confusion matrix classes */
   transient private int[]     _data_classes_mapping;
-  /** @LOCAL: Difference between model cmin and CM cmin */
+  /** LOCAL: Difference between model cmin and CM cmin */
   transient private int       _cmin_model_mapping;
-  /** @LOCAL: Difference between data cmin and CM cmin */
+  /** LOCAL: Difference between data cmin and CM cmin */
   transient private int       _cmin_data_mapping;
 
   /**   Constructor for use by the serializers */
@@ -101,7 +100,7 @@ public class ConfusionTask extends MRTask {
   }
 
   /**Apply a model to a dataset to produce a Confusion Matrix.  To support
-     incremental & repeated model application, hash the model & data and look
+     incremental and repeated model application, hash the model and data and look
      for that Key to already exist, returning a prior CM if one is available.*/
   static public Job make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
     return make(model, model.size(), datakey, classcol, classWt, computeOOB);
