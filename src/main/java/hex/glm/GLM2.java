@@ -127,11 +127,13 @@ public class GLM2 extends ModelJob {
     final int _iter;
     final double _objval;
     final GLMIterationTask _glmt;
+    final int [] _activeCols;
 
-    public IterationInfo(int i, double obj, GLMIterationTask glmt){
+    public IterationInfo(int i, double obj, GLMIterationTask glmt, final int [] activeCols){
       _iter = i;
       _objval = obj;
       _glmt = glmt;
+      _activeCols = activeCols;
     }
   }
 
@@ -244,7 +246,7 @@ public class GLM2 extends ModelJob {
     if(lambda_search && lambda.length > 1)
       throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda, representing the lambda min (smallest lambda in the lambda search).");
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
-    _dinfo = new DataInfo(fr, 1, use_all_factor_levels, standardize,false);
+    _dinfo = new DataInfo(fr, 1, use_all_factor_levels || lambda_search, standardize,false);
     if(higher_accuracy)setHighAccuracy();
   }
   @Override protected Response serve() {
@@ -286,14 +288,26 @@ public class GLM2 extends ModelJob {
     return l2;
   }
 
+  private final double [] expandVec(double [] beta, final int [] activeCols){
+    if(activeCols == null)return beta;
+    double [] res = MemoryManager.malloc8d(_dinfo.fullN()+1);
+    int i = 0;
+    for(int c:activeCols)
+      res[c] = beta[i++];
+    assert i == beta.length-1;
+    res[res.length-1] = beta[i];
+    return res;
+  }
   protected boolean needLineSearch(double [] beta,double objval, double step){
     if(Double.isNaN(objval))return true; // needed for gamma (and possibly others...)
+    final double [] fullBeta = expandVec(beta,_activeCols);
     // line search
     double f_hat = 0;
-    final double [] grad = _lastResult._glmt.gradient(l2pen());
-    ADMMSolver.subgrad(alpha[0],lambda[_lambdaIdx],beta,grad);
+    final double [] grad = expandVec(_lastResult._glmt.gradient(l2pen()),_lastResult._activeCols);
+    ADMMSolver.subgrad(alpha[0],lambda[_lambdaIdx],fullBeta,grad);
+    final double [] oldBeta = expandVec(_lastResult._glmt._beta, _lastResult._activeCols);
     for(int i = 0; i < beta.length; ++i){
-      double diff = beta[i] - _lastResult._glmt._beta[i];
+      double diff = fullBeta[i] - oldBeta[i];
       f_hat += grad[i]*diff;
     }
     f_hat = _lastResult._objval + 0.5*step*f_hat;
@@ -518,7 +532,7 @@ public class GLM2 extends ModelJob {
           new GLMTask.GLMLineSearchTask(GLM2.this,_dinfo,_glm,_lastResult._glmt._beta,glmt._beta,1e-8,glmt._n,alpha[0],lambda[_lambdaIdx], new LineSearchIteration()).asyncExec(_activeFrame);
           return;
         }
-        _lastResult = new IterationInfo(GLM2.this._iter-1, objval, glmt);
+        _lastResult = new IterationInfo(GLM2.this._iter-1, objval, glmt,_activeCols);
       }
       final double [] newBeta = glmt._beta != null?glmt._beta.clone():MemoryManager.malloc8d(glmt._xy.length);
       double [] newBetaDeNorm = null;
