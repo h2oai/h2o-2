@@ -329,7 +329,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if(_val != null)_val.finalize_AIC_AUC();
     }
     public double [] gradient(double l2pen){
-      if(l2pen == 0)return _grad;
       final double [] res = _grad.clone();
       for(int i = 0; i < _grad.length-1; ++i) res[i] += l2pen*_beta[i];
       return res;

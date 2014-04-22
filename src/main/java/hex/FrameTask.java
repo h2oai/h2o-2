@@ -88,6 +88,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public final int _nfolds;
 
     private DataInfo(DataInfo dinfo, int foldId, int nfolds){
+      assert dinfo._catLvls == null:"Should not be called with filtered levels (assuming the selected levels may change with fold id) ";
       _standardize = dinfo._standardize;
       _standardize_response = dinfo._standardize_response;
       _responses = dinfo._responses;
@@ -102,6 +103,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _foldId = foldId;
       _nfolds = nfolds;
       _useAllFactorLevels = dinfo._useAllFactorLevels;
+      _catLvls = null;
     }
     public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul) {
       this(fr,hasResponses,useAllFactorLvls, normSub,normMul,null,null);
@@ -119,6 +121,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         System.arraycopy(normRespMul, 0, _normRespMul, 0, normRespMul.length);
       }
     }
+
+    final int [][] _catLvls;
 
     /**
      * Prepare a Frame (with a single response) to be processed by the FrameTask
@@ -191,12 +195,57 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       this(fr, nResponses, useAllFactors, standardize, false);
     }
 
+
+    //new DataInfo(f,catLvls, _responses, _standardize, _standardize_response);
+    private DataInfo(Frame fr, int [][] catLevels, int responses, boolean standardize, boolean standardizeResponse, int nfolds, int foldId){
+      _adaptedFrame = fr;
+      _catOffsets = MemoryManager.malloc4(catLevels.length+1);
+      int s = 0;
+      for(int i = 0; i < catLevels.length; ++i){
+        _catOffsets[i] = s;
+        s += catLevels[i].length;
+      }
+      _catLvls = catLevels;
+      _catOffsets[_catOffsets.length-1] = s;
+      _responses = responses;
+      _cats = catLevels.length;
+      _nums = fr.numCols()-_cats - responses;
+      if((_standardize = standardize) && _nums > 0){
+        _normMul = MemoryManager.malloc8d(_nums);
+        _normSub = MemoryManager.malloc8d(_nums);
+        for(int i = 0; i < _nums; ++i){
+          Vec v = fr.vec(catLevels.length+i);
+          _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
+          _normSub[i] = v.mean();
+        }
+      } else {
+        _normMul = null;
+        _normSub = null;
+      }
+      if((_standardize_response = standardizeResponse) && responses > 0){
+        _normRespMul = MemoryManager.malloc8d(responses);
+        _normRespSub = MemoryManager.malloc8d(responses);
+        for(int i = 0; i < responses; ++i){
+          Vec v = fr.vec(fr.numCols()-responses+i);
+          _normRespSub[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
+          _normRespSub[i] = v.mean();
+        }
+      } else {
+        _normRespMul = null;
+        _normRespSub = null;
+      }
+      _useAllFactorLevels = false;
+      _adaptedFrame.reloadVecs();
+      _nfolds = nfolds;
+      _foldId = foldId;
+    }
     public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, boolean standardize, boolean standardize_response){
       _nfolds = _foldId = 0;
       _standardize = standardize;
       _standardize_response = standardize_response;
       _responses = nResponses;
       _useAllFactorLevels = useAllFactorLevels;
+      _catLvls = null;
       final Vec [] vecs = fr.vecs();
       final int n = vecs.length-_responses;
       if (n < 1) throw new IllegalArgumentException("Training data must have at least one column.");
@@ -256,6 +305,46 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       }
       _adaptedFrame = new Frame(names,vecs2);
       _adaptedFrame.reloadVecs();
+    }
+
+    public DataInfo filterExpandedColumns(int [] cols){
+      int i = 0, j = 0, ignoredCnt = 0;
+      //public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
+      int [][] catLvls = new int[_cats][];
+      int [] ignoredCols = MemoryManager.malloc4(_nums + _cats);
+      // first do categoricals...
+      while(i < cols.length && cols[i] < _catOffsets[_catOffsets.length-1]){
+        int [] levels = MemoryManager.malloc4(_catOffsets[j+1] - _catOffsets[j]);
+        int k = 0;
+        while(i < cols.length && cols[i] < _catOffsets[j+1])
+          levels[k++] = cols[i++];
+        if(k > 0)
+          catLvls[j] = Arrays.copyOf(levels, k);
+        ++j;
+      }
+      for(int k =0; k < catLvls.length; ++k)
+        if(catLvls[k] == null)ignoredCols[ignoredCnt++] = k;
+      if(ignoredCnt > 0){
+        int [][] c = new int[_cats-ignoredCnt][];
+        int y = 0;
+        for(int x = 0; x < catLvls.length; ++x)
+          if(catLvls[x] != null) c[y++] = catLvls[x];
+        catLvls = c;
+      }
+      // now numerics
+      int prev = j = 0;
+      for(; i < cols.length; ++i){
+        for(int k = prev; k < (cols[i]-numStart()); ++k ){
+          ignoredCols[ignoredCnt++] = k+_cats;
+          ++j;
+        }
+        prev = ++j;
+      }
+      for(int k = prev; k < _nums; ++k)
+        ignoredCols[ignoredCnt++] = k+_cats;
+      Frame f = new Frame(_adaptedFrame.names().clone(),_adaptedFrame.vecs().clone());
+      if(ignoredCnt > 0) f.remove(Arrays.copyOf(ignoredCols,ignoredCnt));
+      return new DataInfo(f,catLvls, _responses, _standardize, _standardize_response, _nfolds, _foldId);
     }
     public String toString(){
       return "";
@@ -343,7 +432,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
         int c = (int)chunks[i].at80(r);
-        if(_dinfo._useAllFactorLevels)
+        if(_dinfo._catLvls != null){ // some levels are ignored?
+          c = Arrays.binarySearch(_dinfo._catLvls[i],c);
+          if(c >= 0)
+            cats[ncats++] = c + _dinfo._catOffsets[i];
+        } else if(_dinfo._useAllFactorLevels)
           cats[ncats++] = c + _dinfo._catOffsets[i];
         else if(c != 0)
           cats[ncats++] = c + _dinfo._catOffsets[i]-1;
