@@ -82,6 +82,9 @@ Steam.MainView = (_) ->
  
   _template = (view) -> view.template
 
+  link$ _.displayEmpty, ->
+    switchPage template: 'empty-view'
+
   link$ _.displayFrame, (frame) ->
     switchPage Steam.FrameView _, frame
 

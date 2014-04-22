@@ -36,6 +36,8 @@ Steam.ApplicationContext = ->
     switchToModels: do edge$
     switchToScoring: do edge$
 
+    displayEmpty: do edge$
+
     loadFrames: do edge$
     displayFrame: do edge$
 
