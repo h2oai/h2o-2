@@ -95,7 +95,7 @@ public class GLM2 extends ModelJob {
   // API output parameters END ------------------------------------------------------------
 
 
-  private static double GLM_GRAD_EPS = 1e-8; // done (converged) if subgrad < this value.
+  private static double GLM_GRAD_EPS = 1e-5; // done (converged) if subgrad < this value.
 
   private boolean highAccuracy(){return higher_accuracy;}
   private void setHighAccuracy(){
@@ -465,6 +465,11 @@ public class GLM2 extends ModelJob {
     @Override public void callback(final GLMIterationTask glmt) {
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - start) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
+      if(glmt._gram != null && _activeData.fullN() < 100){
+        System.out.println("GRAM");
+        System.out.println(Utils.pprint(glmt._gram.getXX()));
+        System.out.println("   ");
+      }
       currentLambdaIter++;
       if(glmt._val != null){
         if(!(glmt._val.residual_deviance < glmt._val.null_deviance)){ // complete fail, look if we can restart with higher_accuracy on
@@ -590,7 +595,7 @@ public class GLM2 extends ModelJob {
                 lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
               }
               final String [] fwarns = warns;
-              double [] beta = MemoryManager.malloc8d(_dinfo.fullN());
+              double [] beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
               beta[beta.length-1] = _glm.link(ymut.ymu());
               // compute gradient and apply strong rules to filter the non-active columns out...
               new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,true,beta,ymut.ymu(),1.0/ymut.nobs(), new H2OCallback<GLMIterationTask>(GLM2.this) {

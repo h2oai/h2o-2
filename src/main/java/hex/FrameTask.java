@@ -201,6 +201,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _adaptedFrame = fr;
       _catOffsets = MemoryManager.malloc4(catLevels.length+1);
       int s = 0;
+
       for(int i = 0; i < catLevels.length; ++i){
         _catOffsets[i] = s;
         s += catLevels[i].length;
@@ -317,7 +318,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         int [] levels = MemoryManager.malloc4(_catOffsets[j+1] - _catOffsets[j]);
         int k = 0;
         while(i < cols.length && cols[i] < _catOffsets[j+1])
-          levels[k++] = cols[i++];
+          levels[k++] = cols[i++]-_catOffsets[j];
         if(k > 0)
           catLvls[j] = Arrays.copyOf(levels, k);
         ++j;
