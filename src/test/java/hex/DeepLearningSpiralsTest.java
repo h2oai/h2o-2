@@ -33,7 +33,7 @@ public class DeepLearningSpiralsTest extends TestUtil {
         {
           DeepLearning p = new DeepLearning();
           p.seed = 0xbabe;
-          p.epochs = 5000;
+          p.epochs = 10000;
           p.hidden = new int[]{100};
           p.sparse = sparse;
           p.col_major = col_major;
