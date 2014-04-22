@@ -12,9 +12,9 @@ Steam.MainView = (_) ->
   toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
   apply$ _isDisplayingTopics, (isDisplayingTopics) ->
     if isDisplayingTopics
-      _listViews.push topicListView
+      _listViews.push _topicListView
     else
-      _listViews.remove topicListView
+      _listViews.remove _topicListView
 
   createTopic = (title, handle, isEnabled) ->
     self =
@@ -27,15 +27,15 @@ Steam.MainView = (_) ->
       when _frameTopic
         unless _topic() is topic
           _topic topic
-          switchList frameListView
+          switchList _frameListView
       when _modelTopic
         unless _topic() is topic
           _topic topic
-          switchList modelListView
+          switchList _modelListView
       when _scoringTopic
         unless _topic() is topic
           _topic topic
-          switchList scoringListView
+          switchList _scoringListView
     _isDisplayingTopics no
     return
   
@@ -62,11 +62,11 @@ Steam.MainView = (_) ->
     _administrationTopic = createTopic 'Administration', null, no
   ]
 
-  topicListView = Steam.TopicListView _, _topics
-  frameListView = Steam.FrameListView _
-  modelListView = Steam.ModelListView _
-  scoringListView = Steam.ScoringListView _
-  modelSelectionView = Steam.ModelSelectionView _
+  _topicListView = Steam.TopicListView _, _topics
+  _frameListView = Steam.FrameListView _
+  _modelListView = Steam.ModelListView _
+  _scoringListView = Steam.ScoringListView _
+  _modelSelectionView = Steam.ModelSelectionView _
 
   switchView = (views, view) ->
     for oldView in views()
@@ -86,13 +86,13 @@ Steam.MainView = (_) ->
     switchPage template: 'empty-view'
 
   link$ _.displayFrame, (frame) ->
-    switchPage Steam.FrameView _, frame
+    switchPage Steam.FrameView _, frame if _topic() is _frameTopic
 
   link$ _.displayModel, (model) ->
-    switchPage Steam.ModelView _, model
+    switchPage Steam.ModelView _, model if _topic() is _modelTopic
 
   link$ _.displayScoring, (scoring) ->
-    switchPage Steam.ScoringView _, scoring
+    switchPage Steam.ScoringView _, scoring if _topic() is _scoringTopic
 
   link$ _.switchToFrames, switchToFrames
 
@@ -100,9 +100,9 @@ Steam.MainView = (_) ->
 
   link$ _.switchToScoring, switchToScoring
 
-  link$ _.modelsSelected, -> switchModal modelSelectionView
+  link$ _.modelsSelected, -> switchModal _modelSelectionView
 
-  link$ _.modelsDeselected, -> _modalViews.remove modelSelectionView
+  link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
 
   #TODO do this through hash uris
   switchToFrames type: 'all'

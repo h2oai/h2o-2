@@ -13,16 +13,23 @@ Steam.FrameListView = (_) ->
       else
         ''
 
-  activateItem = (item) ->
+  displayItem = (item) ->
+    if item
+      _.displayFrame item.data
+    else
+      _.displayEmpty()
+
+  displayActiveItem = ->
+    displayItem find _items(), (item) -> item.isActive()
+
+  activateAndDisplayItem = (item) ->
     for other in _items()
       if other is item
         other.isActive yes
       else
         other.isActive no
 
-    _.displayFrame item.data
-
-    return
+    displayItem item
 
   createItem = (frame) ->
     #TODO replace with type checking
@@ -32,15 +39,12 @@ Steam.FrameListView = (_) ->
       title: frame.key
       caption: describeCount frame.column_names.length, 'column'
       cutline: join frame.column_names, ', '
-      display: -> activateItem self
+      display: -> activateAndDisplayItem self
       isActive: node$ no
   
   displayFrames = (frames) ->
     _items items = map frames, createItem
-    if isEmpty items
-      _.displayEmpty()
-    else
-      activateItem head items
+    activateAndDisplayItem head items
 
   apply$ _predicate, (predicate) ->
     console.assert isDefined predicate
@@ -62,7 +66,11 @@ Steam.FrameListView = (_) ->
 
   clearPredicate = -> _predicate type: 'all'
 
-  link$ _.loadFrames, (predicate) -> _predicate predicate if predicate
+  link$ _.loadFrames, (predicate) ->
+    if predicate
+      _predicate predicate
+    else
+      displayActiveItem()
 
   items: _items
   predicateCaption: _predicateCaption

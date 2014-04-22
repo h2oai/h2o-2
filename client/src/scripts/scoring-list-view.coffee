@@ -6,14 +6,23 @@ Steam.ScoringListView = (_) ->
   #TODO ugly
   _isLive = node$ yes
 
-  activateItem = (item) ->
+  displayItem = (item) ->
+    if item
+      _.displayScoring item.data
+    else
+      _.displayEmpty()
+
+  displayActiveItem = ->
+    displayItem find _items(), (item) -> item.isActive()
+
+  activateAndDisplayItem = (item) ->
     for other in _items()
       if other is item
         other.isActive yes
       else
         other.isActive no
 
-    _.displayScoring item.data
+    displayItem item
 
   createItem = (scoring) ->
     #TODO replace with type checking
@@ -22,7 +31,7 @@ Steam.ScoringListView = (_) ->
       title: scoring.frameKey
       caption: describeCount scoring.scores.length, 'model'
       cutline: new Date(scoring.timestamp).toString()
-      display: -> activateItem self
+      display: -> activateAndDisplayItem self
       isActive: node$ no
       isSelected: node$ no
 
@@ -32,10 +41,7 @@ Steam.ScoringListView = (_) ->
 
   displayScorings = (scorings) ->
     _items items = map scorings, createItem
-    if isEmpty items
-      _.displayEmpty()
-    else
-      activateItem head items
+    activateAndDisplayItem head items
 
 
   apply$ _predicate, (predicate) ->
@@ -47,7 +53,12 @@ Steam.ScoringListView = (_) ->
 
     return
 
-  link$ _.loadScorings, (predicate) -> _predicate predicate if predicate
+  link$ _.loadScorings, (predicate) ->
+    if predicate
+      _predicate predicate
+    else
+      displayActiveItem()
+
   link$ _.deselectAllScorings, ->
     #TODO ugly
     _isLive no

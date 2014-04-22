@@ -53,8 +53,6 @@ Steam.ScoringView = (_, _scoring) ->
       displayComparisonTable scoring
 
   displayComparisonTable = (scoring) ->
-    console.log 'Comparision'
-    console.log scoring
     [ table, kvtable, thead, tbody, tr, th, td ] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr th td'
 
     transposeGrid = (grid) ->

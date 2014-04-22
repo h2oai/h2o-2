@@ -16,14 +16,23 @@ Steam.ModelListView = (_) ->
   #TODO ugly
   _isLive = node$ yes
 
-  activateItem = (item) ->
+  displayItem = (item) ->
+    if item
+      _.displayModel item.data
+    else
+      _.displayEmpty()
+
+  displayActiveItem = ->
+    displayItem find _items(), (item) -> item.isActive()
+
+  activateAndDisplayItem = (item) ->
     for other in _items()
       if other is item
         other.isActive yes
       else
         other.isActive no
 
-    _.displayModel item.data
+    displayItem item
 
   createItem = (model) ->
     #TODO replace with type checking
@@ -39,7 +48,7 @@ Steam.ModelListView = (_) ->
       title: model.model_algorithm
       caption: model.model_category
       cutline: 'Response Column: ' + model.response_column_name
-      display: -> activateItem self
+      display: -> activateAndDisplayItem self
       isActive: node$ no
       isSelected: node$ no
 
@@ -49,10 +58,7 @@ Steam.ModelListView = (_) ->
 
   displayModels = (models) ->
     _items items = map models, createItem
-    if isEmpty items
-      _.displayEmpty()
-    else
-      activateItem head items
+    activateAndDisplayItem head items
 
   apply$ _predicate, (predicate) ->
     console.assert isDefined predicate
@@ -75,7 +81,11 @@ Steam.ModelListView = (_) ->
 
   clearPredicate = -> _predicate type: 'all'
 
-  link$ _.loadModels, (predicate) -> _predicate predicate if predicate
+  link$ _.loadModels, (predicate) ->
+    if predicate
+      _predicate predicate
+    else
+      displayActiveItem()
 
   link$ _.deselectAllModels, ->
     #TODO ugly
