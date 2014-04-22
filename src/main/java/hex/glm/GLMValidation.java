@@ -30,8 +30,6 @@ public class GLMValidation extends Iced {
   @API(help="")
   double null_deviance;
   @API(help="")
-  double avg_err;
-  @API(help="")
   long nobs;
 
   @API(help="best decision threshold")
@@ -87,7 +85,7 @@ public class GLMValidation extends Iced {
     this.dataKey = dataKey;
     this.thresholds = thresholds;
   }
-  protected void regularize(double reg){avg_err = avg_err*reg;}
+
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
   public void add(double yreal, double ymodel){
     null_deviance += _glm.deviance(yreal, _ymu);
@@ -96,7 +94,7 @@ public class GLMValidation extends Iced {
         _cms[i].add((int)yreal, (ymodel >= thresholds[i])?1:0);
     residual_deviance  += _glm.deviance(yreal, ymodel);
     ++nobs;
-    avg_err += (ymodel - yreal) * (ymodel - yreal);
+
     if( _glm.family == Family.poisson ) { // aic for poisson
       long y = Math.round(yreal);
       double logfactorial = 0;
@@ -108,7 +106,6 @@ public class GLMValidation extends Iced {
   public void add(GLMValidation v){
     residual_deviance  += v.residual_deviance;
     null_deviance += v.null_deviance;
-    avg_err = (double)nobs/(nobs+v.nobs)*avg_err +  (double)v.nobs/(nobs+v.nobs)*v.avg_err;
     nobs += v.nobs;
     _aic2 += v._aic2;
     if(_cms == null)_cms = v._cms;

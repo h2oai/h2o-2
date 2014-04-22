@@ -240,7 +240,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         double response = chunks[chunks.length-1].at0(i);
         _res.add(response, _model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
-      _res.avg_err /= _res.nobs;
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
@@ -277,8 +276,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         double response = chunks[chunks.length-1].at80(i);
         val.add(response, model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
-      for(GLMValidation val:_xvals)
-        if(val.nobs > 0)val.avg_err = val.avg_err/val.nobs;
     }
     @Override public void reduce(GLMXValidationTask gval){
       _nobs += gval._nobs;
