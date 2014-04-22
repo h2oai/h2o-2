@@ -33,9 +33,8 @@
 ko.bindingHandlers.paragraph =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     if data = ko.unwrap valueAccessor()
-      if data.indexOf '\n' >= 0
-        html = '<span>' + (data.replace /\n/g, '<br/>' ) + '</span>'
-        ko.utils.setHtml element, html
+      if -1 isnt data.indexOf '\n'
+        ko.utils.setHtml element, "<span>#{data.replace /\n/g, '<br/>'}</span>"
       else
         ko.utils.setTextContent element, data
     else
