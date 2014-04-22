@@ -30,6 +30,17 @@
 # };
 # 
 
+ko.bindingHandlers.paragraph =
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    if data = ko.unwrap valueAccessor()
+      if data.indexOf '\n' >= 0
+        html = '<span>' + (data.replace /\n/g, '<br/>' ) + '</span>'
+        ko.utils.setHtml element, html
+      else
+        ko.utils.setTextContent element, data
+    else
+      ko.utils.setTextContent element, ''
+
 ko.bindingHandlers.json =
   init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     data = ko.unwrap valueAccessor()
