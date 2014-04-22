@@ -3,6 +3,24 @@ Steam.ScoringView = (_, _scoring) ->
   _hasExecuted = node$ no
   _comparisonTable = node$ null
   _hasComparisonTable = lift$ _comparisonTable, (table) -> not isNull table
+  _modelSummary = node$ null
+
+  createModelSummary = (scoring) ->
+    aScore = if scoring.scores.length > 0 then head scoring.scores else null
+    if aScore
+      [ dl, li, dt, dd ] = geyser.generate '.y-summary .y-summary-item .y-summary-key .y-summary-value'
+      dl [
+        li [
+          dt 'Model Category'
+          dd aScore.model.model_category
+        ]
+        li [
+          dt 'Response Column'
+          dd aScore.model.response_column_name
+        ]
+      ]
+    else
+      null
 
   createItem = (score) ->
     status = node$ if isNull score.status then '-' else score.status
@@ -19,6 +37,7 @@ Steam.ScoringView = (_, _scoring) ->
     result: node$ score.result
 
   initialize = (scoring) ->
+    _modelSummary createModelSummary scoring
     _items items = map scoring.scores, createItem
     if (every scoring.scores, (score) -> score.status is null)
       scoreModels scoring, items, ->
@@ -182,8 +201,6 @@ Steam.ScoringView = (_, _scoring) ->
       header = [
         'Method'
         'Name'
-        'Category'
-        'Response Column'
         'Input Parameters'
         'Error'
         'AUC'
@@ -211,8 +228,6 @@ Steam.ScoringView = (_, _scoring) ->
         [
           model.model_algorithm
           model.key
-          model.model_category
-          model.response_column_name
           model.parameters
           (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
           format4f auc.AUC
@@ -250,6 +265,7 @@ Steam.ScoringView = (_, _scoring) ->
   initialize _scoring
 
   items: _items
+  modelSummary: _modelSummary
   hasExecuted: _hasExecuted
   comparisonTable: _comparisonTable
   hasComparisonTable: _hasComparisonTable

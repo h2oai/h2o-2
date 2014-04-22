@@ -63,6 +63,8 @@ Steam.ModelListView = (_) ->
 
   apply$ _predicate, (predicate) ->
     console.assert isDefined predicate
+    _.modelSelectionCleared()
+
     switch predicate.type
       when 'all'
         _.requestModels (error, data) ->

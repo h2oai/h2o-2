@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
         self.assertIsNotNone(Basic.airlines_test_hex)
 
         node = h2o.nodes[0]
-        timeoutSecs = 20
+        timeoutSecs = 200
         retryDelaySecs = 2
 
         print "##############################################################"
@@ -317,24 +317,45 @@ class Basic(unittest.TestCase):
 
 
         print "##############################################"
-        print "Testing /2/Frames with scoring. . ."
+        print "Testing /2/Models with scoring. . ."
         print "##############################################"
         print ""
 
 
         print "##############################################"
-        print "Scoring compatible models for /2/Frames?key=airlines_test.hex&find_compatible_models=true. . ."
-        frames = node.frames(key='airlines_test.hex', find_compatible_models=1)
-        compatible_models = frames['frames']['airlines_test.hex']['compatible_models']
+        print "Scoring compatible frames for compatible models for /2/Models?key=airlines_train.hex&find_compatible_models=true. . ."
+        frames = node.frames(key='airlines_train.hex', find_compatible_models=1)
+        compatible_models = frames['frames']['airlines_train.hex']['compatible_models']
 
+        # NOTE: we start with frame airlines_train.hex and find the compatible models.
+        # Then for each of those models we find all the compatible frames (there are at least two)
+        # and score them.
         for model_key in compatible_models:
-            print "Scoring: /2/Frames?key=airlines_test.hex&score_model=" + model_key
-            scoring_result = node.frames(key='airlines_test.hex', score_model=model_key)
-            self.assertKeysExist(scoring_result, '', ['metrics'])
-            self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error', 'cm', 'auc']) # TODO: HitRatio
-            self.assertEqual(scoring_result['metrics']['model'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model'])
-            self.assertEqual(scoring_result['metrics']['frame'], 'airlines_test.hex', "Expected frame key: " + 'airlines_test.hex' + " but got: " + scoring_result['metrics']['frame'])
-            # TODO: look inside the auc and cm elements
+            # find all compatible frames
+            models = node.models(key=model_key, find_compatible_frames=1)
+            compatible_frames = models['models'][model_key]['compatible_frames']
+
+            for frame_key in compatible_frames:
+                print "Scoring: /2/Models?key=" + frame_key + "&score_model=" + model_key
+                scoring_result = node.models(key=model_key, score_frame=frame_key)
+
+                self.assertKeysExist(scoring_result, '', ['metrics'])
+                self.assertKeysExist(scoring_result, 'metrics', ['model_category'])
+                model_category = scoring_result['metrics']['model_category']
+                self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error'])
+                self.assertEqual(scoring_result['metrics']['model'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model'])
+                self.assertEqual(scoring_result['metrics']['frame'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics']['frame'])
+                if model_category is 'Binomial':
+                    self.assertKeysExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
+                # TODO: look inside the auc and cm elements
+                if model_category is 'Regression':
+                    self.assertKeysDontExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
+
+
+        print "##############################################"
+        print "Testing /2/Frames with scoring. . ."
+        print "##############################################"
+        print ""
 
 
         print "##############################################"
@@ -345,11 +366,18 @@ class Basic(unittest.TestCase):
         for model_key in compatible_models:
             print "Scoring: /2/Frames?key=prostate.hex&score_model=" + model_key
             scoring_result = node.frames(key='prostate.hex', score_model=model_key)
+
             self.assertKeysExist(scoring_result, '', ['metrics'])
-            self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error', 'cm', 'auc']) # TODO: HitRatio
+            self.assertKeysExist(scoring_result, 'metrics', ['model_category'])
+            model_category = scoring_result['metrics']['model_category']
+            self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error'])
             self.assertEqual(scoring_result['metrics']['model'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model'])
             self.assertEqual(scoring_result['metrics']['frame'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics']['frame'])
+            if model_category is 'Binomial':
+                self.assertKeysExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
             # TODO: look inside the auc and cm elements
+            if model_category is 'Regression':
+                self.assertKeysDontExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
 
 
 if __name__ == '__main__':
