@@ -36,6 +36,10 @@ Steam.ModelSelectionView = (_) ->
 
     _predicate predicate unless _predicate() is predicate
 
+  link$ _.modelSelectionCleared, ->
+    _selections.removeAll()
+    _predicate null
+
   scoreModels = ->
     frameKey = _frameKey()
     scores = map _selections(), (selection) ->
