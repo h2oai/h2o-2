@@ -896,6 +896,8 @@ public final class H2O {
     Log.info ("Java heap maxMemory: " + String.format("%.2f gb", runtime.maxMemory() / ONE_GB));
     Log.info ("Java version: " + String.format("Java %s (from %s)", System.getProperty("java.version"), System.getProperty("java.vendor")));
     Log.info ("OS   version: " + String.format("%s %s (%s)", System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")));
+    long totalMemory = OSUtils.getTotalPhysicalMemory();
+    Log.info ("Machine physical memory: " + (totalMemory==-1 ? "NA" : String.format("%.2f gb", totalMemory / ONE_GB)));
   }
 
   public static String getVersion() {
