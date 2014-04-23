@@ -1,11 +1,11 @@
 package water.api;
 
-import java.io.InputStream;
-import java.util.Properties;
-
 import water.*;
 import water.ValueArray.CsvVAStream;
 import water.fvec.Frame;
+
+import java.io.InputStream;
+import java.util.Properties;
 
 /**
  * @author tomasnykodym
@@ -29,6 +29,7 @@ public class DownloadDataset extends Request2 {
   @Override final public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     // Needs to be done also for help to initialize or argument records
     checkArguments(args, type);
+    if (DKV.get(src_key) == null) throw new IllegalArgumentException(src_key.toString() + " not found.");
     Object value = DKV.get(src_key).get();
     InputStream csv = value instanceof ValueArray ? new CsvVAStream((ValueArray) value, null) : ((Frame) value).toCSV(true);
     NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY, csv);
