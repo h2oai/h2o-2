@@ -42,14 +42,21 @@ class Basic(unittest.TestCase):
 
         # Adding values for lambda and max_iter
 
-            kwargs = {'x': x, 'y':  y,'alpha':0.5,'lambda':0.001,'max_iter': 30}
+            kwargs = {
+                'x': x, 
+                'y': y, 
+                'alpha': 0.5, 
+                'lambda': 0.001, 
+                'max_iter': 30,
+                'standardize': 0,
+            }
            
             startime = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             elapsedtime = time.time() - startime
             print("ELAPSED TIME ",elapsedtime)
             pprint(glm['GLMModel']['coefficients'])
-            pprint(glm['GLMModel']['normalized_coefficients'])
+            # pprint(glm['GLMModel']['normalized_coefficients'])
             pprint(glm['GLMModel']['nCols'])
             pprint(glm['GLMModel']['nLines'])
             pprint(glm['GLMModel']['iterations'])
