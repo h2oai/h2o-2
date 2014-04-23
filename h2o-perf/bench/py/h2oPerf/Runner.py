@@ -136,6 +136,7 @@ class PerfRunner:
                 test.test_run.row["contamination_message"] = contamination[1]
                 test.test_run.update(True)
                 self.stop_sys_profiling(ssh_ch)
+                ssh_ch = None
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
                 self.perfdb.this_test_run_id += 1
@@ -168,7 +169,7 @@ class PerfRunner:
         return ssh
 
     def stop_sys_profiling(self, ssh):
-        #ch.exec_command('exit')
+        ssh.exec_command('exit')
         ssh.close()
 
     def __get_instance_type__(self):

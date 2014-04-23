@@ -29,7 +29,10 @@ class Basic(unittest.TestCase):
         # no member id in this one
         y = "3"
         x = range(14)
-        x.remove(0) # 0. skipping causes coefficient of 0 when used alone
+        # 0 and 1 are id-like values
+        x.remove(0)
+        x.remove(1)
+
         x.remove(3) # 3 is output
         x = ','.join(map(str, x))
 

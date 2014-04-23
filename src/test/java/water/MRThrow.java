@@ -2,19 +2,18 @@ package water;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.util.concurrent.ExecutionException;
 
 import jsr166y.CountedCompleter;
 
-import org.junit.*;
-
-import water.DException.DistributedException;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class MRThrow extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }
-
 
   // ---
   // Map in h2o.jar - a multi-megabyte file - into Arraylets.
@@ -30,7 +29,7 @@ public class MRThrow extends TestUtil {
         try {
           bh.invoke(h2okey); // invoke should throw DistributedException wrapped up in RunTimeException
           fail("should've thrown");
-        }catch(RuntimeException e){
+        } catch(RuntimeException e){
           assertTrue(e.getMessage().indexOf("test") != -1);
         } catch(Throwable ex){
           ex.printStackTrace();
@@ -52,7 +51,7 @@ public class MRThrow extends TestUtil {
         try {
           bh.dfork(h2okey).get(); // invoke should throw DistributedException wrapped up in RunTimeException
           fail("should've thrown");
-        }catch(ExecutionException e){
+        } catch(ExecutionException e){
           assertTrue(e.getMessage().indexOf("test") != -1);
         } catch(Throwable ex){
           ex.printStackTrace();
@@ -118,7 +117,7 @@ public class MRThrow extends TestUtil {
     String _throwAt;
     // Count occurrences of bytes
     @SuppressWarnings("divzero")
-    public void map( Key key ) {
+    @Override public void map( Key key ) {
       _x = new int[256];        // One-time set histogram array
       Value val = DKV.get(key); // Get the Value for the Key
       byte[] bits = val.memOrLoad();  // Compute local histogram
@@ -128,7 +127,7 @@ public class MRThrow extends TestUtil {
         throw new RuntimeException("test");
     }
     // ADD together all results
-    public void reduce( ByteHistoThrow bh ) {
+    @Override public void reduce( ByteHistoThrow bh ) {
       if( _x == null ) { _x = bh._x; return; }
       for( int i=0; i<_x.length; i++ )
         _x[i] += bh._x[i];

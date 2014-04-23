@@ -1,0 +1,98 @@
+// ko with:view
+.y-main(data-bind="css:{'y-main-no-help':isHelpHidden}")
+  .y-navigation-bar
+    .y-logo-area
+      img(src='img/h2o.png' width='12%' style='position:relative; top:10px')
+    .y-navigation-area
+      button.y-toggle-help-button(data-bind='click:toggleHelp' title='Toggle help pane')
+        i.fa.fa-question-circle
+  .y-desktop
+    .y-topic-lane
+      .y-lane-header
+        button.y-topic-button.btn.fa-btn(data-bind='click:toggleTopics')
+          i.fa.fa-bars
+        .y-topic-title(data-bind='text:topicTitle')
+        button.y-upload-button.btn.fa-btn
+          i.fa.fa-refresh
+
+      // ko if:isModal
+      .y-mask
+      // /ko
+
+      .y-lane-body(data-bind="template:{name:template, foreach:listViews}")
+
+      // ko if:isListMasked
+      .y-mask
+      // /ko
+
+    .y-workspace-lane
+      .y-lane-header
+
+      .y-lane-body
+        .y-page-views(data-bind="template:{name:template, foreach:pageViews}")
+        // ko if:isModal
+        .y-modal-views(data-bind="template:{name:template, foreach:modalViews}")
+        // /ko
+
+      // ko if:isPageMasked
+      .y-mask
+      // /ko
+        
+    .y-help-lane
+      .y-lane-header
+        button.y-help-home-button.btn.fa-btn
+          i.fa.fa-home
+        .y-help-title Help
+        button.y-help-back-button.btn.fa-btn
+          i.fa.fa-arrow-left
+        button.y-help-forward-button.btn.fa-btn
+          i.fa.fa-arrow-right
+
+      .y-lane-body
+        .y-help
+          h1 Welcome to H<sub>2</sub>O
+          p H<sub>2</sub>O by 0xdata brings better algorithms to big data. H<sub>2</sub>O is the open source math and machine learning platform for speed and scale. With H<sub>2</sub>O, enterprises can use all of their data (instead of sampling) in real-time for better predictions. Data Scientists can take both simple and sophisticated models to production from H<sub>2</sub>O the same interactive platform used for modeling, within R and JSON. H<sub>2</sub>O is also used as an algorithms library for Making Hadoop Do Math.
+          h1 User Guide
+          ul
+            li 
+              i.fa.fa-question-circle
+              span  General
+            li 
+              i.fa.fa-question-circle
+              span  Data
+            li 
+              i.fa.fa-question-circle
+              span  Model
+            li 
+              i.fa.fa-question-circle
+              span  Score
+            li 
+              i.fa.fa-question-circle
+              span  Administration
+          h1 Walkthroughs
+          ul
+            li 
+              i.fa.fa-question-circle
+              span  GLM
+            li 
+              i.fa.fa-question-circle
+              span  GLM Grid
+            li 
+              i.fa.fa-question-circle
+              span  K Means
+            li 
+              i.fa.fa-question-circle
+              span  Random Forest
+            li 
+              i.fa.fa-question-circle
+              span  PCA
+            li 
+              i.fa.fa-question-circle
+              span  GBM
+            li 
+              i.fa.fa-question-circle
+              span  GBM Grid
+
+
+  .y-status-bar
+// /ko

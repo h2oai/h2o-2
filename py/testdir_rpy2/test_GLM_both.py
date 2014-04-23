@@ -11,11 +11,11 @@ from rpy2 import robjects as ro
 
 
 # y is h2o style. start at 0
-def glm_R_and_compare(self, csvPathname, family, formula, y, header=False, h2oResults=None):
+def glm_R_and_compare(self, csvPathname, family, formula, y, h2oResults=None):
     # df = ro.DataFrame.from_csvfile(csvPathname, col_names=col_names, header=False)
     df = ro.DataFrame.from_csvfile(csvPathname, header=False)
     cn = ro.r.colnames(df)
-    ### print df
+    print df
     fit = ro.r.glm(formula=ro.r(formula), data=df, family=ro.r(family + '(link="logit")'))
     gsummary = ro.r.summary(fit)
 
@@ -88,9 +88,12 @@ def glm_R_and_compare(self, csvPathname, family, formula, y, header=False, h2oRe
         ]
 
     for i,v in enumerate(gsummary):
-        d = gsummaryIndexDesc[i]
-        if d in whatIwant:
-            print "%s %s %15s %s" % ("R gsummary", i, d + ":\t", gsummary[i][0])
+        if i >= len(gsummaryIndexDesc):
+            print 'gsummary entry unexpected'
+        else:
+            d = gsummaryIndexDesc[i]
+            if d in whatIwant:
+                print "%s %s %15s %s" % ("R gsummary", i, d + ":\t", gsummary[i][0])
 
     # to get possiblities from gsummary above, do this
     # print "summary", ro.r.summary(gsummary)
@@ -119,43 +122,49 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_umass(self):
+    def test_GLM_both(self):
         h2o.beta_features = True
         if (1==1):
             csvFilenameList = [
+                ('logreg', 'benign.csv', 'binomial', 3, 10),
                 # col is zero based
                 # FIX! what's wrong here? index error
-                ('uis.dat', 'binomial', 8, 5, False),
+                ## ('uis.dat', 'binomial', 8, 5, False),
+                ## ('pros.dat', 'binomial', 1, 10, False),
+                ## ('chdage.dat', 'binomial', 2, 5, True),
+                ## ('icu.dat', 'binomial', 1, 10, False),
+                # how to ignore 6? '1,2,3,4,5', False),
+                ## ('clslowbwt.dat', 'binomial', 7, 10, False),
                 # ('cgd.dat', 'gaussian', 12, 5, False),
                 # ('meexp.dat', 'gaussian', 3, 10, None),
-                ('pros.dat', 'binomial', 1, 10, False),
-                ('chdage.dat', 'binomial', 2, 5, True),
-                ('icu.dat', 'binomial', 1, 10, False),
-                # how to ignore 6? '1,2,3,4,5', False),
-                ('clslowbwt.dat', 'binomial', 7, 10, False),
             ]
         else:
             csvFilenameList = [
                 # leave out ID and birth weight
-                ('icu.dat', 'binomial', 1, 10, None),
+                ('logreg', 'benign.csv', 'gaussian', 3, 10),
+                (None, 'icu.dat', 'binomial', 1, 10),
                 # need to exclude col 0 (ID) and col 10 (bwt)
                 # but -x doesn't work..so do 2:9...range doesn't work? FIX!
-                ('nhanes3.dat', 'binomial', 15, 10),
-                ('lowbwt.dat', 'binomial', 1, 10, '2,3,4,5,6,7,8,9'),
-                ('lowbwtm11.dat', 'binomial', 1, 10, None),
-                ('meexp.dat', 'gaussian', 3, 10, None),
+                (None, 'nhanes3.dat', 'binomial', 15, 10),
+                (None, 'lowbwt.dat', 'binomial', 1, 10),
+                (None, 'lowbwtm11.dat', 'binomial', 1, 10),
+                (None, 'meexp.dat', 'gaussian', 3, 10),
                 # FIX! does this one hang in R?
-                ('nhanes3.dat', 'binomial', 15, 10, None),
-                ('pbc.dat', 'gaussian', 1, 10, None),
-                ('pharynx.dat', 'gaussian', 12, 10, None),
-                ('uis.dat', 'binomial', 8, 10, None),
+                (None, 'nhanes3.dat', 'binomial', 15, 10),
+                (None, 'pbc.dat', 'gaussian', 1, 10),
+                (None, 'pharynx.dat', 'gaussian', 12, 10),
+                (None, 'uis.dat', 'binomial', 8, 10),
             ]
 
         trial = 0
-        for (csvFilename, family, y, timeoutSecs, header) in csvFilenameList:
+        for (offset, csvFilename, family, y, timeoutSecs) in csvFilenameList:
 
             # FIX! do something about this file munging
-            csvPathname1 = 'logreg/umass_statdata/' + csvFilename
+            if offset:
+                csvPathname1 = offset + "/" + csvFilename
+            else:
+                csvPathname1 = 'logreg/umass_statdata/' + csvFilename
+
             fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname1, returnFullPath=True)
 
             csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename + '_2.csv'
@@ -184,6 +193,8 @@ class Basic(unittest.TestCase):
             for c in range(0,num_cols):
                 if csvFilename=='clslowbwt.dat' and c==6:
                     print "Not including col 6 for this dataset from x"
+                if csvFilename=='benign.csv' and (c==0 or c==1):
+                    print "Not including col 0,1 for this dataset from x"
                 else:
                     # don't add the output col to the RHS of formula
                     if x is None: 
@@ -212,7 +223,7 @@ class Basic(unittest.TestCase):
                     # what about x?
                     'family': family, 
                     'alpha': 0, 
-                    'lambda': 1e-4,
+                    'lambda': 0,
                     'beta_epsilon': 1.0E-4, 
                     'max_iter': 50 }
             else:
@@ -226,14 +237,20 @@ class Basic(unittest.TestCase):
                     'beta_epsilon': 1.0E-4, 
                     'max_iter': 50 }
 
+            if csvFilename=='benign.csv':
+                kwargs['ignored_cols'] = '0,1'
+
+            if csvFilename=='clslowbwt.dat':
+                kwargs['ignored_cols'] = '6'
+
+            
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
 
             print "glm end (w/check) on ", csvPathname2, 'took', time.time()-start, 'seconds'
             h2oResults = h2o_glm.simpleCheckGLM(self, glm, None, prettyPrint=True, **kwargs)
             # now do it thru R and compare
-            (warningsR, cListR, interceptR) = glm_R_and_compare(self, csvPathname2, family, formula, y, 
-                header=header, h2oResults=h2oResults)
+            (warningsR, cListR, interceptR) = glm_R_and_compare(self, csvPathname2, family, formula, y, h2oResults=h2oResults)
 
             trial += 1
             print "\nTrial #", trial

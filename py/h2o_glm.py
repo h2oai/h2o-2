@@ -216,11 +216,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                     raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
     if h2o.beta_features:
-        print "GLMModel/validations"
-        validations['avg_err'] = h2o_util.cleanseInfNan(validations['avg_err'])
+        print "GLMModel/validations"        
         validations['null_deviance'] = h2o_util.cleanseInfNan(validations['null_deviance'])
-        validations['residual_deviance'] = h2o_util.cleanseInfNan(validations['residual_deviance'])
-        print "%15s %s" % ("avg_err:\t", validations['avg_err'])
+        validations['residual_deviance'] = h2o_util.cleanseInfNan(validations['residual_deviance'])        
         print "%15s %s" % ("null_deviance:\t", validations['null_deviance'])
         print "%15s %s" % ("residual_deviance:\t", validations['residual_deviance'])
 

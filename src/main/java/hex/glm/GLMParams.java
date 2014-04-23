@@ -195,4 +195,8 @@ public final class GLMParams extends Iced {
     return y * Math.log(y / mu);
   }
 
+ public Family getFamily() {
+   return family;
+ }
+
 }
