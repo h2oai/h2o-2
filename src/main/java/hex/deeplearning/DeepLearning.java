@@ -403,7 +403,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * input features to the first two hidden layers.
    */
   @API(help = "Compute variable importances for input features (Gedeon method) - can be slow for large networks", filter = Default.class, json = true)
-  public boolean variable_importances = true;
+  public boolean variable_importances = false;
 
   /**
    * Enable fast mode (minor approximation in back-propagation), should not affect results significantly.

@@ -18,7 +18,7 @@ import java.util.Random;
  * It contains a DeepLearningModelInfo with the most up-to-date model,
  * a scoring history, as well as some helpers to indicated the progress
  */
-public class DeepLearningModel extends Model {
+public class DeepLearningModel extends Model implements Comparable<DeepLearningModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -43,12 +43,26 @@ public class DeepLearningModel extends Model {
   @API(help = "Scoring during model building")
   private Errors[] errors;
 
+  // Keep the best model so far, based on a single criterion (overall class. error or MSE)
+  @API(help = "The best model trained so far")
+  private Key _bestModelKey = null;
+  private float _bestError = Float.MAX_VALUE;
+  private int _improvedCounter;
+
   // return the most up-to-date model metrics
   Errors last_scored() { return errors[errors.length-1]; }
-  Errors second_last_scored() { return errors[errors.length-2]; }
 
   public final DeepLearning get_params() { return model_info.get_params(); }
   public final Request2 job() { return get_params(); }
+
+  public float error() { return (float) (isClassifier() ? (nclasses() == 2 ? (1f - cm().F1()) : cm().err()) : mse()); }
+
+  @Override
+  public int compareTo(DeepLearningModel o) {
+    if (o.isClassifier() != isClassifier()) throw new UnsupportedOperationException("Cannot compare classifier against regressor.");
+    if (o.nclasses() != nclasses()) throw new UnsupportedOperationException("Cannot compare models with different number of classes.");
+    return (error() < o.error() ? -1 : error() > o.error() ? 1 : 0);
+  }
 
   public static class Errors extends Iced {
     static final int API_WEAVER = 1;
@@ -154,7 +168,12 @@ public class DeepLearningModel extends Model {
         return new ConfMat(lasterror.train_err, lasterror.trainAUC != null ? lasterror.trainAUC.F1() : 0);
       }
     }
-    return new hex.ConfusionMatrix(cm.cm);
+    // cm.cm has NaN padding, reduce it to N-1 size
+    long[][] newcm = new long[cm.cm.length-1][cm.cm.length-1];
+    for (int i=0; i<newcm.length; ++i)
+      for (int j=0; j<newcm.length; ++j)
+        newcm[i][j] = cm.cm[i][j];
+    return new hex.ConfusionMatrix(newcm);
   }
 
   @Override
@@ -609,6 +628,8 @@ public class DeepLearningModel extends Model {
     errors = cp.errors.clone();
     training_rows = cp.training_rows; //copy the value to display the right number on the model page before training has started
     get_params().start_time = System.currentTimeMillis(); //for displaying the model progress
+    _bestModelKey = cp._bestModelKey;
+    _bestError = cp._bestError;
     _timeLastScoreEnter = System.currentTimeMillis();
     _timeLastScoreStart = 0;
     _timeLastScoreEnd = 0;
@@ -733,13 +754,6 @@ public class DeepLearningModel extends Model {
           err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
         }
 
-        // keep output JSON small
-        if (errors.length > 2) {
-          if (second_last_scored().trainAUC != null) second_last_scored().trainAUC.clear();
-          if (second_last_scored().validAUC != null) second_last_scored().validAUC.clear();
-          second_last_scored().variable_importances = null;
-        }
-
         // only keep confusion matrices for the last step if there are fewer than specified number of output classes
         if (err.train_confusion_matrix.cm != null
                 && err.train_confusion_matrix.cm.length-1 >= get_params().max_confusion_matrix_size) {
@@ -758,6 +772,28 @@ public class DeepLearningModel extends Model {
           err2[err2.length-1] = err;
           errors = err2;
         }
+        // always keep a copy of the best model so far (based on the following criterion)
+        if (error() < _bestError) {
+          if (_improvedCounter == 0) _bestModelKey = Key.make("DeepLearning" + Key.rand());
+          _bestError = error();
+          _improvedCounter++;
+          if (!get_params().quiet_mode) Log.info("Saving best model so far under key " + _bestModelKey.toString());
+          DeepLearningModel bestModel = new DeepLearningModel(this, _bestModelKey, jobKey, model_info().data_info());
+          bestModel.delete_and_lock(null);
+          bestModel.unlock(null);
+          assert(UKV.get(_bestModelKey) != null);
+          assert(bestModel.compareTo(this) <= 0);
+          assert(((DeepLearningModel)UKV.get(_bestModelKey)).error() == _bestError);
+        }
+//        else {
+//          // keep output JSON small
+//          if (errors.length > 1) {
+//            if (last_scored().trainAUC != null) last_scored().trainAUC.clear();
+//            if (last_scored().validAUC != null) last_scored().validAUC.clear();
+//            last_scored().variable_importances = null;
+//          }
+//        }
+
         // print the freshly scored model to ASCII
         for (String s : toString().split("\n")) Log.info(s);
         if (printme) Log.info("Time taken for scoring and diagnostics: " + PrettyPrint.msecs(err.scoring_time, true));
@@ -848,8 +884,9 @@ public class DeepLearningModel extends Model {
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key) + ", "
-            + (UKV.get(jobKey) != null && Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
+            + (_bestModelKey != null && UKV.get(_bestModelKey) != null && _bestModelKey != _key ? ", " + DeepLearningModelView.link("Go to best model", _bestModelKey) : "")
+            + (UKV.get(jobKey) != null && Job.isEnded(jobKey) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
