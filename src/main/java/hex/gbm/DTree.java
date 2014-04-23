@@ -12,6 +12,7 @@ import water.api.Inspect2;
 import water.api.Predict;
 import water.api.Request.API;
 import water.fvec.Chunk;
+import water.license.LicenseManager;
 import water.util.*;
 
 import java.util.Arrays;
@@ -590,6 +591,14 @@ public class DTree extends Iced {
       this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, validAUC);
     }
 
+    public enum TreeModelType {
+      UNKNOWN,
+      GBM,
+      DRF,
+    }
+
+    protected TreeModelType getTreeModelType() { return TreeModelType.UNKNOWN; }
+
     private static final Key[][] append(Key[][] prior, DTree[] tree ) {
       if (tree==null) return prior;
       prior = Arrays.copyOf(prior, prior.length+1);
@@ -931,13 +940,41 @@ public class DTree extends Iced {
     // For GBM: learn_rate.  For DRF: mtries, sample_rate, seed.
     abstract protected void generateModelDescription(StringBuilder sb);
 
+    // Determine whether feature is licensed.
+    private boolean isFeatureAllowed() {
+      boolean featureAllowed = false;
+      try {
+        if (treeStats.numTrees <= 10) {
+          featureAllowed = true;
+        }
+        else {
+          if (getTreeModelType() == TreeModelType.GBM) {
+            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_GBM_SCORING);
+          }
+          else if (getTreeModelType() == TreeModelType.DRF) {
+            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_RF_SCORING);
+          }
+        }
+      }
+      catch (Exception xe) {}
+
+      return featureAllowed;
+    }
+
     public void toJavaHtml( StringBuilder sb ) {
       if( treeStats == null ) return; // No trees yet
       sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
                 "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
 
-      if( ntrees() * treeStats.meanLeaves > 5000 ) {
+      boolean featureAllowed = isFeatureAllowed();
+      if (! featureAllowed) {
+        sb.append("You have requested a premium feature (> 10 trees) and your H2O software is unlicensed.\n");
+        sb.append("\n");
+        sb.append("Please email support@0xdata.com to request a trial license.\n");
+        sb.append("Then restart H2O with the -license option.\n");
+      }
+      else if( ntrees() * treeStats.meanLeaves > 5000 ) {
         String modelName = JCodeGen.toJavaId(_key.toString());
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");

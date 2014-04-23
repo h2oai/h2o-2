@@ -76,10 +76,13 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
     Request.addToNavbar(registerRequest(new Upload2()),       "Upload",                 "Data");
     Request.addToNavbar(registerRequest(new Parse2()),        "Parse",                  "Data");
-    Request.addToNavbar(registerRequest(new Inspect2()),      "Inspect",                "Data");
+    Request.addToNavbar(registerRequest(new Inspector()),     "Inspect",                "Data");
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
+    Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
+    // Register Inspect2 just for viewing frames
+    registerRequest(new Inspect2());
 
     // Not supported for now
 //    Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",                  "Data");
@@ -256,6 +259,10 @@ public class RequestServer extends NanoHTTPD {
 //    registerRequest(new GLMValidationView());
     registerRequest(new LaunchJar());
     Request.initializeNavBar();
+
+    // Pure APIs, no HTML, to support The New World
+    registerRequest(new Models());
+    registerRequest(new Frames());
   }
 
   /**

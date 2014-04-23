@@ -88,6 +88,11 @@ build:
 	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/version_build.log
 
 	@echo
+	@echo "PHASE: Building UI..."
+	@echo
+	$(MAKE) -C client PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/client_build.log
+
+	@echo
 	@echo "PHASE: Building H2O..."
 	@echo
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
@@ -243,6 +248,7 @@ clean:
 	rm -f $(BUILD_VERSION_JAVA_FILE)
 	rm -fr target
 	./build.sh clean
+	$(MAKE) -C client clean
 	$(MAKE) -C h2o-scala clean
 	$(MAKE) -C hadoop clean
 	$(MAKE) -C R clean

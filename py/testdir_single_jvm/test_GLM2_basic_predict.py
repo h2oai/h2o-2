@@ -70,8 +70,14 @@ class Basic(unittest.TestCase):
         for maxx in range(1):
             # 0 is member ID. not used
             # 1 is output
-
+            # original data and description here:
+            # http://www.mtech.edu/academics/clsps/math/Data%20Links/benign.txt
+            # 
+            # SOURCE: The data are from Appendix 5 of
+            #   Hosmer, D.W. and Lemeshow, S. (1989) Applied Logistic Regression,
+            #   John Wiley and Sons, New York.
             kwargs = {
+                'ignored_cols': '0,1',
                 'response': y,
                 'family': 'binomial',
                 'ignored_cols':  '0', 

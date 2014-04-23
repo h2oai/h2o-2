@@ -47,8 +47,8 @@ public class DeepLearningModel extends Model {
   Errors last_scored() { return errors[errors.length-1]; }
   Errors second_last_scored() { return errors[errors.length-2]; }
 
-  public final DeepLearning get_params() { return model_info.get_params(); }
-  public final Request2 job() { return get_params(); }
+  @Override public final DeepLearning get_params() { return model_info.get_params(); }
+  @Override public final Request2 job() { return get_params(); }
 
   public static class Errors extends Iced {
     static final int API_WEAVER = 1;
