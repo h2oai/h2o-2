@@ -16,10 +16,10 @@ Steam.MainView = (_) ->
     else
       _listViews.remove _topicListView
 
-  createTopic = (title, handle, isEnabled) ->
+  createTopic = (title, handle) ->
     self =
       title: title
-      isDisabled: not isEnabled
+      isDisabled: not isFunction handle
       display: -> handle() if handle
 
   switchTopic = (topic) ->
@@ -60,14 +60,14 @@ Steam.MainView = (_) ->
     _.loadNotifications predicate
 
   _topics = node$ [
-    _frameTopic = createTopic 'Datasets', switchToFrames, yes
-    _modelTopic = createTopic 'Models', switchToModels, yes
-    _scoringTopic = createTopic 'Scoring', switchToScoring, yes
-    _timelineTopic = createTopic 'Timeline', null, no
-    _notificationTopic = createTopic 'Notifications', switchToNotifications, yes
-    _jobTopic = createTopic 'Jobs', null, no
-    _clusterTopic = createTopic 'Cluster', null, no
-    _administrationTopic = createTopic 'Administration', null, no
+    _frameTopic = createTopic 'Datasets', switchToFrames
+    _modelTopic = createTopic 'Models', switchToModels
+    _scoringTopic = createTopic 'Scoring', switchToScoring
+    _timelineTopic = createTopic 'Timeline', null
+    _notificationTopic = createTopic 'Notifications', switchToNotifications
+    _jobTopic = createTopic 'Jobs', null
+    _clusterTopic = createTopic 'Cluster', null
+    _administrationTopic = createTopic 'Administration', null
   ]
 
   _topicListView = Steam.TopicListView _, _topics
