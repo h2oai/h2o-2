@@ -7,7 +7,6 @@ import water.Key;
 import water.Timer;
 import water.fvec.Chunk;
 import water.fvec.Frame;
-import water.fvec.Vec;
 import water.util.Log;
 
 import java.util.ArrayList;
@@ -32,22 +31,22 @@ public class DABuilder {
     final DataAdapter build(Frame fr) { return inhaleData(fr); }
 
     /** Check that we have proper number of valid columns vs. features selected, if not cap*/
-    private final void checkAndLimitFeatureUsedPerSplit(final DataAdapter dapt) {
+    private void checkAndLimitFeatureUsedPerSplit() {
       int validCols = _drf.source.numCols()-1; // for classIdx column
       if (validCols < _drf.drfParams._numSplitFeatures) {
-        Log.warn(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams._numSplitFeatures +
+        Log.info(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams._numSplitFeatures +
                 " to " + validCols + " because there are no more valid columns in the dataset");
         _drf.drfParams._numSplitFeatures= validCols;
       }
     }
 
     /** Return the number of rows on this node. */
-    private final int getRowCount(Frame fr) {
+    private int getRowCount(Frame fr) {
       return (int)fr.numRows();
     }
 
     /** Return chunk index of the first chunk on this node. Used to identify the trees built here.*/
-    private final long getChunkId(final Frame fr) {
+    private long getChunkId(final Frame fr) {
       Key[] keys = new Key[fr.anyVec().nChunks()];
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
         keys[i] = fr.anyVec().chunkKey(i);
@@ -93,24 +92,22 @@ public class DABuilder {
               _drf.drfParams._binLimit,
               _drf.drfParams._classWt);
       // Check that we have proper number of valid columns vs. features selected, if not cap.
-      checkAndLimitFeatureUsedPerSplit(dapt);
-      // Now load the DataAdapter with all the rows on this node.
-//      final int ncolumns = fr.numCols();
+      checkAndLimitFeatureUsedPerSplit();
 
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
-        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, modelDataMap, totalRows,_isByteCol));
+        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol));
       }
       ForkJoinTask.invokeAll(dataInhaleJobs);
 
       // Shrink data
       dapt.shrink();
-      Log.debug(Log.Tag.Sys.RANDF,"Inhale done in " + t_inhale);
+      Log.info(Log.Tag.Sys.RANDF,"Inhale done in " + t_inhale);
       return dapt;
     }
 
-    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final int[] modelDataMap, final int totalRows, final boolean[] isByteCol) {
+    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol) {
       return new RecursiveAction() {
         @Override protected void compute() {
           try {
