@@ -29,12 +29,24 @@ class Basic(unittest.TestCase):
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
-        y = "4"
+        y = "3"
         # cols 0-13. 3 is output
         # no member id in this one
         for maxx in range(11,14):
             x = range(maxx)
-            x.remove(4) # 4 is output
+            x.remove(3) # 3 is output
+            # 0 and 1 are id-like values
+            x.remove(0) 
+            x.remove(1) 
+
+            # original data and description here:
+            # http://www.mtech.edu/academics/clsps/math/Data%20Links/benign.txt
+            # 
+            # SOURCE: The data are from Appendix 5 of
+            #   Hosmer, D.W. and Lemeshow, S. (1989) Applied Logistic Regression,
+            #   John Wiley and Sons, New York.
+
+
             x = ",".join(map(str,x))
 
             print "\nx:", x
