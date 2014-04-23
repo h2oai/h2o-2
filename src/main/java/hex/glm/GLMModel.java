@@ -1,5 +1,6 @@
 package hex.glm;
 
+import hex.ConfusionMatrix;
 import hex.FrameTask.DataInfo;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
