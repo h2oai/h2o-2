@@ -23,5 +23,4 @@ public class OSUtils {
    } catch (Throwable e) { e.printStackTrace(); }
    return memory;
  }
-
 }
