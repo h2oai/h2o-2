@@ -16,8 +16,10 @@ checkNLoadPackages()
 Log.info("Loading other required test packages")
 if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
 if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
+if(!"ROCR"   %in% rownmaes(installed.packages())) install.packages("ROCR")
 require(glmnet)
 require(gbm)
+require(ROCR)
 
 #Global Variables
 myIP   <- ipPort[[1]]
