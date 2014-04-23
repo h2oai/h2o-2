@@ -140,6 +140,7 @@ build: \
 	$(DEPLOY)/fonts/fontawesome-webfont.ttf \
 	$(DEPLOY)/fonts/fontawesome-webfont.woff \
 	$(DEPLOY)/img/h2o.png \
+	$(DEPLOY)/css/bootstrap.css.map \
 	$(DEPLOY)/css/lib.css \
 	$(DEPLOY)/css/steam.css \
 	$(DEPLOY)/js/lib.js \
@@ -342,6 +343,10 @@ $(DEPLOY)/steam.test.js: $(BUILD)/tests/browser.global.js $(SCRIPTS) $(TESTS)
 	@echo '}).call(this);' >> $@
 
 $(DEPLOY)/tests.html: src/util/mocha-html/tests.html
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(DEPLOY)/css/%.map: $(LIB)/bootstrap/dist/css/%.map
 	@mkdir -p $(@D)
 	cp $< $@
 
