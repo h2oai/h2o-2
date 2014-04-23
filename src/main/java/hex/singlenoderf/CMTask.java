@@ -59,6 +59,7 @@ public class CMTask extends MRTask2<CMTask> {
     _classWt    = classWt != null && classWt.length > 0 ? classWt : null;
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
+    _model = model;
     shared_init();
   }
 
@@ -67,8 +68,8 @@ public class CMTask extends MRTask2<CMTask> {
     /* For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
 //    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
-    _data   = UKV.get(_datakey);
-    _model  = UKV.get(_modelKey);
+//    _data   = UKV.get(_datakey);
+    _data = _model.fr;
 
     _modelDataMap = _model.colMap(_model._names);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;

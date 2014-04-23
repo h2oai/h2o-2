@@ -100,6 +100,7 @@ public class DABuilder {
         dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol));
       }
       _rfmodel.current_status = "Inhaling Data";
+      _rfmodel.update(_rfmodel.jobKey);
       ForkJoinTask.invokeAll(dataInhaleJobs);
 
       // Shrink data
