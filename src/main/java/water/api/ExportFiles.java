@@ -9,7 +9,6 @@ import water.persist.PersistHdfs;
 import water.util.Log;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,11 +24,14 @@ public class ExportFiles extends Request2 {
   @Override
   public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
 
-  @API(help="Key to an existing H2O Frame.", required=true,filter=Default.class)
+  @API(help="Key to an existing H2O Frame (or ValueArray).", required=true,filter=Default.class)
   Key src_key;
 
-  @API(help="Path to a file on either local disk of connected node or HDFS.",required=true,filter=GeneralFile.class,gridable=false)
+  @API(help="Path to a file on either local disk of connected node or HDFS.", required=true,filter=GeneralFile.class,gridable=false)
   String path;
+
+  @API(help="Overwrite existing files.", required=false,filter=Default.class,gridable=false)
+  boolean force = false;
 
   public static String link(Key k, String content){
     return  "<a href='/2/ExportFiles.html?src_key=" + k.toString() + "'>" + content + "</a>";
@@ -62,12 +64,10 @@ public class ExportFiles extends Request2 {
 
   protected void serveHdfs(InputStream csv) throws IOException {
     if (isBareS3NBucketWithoutTrailingSlash(path)) { path += "/"; }
-    ArrayList<String> succ = new ArrayList<String>();
-    ArrayList<String> fail = new ArrayList<String>();
     Path p = new Path(path);
-    PersistHdfs.addFolder2(p, succ, fail);
 
     org.apache.hadoop.fs.FileSystem fs = org.apache.hadoop.fs.FileSystem.get(p.toUri(), PersistHdfs.CONF);
+    if( !force && fs.exists(p) ) throw new IllegalArgumentException("File " + path + " already exists.");
     fs.mkdirs(p.getParent());
 
     FSDataOutputStream s = fs.create(p);
@@ -79,7 +79,7 @@ public class ExportFiles extends Request2 {
       }
     } finally {
       s.close();
-      Log.info("Key '" + src_key.toString() +  "' was written to " + path.toString());
+      Log.info("Key '" + src_key.toString() +  "' was written to " + path.toString() + ".");
     }
   }
 
@@ -88,14 +88,15 @@ public class ExportFiles extends Request2 {
     OutputStream output = null;
     try {
       File f = new File(path);
-      if( f.exists() ) throw new IllegalArgumentException("File " + path + " already exists.");
+      if( !force && f.exists() ) throw new IllegalArgumentException("File " + path + " already exists.");
       output = new FileOutputStream(path.toString());
       byte[] buffer = new byte[1024];
       int len;
       while((len = csv.read(buffer)) > 0) {
         output.write(buffer, 0, len);
       }
-      Log.info("Key '" + src_key.toString() +  "' was written to " + (_local && H2O.CLOUD.size() > 1 ? H2O.SELF_ADDRESS + ":" : "") + path.toString());
+      Log.info("Key '" + src_key.toString() +  "' was written to " +
+              (_local && H2O.CLOUD.size() > 1 ? H2O.SELF_ADDRESS + ":" : "") + path.toString() + ".");
     } finally {
       if (output != null) output.close();
     }
