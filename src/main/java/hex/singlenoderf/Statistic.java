@@ -64,7 +64,7 @@ abstract class Statistic {
 
   /** Aggregates the given column's distribution to the provided array and
    * returns the sum of weights of that array.  */
-  private final int aggregateColumn(int colIndex, int[] dist) {
+  private int aggregateColumn(int colIndex, int[] dist) {
     int sum = 0;
     for (int j = 0; j < _columnDists[colIndex].length; ++j) {
       for (int i = 0; i < dist.length; ++i) {
@@ -104,8 +104,7 @@ abstract class Statistic {
   /**Features can be used in a split if they are not already used. */
   private boolean isColumnUsable(Data d, int i) {
     assert i < d.columns()-1;   // Last column is class
-    if (d.isIgnored(i)) return false;
-    return (_remembered == null || !_remembered.contains(i)) && d.colMaxIdx(i) != d.colMinIdx(i);
+    return !d.isIgnored(i) && (_remembered == null || !_remembered.contains(i)) && d.colMaxIdx(i) != d.colMinIdx(i);
   }
 
   /** Resets the statistic for the next split. Pick a subset of the features and zero out
@@ -142,21 +141,20 @@ abstract class Statistic {
   /** Adds the given row to the statistic.  Updates the column distributions for
    * the analyzed columns.  This version knows the row is always valid (always
    * has a valid class), and is hand-inlined.  */
-  void addQValid( final int cls, final int ridx, final DataAdapter.Col cs[]) {
-    for( int i=0; i<_features.length; i++ ) {
-      int f = _features[i];
-      if( f == -1) break;
-      short[] bins = cs[f]._binned; // null if byte col, otherwise bin#
-      int val;
-      if( bins != null ) {      // binned?
-        val = bins[ridx];       // Grab bin#
-        if( val == DataAdapter.BAD ) continue; // ignore bad rows
-      } else {                  // not binned?
-        val = (0xFF&cs[f]._rawB[ridx]); // raw byte value, has no bad rows
-      }
-      _columnDists[f][val][cls]++;
-    }
-  }
+//  void addQValid( final int cls, final int ridx, final DataAdapter.Col cs[]) {
+//    for (int f : _features) {
+//      if (f == -1) break;
+//      short[] bins = cs[f]._binned; // null if byte col, otherwise bin#
+//      int val;
+//      if (bins != null) {      // binned?
+//        val = bins[ridx];       // Grab bin#
+//        if (val == DataAdapter.BAD) continue; // ignore bad rows
+//      } else {                  // not binned?
+//        val = (0xFF & cs[f]._rawB[ridx]); // raw byte value, has no bad rows
+//      }
+//      _columnDists[f][val][cls]++;
+//    }
+//  }
 
   /** Apply any class weights to the distributions.*/
   void applyClassWeights() {

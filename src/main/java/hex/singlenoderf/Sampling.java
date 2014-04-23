@@ -1,6 +1,5 @@
 package hex.singlenoderf;
 
-import hex.singlenoderf.Data;
 import water.MemoryManager;
 import water.util.Utils;
 

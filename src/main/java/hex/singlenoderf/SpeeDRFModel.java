@@ -4,19 +4,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import hex.FrameTask;
-import hex.deeplearning.DeepLearning;
-import hex.singlenoderf.Sampling;
-import hex.singlenoderf.Tree;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.api.RequestBuilders;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
-
 import java.util.Arrays;
 import java.util.Random;
 
@@ -74,11 +68,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Job key")
   Key jobKey;
 
-  @API(help = "No CM")
-  boolean _noCM;
+//  @API(help = "No CM")
+//  boolean _noCM;
+//
+//  @API(help = "Iterative CM")
+//  boolean iterative_cm;
 
-  @API(help = "Iterative CM")
-  boolean iterative_cm;
 
   @API(help = "Out of bag error estimate.")
   boolean oobee;
@@ -91,11 +86,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   public static final String KEY_PREFIX = "__RFModel_";
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
-  public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
-  public static final String JSON_REFRESH_THRESHOLD_CM = "refresh_threshold_cm";
+//  public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
+//  public static final String JSON_REFRESH_THRESHOLD_CM = "refresh_threshold_cm";
 
-  // JSON keys
-  public static final String JSON_CM              = "confusion_matrix";
   public static final String JSON_CM_TYPE         = "type";
   public static final String JSON_CM_HEADER       = "header";
   public static final String JSON_CM_MATRIX       = "scores";
@@ -122,53 +115,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.dataKey = dataKey;
   }
 
-//  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, int mtry, Sampling.Strategy sampling_strategy, float sample_rate, float[] strata_samples,
-//                      int features, int total_trees, Key[] t_keys, long time, Vec response, double[] weights) {
-//    super(selfKey, dataKey, fr);
-//    int csize = H2O.CLOUD.size();
-//    this.features = features;
-//    this.sampling_strategy = sampling_strategy;
-//    this.sample = sample_rate;
-//    this.fr = fr;
-//    this.response = response;
-//    this.weights = weights;
-//    this.time = time;
-//    this.local_forests = new Key[csize][];
-//    for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
-//    this.t_keys = t_keys;
-//    this.total_trees = total_trees;
-//    this.node_split_features = new int[csize];
-//    this.mtry = mtry;
-//    this.strata_samples = strata_samples;
-//    for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
-//    this.depth = 30;
-//    this.bin_limit = 1024;
-//  }
-//
-//  public SpeeDRFModel(Key selfKey, Frame fr, Key dataKey, Key[] t_keys, int features, float sample, Vec response, double[] weights, float[] strata_samples) {
-//    super(selfKey, dataKey, fr._names, fr.domains());
-//    this.features       = features;
-//    this.sample         = sample;
-//    this.mtry  = features;
-//    this.total_trees     = t_keys.length;
-//    this.t_keys          = t_keys;
-//    this.sampling_strategy   = Sampling.Strategy.RANDOM;
-//    int csize = H2O.CLOUD.size();
-//    this.node_split_features = new int[csize];
-//    this.local_forests       = new Key[csize][];
-//    for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
-//    for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
-//    this.time = 0;
-//    this.weights = weights;
-//    this.strata_samples = strata_samples;
-//    this.trees = null;
-//    this.fr = fr;
-//    this.response = response;
-//    assert classes() > 0;
-//    this.depth = 30;
-//    this.bin_limit = 1024;
-//  }
-
   public Vec get_response() {
     return response;
   }
@@ -177,7 +123,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public int size()      { return t_keys.length; }
   public int classes()   { return (int)(response.max() - response.min() + 1); }
 
-  public static final Key makeKey() {
+  public static Key makeKey() {
     return Key.make(KEY_PREFIX + Key.make());
   }
 
@@ -282,9 +228,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public Counter leaves() { find_leaves_depth(); return _tl; }
   public Counter depth()  { find_leaves_depth(); return _td; }
 
-  /** Return the random seed used to sample this tree. */
-  public long getTreeSeed(int i) {  return Tree.seed(tree(i)); }
-
   public int[] colMap(String[] names) {
     int res[] = new int[names.length];
     for(int i = 0; i < res.length; i++) {
@@ -307,21 +250,18 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return (float) t_keys.length / (float) total_trees;
   }
 
-  static String[] cfDomain(final ConfusionTask.CMFinal cm, int maxClasses) {
+  static String[] cfDomain(final CMTask.CMFinal cm, int maxClasses) {
     String[] dom = cm.domain();
     if (dom.length > maxClasses)
       throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
     return dom;
   }
 
-
   public void generateHTML(String title, StringBuilder sb) {
-    int tasks        = 0;
-    int finished     = 0;
+    int tasks;
+    int finished;
     double[] weights = this.weights;
     // Finish refresh after rf model is done and confusion matrix for all trees is computed
-    boolean done = false;
-    int classCol = this.classcol;
 
     tasks    = this.total_trees;
     finished = this.size();
@@ -335,10 +275,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     int modelSize = tasks * 25/100;
     modelSize = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
-    // Get the computing the matrix - if no job is computing, then start a new job
-    Job cmJob       = ConfusionTask.make(this, modelSize, this.dataKey, classCol, weights,this.oobee);
-    // Here the the job is running - it saved a CM which can be already finished or in invalid state.
-    ConfusionTask.CMFinal confusion = UKV.get(cmJob.dest());
+    CMTask cmTask = new CMTask(this, modelSize, weights, this.oobee);
+    cmTask.doAll(this.fr);
+    CMTask.CMFinal confusion = CMTask.CMFinal.make(cmTask._matrix, this, cmTask.domain(), cmTask._errorsPerTree, this.oobee);
     if (confusion!=null && confusion.valid() && modelSize > 0) {
       //finished += 1;
       JsonObject cm       = new JsonObject();
@@ -371,8 +310,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       cm.addProperty(JSON_CM_TREES,modelSize);
       // Signal end only and only if all trees were generated and confusion matrix is valid
 
-
-
     DocGen.HTML.section(sb, "Confusion Matrix:");
 
     if (cm.has(JSON_CM_MATRIX)) {
@@ -382,13 +319,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       long rows = cm.get(JSON_CM_ROWS).getAsLong();
       long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
       sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
-      sb.append("<dt>trees used</dt><dd>"+cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
+      sb.append("<dt>trees used</dt><dd>").append(cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
       sb.append("</dl>");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
       sb.append("<tr><th>Actual \\ Predicted</th>");
       JsonArray header = (JsonArray) cm.get(JSON_CM_HEADER);
       for (JsonElement e: header)
-        sb.append("<th>"+e.getAsString()+"</th>");
+        sb.append("<th>").append(e.getAsString()).append("</th>");
       sb.append("<th>Error</th></tr>");
       int classes = header.size();
       long[] totals = new long[classes];
@@ -399,7 +336,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         JsonArray row = (JsonArray) matrix2.get(crow);
         long total = 0;
         long error = 0;
-        sb.append("<tr><th>"+header.get(crow).getAsString()+"</th>");
+        sb.append("<tr><th>").append(header.get(crow).getAsString()).append("</th>");
         for (int ccol = 0; ccol < classes; ++ccol) {
           long num = row.get(ccol).getAsLong();
           total += num;
@@ -420,8 +357,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         sumError += error;
       }
       sb.append("<tr><th>Totals</th>");
-      for (int i = 0; i < totals.length; ++i)
-        sb.append("<td>"+totals[i]+"</td>");
+      for (long total : totals) sb.append("<td>").append(total).append("</td>");
       sb.append("<td><b>");
       sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
       sb.append("</b></td></tr>");

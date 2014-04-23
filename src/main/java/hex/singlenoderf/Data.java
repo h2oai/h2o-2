@@ -1,19 +1,10 @@
 package hex.singlenoderf;
 
-import hex.singlenoderf.DataAdapter;
-import hex.singlenoderf.Statistic;
-import hex.singlenoderf.Tree;
 import water.MemoryManager;
 import water.util.Utils;
-
 import java.util.Iterator;
 import java.util.Random;
 
-import water.MemoryManager;
-import water.util.Utils;
-
-import java.util.Iterator;
-import java.util.Random;
 
 public class Data implements Iterable<Data.Row> {
   /** Use stratified sampling */

@@ -1,5 +1,5 @@
 package hex.singlenoderf;
-import hex.singlenoderf.*;
+
 import hex.singlenoderf.Tree.ExclusionNode;
 import hex.singlenoderf.Tree.LeafNode;
 import hex.singlenoderf.Tree.SplitNode;
@@ -18,7 +18,6 @@ public abstract class TreePrinter {
     _colMapping = colMapping;
   }
 
-  public abstract void printTree(hex.singlenoderf.Tree t) throws IOException;
   abstract void printNode(LeafNode t) throws IOException;
   abstract void printNode(SplitNode t) throws IOException;
   abstract void printNode(ExclusionNode t) throws IOException;

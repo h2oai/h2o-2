@@ -1,8 +1,6 @@
 package hex.singlenoderf;
 
-
 import hex.FrameTask;
-import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
@@ -10,7 +8,6 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
 import water.util.Utils;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
@@ -57,8 +54,8 @@ public class SpeeDRF extends Job.ModelJob {
   @API(help = "split limit")
   public int _exclusiveSplitLimit = 0;
 
-  @API(help = "iterative cm")
-  public  boolean  _iterativeCM = true;
+//  @API(help = "iterative cm")
+//  public  boolean  _iterativeCM = true;
 
   @API(help = "use non local data")
   public boolean _useNonLocalData = true;
@@ -161,7 +158,7 @@ public class SpeeDRF extends Job.ModelJob {
     @Override public final void lcompute() {
       final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_rfmodel.fr);
       Data localData        = Data.make(dapt);
-      int numSplitFeatures  = howManySplitFeatures(localData);
+      int numSplitFeatures  = howManySplitFeatures();
       int ntrees            = howManyTrees();
       int[] rowsPerChunks   = howManyRPC(_rfmodel.fr);
       updateRFModel(_rfmodel._key, numSplitFeatures);
@@ -182,7 +179,7 @@ public class SpeeDRF extends Job.ModelJob {
     }
 
     /** Unless otherwise specified each split looks at sqrt(#features). */
-    private int howManySplitFeatures(Data t) {
+    private int howManySplitFeatures() {
       // FIXME should be run over the right data!
       if (_params._numSplitFeatures!=-1) return _params._numSplitFeatures;
       return (int)Math.sqrt(_rfmodel.fr.numCols()-1/*we don't used the class column*/);
@@ -197,7 +194,7 @@ public class SpeeDRF extends Job.ModelJob {
       Frame fr = _rfmodel.fr;
       final long num_chunks = fr.anyVec().nChunks();
       final int  num_nodes  = H2O.CLOUD.size();
-      HashSet<H2ONode> nodes = new HashSet();
+      HashSet<H2ONode> nodes = new HashSet<H2ONode>();
       for( int i=0; i<num_chunks; i++ ) {
         nodes.add(fr.anyVec().chunkKey(i).home_node());
         if( nodes.size() == num_nodes ) // All of nodes covered?
@@ -366,7 +363,7 @@ public class SpeeDRF extends Job.ModelJob {
     /** Pseudo random seed initializing RF algorithm */
     long _seed;
 
-    public static final DRFParams create(int col, int ntrees, int depth, int numrows, int binLimit,
+    public static DRFParams create(int col, int ntrees, int depth, int numrows, int binLimit,
                                          Tree.StatType statType, long seed, boolean parallelTrees, double[] classWt,
                                          int numSplitFeatures, Sampling.Strategy samplingStrategy, float sample,
                                          float[] strataSamples, int verbose, int exclusiveSplitLimit,
