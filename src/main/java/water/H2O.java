@@ -5,7 +5,6 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.Future;
 
 import jsr166y.*;
 import water.Job.JobCancelledException;
@@ -291,8 +290,21 @@ public final class H2O {
   // Find the node index for this H2ONode, or a negative number on a miss
   public int nidx( H2ONode h2o ) { return Arrays.binarySearch(_memary,h2o); }
   public boolean contains( H2ONode h2o ) { return nidx(h2o) >= 0; }
+  // BIG WARNING: do you not change this toString() method since cloud hash value depends on it
   @Override public String toString() {
     return Arrays.toString(_memary);
+  }
+  public String toPrettyString() {
+    if (_memary==null || _memary.length==0) return "[]";
+    int iMax = _memary.length - 1;
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    for (int i = 0; ; i++) {
+      sb.append(String.valueOf(_memary[i]));
+      if (_memary[i]!=null) sb.append(" (").append(PrettyPrint.msecs(_memary[i].runtime(),false)).append(')');
+      if (i==iMax) return sb.append(']').toString();
+      sb.append(", ");
+    }
   }
 
   /**
@@ -306,7 +318,7 @@ public final class H2O {
       ArrayList<NetworkInterface> tmpList = Collections.list(nis);
 
       Comparator<NetworkInterface> c = new Comparator<NetworkInterface>() {
-        public int compare(NetworkInterface lhs, NetworkInterface rhs) {
+        @Override public int compare(NetworkInterface lhs, NetworkInterface rhs) {
           // Handle null inputs.
           if ((lhs == null) && (rhs == null)) { return 0; }
           if (lhs == null) { return 1; }
@@ -410,7 +422,6 @@ public final class H2O {
         // Return the first match from the list, if any.
         // If there are no matches, then exit.
         Log.info("Network list was specified by the user.  Searching for a match...");
-        ArrayList<InetAddress> validIps = new ArrayList();
         for( InetAddress ip : ips ) {
           Log.info("    Considering " + ip.getHostAddress() + " ...");
           for ( UserSpecifiedNetwork n : networkList ) {
@@ -723,7 +734,7 @@ public final class H2O {
     // from a remote node, need the remote task to run at a higher priority
     // than themselves.  This field tracks the required priority.
     public byte priority() { return MIN_PRIORITY; }
-    public H2OCountedCompleter clone(){
+    @Override public H2OCountedCompleter clone(){
       try { return (H2OCountedCompleter)super.clone(); }
       catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
     }
@@ -902,6 +913,8 @@ public final class H2O {
     Log.info ("Java heap maxMemory: " + String.format("%.2f gb", runtime.maxMemory() / ONE_GB));
     Log.info ("Java version: " + String.format("Java %s (from %s)", System.getProperty("java.version"), System.getProperty("java.vendor")));
     Log.info ("OS   version: " + String.format("%s %s (%s)", System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")));
+    long totalMemory = OSUtils.getTotalPhysicalMemory();
+    Log.info ("Machine physical memory: " + (totalMemory==-1 ? "NA" : String.format("%.2f gb", totalMemory / ONE_GB)));
   }
 
   public static String getVersion() {
@@ -1431,7 +1444,7 @@ public final class H2O {
       return space != Persist.UNKNOWN && space < (5 << 10);
     }
 
-    public void run() {
+    @Override public void run() {
       boolean diskFull = false;
       while (true) {
         // Sweep the K/V store, writing out Values (cleaning) and free'ing
@@ -1664,6 +1677,7 @@ public final class H2O {
       }
 
       // Pretty print
+      @Override
       public String toString() {
         long x = _eldest;
         long now = System.currentTimeMillis();
@@ -1734,6 +1748,7 @@ public final class H2O {
     }
 
     // Count the impact of one failure.
+    @SuppressWarnings("unused")
     private void failed() {
       printPossibleCauses();
       if (consecutiveFailures == 0) {
@@ -1789,6 +1804,7 @@ public final class H2O {
     }
 
     // Class main thread.
+    @Override
     public void run() {
       Log.debug (threadName + ": Thread run() started");
       reset();

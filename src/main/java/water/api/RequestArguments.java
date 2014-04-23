@@ -1715,7 +1715,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected String parse(String input) throws IllegalArgumentException {
       return input;
     }
-    @Override protected String queryDescription() { return "Existing file or directory, can be on nfs, hdfs or S3"; }
+    @Override protected String queryDescription() { return "File or directory, can be on NFS, HDFS or S3"; }
     @Override protected String defaultValue() { return ""; }
     @Override protected String[] errors() { return new String[] { "File not found" }; }
   }
