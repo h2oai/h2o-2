@@ -115,7 +115,7 @@ LIB_TEST_JS=\
 LIB_TEST_CSS=\
 	$(MODULES)/mocha/mocha.css
 
-all: build
+all: setup build
 
 build: \
 	$(DEPLOY)/index.html \
