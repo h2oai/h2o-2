@@ -288,6 +288,7 @@ public final class H2O {
   // Find the node index for this H2ONode, or a negative number on a miss
   public int nidx( H2ONode h2o ) { return Arrays.binarySearch(_memary,h2o); }
   public boolean contains( H2ONode h2o ) { return nidx(h2o) >= 0; }
+  // BIG WARNING: do you not change this toString() method since cloud hash value depends on it
   @Override public String toString() {
     return Arrays.toString(_memary);
   }
