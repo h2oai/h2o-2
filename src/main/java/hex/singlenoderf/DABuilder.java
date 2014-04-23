@@ -99,6 +99,7 @@ public class DABuilder {
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
         dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol));
       }
+      _rfmodel.current_status = "Inhaling Data";
       ForkJoinTask.invokeAll(dataInhaleJobs);
 
       // Shrink data

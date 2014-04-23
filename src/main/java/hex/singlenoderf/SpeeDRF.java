@@ -118,10 +118,10 @@ public class SpeeDRF extends Job.ModelJob {
   public SpeeDRFModel initModel() {
     try {
       source.read_lock(self());
-      double[] weights = new double[(int)(response.max() - response.min() + 1)];
+//      double[] weights = new double[(int)(response.max() - response.min() + 1)];
       float[] samples = new float[(int) (response.max() - response.min() + 1)];
       for(int i = 0; i < samples.length; ++i) samples[i] = (float)67.0;
-      for(int i = 0; i < weights.length; ++i) weights[i] = 1.0;
+//      for(int i = 0; i < weights.length; ++i) weights[i] = 1.0;
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
       SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0]);
       model.bin_limit = bin_limit;
@@ -131,7 +131,7 @@ public class SpeeDRF extends Job.ModelJob {
       model.features = source.numCols();
       model.sampling_strategy = Sampling.Strategy.RANDOM;
       model.sample = (float) sample;
-      model.weights = weights;
+      model.weights = null; //weights;
       model.time = 0;
       model.total_trees = num_trees;
       model.strata_samples = samples;

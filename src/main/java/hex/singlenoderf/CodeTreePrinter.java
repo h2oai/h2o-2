@@ -1,10 +1,8 @@
 package hex.singlenoderf;
 
-import hex.singlenoderf.Tree;
 import hex.singlenoderf.Tree.ExclusionNode;
 import hex.singlenoderf.Tree.LeafNode;
 import hex.singlenoderf.Tree.SplitNode;
-import hex.singlenoderf.TreePrinter;
 import water.AutoBuffer;
 import water.ValueArray.Column;
 import water.util.IndentingAppender;

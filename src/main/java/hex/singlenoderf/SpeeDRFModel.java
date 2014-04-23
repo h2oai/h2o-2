@@ -68,6 +68,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Job key")
   Key jobKey;
 
+  @API(help = "")
+  String current_status;
+
 //  @API(help = "No CM")
 //  boolean _noCM;
 //
@@ -113,6 +116,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.jobKey = jobKey;
     this.classcol = fr.find(response);
     this.dataKey = dataKey;
+    this.current_status = "Initializing Model";
   }
 
   public Vec get_response() {
@@ -271,103 +275,108 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
 
     DocGen.HTML.section(sb, "SpeeDRF Output:");
+    sb.append("Current Status: " + this.current_status);
+
 
     int modelSize = tasks * 25/100;
     modelSize = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
-    CMTask cmTask = new CMTask(this, modelSize, weights, this.oobee);
-    cmTask.doAll(this.fr);
-    CMTask.CMFinal confusion = CMTask.CMFinal.make(cmTask._matrix, this, cmTask.domain(), cmTask._errorsPerTree, this.oobee);
-    if (confusion!=null && confusion.valid() && modelSize > 0) {
-      //finished += 1;
-      JsonObject cm       = new JsonObject();
-      JsonArray  cmHeader = new JsonArray();
-      JsonArray  matrix   = new JsonArray();
-      cm.addProperty(JSON_CM_TYPE, oobee ? "OOB error estimate" : "full scoring");
-      cm.addProperty(JSON_CM_CLASS_ERR, confusion.classError());
-      cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
-      cm.addProperty(JSON_CM_ROWS, confusion.rows());
-      // create the header
-      for (String s : cfDomain(confusion, 1024))
-        cmHeader.add(new JsonPrimitive(s));
-      cm.add(JSON_CM_HEADER,cmHeader);
-      // add the matrix
-      final int nclasses = confusion.dimension();
-      JsonArray classErrors = new JsonArray();
-      for (int crow = 0; crow < nclasses; ++crow) {
-        JsonArray row  = new JsonArray();
-        int classHitScore = 0;
-        for (int ccol = 0; ccol < nclasses; ++ccol) {
-          row.add(new JsonPrimitive(confusion.matrix(crow,ccol)));
-          if (crow!=ccol) classHitScore += confusion.matrix(crow,ccol);
-        }
-        // produce infinity members in case of 0.f/0
-        classErrors.add(new JsonPrimitive((float)classHitScore / (classHitScore + confusion.matrix(crow,crow))));
-        matrix.add(row);
-      }
-      cm.add(JSON_CM_CLASSES_ERRORS, classErrors);
-      cm.add(JSON_CM_MATRIX,matrix);
-      cm.addProperty(JSON_CM_TREES,modelSize);
-      // Signal end only and only if all trees were generated and confusion matrix is valid
 
-    DocGen.HTML.section(sb, "Confusion Matrix:");
-
-    if (cm.has(JSON_CM_MATRIX)) {
-      sb.append("<h3>Confusion matrix - ").append(cm.get(JSON_CM_TYPE).getAsString()).append("</h3>");
-      sb.append("<dl class='dl-horizontal'>");
-      sb.append("<dt>classification error</dt><dd>").append(String.format("%5.3f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
-      long rows = cm.get(JSON_CM_ROWS).getAsLong();
-      long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
-      sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
-      sb.append("<dt>trees used</dt><dd>").append(cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
-      sb.append("</dl>");
-      sb.append("<table class='table table-striped table-bordered table-condensed'>");
-      sb.append("<tr><th>Actual \\ Predicted</th>");
-      JsonArray header = (JsonArray) cm.get(JSON_CM_HEADER);
-      for (JsonElement e: header)
-        sb.append("<th>").append(e.getAsString()).append("</th>");
-      sb.append("<th>Error</th></tr>");
-      int classes = header.size();
-      long[] totals = new long[classes];
-      JsonArray matrix2 = (JsonArray) cm.get(JSON_CM_MATRIX);
-      long sumTotal = 0;
-      long sumError = 0;
-      for (int crow = 0; crow < classes; ++crow) {
-        JsonArray row = (JsonArray) matrix2.get(crow);
-        long total = 0;
-        long error = 0;
-        sb.append("<tr><th>").append(header.get(crow).getAsString()).append("</th>");
-        for (int ccol = 0; ccol < classes; ++ccol) {
-          long num = row.get(ccol).getAsLong();
-          total += num;
-          totals[ccol] += num;
-          if (ccol == crow) {
-            sb.append("<td style='background-color:LightGreen'>");
-          } else {
-            sb.append("<td>");
-            error += num;
+    if (tasks * 1. / (1.*finished) > 0.50) {
+      CMTask cmTask = new CMTask(this, modelSize, weights, this.oobee);
+      cmTask.doAll(this.fr);
+      CMTask.CMFinal confusion = CMTask.CMFinal.make(cmTask._matrix, this, cmTask.domain(), cmTask._errorsPerTree, this.oobee);
+      if (confusion!=null && confusion.valid() && modelSize > 0) {
+        //finished += 1;
+        JsonObject cm       = new JsonObject();
+        JsonArray  cmHeader = new JsonArray();
+        JsonArray  matrix   = new JsonArray();
+        cm.addProperty(JSON_CM_TYPE, oobee ? "OOB error estimate" : "full scoring");
+        cm.addProperty(JSON_CM_CLASS_ERR, confusion.classError());
+        cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
+        cm.addProperty(JSON_CM_ROWS, confusion.rows());
+        // create the header
+        for (String s : cfDomain(confusion, 1024))
+          cmHeader.add(new JsonPrimitive(s));
+        cm.add(JSON_CM_HEADER,cmHeader);
+        // add the matrix
+        final int nclasses = confusion.dimension();
+        JsonArray classErrors = new JsonArray();
+        for (int crow = 0; crow < nclasses; ++crow) {
+          JsonArray row  = new JsonArray();
+          int classHitScore = 0;
+          for (int ccol = 0; ccol < nclasses; ++ccol) {
+            row.add(new JsonPrimitive(confusion.matrix(crow,ccol)));
+            if (crow!=ccol) classHitScore += confusion.matrix(crow,ccol);
           }
-          sb.append(num);
-          sb.append("</td>");
+          // produce infinity members in case of 0.f/0
+          classErrors.add(new JsonPrimitive((float)classHitScore / (classHitScore + confusion.matrix(crow,crow))));
+          matrix.add(row);
         }
-        sb.append("<td>");
-        sb.append(String.format("%5.3f = %d / %d", (double)error/total, error, total));
-        sb.append("</td></tr>");
-        sumTotal += total;
-        sumError += error;
+        cm.add(JSON_CM_CLASSES_ERRORS, classErrors);
+        cm.add(JSON_CM_MATRIX,matrix);
+        cm.addProperty(JSON_CM_TREES,modelSize);
+        // Signal end only and only if all trees were generated and confusion matrix is valid
+
+      DocGen.HTML.section(sb, "Confusion Matrix:");
+
+      if (cm.has(JSON_CM_MATRIX)) {
+        sb.append("<h3>Confusion matrix - ").append(cm.get(JSON_CM_TYPE).getAsString()).append("</h3>");
+        sb.append("<dl class='dl-horizontal'>");
+        sb.append("<dt>classification error</dt><dd>").append(String.format("%5.3f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
+        long rows = cm.get(JSON_CM_ROWS).getAsLong();
+        long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
+        sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
+        sb.append("<dt>trees used</dt><dd>").append(cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
+        sb.append("</dl>");
+        sb.append("<table class='table table-striped table-bordered table-condensed'>");
+        sb.append("<tr><th>Actual \\ Predicted</th>");
+        JsonArray header = (JsonArray) cm.get(JSON_CM_HEADER);
+        for (JsonElement e: header)
+          sb.append("<th>").append(e.getAsString()).append("</th>");
+        sb.append("<th>Error</th></tr>");
+        int classes = header.size();
+        long[] totals = new long[classes];
+        JsonArray matrix2 = (JsonArray) cm.get(JSON_CM_MATRIX);
+        long sumTotal = 0;
+        long sumError = 0;
+        for (int crow = 0; crow < classes; ++crow) {
+          JsonArray row = (JsonArray) matrix2.get(crow);
+          long total = 0;
+          long error = 0;
+          sb.append("<tr><th>").append(header.get(crow).getAsString()).append("</th>");
+          for (int ccol = 0; ccol < classes; ++ccol) {
+            long num = row.get(ccol).getAsLong();
+            total += num;
+            totals[ccol] += num;
+            if (ccol == crow) {
+              sb.append("<td style='background-color:LightGreen'>");
+            } else {
+              sb.append("<td>");
+              error += num;
+            }
+            sb.append(num);
+            sb.append("</td>");
+          }
+          sb.append("<td>");
+          sb.append(String.format("%5.3f = %d / %d", (double)error/total, error, total));
+          sb.append("</td></tr>");
+          sumTotal += total;
+          sumError += error;
+        }
+        sb.append("<tr><th>Totals</th>");
+        for (long total : totals) sb.append("<td>").append(total).append("</td>");
+        sb.append("<td><b>");
+        sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
+        sb.append("</b></td></tr>");
+        sb.append("</table>");
+      } else {
+        sb.append("<div class='alert alert-info'>");
+        sb.append("Confusion matrix is being computed into the key:</br>");
+        sb.append(cm.get(JSON_CONFUSION_KEY).getAsString());
+        sb.append("</div>");
       }
-      sb.append("<tr><th>Totals</th>");
-      for (long total : totals) sb.append("<td>").append(total).append("</td>");
-      sb.append("<td><b>");
-      sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
-      sb.append("</b></td></tr>");
-      sb.append("</table>");
-    } else {
-      sb.append("<div class='alert alert-info'>");
-      sb.append("Confusion matrix is being computed into the key:</br>");
-      sb.append(cm.get(JSON_CONFUSION_KEY).getAsString());
-      sb.append("</div>");
-    }
+      }
     }
   }
 }

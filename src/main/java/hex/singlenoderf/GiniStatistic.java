@@ -1,9 +1,6 @@
 package hex.singlenoderf;
 
-import hex.singlenoderf.*;
-import hex.singlenoderf.Data;
 import water.util.Utils;
-
 import java.util.Random;
 
 /** Computes the gini split statistics.
