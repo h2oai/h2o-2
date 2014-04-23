@@ -112,8 +112,10 @@ public class Models extends Request2 {
         try {
           Frame frame = all_frames.get(entry.getKey());
           Frame[] outputs = model.adapt(frame, false); // TODO: this does too much work; write canAdapt()
-          // TODO: we have to free the vecTrash vectors?
-          // Model vecTrash = inputs[1];
+          Frame adapted = outputs[0];
+          Frame trash = outputs[1];
+          // adapted.delete();  // TODO: shouldn't we clean up adapted vecs?  But we can't delete() the frame as a whole. . .
+          trash.delete();
 
           // A-Ok
           compatible_frames.put(entry.getKey(), frame);
@@ -232,7 +234,6 @@ public class Models extends Request2 {
     "max_depth",
     "min_rows",
     "nbins",
-    "score_each_iteration",
     "_mtry",
     "_seed"
   };
@@ -323,7 +324,6 @@ public class Models extends Request2 {
     "max_depth",
     "min_rows",
     "nbins",
-    "score_each_iteration",
     "learn_rate",
     "grid_parallelism",
   };
@@ -382,7 +382,7 @@ public class Models extends Request2 {
    * Score a frame with the given model.
    */
   protected static Response scoreOne(Frame frame, Model score_model, boolean adapt) {
-    return Frames.scoreOne(frame, score_model, adapt);
+    return Frames.scoreOne(frame, score_model);
   }
 
 

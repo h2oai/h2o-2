@@ -45,9 +45,6 @@ public class Frames extends Request2 {
   @API(help="An existing H2O Model key to score with the Frame which is specified by the key parameter.", required=false, filter=Default.class)
   Model score_model = null;
 
-  @API(help="Should we adapt() the Frame to the Model?", required=false, filter=Default.class)
-  boolean adapt = false; // TODO: revisit; calling adapt outside score is causing the numCols() to be off
-
 
   /////////////////
   // The Code (tm):
@@ -110,8 +107,10 @@ public class Frames extends Request2 {
         try {
           Model model = all_models.get(entry.getKey());
           Frame[] outputs = model.adapt(frame, false); // TODO: this does too much work; write canAdapt()
-          // TODO: we have to free the vecTrash vectors?
-          // Frame vecTrash = inputs[1];
+          Frame adapted = outputs[0];
+          Frame trash = outputs[1];
+          // adapted.delete();  // TODO: shouldn't we clean up adapted vecs?  But we can't delete() the frame as a whole. . .
+          trash.delete();
 
           // A-Ok
           compatible_models.put(entry.getKey(), model);
@@ -228,15 +227,8 @@ public class Frames extends Request2 {
   /**
    * Score a frame with the given model.
    */
-  protected static Response scoreOne(Frame frame, Model score_model, boolean adapt) {
+  protected static Response scoreOne(Frame frame, Model score_model) {
     Frame input = frame;
-
-    if (false && adapt) { // TODO: for now we're always calling adapt inside score
-      Frame[] inputs = score_model.adapt(frame, false);
-      input = inputs[0];
-      // TODO: we have to free the vecTrash vectors?
-      Frame vecTrash = inputs[1];
-    }
 
     long before = System.currentTimeMillis();
     Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
@@ -299,10 +291,9 @@ public class Frames extends Request2 {
         return serveOneOrAll(framesMap);
       } else {
         // score it
-        return scoreOne(this.key, this.score_model, this.adapt);
+        return scoreOne(this.key, this.score_model);
       }
     }
-
   } // serve()
 
-}
+} // class Frames
