@@ -80,6 +80,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
+    Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
 
     // Not supported for now
 //    Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",                  "Data");
