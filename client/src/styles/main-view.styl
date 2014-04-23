@@ -5,6 +5,17 @@
   dock-top(y-navigation-bar-height)
   background-color y-color-yellow
 
+.y-toggle-help-button
+  float right
+  background none
+  border none
+  padding 0
+  width: 32px
+  font-size 16px
+  color y-color-grey-md
+  &:hover
+    color black
+
 .y-logo-area
   dock-left(y-topic-lane-width)
   background-color y-color-yellow-dk
@@ -12,6 +23,7 @@
 
 .y-navigation-area
   dock(left:y-topic-lane-width)
+  line-height y-navigation-bar-height
 
 .y-desktop
   dock(top:y-navigation-bar-height, bottom:y-status-bar-height)

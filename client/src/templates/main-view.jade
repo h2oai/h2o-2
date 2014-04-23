@@ -1,10 +1,11 @@
 // ko with:view
-.y-main
+.y-main(data-bind="css:{'y-main-no-help':isHelpHidden}")
   .y-navigation-bar
     .y-logo-area
       img(src='img/h2o.png' width='12%' style='position:relative; top:10px')
     .y-navigation-area
-
+      button.y-toggle-help-button(data-bind='click:toggleHelp' title='Toggle help pane')
+        i.fa.fa-question-circle
   .y-desktop
     .y-topic-lane
       .y-lane-header

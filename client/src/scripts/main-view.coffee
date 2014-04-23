@@ -3,6 +3,7 @@ Steam.MainView = (_) ->
   _pageViews = nodes$ []
   _modalViews = nodes$ []
   _isModal = lift$ _modalViews, (modalViews) -> modalViews.length > 0
+  _isHelpHidden = node$ no
   _topic = node$ null
   _isDisplayingTopics = node$ no
   _isListMasked = node$ no
@@ -10,6 +11,7 @@ Steam.MainView = (_) ->
   _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
     if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
   toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
+  toggleHelp = -> _isHelpHidden not _isHelpHidden()
   apply$ _isDisplayingTopics, (isDisplayingTopics) ->
     if isDisplayingTopics
       _listViews.push _topicListView
@@ -123,10 +125,12 @@ Steam.MainView = (_) ->
 
   topicTitle: _topicTitle
   toggleTopics: toggleTopics
+  toggleHelp: toggleHelp
   listViews: _listViews
   pageViews: _pageViews
   modalViews: _modalViews
   isListMasked: _isListMasked
   isPageMasked: _isPageMasked
   isModal: _isModal
+  isHelpHidden: _isHelpHidden
   template: _template
