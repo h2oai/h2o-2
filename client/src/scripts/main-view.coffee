@@ -36,28 +36,36 @@ Steam.MainView = (_) ->
         unless _topic() is topic
           _topic topic
           switchList _scoringListView
+      when _notificationTopic
+        unless _topic() is topic
+          _topic topic
+          switchList _notificationListView
     _isDisplayingTopics no
     return
   
-  switchToFrames = (opts) ->
+  switchToFrames = (predicate) ->
     switchTopic _frameTopic
-    _.loadFrames opts
+    _.loadFrames predicate
 
-  switchToModels = (opts) ->
+  switchToModels = (predicate) ->
     switchTopic _modelTopic
-    _.loadModels opts
+    _.loadModels predicate
 
-  switchToScoring = (opts) ->
+  switchToScoring = (predicate) ->
     switchTopic _scoringTopic
-    _.loadScorings opts
+    _.loadScorings predicate
+
+  switchToNotifications = (predicate) ->
+    switchTopic _notificationTopic
+    _.loadNotifications predicate
 
   _topics = node$ [
     _frameTopic = createTopic 'Datasets', switchToFrames, yes
     _modelTopic = createTopic 'Models', switchToModels, yes
     _scoringTopic = createTopic 'Scoring', switchToScoring, yes
     _timelineTopic = createTopic 'Timeline', null, no
-    _notificationsTopic = createTopic 'Notifications', null, no
-    _jobsTopic = createTopic 'Jobs', null, no
+    _notificationTopic = createTopic 'Notifications', switchToNotifications, yes
+    _jobTopic = createTopic 'Jobs', null, no
     _clusterTopic = createTopic 'Cluster', null, no
     _administrationTopic = createTopic 'Administration', null, no
   ]
@@ -66,6 +74,7 @@ Steam.MainView = (_) ->
   _frameListView = Steam.FrameListView _
   _modelListView = Steam.ModelListView _
   _scoringListView = Steam.ScoringListView _
+  _notificationListView = Steam.NotificationListView _
   _modelSelectionView = Steam.ModelSelectionView _
 
   switchView = (views, view) ->
@@ -94,11 +103,16 @@ Steam.MainView = (_) ->
   link$ _.displayScoring, (scoring) ->
     switchPage Steam.ScoringView _, scoring if _topic() is _scoringTopic
 
+  link$ _.displayNotification, (notification) ->
+    switchPage Steam.NotificationView _, notification if _topic() is _notificationTopic
+
   link$ _.switchToFrames, switchToFrames
 
   link$ _.switchToModels, switchToModels
 
   link$ _.switchToScoring, switchToScoring
+
+  link$ _.switchToNotifications, switchToNotifications
 
   link$ _.modelsSelected, -> switchModal _modelSelectionView
 

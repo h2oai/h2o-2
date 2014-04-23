@@ -11,8 +11,7 @@ Steam.H2OProxy = (_) ->
     _.requestJSON (composeUri uri, opts), (error, result) ->
       if error
         #TODO error logging / retries, etc.
-        console.error error
-        console.error result
+        console.error error, result
         go error, result
       else
         go error, result.data

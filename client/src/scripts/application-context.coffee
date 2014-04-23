@@ -1,6 +1,12 @@
 Steam.ApplicationContext = ->
   context$
 
+    error: do edge$
+    warn: do edge$
+    info: do edge$
+    fatal: do edge$
+    notify: do edge$
+
     route: do edge$
     setRoute: do edge$
     getRoute: do edge$
@@ -35,6 +41,7 @@ Steam.ApplicationContext = ->
     switchToFrames: do edge$
     switchToModels: do edge$
     switchToScoring: do edge$
+    switchToNotifications: do edge$
 
     displayEmpty: do edge$
 
@@ -49,6 +56,9 @@ Steam.ApplicationContext = ->
     modelsDeselected: do edge$
     deselectAllModels: do edge$
     clearModelSelection: do edge$
+
+    loadNotifications: do edge$
+    displayNotification: do edge$
 
     loadScorings: do edge$
     displayScoring: do edge$

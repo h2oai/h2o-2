@@ -1,5 +1,7 @@
 Steam.Application = (_) ->
 
+  Steam.ErrorMonitor _
+  Steam.EventLog _
   Steam.Cache _
   Steam.LocalStorage _
   Steam.Xhr _

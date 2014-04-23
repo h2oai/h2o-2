@@ -66,9 +66,13 @@ Steam.ScoringView = (_, _scoring) ->
       run: (go) ->
         item.status 'running'
         _.requestScoringOnFrame frameKey, modelKey, (error, result) ->
+
+          if error
+            _.error 'Scoring failed', { frameKey: frameKey, modelKey: modelKey }, error
+
           data = if error then error.data else result
-          item.status data.response.status
-          item.time data.response.time
+          item.status if data.response then data.response.status else 'error'
+          item.time if data.response then data.response.time else 0
           item.result error or result
           do go
 
