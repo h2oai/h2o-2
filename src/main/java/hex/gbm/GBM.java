@@ -70,6 +70,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       this.learn_rate = prior.learn_rate;
     }
 
+    @Override protected TreeModelType getTreeModelType() { return TreeModelType.GBM; }
+
     @Override protected float[] score0(double[] data, float[] preds) {
       float[] p = super.score0(data, preds);
       if (nclasses()>1) { // classification

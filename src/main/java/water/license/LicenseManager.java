@@ -9,10 +9,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LicenseManager {
-  public final String FEATURE_GLM_SCORING = "glm_scoring";
-  public final String FEATURE_GBM_SCORING = "gbm_scoring";
-  public final String FEATURE_RF_SCORING  = "rf_scoring";
-  public final String FEATURE_DEEPLEARNING_SCORING = "deeplearning_scoring";
+  public static final String FEATURE_GLM_SCORING = "glm_scoring";
+  public static final String FEATURE_GBM_SCORING = "gbm_scoring";
+  public static final String FEATURE_RF_SCORING  = "rf_scoring";
+  public static final String FEATURE_DEEPLEARNING_SCORING = "deeplearning_scoring";
 
   public enum Result {
     OK,
@@ -63,10 +63,11 @@ public class LicenseManager {
 
   public boolean isFeatureAllowed(String featureName) {
     if (_license == null) {
+      Log.info("isFeatureAllowed(" + featureName + ") is false (no valid license found)");
       return false;
     }
 
-    Pattern p = Pattern.compile("^feature:\\s*(\\S*)\\s*$");
+    Pattern p = Pattern.compile("Feature:\\s*(\\S*)\\s*");
     Scanner scanner = new Scanner(_license);
     while (scanner.hasNextLine()) {
       String line = scanner.nextLine();
@@ -83,6 +84,7 @@ public class LicenseManager {
     }
     scanner.close();
 
+    Log.info("isFeatureAllowed(" + featureName + ") is false (feature not licensed)");
     return false;
   }
 }
