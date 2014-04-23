@@ -27,6 +27,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
   final static public String H2O_BETA_KEY = "h2o.beta";
   final static public String H2O_NTHREADS_KEY = "h2o.nthreads";
   final static public String H2O_BASE_PORT_KEY = "h2o.baseport";
+  final static public String H2O_LICENSE_DATA_KEY = "h2o.license.data";
 
   static EmbeddedH2OConfig _embeddedH2OConfig;
 
@@ -339,7 +340,15 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     Thread counterThread = new CounterThread(context, counter);
     counterThread.start();
 
-    String ice_root = conf.get("mapred.local.dir");
+    String mapredLocalDir = conf.get("mapred.local.dir");
+    String ice_root;
+    if (mapredLocalDir.contains(",")) {
+      ice_root = mapredLocalDir.split(",")[0];
+    }
+    else {
+      ice_root = mapredLocalDir;
+    }
+
     String jobtrackerName = conf.get(H2O_JOBTRACKERNAME_KEY);
     context.write(textId, new Text("mapred.local.dir is " + ice_root));
     String driverIp = conf.get(H2O_DRIVER_IP_KEY);
@@ -348,6 +357,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     String nthreadsString = conf.get(H2O_NTHREADS_KEY);
     String basePortString = conf.get(H2O_BASE_PORT_KEY);
     String betaString = conf.get(H2O_BETA_KEY);
+    String licenseData = conf.get(H2O_LICENSE_DATA_KEY);
 
     ServerSocket ss = new ServerSocket();
     InetSocketAddress sa = new InetSocketAddress("127.0.0.1", 0);
@@ -385,6 +395,26 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     if (betaString != null) {
       if (betaString.length() > 0) {
         argsList.add(betaString);
+      }
+    }
+    if (licenseData != null) {
+      if (licenseData.length() > 0) {
+        Log.POST(100, "Before writing license file");
+        Log.POST(101, ice_root);
+        File f = new File(ice_root);
+        boolean b = f.exists();
+        Log.POST(102, b ? "exists" : "does not exist");
+        if (! b) {
+          Log.POST(103, "before mkdirs()");
+          f.mkdirs();
+          Log.POST(104, "after mkdirs()");
+        }
+        String fileName = ice_root + File.separator + "h2o_license.txt";
+        PrintWriter out = new PrintWriter(fileName);
+        out.print(licenseData);
+        out.close();
+        argsList.add("-license");
+        argsList.add(fileName);
       }
     }
 
