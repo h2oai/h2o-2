@@ -54,7 +54,7 @@ public abstract class Request extends RequestBuilders {
     }
   }
 
-  public interface Filter {
+  public static interface Filter {
     boolean run(Object value);
   }
 
