@@ -8,8 +8,23 @@
 
 Note: You might need to `sudo` these commands.
 
+*OSX*
+
     brew install node
     npm install -g bower
+
+*Linux*
+
+Follow the instructions on the [Node.js wiki](https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager), and then:
+
+    npm install -g bower
+
+*Windows*
+
+[Install Node.js](http://nodejs.org/download/), and then:
+
+    npm install -g bower
+
 
 **Step 2** Setup local dependencies. Assuming you've already cloned the h2o git repo -
 
@@ -23,7 +38,7 @@ Note: You might need to `sudo` these commands.
 
 ## Launch
 
-Point your browser to [http://localhost:54321/steam.html](http://localhost:54321/steam.html)
+Point your browser to [http://localhost:54321/steam/index.html](http://localhost:54321/steam/index.html)
 
 ## Make tasks
 
