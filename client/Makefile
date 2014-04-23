@@ -158,6 +158,9 @@ node: \
 watch:
 	$(BIN)/watchy --watch src -- make build test
 
+preload:
+	Rscript src/util/h2o-R/preload.R
+
 help:
 	@echo "Please use \`make <target>' where <target> is one of -"
 	@echo ""
@@ -165,11 +168,13 @@ help:
 	@echo "  make check      Check prerequisites"
 	@echo "  make setup      Set up dev dependencies"
 	@echo "  make reset      Clean up dev dependencies"
+	@echo "  make preload    Preload a few frames and models into H2O (requires R)"
 	@echo ""
 	@echo "Development tasks:"
 	@echo "  make build      Build and deploy to ../lib/resources/steam/"
 	@echo "  make unit       Build browser test suite"
 	@echo "  make test       Run all tests"
+	@echo "  make            Run all tests"
 	@echo "  make smoke      Run tests, but bail on first failure"
 	@echo "  make report     Run all tests, verbose, with specs"
 	@echo "  make debug      Run tests in debug mode"
@@ -177,6 +182,7 @@ help:
 	@echo "  make coverage   Compile test coverage"
 	@echo "  make doc        Compile code documentation"
 	@echo "  make clean      Clean up build directories"
+	@echo "  make watch      Watch for changes and run `make build test`"
 
 smoke: node
 	$(BIN)/mocha \
