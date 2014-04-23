@@ -7,7 +7,8 @@ Steam.FrameView = (_, _frame) ->
         #TODO handle errors
       else
         #TODO typecheck
-        _compatibleModels createCompatibleModelsSection head data.frames
+        unless isEmpty data.frames
+          _compatibleModels createCompatibleModelsSection head data.frames
         return
 
   # Columns section
