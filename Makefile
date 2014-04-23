@@ -87,10 +87,10 @@ build:
 	@echo
 	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/version_build.log
 
-	@echo
-	@echo "PHASE: Building UI..."
-	@echo
-	$(MAKE) -C client PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/client_build.log
+#	@echo
+#	@echo "PHASE: Building UI..."
+#	@echo
+#	$(MAKE) -C client PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/client_build.log
 
 	@echo
 	@echo "PHASE: Building H2O..."
