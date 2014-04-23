@@ -239,15 +239,21 @@ check:
 	@echo Checking prerequisites...
 
 ifeq ($(shell which node),)
-	$(error Dependency node not found. Exiting.)
+	$(error Dependency node not found. Exiting. Try: brew install node)
 else
 	@echo node ... OK
 endif
 
 ifeq ($(shell which npm),)
-	$(error Dependency npm not found. Exiting.)
+	$(error Dependency npm not found. Exiting. Try: brew install node)
 else
 	@echo npm ... OK
+endif
+
+ifeq ($(shell which bower),)
+	$(error Dependency bower not found. Exiting. Try: npm install -g bower)
+else
+	@echo bower ... OK
 endif
 
 setup: check
