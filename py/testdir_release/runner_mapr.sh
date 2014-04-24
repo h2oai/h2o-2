@@ -20,8 +20,9 @@ mkdir -p sandbox
 # I suppose we could just have a test verify the request cloud size, after buildingk
 MAPR_JOBTRACKER=192.168.1.173:9001
 MAPR_NODES=3
-MAPR_HEAP=20g
-MAPR_JAR=h2odriver_mapr2.1.3.jar
+MAPR_HEAP=4g
+# MAPR_JAR=h2odriver_mapr2.1.3.jar
+MAPR_JAR=h2odriver_mapr3.0.1.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
@@ -76,7 +77,7 @@ done < h2o_one_node
 
 rm -fr h2o-nodes.json
 # NOTE: keep this hdfs info in sync with the json used to build the cloud above
-../find_cloud.py -f h2o_one_node -hdfs_version mapr3.0.1 -hdfs_name_node 192.168.1.161 -expected_size $MAPR_NODES
+../find_cloud.py -f h2o_one_node -hdfs_version mapr3.0.1 -hdfs_name_node 192.168.1.171 -expected_size $MAPR_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
