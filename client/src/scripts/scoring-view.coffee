@@ -90,7 +90,7 @@ Steam.ScoringView = (_, _scoring) ->
     renderComparisonTable map selectedItems, (item) -> item.data
 
   renderComparisonTable = (scores) ->
-    [ table, kvtable, thead, tbody, tr, th, td ] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr th td'
+    [ table, kvtable, thead, tbody, tr, diffSpan, th, td ] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr span.bg-info th td'
 
     transposeGrid = (grid) ->
       transposed = []
@@ -100,12 +100,13 @@ Steam.ScoringView = (_, _scoring) ->
           column[i] = cell
       transposed
 
-    createParameterTable = (parameters) ->
+    createParameterTable = (parametersAndDifferences) ->
+      { parameters, differences } = parametersAndDifferences
       kvtable [
         tbody mapWithKey parameters, (value, key) ->
           tr [
             th key
-            td value
+            td if differences[key] then value else diffSpan value
           ]
       ]
 
@@ -200,11 +201,37 @@ Steam.ScoringView = (_, _scoring) ->
       rates = map cms, computeTPRandFPR
       createROCChart rates
 
+    compareInputParameters = (modelsByAlgorithm) ->
+      zipObject mapWithKey modelsByAlgorithm, (models, algorithm) ->
+        headParameter = (head models).parameters
+        tailParameters = map (tail models), (model) -> model.parameters
+
+        headKeys = keys headParameter
+
+        #TODO null keys
+
+        areSame = map headKeys, (key) ->
+          every tailParameters, (tailParameter) ->
+            a = headParameter[key]
+            b = tailParameter[key]
+            # DRF has array-valued params, so handle that case properly
+            if isArray a and isArray b
+              a.toString() is b.toString() #HACK
+            else
+              a is b
+
+            tailParameter[key] is headParameter[key]
+
+        [
+          algorithm
+          zipObject headKeys, areSame
+        ]
 
     createComparisonGrid = (scores) ->
       header = [
         'Method'
         'Name'
+        'ROC Curve'
         'Input Parameters'
         'Error'
         'AUC'
@@ -216,12 +243,14 @@ Steam.ScoringView = (_, _scoring) ->
         'Recall'
         'Specificity'
         'Max per class Error'
-        'ROC Curve'
       ]
 
       format4f = d3.format '.4f' # precision = 4
 
       scoreWithLowestError = min scores, (score) -> score.result.metrics.error
+
+      allModels = map scores, (score) -> score.model
+      parameterDifferences = compareInputParameters groupBy allModels, (model) -> model.model_algorithm
 
       rows = map scores, (score) ->
         model = score.model
@@ -232,7 +261,11 @@ Steam.ScoringView = (_, _scoring) ->
         [
           model.model_algorithm
           model.key
-          model.parameters
+          createROC auc.confusion_matrices
+          {
+            parameters: model.parameters
+            differences: parameterDifferences[model.model_algorithm]
+          }
           (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
           format4f auc.AUC
           head auc.threshold_criteria
@@ -243,7 +276,6 @@ Steam.ScoringView = (_, _scoring) ->
           format4f head auc.recall_for_criteria
           format4f head auc.specificity_for_criteria
           format4f head auc.max_per_class_error_for_criteria
-          createROC auc.confusion_matrices
         ]
 
       unshift rows, header
@@ -258,6 +290,8 @@ Steam.ScoringView = (_, _scoring) ->
             if isElement cell
               td cell
             else if isObject cell
+              #HACK the parameter table is the only object in the list
+              #TODO ugly
               td createParameterTable cell
             else
               td cell
