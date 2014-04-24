@@ -7,11 +7,11 @@ import h2o_common, h2o_gbm
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c9_GLM_airlines_fvec(self):
+    def test_c9_GLM_rc_fvec(self):
         h2o.beta_features = True
 
         files = [
-                 ('airlines', 'airlines_all.csv', 'airlines_all.hex', 1800, 'IsDepDelayed')
+                 ('c16', '140k_train_anonymised.csv', 'rc.hex', 1800,  None)
                 ]
 
         for importFolderPath, csvFilename, trainKey, timeoutSecs, response in files:
@@ -19,12 +19,18 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             csvPathname = importFolderPath + "/" + csvFilename
             
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=trainKey, 
-                timeoutSecs=timeoutSecs)
+            # avoid printing the coefficient names in jenkins output
+            # the last col is the response, so we use a number to point to it below
+            parseResult = h2i.import_parse(bucket='0xcustomer-datasets', path=csvPathname, schema='local', hex_key=trainKey, 
+                header=0, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseResult['destination_key']
+
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+            response = numCols-1
 
             # GLM (train)****************************************
             params = {
@@ -33,11 +39,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'lambda': 1e-8,
                 'alpha': 0.0,
                 'max_iter': 30,
-                'n_folds': 3,
+                'n_folds': 0,
                 'family': 'binomial',
                 'destination_key': "GLMKEY",
                 'response': response,
-                'ignored_cols': 'CRSDepTime,CRSArrTime,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed'
             }
             kwargs = params.copy()
             timeoutSecs = 1800

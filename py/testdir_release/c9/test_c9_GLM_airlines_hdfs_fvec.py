@@ -76,13 +76,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 start = time.time()
 
                 predictResult = h2o_cmd.runPredict(
-                    data_key='airlines_all.hex',
+                    data_key=trainKey,
                     model_key=modelKey,
                     destination_key=predictKey,
                     timeoutSecs=timeoutSecs)
 
                 predictCMResult = h2o.nodes[0].predict_confusion_matrix(
-                    actual='airlines_all.hex',
+                    actual=trainKey,
                     vactual=response,
                     predict=predictKey,
                     vpredict='predict',
