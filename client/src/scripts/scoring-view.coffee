@@ -202,6 +202,7 @@ Steam.ScoringView = (_, _scoring) ->
       createROCChart rates
 
     compareInputParameters = (modelsByAlgorithm) ->
+      # change to mapValues modelsByAlgorithm, (models) ->
       zipObject mapWithKey modelsByAlgorithm, (models, algorithm) ->
         headParameter = (head models).parameters
         tailParameters = map (tail models), (model) -> model.parameters
