@@ -220,8 +220,6 @@ public class GLM extends Request {
       res._link = new LinkIced( res._family._family.defaultLink );
     res._maxIter = _maxIter.value();
     res._betaEps = _betaEps.value();
-    if(_prior.valid())
-      res._caseWeight = _prior.value();
     if(_case.valid())
       res._caseVal = _case.value();
     res._caseMode = _caseMode.valid()?_caseMode.value():CaseMode.none;
@@ -266,7 +264,7 @@ public class GLM extends Request {
         lsm = new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
       }
       Double prior = _prior.value();
-      if(prior == null)prior = _prior.defaultValue();
+      if(prior == null || prior == -1)prior = _prior.defaultValue();
       GLMJob job = DGLM.startGLMJob(dest, data, lsm, glmParams, null, prior, _xval.value(), true);
       JsonObject j = new JsonObject();
       j.addProperty(Constants.DEST_KEY, job.dest().toString());
