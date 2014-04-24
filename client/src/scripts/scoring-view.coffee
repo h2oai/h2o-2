@@ -233,7 +233,7 @@ Steam.ScoringView = (_, _scoring) ->
               break
       return
 
-    createComparisonGrid2 = (scores) ->
+    createComparisonGrid = (scores) ->
       algorithmRow = [ th 'Method' ]
       nameRow = [ th 'Name' ]
       rocCurveRow = [ th 'ROC Curve' ]
@@ -273,7 +273,7 @@ Steam.ScoringView = (_, _scoring) ->
 
         algorithmRow.push td model.model_algorithm
         nameRow.push td model.key
-        rocCurveRow.push td createROC auc.confusion_matrices
+        rocCurveRow.push td 'Loading...', "roc-#{scoreIndex}"
         inputParametersRow.push td createParameterTable parameters: inputParamsByScoreIndex[scoreIndex]
         errorRow.push td (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
         aucRow.push td format4f auc.AUC
@@ -285,8 +285,16 @@ Steam.ScoringView = (_, _scoring) ->
         recallRow.push td format4f head auc.recall_for_criteria
         specificityRow.push td format4f head auc.specificity_for_criteria
         maxPerClassErrorRow.push td format4f head auc.max_per_class_error_for_criteria
+        #createROC auc.confusion_matrices
 
-      table tbody [
+      renderRocCurves = ($element) ->
+        forEach scores, (score, scoreIndex) ->
+          defer ->
+            rocCurve = createROC score.result.metrics.auc.members.confusion_matrices
+            $("#roc-#{scoreIndex}", $element).append rocCurve
+        return
+
+      markup: table tbody [
         tr algorithmRow
         tr nameRow
         tr rocCurveRow
@@ -302,8 +310,9 @@ Steam.ScoringView = (_, _scoring) ->
         tr specificityRow
         tr maxPerClassErrorRow
       ]
+      behaviors: [ renderRocCurves ]
 
-    _comparisonTable if scores.length > 0 then createComparisonGrid2 scores else null
+    _comparisonTable if scores.length > 0 then createComparisonGrid scores else null
 
 
   initialize _scoring
