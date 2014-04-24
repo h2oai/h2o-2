@@ -3,24 +3,20 @@ Steam.ScoringView = (_, _scoring) ->
   _hasExecuted = node$ no
   _comparisonTable = node$ null
   _hasComparisonTable = lift$ _comparisonTable, (table) -> not isNull table
-  _modelSummary = node$ null
+  _modelSummary = nodes$ []
 
   createModelSummary = (scoring) ->
-    aScore = if scoring.scores.length > 0 then head scoring.scores else null
-    if aScore
-      [ dl, li, dt, dd ] = geyser.generate '.y-summary .y-summary-item .y-summary-key .y-summary-value'
-      dl [
-        li [
-          dt 'Model Category'
-          dd aScore.model.model_category
-        ]
-        li [
-          dt 'Response Column'
-          dd aScore.model.response_column_name
-        ]
+    score = if scoring.scores.length > 0 then head scoring.scores else null
+    if score
+      [
+        key: 'Model Category'
+        value: score.model.model_category
+      ,
+        key: 'Response Column'
+        value: score.model.response_column_name
       ]
     else
-      null
+      []
 
   createItem = (score) ->
     status = node$ if isNull score.status then '-' else score.status
@@ -91,7 +87,7 @@ Steam.ScoringView = (_, _scoring) ->
 
   renderComparisonTable = (scores) ->
     #TODO thIndent is a HACK. remove.
-    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
+    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser.generate words 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
 
     transposeGrid = (grid) ->
       transposed = []
@@ -111,7 +107,7 @@ Steam.ScoringView = (_, _scoring) ->
           ]
       ]
 
-    createROCChart = (data) ->
+    renderROC = (data) ->
       margin = top: 20, right: 20, bottom: 20, left: 30
       width = 175
       height = 175
@@ -200,7 +196,7 @@ Steam.ScoringView = (_, _scoring) ->
 
     createROC = (cms) ->
       rates = map cms, computeTPRandFPR
-      createROCChart rates
+      renderROC rates
 
     createInputParameter = (key, value, type) ->
       key: key, value: value, type: type, isDifferent: no
