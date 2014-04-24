@@ -44,6 +44,56 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             elapsed = time.time() - start
             print "GLM training completed in", elapsed, "seconds. On dataset: ", csvFilename
 
+            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+            modelKey = glm['glm_model']['_key']
+
+            submodels = glm['glm_model']['submodels']
+            # hackery to make it work when there's just one
+            validation = submodels[-1]['validation']
+            best_threshold = validation['best_threshold']
+            thresholds = validation['thresholds']
+            # have to look up the index for the cm, from the thresholds list
+            best_index = None
+            for i,t in enumerate(thresholds):
+                if t == best_threshold:
+                    best_index = i
+                    break
+            cms = validation['_cms']
+            cm = cms[best_index]
+            pctWrong = h2o_gbm.pp_cm_summary(cm['_arr']);
+            # FIX! should look at prediction error/class error?
+            # self.assertLess(pctWrong, 9,"Should see less than 40% error")
+
+            print "\nTrain\n==========\n"
+            print h2o_gbm.pp_cm(cm['_arr'])
+
+            # Score *******************************
+            # this messes up if you use case_mode/case_vale above
+            predictKey = 'Predict.hex'
+            start = time.time()
+
+            predictResult = h2o_cmd.runPredict(
+                data_key='airlines_all.hex',
+                model_key=modelKey,
+                destination_key=predictKey,
+                timeoutSecs=timeoutSecs)
+
+            predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+                actual='airlines_all.hex',
+                vactual='C' + str(y+1),
+                predict=predictKey,
+                vpredict='predict',
+                )
+
+            cm = predictCMResult['cm']
+            # These will move into the h2o_gbm.py
+            pctWrong = h2o_gbm.pp_cm_summary(cm);
+            # self.assertLess(pctWrong, 40,"Should see less than 40% error")
+
+            print "\nTest\n==========\n"
+            print h2o_gbm.pp_cm(cm)
+
+
         h2i.delete_keys_at_all_nodes(timeoutSecs=600)
 
 
