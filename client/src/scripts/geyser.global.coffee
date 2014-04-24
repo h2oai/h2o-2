@@ -5,7 +5,7 @@ geyser = do ->
     constructor: (@name, @classes, @attrs) ->
 
   class GeyserNode
-    constructor: (@tag, @content) ->
+    constructor: (@id, @tag, @content) ->
 
   createTag = (tagSpec, attrSpec) ->
     switch tagSpec.indexOf '.'
@@ -39,8 +39,8 @@ geyser = do ->
 
     map specs, (spec) ->
       tag = getOrCreateTag spec
-      (arg) ->
-        new GeyserNode tag,
+      (arg, id) ->
+        new GeyserNode id, tag,
           if isArray arg
             arg
           else if arg instanceof GeyserNode
@@ -54,12 +54,13 @@ geyser = do ->
 
   render = (arg) ->
     if arg instanceof GeyserNode
+      id = if arg.id then " id='#{arg.id}'" else ''
       tag = arg.tag
       name = tag.name
       classes = if tag.classes then " class='#{tag.classes}'" else ''
       attrs = if tag.attrs then " #{tag.attrs}" else ''
       content = render arg.content
-      "<#{name}#{classes}#{attrs}>#{content}</#{name}>"
+      "<#{name}#{id}#{classes}#{attrs}>#{content}</#{name}>"
     else if isArray arg
       join (map arg, render), ''
     else

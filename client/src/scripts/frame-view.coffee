@@ -14,7 +14,7 @@ Steam.FrameView = (_, _frame) ->
   # Columns section
   createColumnsSection = (frame) ->
     rows = map frame.column_names, (columnName) -> [ columnName ]
-    [ table, tbody, tr, td ] = geyser.generate 'table.table.table-condensed.table-hover tbody tr td'
+    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed.table-hover tbody tr td'
     table [
       tbody map rows, (row) ->
         tr map row, td

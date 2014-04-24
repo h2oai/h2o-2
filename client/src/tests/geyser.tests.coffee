@@ -4,6 +4,7 @@ describe 'Geyser', ->
       [div] = geyser.generate [ 'div' ]
       dom = div 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'div'
           classes: null
@@ -11,10 +12,23 @@ describe 'Geyser', ->
         content: 'hello'
       strictEqual (geyser.render dom), "<div>hello</div>"
 
+    it "div with id", ->
+      [div] = geyser.generate [ 'div' ]
+      dom = div 'hello', 'foo'
+      deepEqual dom,
+        id: 'foo'
+        tag:
+          name: 'div'
+          classes: null
+          attrs: null
+        content: 'hello'
+      strictEqual (geyser.render dom), "<div id='foo'>hello</div>"
+
     it ".foo", ->
       [div] = geyser.generate [ '.foo' ]
       dom = div 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'div'
           classes: 'foo'
@@ -26,6 +40,7 @@ describe 'Geyser', ->
       [div] = geyser.generate [ '.foo.bar' ]
       dom = div 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'div'
           classes: 'foo bar'
@@ -37,6 +52,7 @@ describe 'Geyser', ->
       [span] = geyser.generate [ 'span.foo.bar' ]
       dom = span 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'span'
           classes: 'foo bar'
@@ -48,6 +64,7 @@ describe 'Geyser', ->
       [a] = geyser.generate [ "a.foo href='http://localhost/'" ]
       dom = a 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'a'
           classes: 'foo'
@@ -59,6 +76,7 @@ describe 'Geyser', ->
       [div] = geyser.generate [ ".foo data-id='bar'" ]
       dom = div 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'div'
           classes: 'foo'
@@ -70,6 +88,7 @@ describe 'Geyser', ->
       [input] = geyser.generate [ "input type='checkbox' data-id='bar' checked" ]
       dom = input 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'input'
           classes: null
@@ -81,6 +100,7 @@ describe 'Geyser', ->
       [input] = geyser.generate [ "input.foo type='checkbox' data-id='bar' checked" ]
       dom = input 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'input'
           classes: 'foo'
@@ -92,11 +112,13 @@ describe 'Geyser', ->
       [div] = geyser.generate [ '.foo' ]
       dom = div div 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'div'
           classes: 'foo'
           attrs: null
         content: [
+          id: undefined
           tag:
             name: 'div'
             classes: 'foo'
@@ -109,16 +131,19 @@ describe 'Geyser', ->
       [div] = geyser.generate [ '.foo' ]
       dom = div div div 'hello'
       deepEqual dom,
+        id: undefined
         tag:
           name: 'div'
           classes: 'foo'
           attrs: null
         content: [
+          id: undefined
           tag:
             name: 'div'
             classes: 'foo'
             attrs: null
           content: [
+            id: undefined
             tag:
               name: 'div'
               classes: 'foo'
@@ -135,17 +160,20 @@ describe 'Geyser', ->
         div 'world'
       ]
       deepEqual dom,
+        id: undefined
         tag:
           name: 'div'
           classes: 'foo'
           attrs: null
         content: [
+          id: undefined
           tag:
             name: 'div'
             classes: 'foo'
             attrs: null
           content: 'hello'
         ,
+          id: undefined
           tag:
             name: 'div'
             classes: 'foo'

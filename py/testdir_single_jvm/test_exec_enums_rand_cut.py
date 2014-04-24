@@ -19,7 +19,7 @@ MAX_ENUM_WIDTH = 8
 RAND_ENUM_LENGTH = True
 CUT_EXPR_CNT = 200
 
-ROWS=10000000
+ROWS=1000000
 
 DO_PLOT = getpass.getuser()=='kevin'
 

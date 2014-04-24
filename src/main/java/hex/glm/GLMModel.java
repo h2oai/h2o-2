@@ -146,39 +146,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public static final String[] getCriticalParamNames() {
-    return new String[] {
-      "max_iter",
-      "standardize",
-      "n_folds",
-      "family"
-    };
-  }
-
-  public static final String[] getSecondaryParamNames() {
-    return new String[] {
-      "_wgiven",
-      "_proximalPenalty",
-      "_beta",
-      "_runAllLambdas",
-      "link",
-      "tweedie_variance_power",
-      "tweedie_link_power",
-      "alpha",
-      "lambda_max",
-      "lambda",
-      "beta_epsilon"
-    };
-  }
-
-  public static final String[] getExpertParamNames() {
-    return new String[0];
-  }
-
-  // Params that do not affect model quality:
-  //
-
-
   public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
     super(selfKey,null,dinfo._adaptedFrame);
     parameters = job;

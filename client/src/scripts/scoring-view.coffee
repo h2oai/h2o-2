@@ -233,27 +233,26 @@ Steam.ScoringView = (_, _scoring) ->
               break
       return
 
-    createComparisonGrid = (scores) ->
-      header = [
-        'Method'
-        'Name'
-        'ROC Curve'
-        'Input Parameters '
-        'Error'
-        'AUC'
-        'Threshold Criterion'
-        ' Threshold' #HACK
-        ' F1' #HACK
-        ' Accuracy' #HACK
-        ' Precision' #HACK
-        ' Recall' #HACK
-        ' Specificity' #HACK
-        ' Max per class Error' #HACK
-      ]
+    createComparisonGrid2 = (scores) ->
+      algorithmRow = [ th 'Method' ]
+      nameRow = [ th 'Name' ]
+      rocCurveRow = [ th 'ROC Curve' ]
+      inputParametersRow = [ th 'Input Parameters' ]
+      errorRow = [ th 'Error' ]
+      aucRow = [ th 'AUC' ]
+      thresholdCriterionRow = [ th 'Threshold Criterion' ]
+      thresholdRow = [ thIndent 'Threshold' ]
+      f1Row = [ thIndent 'F1' ]
+      accuracyRow = [ thIndent 'Accuracy' ]
+      precisionRow = [ thIndent 'Precision' ]
+      recallRow = [ thIndent 'Recall' ]
+      specificityRow = [ thIndent 'Specificity' ]
+      maxPerClassErrorRow = [ thIndent 'Max Per Class Error' ]
 
       format4f = d3.format '.4f' # precision = 4
 
       scoreWithLowestError = min scores, (score) -> score.result.metrics.error
+
       inputParamsWithAlgorithm = map scores, (score) ->
         algorithm: score.model.model_algorithm
         parameters: combineInputParameters score.model
@@ -265,53 +264,46 @@ Steam.ScoringView = (_, _scoring) ->
       forEach inputParamsByAlgorithm, (groups) ->
         compareInputParameters map groups, (group) -> group.parameters
 
-      rows = map scores, (score, scoreIndex) ->
+      for score, scoreIndex in scores
         model = score.model
         metrics = score.result.metrics
         auc = metrics.auc.members
         cm = metrics.cm.members
         errorBadge = if scores.length > 1 and score is scoreWithLowestError then ' (Lowest)' else ''
-        [
-          model.model_algorithm
-          model.key
-          createROC auc.confusion_matrices
-          { parameters: inputParamsByScoreIndex[scoreIndex] }
-          (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
-          format4f auc.AUC
-          head auc.threshold_criteria
-          head auc.threshold_for_criteria
-          format4f head auc.F1_for_criteria
-          format4f head auc.accuracy_for_criteria
-          format4f head auc.precision_for_criteria
-          format4f head auc.recall_for_criteria
-          format4f head auc.specificity_for_criteria
-          format4f head auc.max_per_class_error_for_criteria
-        ]
 
-      unshift rows, header
-      rows
+        algorithmRow.push td model.model_algorithm
+        nameRow.push td model.key
+        rocCurveRow.push td createROC auc.confusion_matrices
+        inputParametersRow.push td createParameterTable parameters: inputParamsByScoreIndex[scoreIndex]
+        errorRow.push td (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
+        aucRow.push td format4f auc.AUC
+        thresholdCriterionRow.push td head auc.threshold_criteria
+        thresholdRow.push td head auc.threshold_for_criteria
+        f1Row.push td format4f head auc.F1_for_criteria
+        accuracyRow.push td format4f head auc.accuracy_for_criteria
+        precisionRow.push td format4f head auc.precision_for_criteria
+        recallRow.push td format4f head auc.recall_for_criteria
+        specificityRow.push td format4f head auc.specificity_for_criteria
+        maxPerClassErrorRow.push td format4f head auc.max_per_class_error_for_criteria
 
-    renderTable = (grid) ->
-      table tbody map grid, (row, i) ->
-        tr map row, (cell, i) ->
-          if i is 0
-            # HACK 
-            if 0 is cell.indexOf ' '
-              thIndent cell
-            else
-              th cell
-          else
-            if isElement cell
-              td cell
-            else if isObject cell
-              #HACK the parameter table is the only object in the list
-              #TODO ugly
-              td createParameterTable cell
-            else
-              td cell
+      table tbody [
+        tr algorithmRow
+        tr nameRow
+        tr rocCurveRow
+        tr inputParametersRow
+        tr errorRow
+        tr aucRow
+        tr thresholdCriterionRow
+        tr thresholdRow
+        tr f1Row
+        tr accuracyRow
+        tr precisionRow
+        tr recallRow
+        tr specificityRow
+        tr maxPerClassErrorRow
+      ]
 
-
-    _comparisonTable if scores.length > 0 then renderTable transposeGrid createComparisonGrid scores else null
+    _comparisonTable if scores.length > 0 then createComparisonGrid2 scores else null
 
 
   initialize _scoring

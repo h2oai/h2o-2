@@ -16,6 +16,7 @@ import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
+import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
@@ -34,28 +35,28 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   // API input parameters BEGIN ------------------------------------------------------------
 
-  @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true)
+  @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
   int max_iter = 100;
 
-  @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true)
+  @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   boolean standardize = true;
 
-  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true)
+  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
   int n_folds;
 
-  @API(help = "Family.", filter = Default.class, json=true)
+  @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   Family family = Family.gaussian;
 
-  @API(help = "Tweedie variance power", filter = Default.class, json=true)
+  @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   double tweedie_variance_power;
 
-  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true)
+  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   double [] alpha = new double[]{0.5};
 
-  @API(help = "regularization strength", filter = Default.class, json=true)
+  @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public double [] lambda = new double[]{1e-5};
 
-  @API(help = "beta_eps", filter = Default.class, json=true)
+  @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   double beta_epsilon = DEFAULT_BETA_EPS;
 
   @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
@@ -71,25 +72,25 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   // API output parameters BEGIN ------------------------------------------------------------
 
-  @API(help = "", json=true)
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   private double [] _wgiven;
 
-  @API(help = "", json=true)
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   private double _proximalPenalty;
 
-  @API(help = "", json=true)
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   private double [] _beta;
 
-  @API(help = "", json=true)
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   private boolean _runAllLambdas = true;
 
-  @API(help = "", json=true)
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   Link link = Link.identity;
 
-  @API(help = "Tweedie link power", json=true)
+  @API(help = "Tweedie link power", json=true, importance = ParamImportance.SECONDARY)
   double tweedie_link_power;
 
-  @API(help = "lambda max", json=true)
+  @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
   double lambda_max;
 
   // API output parameters END ------------------------------------------------------------

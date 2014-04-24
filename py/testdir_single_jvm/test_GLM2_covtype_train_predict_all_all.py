@@ -64,7 +64,6 @@ class Basic(unittest.TestCase):
         timeoutSecs = 60
 
         for trial in range(1):
-
             # test/train split **********************************************8
             aHack = {'destination_key': trainDataKey}
 
@@ -73,7 +72,6 @@ class Basic(unittest.TestCase):
             glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-
 
             modelKey = glm['glm_model']['_key']
             submodels = glm['glm_model']['submodels']
@@ -90,7 +88,6 @@ class Basic(unittest.TestCase):
             cms = validation['_cms']
             cm = cms[best_index]
             trainPctWrong = h2o_gbm.pp_cm_summary(cm['_arr']);
-
 
             # Score **********************************************
             predictKey = 'Predict.hex'

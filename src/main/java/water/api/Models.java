@@ -1,23 +1,21 @@
 package water.api;
 
-import java.lang.reflect.Field;
-import java.util.*;
-
-import com.google.gson.*;
+import static water.util.ParamUtils.*;
 import hex.deeplearning.DeepLearning;
-import hex.deeplearning.DeepLearningModel;
 import hex.drf.DRF;
-import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM;
-import hex.gbm.GBM.GBMModel;
 import hex.glm.GLM2;
 import hex.glm.GLMModel;
-import org.apache.commons.math3.util.Pair;
-import water.*;
-import water.fvec.Frame;
-import water.util.Log;
 
+import java.util.*;
+
+import org.apache.commons.math3.util.Pair;
+
+import water.*;
 import water.api.Frames.FrameSummary;
+import water.fvec.Frame;
+
+import com.google.gson.*;
 
 public class Models extends Request2 {
 
@@ -198,9 +196,9 @@ public class Models extends Request2 {
   /******
    * GLM2
    ******/
-  private static final Set<String> GLM_critical_params = new HashSet<String>(Arrays.asList(GLMModel.getCriticalParamNames()));
-  private static final Set<String> GLM_secondary_params = new HashSet<String>(Arrays.asList(GLMModel.getSecondaryParamNames()));
-  private static final Set<String> GLM_expert_params = new HashSet<String>(Arrays.asList(GLMModel.getExpertParamNames()));
+  private static final Set<String> GLM_critical_params = getCriticalParamNames(GLM2.DOC_FIELDS);
+  private static final Set<String> GLM_secondary_params = getSecondaryParamNames(GLM2.DOC_FIELDS);
+  private static final Set<String> GLM_expert_params = getExpertParamNames(GLM2.DOC_FIELDS);
 
   /**
    * Summarize fields which are specific to hex.glm.GLMModel.
@@ -221,9 +219,9 @@ public class Models extends Request2 {
   /******
    * DRF
    ******/
-  private static final Set<String> DRF_critical_params = new HashSet<String>(Arrays.asList(DRF.DRFModel.getCriticalParamNames()));
-  private static final Set<String> DRF_secondary_params = new HashSet<String>(Arrays.asList(DRF.DRFModel.getSecondaryParamNames()));
-  private static final Set<String> DRF_expert_params = new HashSet<String>(Arrays.asList(DRF.DRFModel.getExpertParamNames()));
+  private static final Set<String> DRF_critical_params = getCriticalParamNames(DRF.DOC_FIELDS);
+  private static final Set<String> DRF_secondary_params = getSecondaryParamNames(DRF.DOC_FIELDS);
+  private static final Set<String> DRF_expert_params = getExpertParamNames(DRF.DOC_FIELDS);
 
   /**
    * Summarize fields which are specific to hex.drf.DRF.DRFModel.
@@ -243,9 +241,9 @@ public class Models extends Request2 {
   /***************
    * DeepLearning
    ***************/
-  private static final Set<String> DL_critical_params = new HashSet<String>(Arrays.asList(DeepLearningModel.getCriticalParamNames()));
-  private static final Set<String> DL_secondary_params = new HashSet<String>(Arrays.asList(DeepLearningModel.getSecondaryParamNames()));
-  private static final Set<String> DL_expert_params = new HashSet<String>(Arrays.asList(DeepLearningModel.getExpertParamNames()));
+  private static final Set<String> DL_critical_params = getCriticalParamNames(DeepLearning.DOC_FIELDS);
+  private static final Set<String> DL_secondary_params = getSecondaryParamNames(DeepLearning.DOC_FIELDS);
+  private static final Set<String> DL_expert_params =getExpertParamNames(DeepLearning.DOC_FIELDS);
 
   /**
    * Summarize fields which are specific to hex.deeplearning.DeepLearningModel.
@@ -265,9 +263,9 @@ public class Models extends Request2 {
   /******
    * GBM
    ******/
-  private static final Set<String> GBM_critical_params = new HashSet<String>(Arrays.asList(GBMModel.getCriticalParamNames()));
-  private static final Set<String> GBM_secondary_params = new HashSet<String>(Arrays.asList(GBMModel.getSecondaryParamNames()));
-  private static final Set<String> GBM_expert_params = new HashSet<String>(Arrays.asList(GBMModel.getExpertParamNames()));
+  private static final Set<String> GBM_critical_params = getCriticalParamNames(GBM.DOC_FIELDS);
+  private static final Set<String> GBM_secondary_params = getSecondaryParamNames(GBM.DOC_FIELDS);
+  private static final Set<String> GBM_expert_params = getExpertParamNames(GBM.DOC_FIELDS);
 
   /**
    * Summarize fields which are specific to hex.gbm.GBM.GBMModel.
