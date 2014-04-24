@@ -103,6 +103,7 @@ h2o.__changeLogPath <- function(path, type) {
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
+.h2o.__PAGE_EXPORTFILES = "2/ExportFiles.json"
 .h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 .h2o.__PAGE_PARSE2 = "2/Parse2.json"
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"

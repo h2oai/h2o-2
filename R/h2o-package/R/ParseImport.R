@@ -390,6 +390,20 @@ h2o.parseRaw.FV <- function(data, key = "", header, sep = "", col.names) {
 }
       
 #-------------------------------- Miscellaneous -----------------------------------#
+h2o.exportFile <- function(data, path, force = FALSE) {
+    canHandle = FALSE
+    if (class(data) == "H2OParsedData") { canHandle = TRUE }
+    if (class(data) == "H2OParsedDataVA") { canHandle = TRUE }
+    if (! canHandle) {
+        stop("h2o.exportFile only works on H2OParsedData or H2OParsedDataVA frames")
+    }
+    if(!is.character(path)) stop("path must be of class character")
+    if(nchar(path) == 0) stop("path must be a non-empty string")
+    if(!is.logical(force)) stop("force must be of class logical")
+    
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_EXPORTFILES, src_key = data@key, path = path, force = as.numeric(force))
+}
+
 h2o.exportHDFS <- function(object, path) {
   if(inherits(object, "H2OModelVA")) stop("h2o.exportHDFS does not work under ValueArray")
   else if(!inherits(object, "H2OModel")) stop("object must be an H2O model")

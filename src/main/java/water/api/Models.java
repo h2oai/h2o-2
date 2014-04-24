@@ -167,7 +167,7 @@ public class Models extends Request2 {
       summarizeGBMModel(summary, (hex.gbm.GBM.GBMModel) model);
     } else {
       // catch-all
-      summarizeModelCommonFields(summary, (Model) model);
+      summarizeModelCommonFields(summary, model);
     }
 
     if (find_compatible_frames) {
@@ -211,7 +211,7 @@ public class Models extends Request2 {
 
     summary.model_algorithm = "GLM";
 
-    JsonObject all_params = ((GLM2)model.get_params()).toJSON();
+    JsonObject all_params = (model.get_params()).toJSON();
     summary.critical_parameters = whitelistJsonObject(all_params, GLM_critical_params);
     summary.secondary_parameters = whitelistJsonObject(all_params, GLM_secondary_params);
     summary.expert_parameters = whitelistJsonObject(all_params, GLM_expert_params);
@@ -234,7 +234,7 @@ public class Models extends Request2 {
 
     summary.model_algorithm = "DRF";
 
-    JsonObject all_params = ((DRF)model.get_params()).toJSON();
+    JsonObject all_params = (model.get_params()).toJSON();
     summary.critical_parameters = whitelistJsonObject(all_params, DRF_critical_params);
     summary.secondary_parameters = whitelistJsonObject(all_params, DRF_secondary_params);
     summary.expert_parameters = whitelistJsonObject(all_params, DRF_expert_params);
@@ -256,7 +256,7 @@ public class Models extends Request2 {
 
     summary.model_algorithm = "DeepLearning";
 
-    JsonObject all_params = ((DeepLearning)model.get_params()).toJSON();
+    JsonObject all_params = (model.get_params()).toJSON();
     summary.critical_parameters = whitelistJsonObject(all_params, DL_critical_params);
     summary.secondary_parameters = whitelistJsonObject(all_params, DL_secondary_params);
     summary.expert_parameters = whitelistJsonObject(all_params, DL_expert_params);
@@ -278,7 +278,7 @@ public class Models extends Request2 {
 
     summary.model_algorithm = "GBM";
 
-    JsonObject all_params = ((GBM)model.get_params()).toJSON();
+    JsonObject all_params = (model.get_params()).toJSON();
     summary.critical_parameters = whitelistJsonObject(all_params, GBM_critical_params);
     summary.secondary_parameters = whitelistJsonObject(all_params, GBM_secondary_params);
     summary.expert_parameters = whitelistJsonObject(all_params, GBM_expert_params);

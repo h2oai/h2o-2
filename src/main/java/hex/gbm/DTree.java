@@ -550,15 +550,15 @@ public class DTree extends Iced {
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
     @API(help="AUC for validation dataset")                                           public final AUC             validAUC;
 
-    private transient CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
+    private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey; this.cms = new ConfusionMatrix[0];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
-      treeKeys = new Key[0][];
-      treeStats = null;
+      this.treeKeys = new Key[0][];
+      this.treeStats = null;
       this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
       this.varimp = null;
       this.validAUC = null;
@@ -631,6 +631,8 @@ public class DTree extends Iced {
       } else return Double.NaN;
     }
     @Override protected float[] score0(double data[], float preds[]) {
+      // Prefetch trees into the local cache if it is necessary
+      // Invoke scoring
       Arrays.fill(preds,0);
       for( int tidx=0; tidx<treeKeys.length; tidx++ )
         score0(data, preds, tidx);
@@ -638,15 +640,24 @@ public class DTree extends Iced {
     }
 
     /** Returns i-th tree represented by an array of k-trees. */
-    public final synchronized CompressedTree[] ctree(int tidx) {
-      if (_treeBitsCache!=null && _treeBitsCache[tidx]!=null) return _treeBitsCache[tidx];
-      if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[ntrees()][];
-      Key[] k = treeKeys[tidx];
-      CompressedTree[] ctree = new CompressedTree[nclasses()];
-      for (int i = 0; i < nclasses(); i++) // binary classifiers can contains null for second tree
-        if (k[i]!=null) ctree[i] = UKV.get(k[i]);
-      _treeBitsCache[tidx] = ctree;
-      return ctree;
+    public final CompressedTree[] ctree(int tidx) {
+      if (_treeBitsCache==null) {
+        synchronized(this) {
+          if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[ntrees()][];
+        }
+      }
+      if (_treeBitsCache[tidx]==null) {
+        synchronized(this) {
+          if (_treeBitsCache[tidx]==null) {
+            Key[] k = treeKeys[tidx];
+            CompressedTree[] ctree = new CompressedTree[nclasses()];
+            for (int i = 0; i < nclasses(); i++) // binary classifiers can contains null for second tree
+              if (k[i]!=null) ctree[i] = UKV.get(k[i]);
+            _treeBitsCache[tidx] = ctree;
+          }
+        }
+      }
+      return _treeBitsCache[tidx];
     }
     // Score per line per tree
     public void score0(double data[], float preds[], int treeIdx) {
