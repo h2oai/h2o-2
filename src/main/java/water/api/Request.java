@@ -21,6 +21,7 @@ import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD})
   @Documented
   public @interface API {
     String help();
@@ -42,6 +43,7 @@ public abstract class Request extends RequestBuilders {
     String displayName() default "";
     boolean gridable() default true;
     Class<? extends Validator> validator() default NOPValidator.class;
+    ParamImportance importance() default ParamImportance.UNIMPORTANT;
   }
 
   public interface Validator<V> extends Freezable {

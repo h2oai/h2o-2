@@ -107,31 +107,7 @@ public abstract class Model extends Lockable<Model> {
             ModelCategory.Regression);
   }
 
-  /**
-   * Names of the model parameters which will always be shown in a short description of
-   * the model (e.g., for a tree model it would include ntrees and depth).
-   */
-  public static String[] getCriticalParamNames() {
-    return new String[0];
-  }
-
-  /**
-   * Names of the model parameters which will also be shown in a longer description of
-   * the model (e.g., learning rate).
-   */
-  public static String[] getSecondaryParamNames() {
-    return new String[0];
-  }
-
-  /**
-   * Names of the model parameters which will be shown only in an expert view of
-   * the model (e.g., for Deep Learning it would include initial_weight_scale).
-   */
-  public static String[] getExpertParamNames() {
-    return new String[0];
-  }
-
-    /** Remove any Model internal Keys */
+  /** Remove any Model internal Keys */
   @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
   @Override public String errStr() { return "Model"; }
 
