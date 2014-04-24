@@ -146,10 +146,10 @@ public class GLMValidation extends Iced {
   protected void finalize_AIC_AUC(){
     computeAIC();
     if(_glm.family == Family.binomial){
+      for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
       AUC auc = new AUC(_cms,thresholds);
       this.auc = auc.AUC();
       best_threshold = auc.threshold();
-      for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
     }
   }
   /**

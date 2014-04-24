@@ -251,7 +251,6 @@ public class GLM extends Request {
         }
       }
 
-
       DataFrame data = DGLM.getData(ary, columns, null, _standardize.value());
       LSMSolver lsm = null;
       switch(_lsmSolver.value()){
@@ -266,7 +265,9 @@ public class GLM extends Request {
       case GenGradient:
         lsm = new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
       }
-      GLMJob job = DGLM.startGLMJob(dest, data, lsm, glmParams, null, _prior.value(), _xval.value(), true);
+      Double prior = _prior.value();
+      if(prior == null)prior = _prior.defaultValue();
+      GLMJob job = DGLM.startGLMJob(dest, data, lsm, glmParams, null, prior, _xval.value(), true);
       JsonObject j = new JsonObject();
       j.addProperty(Constants.DEST_KEY, job.dest().toString());
       Response r = GLMProgressPage.redirect(j, job.self(), job.dest(),job.progressKey());
