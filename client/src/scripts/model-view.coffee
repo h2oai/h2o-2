@@ -18,19 +18,25 @@ Steam.ModelView = (_, _model) ->
   createDefinitionList = (data) ->
     [ dl, li, dt, dd ] = geyser.generate '.y-summary .y-summary-item .y-summary-key .y-summary-value'
 
-    dl mapWithKey data, (value, key) ->
+    dl map data, ([key, value]) ->
       li [ (dt key), (dd stringify value) ]
 
   # Summary section
   createSummarySection = (model) ->
-    createDefinitionList
-      'Response Column': model.response_column_name
-      'Model Category': model.model_category
-      'State': model.state
+    createDefinitionList [
+      [ 'Response Column', model.response_column_name ]
+      [ 'Model Category', model.model_category ]
+      [ 'State', model.state ]
+    ]
 
   # Parameters section
   createParametersSection = (model) ->
-    createDefinitionList model.parameters
+    parameters = [
+      pairs model.critical_parameters
+      pairs model.secondary_parameters
+      pairs model.expert_parameters
+    ]
+    createDefinitionList flatten parameters, yes
   
   # Input columns section
   createInputColumnsSection = (model) ->

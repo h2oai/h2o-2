@@ -39,7 +39,9 @@ Steam.ModelListView = (_) ->
     console.assert isArray model.input_column_names
     console.assert has model, 'model_algorithm'
     console.assert has model, 'model_category'
-    console.assert isObject model.parameters
+    console.assert isObject model.critical_parameters
+    console.assert isObject model.secondary_parameters
+    console.assert isObject model.expert_parameters
     console.assert has model, 'response_column_name'
     console.assert has model, 'state'
 
