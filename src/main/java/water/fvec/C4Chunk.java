@@ -36,6 +36,13 @@ public class C4Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    throw H2O.unimpl();
+    //nothing to inflate - just copy
+    nc._ds = MemoryManager.malloc8d(_len);
+    nc._len = 0;
+    nc._len2 = 0;
+    for( int i=0; i<_len; i++ ) //use unsafe?
+      if(isNA0(i))nc.addNA();
+      else nc.addNum(at80(i),0);
+    return nc;
   }
 }
