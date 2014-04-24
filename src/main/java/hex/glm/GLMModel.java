@@ -242,9 +242,15 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     double mu = glm.linkInv(eta);
     preds[0] = (float)mu;
     if( glm.family == Family.binomial ) { // threshold for prediction
-      preds[0] = (mu >= threshold ? 1 : 0);
-      preds[1] = 1.0f - (float)mu; // class 0
-      preds[2] =        (float)mu; // class 1
+      if(Double.isNaN(mu)){
+        preds[0] = Float.NaN;
+        preds[1] = Float.NaN;
+        preds[2] = Float.NaN;
+      } else {
+        preds[0] = (mu >= threshold ? 1 : 0);
+        preds[1] = 1.0f - (float)mu; // class 0
+        preds[2] =        (float)mu; // class 1
+      }
     }
     return preds;
   }
