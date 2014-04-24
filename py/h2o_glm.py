@@ -152,23 +152,19 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     if h2o.beta_features:
         # number of submodels = number of lambda
-        # min of 2. lambdaMax is first
+        # min of 2. lambda_max is first
         submodels = GLMModel['submodels']
         lambdas = GLMModel['lambdas']
         # since all our tests?? only use one lambda, the best_lamda_idx should = 1
         best_lambda_idx = GLMModel['best_lambda_idx']
-        lambdaMax = lambdas[0]
-        print "lambdaMax:", lambdaMax
+        lambda_max = GLMModel['lambda_max']
+        print "lambda_max:", lambda_max
 
         if 1==0:
-            if len(submodels) < 2:
-                raise Exception("Always should have a minimum of 2 submodels in GLM2 response", len(submodels))
-            if len(lambdas) < 2:
-                raise Exception("Always should have a minimum of 2 lambdas in GLM2 response", len(submodels))
             if best_lambda_idx != 1:
                 raise Exception("best_lamda_idx %s should point to the one lamda we specified? %s" % (best_lamda_idx, lamdas[1]))
-            if lambdaMax <= lambdas[-1]:
-                raise Exception("lambdaMax %s should always be < the lambda result %s we're checking" % (lambdaMax, lambdas[1]))
+            if lambda_max <= lambdas[-1]:
+                raise Exception("lambda_max %s should always be > the lambda result %s we're checking" % (lambda_max, lambdas[1]))
 
         submodels0 = submodels[0]
         submodels1 = submodels[-1] # hackery to make it work when there's just one

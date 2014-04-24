@@ -11,7 +11,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         h2o.beta_features = True
 
         files = [
-                 ('datasets', 'airlines_all.csv', 'airlines_all.hex', 1800, 'IsDepDelayed')
+                 ('airlines', 'airlines_all.csv', 'airlines_all.hex', 1800, 'IsDepDelayed')
                 ]
 
         for importFolderPath, csvFilename, trainKey, timeoutSecs, response in files:
@@ -19,7 +19,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             csvPathname = importFolderPath + "/" + csvFilename
             
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=trainKey, 
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=trainKey, 
                 timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
