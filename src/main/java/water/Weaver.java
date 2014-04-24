@@ -311,7 +311,7 @@ public class Weaver {
       if( first ) first = false;
       else sb.append(",");
       boolean input = isInput(ctf.getType(), api);
-      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class,"+input+","+api.required()+")");
+      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class,"+input+","+api.required()+",water.api.ParamImportance."+api.importance()+")");
     }
     return first;
   }
